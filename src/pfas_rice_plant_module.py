@@ -89,6 +89,13 @@ class Compound:
     Km_out: float           # efflux half-saturation [ug/L]
     # phloem loading partition (carrier/channel, NOT pH ion-trap) [-]
     L_Ph: float
+    # root -> xylem loading factor (transpiration-stream concentration factor,
+    # TSCF analog) [-]: fraction of the root free aqueous concentration actually
+    # loaded into the ascending xylem.  <1 for anions because the endodermal
+    # Casparian barrier and tissue binding sequester PFAS in the root and limit
+    # root-to-shoot translocation.  f_xy = 1 recovers the unrestricted DPU base
+    # (assumption A2); the PFAS limit is f_xy << 1, larger for short chains.
+    f_xy: float = 0.1
     # speciation (PFAS: fully dissociated)
     fd: float = 1.0
     fn: float = 0.0
@@ -209,18 +216,27 @@ class RiceUptakeModel:
         g = [c.gamma for c in self.comps]
         dC = np.zeros(4)
 
+        # root -> xylem loading: only a fraction f_xy of the root free conc is
+        # loaded into the ascending xylem (TSCF; endodermal barrier + binding).
+        # The SAME Cw_xyl is what the root loses and the stem gains, so the
+        # root->stem xylem transfer remains mass-conserving.
+        Cw_xyl = self.cmpd.f_xy * Cw[ROOT]
+
         # root
         jR = root_uptake(Cwo, Cw[ROOT], self.cmpd, self.env)
         dC[ROOT] = (jR
-                    - (Qtp / M[ROOT]) * Cw[ROOT]
+                    - (Qtp / M[ROOT]) * Cw_xyl
                     + self.phi * (Q_Phl / M[ROOT]) * C_Phl
                     - g[ROOT] * C[ROOT] - mu[ROOT] * C[ROOT])
-        # stem (xylem in from root, xylem out to leaf+fruit)
-        dC[STEM] = ((Qtp / M[STEM]) * (Cw[ROOT] - Cw[STEM])
+        # stem (xylem in from root at the loaded conc, xylem out to leaf+fruit)
+        dC[STEM] = ((Qtp / M[STEM]) * (Cw_xyl - Cw[STEM])
                     - g[STEM] * C[STEM] - mu[STEM] * C[STEM])
-        # leaf (xylem terminal; phloem source)
+        # leaf (xylem terminal; phloem source). The leaf supplies the WHOLE
+        # phloem export: the grain sink (Q_Phl*C_Phl) plus the fraction phi*Q_Phl
+        # that recirculates to the root -> total (1+phi)*Q_Phl*C_Phl. This closes
+        # the phloem mass balance (leaf loss = grain gain + root recirculation).
         dC[LEAF] = (f3 * (Qtp / M[LEAF]) * Cw[STEM]
-                    - (Q_Phl / M[LEAF]) * C_Phl
+                    - (1.0 + self.phi) * (Q_Phl / M[LEAF]) * C_Phl
                     - g[LEAF] * C[LEAF] - mu[LEAF] * C[LEAF])
         # fruit/grain (small xylem in; phloem-dominated; terminal sink)
         dC[FRUIT] = (f4 * (Qtp / M[FRUIT]) * Cw[STEM]
@@ -267,17 +283,28 @@ def _demo():
     inputs = PlantInputs(t=t, Cwo=Cwo, Qtp=Qtp, M=M)
 
     env = Environment()                  # N ~ +4.67 for z=-1, E=-120 mV
-    # PFOA-like placeholder compound (values are illustrative, NOT calibrated)
+    # PFOA-like placeholder compound (values are illustrative, NOT calibrated).
+    # The three transport parameters below encode the PFAS-specific physics that
+    # produces the empirical root > straw > grain ordering:
+    #   f_xy = 0.02  -> low transpiration-stream loading: the anion is strongly
+    #                   retained in the root and translocates poorly to the shoot
+    #                   (endodermal Casparian barrier + binding); larger for short
+    #                   chains, smaller for long chains.
+    #   L_Ph = 0.005 -> PFAS is poorly phloem-mobile (no weak-acid ion-trap for a
+    #                   fully dissociated anion), so the phloem-fed grain is the
+    #                   most poorly supplied compartment.
     cmpd = Compound(
         name="PFOA",
         K_prot=50.0, K_PL=100.0, K_cw=20.0,        # [L/kg]
         kappa_d=0.5,                                # [L/(day kg)]
         Vmax_in=20.0, Km_in=5.0,                    # carrier influx (must overcome anion exclusion)
         Vmax_out=8.0, Km_out=5.0,                   # carrier efflux
-        L_Ph=0.05,
+        L_Ph=0.005,                                 # low phloem loading (anion: no pH ion-trap)
+        f_xy=0.02,                                  # root->xylem loading (TSCF): limited translocation
     )
     comps = [
-        Compartment("root",  theta=0.70, f_prot=0.02, f_PL=0.010, f_cw=0.30),
+        # root binds PFAS most strongly (rhizoplane/cortex sorption) -> highest B_k
+        Compartment("root",  theta=0.70, f_prot=0.05, f_PL=0.010, f_cw=0.30),
         Compartment("stem",  theta=0.80, f_prot=0.01, f_PL=0.005, f_cw=0.08),
         Compartment("leaf",  theta=0.80, f_prot=0.03, f_PL=0.020, f_cw=0.04, S=20.0),
         Compartment("grain", theta=0.15, f_prot=0.08, f_PL=0.010, f_cw=0.10, S=2.0),
@@ -295,9 +322,18 @@ def _demo():
     baf = model.baf(Cend, t[-1])
     for c, ck, bk in zip(comps, Cend, baf):
         print(f"  {c.name:5s}  C = {ck:8.3f} ug/kg   BAF = {bk:7.3f} L/kg")
-    # grain accumulation check (terminal sink: should keep rising while it fills)
-    print(f"\ngrain BAF ordering vs vegetative (expect root highest, grain trapped by protein):")
-    print(f"  root/grain BAF ratio = {baf[ROOT]/baf[FRUIT]:.2f}")
+    # empirical target ordering root > straw > grain, where "straw" is the bulk
+    # shoot = mass-weighted mean of stem + leaf (standard rice-agronomy tissue).
+    Mf = inputs.M_(t[-1])
+    straw = (Cend[STEM] * Mf[STEM] + Cend[LEAF] * Mf[LEAF]) / (Mf[STEM] + Mf[LEAF])
+    straw_baf = straw / inputs.Cwo_(t[-1])
+    ordered = baf[ROOT] > straw_baf > baf[FRUIT]
+    print(f"\nordering check (target: root > straw > grain):")
+    print(f"  root  BAF = {baf[ROOT]:6.2f}")
+    print(f"  straw BAF = {straw_baf:6.2f}   (mass-weighted stem+leaf)")
+    print(f"  grain BAF = {baf[FRUIT]:6.2f}")
+    print(f"  root > straw > grain : {'OK' if ordered else 'VIOLATED'}"
+          f"  (root/straw = {baf[ROOT]/straw_baf:.2f}, straw/grain = {straw_baf/baf[FRUIT]:.2f})")
 
     # optional figure
     try:

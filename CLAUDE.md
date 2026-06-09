@@ -56,7 +56,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 
 ## 5. Parameter tiers (calibration design)
 - **Tier 0** inputs/known: `M_k(t), Q_TP(t), C_w^o(t), N(E,z), f_d, γ_k≈0, T_C,Ph`.
-- **Tier 1** BAF-identifiable (lumped): `B_k`, `g_in/g_out`, `Π = Q_Phl·L_Ph/Q_TP`, `φ`.
+- **Tier 1** BAF-identifiable (lumped): `B_k`, `g_in/g_out`, `f_xy` (root→xylem loading/TSCF),
+  `Π = Q_Phl·L_Ph/Q_TP`, `φ`.
 - **Tier 2** need inhibitor/kinetic data: separate `P_d^eff` (channel) vs `V_max` (carrier);
   influx vs efflux asymmetry.
 - **Tier 3** QSPR/measurement (chain-length resolved): `K_prot, K_PL, K_cw, L_Ph, a_R`.
@@ -65,18 +66,23 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   BAF alone (need inhibitor experiments).
 
 ## 6. Current status
-- Derivation + LaTeX docs: complete.
+- Derivation + LaTeX docs: complete (TSCF loading factor + mass-conserving phloem added;
+  `ρ_k` binding bug fixed). **PDFs are not in the repo — rebuild with pdflatex where available.**
 - Python module: runs (BDF stiff solver); reproduces the structural results
-  (anion exclusion, terminal-sink accumulation, binding).
-- **KNOWN ISSUE**: with placeholder parameters, leaf & grain over-accumulate
-  (terminal-sink runaway). Reproducing the empirical **root > straw > grain** ordering is
-  the Tier-1 calibration target; it requires genuinely low-translocation parameters and/or
-  realistic terminal-tissue loss terms. **Demo BAFs are NOT calibrated** — ignore absolute
-  values until calibration.
+  (anion exclusion, terminal-sink accumulation, binding, TSCF-limited translocation).
+- Test suite: `tests/test_plant_module.py` (pytest) locks in the structural invariants
+  and exact mass conservation (`pip install pytest && pytest`).
+- **RESOLVED (was KNOWN ISSUE)**: the terminal-sink runaway is fixed *structurally* by the
+  root→xylem loading factor `f_xy` (TSCF, assumption A2): the anion is retained in the root
+  and translocates poorly, so leaf/grain no longer out-accumulate the root. The demo now
+  reproduces **root > straw > grain** (straw = mass-weighted stem+leaf). Also closed a phloem
+  mass-conservation leak (leaf now exports the full `(1+φ)·Q_Phl·C_Phl`). **Demo BAFs remain
+  illustrative, NOT calibrated** — real Tier-1 calibration vs data is still task #4.
 
 ## 7. Build & run
 - Python: `pip install -r requirements.txt` then `python src/pfas_rice_plant_module.py`
-  (prints N, B_k, final tissue concentrations/BAFs; saves `pfas_rice_demo.png`).
+  (prints N, B_k, final tissue concentrations/BAFs + the root>straw>grain check; saves `pfas_rice_demo.png`).
+- Tests: `pip install pytest && pytest` (or `python tests/test_plant_module.py`).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
   (gfortran + `makefile` / `make.bat`).
@@ -84,16 +90,20 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ## 8. Conventions
 - Units: time **day**; aqueous conc **µg/L**; tissue conc **µg/kg**; mass **kg**;
   flow **L/day**; `B_k` in **L/kg** (`C_k = B_k · C_w,k`).
-- `B_k` has **no density factor** (the `ρ_k` in the current `.tex` is dimensionally wrong;
-  fix it on the next doc edit).
-- Symbols map 1:1 to `docs/pfas_rice_compartmental_model.tex` (`j_R, B_k, N, L_Ph, ...`).
+- `B_k` has **no density factor** (the dimensionally-wrong `ρ_k` prefactor has been removed
+  from Eq. binding in the `.tex`; the code was already correct).
+- `f_xy` ∈ (0,1] is the root→xylem loading factor (TSCF analog): only `f_xy·C_1/B_1` enters
+  the ascending xylem (`f_xy=1` = unrestricted DPU; `f_xy≪1` for anions). It is what
+  constrains translocation and yields root>straw>grain.
+- Symbols map 1:1 to `docs/pfas_rice_compartmental_model.tex` (`j_R, B_k, N, f_xy, L_Ph, ...`).
 
 ## 9. Next tasks (prioritized)
-1. **Physical realism of terminal compartments** — add loss/limiting terms or constrain
-   translocation so leaf/grain don't run away; verify against `root > straw > grain`.
+1. ~~Physical realism of terminal compartments~~ **DONE** — added the root→xylem loading
+   factor `f_xy` (TSCF) + mass-conserving phloem; demo reproduces `root > straw > grain`;
+   regression tests in `tests/`. (Calibrating `f_xy`/`L_Ph`/`B_k` to data is task #4.)
 2. **Tier-3 QSPR** for `K_prot`, `K_PL` (chain-length descriptors) to populate `B_k`.
 3. **Plug real Phydrus output** into `PlantInputs`; add Freundlich soil sorption (paddy).
-4. **Tier-1 calibration** vs rice BAF / lysimeter data (chain-length trends).
+4. **Tier-1 calibration** vs rice BAF / lysimeter data (chain-length trends; now also `f_xy`).
 5. (Later) **Method B** tight coupling in `external/hydrus_source`.
 
 ## 10. Gotchas / external dependencies

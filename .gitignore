@@ -1,6 +1,8 @@
 *:Zone.Identifier
 data/
 __pycache__/
+.pytest_cache/
+pfas_rice_demo.png
 *.pyc
 *.aux
 *.log

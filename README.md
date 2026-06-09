@@ -11,7 +11,9 @@ couple with **HYDRUS-1D** for the soil side.
 Solves the four-compartment ODE system for a fully-dissociated PFAS anion, with:
 - a **hybrid root uptake** flux (ionic electrodiffusion + saturable carrier),
 - compartment **binding factors** (protein / phospholipid / cell-wall),
-- **xylem** (upward) and **phloem** (grain-loading) transport,
+- **xylem** (upward) and **phloem** (grain-loading) transport, mass-conserving,
+- **TSCF-limited root→xylem loading** (`f_xy`): the anion is retained in the root and
+  translocates poorly, reproducing the empirical **root > straw > grain** ordering,
 - the grain as a **terminal accumulator**.
 
 Soil pore-water free concentration `C_w^o(t)`, transpiration `Q_TP(t)`, and tissue growth
@@ -21,12 +23,15 @@ Soil pore-water free concentration `C_w^o(t)`, transpiration `Q_TP(t)`, and tiss
 ```bash
 pip install -r requirements.txt
 python src/pfas_rice_plant_module.py
+pip install pytest && pytest            # structural + mass-conservation tests
 ```
 This runs a synthetic demo (placeholder parameters — **not calibrated**) and prints the
-electrochemical number, binding factors, and final tissue concentrations/BAFs.
+electrochemical number, binding factors, final tissue concentrations/BAFs, and the
+`root > straw > grain` ordering check.
 
 ## Layout
 - `src/pfas_rice_plant_module.py` — the plant ODE module (Method A).
+- `tests/` — pytest suite locking in the structural results and exact mass conservation.
 - `docs/` — LaTeX model report (`pfas_rice_compartmental_model`) and the corrected
   neutral DPU base summary (`dpu_model_summary_corrected`).
 - `external/hydrus_source/` — git submodule of `phydrus/source_code` (HYDRUS-1D 4.08
@@ -34,7 +39,8 @@ electrochemical number, binding factors, and final tissue concentrations/BAFs.
 
 ## Status
 Structure + derivation complete; Python module runs and reproduces the expected structural
-behaviour. **Not yet calibrated** — see `CLAUDE.md` §6 and the prioritized next tasks in §9.
+behaviour, including the empirical **root > straw > grain** ordering via the TSCF loading
+factor. **Not yet calibrated** — see `CLAUDE.md` §6 and the prioritized next tasks in §9.
 
 ## References
 Brunetti et al. 2019 (WRR, DOI 10.1029/2019WR025432), 2021 (ES&T, 10.1021/acs.est.0c07420),

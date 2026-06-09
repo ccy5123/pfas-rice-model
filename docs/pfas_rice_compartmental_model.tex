@@ -59,7 +59,7 @@ The plant is represented by four compartments: roots ($k=1$), stem ($k=2$), leav
 
 \begin{description}[leftmargin=2.2em,style=nextline,nosep]
     \item[(A1)] Internal compartments exchange solute by \emph{advection} (xylem and phloem) plus internal partitioning; an explicit transmembrane uptake flux $j_R$ is retained only at the soil--root boundary.  The cell-level electrodiffusion equilibrium for internal tissues is absorbed into the binding factors $B_k$.
-    \item[(A2)] Each compartment is well mixed; the concentration carried by the sap leaving a compartment is the free aqueous concentration $\Cw{}_{,k}=C_k/B_k$.
+    \item[(A2)] Each compartment is well mixed; the concentration carried by the sap leaving a compartment is the free aqueous concentration $\Cw{}_{,k}=C_k/B_k$, except at the root--xylem boundary, where only a fraction $f_\mathrm{xy}\le1$ (the transpiration-stream concentration factor, TSCF) is loaded into the ascending xylem.  $f_\mathrm{xy}\to1$ recovers the unrestricted DPU base; $f_\mathrm{xy}\ll1$ for anions, whose endodermal (Casparian) loading and strong root binding sequester the solute in the root and limit root-to-shoot translocation.
     \item[(A3)] PFAS are non-volatile ($K_\mathrm{AW}\approx0$); volatilisation, gaseous uptake, and particle deposition are neglected.
     \item[(A4)] PFAS are metabolically recalcitrant; first-order metabolisation rate constants $\gamma_k\approx0$ (kept symbolically, set to zero in the PFAS limit).
     \item[(A5)] PFAS are fully dissociated ($f_d\approx1$, $f_n\approx0$); the neutral-permeation pathway and the weak-acid pH ion-trap are inactive.
@@ -99,9 +99,9 @@ The electrodiffusion term alone gives, at $J=0$, $\Cw{}_{,1}/\Cw^{o}=e^{-N}=e^{E
 The compartment state variable is the total tissue concentration, related to the free aqueous concentration through a (linearised) binding capacity factor:
 \begin{equation}\label{eq:binding}
     C_k=B_k\,\Cw{}_{,k},\qquad
-    B_k=\theta_k+\rho_k\!\left(f_\mathrm{prot}K_\mathrm{prot}+f_\mathrm{PL}K_\mathrm{PL}+f_\mathrm{cw}K_\mathrm{cw}\right),
+    B_k=\theta_k+f_\mathrm{prot}K_\mathrm{prot}+f_\mathrm{PL}K_\mathrm{PL}+f_\mathrm{cw}K_\mathrm{cw},
 \end{equation}
-with $\theta_k$ the aqueous fraction, $\rho_k$ density, and $f_\mathrm{prot},f_\mathrm{PL},f_\mathrm{cw}$ the protein, phospholipid, and cell-wall mass fractions.  Protein binding saturates at high concentration; $K_\mathrm{prot}$ may be replaced by a Langmuir form where needed.  $B_k$ carries the binding-driven accumulation; the large protein content of grain makes $B_4$ large, trapping PFAS in the edible tissue.
+with $\theta_k$ the aqueous volume fraction $[\mathrm{L\,kg^{-1}}]$ and $f_\mathrm{prot},f_\mathrm{PL},f_\mathrm{cw}$ the protein, phospholipid, and cell-wall mass fractions $[\mathrm{kg\,kg^{-1}}]$ multiplying the partition coefficients $K_i\,[\mathrm{L\,kg^{-1}}]$.  There is \emph{no} density prefactor: $B_k$ is a per-fresh-mass capacity, so each term already carries units $\mathrm{L\,kg^{-1}}$ and $C_k=B_k\Cw{}_{,k}$ is dimensionally consistent.  Protein binding saturates at high concentration; $K_\mathrm{prot}$ may be replaced by a Langmuir form where needed.  $B_k$ carries the binding-driven accumulation; the large protein content of grain makes $B_4$ large, trapping PFAS in the edible tissue.
 
 
 %% ============================================================
@@ -114,7 +114,11 @@ The xylem flow follows the DPU distribution
 \begin{equation}\label{eq:Qxyl}
     \dot{\mathbf Q}_\mathrm{XYL}=\Big[\dot Q_\mathrm{TP},\;\dot Q_\mathrm{TP},\;\tfrac{A_3}{A_3+A_4}\dot Q_\mathrm{TP},\;\tfrac{A_4}{A_3+A_4}\dot Q_\mathrm{TP}\Big]^{\mathsf T},
 \end{equation}
-and each compartment exports sap at its free concentration $C_k/B_k$.  The phloem flow is driven by grain sink demand plus a recirculating fraction $\varphi$ of transpiration:
+and each compartment exports sap at its free concentration $C_k/B_k$, with the exception of the root, whose xylem loading is throttled by the transpiration-stream concentration factor $f_\mathrm{xy}\le1$ (A2): the concentration entering the ascending xylem is
+\begin{equation}\label{eq:Cxyl}
+    \Cw^{\mathrm{xyl}}=f_\mathrm{xy}\,\frac{C_1}{B_1}.
+\end{equation}
+The phloem flow is driven by grain sink demand plus a recirculating fraction $\varphi$ of transpiration:
 \begin{equation}\label{eq:Qphl}
     \dot Q_\mathrm{Phl}=\dv{M_4}{t}\,T_{C,\mathrm{Ph}}+\varphi\,\dot Q_\mathrm{TP},
 \end{equation}
@@ -127,12 +131,12 @@ with phloem sap concentration set by carrier/channel loading at the leaf source 
 
 Writing $\mu_k=\tfrac{1}{M_k}\dv*{M_k}{t}$ for the growth-dilution rate,
 \begin{align}
-    \dv{C_1}{t}&=j_R-\frac{\dot Q_\mathrm{TP}}{M_1}\frac{C_1}{B_1}+\varphi\frac{\dot Q_\mathrm{Phl}}{M_1}C_\mathrm{Phl}-\gamma_1C_1-\mu_1C_1, \label{eq:root}\\[4pt]
-    \dv{C_2}{t}&=\frac{\dot Q_\mathrm{TP}}{M_2}\!\left(\frac{C_1}{B_1}-\frac{C_2}{B_2}\right)-\gamma_2C_2-\mu_2C_2, \label{eq:stem}\\[4pt]
-    \dv{C_3}{t}&=\frac{A_3}{A_3+A_4}\frac{\dot Q_\mathrm{TP}}{M_3}\frac{C_2}{B_2}-\frac{\dot Q_\mathrm{Phl}}{M_3}C_\mathrm{Phl}-\gamma_3C_3-\mu_3C_3, \label{eq:leaf}\\[4pt]
+    \dv{C_1}{t}&=j_R-\frac{\dot Q_\mathrm{TP}}{M_1}\Cw^{\mathrm{xyl}}+\varphi\frac{\dot Q_\mathrm{Phl}}{M_1}C_\mathrm{Phl}-\gamma_1C_1-\mu_1C_1, \label{eq:root}\\[4pt]
+    \dv{C_2}{t}&=\frac{\dot Q_\mathrm{TP}}{M_2}\!\left(\Cw^{\mathrm{xyl}}-\frac{C_2}{B_2}\right)-\gamma_2C_2-\mu_2C_2, \label{eq:stem}\\[4pt]
+    \dv{C_3}{t}&=\frac{A_3}{A_3+A_4}\frac{\dot Q_\mathrm{TP}}{M_3}\frac{C_2}{B_2}-(1+\varphi)\frac{\dot Q_\mathrm{Phl}}{M_3}C_\mathrm{Phl}-\gamma_3C_3-\mu_3C_3, \label{eq:leaf}\\[4pt]
     \dv{C_4}{t}&=\frac{A_4}{A_3+A_4}\frac{\dot Q_\mathrm{TP}}{M_4}\frac{C_2}{B_2}+\frac{\dot Q_\mathrm{Phl}}{M_4}C_\mathrm{Phl}-\gamma_4C_4-\mu_4C_4. \label{eq:fruit}
 \end{align}
-With $j_R=a_RJ_R$ from Eq.~\eqref{eq:JR_pfas} and the closures \eqref{eq:binding}--\eqref{eq:Cphl}, Eqs.~\eqref{eq:root}--\eqref{eq:fruit} form a closed nonlinear ODE system in $(C_1,\dots,C_4)$.
+With $j_R=a_RJ_R$ from Eq.~\eqref{eq:JR_pfas} and the closures \eqref{eq:binding} and \eqref{eq:Cxyl}--\eqref{eq:Cphl}, Eqs.~\eqref{eq:root}--\eqref{eq:fruit} form a closed nonlinear ODE system in $(C_1,\dots,C_4)$.  As the phloem source, the leaf loses the \emph{whole} phloem export $(1+\varphi)\dot Q_\mathrm{Phl}C_\mathrm{Phl}$, which feeds the grain sink ($\dot Q_\mathrm{Phl}C_\mathrm{Phl}$) and the root recirculation ($\varphi\dot Q_\mathrm{Phl}C_\mathrm{Phl}$); together with the matched root$\to$stem loading $\Cw^{\mathrm{xyl}}$, the internal xylem and phloem transfers then conserve solute mass exactly, leaving $j_R$ as the only net source (the only sink being metabolism, $\gamma_k\to0$).
 
 
 %% ============================================================
@@ -148,6 +152,7 @@ Scaling free concentrations by the soil value, $u_k=\Cw{}_{,k}/\Cw^{o}=C_k/(B_k\
 \midrule
 $B_k$ & binding capacity (tissue retention vs re-export) \\
 $N=zEF/RT$ & electrochemical driving force \\
+$f_\mathrm{xy}$ & root$\to$xylem loading factor (TSCF; translocation throttle) \\
 $\mathrm{Da}_k=\gamma_k B_k M_k/\dot Q_\mathrm{TP}$ & metabolism vs advective throughput \\
 $\Pi=\dot Q_\mathrm{Phl}L_\mathrm{Ph}/\dot Q_\mathrm{TP}$ & phloem vs xylem (leaf$\to$grain partitioning) \\
 $g_\mathrm{in}/g_\mathrm{out}$ & root influx vs efflux conductance (Eq.~\ref{eq:gio}) \\
@@ -165,9 +170,9 @@ Assuming the chemical distribution equilibrates fast relative to growth ($\dv*{C
 
 \paragraph{Xylem conservation.}  From Eq.~\eqref{eq:stem},
 \begin{equation}
-    \frac{u_2}{u_1}=\frac{1}{1+\mathrm{Da}_2}\;\xrightarrow{\ \gamma_2\to0\ }\;1,
+    \frac{u_2}{u_1}=\frac{f_\mathrm{xy}}{1+\mathrm{Da}_2}\;\xrightarrow{\ \gamma_2\to0\ }\;f_\mathrm{xy},
 \end{equation}
-so for non-metabolised PFAS the free concentration is conserved along the xylem ($\Cw{}_{,2}\approx\Cw{}_{,1}$).
+so for non-metabolised PFAS the free concentration entering the shoot is the root value reduced by the loading factor ($\Cw{}_{,2}\approx f_\mathrm{xy}\Cw{}_{,1}$) and is then conserved along the xylem.
 
 \paragraph{Root bioaccumulation factor.}  In the low-concentration (linear) limit $\Cw\ll K_m$, define
 \begin{equation}\label{eq:gio}
@@ -176,9 +181,9 @@ so for non-metabolised PFAS the free concentration is conserved along the xylem 
 \end{equation}
 Neglecting the (small) phloem return, the root balance \eqref{eq:root} at steady state gives
 \begin{equation}\label{eq:BAF}
-    \mathrm{BAF}_1=\frac{C_1}{\Cw^{o}}=B_1\,\frac{g_\mathrm{in}}{\,g_\mathrm{out}+\dot Q_\mathrm{TP}/M_1\,}.
+    \mathrm{BAF}_1=\frac{C_1}{\Cw^{o}}=B_1\,\frac{g_\mathrm{in}}{\,g_\mathrm{out}+f_\mathrm{xy}\dot Q_\mathrm{TP}/M_1\,}.
 \end{equation}
-The root BAF is thus the binding capacity $B_1$ times an influx/(efflux $+$ xylem export) ratio.  The chain-length dependence observed empirically (concave/U-shaped for PFCA, monotone for PFSA) enters through the chain-length variation of $B_1$ and of $g_\mathrm{in}/g_\mathrm{out}$.
+The root BAF is thus the binding capacity $B_1$ times an influx/(efflux $+$ loaded xylem export) ratio.  A small loading factor $f_\mathrm{xy}$ both raises the root BAF (less is exported upward) and starves the shoot, which is the mechanism that restores the empirical root~$>$~straw~$>$~grain ordering.  The chain-length dependence observed empirically (concave/U-shaped for PFCA, monotone for PFSA) enters through the chain-length variation of $B_1$, of $g_\mathrm{in}/g_\mathrm{out}$, and of $f_\mathrm{xy}$.
 
 \paragraph{Grain as a terminal accumulator.}  The fruit \eqref{eq:fruit} has no outflow and $\gamma_4\approx0$; the only sink is growth dilution $\mu_4=K_4^\mathrm{gr}(1-M_4/M_4^\mathrm{max})$, which vanishes as the grain matures.  Hence \emph{no bounded steady state exists}: the grain is an accumulator, and its concentration at harvest is the time integral of all inflows divided by the final grain mass,
 \begin{equation}\label{eq:grain}
@@ -222,6 +227,7 @@ $T_{C,\mathrm{Ph}}$ & phloem flux coefficient & literature ($\sim\SI{10}{L/kg}$)
 \midrule
 $B_k$ & compartment binding capacity & per-tissue BAF \\
 $g_\mathrm{in}/g_\mathrm{out}$ & root influx/efflux conductance ratio & root BAF \\
+$f_\mathrm{xy}$ & root$\to$xylem loading factor (TSCF) & root vs shoot BAF \\
 $\Pi=\dot Q_\mathrm{Phl}L_\mathrm{Ph}/\dot Q_\mathrm{TP}$ & phloem/xylem ratio & shoot \& grain BAF \\
 $\varphi$ & phloem recirculation fraction & root--shoot pattern \\
 \bottomrule
