@@ -1,0 +1,8 @@
+*:Zone.Identifier
+data/
+__pycache__/
+*.pyc
+*.aux
+*.log
+*.out
+*.toc
