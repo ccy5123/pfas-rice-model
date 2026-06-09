@@ -1,0 +1,270 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{physics}
+\usepackage{siunitx}
+\usepackage{upgreek}
+\usepackage{bm}
+\usepackage[version=4]{mhchem}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue!60!black, citecolor=blue!60!black}
+
+\geometry{top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\oN}{\mathbf{1}_N}
+\newcommand{\oFour}{\mathbf{1}_4}
+% Dimension symbols (upright sans-serif), distinct from variables
+\newcommand{\dM}{\mathsf{M}}
+\newcommand{\dL}{\mathsf{L}}
+\newcommand{\dT}{\mathsf{T}}
+\newcommand{\Cw}{C_{\mathrm{w}}}
+
+\title{\textbf{Mechanistic Compartmental Model for PFAS Bioaccumulation in Rice}\\[6pt]
+\large An Ionizable-Organic-Compound (IOC) Extension of the Dynamic Plant Uptake Framework}
+\author{Chan Young Joe}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+%% ============================================================
+\section{Introduction and Scope}
+%% ============================================================
+
+This report develops a mechanistic four-compartment model for the uptake and tissue distribution of per- and polyfluoroalkyl substances (PFAS) in rice (\emph{Oryza sativa}).  It extends the neutral-compound Dynamic Plant Uptake (DPU) base framework to \textbf{ionizable organic compounds (IOC)}, with PFAS treated as the limiting case of a \emph{permanently dissociated anion} (very low $\mathrm{p}K_\mathrm{a}$, dissociated fraction $f_d\approx1$ at environmental pH).
+
+Three features distinguish PFAS-in-rice from the neutral DPU base and motivate every structural change below:
+\begin{enumerate}[nosep]
+    \item \textbf{Charge.} The octanol--water / Briggs partition core of the neutral model does not apply; for PFAS the translocation factor correlates \emph{negatively} with $\log K_\mathrm{OW}$, and $K_\mathrm{OW}$ is itself ill-defined for surfactants.  Membrane crossing is governed by electrodiffusion together with channel- and carrier-mediated transport.
+    \item \textbf{Phloem-fed grain.} The rice grain is a terminal sink filled through the phloem, which the xylem-only DPU base cannot represent.  Moreover, the classical weak-acid \emph{ion-trap} phloem mechanism does not operate for a fully dissociated anion ($f_n\approx0$), so phloem loading is recast as carrier/channel loading.
+    \item \textbf{Binding-driven accumulation.} Tissue retention is set by protein, phospholipid, and cell-wall binding rather than by neutral-lipid partitioning; this is encoded in compartment binding factors $B_k$.
+\end{enumerate}
+
+\paragraph{Convention.}  Dimension symbols are upright sans-serif ($\dM$ mass, $\dL$ length, $\dT$ time, $\mathrm{mol}$ amount).  A dot marks a rate (a flow or a flux contributing to $\dv*{C}{t}$).  The state variable in each compartment $k$ is the total tissue concentration $C_k\;[\mathrm{mol\,kg^{-1}}]$ on a fresh-mass basis.
+
+
+%% ============================================================
+\section{Model Structure and Assumptions}
+%% ============================================================
+
+The plant is represented by four compartments: roots ($k=1$), stem ($k=2$), leaves ($k=3$), and fruits/grain ($k=4$).  The core assumptions are:
+
+\begin{description}[leftmargin=2.2em,style=nextline,nosep]
+    \item[(A1)] Internal compartments exchange solute by \emph{advection} (xylem and phloem) plus internal partitioning; an explicit transmembrane uptake flux $j_R$ is retained only at the soil--root boundary.  The cell-level electrodiffusion equilibrium for internal tissues is absorbed into the binding factors $B_k$.
+    \item[(A2)] Each compartment is well mixed; the concentration carried by the sap leaving a compartment is the free aqueous concentration $\Cw{}_{,k}=C_k/B_k$.
+    \item[(A3)] PFAS are non-volatile ($K_\mathrm{AW}\approx0$); volatilisation, gaseous uptake, and particle deposition are neglected.
+    \item[(A4)] PFAS are metabolically recalcitrant; first-order metabolisation rate constants $\gamma_k\approx0$ (kept symbolically, set to zero in the PFAS limit).
+    \item[(A5)] PFAS are fully dissociated ($f_d\approx1$, $f_n\approx0$); the neutral-permeation pathway and the weak-acid pH ion-trap are inactive.
+    \item[(A6)] Tissue mass $M_k(t)$, transpiration $\dot Q_\mathrm{TP}(t)$, and the soil pore-water free concentration $C_\mathrm{w}^{o}(t)$ are external inputs.
+\end{description}
+
+
+%% ============================================================
+\section{Root Membrane Uptake: Hybrid Flux}\label{sec:root}
+%% ============================================================
+
+\subsection{General hybrid flux}
+
+Across the root plasma membrane, the molar flux per unit membrane area $J_R\;[\mathrm{mol\,m^{-2}\,s^{-1}}]$ between soil pore water (superscript $o$) and the root symplast aqueous phase is the parallel sum of three pathways:
+\begin{equation}\label{eq:JR}
+    J_R=\underbrace{P_n\!\left(f_n^{o}\Cw^{o}-f_n^{i}\Cw{}_{,1}\right)}_{\text{neutral passive}}
+    +\underbrace{P_d^{\mathrm{eff}}\,\frac{N}{e^{N}-1}\!\left(f_d^{o}\Cw^{o}-f_d^{i}e^{N}\Cw{}_{,1}\right)}_{\text{ionic electrodiffusion}}
+    +\underbrace{\frac{V_{\max}^{\mathrm{in}}\Cw^{o}}{K_m^{\mathrm{in}}+\Cw^{o}}-\frac{V_{\max}^{\mathrm{out}}\Cw{}_{,1}}{K_m^{\mathrm{out}}+\Cw{}_{,1}}}_{\text{carrier-mediated (saturable)}},
+\end{equation}
+where $N=zEF/(RT)$ is the dimensionless electrochemical driving force ($z=-1$ for PFAS, $E$ the membrane potential, $E\approx-\SI{120}{mV}$), and $\Cw{}_{,1}=C_1/B_1$ is the root free aqueous concentration.  The passive channels (anion channels, aquaporins) act in parallel with the lipid bilayer and are absorbed into the effective ionic permeability,
+\begin{equation}\label{eq:Pdeff}
+    P_d^{\mathrm{eff}}=P_d+P_\mathrm{ac}+P_\mathrm{aq},\qquad P_d\approx P_n\cdot10^{-3.5},
+\end{equation}
+with $P_\mathrm{ac}$ (anion channel) and $P_\mathrm{aq}$ (aquaporin) as conductive contributions.  Only the carrier term ($V_{\max}$) is energy-dependent, i.e.\ the metabolic-inhibitor-sensitive fraction.  The mass-specific root uptake is $j_R=a_R J_R$, with $a_R\;[\mathrm{m^2\,kg^{-1}}]$ the specific root membrane area.
+
+\subsection{PFAS limit}
+
+For a fully dissociated anion ($f_n\to0,\;f_d\to1$) the neutral term vanishes:
+\begin{equation}\label{eq:JR_pfas}
+    J_R\approx P_d^{\mathrm{eff}}\,\frac{N}{e^{N}-1}\!\left(\Cw^{o}-e^{N}\Cw{}_{,1}\right)
+    +\frac{V_{\max}^{\mathrm{in}}\Cw^{o}}{K_m^{\mathrm{in}}+\Cw^{o}}-\frac{V_{\max}^{\mathrm{out}}\Cw{}_{,1}}{K_m^{\mathrm{out}}+\Cw{}_{,1}}.
+\end{equation}
+The electrodiffusion term alone gives, at $J=0$, $\Cw{}_{,1}/\Cw^{o}=e^{-N}=e^{EF/RT}<1$: passive electrodiffusion \emph{excludes} the anion (inside-negative membrane).  Observed accumulation must therefore be driven by the carrier influx $V_{\max}^{\mathrm{in}}$ and/or by binding (Section~\ref{sec:binding}).  This structure naturally separates congeners: PFOA behaves carrier-dominated (active), PFOS electrodiffusion/aquaporin-dominated (passive).
+
+\subsection{Free versus total concentration: binding}\label{sec:binding}
+
+The compartment state variable is the total tissue concentration, related to the free aqueous concentration through a (linearised) binding capacity factor:
+\begin{equation}\label{eq:binding}
+    C_k=B_k\,\Cw{}_{,k},\qquad
+    B_k=\theta_k+\rho_k\!\left(f_\mathrm{prot}K_\mathrm{prot}+f_\mathrm{PL}K_\mathrm{PL}+f_\mathrm{cw}K_\mathrm{cw}\right),
+\end{equation}
+with $\theta_k$ the aqueous fraction, $\rho_k$ density, and $f_\mathrm{prot},f_\mathrm{PL},f_\mathrm{cw}$ the protein, phospholipid, and cell-wall mass fractions.  Protein binding saturates at high concentration; $K_\mathrm{prot}$ may be replaced by a Langmuir form where needed.  $B_k$ carries the binding-driven accumulation; the large protein content of grain makes $B_4$ large, trapping PFAS in the edible tissue.
+
+
+%% ============================================================
+\section{Governing Equations for the Four-Compartment System}\label{sec:system}
+%% ============================================================
+
+\subsection{Long-distance transport}
+
+The xylem flow follows the DPU distribution
+\begin{equation}\label{eq:Qxyl}
+    \dot{\mathbf Q}_\mathrm{XYL}=\Big[\dot Q_\mathrm{TP},\;\dot Q_\mathrm{TP},\;\tfrac{A_3}{A_3+A_4}\dot Q_\mathrm{TP},\;\tfrac{A_4}{A_3+A_4}\dot Q_\mathrm{TP}\Big]^{\mathsf T},
+\end{equation}
+and each compartment exports sap at its free concentration $C_k/B_k$.  The phloem flow is driven by grain sink demand plus a recirculating fraction $\varphi$ of transpiration:
+\begin{equation}\label{eq:Qphl}
+    \dot Q_\mathrm{Phl}=\dv{M_4}{t}\,T_{C,\mathrm{Ph}}+\varphi\,\dot Q_\mathrm{TP},
+\end{equation}
+with phloem sap concentration set by carrier/channel loading at the leaf source (\emph{not} a pH ion-trap, per A5):
+\begin{equation}\label{eq:Cphl}
+    C_\mathrm{Phl}=L_\mathrm{Ph}\,\frac{C_3}{B_3}.
+\end{equation}
+
+\subsection{Compartment mass balances}
+
+Writing $\mu_k=\tfrac{1}{M_k}\dv*{M_k}{t}$ for the growth-dilution rate,
+\begin{align}
+    \dv{C_1}{t}&=j_R-\frac{\dot Q_\mathrm{TP}}{M_1}\frac{C_1}{B_1}+\varphi\frac{\dot Q_\mathrm{Phl}}{M_1}C_\mathrm{Phl}-\gamma_1C_1-\mu_1C_1, \label{eq:root}\\[4pt]
+    \dv{C_2}{t}&=\frac{\dot Q_\mathrm{TP}}{M_2}\!\left(\frac{C_1}{B_1}-\frac{C_2}{B_2}\right)-\gamma_2C_2-\mu_2C_2, \label{eq:stem}\\[4pt]
+    \dv{C_3}{t}&=\frac{A_3}{A_3+A_4}\frac{\dot Q_\mathrm{TP}}{M_3}\frac{C_2}{B_2}-\frac{\dot Q_\mathrm{Phl}}{M_3}C_\mathrm{Phl}-\gamma_3C_3-\mu_3C_3, \label{eq:leaf}\\[4pt]
+    \dv{C_4}{t}&=\frac{A_4}{A_3+A_4}\frac{\dot Q_\mathrm{TP}}{M_4}\frac{C_2}{B_2}+\frac{\dot Q_\mathrm{Phl}}{M_4}C_\mathrm{Phl}-\gamma_4C_4-\mu_4C_4. \label{eq:fruit}
+\end{align}
+With $j_R=a_RJ_R$ from Eq.~\eqref{eq:JR_pfas} and the closures \eqref{eq:binding}--\eqref{eq:Cphl}, Eqs.~\eqref{eq:root}--\eqref{eq:fruit} form a closed nonlinear ODE system in $(C_1,\dots,C_4)$.
+
+
+%% ============================================================
+\section{Nondimensionalization and Dimensionless Groups}\label{sec:nondim}
+%% ============================================================
+
+Scaling free concentrations by the soil value, $u_k=\Cw{}_{,k}/\Cw^{o}=C_k/(B_k\Cw^{o})$, the system is governed by:
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Group} & \textbf{Meaning} \\
+\midrule
+$B_k$ & binding capacity (tissue retention vs re-export) \\
+$N=zEF/RT$ & electrochemical driving force \\
+$\mathrm{Da}_k=\gamma_k B_k M_k/\dot Q_\mathrm{TP}$ & metabolism vs advective throughput \\
+$\Pi=\dot Q_\mathrm{Phl}L_\mathrm{Ph}/\dot Q_\mathrm{TP}$ & phloem vs xylem (leaf$\to$grain partitioning) \\
+$g_\mathrm{in}/g_\mathrm{out}$ & root influx vs efflux conductance (Eq.~\ref{eq:gio}) \\
+\bottomrule
+\end{tabular}
+\end{center}
+For PFAS, $\gamma_k\approx0\Rightarrow\mathrm{Da}_k\approx0$, a substantial simplification.
+
+
+%% ============================================================
+\section{Quasi-Steady-State Analysis}\label{sec:qss}
+%% ============================================================
+
+Assuming the chemical distribution equilibrates fast relative to growth ($\dv*{C_k}{t}=0$, $\gamma_k\approx0$):
+
+\paragraph{Xylem conservation.}  From Eq.~\eqref{eq:stem},
+\begin{equation}
+    \frac{u_2}{u_1}=\frac{1}{1+\mathrm{Da}_2}\;\xrightarrow{\ \gamma_2\to0\ }\;1,
+\end{equation}
+so for non-metabolised PFAS the free concentration is conserved along the xylem ($\Cw{}_{,2}\approx\Cw{}_{,1}$).
+
+\paragraph{Root bioaccumulation factor.}  In the low-concentration (linear) limit $\Cw\ll K_m$, define
+\begin{equation}\label{eq:gio}
+    g_\mathrm{in}=a_R\!\left[\frac{P_d^{\mathrm{eff}}N}{e^{N}-1}+\frac{V_{\max}^{\mathrm{in}}}{K_m^{\mathrm{in}}}\right],\qquad
+    g_\mathrm{out}=a_R\!\left[\frac{P_d^{\mathrm{eff}}N}{e^{N}-1}e^{N}+\frac{V_{\max}^{\mathrm{out}}}{K_m^{\mathrm{out}}}\right].
+\end{equation}
+Neglecting the (small) phloem return, the root balance \eqref{eq:root} at steady state gives
+\begin{equation}\label{eq:BAF}
+    \mathrm{BAF}_1=\frac{C_1}{\Cw^{o}}=B_1\,\frac{g_\mathrm{in}}{\,g_\mathrm{out}+\dot Q_\mathrm{TP}/M_1\,}.
+\end{equation}
+The root BAF is thus the binding capacity $B_1$ times an influx/(efflux $+$ xylem export) ratio.  The chain-length dependence observed empirically (concave/U-shaped for PFCA, monotone for PFSA) enters through the chain-length variation of $B_1$ and of $g_\mathrm{in}/g_\mathrm{out}$.
+
+\paragraph{Grain as a terminal accumulator.}  The fruit \eqref{eq:fruit} has no outflow and $\gamma_4\approx0$; the only sink is growth dilution $\mu_4=K_4^\mathrm{gr}(1-M_4/M_4^\mathrm{max})$, which vanishes as the grain matures.  Hence \emph{no bounded steady state exists}: the grain is an accumulator, and its concentration at harvest is the time integral of all inflows divided by the final grain mass,
+\begin{equation}\label{eq:grain}
+    C_4^{\mathrm{harv}}=\frac{1}{M_4^{\mathrm f}}\int_0^{t_\mathrm{harv}}\!\left(\dot Q_\mathrm{Phl}\,C_\mathrm{Phl}+\frac{A_4}{A_3+A_4}\dot Q_\mathrm{TP}\,\frac{C_2}{B_2}\right)dt.
+\end{equation}
+This is precisely why a \emph{dynamic} model coupled to grain-filling phenology is required; a steady-state formulation cannot, in principle, predict the edible-tissue concentration.
+
+\paragraph{Identifiability.}  Equation~\eqref{eq:BAF} depends on $P_d^{\mathrm{eff}}$ and $V_{\max}$ only through the \emph{lumped} conductance $g_\mathrm{in}$, not separately.  Bioaccumulation data alone therefore cannot resolve the channel (passive) from the carrier (active) contribution; selective-inhibitor experiments are required to separate them.
+
+
+%% ============================================================
+\section{Parameter Inventory and Calibration Design}\label{sec:params}
+%% ============================================================
+
+Parameters are organised by the data required to determine them.
+
+\paragraph{Tier 0 --- inputs / known (fixed).}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}p{4.4cm}p{6.2cm}p{3.6cm}@{}}
+\toprule
+\textbf{Symbol} & \textbf{Meaning} & \textbf{Source} \\
+\midrule
+$M_k(t),\dot Q_\mathrm{TP}(t),\Cw^{o}(t)$ & mass, transpiration, soil free conc.\ (drivers) & measurement / sub-model \\
+$M_k^0,M_k^\mathrm{max},K_k^\mathrm{gr}$ & logistic growth & biomass curves \\
+$S_k,\rho_k,\theta_k$ & specific area, density, water fraction & tissue measurement \\
+$N=zEF/RT$ & electrochemical number & $E\approx-\SI{120}{mV}$, $z=-1$ \\
+$f_d\approx1,\,f_n\approx0$ & dissociation fractions & $\mathrm{p}K_\mathrm{a}$ (strong acid) \\
+$\gamma_k\approx0$ & metabolism & recalcitrant $\to0$ \\
+$T_{C,\mathrm{Ph}}$ & phloem flux coefficient & literature ($\sim\SI{10}{L/kg}$) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Tier 1 --- identifiable from BAF / tissue-concentration data (lumped).}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}p{4.4cm}p{6.2cm}p{3.6cm}@{}}
+\toprule
+\textbf{Symbol} & \textbf{Meaning} & \textbf{Data} \\
+\midrule
+$B_k$ & compartment binding capacity & per-tissue BAF \\
+$g_\mathrm{in}/g_\mathrm{out}$ & root influx/efflux conductance ratio & root BAF \\
+$\Pi=\dot Q_\mathrm{Phl}L_\mathrm{Ph}/\dot Q_\mathrm{TP}$ & phloem/xylem ratio & shoot \& grain BAF \\
+$\varphi$ & phloem recirculation fraction & root--shoot pattern \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Tier 2 --- require inhibitor / kinetic experiments to separate.}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}p{4.4cm}p{6.2cm}p{3.6cm}@{}}
+\toprule
+\textbf{Split} & \textbf{Meaning} & \textbf{Experiment} \\
+\midrule
+$P_d\mid P_\mathrm{ac}\mid P_\mathrm{aq}$ & membrane / anion-channel / aquaporin & channel \& aquaporin blockers \\
+$V_{\max},K_m\mid P_d^{\mathrm{eff}}$ & carrier vs passive & metabolic inhibitor + conc.\ series \\
+$V_{\max}^{\mathrm{in}}\mid V_{\max}^{\mathrm{out}}$ & influx/efflux asymmetry & uptake/depuration kinetics \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Tier 3 --- independent measurement / QSPR (chain-length resolved).}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}p{4.4cm}p{6.2cm}p{3.6cm}@{}}
+\toprule
+\textbf{Symbol} & \textbf{Meaning} & \textbf{Source} \\
+\midrule
+$K_\mathrm{prot}$ & PFAS--protein binding & assay (albumin/FABP) / QSPR \\
+$K_\mathrm{PL}$ & phospholipid--water partition & measurement / QSPR \\
+$K_\mathrm{cw}$ & cell-wall sorption & measurement / estimate \\
+$L_\mathrm{Ph}$ & phloem loading partition & sparse data $\to$ estimate/calibrate \\
+$a_R$ & specific root membrane area & anatomical measurement \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Calibration workflow.}  The tiers define the procedure: fix Tier~0; supply Tier~3 by QSPR/assay (decomposing $B_k$ and providing $L_\mathrm{Ph}$); calibrate Tier~1 against chain-length-resolved BAF data (chain-length trends can be shared across homologues through a hierarchical structure); and obtain Tier~2 from dedicated inhibitor and uptake/depuration experiments.  The dominant uncertainties are expected to be (i) $K_\mathrm{prot}$ (controls grain $B_4$ and edible-tissue accumulation), (ii) $L_\mathrm{Ph}$ (data-poor phloem loading), and (iii) the $P_d^{\mathrm{eff}}$ vs $V_{\max}$ separation (not identifiable from BAF alone).
+
+
+%% ============================================================
+\section{Outlook}
+%% ============================================================
+
+The present document fixes the model skeleton, the dimensionless structure, and the calibration design.  Items deferred to subsequent work include: the QSPR construction for $K_\mathrm{prot}$ and $K_\mathrm{PL}$ (Tier~3); an explicit soil-side sub-model for $\Cw^{o}(t)$ under paddy redox dynamics; the saturable (nonlinear) regime of the carrier and protein-binding terms; and numerical implementation with parameter estimation against rice field and lysimeter datasets.
+
+\end{document}

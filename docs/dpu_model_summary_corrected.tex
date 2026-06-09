@@ -1,0 +1,424 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{physics}
+\usepackage{siunitx}
+\usepackage{upgreek}
+\usepackage{bm}
+\usepackage[version=4]{mhchem}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue!60!black, citecolor=blue!60!black}
+
+% Page margins
+\geometry{top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm}
+
+% Custom commands for clarity
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\oN}{\mathbf{1}_N}
+\newcommand{\oFour}{\mathbf{1}_4}
+% Dimension symbols (sans-serif, to distinguish from bold variables L, M)
+\newcommand{\dM}{\mathsf{M}}
+\newcommand{\dL}{\mathsf{L}}
+\newcommand{\dT}{\mathsf{T}}
+
+\title{\textbf{Technical Report: IOC DPU Summary}\\[6pt]
+\large Integrated Organic Chemical --- Dynamic Plant Uptake Model\\[4pt]
+\normalsize (corrected revision)}
+\author{Chan Young Joe}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+\newpage
+
+%% ============================================================
+\section{Introduction}
+%% ============================================================
+
+This report summarises the mathematical framework of the \textbf{IOC DPU} (Integrated Organic Chemical Dynamic Plant Uptake) model, which describes the fate and transport of organic chemicals within a growing plant.  The plant is conceptualised as four interconnected tissue compartments---\emph{roots}, \emph{stem}, \emph{leaves}, and \emph{fruits}---through which $N$ chemical species are transported, exchanged with the atmosphere, and metabolised.
+
+The state variable is the vector/matrix of tissue concentrations $\mathbf{C}\in\R^{N\times4}$, expressed as \textbf{mass of chemical per unit fresh tissue mass} $[\dM_\mathrm{chem}/\dM_\mathrm{tissue}]$.  Its governing equation across the four compartments takes the general form
+\begin{equation}\label{eq:governing}
+    \dv{\mathbf{C}}{t} = \dot{\mathbf{Q}}_\mathrm{IN} + \dot{\mathbf{Q}}_\mathrm{DEP} + \dot{\mathbf{Q}}_\mathrm{GAS} - \dot{\mathbf{Q}}_\mathrm{TR} - \dot{\mathbf{Q}}_\mathrm{VOL} + \dot{\bm{\Upomega}},
+\end{equation}
+where each term on the right-hand side represents a distinct mass-transfer or reaction process (see Section~\ref{sec:fluxes}).  A dot ($\dot{\;}$) marks a quantity that is itself a \emph{rate}: a volumetric flow, a flux contributing to $\dv*{\mathbf C}{t}$, or a hydraulic uptake rate.  Static transport coefficients (permeabilities, partition coefficients, deposition velocity, metabolisation operators) carry no dot.
+
+\paragraph{Scope and limitations.}  This formulation targets \emph{neutral} organic chemicals: the plant--water partitioning (Section~\ref{sec:partition}) follows the Briggs lipophilicity correlation, and no dissociation, pH-dependent speciation, membrane electrical potential, ion-trap, or phloem transport is included.  Extension to ionisable / permanently charged compounds (e.g.\ via a Nernst--Planck cell model and phloem loading) is outside the present scope and is treated separately.
+
+The remainder of this report is organised as follows.  Section~\ref{sec:definitions} introduces the notation and material properties of both the plant tissues and the chemical compounds.  Section~\ref{sec:growth} describes the logistic plant-growth model.  Section~\ref{sec:partition} defines the plant--water partition coefficient.  Section~\ref{sec:fluxes} derives each flux term appearing in Eq.~\eqref{eq:governing}.  Section~\ref{sec:metabolism} presents the metabolisation framework, and Section~\ref{sec:full} assembles the complete equation and discusses the numerical solution strategy.
+
+
+%% ============================================================
+\section{Definitions and Material Properties}\label{sec:definitions}
+%% ============================================================
+
+\subsection{Plant Tissue Properties}
+
+The four tissue compartments ($k=1$: roots, $k=2$: stem, $k=3$: leaves, $k=4$: fruits) are characterised by the following vectors.  The notation $[\cdot]$ denotes the physical dimension, with $\dM$ for mass, $\dL$ for length, $\dT$ for time, and $\mathrm{mol}$ for amount of substance.  \emph{Dimension symbols are set in upright sans serif} ($\dM,\dL,\dT$) to distinguish them from bold variable vectors such as $\mathbf{L}$ (lipid fraction) and $\mathbf{M}$ (tissue mass).
+
+\begin{align*}
+    \mathbf{W} &= 
+    \begin{bmatrix}
+        W_1 \\ W_2 \\ W_3 \\ W_4
+    \end{bmatrix};\; [\dL^3/\dM], \quad
+    \mathbf{L} = 
+    \begin{bmatrix}
+        L_1 \\ L_2 \\ L_3 \\ L_4
+    \end{bmatrix};\; [\dM/\dM], \quad
+    \mathbf{M}^0 = 
+    \begin{bmatrix}
+        M_1^0 \\ M_2^0 \\ M_3^0 \\ M_4^0
+    \end{bmatrix};\; [\dM], \quad
+    \mathbf{M}^\mathrm{max} = 
+    \begin{bmatrix}
+        M_1^\mathrm{max} \\ M_2^\mathrm{max} \\ M_3^\mathrm{max} \\ M_4^\mathrm{max}
+    \end{bmatrix};\; [\dM],
+\end{align*}
+\begin{align*}
+    \mathbf{K}^\mathrm{gr} &= 
+    \begin{bmatrix}
+        K_1^\mathrm{gr} \\ K_2^\mathrm{gr} \\ K_3^\mathrm{gr} \\ K_4^\mathrm{gr}
+    \end{bmatrix};\; [1/\dT], \quad
+    \mathbf{S} = 
+    \begin{bmatrix}
+        S_1 \\ S_2 \\ S_3 \\ S_4
+    \end{bmatrix};\; [\dL^2/\dM], \quad
+    \bm{\uprho} = 
+    \begin{bmatrix}
+        \rho_1 \\ \rho_2 \\ \rho_3 \\ \rho_4
+    \end{bmatrix};\; [\dM/\dL^3]
+\end{align*}
+
+\noindent Here:
+\begin{itemize}[nosep]
+    \item $\mathbf{W}$ --- water content of each tissue (volume of water per unit fresh mass),
+    \item $\mathbf{L}$ --- lipid fraction (mass of lipid per unit dry mass),
+    \item $\mathbf{M}^0,\;\mathbf{M}^\mathrm{max}$ --- initial and maximum tissue mass,
+    \item $\mathbf{K}^\mathrm{gr}$ --- logistic growth rate constant,
+    \item $\mathbf{S}$ --- specific surface area (surface area per unit mass),
+    \item $\bm{\uprho}$ --- bulk tissue density.
+\end{itemize}
+
+
+\subsection{Chemical Compound Properties}
+
+For the $N$ compounds of interest:
+\begin{equation*}
+    \mathbf{K}_\mathrm{OW} = 
+    \begin{bmatrix}
+        K_{\mathrm{OW},1} \\
+        K_{\mathrm{OW},2} \\
+        \vdots \\
+        K_{\mathrm{OW},N}
+    \end{bmatrix};\; [-], \quad
+    \mathbf{K}_\mathrm{AW} = 
+    \begin{bmatrix}
+        K_{\mathrm{AW},1} \\
+        K_{\mathrm{AW},2} \\
+        \vdots \\
+        K_{\mathrm{AW},N}
+    \end{bmatrix};\; [-], \\
+\end{equation*}
+\begin{equation*}
+    \mathbf{C}_\mathrm{A} =
+    \begin{bmatrix}
+        C_{\mathrm{A},1} \\
+        C_{\mathrm{A},2} \\
+        \vdots \\
+        C_{\mathrm{A},N}
+    \end{bmatrix};\; [\dM/\dL^3], \quad
+    \mathbf{m} = 
+    \begin{bmatrix}
+        m_1 \\
+        m_2 \\
+        \vdots \\
+        m_N
+    \end{bmatrix};\; [\dM\,\mathrm{mol}^{-1}]
+\end{equation*}
+
+\noindent where $\mathbf{K}_\mathrm{OW}$ is the octanol--water partition coefficient \emph{on the linear (non-log) scale}, $\mathbf{K}_\mathrm{AW}$ the air--water partition coefficient, $\mathbf{C}_\mathrm{A}$ the atmospheric concentration, and $\mathbf{m}$ the molar mass.  Wherever a logarithm of $K_\mathrm{OW}$ is required (e.g.\ Eq.~\eqref{eq:Pc}) it is written explicitly as $\log\mathbf{K}_\mathrm{OW}$.
+
+\paragraph{Notation convention.}  Throughout this report, $\odot$ denotes the element-wise (Hadamard) product, $\oslash$ denotes element-wise division, and $\mathbf{X}^{\circ\alpha}$ denotes the element-wise power $\alpha$ applied to each entry of $\mathbf{X}$.  A broadcast of a column vector $\mathbf{x}\in\R^N$ to all four compartments is written $\mathbf{x}\,\oFour^\mathsf{T}\in\R^{N\times4}$ (and analogously $\oN\,\mathbf{y}^\mathsf{T}$ broadcasts $\mathbf{y}\in\R^4$ to all $N$ species).
+
+
+%% ============================================================
+\section{Plant Growth Model}\label{sec:growth}
+%% ============================================================
+
+The fresh-weight mass of each tissue compartment is assumed to follow a logistic growth curve:
+\begin{equation}\label{eq:growth_ode}
+    \dv{\mathbf{M}}{t} = \mathbf{K}^\mathrm{gr} \odot \mathbf{M} \odot \left(\mathbf{1} - \mathbf{M} \oslash \mathbf{M}^\mathrm{max}\right).
+\end{equation}
+
+Given the initial condition $\mathbf{M}(0)=\mathbf{M}^0$ (with $\mathbf{M}^0>\mathbf{0}$ element-wise), the analytical solution is
+\begin{equation}\label{eq:growth_soln}
+    \mathbf{M}(t) = \mathbf{M}^\mathrm{max} \oslash \left[\mathbf{1}+\left(\mathbf{M}^\mathrm{max}\oslash\mathbf{M}^0-\mathbf{1}\right)\odot\exp\!\left(-\mathbf{K}^\mathrm{gr}t\right)\right].
+\end{equation}
+
+From the mass trajectory, the \emph{surface area} of each tissue compartment is obtained as
+\begin{equation}\label{eq:area}
+    \mathbf{A}(t) := \mathbf{S}\odot \mathbf{M}(t)\in \R^4;\; [\dL^2].
+\end{equation}
+
+
+%% ============================================================
+\section{Plant--Water Partition Coefficient}\label{sec:partition}
+%% ============================================================
+
+Following Briggs et al.\ (1982), the plant--water partition coefficient for each compound--tissue combination is modelled as
+\begin{equation}\label{eq:kpw}
+    \mathbf{K}_\mathrm{PW} := \oN\mathbf{W}^\mathsf{T} + a\,\mathbf{K}_\mathrm{OW}^{\circ b}\,\mathbf{L}^\mathsf{T} \;\in \R^{N\times 4};\; [\dL^3/\dM].
+\end{equation}
+Here $b\;[-]$ is a dimensionless exponent and $a\;[\dL^3/\dM]$ is the lipid--water sorption coefficient (i.e.\ the proportionality between $K_\mathrm{OW}^{\,b}$ and the lipid-normalised capacity); $a$ therefore carries the dimension $[\dL^3/\dM]$ so that the second term matches the first.  In matrix form:
+\begin{equation*}
+    \mathbf{K}_\mathrm{PW} = 
+    \begin{bmatrix}
+        K_{\mathrm{PW},11} & K_{\mathrm{PW},12} & K_{\mathrm{PW},13} & K_{\mathrm{PW},14}\\
+        K_{\mathrm{PW},21} & K_{\mathrm{PW},22} & K_{\mathrm{PW},23} & K_{\mathrm{PW},24}\\
+        \vdots & \vdots & \vdots & \vdots\\
+        K_{\mathrm{PW},N1} & K_{\mathrm{PW},N2} & K_{\mathrm{PW},N3} & K_{\mathrm{PW},N4}
+    \end{bmatrix}.
+\end{equation*}
+
+The first term ($\oN\mathbf{W}^\mathsf{T}$) accounts for partitioning into the aqueous fraction, and the second term ($a\,\mathbf{K}_\mathrm{OW}^{\circ b}\,\mathbf{L}^\mathsf{T}$) for partitioning into the lipid fraction.  $\mathbf{K}_\mathrm{PW}$ maps a soil/xylem-water concentration $[\dM_\mathrm{chem}/\dL^3]$ to the tissue mass-fraction $[\dM_\mathrm{chem}/\dM_\mathrm{tissue}]$; it is thus a capacity factor rather than a dimensionless ratio.  Note that the accuracy of this correlation decreases with increasing polarity of the compound, and it is not valid for dissociating species.
+
+
+%% ============================================================
+\section{Flux Terms}\label{sec:fluxes}
+%% ============================================================
+
+This section derives each flux term in the governing equation~\eqref{eq:governing}.
+
+\subsection{Xylem Flow}\label{sec:xylem}
+
+The effect of plant water storage is neglected.  For small crops, the xylem sap flow is assumed equal to the transpiration stream $\dot{Q}_\mathrm{TP}(t)\;[\dL^3/\dT]$, supplied as an external (time-dependent) input.  The flow is distributed to the four compartments as
+\begin{equation}\label{eq:xylem}
+    \dot{\mathbf{Q}}_\mathrm{XYL} :=
+    \begin{bmatrix}
+        \dot{Q}_\mathrm{TP}\\[4pt]
+        \dot{Q}_\mathrm{TP}\\[4pt]
+        \dfrac{A_3}{A_3 + A_4}\,\dot{Q}_\mathrm{TP}\\[6pt]
+        \dfrac{A_4}{A_3 + A_4}\,\dot{Q}_\mathrm{TP}
+    \end{bmatrix};\; [\dL^3/\dT].
+\end{equation}
+
+Roots and stem receive the full transpiration flow; leaves and fruits share it in proportion to their respective surface areas.
+
+
+\subsection{Translocation (\texorpdfstring{$\dot{\mathbf{Q}}_\mathrm{TR}$}{Q\_TR})}\label{sec:translocation}
+
+The solute translocation flux describes the advective transport of dissolved chemicals carried by the xylem sap (the outflow leaving each compartment):
+\begin{equation}\label{eq:Qtr}
+    \dot{\mathbf{Q}}_\mathrm{TR} = \left[\oN\!\left(\bm{\upchi}_\mathrm{TR}\odot\dot{\mathbf{Q}}_\mathrm{XYL} \oslash \mathbf{M}\right)^\mathsf{T}\right] \odot \left(\mathbf{C} \oslash \mathbf{K}_\mathrm{PW}\right)\in \R^{N\times4},
+\end{equation}
+where the masking vector
+\begin{equation*}
+    \bm{\upchi}_\mathrm{TR} := 
+    \begin{bmatrix}
+        1 \\ 1 \\ 0 \\ 0
+    \end{bmatrix}
+\end{equation*}
+ensures that translocation occurs \emph{only} from roots and stem.  Leaves and fruits are the terminal compartments of the xylem, so no further outward translocation is assumed from them.
+
+
+\subsection{Solute Inflow (\texorpdfstring{$\dot{\mathbf{Q}}_\mathrm{IN}$}{Q\_IN})}\label{sec:inflow}
+
+The inflow into each compartment comprises (i) the translocation flux arriving from the upstream compartment and (ii) root uptake from the soil solution:
+\begin{equation}\label{eq:Qin}
+    \dot{\mathbf Q}_\mathrm{IN}
+=
+\dot{\mathbf Q}_\mathrm{TR}\,\mathbf T^{\mathsf T}
++
+\begin{bmatrix}
+\dot{\mathbf q}_\mathrm{up} & \mathbf 0 & \mathbf 0 & \mathbf 0
+\end{bmatrix}
+\in \R^{N\times4},
+\end{equation}
+where the \emph{transfer matrix} $\mathbf{T}$ routes the outflow from one compartment as inflow to the next.  Its entry $T_{ik}$ is the fraction of compartment $k$'s xylem outflow that is delivered to compartment $i$ (\emph{receiver in rows, donor in columns}):
+\begin{equation}\label{eq:T}
+    \mathbf T
+=
+\begin{bmatrix}
+0 & 0 & 0 & 0 \\[2pt]
+1 & 0 & 0 & 0 \\[2pt]
+0 & \dfrac{A_3}{A_3 + A_4} & 0 & 0 \\[6pt]
+0 & \dfrac{A_4}{A_3 + A_4} & 0 & 0
+\end{bmatrix}.
+\end{equation}
+With this convention, inflow to compartment $i$ is $\sum_k T_{ik}\,\dot{\mathbf Q}_\mathrm{TR}[:,k] = (\dot{\mathbf Q}_\mathrm{TR}\mathbf T^{\mathsf T})[:,i]$, hence the transpose $\mathbf T^{\mathsf T}$ in Eq.~\eqref{eq:Qin}.  (Using $\dot{\mathbf Q}_\mathrm{TR}\mathbf T$ without the transpose would route stem outflow back into the roots and leave the stem with zero inflow.)  The root uptake rate is
+\begin{equation*}
+    \dot{\mathbf q}_\mathrm{up}
+:=
+\frac{\dot{\mathbf U}_\mathrm{HYD}}{M_{\mathrm{root,fw}}}
+\in \R^{N\times1},
+\end{equation*}
+where $\dot{\mathbf{U}}_\mathrm{HYD}(t)$ is the hydraulic (solute) uptake rate from the soil, supplied as an external boundary condition (e.g.\ from a soil hydrology / reactive-transport model).
+
+
+\subsection{Permeabilities and Air Exchange}\label{sec:permeability}
+
+The exchange of chemicals between the plant surface and the atmosphere occurs through three parallel pathways: the cuticle, the air boundary layer, and the stomata.  \emph{The numerical constants in the empirical permeability correlations below assume SI base units} (length in \si{m}, time in \si{s}, molar mass $\mathbf m$ in \si{g/mol}, $\mathbf K_\mathrm{OW},\mathbf K_\mathrm{AW}$ dimensionless); each resulting permeability has units of $[\dL/\dT]$ (\si{m/s}).
+
+\paragraph{Cuticle permeability.}
+\begin{equation}\label{eq:Pc}
+    \mathbf{P}_\mathrm{C} := 10^{\,0.704\log \mathbf{K}_\mathrm{OW}-11.2}\in \R^{N};\; [\dL/\dT].
+\end{equation}
+
+\paragraph{Air boundary-layer conductance.}
+\begin{equation}\label{eq:Pair}
+    \mathbf{P}_\mathrm{air} := \frac{\sqrt{300}\;\mathbf{K}_\mathrm{AW}}{200\;\mathbf{m}^{\circ\,0.5}}\in \R^{N};\; [\dL/\dT].
+\end{equation}
+
+\paragraph{Aqueous-layer (apoplast) permeability.}
+\begin{equation}\label{eq:Paqua}
+    \mathbf{P}_\mathrm{aqua} := \frac{D_{\ce{O2}}}{z}\left(\frac{\mathbf{m}}{32}\right)^{\circ(-0.5)}\in \R^{N};\; [\dL/\dT],
+\end{equation}
+where $D_{\ce{O2}}\;[\dL^2/\dT]$ is the diffusion coefficient of oxygen in water, $32\;[\dM\,\mathrm{mol}^{-1}]$ its molar mass, and $z\;[\dL]$ the diffusion path length.  (The path length $z$ divides the diffusivity, so that $D_{\ce{O2}}/z$ has units $[\dL/\dT]$ and the molar-mass ratio $(\mathbf m/32)^{-0.5}$ is dimensionless.)
+
+\paragraph{Total cuticle permeability.}  These three resistances act in series:
+\begin{equation}\label{eq:Pctot}
+    \mathbf{P}_\mathrm{C, tot} := \left[\mathbf{P}_\mathrm{C}^{\circ(-1)} + \mathbf{P}_\mathrm{air}^{\circ(-1)} +  \mathbf{P}_\mathrm{aqua}^{\circ(-1)}\right]^{\circ(-1)}\in \R^{N};\; [\dL/\dT].
+\end{equation}
+
+\paragraph{Stomatal conductance.}  The stomatal pathway is linked to the transpiration stream:
+\begin{equation}\label{eq:Ps}
+    \mathbf{P}_\mathrm{S} = \frac{\rho_\mathrm{water}}{(1-\phi)\,C_{\ce{H2O}\mathrm{,sat}}}\left[(\mathbf{m}/18)^{\circ(-0.5)}\odot\mathbf{K}_\mathrm{AW}\right]\!\left(\dot{\mathbf{Q}}_\mathrm{XYL}\oslash \mathbf{A}\right)^\mathsf{T}\in \R^{N\times 4};\; [\dL/\dT],
+\end{equation}
+where $\phi$ is the relative humidity and the saturation concentration of water vapour is
+\begin{equation}\label{eq:Csat}
+    C_{\ce{H2O}\mathrm{,sat}} = \frac{p_{\ce{H2O}}}{461.9\,T};\quad p_{\ce{H2O}} = 610.7\times 10^{\frac{7.5\,T_C}{237 + T_C}};\quad T_C = T - \SI{273.15}{K}.
+\end{equation}
+\emph{Caveat:} the factor $1/(1-\phi)$ is singular as $\phi\to1$ (saturated air).  In that limit the transpiration stream $\dot{Q}_\mathrm{TP}\to0$ as well, so $\mathbf{P}_\mathrm{S}\odot(\dot{\mathbf Q}_\mathrm{XYL}\oslash\mathbf A)$ remains finite; nonetheless the term should be guarded numerically (e.g.\ cap $\phi<1$) to avoid overflow.
+
+\paragraph{Total plant--air permeability.}  The cuticle and stomatal pathways act in \emph{parallel}:
+\begin{equation}\label{eq:Pp}
+    \mathbf{P}_\mathrm{P} = \mathbf{P}_\mathrm{S} + \oN\,\mathbf{P}_\mathrm{C, tot}^\mathsf{T} \in \R^{N\times 4};\; [\dL/\dT].
+\end{equation}
+
+\paragraph{Important modelling assumptions:}
+\begin{itemize}[nosep]
+    \item No volatilisation is assumed from the roots (below-ground tissue).
+    \item Only the cuticular pathway is considered for the stem.
+    \item For leaves and fruits, exchange occurs through both the cuticle and stomata in parallel.
+\end{itemize}
+
+
+\subsection{Plant--Air Partition Coefficient}
+
+The partition coefficient between the plant tissue and air is given by
+\begin{equation}\label{eq:Kpa}
+    \mathbf{K}_\mathrm{PA} = \mathbf{K}_\mathrm{PW} \odot \left(\oN\, \bm{\uprho}^\mathsf{T}\right) \oslash \left(\mathbf{K}_\mathrm{AW}\,\oFour^\mathsf{T}\right)\in \R^{N\times 4};\; [-].
+\end{equation}
+
+
+\subsection{Volatilisation (\texorpdfstring{$\dot{\mathbf{Q}}_\mathrm{VOL}$}{Q\_VOL})}\label{sec:vol}
+
+The volatilisation flux describes the loss of chemicals from the plant tissue to the atmosphere:
+\begin{equation}\label{eq:Qvol}
+    \dot{\mathbf{Q}}_\mathrm{VOL} = \left[\oN\!\left(\mathbf{A}\odot \bm{\uprho}\oslash\mathbf{M}\right)^\mathsf{T}\right]\odot\left(\mathbf{P}_\mathrm{P}\odot\mathbf{C}\oslash\mathbf{K}_\mathrm{PA}\right).
+\end{equation}
+
+
+\subsection{Gaseous Uptake (\texorpdfstring{$\dot{\mathbf{Q}}_\mathrm{GAS}$}{Q\_GAS})}\label{sec:gas}
+
+The uptake of gaseous-phase chemicals from the atmosphere into the plant is
+\begin{equation}\label{eq:Qgas}
+    \dot{\mathbf{Q}}_\mathrm{GAS} = (1-f_p)\left[\mathbf{C}_\mathrm{A}\!\left(\mathbf{A}\oslash\mathbf{M}\right)^\mathsf{T}\right]\odot\mathbf{P}_\mathrm{P},
+\end{equation}
+where $f_p\;[-]$ is the fraction of the atmospheric concentration that is associated with airborne particles.
+
+
+\subsection{Particle Deposition (\texorpdfstring{$\dot{\mathbf{Q}}_\mathrm{DEP}$}{Q\_DEP})}\label{sec:dep}
+
+The uptake of particle-bound chemicals via dry deposition is
+\begin{equation}\label{eq:Qdep}
+    \dot{\mathbf{Q}}_\mathrm{DEP} = \nu_\mathrm{DEP}\,f_p\left[\mathbf{C}_\mathrm{A}\!\left(\mathbf{A}\oslash\mathbf{M}\right)^\mathsf{T}\right],
+\end{equation}
+where $\nu_\mathrm{DEP}\;[\dL/\dT]$ is the particle deposition velocity (commonly assumed $\approx \SI{0.001}{m/s}$).
+
+
+%% ============================================================
+\section{Plant Metabolisation}\label{sec:metabolism}
+%% ============================================================
+
+Chemical transformation within the plant is modelled using a first-order metabolisation matrix for each tissue compartment $k$:
+\begin{equation}\label{eq:gamma}
+    \bm{\Upgamma}_k = 
+    \begin{bmatrix}
+        -\tau_{11} & \tau_{12} & \dots & \tau_{1N} \\
+        \tau_{21} & -\tau_{22} & \dots & \tau_{2N} \\
+        \vdots & \vdots & \ddots & \vdots \\
+        \tau_{N1} & \tau_{N2} & \dots & -\tau_{NN}
+    \end{bmatrix}\in \R^{N\times N},
+\end{equation}
+where $\tau_{ij}\;[1/\dT]$ is the rate constant for the transformation $s_j \rightarrow s_i$.  The diagonal entries (with a negative sign) represent the total first-order degradation rate of each compound.
+
+The four tissue-specific matrices are assembled into a single block-diagonal operator via the direct sum:
+\begin{equation}\label{eq:bigG}
+    \bm{\mathcal{G}} := \bigoplus_{k=1}^{4}\bm{\Upgamma}_k=
+    \begin{bmatrix}
+        \bm{\Upgamma}_1 & \mathbf{0} & \mathbf{0} & \mathbf{0} \\
+        \mathbf{0} & \bm{\Upgamma}_2 & \mathbf{0} & \mathbf{0} \\
+        \mathbf{0} & \mathbf{0} & \bm{\Upgamma}_3 & \mathbf{0} \\
+        \mathbf{0} & \mathbf{0} & \mathbf{0} & \bm{\Upgamma}_4
+    \end{bmatrix}\in \R^{4N \times 4N},
+\end{equation}
+where $\mathbf{0}:= \mathbf{0}_{N \times N}$.  Acting on the (column-stacked) concentration vector, the metabolisation \emph{flux} is then
+\begin{equation}\label{eq:omega}
+    \dot{\bm{\Upomega}} = \bm{\mathcal{G}}\,\mathbf{C}.
+\end{equation}
+
+
+%% ============================================================
+\section{Full Governing Equation and Numerical Solution}\label{sec:full}
+%% ============================================================
+
+\subsection{Complete Equation}
+
+Substituting all flux terms into Eq.~\eqref{eq:governing}, the fully expanded governing equation reads
+\begin{align}\label{eq:full}
+    \dv{\mathbf{C}}{t}
+    &= \underbrace{\left\{\left[\oN\!\left(\bm{\upchi}_\mathrm{TR}\odot\dot{\mathbf{Q}}_\mathrm{XYL} \oslash \mathbf{M}\right)^\mathsf{T}\right] \odot \left(\mathbf{C} \oslash \mathbf{K}_\mathrm{PW}\right)\right\}\mathbf{T}^{\mathsf T}
+    +
+    \begin{bmatrix}
+    \dot{\mathbf q}_\mathrm{up} & \mathbf 0 & \mathbf 0 & \mathbf 0
+    \end{bmatrix}}_{\dot{\mathbf{Q}}_\mathrm{IN}} \nonumber\\[6pt]
+    &\quad+ \underbrace{\nu_\mathrm{DEP}\,f_p\left[\mathbf{C}_\mathrm{A}\!\left(\mathbf{A}\oslash\mathbf{M}\right)^\mathsf{T}\right]}_{\dot{\mathbf{Q}}_\mathrm{DEP}}
+    + \underbrace{(1-f_p)\left[\mathbf{C}_\mathrm{A}\!\left(\mathbf{A}\oslash\mathbf{M}\right)^\mathsf{T}\right]\odot\mathbf{P}_\mathrm{P}}_{\dot{\mathbf{Q}}_\mathrm{GAS}} \nonumber\\[6pt]
+    &\quad- \underbrace{\left[\oN\!\left(\bm{\upchi}_\mathrm{TR}\odot\dot{\mathbf{Q}}_\mathrm{XYL} \oslash \mathbf{M}\right)^\mathsf{T}\right] \odot \left(\mathbf{C} \oslash \mathbf{K}_\mathrm{PW}\right)}_{\dot{\mathbf{Q}}_\mathrm{TR}} \nonumber\\[6pt]
+    &\quad- \underbrace{\left[\oN\!\left(\mathbf{A}\odot \bm{\uprho}\oslash\mathbf{M}\right)^\mathsf{T}\right]\odot\left(\mathbf{P}_\mathrm{P}\odot\mathbf{C}\oslash\mathbf{K}_\mathrm{PA}\right)}_{\dot{\mathbf{Q}}_\mathrm{VOL}}
+    + \underbrace{\bm{\mathcal{G}}\,\mathbf{C}}_{\dot{\bm{\Upomega}}}.
+\end{align}
+
+
+\subsection{Model Inputs and Initial Conditions}
+
+Integration of Eq.~\eqref{eq:full} requires: the initial tissue concentrations $\mathbf{C}(0)$ (often $\mathbf{0}$ for a clean planting); the tissue mass trajectory $\mathbf{M}(t)$ from Eq.~\eqref{eq:growth_soln} (which also sets $\mathbf{A}(t)$); the transpiration stream $\dot{Q}_\mathrm{TP}(t)$; the soil-side hydraulic uptake $\dot{\mathbf{U}}_\mathrm{HYD}(t)$; the atmospheric concentration $\mathbf{C}_\mathrm{A}(t)$; and the environmental drivers $T(t)$ and $\phi(t)$.
+
+
+\subsection{Time Integration}
+
+Equation~\eqref{eq:full} constitutes a stiff, nonlinear system of $4N$ coupled ordinary differential equations.  It is discretised in time using the \textbf{backward Euler method}:
+\begin{equation}\label{eq:euler}
+    \frac{\mathbf{C}^{t+\Delta t} - \mathbf{C}^t}{\Delta t} = \dot{\mathbf{Q}}_\mathrm{IN}^{t+\Delta t} + \dot{\mathbf{Q}}_\mathrm{DEP}^{t+\Delta t} + \dot{\mathbf{Q}}_\mathrm{GAS}^{t+\Delta t} - \dot{\mathbf{Q}}_\mathrm{TR}^{t+\Delta t} - \dot{\mathbf{Q}}_\mathrm{VOL}^{t+\Delta t} + \dot{\bm{\Upomega}}^{t+\Delta t}.
+\end{equation}
+
+Since all flux terms on the right-hand side are evaluated at the unknown time level $t+\Delta t$, the resulting nonlinear algebraic system is solved iteratively using a \textbf{quasi-Newton--Broyden method}, which avoids the need to recompute the full Jacobian at every iteration while maintaining superlinear convergence.  (Backward Euler is only first-order accurate in time; if higher accuracy is needed for the stiff dynamics, a second-order BDF or an implicit Rosenbrock scheme can replace it without changing the residual structure.)
+
+
+%% ============================================================
+\addcontentsline{toc}{section}{References}
+%% ============================================================
+\begin{thebibliography}{9}
+\bibitem{briggs1982} Briggs, G.~G., Bromilow, R.~H., \& Evans, A.~A. (1982). Relationships between lipophilicity and root uptake and translocation of non-ionised chemicals by barley. \emph{Pesticide Science}, 13(5), 495--504.
+\bibitem{trapp1994} Trapp, S., McFarlane, J.~C., \& Matthies, M. (1994). Model for uptake of xenobiotics into plants: validation with bromacil experiments. \emph{Environmental Toxicology and Chemistry}, 13(3), 413--422.
+\bibitem{trapp1995} Trapp, S., \& Matthies, M. (1995). Generic one-compartment model for uptake of organic chemicals by foliar vegetation. \emph{Environmental Science \& Technology}, 29(9), 2333--2338.
+\end{thebibliography}
+
+
+\end{document}
