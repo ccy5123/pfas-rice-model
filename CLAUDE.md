@@ -96,13 +96,14 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   plus `raw_si/` (per-congener tables extracted from the cited papers' SI). `src/literature_params.py`
   transcribes the **verified** pieces — soil `Koc(chain length)` QSPR (Higgins & Luthy +0.55/CF₂,
   +0.23 sulfonate; anchored on Milinovic PFOA/PFOS/PFBS), `f_d` from pKa (Goss 2008), rice root
-  `E_m` (Wang 1994), and now the **MEASURED per-congener `K_PL`** (Chen 2025 K_MW Table S5, L/kg
-  lipid, cross-checked vs Droge 2019 SSLM) and **`K_prot`** (from Chen 2025 HSA `K_D`, single-site;
-  cross-checked vs Zhou 2025 BSA) — into builders (`literature_compound`, `literature_environment`,
-  `literature_paddy_soil`). Each value carries a citation + `DOI_status`. **Still placeholder**:
-  `K_cw` (no coefficient in literature) and the absolute *plant* `K_prot` intercept (Zhou's plant
-  numbers are in the main text, not the SI → albumin × `PLANT_PROTEIN_SCALE`); transport params
-  (`f_xy, L_Ph, kappa_d, Vmax/Km`) are still fitted (Tier-1/2, not BAF-identifiable).
+  `E_m` (Wang 1994), and the **MEASURED per-congener `K_PL`** (Chen 2025 K_MW Table S5, L/kg lipid,
+  cross-checked vs Droge 2019 SSLM) and **`K_prot`** (Zhou 2025 **Table 1** dialysis `K_prow`: soy
+  protein isolate = the plant/grain analog, BSA = animal reference) — into builders
+  (`literature_compound`, `literature_environment`, `literature_paddy_soil`). Each value carries a
+  citation + `DOI_status`. NOTE: the Chen HSA `K_D` / Zhou BSA `K_A` are *binding constants*; the
+  single-site `K_D`→partition route overestimates ~50× vs the dialysis `K_prow`, so dialysis is used
+  and `k_prot_albumin` is reference-only. **Still placeholder**: `K_cw` (no coefficient exists in the
+  literature); transport params (`f_xy, L_Ph, kappa_d, Vmax/Km`) remain fitted (Tier-1/2).
 - **Real Tier-1 calibration (task #4)**: Kim 2019 (`docs/literature_db/raw_si/kim2019_*`) gives
   per-congener brown-rice (grain) BAF paired with paddy pore water. `literature_params.kim2019_grain_baf()`
   exposes it; the demo fits `L_Ph` to the PFOA grain BAF (0.07 → 4.43 L/kg, `L_Ph≈0.84`). The
@@ -136,12 +137,11 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
    factor `f_xy` (TSCF) + mass-conserving phloem; demo reproduces `root > straw > grain`;
    regression tests in `tests/`. (Calibrating `f_xy`/`L_Ph`/`B_k` to data is task #4.)
 2. **Tier-3 QSPR** for `K_prot`, `K_PL` (chain-length descriptors) to populate `B_k`
-   **MOSTLY DONE** (`src/literature_params.py` + `docs/literature_db/raw_si/`): the **measured
-   per-congener** `K_PL` (Chen 2025 K_MW) and `K_prot` (Chen 2025 HSA `K_D`) are extracted from the
-   SI and wired into `B_k` (Droge 2019 / Zhou 2025 cross-checks). **Remaining**: a quantitative
-   `K_cw` (no coefficient in the literature yet — batch sorption to rice root cell-wall fractions)
-   and the absolute *plant*-protein `K_prot` (needs Zhou 2025 main-text table; currently albumin ×
-   `PLANT_PROTEIN_SCALE`).
+   **MOSTLY DONE** (`src/literature_params.py` + `docs/literature_db/raw_si/`): **measured
+   per-congener** `K_PL` (Chen 2025 K_MW, vs Droge 2019) and `K_prot` (Zhou 2025 Table 1 dialysis
+   `K_prow` — soy protein isolate for plant tissues, BSA for animal) are extracted and wired into
+   `B_k`. **Remaining**: only a quantitative `K_cw` (no coefficient exists in the literature — batch
+   sorption to rice root cell-wall fractions, pectin/hemicellulose).
 3. **Freundlich paddy soil sorption** **DONE** (`src/soil_paddy.py`); literature `Koc`→`K_F`
    parametrization now in `src/literature_params.py`. **Remaining**: plug a *real*
    HYDRUS-1D/Phydrus run into `PlantInputs` (interface ready via `load_inputs_csv` /

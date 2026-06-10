@@ -21,12 +21,14 @@ what is solid vs. what is still a placeholder:
     - root membrane potential ``E_m`` for the GHK term (C5; Wang & Glass 1994,
       rice -116..-140 mV -- DOI not confirmed this session, see ``DOI_status``).
 
-* MEASURED per-congener values, extracted from the cited SI (this session;
+* MEASURED per-congener values, extracted from the cited papers (this session;
   see ``docs/literature_db/raw_si/``):
     - ``K_PL`` (= membrane-water K_MW): Chen 2025 Table S5, log L/kg lipid,
       cross-checked against Droge 2019 SSLM (same method, within ~0.2 log).
-    - ``K_prot`` (serum-albumin): converted from the Chen 2025 HSA K_D
-      (single-site), cross-checked against the Zhou 2025 BSA K_A.
+    - ``K_prot`` (= protein-water K_prow): Zhou 2025 Table 1 dialysis values for
+      soy protein isolate (the PLANT/grain storage-protein analog) and BSA
+      (animal reference).  [The Chen 2025 HSA K_D is reference-only -- the
+      single-site binding-constant route overestimates the partition ~50x.]
     - calibration target: Kim 2019 per-congener brown-rice (grain) BAF, paired
       with paddy pore water.
 
@@ -34,9 +36,6 @@ what is solid vs. what is still a placeholder:
     - ``K_cw`` (cell-wall): no partition coefficient exists in the literature
       (only the binding components -- pectin/hemicellulose -- are identified);
       kept as a nominal anchor.
-    - absolute PLANT-protein ``K_prot``: the plant/storage-protein numbers are in
-      Zhou 2025's MAIN TEXT (not the SI we have), so plant ``K_prot`` = measured
-      albumin x ``PLANT_PROTEIN_SCALE`` (an illustrative ratio < 1).
 
 * NOT BAF-identifiable (fitted, not from the database):
     - ``f_xy`` (TSCF), ``L_Ph`` (phloem loading), ``kappa_d``, ``Vmax/Km``.
@@ -225,11 +224,27 @@ KD_HSA_CHEN2025_UMOL: dict[str, float] = {
     "PFBS": 15.6, "PFHxS": 1.31, "PFOS": 0.94,
 }
 MW_HSA_KG_MOL = 66.5           # human serum albumin molecular weight
-# BSA association constants K_A [L/mol] @300 K (zhou2025 Table S4) -- independent
-# animal-protein cross-check (agrees with HSA within ~1.5x for PFOA).
+# BSA association constants K_A [L/mol] @300 K (zhou2025 Table S4) -- a BINDING
+# constant from fluorescence quenching (NOT a partition coefficient); see note below.
 KA_BSA_ZHOU2025: dict[str, float] = {
     "PFHxA": 3.03e4, "PFOA": 2.726e5, "PFDA": 7.31e5,
     "PFBS": 47.6, "PFHxS": 2.64e4, "PFOS": 4.12e5,
+}
+# --- MEASURED protein-water partition K_prow [log10 L/kg], dialysis (zhou2025 Table 1) ---
+# This is the PARTITION coefficient the model needs (C_protein/C_water at low conc),
+# measured directly for FOUR proteins.  PREFERRED over the K_A/K_D route, which
+# (single-site) overestimates by ~50x (BSA PFOA: dialysis 110 vs K_D-derived ~5850).
+# "soy" = soy protein isolate = grain storage-protein analog -> the PLANT K_prot.
+# (see docs/literature_db/raw_si/zhou2025_kprow.csv)
+KPROW_ZHOU2025_LOG: dict[str, dict[str, float]] = {
+    "bsa":         {"PFBA": 2.31, "PFHxA": 2.16, "PFOA": 2.04, "PFDA": 1.67,
+                    "PFBS": 2.28, "PFHxS": 2.18, "PFOS": 1.88},
+    "faf_bsa":     {"PFBA": 2.33, "PFHxA": 2.16, "PFOA": 2.00, "PFDA": 1.64,
+                    "PFBS": 2.37, "PFHxS": 2.08, "PFOS": 1.94},
+    "phycocyanin": {"PFBA": 1.08, "PFHxA": 1.11, "PFOA": 1.28, "PFDA": 1.54,
+                    "PFBS": 1.10, "PFHxS": 1.68, "PFOS": 1.69},
+    "soy":         {"PFBA": 1.03, "PFHxA": 1.15, "PFOA": 1.09, "PFDA": 1.37,
+                    "PFBS": 1.56, "PFHxS": 1.63, "PFOS": 1.54},
 }
 
 # membrane(phospholipid)-water partition slope, per CF2 (chen2025)  [verified] --
@@ -238,13 +253,12 @@ KPL_PER_CF2: dict[str, float] = {"carboxylate": 0.36, "sulfonate": 0.37}
 KPL_PER_CF2_DROGE = 0.53       # alt PFSA slope (droge2019)                          [verified]
 KPL_ANCHOR_LKG = 10.0 ** KMW_CHEN2025_LOG["PFOA"]   # measured PFOA anchor (~1905 L/kg)
 KPL_ANCHOR_NPFC = 7
-KPROT_ANCHOR_LKG = 50.0        # K_prot fallback scale (only if HSA K_D unavailable)
+KPROT_ANCHOR_LKG = 12.0        # K_prot last-resort fallback [L/kg] (~ measured soy PFOA),
+                               # used only if a congener is absent from KPROW_ZHOU2025_LOG
 KCW_ANCHOR_LKG = 20.0          # K_cw cell-wall  [PLACEHOLDER -- no coefficient in literature]
-# plant proteins (soy protein isolate, a grain storage-protein analog) bind
-# WEAKER than serum albumin (zhou2025).  The absolute plant K_prot is in Zhou's
-# MAIN TEXT (not the SI we have) -> still a GAP; we scale the measured albumin
-# value by this illustrative ratio < 1 for plant/grain tissues.
-PLANT_PROTEIN_SCALE = 0.3      # [PLACEHOLDER ratio < 1 -- plant absolute = GAP]
+# Plant storage proteins (soy protein isolate) bind PFAS WEAKER than serum
+# albumin -- now captured DIRECTLY by the measured K_prow (zhou2025 Table 1), so
+# NO scale factor is needed: plant/grain tissues use protein="soy", animal "bsa".
 
 
 def k_pl(n_perfluoroC: float | None = None, head_group: str = "carboxylate",
@@ -265,46 +279,68 @@ def k_pl(n_perfluoroC: float | None = None, head_group: str = "carboxylate",
 
 
 def _kprot_chain_factor(n_perfluoroC: float) -> float:
-    """U-shaped (inverted-V) fallback chain-length factor for albumin affinity.
-
-    Optimum plateau at nPFC 6-10 (chen2025; cross-species albumin study); shorter
-    and longer chains bind weaker.  Used ONLY when no measured HSA K_D exists.
-    """
+    """U-shaped (inverted-V) fallback chain-length factor (optimum nPFC 6-10).
+    Used ONLY when no measured K_prow exists for the congener or its family."""
     if 6 <= n_perfluoroC <= 10:
         return 1.0
     d = (6 - n_perfluoroC) if n_perfluoroC < 6 else (n_perfluoroC - 10)
-    return float(np.power(10.0, -0.25 * d))     # ~ -0.25 log/CF2 off the optimum [illustrative]
+    return float(np.power(10.0, -0.25 * d))
+
+
+def k_prot_measured(name: str, protein: str = "soy") -> float | None:
+    """Dialysis-measured protein-water partition K_prow [L/kg] (zhou2025 Table 1).
+
+    ``protein`` in {"soy", "bsa", "faf_bsa", "phycocyanin"}.  "soy" (soy protein
+    isolate) is the grain storage-protein analog.  Returns None if the congener
+    was not measured for that protein.
+    """
+    log = KPROW_ZHOU2025_LOG.get(protein, {}).get(name)
+    return None if log is None else float(np.power(10.0, log))
+
+
+def _kprow_interp(name: str, protein: str) -> float | None:
+    """Interpolate log K_prow within the same head-group family (zhou2025) for a
+    congener not directly measured.  ``np.interp`` clamps beyond the measured range."""
+    if name not in SPECIES:
+        return None
+    _, npfc, head = SPECIES[name]
+    pts = sorted((n, KPROW_ZHOU2025_LOG[protein][sp])
+                 for sp, (_, n, h) in SPECIES.items()
+                 if h == head and sp in KPROW_ZHOU2025_LOG.get(protein, {}))
+    if not pts:
+        return None
+    return float(np.power(10.0, np.interp(npfc, [p[0] for p in pts], [p[1] for p in pts])))
 
 
 def k_prot_albumin(name: str) -> float | None:
-    """Serum-albumin protein-water partition [L/kg], MEASURED.  [C4]
-
-    From the HSA dissociation constant K_D (chen2025, Table S5), single-site:
-        K_prot = Bmax / (K_D[mol/L] * MW_HSA[kg/mol]),  Bmax = 1.
-    Returns None if the congener has no measured K_D.  Cross-checks zhou2025 BSA
-    (= n*K_A/MW) within ~1.5x for PFOA.
-    """
+    """Serum-albumin partition [L/kg] from the HSA K_D (chen2025), single-site:
+    ``K_prot = 1/(K_D[mol/L]*MW_HSA[kg/mol])``.  NOTE: this binding-constant route
+    OVERESTIMATES the partition by ~50x vs the dialysis K_prow (zhou2025, BSA PFOA:
+    110 vs ~5850) -- kept for reference only; prefer :func:`k_prot`."""
     kd = KD_HSA_CHEN2025_UMOL.get(name)
-    if kd is None:
-        return None
-    return 1.0 / ((kd * 1e-6) * MW_HSA_KG_MOL)
+    return None if kd is None else 1.0 / ((kd * 1e-6) * MW_HSA_KG_MOL)
 
 
 def k_prot(n_perfluoroC: float | None = None, plant: bool = True,
-           anchor: float = KPROT_ANCHOR_LKG, *, name: str | None = None) -> float:
-    """Protein-water partition K_prot [L/kg protein].  [C4]
+           anchor: float = KPROT_ANCHOR_LKG, *, name: str | None = None,
+           protein: str | None = None) -> float:
+    """Protein-water partition K_prot [L/kg protein].  [C4, zhou2025]
 
-    Uses the MEASURED serum-albumin value (:func:`k_prot_albumin`) when ``name``
-    is a known congener; otherwise a U-shaped fallback on a nominal anchor.  For
-    ``plant=True`` the value is reduced by ``PLANT_PROTEIN_SCALE`` (plant storage
-    proteins bind weaker, zhou2025 -- absolute plant K_prot is still a GAP).
+    Uses the dialysis-MEASURED K_prow: ``protein="soy"`` (soy protein isolate, the
+    grain storage-protein analog) for plant tissues, ``"bsa"`` for an animal
+    reference; ``plant`` selects the default.  Congeners not measured are
+    interpolated within their head-group family; absent that, a U-shaped fallback
+    on a nominal anchor is used.
     """
-    base = k_prot_albumin(name) if name is not None else None
+    prot = protein or ("soy" if plant else "bsa")
+    base = k_prot_measured(name, prot) if name is not None else None
+    if base is None and name is not None:
+        base = _kprow_interp(name, prot)
     if base is None:
         if n_perfluoroC is None:
             raise ValueError("k_prot needs a measured `name` or an `n_perfluoroC` (fallback)")
         base = float(anchor) * _kprot_chain_factor(n_perfluoroC)
-    return base * PLANT_PROTEIN_SCALE if plant else base
+    return base
 
 
 # ===========================================================================
@@ -456,10 +492,12 @@ def _demo():
         ms = f"   measured={meas:6.1f}" if meas else ""
         print(f"  {nm:7s} nPFC={npfc:2d} {hg:11s} Koc_pred={float(koc(npfc,hg)):7.1f} L/kg{ms}")
 
-    print("\n== C4  MEASURED K_PL (chen2025 K_MW) & K_prot (HSA K_D -> albumin) [L/kg] ==")
+    print("\n== C4  MEASURED K_PL (chen2025 K_MW) & K_prot (zhou2025 dialysis K_prow) [L/kg] ==")
     for nm in ("PFBA", "PFHxA", "PFOA", "PFDA", "PFDoDA", "PFOS"):
+        star = "" if nm in KPROW_ZHOU2025_LOG["soy"] else " (interp)"
         print(f"  {nm:7s}  K_PL={k_pl(name=nm):9.1f}   "
-              f"K_prot_albumin={k_prot_albumin(nm):9.1f}   K_prot(plant)={k_prot(name=nm):8.1f}")
+              f"K_prot(soy/plant)={k_prot(name=nm, plant=True):7.1f}   "
+              f"K_prot(BSA)={k_prot(name=nm, plant=False):7.1f}{star}")
 
     print("\n== C1  MEASURED grain BAF (Kim 2019, porewater basis) [L/kg]  [kim2019] ==")
     for nm, b in kim2019_grain_baf("porewater").items():

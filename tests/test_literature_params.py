@@ -83,15 +83,12 @@ def test_kpl_anchor_and_slope():
     assert r_s == pytest.approx(10.0 ** lp.KPL_PER_CF2["sulfonate"])
 
 
-def test_kprot_is_u_shaped_and_plant_weaker():
-    # plateau optimum C6-C10 (equal); shorter/longer bind weaker
+def test_kprot_fallback_is_u_shaped():
+    # with no measured name, k_prot uses the U-shaped fallback (plateau nPFC 6-10)
     plateau = [lp.k_prot(n, plant=False) for n in (6, 7, 8, 9, 10)]
     assert all(p == pytest.approx(plateau[0]) for p in plateau)
     assert lp.k_prot(4, plant=False) < plateau[0]
     assert lp.k_prot(12, plant=False) < plateau[0]
-    # plant storage protein binds weaker than serum albumin (Zhou 2025)
-    assert lp.k_prot(7, plant=True) == pytest.approx(lp.k_prot(7, plant=False) * lp.PLANT_PROTEIN_SCALE)
-    assert lp.k_prot(7, plant=True) < lp.k_prot(7, plant=False)
 
 
 # ---------------------------------------------------------------------------
@@ -105,15 +102,23 @@ def test_kpl_uses_measured_chen_when_named():
     assert lp.k_pl(7, "carboxylate", name="not-a-pfas") == pytest.approx(lp.KPL_ANCHOR_LKG)
 
 
-def test_kprot_albumin_from_hsa_kd():
-    # K_prot = 1/(K_D[mol/L] * MW_HSA[kg/mol]); PFOA K_D = 2.57 umol/L
+def test_kprot_measured_kprow_soy_weaker_than_bsa():
+    # dialysis-measured K_prow (Zhou 2025 Table 1): soy (plant) < BSA (animal)
+    assert lp.k_prot(name="PFOA", plant=True) == pytest.approx(10.0 ** 1.09, rel=1e-6)    # soy
+    assert lp.k_prot(name="PFOA", plant=False) == pytest.approx(10.0 ** 2.04, rel=1e-6)   # bsa
+    assert lp.k_prot(name="PFOA", plant=True) < lp.k_prot(name="PFOA", plant=False)
+    assert lp.k_prot_measured("PFOS", "soy") == pytest.approx(10.0 ** 1.54, rel=1e-6)
+    # a congener not in Zhou Table 1 -> interpolated within its head-group family
+    assert lp.k_prot_measured("PFNA", "soy") is None
+    assert lp.k_prot(name="PFNA", plant=True) > 0
+
+
+def test_kprot_albumin_kd_is_reference_only():
+    # k_prot_albumin (HSA K_D route) OVERESTIMATES vs the dialysis K_prow (~50x)
     expect = 1.0 / (2.57e-6 * lp.MW_HSA_KG_MOL)
     assert lp.k_prot_albumin("PFOA") == pytest.approx(expect, rel=1e-6)
-    assert lp.k_prot_albumin("PFOS") > lp.k_prot_albumin("PFOA")   # PFOS binds HSA stronger
+    assert lp.k_prot_albumin("PFOA") > 10.0 * lp.k_prot(name="PFOA", plant=False)
     assert lp.k_prot_albumin("not-a-pfas") is None
-    # named k_prot uses the measured albumin value, plant-scaled
-    assert lp.k_prot(name="PFOA", plant=False) == pytest.approx(expect, rel=1e-6)
-    assert lp.k_prot(name="PFOA", plant=True) == pytest.approx(expect * lp.PLANT_PROTEIN_SCALE, rel=1e-6)
 
 
 # ---------------------------------------------------------------------------
