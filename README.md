@@ -22,12 +22,19 @@ Soil pore-water free concentration `C_w^o(t)`, transpiration `Q_TP(t)`, and tiss
 inventory (redox-dependent, non-linear sorption), and a **Tier-1 calibration** module
 (`src/calibration.py`) fits the identifiable parameters to observed tissue BAFs.
 
+A **literature parameter module** (`src/literature_params.py`) encodes the verified QSPRs and
+anchor values from the curated database in [`docs/literature_db/`](docs/literature_db/) —
+soil `Koc(chain length)`, membrane/protein `K_PL`/`K_prot` per-CF₂ slopes, `f_d` from pKa, and
+the rice root membrane potential `E_m` — and provides builders that produce literature-grounded
+`Compound`/`Environment`/`FreundlichSoil` objects for the model.
+
 ## Quickstart
 ```bash
 pip install -r requirements.txt
 python src/pfas_rice_plant_module.py    # plant demo: prints the root > straw > grain check
 python src/soil_paddy.py                # Freundlich soil → C_w^o(t) under a flooding schedule
 python src/calibration.py               # synthetic parameter recovery + identifiability demo
+python src/literature_params.py         # literature QSPRs + end-to-end literature-parametrised run
 pip install pytest && pytest            # structural, soil, mass-conservation & calibration tests
 ```
 The plant demo uses placeholder parameters (**not calibrated**) and prints the electrochemical
@@ -37,10 +44,13 @@ number, binding factors, final tissue concentrations/BAFs, and the `root > straw
 - `src/pfas_rice_plant_module.py` — the plant ODE module (Method A).
 - `src/soil_paddy.py` — Freundlich paddy soil sorption (`C_w^o(t)`) + CSV / HYDRUS input adapters.
 - `src/calibration.py` — Tier-1 calibration to observed BAFs (scipy); synthetic recovery.
-- `tests/` — pytest suite (plant, soil, calibration) locking in the structural results,
-  exact mass conservation, and parameter recovery.
-- `docs/` — LaTeX model report (`pfas_rice_compartmental_model`) and the corrected
-  neutral DPU base summary (`dpu_model_summary_corrected`).
+- `src/literature_params.py` — literature-derived QSPRs/anchors (with citations + DOI status)
+  and builders for literature-grounded model objects.
+- `tests/` — pytest suite (plant, soil, calibration, literature params) locking in the structural
+  results, exact mass conservation, parameter recovery, and the verified QSPR relationships.
+- `docs/` — LaTeX model report (`pfas_rice_compartmental_model`), the corrected neutral DPU base
+  summary (`dpu_model_summary_corrected`), and `literature_db/` (the curated parameter database:
+  xlsx + per-sheet CSV).
 - `external/hydrus_source/` — git submodule of `phydrus/source_code` (HYDRUS-1D 4.08
   FORTRAN, LGPL-3.0) for the future tight (Method B) coupling.
 

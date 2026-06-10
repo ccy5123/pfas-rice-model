@@ -37,14 +37,16 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── src/
 │   ├── pfas_rice_plant_module.py     # Method A plant ODE module (runnable)
 │   ├── soil_paddy.py                 # Freundlich paddy soil → C_w^o(t); input adapters
-│   └── calibration.py                # Tier-1 calibration (scipy); synthetic recovery
+│   ├── calibration.py                # Tier-1 calibration (scipy); synthetic recovery
+│   └── literature_params.py          # literature QSPRs/anchors (cited) → Compound/Env/Soil builders
 ├── docs/
 │   ├── pfas_rice_compartmental_model.tex / .pdf
-│   └── dpu_model_summary_corrected.tex / .pdf
+│   ├── dpu_model_summary_corrected.tex / .pdf
+│   └── literature_db/                # curated parameter database: .xlsx + per-sheet .csv + README
 ├── external/
 │   └── hydrus_source/                # git submodule → github.com/phydrus/source_code
 ├── data/                             # (gitignored) HYDRUS output, BAF datasets, params
-└── tests/                            # pytest: plant, soil, calibration
+└── tests/                            # pytest: plant, soil, calibration, literature params
 ```
 
 ## 4. Coupling strategy
@@ -89,12 +91,23 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   by `synthetic_recovery` (recovers known Tier-1 params, incl. under noise). NOTE: tighten
   the finite-diff step (`diff_step≈1e-2`) so the gradient clears the ODE solver's tolerance
   floor. Real fit pending the user's BAF data (`load_baf_csv`).
+- **Literature database (task #2 enabler)**: `docs/literature_db/` holds the curated empirical
+  parameter database (xlsx + per-sheet CSV; categories C1–C6 + source shortlist + gap analysis)
+  produced by a literature search. `src/literature_params.py` transcribes the **verified** pieces
+  — soil `Koc(chain length)` QSPR (Higgins & Luthy +0.55/CF₂, +0.23 sulfonate; anchored on
+  Milinovic PFOA/PFOS/PFBS), `K_PL`/`K_prot` per-CF₂ slopes (Chen 2025; U-shaped albumin,
+  plant-protein-weakened), `f_d` from pKa (Goss 2008), and rice root `E_m` (Wang 1994) — into
+  builders (`literature_compound`, `literature_environment`, `literature_paddy_soil`). Each value
+  carries a citation + `DOI_status` (verified vs UNVERIFIED). **Absolute `K_PL/K_prot/K_cw`
+  intercepts remain placeholders** (the DB gives slopes, not intercepts → flagged GAP); transport
+  params (`f_xy, L_Ph, kappa_d, Vmax/Km`) are still fitted (Tier-1/2, not BAF-identifiable).
 
 ## 7. Build & run
 - Python: `pip install -r requirements.txt` then `python src/pfas_rice_plant_module.py`
   (prints N, B_k, final tissue concentrations/BAFs + the root>straw>grain check; saves `pfas_rice_demo.png`).
 - Soil → plant: `python src/soil_paddy.py` (Freundlich + flooding schedule → `C_w^o(t)`).
 - Calibration: `python src/calibration.py` (synthetic recovery + identifiability demo).
+- Literature params: `python src/literature_params.py` (QSPRs + end-to-end literature-parametrised run).
 - Tests: `pip install pytest && pytest` (or `python tests/test_plant_module.py`).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
@@ -114,13 +127,21 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 1. ~~Physical realism of terminal compartments~~ **DONE** — added the root→xylem loading
    factor `f_xy` (TSCF) + mass-conserving phloem; demo reproduces `root > straw > grain`;
    regression tests in `tests/`. (Calibrating `f_xy`/`L_Ph`/`B_k` to data is task #4.)
-2. **Tier-3 QSPR** for `K_prot`, `K_PL` (chain-length descriptors) to populate `B_k`.
-3. **Freundlich paddy soil sorption** **DONE** (`src/soil_paddy.py`); **remaining**: plug a
-   *real* HYDRUS-1D/Phydrus run into `PlantInputs` (interface ready via `load_inputs_csv` /
-   `inputs_from_soil` — needs the user's HYDRUS output).
+2. **Tier-3 QSPR** for `K_prot`, `K_PL` (chain-length descriptors) to populate `B_k`
+   **PARTLY DONE** (`src/literature_params.py` + `docs/literature_db/`): the verified per-CF₂
+   *slopes* are encoded and wired into a chain-length-resolved `B_k`. **Remaining**: extract the
+   absolute per-congener `K_PL`/`K_prot` *intercepts* from the cited SI tables (Chen 2025 / Droge
+   2019 / Allendorf 2019) and derive a quantitative `K_cw` (no coefficient in the literature yet —
+   batch sorption to rice root cell-wall fractions). Replace the placeholder intercepts.
+3. **Freundlich paddy soil sorption** **DONE** (`src/soil_paddy.py`); literature `Koc`→`K_F`
+   parametrization now in `src/literature_params.py`. **Remaining**: plug a *real*
+   HYDRUS-1D/Phydrus run into `PlantInputs` (interface ready via `load_inputs_csv` /
+   `inputs_from_soil` — needs the user's HYDRUS output); anoxic/flooded sorption is a DB gap.
 4. **Tier-1 calibration machinery** **DONE** (`src/calibration.py`, scipy; synthetic recovery
    + identifiability verified); **remaining**: run the real fit vs rice BAF / lysimeter data
-   (chain-length trends; now also `f_xy`) — needs the user's measured BAFs (`load_baf_csv`).
+   (chain-length trends; now also `f_xy`). Primary data anchor identified: **Kim et al. 2019**
+   (Korean paddy, paired soil/porewater/brown-rice, `10.1016/j.scitotenv.2019.03.240`) — load via
+   `load_baf_csv`; full compartment-resolved TF is still a DB gap (greenhouse time-series needed).
 5. (Later) **Method B** tight coupling in `external/hydrus_source`.
 
 ## 10. Gotchas / external dependencies
