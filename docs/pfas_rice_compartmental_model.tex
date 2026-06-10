@@ -268,9 +268,27 @@ $a_R$ & specific root membrane area & anatomical measurement \\
 
 
 %% ============================================================
+\section{Soil Boundary Condition and Calibration (Method A)}
+%% ============================================================
+
+\paragraph{Paddy soil sorption.}  The driver $\Cw^{o}(t)$ is obtained from a soil PFAS inventory through a Freundlich partition between pore water and the solid phase,
+\begin{equation}\label{eq:freundlich}
+    S=K_F\,\Cw^{\,n},\qquad
+    C_T=K_F\,\Cw^{\,n}+\theta_g\,\Cw,
+\end{equation}
+with $S$ the sorbed solid-phase load, $C_T$ the total PFAS per unit dry soil mass, $\theta_g$ the gravimetric water content $[\mathrm{L\,kg^{-1}}]$, $K_F$ the Freundlich capacity, and $n$ the (typically sub-linear) exponent.  Since $C_T(\Cw)$ is strictly increasing for $\Cw\ge0$, the bioavailable pore-water concentration $\Cw^{o}=\Cw$ is recovered by inverting Eq.~\eqref{eq:freundlich} (the linear $K_d$ limit is $n=1$).  Flooding versus draining the paddy switches the redox state and hence $(K_F,n)$, so $\Cw^{o}(t)$ follows the water-management schedule.  This sub-model is interchangeable with a HYDRUS-1D/Phydrus solute output under the loose, one-way Method~A coupling.
+
+\paragraph{Calibration.}  The Tier-1 parameters $\bm\beta=(B_k,\,g_\mathrm{in}/g_\mathrm{out},\,f_\mathrm{xy},\,\Pi,\,\varphi)$ are estimated by weighted least squares in log space against observed tissue bioaccumulation factors,
+\begin{equation}\label{eq:objective}
+    \hat{\bm\beta}=\arg\min_{\bm\beta}\;\sum_{k}\frac{1}{\sigma_k^{2}}\Big(\log\mathrm{BAF}_k^{\mathrm{pred}}(\bm\beta)-\log\mathrm{BAF}_k^{\mathrm{obs}}\Big)^{2},
+\end{equation}
+under box constraints, with the mass-weighted shoot (straw) treated as one observable.  Consistent with the identifiability analysis of Section~\ref{sec:qss}, BAF data recover only the lumped influx conductance $g_\mathrm{in}$: the channel ($P_d^{\mathrm{eff}}$) and carrier ($V_{\max}$) contributions trade off at fixed $g_\mathrm{in}$ and require inhibitor experiments to separate.
+
+
+%% ============================================================
 \section{Outlook}
 %% ============================================================
 
-The present document fixes the model skeleton, the dimensionless structure, and the calibration design.  Items deferred to subsequent work include: the QSPR construction for $K_\mathrm{prot}$ and $K_\mathrm{PL}$ (Tier~3); an explicit soil-side sub-model for $\Cw^{o}(t)$ under paddy redox dynamics; the saturable (nonlinear) regime of the carrier and protein-binding terms; and numerical implementation with parameter estimation against rice field and lysimeter datasets.
+The model skeleton, the dimensionless structure, the paddy soil boundary condition (Eq.~\ref{eq:freundlich}), and the calibration design (Eq.~\ref{eq:objective}) are implemented in the accompanying Python module under the Method~A coupling.  Items still deferred to subsequent work include: the QSPR construction for $K_\mathrm{prot}$ and $K_\mathrm{PL}$ (Tier~3); the saturable (nonlinear) regime of the carrier and protein-binding terms; the parameter fit against measured rice field and lysimeter datasets; and the tight (Method~B) coupling inside HYDRUS-1D.
 
 \end{document}

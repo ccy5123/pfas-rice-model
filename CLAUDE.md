@@ -35,14 +35,16 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── README.md
 ├── requirements.txt
 ├── src/
-│   └── pfas_rice_plant_module.py     # Method A plant ODE module (runnable)
+│   ├── pfas_rice_plant_module.py     # Method A plant ODE module (runnable)
+│   ├── soil_paddy.py                 # Freundlich paddy soil → C_w^o(t); input adapters
+│   └── calibration.py                # Tier-1 calibration (scipy); synthetic recovery
 ├── docs/
 │   ├── pfas_rice_compartmental_model.tex / .pdf
 │   └── dpu_model_summary_corrected.tex / .pdf
 ├── external/
 │   └── hydrus_source/                # git submodule → github.com/phydrus/source_code
 ├── data/                             # (gitignored) HYDRUS output, BAF datasets, params
-└── tests/
+└── tests/                            # pytest: plant, soil, calibration
 ```
 
 ## 4. Coupling strategy
@@ -78,10 +80,21 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   reproduces **root > straw > grain** (straw = mass-weighted stem+leaf). Also closed a phloem
   mass-conservation leak (leaf now exports the full `(1+φ)·Q_Phl·C_Phl`). **Demo BAFs remain
   illustrative, NOT calibrated** — real Tier-1 calibration vs data is still task #4.
+- **Soil side (task #3)**: `src/soil_paddy.py` adds a Freundlich paddy sorption sub-model
+  (`S=K_F·C_w^n`, redox-dependent `K_F`) that inverts a total soil inventory to the
+  pore-water `C_w^o(t)`, plus `load_inputs_csv` to drop in real HYDRUS-1D/Phydrus output.
+  Wiring a *real* Phydrus run is still pending (needs the user's HYDRUS output).
+- **Calibration (task #4)**: `src/calibration.py` fits Tier-1 params to observed tissue
+  BAFs (log-space weighted least squares, scipy; box bounds; optional global DE). Validated
+  by `synthetic_recovery` (recovers known Tier-1 params, incl. under noise). NOTE: tighten
+  the finite-diff step (`diff_step≈1e-2`) so the gradient clears the ODE solver's tolerance
+  floor. Real fit pending the user's BAF data (`load_baf_csv`).
 
 ## 7. Build & run
 - Python: `pip install -r requirements.txt` then `python src/pfas_rice_plant_module.py`
   (prints N, B_k, final tissue concentrations/BAFs + the root>straw>grain check; saves `pfas_rice_demo.png`).
+- Soil → plant: `python src/soil_paddy.py` (Freundlich + flooding schedule → `C_w^o(t)`).
+- Calibration: `python src/calibration.py` (synthetic recovery + identifiability demo).
 - Tests: `pip install pytest && pytest` (or `python tests/test_plant_module.py`).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
@@ -102,8 +115,12 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
    factor `f_xy` (TSCF) + mass-conserving phloem; demo reproduces `root > straw > grain`;
    regression tests in `tests/`. (Calibrating `f_xy`/`L_Ph`/`B_k` to data is task #4.)
 2. **Tier-3 QSPR** for `K_prot`, `K_PL` (chain-length descriptors) to populate `B_k`.
-3. **Plug real Phydrus output** into `PlantInputs`; add Freundlich soil sorption (paddy).
-4. **Tier-1 calibration** vs rice BAF / lysimeter data (chain-length trends; now also `f_xy`).
+3. **Freundlich paddy soil sorption** **DONE** (`src/soil_paddy.py`); **remaining**: plug a
+   *real* HYDRUS-1D/Phydrus run into `PlantInputs` (interface ready via `load_inputs_csv` /
+   `inputs_from_soil` — needs the user's HYDRUS output).
+4. **Tier-1 calibration machinery** **DONE** (`src/calibration.py`, scipy; synthetic recovery
+   + identifiability verified); **remaining**: run the real fit vs rice BAF / lysimeter data
+   (chain-length trends; now also `f_xy`) — needs the user's measured BAFs (`load_baf_csv`).
 5. (Later) **Method B** tight coupling in `external/hydrus_source`.
 
 ## 10. Gotchas / external dependencies
