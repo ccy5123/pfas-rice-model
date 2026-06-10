@@ -1,0 +1,23 @@
+key,reference,gap,role,doi,status
+Mel2024,"Mel, Lau, Hockaday 2024, JHM 480:136016",A,K_lignin direct anchor (pH6.5),10.1016/j.jhazmat.2024.136016,verified
+Guo2025,"Guo et al. 2025, Nat. Commun. 16:10283",A,DFT dG ladder + mechanism + monosaccharide,10.1038/s41467-025-65191-3,verified
+rice_tissue,user rice_tissue package,A,organ poly/lignin dw fractions,,internal
+Liu2023,"Liu et al. 2023, ES&T 57:8739",AB,surface-sorption context / slow anion channel,10.1021/acs.est.3c00504,verified
+Trapp2000,"Trapp S. 2000, Pest Manag. Sci. 56:767",B,ionizable root-uptake/TSCF model (origin),10.1002/1526-4998(200009)56:9<767::AID-PS198>3.0.CO;2-Q,verified
+Trapp2004,"Trapp S. 2004, ESPR 11:33",B,neutral/ionic plant uptake,10.1065/espr2003.08.169,verified
+Trapp2002,"Trapp S. 2002, ETC 21:203",B,dynamic root uptake,10.1002/etc.5620210128,unverified-doi
+Briggs1982,"Briggs et al. 1982, Pestic. Sci. 13:495",B,TSCF-logKow bell; RCF slope,10.1002/ps.2780130506,verified
+Rein2011,"Rein, Legind, Trapp 2011, SAR QSAR Environ. Res. 22:191",B,dynamic plant uptake (DPU concept),10.1080/1062936X.2010.548829,verified
+Brunetti2019,"Brunetti et al. 2019, Water Resour. Res. 55:8967",B,DPU module for HYDRUS (framework),10.1029/2019WR025432,verified
+Felizeter2014,"Felizeter et al. 2014, JAFC 62:3334",B,solution-normalised TSCF (absolute anchor),10.1021/jf500674j,verified
+Felizeter2012,"Felizeter et al. 2012, EST 46:11735",B,lettuce TSCF/RCF,10.1021/es302398u,verified
+Felizeter2020,"Felizeter et al. 2020, STE",B,soil<->hydroponic pore-water TSCF,S0045653520318038,unverified-doi
+Krippner2015,"Krippner et al. 2015, JAFC 63:3646",B,maize soil TF (straw/kernel),10.1021/acs.jafc.5b00012,verified
+Krippner2014,"Krippner et al. 2014, Chemosphere 94:85",B,maize shoot:root / pH,10.1016/j.chemosphere.2013.09.018,verified
+Wen2013,"Wen et al. 2013, Plant Soil 370:345",B,carrier-mediated (Michaelis-Menten),,unverified-doi
+Wen2014,"Wen et al. 2014, Environ Pollut 184:547",B,wheat field carrier validation,,unverified-doi
+Lan2018,"Lan et al. 2018, ESPR 25:30907",B,wheat soil TF chain-length,10.1007/s11356-018-3070-3,verified
+Yamazaki2023,"Yamazaki et al. 2023, EST 57 (es2c08767)",val,rice tissue distribution (main validation),10.1021/acs.est.2c08767,verified
+Li2025,"Li et al. 2025, JHM 492",val,paddy field (cross-field TF; BAF water-caveat),10.1016/j.jhazmat.2025.138256,verified
+Chen2025,Chen 2025 (SSLM),model,K_PL membrane partition,,user-held
+Zhou2025,Zhou 2025,model,K_prot protein partition,,user-held

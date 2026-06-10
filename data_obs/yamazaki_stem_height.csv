@@ -1,0 +1,15 @@
+# Yamazaki 2023 (10.1021/acs.est.2c08767) SI Table S18 (Indica) + S19 (Japonica)
+# geometric mean of the two cultivars, PFAS tissue concentration [pg/g dw]
+# stem(+leaf) bands by height; used to test the N-segment stem gradient (GAP B).
+pfas,root,stem_0_20,stem_20_40,stem_40_60,stem_gt60
+PFBA,50.4,106.5,247.2,479.6,786.4
+PFPeA,32.5,55.2,111.0,186.3,302.8
+PFHxA,33.8,44.7,45.3,69.0,114.2
+PFHpA,58.3,34.1,23.9,33.5,68.3
+PFOA,41.9,32.9,19.6,33.6,55.5
+PFNA,33.9,18.3,9.8,20.2,33.9
+PFDA,22.4,9.9,4.2,9.2,13.5
+PFUnDA,62.5,21.0,6.0,11.2,13.9
+PFDoDA,13.9,6.5,2.0,5.0,6.3
+PFBS,15.5,5.0,6.3,8.7,8.7
+PFOS,70.6,20.6,15.0,27.9,38.4

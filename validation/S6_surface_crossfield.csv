@@ -1,0 +1,17 @@
+field,pfas,n_C,obs_root_BAF_fw,B_root_ceiling,obs_over_ceiling,surface_excess,water_quality,verdict
+Yamazaki,PFBA,4,0.68,1.179,0.577,0.0,,sub-eq
+Yamazaki,PFBS,4,2.278,2.411,0.945,0.0,,sub-eq
+Yamazaki,PFPeA,5,0.27,1.315,0.205,0.0,,sub-eq
+Yamazaki,PFHxA,6,0.278,1.603,0.174,0.0,,sub-eq
+Yamazaki,PFHpA,7,0.78,2.322,0.336,0.0,,sub-eq
+Yamazaki,PFOA,8,0.487,4.174,0.117,0.0,,sub-eq
+Yamazaki,PFOS,8,5.933,49.447,0.12,0.0,,sub-eq
+Yamazaki,PFNA,9,0.569,9.864,0.058,0.0,,sub-eq
+Yamazaki,PFDA,10,4.157,24.279,0.171,0.0,,sub-eq
+Yamazaki,PFUnDA,11,19.531,49.148,0.397,0.0,,sub-eq
+Yamazaki,PFDoDA,12,69.282,100.988,0.686,0.0,,sub-eq
+Li2025,PFBA,4,8.145,1.179,6.908,6.966,med,EXCESS
+Li2025,PFBS,4,39.538,2.411,16.399,37.127,rough,EXCESS
+Li2025,PFHxA,6,35.416,1.603,22.093,33.813,rough,EXCESS
+Li2025,PFOA,8,2.194,4.174,0.526,0.0,good,sub-eq
+Li2025,PFOS,8,251.254,49.447,5.081,201.806,poor,EXCESS

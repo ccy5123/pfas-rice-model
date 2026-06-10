@@ -31,22 +31,29 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ## 3. Repo layout
 ```
 .
-├── CLAUDE.md                         # this file
-├── README.md
-├── requirements.txt
+├── CLAUDE.md  README.md  requirements.txt
+├── reproduce_demo.py                 # entry point: Yamazaki BAF via full ODE (W2 fit)
+├── build_parameters.py               # (re)assembles params/parameters.json from source tables
 ├── src/
-│   ├── pfas_rice_plant_module.py     # Method A plant ODE module (runnable)
-│   ├── soil_paddy.py                 # Freundlich paddy soil → C_w^o(t); input adapters
-│   ├── calibration.py                # Tier-1 calibration (scipy); synthetic recovery
-│   └── literature_params.py          # literature QSPRs/anchors (cited) → Compound/Env/Soil builders
+│   ├── pfas_rice_plant_module_4pool.py       # basis-A 4-compartment ODE (CANONICAL core)
+│   ├── pfas_rice_plant_module_4pool_surf.py  #  + K_surf (Fe/Mn-plaque dead-end pool)
+│   ├── pfas_rice_plant_module_5pool.py       #  + explicit lignin pool
+│   ├── pfas_rice_plant_module_nstem.py       # N serial stem segments (multi-height; GAP-B fix)
+│   ├── pfas_rice_plant_module.py             # import alias → 4pool_surf (basis-A); legacy name
+│   ├── soil_paddy.py                         # Freundlich soil → C_w^o(t) (legacy redox sign)
+│   ├── soil_paddy_redox_corrected.py         # W3-corrected redox (dilution+leaching; USE THIS)
+│   ├── calibration.py                        # Tier-1 calibration (scipy)
+│   └── literature_params.py                  # literature QSPRs/anchors (cited) + Kim2019 BAF
+├── params/                           # parameters.json (CANONICAL) + source CSVs (Bk, f_xy, Kcw, ...)
+├── data_obs/                         # observed BAF/TF (Yamazaki, Li2025) + yamazaki_stem_height.csv
+├── validation/                       # S6 + nstem reproduction scripts + figures
 ├── docs/
-│   ├── pfas_rice_compartmental_model.tex / .pdf
-│   ├── dpu_model_summary_corrected.tex / .pdf
-│   └── literature_db/                # curated parameter database: .xlsx + per-sheet .csv + README
-├── external/
-│   └── hydrus_source/                # git submodule → github.com/phydrus/source_code
-├── data/                             # (gitignored) HYDRUS output, BAF datasets, params
-└── tests/                            # pytest: plant, soil, calibration, literature params
+│   ├── pfas_rice_compartmental_model.tex / dpu_model_summary_corrected.tex
+│   ├── DELIVERABLE_GAP_A_Kcw.md / DELIVERABLE_GAP_B_fxy.md / theory_anchor.tex / H8_handoff_S6_final.md / sources.csv
+│   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
+├── external/hydrus_source/           # git submodule → github.com/phydrus/source_code
+├── data/                             # (gitignored)
+└── tests/                            # pytest (52): plant, soil, calibration, literature params
 ```
 
 ## 4. Coupling strategy
@@ -110,26 +117,46 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   measured binding keeps `root > straw > grain` (delivery-limited), but the *grain BAF* now matches
   data. **Limitation**: Kim is grain-only, so `f_xy` (root→shoot) is unconstrained — full
   compartment-resolved TF (root/straw) is a DB gap (greenhouse time-series needed).
+- **Integrated advanced workstream (basis-A + GAP A/B + nstem)**: merged the consolidated
+  parameter package (`params/parameters.json` + `params/*.csv`, `data_obs/`, `validation/`,
+  GAP deliverables in `docs/`, the basis-A plant modules `*_4pool[_surf]/_5pool`, and
+  `soil_paddy_redox_corrected`). `pfas_rice_plant_module` is now an **alias to the basis-A
+  4pool_surf** core. Key honest-status corrections from the review: (a) `reproduce_demo.py`'s
+  log10 RMSE 0.029 is a **saturated W2 fit** (3 transport params/3 obs per congener) — reproduction
+  is guaranteed, NOT predictive validation; (b) the empirical ordering is **congener-dependent**
+  (Yamazaki: short-chain straw≫root, long-chain root>straw) — `root>straw>grain` is NOT universal
+  under basis-A; (c) **GAP B is shape-resolved, not closed** — see task #6.
+- **Multi-height stem (task #6, DONE-structural)**: `src/pfas_rice_plant_module_nstem.py` (N serial
+  stem segments: transpiration draw-off + radial exchange + growth dilution; mass-conserving) lets a
+  **monotone f_xy reproduce the Yamazaki stem gradient for PFCAs** (`validation/nstem_gradient_check.py`).
+  Crossover `B* ~ Q_s/(M_s·μ_s)` ⇒ absolute scale needs measured `Q_TP(t)/M_s(t)` (task #7); PFOS/PFSA
+  translocate up despite high binding ⇒ a PFSA-specific transport term is still open (task #8).
 
 ## 7. Build & run
-- Python: `pip install -r requirements.txt` then `python src/pfas_rice_plant_module.py`
-  (prints N, B_k, final tissue concentrations/BAFs + the root>straw>grain check; saves `pfas_rice_demo.png`).
-- Soil → plant: `python src/soil_paddy.py` (Freundlich + flooding schedule → `C_w^o(t)`).
-- Calibration: `python src/calibration.py` (synthetic recovery + identifiability demo).
-- Literature params: `python src/literature_params.py` (QSPRs + end-to-end literature-parametrised run).
-- Tests: `pip install pytest && pytest` (or `python tests/test_plant_module.py`).
+- `pip install -r requirements.txt`
+- **Main reproduction**: `python reproduce_demo.py` (Yamazaki BAF, W2 fit, RMSE≈0.029);
+  `--rec` uses the monotone f_xy. Rebuild params: `python build_parameters.py`.
+- Plant demo: `python src/pfas_rice_plant_module_4pool_surf.py` (N, B_k, BAFs; saves `pfas_rice_demo.png`).
+- Multi-height stem: `python validation/nstem_gradient_check.py` (stem-gradient direction vs Yamazaki).
+- Soil → plant: `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
+- Calibration: `python src/calibration.py`; Literature params: `python src/literature_params.py`.
+- Tests: `pip install pytest && pytest` (52 passing).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
   (gfortran + `makefile` / `make.bat`).
 
 ## 8. Conventions
 - Units: time **day**; aqueous conc **µg/L**; tissue conc **µg/kg**; mass **kg**;
-  flow **L/day**; `B_k` in **L/kg** (`C_k = B_k · C_w,k`).
-- `B_k` has **no density factor** (the dimensionally-wrong `ρ_k` prefactor has been removed
-  from Eq. binding in the `.tex`; the code was already correct).
-- `f_xy` ∈ (0,1] is the root→xylem loading factor (TSCF analog): only `f_xy·C_1/B_1` enters
-  the ascending xylem (`f_xy=1` = unrestricted DPU; `f_xy≪1` for anions). It is what
-  constrains translocation and yields root>straw>grain.
+  flow **L/day**; `B_k` in **L/kg fw** (`C_k = B_k · C_w,k`).
+- **Binding = basis A (fresh weight)**: `B_k = θ_fw + (1−θ_fw)·(f_prot·K_prot + f_PL·K_PL + f_cw·K_cw)`.
+  `θ_fw` = fresh-weight water fraction; `f_*` = **dry-weight** mass fractions; `K_*` in L/kg pool-dw.
+  The `(1−θ_fw)` factor is a **dry→fresh conversion** (mandatory; the legacy naive `θ+Σf·K` over-states
+  B_k ~3×) — it is NOT the old dimensionally-wrong `ρ_k` density prefactor (still absent). Compare to
+  dw-reported data via `C_dw = C_fw/(1−θ_fw)`. `f_cw` = whole cell wall (poly+lignin), K = `K_cw_wholecw`.
+- `f_xy` ∈ (0,1] is the root→xylem loading factor (TSCF analog): only `f_xy·C_1/B_1` enters the
+  ascending xylem (`f_xy=1` = unrestricted DPU; `f_xy≪1`, monotone-decreasing in chain length, for anions).
+  NOTE: it does **not** yield a universal `root>straw>grain` — the ordering is **congener-dependent**
+  (short chains: straw>root; long chains: root>straw), matching Yamazaki.
 - Symbols map 1:1 to `docs/pfas_rice_compartmental_model.tex` (`j_R, B_k, N, f_xy, L_Ph, ...`).
 
 ## 9. Next tasks (prioritized)
@@ -151,7 +178,16 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
    (`kim2019_grain_baf()`); the demo fits `L_Ph` to the PFOA grain BAF (→ matches 4.43 L/kg).
    **Remaining**: a chain-length series fit and a full compartment-resolved fit — Kim is grain-only,
    so `f_xy` (root→shoot) needs root/straw tissue data (DB gap; greenhouse time-series needed).
-5. (Later) **Method B** tight coupling in `external/hydrus_source`.
+5. **Literature parameter DB + measured `B_k`** **DONE** (`docs/literature_db/`, `src/literature_params.py`):
+   curated C1–C6 DB + `raw_si/` extractions; measured `K_PL`/`K_prot`/`K_cw` wired into basis-A `B_k`.
+6. **Multi-height stem (GAP-B fix)** **DONE (structural)** — `src/pfas_rice_plant_module_nstem.py` +
+   `validation/nstem_gradient_check.py`: monotone f_xy reproduces the PFCA stem gradient.
+7. **Measured `Q_TP(t)` / `M_s(t)`** → pin the f_xy absolute scale + gradient crossover and run the
+   full compartment-resolved fit (currently structural/direction only; placeholder transpiration ~5× high).
+   Candidate value source flagged by the user: **Tang 2026 JHM (`10.1016/j.jhazmat.2025.141017`)**.
+8. **PFSA-specific transport term** — PFOS/PFSA translocate upward despite high binding (the monotone
+   binding-driven f_xy misses them); revisit the `PFSA = PFCA·e^(−1.5)` headgroup offset (sign/size).
+9. (Later) **Method B** tight coupling in `external/hydrus_source`.
 
 ## 10. Gotchas / external dependencies
 - DPU module source is **not public** (author request only). The ionizable extension

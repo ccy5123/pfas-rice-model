@@ -1,0 +1,399 @@
+{
+  "_meta": {
+    "title": "PFAS–rice 4-compartment uptake model — consolidated parameters",
+    "model": "IOC extension of DPU/Trapp; 12 congeners (PFCA C4–C12 + PFSA C4/C6/C8)",
+    "binding_basis": "A (fresh-weight): B_k = theta_fw + (1-theta_fw)*sum_i f_i,dw * K_i  [L/kg fw]",
+    "units": {
+      "K_*": "L/kg pool-dw",
+      "B_k": "L/kg fw",
+      "theta": "L/kg fw",
+      "f_*": "kg/kg dw"
+    },
+    "provenance": {
+      "K_PL": "Chen2025 SSLM",
+      "K_prot": "Zhou2025",
+      "K_cw": "GAP A / Prompt2 v2 (Guo2025 Fig.3f DFT + Mel2024 lignin anchor; rice whole-cw per organ)",
+      "f_xy_recommended": "GAP B / S4 + docs/theory_anchor.tex (Trapp+Briggs LFER: MONOTONE logistic)",
+      "f_xy_W2fit": "S6 W2 transport fit to Yamazaki (SATURATED 3param/3obs; long-chain values NON-physical, see docs/DELIVERABLE_GAP_B_fxy.md)",
+      "composition": "rice_tissue package (recommended anchors)"
+    },
+    "WARNING_f_xy": "Use f_xy_recommended (monotone). f_xy_W2fit rises spuriously for C10+ (single-straw-compartment entanglement, H7 §7.2); theory + cross-field TF both require monotone decline."
+  },
+  "environment": {
+    "E_m_V": -0.12,
+    "E_m_plausible_range_V": [
+      -0.12,
+      -0.09
+    ],
+    "z": -1,
+    "f_d": 1.0,
+    "f_n": 0.0,
+    "T_K": 298.15,
+    "note": "fully-dissociated anion; E_m is the live pH/redox lever (Task B); in-situ paddy E_m unmeasured (key gap)."
+  },
+  "carrier_MichaelisMenten": {
+    "Vmax_in": 20.0,
+    "Km_in": 5.0,
+    "Vmax_out": 8.0,
+    "Km_out": 5.0,
+    "note": "fixed during W2 fit; carrier overcomes GHK anion exclusion (e^N≈107)."
+  },
+  "f_xy_functional_form": {
+    "form": "logistic",
+    "expression": "f_xy(n) = eta / (1 + 10^(s*(n - n0)))",
+    "logit_natural_log_fit": "logit f_xy = 4.061 - 0.857*n   (OLS, R^2=0.97)",
+    "eta_ceiling": 1.0,
+    "beta_per_C_pooled": 0.67,
+    "beta_per_C_OLS": 0.86,
+    "s_base10": 0.372,
+    "n0": 4.74,
+    "headgroup": "PFSA = PFCA * exp(-1.5)  (sign uncertain; sensitivity term)",
+    "ceiling_check": "f_xy(PFBA)=0.79 ≈ Briggs neutral max 0.784",
+    "source": "docs/theory_anchor.tex (Task A)"
+  },
+  "tissue_composition_recommended": {
+    "root": {
+      "theta_fw": 0.9,
+      "f_prot": 0.07,
+      "f_PL": 0.015,
+      "f_cw": 0.5
+    },
+    "stem": {
+      "theta_fw": 0.83,
+      "f_prot": 0.05,
+      "f_PL": 0.005,
+      "f_cw": 0.72
+    },
+    "leaf": {
+      "theta_fw": 0.78,
+      "f_prot": 0.1,
+      "f_PL": 0.01,
+      "f_cw": 0.56
+    },
+    "grain_brown": {
+      "theta_fw": 0.14,
+      "f_prot": 0.09,
+      "f_PL": 0.003,
+      "f_cw": 0.035
+    }
+  },
+  "congeners": [
+    {
+      "name": "PFBA",
+      "n_C": 4,
+      "group": "PFCA",
+      "K_prot_Lkg": 10.72,
+      "K_PL_Lkg": 42.66,
+      "K_cw_wholecw_Lkg": {
+        "root": 2.8,
+        "stem": 2.77,
+        "leaf": 2.46,
+        "grain": 3.31
+      },
+      "K_cw_poly_rec_Lkg": 1.6,
+      "K_lignin_rec_Lkg": 7.6,
+      "f_xy_recommended": 0.79,
+      "f_xy_W2fit": 0.0772,
+      "L_Ph_W2fit": 0.00024,
+      "kappa_d_W2fit": 0.87,
+      "B_k_basisA_Lkg_fw": {
+        "root": 1.179,
+        "stem": 1.296,
+        "leaf": 1.413,
+        "grain": 1.179
+      }
+    },
+    {
+      "name": "PFPeA",
+      "n_C": 5,
+      "group": "PFCA",
+      "K_prot_Lkg": 12.3,
+      "K_PL_Lkg": 104.71,
+      "K_cw_wholecw_Lkg": {
+        "root": 3.44,
+        "stem": 3.4,
+        "leaf": 3.03,
+        "grain": 4.06
+      },
+      "K_cw_poly_rec_Lkg": 2.0,
+      "K_lignin_rec_Lkg": 9.2,
+      "f_xy_recommended": 0.47,
+      "f_xy_W2fit": 0.047,
+      "L_Ph_W2fit": 0.00022,
+      "kappa_d_W2fit": 3.225,
+      "B_k_basisA_Lkg_fw": {
+        "root": 1.315,
+        "stem": 1.44,
+        "leaf": 1.654,
+        "grain": 1.484
+      }
+    },
+    {
+      "name": "PFHxA",
+      "n_C": 6,
+      "group": "PFCA",
+      "K_prot_Lkg": 14.13,
+      "K_PL_Lkg": 263.03,
+      "K_cw_wholecw_Lkg": {
+        "root": 4.2,
+        "stem": 4.15,
+        "leaf": 3.71,
+        "grain": 4.93
+      },
+      "K_cw_poly_rec_Lkg": 2.5,
+      "K_lignin_rec_Lkg": 11.0,
+      "f_xy_recommended": 0.216,
+      "f_xy_W2fit": 0.0232,
+      "L_Ph_W2fit": 0.0011,
+      "kappa_d_W2fit": 3.943,
+      "B_k_basisA_Lkg_fw": {
+        "root": 1.603,
+        "stem": 1.682,
+        "leaf": 2.127,
+        "grain": 2.061
+      }
+    },
+    {
+      "name": "PFHpA",
+      "n_C": 7,
+      "group": "PFCA",
+      "K_prot_Lkg": 13.18,
+      "K_PL_Lkg": 707.95,
+      "K_cw_wholecw_Lkg": {
+        "root": 5.36,
+        "stem": 5.3,
+        "leaf": 4.74,
+        "grain": 6.29
+      },
+      "K_cw_poly_rec_Lkg": 3.2,
+      "K_lignin_rec_Lkg": 14.0,
+      "f_xy_recommended": 0.098,
+      "f_xy_W2fit": 0.0113,
+      "L_Ph_W2fit": 0.00182,
+      "kappa_d_W2fit": 1.828,
+      "B_k_basisA_Lkg_fw": {
+        "root": 2.322,
+        "stem": 2.193,
+        "leaf": 3.211,
+        "grain": 3.176
+      }
+    },
+    {
+      "name": "PFOA",
+      "n_C": 8,
+      "group": "PFCA",
+      "K_prot_Lkg": 12.3,
+      "K_PL_Lkg": 1905.46,
+      "K_cw_wholecw_Lkg": {
+        "root": 6.6,
+        "stem": 6.53,
+        "leaf": 5.86,
+        "grain": 7.71
+      },
+      "K_cw_poly_rec_Lkg": 4.0,
+      "K_lignin_rec_Lkg": 17.0,
+      "f_xy_recommended": 0.04,
+      "f_xy_W2fit": 0.0256,
+      "L_Ph_W2fit": 0.00478,
+      "kappa_d_W2fit": 6.205,
+      "B_k_basisA_Lkg_fw": {
+        "root": 4.174,
+        "stem": 3.353,
+        "leaf": 5.965,
+        "grain": 6.24
+      }
+    },
+    {
+      "name": "PFNA",
+      "n_C": 9,
+      "group": "PFCA",
+      "K_prot_Lkg": 16.98,
+      "K_PL_Lkg": 5623.41,
+      "K_cw_wholecw_Lkg": {
+        "root": 8.2,
+        "stem": 8.11,
+        "leaf": 7.29,
+        "grain": 9.57
+      },
+      "K_cw_poly_rec_Lkg": 5.0,
+      "K_lignin_rec_Lkg": 21.0,
+      "f_xy_recommended": 0.014,
+      "f_xy_W2fit": 0.0433,
+      "L_Ph_W2fit": 0.01271,
+      "kappa_d_W2fit": 14.218,
+      "B_k_basisA_Lkg_fw": {
+        "root": 9.864,
+        "stem": 6.747,
+        "leaf": 14.423,
+        "grain": 16.251
+      }
+    },
+    {
+      "name": "PFDA",
+      "n_C": 10,
+      "group": "PFCA",
+      "K_prot_Lkg": 23.44,
+      "K_PL_Lkg": 15135.61,
+      "K_cw_wholecw_Lkg": {
+        "root": 10.24,
+        "stem": 10.13,
+        "leaf": 9.11,
+        "grain": 11.93
+      },
+      "K_cw_poly_rec_Lkg": 6.3,
+      "K_lignin_rec_Lkg": 26.0,
+      "f_xy_recommended": 0.0051,
+      "f_xy_W2fit": 0.0817,
+      "L_Ph_W2fit": 0.06687,
+      "kappa_d_W2fit": 3.942,
+      "B_k_basisA_Lkg_fw": {
+        "root": 24.279,
+        "stem": 15.134,
+        "leaf": 35.716,
+        "grain": 41.363
+      }
+    },
+    {
+      "name": "PFUnDA",
+      "n_C": 11,
+      "group": "PFCA",
+      "K_prot_Lkg": 23.44,
+      "K_PL_Lkg": 31622.78,
+      "K_cw_wholecw_Lkg": {
+        "root": 13.0,
+        "stem": 12.86,
+        "leaf": 11.57,
+        "grain": 15.14
+      },
+      "K_cw_poly_rec_Lkg": 8.0,
+      "K_lignin_rec_Lkg": 33.0,
+      "f_xy_recommended": 0.0039,
+      "f_xy_W2fit": 0.0933,
+      "L_Ph_W2fit": 0.06291,
+      "kappa_d_W2fit": 1.392,
+      "B_k_basisA_Lkg_fw": {
+        "root": 49.148,
+        "stem": 29.483,
+        "leaf": 72.291,
+        "grain": 83.997
+      }
+    },
+    {
+      "name": "PFDoDA",
+      "n_C": 12,
+      "group": "PFCA",
+      "K_prot_Lkg": 23.44,
+      "K_PL_Lkg": 66069.34,
+      "K_cw_wholecw_Lkg": {
+        "root": 16.4,
+        "stem": 16.22,
+        "leaf": 14.57,
+        "grain": 19.14
+      },
+      "K_cw_poly_rec_Lkg": 10.0,
+      "K_lignin_rec_Lkg": 42.0,
+      "f_xy_recommended": 0.003,
+      "f_xy_W2fit": 0.6727,
+      "L_Ph_W2fit": 0.5,
+      "kappa_d_W2fit": 0.001,
+      "B_k_basisA_Lkg_fw": {
+        "root": 100.988,
+        "stem": 59.174,
+        "leaf": 148.443,
+        "grain": 172.989
+      }
+    },
+    {
+      "name": "PFBS",
+      "n_C": 4,
+      "group": "PFSA",
+      "K_prot_Lkg": 36.31,
+      "K_PL_Lkg": 524.81,
+      "K_cw_wholecw_Lkg": {
+        "root": 9.4,
+        "stem": 9.28,
+        "leaf": 8.14,
+        "grain": 11.29
+      },
+      "K_cw_poly_rec_Lkg": 5.0,
+      "K_lignin_rec_Lkg": 27.0,
+      "f_xy_recommended": 0.17627,
+      "f_xy_W2fit": 0.0083,
+      "L_Ph_W2fit": 0.00063,
+      "kappa_d_W2fit": 0.46,
+      "B_k_basisA_Lkg_fw": {
+        "root": 2.411,
+        "stem": 2.721,
+        "leaf": 3.736,
+        "grain": 4.644
+      }
+    },
+    {
+      "name": "PFHxS",
+      "n_C": 6,
+      "group": "PFSA",
+      "K_prot_Lkg": 42.66,
+      "K_PL_Lkg": 4466.84,
+      "K_cw_wholecw_Lkg": {
+        "root": 12.6,
+        "stem": 12.47,
+        "leaf": 11.29,
+        "grain": 14.57
+      },
+      "K_cw_poly_rec_Lkg": 8.0,
+      "K_lignin_rec_Lkg": 31.0,
+      "f_xy_recommended": 0.0482,
+      "f_xy_W2fit": null,
+      "L_Ph_W2fit": null,
+      "kappa_d_W2fit": null,
+      "B_k_basisA_Lkg_fw": {
+        "root": 8.529,
+        "stem": 6.516,
+        "leaf": 12.936,
+        "grain": 15.405
+      }
+    },
+    {
+      "name": "PFOS",
+      "n_C": 8,
+      "group": "PFSA",
+      "K_prot_Lkg": 34.67,
+      "K_PL_Lkg": 31622.78,
+      "K_cw_wholecw_Lkg": {
+        "root": 17.4,
+        "stem": 17.28,
+        "leaf": 16.14,
+        "grain": 19.29
+      },
+      "K_cw_poly_rec_Lkg": 13.0,
+      "K_lignin_rec_Lkg": 35.0,
+      "f_xy_recommended": 0.00893,
+      "f_xy_W2fit": 0.1419,
+      "L_Ph_W2fit": 0.06194,
+      "kappa_d_W2fit": 5.888,
+      "B_k_basisA_Lkg_fw": {
+        "root": 49.447,
+        "stem": 30.119,
+        "leaf": 73.101,
+        "grain": 84.991
+      }
+    }
+  ],
+  "status": {
+    "GAP_A_Kcw": "CLOSED (docs/DELIVERABLE_GAP_A_Kcw.md)",
+    "GAP_B_fxy": "CLOSED (docs/DELIVERABLE_GAP_B_fxy.md; H7 §7.2 entanglement resolved by theory)",
+    "validation": "Yamazaki full-ODE reproduced (log10 RMSE 0.029); cross-field TF (water-independent) confirms monotone f_xy; see docs/H8_handoff_S6_final.md",
+    "open_data_limited": [
+      "rice (not wheat) per-congener root subcellular -> alpha/QC1 point estimate",
+      "reliable per-congener pore-water OR hydroponic RCF -> surface test + f_xy absolute",
+      "measured Q_TP(t), M(t) -> f_xy absolute scale",
+      "direct K_cw_poly + rice cw monosaccharide composition (long-term weakest point)",
+      "in-situ paddy E_m (-90..-120 mV -> ~2.5-3x passive-influx spread)"
+    ],
+    "config_decisions": {
+      "root_theta": "0.90 recommended (rice_tissue/Liu measured 0.90-0.92); 0.70 was an early choice",
+      "root_f_PL": "0.015 recommended (estimate, range 0.01-0.02; dominates long-chain B_root)",
+      "grain_theta": "0.14 (harvest/dry) vs 0.30 (filling) — stage-dependent"
+    }
+  }
+}

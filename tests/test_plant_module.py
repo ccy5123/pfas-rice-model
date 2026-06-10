@@ -35,7 +35,7 @@ def make_inputs(season=120.0, n=481, Cwo=1.0):
 
 
 def make_compound(**kw):
-    base = dict(name="PFOA", K_prot=50.0, K_PL=100.0, K_cw=20.0, kappa_d=0.5,
+    base = dict(name="PFOA", K_prot=50.0, K_PL=100.0, K_cw=7.0, kappa_d=0.5,
                 Vmax_in=20.0, Km_in=5.0, Vmax_out=8.0, Km_out=5.0,
                 L_Ph=0.005, f_xy=0.02)
     base.update(kw)
@@ -43,11 +43,13 @@ def make_compound(**kw):
 
 
 def make_comps():
+    # rice_tissue recommended composition (basis-A): theta = fresh-weight water
+    # fraction; f_* = DRY-weight mass fractions (rescaled by (1-theta) in B_k).
     return [
-        Compartment("root",  theta=0.70, f_prot=0.05, f_PL=0.010, f_cw=0.30),
-        Compartment("stem",  theta=0.80, f_prot=0.01, f_PL=0.005, f_cw=0.08),
-        Compartment("leaf",  theta=0.80, f_prot=0.03, f_PL=0.020, f_cw=0.04, S=20.0),
-        Compartment("grain", theta=0.15, f_prot=0.08, f_PL=0.010, f_cw=0.10, S=2.0),
+        Compartment("root",  theta=0.90, f_prot=0.07, f_PL=0.015, f_cw=0.50),
+        Compartment("stem",  theta=0.83, f_prot=0.05, f_PL=0.005, f_cw=0.72),
+        Compartment("leaf",  theta=0.78, f_prot=0.10, f_PL=0.010, f_cw=0.56, S=20.0),
+        Compartment("grain", theta=0.14, f_prot=0.09, f_PL=0.003, f_cw=0.035, S=2.0),
     ]
 
 
@@ -97,14 +99,18 @@ def test_carrier_enables_net_influx():
 # ---------------------------------------------------------------------------
 # binding (no density prefactor)
 # ---------------------------------------------------------------------------
-def test_binding_factor_has_no_density_prefactor():
+def test_binding_factor_basis_A_no_density_prefactor():
+    """Basis A (fresh-weight): B = theta_fw + (1-theta_fw)*sum_i f_i,dw*K_i.
+    The (1-theta) factor is a dry->fresh conversion (f_i are dw fractions), NOT a
+    density prefactor -- there is still no spurious rho_k term."""
     comps, cmpd = make_comps(), make_compound()
     B = binding_factors(comps, cmpd)
     for k, c in enumerate(comps):
-        expected = (c.theta + c.f_prot * cmpd.K_prot
-                    + c.f_PL * cmpd.K_PL + c.f_cw * cmpd.K_cw)
+        expected = c.theta + (1.0 - c.theta) * (
+            c.f_prot * cmpd.K_prot + c.f_PL * cmpd.K_PL + c.f_cw * cmpd.K_cw)
         assert B[k] == pytest.approx(expected)
-    assert B[ROOT] == pytest.approx(max(B))            # root binds most strongly
+    # under basis A the low-water grain has the largest fresh-weight B_k
+    assert B[FRUIT] == pytest.approx(max(B))
 
 
 # ---------------------------------------------------------------------------
@@ -133,14 +139,22 @@ def test_full_loading_reproduces_runaway():
 # ---------------------------------------------------------------------------
 # the empirical target ordering
 # ---------------------------------------------------------------------------
-def test_root_straw_grain_ordering():
-    """Demo parameters must reproduce root > straw > grain, with straw the
-    mass-weighted stem+leaf (bulk shoot)."""
-    t, model = make_model()
-    C = model.solve(t).y[:, -1]
-    Mf = model.inputs.M_(t[-1])
-    straw = (C[STEM] * Mf[STEM] + C[LEAF] * Mf[LEAF]) / (Mf[STEM] + Mf[LEAF])
-    assert C[ROOT] > straw > C[FRUIT]
+def test_translocation_controls_root_shoot_partitioning():
+    """f_xy controls the root<->shoot split.  The empirical ordering is
+    CONGENER-DEPENDENT (Yamazaki: short-chain PFBA straw >> root, but long-chain
+    PFUnDA root > straw), so a *universal* root>straw>grain does NOT hold under
+    the basis-A binding and is not asserted.  Instead: strong root retention
+    (very low f_xy, long-chain-like) keeps root above the shoot, while efficient
+    loading (high f_xy, short-chain-like) puts the shoot above the root."""
+    t, m_lo = make_model(f_xy=0.002)     # long-chain-like: root-retained
+    _, m_hi = make_model(f_xy=0.5)       # short-chain-like: translocated
+    Clo = m_lo.solve(t).y[:, -1]
+    Chi = m_hi.solve(t).y[:, -1]
+    Mf = m_lo.inputs.M_(t[-1])
+    straw_lo = (Clo[STEM] * Mf[STEM] + Clo[LEAF] * Mf[LEAF]) / (Mf[STEM] + Mf[LEAF])
+    straw_hi = (Chi[STEM] * Mf[STEM] + Chi[LEAF] * Mf[LEAF]) / (Mf[STEM] + Mf[LEAF])
+    assert Clo[ROOT] > straw_lo          # root retains when translocation is low
+    assert straw_hi > Chi[ROOT]          # shoot exceeds root when loading is high
 
 
 # ---------------------------------------------------------------------------

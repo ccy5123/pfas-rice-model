@@ -1,0 +1,15 @@
+compound,tissue,baf,sigma,source
+PFBA,root,8.1448,0.4,Li2025 S6 fw-converted; water med(19-31%)
+PFBA,straw,18.1529,0.4,Li2025 S6 fw-converted; water med(19-31%)
+PFHxA,root,35.4158,0.4,Li2025 S6 fw-converted; water rough
+PFHxA,straw,47.4891,0.4,Li2025 S6 fw-converted; water rough
+PFHxA,grain,279.2479,0.4,Li2025 S6 fw-converted; water rough
+PFOA,root,2.1941,0.3,Li2025 S6 fw-converted; water good(59-70%)
+PFOA,straw,1.5501,0.3,Li2025 S6 fw-converted; water good(59-70%)
+PFOA,grain,2.9623,0.3,Li2025 S6 fw-converted; water good(59-70%)
+PFBS,root,39.5385,0.6,Li2025 S6 fw-converted; water rough
+PFBS,straw,42.825,0.6,Li2025 S6 fw-converted; water rough
+PFBS,grain,763.2692,0.6,Li2025 S6 fw-converted; water rough
+PFOS,root,251.2535,0.6,Li2025 S6 fw-converted; water poor(0.3-1.6%)
+PFOS,straw,153.1755,0.6,Li2025 S6 fw-converted; water poor(0.3-1.6%)
+PFOS,grain,199.8607,0.6,Li2025 S6 fw-converted; water poor(0.3-1.6%)
