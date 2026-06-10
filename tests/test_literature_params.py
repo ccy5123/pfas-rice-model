@@ -95,6 +95,40 @@ def test_kprot_is_u_shaped_and_plant_weaker():
 
 
 # ---------------------------------------------------------------------------
+# C4 -- MEASURED per-congener values (Chen 2025 SI / Zhou 2025 SI)
+# ---------------------------------------------------------------------------
+def test_kpl_uses_measured_chen_when_named():
+    # named congener -> measured K_MW (10**logK_MW); PFOA logK_MW = 3.28
+    assert lp.k_pl(name="PFOA") == pytest.approx(10.0 ** 3.28, rel=1e-6)
+    assert lp.k_pl(name="PFOS") > lp.k_pl(name="PFOA") > lp.k_pl(name="PFBA")
+    # unknown name falls back to the slope rule (needs nPFC)
+    assert lp.k_pl(7, "carboxylate", name="not-a-pfas") == pytest.approx(lp.KPL_ANCHOR_LKG)
+
+
+def test_kprot_albumin_from_hsa_kd():
+    # K_prot = 1/(K_D[mol/L] * MW_HSA[kg/mol]); PFOA K_D = 2.57 umol/L
+    expect = 1.0 / (2.57e-6 * lp.MW_HSA_KG_MOL)
+    assert lp.k_prot_albumin("PFOA") == pytest.approx(expect, rel=1e-6)
+    assert lp.k_prot_albumin("PFOS") > lp.k_prot_albumin("PFOA")   # PFOS binds HSA stronger
+    assert lp.k_prot_albumin("not-a-pfas") is None
+    # named k_prot uses the measured albumin value, plant-scaled
+    assert lp.k_prot(name="PFOA", plant=False) == pytest.approx(expect, rel=1e-6)
+    assert lp.k_prot(name="PFOA", plant=True) == pytest.approx(expect * lp.PLANT_PROTEIN_SCALE, rel=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# C1 -- MEASURED calibration data (Kim et al. 2019)
+# ---------------------------------------------------------------------------
+def test_kim2019_grain_baf():
+    baf = lp.kim2019_grain_baf("porewater")
+    # PFOA: brown rice 0.349 ng/g, porewater 78.7 ng/L -> 0.349/(78.7/1000) = 4.43 L/kg
+    assert baf["PFOA"] == pytest.approx(0.349 / (78.7 / 1000.0), rel=1e-6)
+    assert all(v > 0 for v in baf.values())
+    soil = lp.kim2019_grain_baf("soil")
+    assert soil["PFOA"] == pytest.approx(0.349 / 0.160, rel=1e-6)
+
+
+# ---------------------------------------------------------------------------
 # C1 -- grain BAF chain-length trend
 # ---------------------------------------------------------------------------
 def test_grain_baf_factor_decreases_with_chain_length():

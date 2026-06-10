@@ -20,23 +20,29 @@ what is solid vs. what is still a placeholder:
       measured PFOA/PFOS/PFBS Koc values).
     - root membrane potential ``E_m`` for the GHK term (C5; Wang & Glass 1994,
       rice -116..-140 mV -- DOI not confirmed this session, see ``DOI_status``).
-    - QSPR *slopes* for the membrane/protein binding that feeds ``B_k``
-      (C4; Chen 2025 K_MW +0.36/CF2 (PFCA), +0.37/CF2 (PFSA)).
 
-* PLACEHOLDER intercepts (flagged ``GAP`` in the database):
-    - absolute ``K_PL``, ``K_prot``, ``K_cw`` per congener: the database gives
-      the chain-length *slopes/shape* but the absolute values must be read from
-      the cited SI tables (not done this session) or fitted.  We therefore scale
-      a NOMINAL anchor (kept equal to the illustrative demo value) by the
-      verified slope, so the model runs with chain-length-resolved binding while
-      remaining explicit that the intercept is uncalibrated.
+* MEASURED per-congener values, extracted from the cited SI (this session;
+  see ``docs/literature_db/raw_si/``):
+    - ``K_PL`` (= membrane-water K_MW): Chen 2025 Table S5, log L/kg lipid,
+      cross-checked against Droge 2019 SSLM (same method, within ~0.2 log).
+    - ``K_prot`` (serum-albumin): converted from the Chen 2025 HSA K_D
+      (single-site), cross-checked against the Zhou 2025 BSA K_A.
+    - calibration target: Kim 2019 per-congener brown-rice (grain) BAF, paired
+      with paddy pore water.
+
+* STILL PLACEHOLDER / GAP:
+    - ``K_cw`` (cell-wall): no partition coefficient exists in the literature
+      (only the binding components -- pectin/hemicellulose -- are identified);
+      kept as a nominal anchor.
+    - absolute PLANT-protein ``K_prot``: the plant/storage-protein numbers are in
+      Zhou 2025's MAIN TEXT (not the SI we have), so plant ``K_prot`` = measured
+      albumin x ``PLANT_PROTEIN_SCALE`` (an illustrative ratio < 1).
 
 * NOT BAF-identifiable (fitted, not from the database):
     - ``f_xy`` (TSCF), ``L_Ph`` (phloem loading), ``kappa_d``, ``Vmax/Km``.
-      The database confirms the *mechanisms* (carrier M-M, low anion TSCF,
-      phloem mobility) and the chain-length *ordering*, but the numeric values
-      are Tier-1/2 calibration targets.  Builders accept them as arguments with
-      documented defaults matching the demo.
+      The database confirms the *mechanisms* and chain-length *ordering*, but the
+      numeric values are Tier-1/2 calibration targets.  ``_demo()`` shows fitting
+      ``L_Ph`` to the Kim 2019 PFOA grain BAF.
 
 Symbol map (report / code -> this module)
 -----------------------------------------
@@ -202,38 +208,67 @@ def koc_to_KF(Koc_LkG: float, f_oc: float, n: float = 1.0) -> float:
 # ===========================================================================
 # C4 -- tissue binding factor B_k: K_PL, K_prot, K_cw
 # ===========================================================================
-# membrane(phospholipid)-water partition slope, per CF2 (chen2025)  [verified]
+# --- MEASURED membrane-water partition K_MW (= K_PL), log10 L/kg lipid, pH 7.0 ---
+# chen2025 Table S5 (SSLM/TRANSIL kit).  Cross-checked against droge2019 SSLM
+# (same method) for the PFCAs -> agree within ~0.2 log, confirming L/kg lipid.
+# (see docs/literature_db/raw_si/chen2025_kmw_hsa.csv, droge2019_kmw.csv)
+KMW_CHEN2025_LOG: dict[str, float] = {
+    "PFBA": 1.63, "PFPeA": 2.02, "PFHxA": 2.42, "PFHpA": 2.85, "PFOA": 3.28,
+    "PFNA": 3.75, "PFDA": 4.18, "PFUnDA": 4.50, "PFDoDA": 4.82,
+    "PFBS": 2.72, "PFHxS": 3.65, "PFOS": 4.50,
+}
+# --- MEASURED HSA binding: equilibrium dissociation constant K_D [umol/L], pH 7.4 ---
+# chen2025 Table S5.  Converted to a protein-water partition by k_prot_albumin().
+KD_HSA_CHEN2025_UMOL: dict[str, float] = {
+    "PFBA": 84.9, "PFPeA": 16.27, "PFHxA": 13.98, "PFHpA": 6.2, "PFOA": 2.57,
+    "PFNA": 3.75, "PFDA": 3.64, "PFUnDA": 4.73, "PFDoDA": 15.76,
+    "PFBS": 15.6, "PFHxS": 1.31, "PFOS": 0.94,
+}
+MW_HSA_KG_MOL = 66.5           # human serum albumin molecular weight
+# BSA association constants K_A [L/mol] @300 K (zhou2025 Table S4) -- independent
+# animal-protein cross-check (agrees with HSA within ~1.5x for PFOA).
+KA_BSA_ZHOU2025: dict[str, float] = {
+    "PFHxA": 3.03e4, "PFOA": 2.726e5, "PFDA": 7.31e5,
+    "PFBS": 47.6, "PFHxS": 2.64e4, "PFOS": 4.12e5,
+}
+
+# membrane(phospholipid)-water partition slope, per CF2 (chen2025)  [verified] --
+# used only as a FALLBACK for congeners absent from the measured dict.
 KPL_PER_CF2: dict[str, float] = {"carboxylate": 0.36, "sulfonate": 0.37}
 KPL_PER_CF2_DROGE = 0.53       # alt PFSA slope (droge2019)                          [verified]
-# NOMINAL anchors (absolute intercept = GAP; kept equal to the demo values so the
-# model runs unchanged in magnitude while scaling correctly with chain length).
-KPL_ANCHOR_LKG = 100.0         # K_PL at nPFC=7 carboxylate  [PLACEHOLDER intercept]
+KPL_ANCHOR_LKG = 10.0 ** KMW_CHEN2025_LOG["PFOA"]   # measured PFOA anchor (~1905 L/kg)
 KPL_ANCHOR_NPFC = 7
-KPROT_ANCHOR_LKG = 50.0        # K_prot serum-albumin scale  [PLACEHOLDER intercept]
-KCW_ANCHOR_LKG = 20.0          # K_cw cell-wall              [PLACEHOLDER -- no coefficient in lit.]
+KPROT_ANCHOR_LKG = 50.0        # K_prot fallback scale (only if HSA K_D unavailable)
+KCW_ANCHOR_LKG = 20.0          # K_cw cell-wall  [PLACEHOLDER -- no coefficient in literature]
 # plant proteins (soy protein isolate, a grain storage-protein analog) bind
-# WEAKER than serum albumin (zhou2025) -> grain B_k via storage protein is lower
-# than animal-albumin estimates.  Ratio is illustrative (no precise value given).
-PLANT_PROTEIN_SCALE = 0.3      # [PLACEHOLDER ratio < 1]
+# WEAKER than serum albumin (zhou2025).  The absolute plant K_prot is in Zhou's
+# MAIN TEXT (not the SI we have) -> still a GAP; we scale the measured albumin
+# value by this illustrative ratio < 1 for plant/grain tissues.
+PLANT_PROTEIN_SCALE = 0.3      # [PLACEHOLDER ratio < 1 -- plant absolute = GAP]
 
 
-def k_pl(n_perfluoroC: float, head_group: str = "carboxylate",
-         anchor: float = KPL_ANCHOR_LKG, anchor_npfc: int = KPL_ANCHOR_NPFC) -> float:
-    """Phospholipid membrane-water partition K_PL [L/kg].  [C4]
+def k_pl(n_perfluoroC: float | None = None, head_group: str = "carboxylate",
+         anchor: float = KPL_ANCHOR_LKG, anchor_npfc: int = KPL_ANCHOR_NPFC,
+         *, name: str | None = None) -> float:
+    """Phospholipid membrane-water partition K_PL [L/kg lipid].  [C4]
 
-    Scales a NOMINAL anchor by the verified per-CF2 slope (chen2025):
+    Prefers the MEASURED chen2025 K_MW when ``name`` is a known congener; otherwise
+    falls back to the per-CF2 slope from the measured PFOA anchor:
         log K_PL = log(anchor) + slope*(nPFC - anchor_npfc).
     """
+    if name is not None and name in KMW_CHEN2025_LOG:
+        return float(np.power(10.0, KMW_CHEN2025_LOG[name]))
+    if n_perfluoroC is None:
+        raise ValueError("k_pl needs a measured `name` or an `n_perfluoroC` (fallback)")
     slope = KPL_PER_CF2[head_group]
     return float(anchor) * float(np.power(10.0, slope * (n_perfluoroC - anchor_npfc)))
 
 
 def _kprot_chain_factor(n_perfluoroC: float) -> float:
-    """U-shaped (inverted-V) chain-length factor for serum-albumin affinity.
+    """U-shaped (inverted-V) fallback chain-length factor for albumin affinity.
 
-    Affinity is NON-monotonic with an optimum plateau at nPFC 6-10 (chen2025;
-    cross-species albumin study); shorter and longer chains bind weaker.  The
-    plateau is from the literature; the off-plateau decline rate is illustrative.
+    Optimum plateau at nPFC 6-10 (chen2025; cross-species albumin study); shorter
+    and longer chains bind weaker.  Used ONLY when no measured HSA K_D exists.
     """
     if 6 <= n_perfluoroC <= 10:
         return 1.0
@@ -241,15 +276,35 @@ def _kprot_chain_factor(n_perfluoroC: float) -> float:
     return float(np.power(10.0, -0.25 * d))     # ~ -0.25 log/CF2 off the optimum [illustrative]
 
 
-def k_prot(n_perfluoroC: float, plant: bool = True, anchor: float = KPROT_ANCHOR_LKG) -> float:
-    """Protein-water partition K_prot [L/kg].  [C4]
+def k_prot_albumin(name: str) -> float | None:
+    """Serum-albumin protein-water partition [L/kg], MEASURED.  [C4]
 
-    U-shaped chain-length factor (optimum C6-C10) on a NOMINAL anchor; when
-    ``plant=True`` it is reduced by ``PLANT_PROTEIN_SCALE`` (plant storage
-    proteins bind weaker than serum albumin, zhou2025).
+    From the HSA dissociation constant K_D (chen2025, Table S5), single-site:
+        K_prot = Bmax / (K_D[mol/L] * MW_HSA[kg/mol]),  Bmax = 1.
+    Returns None if the congener has no measured K_D.  Cross-checks zhou2025 BSA
+    (= n*K_A/MW) within ~1.5x for PFOA.
     """
-    val = float(anchor) * _kprot_chain_factor(n_perfluoroC)
-    return val * PLANT_PROTEIN_SCALE if plant else val
+    kd = KD_HSA_CHEN2025_UMOL.get(name)
+    if kd is None:
+        return None
+    return 1.0 / ((kd * 1e-6) * MW_HSA_KG_MOL)
+
+
+def k_prot(n_perfluoroC: float | None = None, plant: bool = True,
+           anchor: float = KPROT_ANCHOR_LKG, *, name: str | None = None) -> float:
+    """Protein-water partition K_prot [L/kg protein].  [C4]
+
+    Uses the MEASURED serum-albumin value (:func:`k_prot_albumin`) when ``name``
+    is a known congener; otherwise a U-shaped fallback on a nominal anchor.  For
+    ``plant=True`` the value is reduced by ``PLANT_PROTEIN_SCALE`` (plant storage
+    proteins bind weaker, zhou2025 -- absolute plant K_prot is still a GAP).
+    """
+    base = k_prot_albumin(name) if name is not None else None
+    if base is None:
+        if n_perfluoroC is None:
+            raise ValueError("k_prot needs a measured `name` or an `n_perfluoroC` (fallback)")
+        base = float(anchor) * _kprot_chain_factor(n_perfluoroC)
+    return base * PLANT_PROTEIN_SCALE if plant else base
 
 
 # ===========================================================================
@@ -266,6 +321,35 @@ def grain_baf_chain_factor(n_perfluoroC: float, ref_n_perfluoroC: int = 7) -> fl
     series; it is a diagnostic scaling, not a direct model parameter.
     """
     return float(np.power(10.0, GRAIN_BAF_PER_CF2 * (n_perfluoroC - ref_n_perfluoroC)))
+
+
+# --- MEASURED field calibration data: Kim et al. 2019 (Korean paddy) ------------
+# Table 4 averages (porewater n=27; soil & brown rice n=30), per congener:
+#   (porewater [ng/L], soil [ng/g dw], brown rice [ng/g], rice detection freq [%]).
+# Only congeners with detectable brown rice are kept.  These are field ENSEMBLE
+# averages (NOT same-site paired), so the BAFs below are approximate anchors.
+# (see docs/literature_db/raw_si/kim2019_field_conc.csv, kim2019_grain_baf.csv)
+KIM2019_FIELD: dict[str, tuple[float, float, float, float]] = {
+    "PFHpA":  (24.7,   0.499,  0.00974, 13.0),
+    "PFOA":   (78.7,   0.160,  0.349,   57.0),
+    "PFNA":   (13.0,   0.272,  0.0287,  20.0),
+    "PFDA":   (3.54,   0.217,  0.00551, 6.7),
+    "PFUnDA": (0.244,  0.149,  0.00807, 13.0),
+    "PFDoDA": (0.0488, 0.0802, 0.00172, 3.3),
+}
+
+
+def kim2019_grain_baf(basis: str = "porewater") -> dict[str, float]:
+    """Per-congener brown-rice (grain) BAF from Kim et al. 2019.  [C1, kim2019]
+
+    ``basis="porewater"`` -> C_grain/C_porewater [L/kg] (the model's BAF, since
+    C_w^o is pore water; ng/g == ug/kg, ng/L -> ug/L by /1000).  ``basis="soil"``
+    -> C_grain/C_soil [kg/kg].  Field ensemble averages -> treat as approximate.
+    """
+    out = {}
+    for sp, (pw, soil, rice, _df) in KIM2019_FIELD.items():
+        out[sp] = rice / (pw / 1000.0) if basis == "porewater" else rice / soil
+    return out
 
 
 # ===========================================================================
@@ -312,8 +396,8 @@ def literature_compound(name: str | None = None, *,
     label = name or f"PF{n_perfluoroC}{'S' if head_group == 'sulfonate' else 'A'}"
     return Compound(
         name=label,
-        K_prot=k_prot(n_perfluoroC, plant=plant_protein, anchor=kprot_anchor),
-        K_PL=k_pl(n_perfluoroC, head_group, anchor=kpl_anchor),
+        K_prot=k_prot(n_perfluoroC, plant=plant_protein, anchor=kprot_anchor, name=name),
+        K_PL=k_pl(n_perfluoroC, head_group, anchor=kpl_anchor, name=name),
         K_cw=kcw_anchor,
         kappa_d=kappa_d, Vmax_in=Vmax_in, Km_in=Km_in,
         Vmax_out=Vmax_out, Km_out=Km_out,
@@ -372,16 +456,14 @@ def _demo():
         ms = f"   measured={meas:6.1f}" if meas else ""
         print(f"  {nm:7s} nPFC={npfc:2d} {hg:11s} Koc_pred={float(koc(npfc,hg)):7.1f} L/kg{ms}")
 
-    print("\n== C4  K_PL chain-length scaling  [chen2025 slope; intercept PLACEHOLDER] ==")
-    for nm in ("PFBA", "PFHxA", "PFOA", "PFDA", "PFDoDA"):
-        _, npfc, hg = SPECIES[nm]
-        print(f"  {nm:7s} nPFC={npfc:2d}  K_PL={k_pl(npfc,hg):8.2f}  "
-              f"K_prot(plant)={k_prot(npfc):7.2f} L/kg")
+    print("\n== C4  MEASURED K_PL (chen2025 K_MW) & K_prot (HSA K_D -> albumin) [L/kg] ==")
+    for nm in ("PFBA", "PFHxA", "PFOA", "PFDA", "PFDoDA", "PFOS"):
+        print(f"  {nm:7s}  K_PL={k_pl(name=nm):9.1f}   "
+              f"K_prot_albumin={k_prot_albumin(nm):9.1f}   K_prot(plant)={k_prot(name=nm):8.1f}")
 
-    print("\n== C1  grain-BAF chain-length factor (rel. PFOA)  [liu2019, verified trend] ==")
-    for nm in ("PFBA", "PFHxA", "PFOA", "PFDA", "PFDoDA"):
-        _, npfc, _ = SPECIES[nm]
-        print(f"  {nm:7s} nPFC={npfc:2d}  grain-BAF factor = {grain_baf_chain_factor(npfc):.3f}")
+    print("\n== C1  MEASURED grain BAF (Kim 2019, porewater basis) [L/kg]  [kim2019] ==")
+    for nm, b in kim2019_grain_baf("porewater").items():
+        print(f"  {nm:7s}  grain BAF = {b:7.2f}")
 
     print("\n== end-to-end: literature-parametrised PFOA in paddy rice ==")
     t = np.linspace(0.0, 120.0, 481)
@@ -407,11 +489,30 @@ def _demo():
     print(f"  soil: Koc={KOC_ANCHORS_LKG['PFOA']:.0f} L/kg -> K_F={soil.K_F:.3f} "
           f"(f_oc=0.02), n={soil.n}; C_w^o(day45)={inputs.Cwo_(45):.4f} ug/L")
     print(f"  B_k [L/kg]: " + ", ".join(f"{c.name}={b:.2f}" for c, b in zip(comps, B)))
+    Cwo_end = inputs.Cwo_(t[-1])
     Mf = inputs.M_(t[-1])
     straw = (Cend[STEM] * Mf[STEM] + Cend[LEAF] * Mf[LEAF]) / (Mf[STEM] + Mf[LEAF])
     print(f"  final conc [ug/kg]: root={Cend[ROOT]:.3f}  straw={straw:.3f}  grain={Cend[FRUIT]:.3f}")
-    ok = Cend[ROOT] > straw > Cend[FRUIT]
-    print(f"  ordering root > straw > grain: {'OK' if ok else 'VIOLATED'}")
+    print(f"  model BAF  [L/kg] : root={Cend[ROOT]/Cwo_end:.2f}  straw={straw/Cwo_end:.2f}  "
+          f"grain={Cend[FRUIT]/Cwo_end:.3f}")
+    print(f"  Kim 2019 PFOA grain BAF (porewater) = {kim2019_grain_baf()['PFOA']:.2f} L/kg "
+          f"<- Tier-1 calibration target")
+    ok = Cend[ROOT] / Cwo_end > straw / Cwo_end > Cend[FRUIT] / Cwo_end
+    print(f"  ordering root > straw > grain: {'OK' if ok else 'VIOLATED (transport params need calibration)'}")
+
+    # Tier-1 calibration: fit phloem loading L_Ph to the Kim 2019 PFOA grain BAF.
+    try:
+        from calibration import calibrate, Param, ObservedBAF
+        tgt = kim2019_grain_baf()["PFOA"]
+        res = calibrate(model, [Param("L_Ph", 1e-4, 1.0)],
+                        [ObservedBAF("grain", tgt, sigma=0.3)], global_search=False)
+        print(f"\n== Tier-1 calibration to Kim 2019 PFOA grain BAF ({tgt:.2f} L/kg) ==")
+        print(f"  fitted L_Ph = {res.values['L_Ph']:.4f}  ->  grain BAF = "
+              f"{res.predicted['grain']:.3f}  (was {Cend[FRUIT]/Cwo_end:.3f})")
+        print("  NOTE: grain-only constraint -> fits the phloem knob; f_xy (root->shoot)"
+              " needs root/straw data (Kim is grain-only) -- a DB gap.")
+    except Exception as e:
+        print(f"  (calibration step skipped: {e})")
 
 
 if __name__ == "__main__":

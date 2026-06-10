@@ -8,6 +8,10 @@ the model (C1–C6) plus an overall source shortlist and a gap analysis.
 - `PFAS_rice_parameter_database.xlsx` — source workbook (one sheet per tab).
 - `*.csv` — per-sheet exports (diff-able, machine-readable; regenerate from the
   xlsx with `openpyxl`).
+- `raw_si/` — per-congener numeric tables extracted from the cited papers'
+  **Supporting Information** (Chen 2025 K_MW/HSA K_D, Droge 2019 K_MW, Zhou 2025
+  BSA K_A, Kim 2019 field concentrations + grain BAF). These populate the
+  *measured* values in `src/literature_params.py`. See `raw_si/README.md`.
 
 ## Tabs → model terms
 | tab | tier | model term it feeds |
@@ -20,10 +24,12 @@ the model (C1–C6) plus an overall source shortlist and a gap analysis.
 | `C6_Physchem`             | Tier-0 | `f_d` (pKa), `P_d`, `D_aq` |
 
 ## How it is consumed
-`src/literature_params.py` transcribes the **verified** quantities (QSPR slopes,
-the measured Koc anchors, `f_d`, `E_m`) into builders that plug into
-`pfas_rice_plant_module` and `soil_paddy`. Run `python src/literature_params.py`
-for a demo of the QSPRs and an end-to-end literature-parametrised run.
+`src/literature_params.py` transcribes the **verified** quantities — QSPR slopes,
+the measured Koc anchors, `f_d`, `E_m`, the **measured per-congener `K_PL`/`K_prot`**
+(from `raw_si/`), and the **Kim 2019 grain BAF** calibration data — into builders
+that plug into `pfas_rice_plant_module` and `soil_paddy`. Run
+`python src/literature_params.py` for a demo of the QSPRs, an end-to-end
+literature-parametrised run, and a Tier-1 fit of `L_Ph` to the Kim 2019 PFOA grain BAF.
 
 ## ⚠️ DOI status (no-fabrication rule)
 Each row carries a `DOI_status`:
