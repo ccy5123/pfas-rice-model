@@ -100,7 +100,7 @@ doc = {
         "logit_natural_log_fit": "logit f_xy = 4.061 - 0.857*n   (OLS, R^2=0.97)",
         "eta_ceiling": 1.0, "beta_per_C_pooled": 0.67, "beta_per_C_OLS": 0.86,
         "s_base10": 0.372, "n0": 4.74,
-        "headgroup": "PFSA = PFCA * exp(-1.5)  (sign uncertain; sensitivity term)",
+        "headgroup": "PFSA = PFCA * exp(-1.1)  (Tang2026 + Yamazaki2023 TF: PFOS/PFOA ~0.26-0.43; sign CONFIRMED PFSA<PFCA; was placeholder exp(-1.5))",
         "ceiling_check": "f_xy(PFBA)=0.79 ≈ Briggs neutral max 0.784",
         "source": "docs/theory_anchor.tex (Task A)",
     },

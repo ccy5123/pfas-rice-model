@@ -124,6 +124,17 @@ def test_kprot_albumin_kd_is_reference_only():
 # ---------------------------------------------------------------------------
 # C1 -- MEASURED calibration data (Kim et al. 2019)
 # ---------------------------------------------------------------------------
+def test_fxy_headgroup_offset_pfsa_lower_than_pfca():
+    # PFSA translocates LESS than the CF2-matched PFCA (Tang 2026 / Yamazaki 2023)
+    base = 0.04
+    assert lp.f_xy_headgroup(base, "carboxylate") == pytest.approx(base)
+    assert lp.f_xy_headgroup(base, "sulfonate") == pytest.approx(base * np.exp(-1.1))
+    assert lp.f_xy_headgroup(base, "sulfonate") < lp.f_xy_headgroup(base, "carboxylate")
+    # ether (GenX) intermediate: below carboxylate, above sulfonate
+    assert (lp.f_xy_headgroup(base, "sulfonate") < lp.f_xy_headgroup(base, "ether")
+            < lp.f_xy_headgroup(base, "carboxylate"))
+
+
 def test_kim2019_grain_baf():
     baf = lp.kim2019_grain_baf("porewater")
     # PFOA: brown rice 0.349 ng/g, porewater 78.7 ng/L -> 0.349/(78.7/1000) = 4.43 L/kg

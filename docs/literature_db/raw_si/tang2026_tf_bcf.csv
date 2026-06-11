@@ -1,0 +1,12 @@
+# Tang et al. 2026 (J. Hazard. Mater., PII S030438942503938X) "Fate, bioaccumulation,
+# and toxic responses of PFOA, PFOS, GenX in the paddy soil-rice system across the full
+# growth cycle." SI Tables S7 (BCF) and S8 (TF, tissue/root), at the lowest dose 0.1 ug/g
+# (closest to environmental). TF tissue = stalk/leaf/chaff/endosperm relative to root.
+# Use: PFSA(PFOS) and ether(GenX) headgroup offsets on the root->shoot loading f_xy.
+compound,group,BCF_0.1,TF_stalk,TF_leaf,TF_chaff,TF_endosperm
+PFOA,PFCA,0.240,2.222,2.476,1.099,1.371
+PFOS,PFSA,0.254,0.571,0.684,0.652,0.944
+GenX,ether-PFCA,0.472,0.915,1.327,1.175,1.619
+# Headgroup TF ratios vs PFOA (matched-ish): PFOS/PFOA ~0.26 (stalk) confirms PFSA
+# translocates LESS than the CF2-comparable PFCA; cross-checks Yamazaki straw/root TF
+# (PFOS 0.73 / PFOA 1.69 = 0.43). GenX/PFOA ~0.4-1.2 (variable; ether, replacement).

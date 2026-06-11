@@ -192,8 +192,14 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 7. **Measured `Q_TP(t)` / `M_s(t)`** → pin the f_xy absolute scale + gradient crossover and run the
    full compartment-resolved fit (currently structural/direction only; placeholder transpiration ~5× high).
    Candidate value source flagged by the user: **Tang 2026 JHM (`10.1016/j.jhazmat.2025.141017`)**.
-8. **PFSA-specific transport term** — PFOS/PFSA translocate upward despite high binding (the monotone
-   binding-driven f_xy misses them); revisit the `PFSA = PFCA·e^(−1.5)` headgroup offset (sign/size).
+8. **PFSA-specific transport term** **DONE (sign pinned)** — the headgroup offset on `f_xy` is
+   confirmed and quantified: in BOTH Tang 2026 (paddy, PFOS/PFOA TF 0.26) and Yamazaki 2023 (0.43),
+   **PFSA translocates LESS** than the CF2-matched PFCA, so `f_xy(PFSA) = f_xy(PFCA)·exp(−1.1)`
+   (refines the placeholder `exp(−1.5)`; sign was "uncertain"). Wired as `literature_params.f_xy_headgroup`
+   + `FXY_HEADGROUP_LN_OFFSET`; `params/parameters.json` PFSA `f_xy_recommended` rescaled (build via
+   `Bk_table_S5.csv`). Ether (GenX) factor `exp(−0.7)` documented (Tang, provisional; not in the core
+   12). **Note**: this is distinct from the *long-chain PFCA* shoot mechanism (the f_xy-fit U-shape /
+   PFDoDA un-capturable), which remains open (hysteretic sorption — `docs/nstem_gradient_exploration.md`).
 9. (Later) **Method B** tight coupling in `external/hydrus_source`.
 
 ## 10. Gotchas / external dependencies

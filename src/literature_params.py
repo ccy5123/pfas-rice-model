@@ -115,6 +115,8 @@ REFERENCES: dict[str, Citation] = {
                         "10.1016/j.envint.2019.04.008", "verified", "C1"),
     "kim2019": Citation("kim2019", "Kim, Ekpe, Lee, Kim, Oh", 2019, "Sci. Total Environ. 671:714-721",
                         "10.1016/j.scitotenv.2019.03.240", "verified", "C1"),
+    "tang2026": Citation("tang2026", "Tang, Xiao, Wu, Wang, Ge, Zhu, Chu, Chen", 2026,
+                         "J. Hazard. Mater. (PII S030438942503938X)", "UNVERIFIED", "UNVERIFIED", "C1/C5"),
 }
 
 
@@ -399,6 +401,35 @@ EM_PLANT_GENERIC_RANGE_V = (-0.160, -0.090)  # generic plant sweep (sensitivity)
 
 
 # ===========================================================================
+# GAP-B headgroup-specific f_xy offset (task 8: PFSA / ether transport term)
+# ===========================================================================
+# Root->shoot loading differs by head group at matched chain length.  Expressed
+# as a multiplicative offset on the carboxylate f_xy:  f_xy = f_xy_PFCA * exp(off).
+# SIGN NOW CONFIRMED (was "uncertain"): PFSA translocates LESS than the
+# CF2-comparable PFCA -- the transfer factor TF=tissue/root is consistently lower:
+#   * Tang 2026 (paddy rice, low dose): PFOS/PFOA TF_stalk = 0.57/2.22 = 0.26
+#   * Yamazaki 2023 (lysimeter): PFOS/PFOA TF(straw/root) = 0.73/1.69 = 0.43
+#   geomean ratio ~0.33 -> ln offset ~ -1.1 (refines the placeholder -1.5).
+# Ether (GenX/PFECA): Tang GenX/PFOA TF ~0.4-1.2 (variable, single study) -> ~-0.7;
+#   provisional, and not among the 12 core congeners.
+# (see docs/literature_db/raw_si/tang2026_tf_bcf.csv)
+FXY_HEADGROUP_LN_OFFSET: dict[str, float] = {
+    "carboxylate": 0.0,
+    "sulfonate": -1.1,      # Tang 2026 + Yamazaki 2023 (TF PFOS/PFOA ~0.26-0.43)
+    "ether": -0.7,          # Tang 2026 GenX (provisional; ether/replacement)
+}
+
+
+def f_xy_headgroup(f_xy_carboxylate: float, head_group: str = "carboxylate") -> float:
+    """Apply the head-group offset to a carboxylate f_xy:  f_xy * exp(offset).  [task 8]
+
+    PFSA (sulfonate) translocates ~3x less than the CF2-matched PFCA (Tang 2026,
+    Yamazaki 2023); ether (GenX) is intermediate (provisional).
+    """
+    return float(f_xy_carboxylate) * float(np.exp(FXY_HEADGROUP_LN_OFFSET[head_group]))
+
+
+# ===========================================================================
 # builders -- literature-parametrised model objects
 # ===========================================================================
 def literature_environment(E_V: float = EM_RICE_ROOT_V, T: float = 298.15,
@@ -502,6 +533,11 @@ def _demo():
     print("\n== C1  MEASURED grain BAF (Kim 2019, porewater basis) [L/kg]  [kim2019] ==")
     for nm, b in kim2019_grain_baf("porewater").items():
         print(f"  {nm:7s}  grain BAF = {b:7.2f}")
+
+    print("\n== task 8  head-group f_xy offset (Tang2026 + Yamazaki2023 TF) ==")
+    for hg in ("carboxylate", "sulfonate", "ether"):
+        print(f"  {hg:11s}  f_xy x exp({FXY_HEADGROUP_LN_OFFSET[hg]:+.1f}) = "
+              f"x{np.exp(FXY_HEADGROUP_LN_OFFSET[hg]):.2f}  (PFCA f_xy=0.04 -> {f_xy_headgroup(0.04, hg):.4f})")
 
     print("\n== end-to-end: literature-parametrised PFOA in paddy rice ==")
     t = np.linspace(0.0, 120.0, 481)
