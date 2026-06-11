@@ -75,7 +75,25 @@ version of the same physics) scores best (0.286).
   ratio per congener (root-pressure exudate) across chain length — the U-shape and its
   `K_PL`-gated lipid arm are a sharp, falsifiable prediction.
 
-## Status
-Recorded, not yet wired into the canonical core. Wiring the `K_PL`-gated lipid loading into
-`pfas_rice_plant_module_4pool_surf` (as an opt-in term, default off) is the natural next
-implementation step; `model_api` already carries the override hooks used here.
+## Status — WIRED (opt-in, default off)
+The mechanism is now in the canonical core. `Compound` gained `g_xy`/`g_ph` (lipid-bound
+loading conductances, default 0 → free-only model recovered exactly; mass conservation and
+all tests unchanged). `RiceUptakeModel.rhs` loads `f_xy·Cw + g_xy·C` (xylem) and
+`L_Ph·Cw + g_ph·C` (phloem). `model_api.simulate(lipid_loading=True)` switches on the
+**`K_PL`-gated** parameterization via `model_api.lipid_loading_conductances(n_C, K_PL, group)`
+(`LIPID_LOADING` constants, fit to Yamazaki excl. PFDoDA); `f_xy/L_Ph/kappa_d/g_xy/g_ph`
+overrides are exposed for further work. Tests: `tests/test_model_api.py`
+(`test_lipid_loading_*`).
+
+**What it buys, honestly.** Turning it on cuts the monotone-`f_xy` error from 0.982 to
+~0.36 (excl PFDoDA) and **fixes the long-chain grain** the free-only model could not reach
+(PFDA grain 0.04 → ~5, obs 3.37; PFUnDA → ~6, obs 3.1). But it is a **trade-off, not a free
+win**: loading the bound pool drains the long-chain **root** (PFUnDA root 2.3 vs obs 19.5),
+because a single root pool with one partition cannot hold a high root burden *and* export
+heavily to the shoot. The phenomenological `K_PL`-driven U-shaped `f_xy` still scores better
+overall (0.286) by keeping the root and tuning `f_xy` up — at the cost of grain. The honest
+reading: the bound-loading term is the **mechanistically correct** representation of
+long-chain translocation, and it exposes a remaining **structural** limit (the root needs a
+sequestered, non-draining sub-pool — e.g. apoplast/plaque `K_surf` or a two-pool root — to
+carry the huge long-chain root BAF without starving the shoot). Still in-sample; the
+xylem-sap experiment remains the decisive test.

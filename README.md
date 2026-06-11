@@ -180,7 +180,7 @@ them, so a PFSA-specific transport term is still needed.
 - **Soil side (Method A)** — the real HYDRUS-1D engine is now compiled and wired (`src/soil_hydrus.py`):
   per-congener `C_w^o(t)` from the soil transport solve drives the plant ODE. Short chains leach →
   the constant-`Cwo` placeholder over-predicts grain/straw BAF ~2–4×; long chains stay buffered.
-- **Tests** — 76 passing, 1 skipped (`pytest`; HYDRUS tests auto-skip without the built engine).
+- **Tests** — 79 passing, 1 skipped (`pytest`; HYDRUS tests auto-skip without the built engine).
 
 **Open (data-limited, not modeling work):** rice (not wheat) per-congener root subcellular →
 membrane-share/α; reliable per-congener pore-water or hydroponic RCF → surface test + f_xy

@@ -54,7 +54,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
 ├── external/hydrus_source/           # git submodule → github.com/phydrus/source_code
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (76): plant, soil, hydrus, calibration, literature params
+└── tests/                            # pytest (79): plant, soil, hydrus, calibration, literature params
 ```
 
 ## 4. Coupling strategy
@@ -175,7 +175,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   python validation/hydrus_coupled_run.py             # full soil→plant + figure/CSV
   ```
 - Calibration: `python src/calibration.py`; Literature params: `python src/literature_params.py`.
-- Tests: `pip install pytest && pytest` (76 passing, 1 skipped; HYDRUS tests auto-skip if the exe is unbuilt).
+- Tests: `pip install pytest && pytest` (79 passing, 1 skipped; HYDRUS tests auto-skip if the exe is unbuilt).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
   (gfortran + `makefile` / `make.bat`). NOTE: the top-level `makefile` lists the `.FOR` files
@@ -190,9 +190,16 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   B_k ~3×) — it is NOT the old dimensionally-wrong `ρ_k` density prefactor (still absent). Compare to
   dw-reported data via `C_dw = C_fw/(1−θ_fw)`. `f_cw` = whole cell wall (poly+lignin), K = `K_cw_wholecw`.
 - `f_xy` ∈ (0,1] is the root→xylem loading factor (TSCF analog): only `f_xy·C_1/B_1` enters the
-  ascending xylem (`f_xy=1` = unrestricted DPU; `f_xy≪1`, monotone-decreasing in chain length, for anions).
-  NOTE: it does **not** yield a universal `root>straw>grain` — the ordering is **congener-dependent**
-  (short chains: straw>root; long chains: root>straw), matching Yamazaki.
+  ascending xylem (`f_xy=1` = unrestricted DPU). NOTE it does **not** yield a universal
+  `root>straw>grain` — the ordering is **congener-dependent** (short: straw>root; long: root>straw).
+  **REVISED (`docs/fxy_longchain_lipid_exploration.md`)**: the data require a **non-monotone (U-shaped)**
+  effective `f_xy`, not the monotone `f_xy_recommended` — the long-chain rise is REAL (lipid-facilitated
+  translocation driven by measured `K_PL`), not the "non-physical W2 artifact" the older framing claimed.
+- **Lipid-bound loading (opt-in, default off)**: `Compound.g_xy`/`g_ph` add a B-independent
+  `g·C` term to xylem/phloem loading (free anion is `f_xy·Cw`, but `Cw=C/B` starves high-binding long
+  chains; the bound pool rides the lipid phase). `model_api.simulate(lipid_loading=True)` uses the
+  `K_PL`-gated fit; cuts monotone error 0.98→~0.36 and fixes long-chain grain, but trades off root
+  (single-pool limit). EXPLORATORY / in-sample.
 - Symbols map 1:1 to `docs/pfas_rice_compartmental_model.tex` (`j_R, B_k, N, f_xy, L_Ph, ...`).
 
 ## 9. Next tasks (prioritized)
