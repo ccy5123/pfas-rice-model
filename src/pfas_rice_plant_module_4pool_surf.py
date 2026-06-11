@@ -102,6 +102,19 @@ class Compound:
     # Field/soil-dependent: ~0 for high-carbon Andosol (Yamazaki2023, root sub-equilibrium)
     # but >0 for high-loading fields (Li2025/Tianjin). Add to root BAF only; ODE unchanged.
     K_surf: float = 0.0
+    # lipid-facilitated ("bound") loading conductances [L/kg].  The free-anion
+    # xylem/phloem loading (f_xy*Cw, L_Ph*Cw) scales with the FREE aqueous conc
+    # Cw=C/B, which collapses ~1/B for high-binding long chains and starves the
+    # shoot of them -- yet long chains are observed in straw AND grain. These add
+    # a B-INDEPENDENT term that loads the membrane/lipid-associated (bound) pool:
+    #   xylem  Cw_xyl = f_xy*Cw_root + g_xy*C_root
+    #   phloem C_Phl  = L_Ph*Cw_leaf + g_ph*C_leaf
+    # so long chains ride the lipid phase across the endodermis/into the phloem.
+    # EXPLORATORY / opt-in: default 0 recovers the free-only model exactly. The
+    # value is K_PL-gated (off for short chains); see docs/fxy_longchain_lipid_
+    # exploration.md and lipid_loading_conductances(). Still in-sample (Yamazaki).
+    g_xy: float = 0.0
+    g_ph: float = 0.0
     # speciation (PFAS: fully dissociated)
     fd: float = 1.0
     fn: float = 0.0
@@ -225,16 +238,16 @@ class RiceUptakeModel:
         # phloem flow and sap concentration (carrier loading at leaf; NOT pH trap)
         Q_Phl = dM[FRUIT] * self.T_C_Ph + self.phi * Qtp     # [L/day]
         Q_Phl = max(Q_Phl, 0.0)
-        C_Phl = self.cmpd.L_Ph * Cw[LEAF]                    # [ug/L]
+        C_Phl = self.cmpd.L_Ph * Cw[LEAF] + self.cmpd.g_ph * C[LEAF]   # free + lipid-bound [ug/L]
 
         g = [c.gamma for c in self.comps]
         dC = np.zeros(4)
 
-        # root -> xylem loading: only a fraction f_xy of the root free conc is
-        # loaded into the ascending xylem (TSCF; endodermal barrier + binding).
-        # The SAME Cw_xyl is what the root loses and the stem gains, so the
-        # root->stem xylem transfer remains mass-conserving.
-        Cw_xyl = self.cmpd.f_xy * Cw[ROOT]
+        # root -> xylem loading: a fraction f_xy of the root FREE conc (TSCF;
+        # endodermal barrier + binding) PLUS a B-independent lipid-bound term
+        # g_xy*C_root (default 0). The SAME Cw_xyl is what the root loses and the
+        # stem gains, so the root->stem xylem transfer remains mass-conserving.
+        Cw_xyl = self.cmpd.f_xy * Cw[ROOT] + self.cmpd.g_xy * C[ROOT]
 
         # root
         jR = root_uptake(Cwo, Cw[ROOT], self.cmpd, self.env)

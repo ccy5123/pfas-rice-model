@@ -23,6 +23,26 @@ python validation/nstem_gradient_check.py # multi-height stem: reproduces the Ya
 pip install pytest && pytest              # tests (structure, mass conservation, QSPRs, calibration, API)
 ```
 
+### Real soil side — HYDRUS-1D (Method A, now wired)
+
+The soil half of Method A runs the genuine HYDRUS-1D engine (compiled from the
+`external/hydrus_source` submodule, driven via `phydrus`) to produce a real
+per-congener pore-water trajectory `C_w^o(t)` that drives the plant ODE:
+
+```bash
+git submodule update --init external/hydrus_source
+cp external/hydrus_source/makefile external/hydrus_source/source/
+(cd external/hydrus_source/source && make)     # needs gfortran
+pip install phydrus
+python src/soil_hydrus.py                       # per-congener pore-water summary
+python validation/hydrus_coupled_run.py         # full soil→plant run + figure/CSV
+```
+
+Weakly-sorbed short chains (Kd≈0.01–0.15 from `Koc·f_oc`) leach to near-zero during
+flooding, so the constant-`Cwo` placeholder **over-predicts grain/straw BAF ~2–4×**
+(PFBA grain 2.07→0.43); strongly-sorbed long chains (Kd≳7) stay buffered. The HYDRUS
+tests auto-skip where the executable/`phydrus` is unavailable.
+
 `reproduce_demo.py` loads `params/parameters.json` + `src/` and runs the 4-compartment ODE
 for all 12 congeners, printing predicted vs observed root/straw/grain BAF.
 
@@ -81,6 +101,7 @@ pfas_rice_model/
 │   ├── pfas_rice_plant_module.py              import alias → 4pool_surf (do not delete)
 │   ├── soil_paddy.py                          soil↔porewater (Freundlich)         ← legacy redox sign
 │   ├── soil_paddy_redox_corrected.py          W3-CORRECTED redox (USE THIS)
+│   ├── soil_hydrus.py                         REAL HYDRUS-1D → C_w^o(t),Q_TP(t) via phydrus (Method A)
 │   ├── calibration.py                         BAF→parameter fitting machinery
 │   └── literature_params.py                   literature QSPRs/anchors (cited) + Kim2019 BAF data
 ├── params/                       ← parameters
@@ -101,6 +122,7 @@ pfas_rice_model/
 │   ├── S6_surface_crossfield.py  surface-excess (water-quality confound)
 │   ├── S6_Gap4.py                full-ODE reproduction + cross-field TF
 │   ├── nstem_gradient_check.py   multi-height stem: stem-gradient direction vs Yamazaki
+│   ├── hydrus_coupled_run.py     REAL HYDRUS-1D soil → plant coupling (vs constant-Cwo baseline)
 │   └── figures/*.png
 └── docs/
     ├── DELIVERABLE_GAP_A_Kcw.md  GAP A verdict, recommended values, experimental design
@@ -181,10 +203,15 @@ them, so a PFSA-specific transport term is still needed.
 - **Visualization tool** — `app.py` (+ `src/model_api.py`, `src/plots.py`): plant/soil accumulation
   colormap + five exposure modes (model / HYDRUS CSV / **live HYDRUS-1D** / soil inventory /
   biomonitoring). `docs/visualization_tool.md`.
-- **Live HYDRUS-1D coupling** — `src/soil_hydrus.py`: runs the real HYDRUS-1D engine (built from
-  `external/hydrus_source` via `phydrus`) for congener-resolved pore water `Cwᵒ(t)` (Method A).
-  Tests skip gracefully when the engine isn't built.
-- **Tests** — 85 passing (+ HYDRUS engine tests when the engine is built; `pytest`).
+- **Soil side (Method A) — real HYDRUS-1D** (`src/soil_hydrus.py`): the engine is compiled and wired
+  (built from `external/hydrus_source` via `phydrus`); per-congener `C_w^o(t)` from the soil transport
+  solve drives the plant ODE (and the app's live mode). Short chains leach → the constant-`Cwo`
+  placeholder over-predicts grain/straw BAF ~2–4×; long chains stay buffered. Tests skip gracefully
+  when the engine isn't built.
+- **Opt-in lipid-facilitated loading** — `simulate(lipid_loading=True)` adds a K_PL-gated, B-independent
+  xylem/phloem term (`g_xy`/`g_ph`; default 0) so high-binding long chains reach the shoot; in-sample/
+  exploratory (`docs/fxy_longchain_lipid_exploration.md`).
+- **Tests** — 92 passing (`pytest`; HYDRUS engine tests additionally run when the engine is built).
 
 **Open (data-limited, not modeling work):** rice (not wheat) per-congener root subcellular →
 membrane-share/α; reliable per-congener pore-water or hydroponic RCF → surface test + f_xy
@@ -192,9 +219,10 @@ absolute scale; measured Q_TP(t), M(t) → f_xy absolute; direct K_cw_poly + ric
 composition; in-situ paddy E_m.
 
 **Open (modeling, doable now):** (1) multi-height stem compartment so the *physical* monotone f_xy
-reproduces long-chain straw (currently the W2 fit compensates); (2) integrated soil→plant run with
-`soil_paddy_redox_corrected` + a realistic flooding schedule; (3) f_PL (0.01–0.02, 2× uncertain)
-uncertainty propagation.
+reproduces long-chain straw (currently the W2 fit compensates); (2) ~~integrated soil→plant run~~
+**DONE** via the real HYDRUS-1D engine (`src/soil_hydrus.py`, `validation/hydrus_coupled_run.py`) —
+remaining: a measured field flooding schedule, anoxic/flooded sorption, and the user's site soil;
+(3) f_PL (0.01–0.02, 2× uncertain) uncertainty propagation.
 
 **Config to standardize:** root θ = 0.90 (measured 0.90–0.92), root f_PL = 0.015, grain θ stage-
 dependent (0.14 harvest / 0.30 filling). Conclusions are robust to these.

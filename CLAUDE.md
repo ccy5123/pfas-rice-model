@@ -43,7 +43,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── pfas_rice_plant_module.py             # import alias → 4pool_surf (basis-A); legacy name
 │   ├── soil_paddy.py                         # Freundlich soil → C_w^o(t) (legacy redox sign)
 │   ├── soil_paddy_redox_corrected.py         # W3-corrected redox (dilution+leaching; USE THIS)
-│   ├── soil_hydrus.py                        # REAL HYDRUS-1D run via phydrus → Cwo(t),Qtp(t) (Method A, live)
+│   ├── soil_hydrus.py                        # REAL HYDRUS-1D run via phydrus → Cwo(t),Qtp(t) (Method A; wired + app live mode)
 │   ├── calibration.py                        # Tier-1 calibration (scipy)
 │   ├── literature_params.py                  # literature QSPRs/anchors (cited) + Kim2019 BAF
 │   ├── model_api.py                          # UI-agnostic wrapper: simulate(), driver/soil/biomon helpers
@@ -51,7 +51,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── examples/                         # ready-to-load CSVs for app.py (HYDRUS drivers + biomonitoring)
 ├── params/                           # parameters.json (CANONICAL) + source CSVs (Bk, f_xy, Kcw, ...)
 ├── data_obs/                         # observed BAF/TF (Yamazaki, Li2025) + yamazaki_stem_height.csv
-├── validation/                       # S6 + nstem reproduction scripts + figures
+├── validation/                       # S6 + nstem + hydrus_coupled_run reproduction scripts + figures
 ├── docs/
 │   ├── pfas_rice_compartmental_model.tex / dpu_model_summary_corrected.tex
 │   ├── DELIVERABLE_GAP_A_Kcw.md / DELIVERABLE_GAP_B_fxy.md / theory_anchor.tex / H8_handoff_S6_final.md / sources.csv
@@ -59,13 +59,21 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
 ├── external/hydrus_source/           # git submodule → github.com/phydrus/source_code
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (83): plant, soil, calibration, literature params, API, plots
+└── tests/                            # pytest (92): plant, soil, hydrus, calibration, literature params, API, plots
+
 ```
 
 ## 4. Coupling strategy
-- **Method A — loose, one-way (CURRENT).** HYDRUS-1D/Phydrus → `C_w^o(t)`, `Q_TP(t)`;
-  the plant ODE is solved in Python (`src/pfas_rice_plant_module.py`). No FORTRAN edits.
-  Interface = the three arrays in `PlantInputs` (`Cwo`, `Qtp`, `M`).
+- **Method A — loose, one-way (CURRENT; now WIRED to a real HYDRUS run).** HYDRUS-1D/Phydrus →
+  `C_w^o(t)`, `Q_TP(t)`; the plant ODE is solved in Python (`src/pfas_rice_plant_module.py`).
+  No FORTRAN edits. Interface = the three arrays in `PlantInputs` (`Cwo`, `Qtp`, `M`).
+  `src/soil_hydrus.py` builds & runs the compiled HYDRUS-1D engine (via `phydrus`) for a paddy
+  scenario per congener (Kd from the C3 `Koc` QSPR) and returns BOTH the pore-water trajectory
+  `C_w^o(t)` and the root water uptake `Q_TP(t)` → `inputs_from_hydrus()` → `PlantInputs`. The
+  soil run is driven by the MEASURED transpiration (`forcing_rice.transpiration_mm_d`), so HYDRUS's
+  actual uptake `vRoot` carries the measured crop-physiology shape (+ soil-water-stress feedback);
+  `qtp_from_hydrus=True` (default) reproduces `forcing_rice.Q_TP` to <1% when unstressed (consistency
+  test) and only diverges under water limitation. See `validation/hydrus_coupled_run.py`.
 - **Method B — tight (FUTURE).** Modify `external/hydrus_source` (HYDRUS-1D FORTRAN):
   replace/augment the **root solute-uptake routine** with `j_R`, add the plant module,
   rebuild via `makefile`. `external/hydrus_source/source_mcmc/` provides Bayesian
@@ -98,7 +106,18 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Soil side (task #3)**: `src/soil_paddy.py` adds a Freundlich paddy sorption sub-model
   (`S=K_F·C_w^n`, redox-dependent `K_F`) that inverts a total soil inventory to the
   pore-water `C_w^o(t)`, plus `load_inputs_csv` to drop in real HYDRUS-1D/Phydrus output.
-  Wiring a *real* Phydrus run is still pending (needs the user's HYDRUS output).
+- **REAL HYDRUS-1D run wired (task #3)** — `src/soil_hydrus.py`: the submodule HYDRUS-1D 4.08
+  engine is now **compiled** (gfortran; `external/hydrus_source/source/hydrus`) and driven through
+  `phydrus` to produce a genuine pore-water `C_w^o(t)` and root water uptake `Q_TP(t)` for a
+  one-season paddy (clean-water flooding → drainage), per congener via a **linear Kd** isotherm
+  (`Kd = Koc·f_oc`; Freundlich n<1 makes the solute solver diverge at the c→0 clean-water boundary,
+  so linear Kd is used — full congener-resolved retardation R=1+ρKd/θ is retained). `inputs_from_hydrus()`
+  normalises the series to season-mean exposure and returns `PlantInputs`. **Result** (`validation/
+  hydrus_coupled_run.py`): the pore water is strongly **congener-dependent** — weakly-sorbed short
+  chains (Kd≈0.01–0.15) leach to near-zero during flooding so the constant-`Cwo` placeholder
+  **over-predicts grain/straw BAF ~2–4×** (PFBA grain 2.07→0.43), while strongly-sorbed long chains
+  (Kd≳7) stay buffered (BAF≈unchanged). Tests skip when the exe/phydrus is absent. **Remaining**:
+  anoxic/flooded sorption + a real field flooding schedule + the user's site soil/loading.
 - **Calibration (task #4)**: `src/calibration.py` fits Tier-1 params to observed tissue
   BAFs (log-space weighted least squares, scipy; box bounds; optional global DE). Validated
   by `synthetic_recovery` (recovers known Tier-1 params, incl. under noise). NOTE: tighten
@@ -176,13 +195,23 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (cd external/hydrus_source/source && make)` (gfortran); `pip install phydrus`. Demo: `python src/soil_hydrus.py`.
 - Plant demo: `python src/pfas_rice_plant_module_4pool_surf.py` (N, B_k, BAFs; saves `pfas_rice_demo.png`).
 - Multi-height stem: `python validation/nstem_gradient_check.py` (stem-gradient direction vs Yamazaki).
-- Soil → plant: `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
+- Soil → plant (analytic): `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
+- **Soil → plant (REAL HYDRUS-1D)**: build the engine once, then run the coupling:
+  ```
+  git submodule update --init external/hydrus_source
+  cp external/hydrus_source/makefile external/hydrus_source/source/
+  (cd external/hydrus_source/source && make)          # needs gfortran
+  pip install phydrus
+  python src/soil_hydrus.py                            # per-congener pore-water summary
+  python validation/hydrus_coupled_run.py             # full soil→plant + figure/CSV
+  ```
 - Calibration: `python src/calibration.py`; Literature params: `python src/literature_params.py`.
-- Tests: `pip install pytest && pytest` (85 passing; HYDRUS engine tests in `test_soil_hydrus.py`
-  additionally run when the engine is built, else skip).
+- Tests: `pip install pytest && pytest` (92 passing; HYDRUS engine tests in `test_soil_hydrus.py`
+  additionally run when the engine is built, else auto-skip).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
-  (gfortran + `makefile` / `make.bat`).
+  (gfortran + `makefile` / `make.bat`). NOTE: the top-level `makefile` lists the `.FOR` files
+  without a path, so build from inside `source/` (copy the makefile in, as above).
 
 ## 8. Conventions
 - Units: time **day**; aqueous conc **µg/L**; tissue conc **µg/kg**; mass **kg**;
@@ -193,9 +222,16 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   B_k ~3×) — it is NOT the old dimensionally-wrong `ρ_k` density prefactor (still absent). Compare to
   dw-reported data via `C_dw = C_fw/(1−θ_fw)`. `f_cw` = whole cell wall (poly+lignin), K = `K_cw_wholecw`.
 - `f_xy` ∈ (0,1] is the root→xylem loading factor (TSCF analog): only `f_xy·C_1/B_1` enters the
-  ascending xylem (`f_xy=1` = unrestricted DPU; `f_xy≪1`, monotone-decreasing in chain length, for anions).
-  NOTE: it does **not** yield a universal `root>straw>grain` — the ordering is **congener-dependent**
-  (short chains: straw>root; long chains: root>straw), matching Yamazaki.
+  ascending xylem (`f_xy=1` = unrestricted DPU). NOTE it does **not** yield a universal
+  `root>straw>grain` — the ordering is **congener-dependent** (short: straw>root; long: root>straw).
+  **REVISED (`docs/fxy_longchain_lipid_exploration.md`)**: the data require a **non-monotone (U-shaped)**
+  effective `f_xy`, not the monotone `f_xy_recommended` — the long-chain rise is REAL (lipid-facilitated
+  translocation driven by measured `K_PL`), not the "non-physical W2 artifact" the older framing claimed.
+- **Lipid-bound loading (opt-in, default off)**: `Compound.g_xy`/`g_ph` add a B-independent
+  `g·C` term to xylem/phloem loading (free anion is `f_xy·Cw`, but `Cw=C/B` starves high-binding long
+  chains; the bound pool rides the lipid phase). `model_api.simulate(lipid_loading=True)` uses the
+  `K_PL`-gated fit; cuts monotone error 0.98→~0.36 and fixes long-chain grain, but trades off root
+  (single-pool limit). EXPLORATORY / in-sample.
 - Symbols map 1:1 to `docs/pfas_rice_compartmental_model.tex` (`j_R, B_k, N, f_xy, L_Ph, ...`).
 
 ## 9. Next tasks (prioritized)
@@ -209,9 +245,12 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
    `B_k`. **Remaining**: only a quantitative `K_cw` (no coefficient exists in the literature — batch
    sorption to rice root cell-wall fractions, pectin/hemicellulose).
 3. **Freundlich paddy soil sorption** **DONE** (`src/soil_paddy.py`); literature `Koc`→`K_F`
-   parametrization now in `src/literature_params.py`. **Remaining**: plug a *real*
-   HYDRUS-1D/Phydrus run into `PlantInputs` (interface ready via `load_inputs_csv` /
-   `inputs_from_soil` — needs the user's HYDRUS output); anoxic/flooded sorption is a DB gap.
+   parametrization in `src/literature_params.py`. **Real HYDRUS-1D run now WIRED** (`src/soil_hydrus.py`,
+   `validation/hydrus_coupled_run.py`): the compiled engine produces a genuine per-congener `C_w^o(t)`
+   that drives the plant ODE (short chains leach → constant-`Cwo` over-predicts grain BAF ~2–4×).
+   **Remaining**: anoxic/flooded sorption (DB gap), a real field flooding schedule, and the user's
+   site-specific soil/loading. HYDRUS now also supplies `Q_TP(t)` by default (`qtp_from_hydrus=True`),
+   driven by the measured `forcing_rice` transpiration and reproducing it to <1% when unstressed.
 4. **Tier-1 calibration machinery** **DONE** + **first real fit done**: **Kim et al. 2019**
    (Korean paddy, paired pore-water/soil/brown-rice, `10.1016/j.scitotenv.2019.03.240`) is wired in
    (`kim2019_grain_baf()`); the demo fits `L_Ph` to the PFOA grain BAF (→ matches 4.43 L/kg).

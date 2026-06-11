@@ -35,6 +35,28 @@ TISSUES = ("root", "stem", "leaf", "grain")
 # tissue keys that compose "straw" (the bulk shoot reported in agronomy)
 STRAW_PARTS = ("stem", "leaf")
 
+# --- EXPLORATORY lipid-facilitated loading model (opt-in; default OFF) ----------
+# Two superposed transport mechanisms (docs/fxy_longchain_lipid_exploration.md):
+#   free anion TSCF (declining) loads the FREE conc; a K_PL-GATED, B-independent
+#   "bound" term loads the membrane/lipid-associated pool into xylem (g_xy) and
+#   phloem (g_ph) so high-binding long chains reach the shoot. Global params fit to
+#   Yamazaki (excl. near-MQL PFDoDA); IN-SAMPLE shape/mechanism, NOT validated.
+LIPID_LOADING = dict(a=0.25, b=0.50, g_xy=0.05, g_ph=0.010, K_half=3000.0, pfsa_ln=1.25)
+
+
+def lipid_loading_conductances(n_C, K_PL, group="PFCA"):
+    """(f_xy_free, g_xy, g_ph) for the K_PL-gated lipid-loading model.
+
+    f_xy_free = a*exp(-b*(n-4))             free-anion TSCF (declining)
+    phi       = K_PL/(K_PL+K_half)          lipid takeover (off for short chains)
+    g_xy,g_ph = g_*max * phi                B-independent bound loading
+    PFSA carries a head-group factor exp(-pfsa_ln). See LIPID_LOADING.
+    """
+    p = LIPID_LOADING
+    sf = np.exp(-p["pfsa_ln"]) if group == "PFSA" else 1.0
+    phi = K_PL / (K_PL + p["K_half"])
+    return (p["a"] * np.exp(-p["b"] * (n_C - 4)) * sf, p["g_xy"] * phi * sf, p["g_ph"] * phi * sf)
+
 
 def _compartments():
     g = _COMP
@@ -88,7 +110,9 @@ def _default_drivers(t, season, Cwo, measured_forcing):
 
 
 def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
-             f_xy_override=None, season=120.0, n_t=241, measured_forcing=True,
+             f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
+             lipid_loading=False, g_xy_override=None, g_ph_override=None,
+             season=120.0, n_t=241, measured_forcing=True,
              drivers=None, K_surf=0.0):
     """Run the 4-compartment ODE for one congener and scenario.
 
@@ -99,6 +123,8 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     E_m_mV : root membrane potential [mV] (GHK anion-exclusion lever).
     f_xy_source : "recommended" (monotone) or "W2fit" (reproduces Yamazaki).
     f_xy_override : if given, use this f_xy instead.
+    L_Ph_override, kappa_d_override : if given, use these phloem-loading / root
+        membrane-conductance values instead of the per-congener W2 fits.
     measured_forcing : True -> Q_TP from forcing_rice, M from growth_rice (ORYZA);
         False -> the illustrative logistic placeholders.
     drivers : optional dict with arrays {'t','Cwo','Qtp','M'} (M shape (n,4)) that
@@ -127,17 +153,21 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         Cwo_series, Qtp, M = _default_drivers(t, season, Cwo, measured_forcing)
     inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M)
 
-    if f_xy_override is not None:
-        f_xy = float(f_xy_override)
+    if lipid_loading:
+        f_xy_def, g_xy_def, g_ph_def = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"])
     else:
-        f_xy = c["f_xy_recommended"] if f_xy_source == "recommended" else (c.get("f_xy_W2fit") or c["f_xy_recommended"])
-    kappa_d = c.get("kappa_d_W2fit") or 2.0
-    L_Ph = c.get("L_Ph_W2fit") or 0.01
+        f_xy_def = c["f_xy_recommended"] if f_xy_source == "recommended" else (c.get("f_xy_W2fit") or c["f_xy_recommended"])
+        g_xy_def = g_ph_def = 0.0
+    f_xy = float(f_xy_override) if f_xy_override is not None else float(f_xy_def)
+    g_xy = float(g_xy_override) if g_xy_override is not None else float(g_xy_def)
+    g_ph = float(g_ph_override) if g_ph_override is not None else float(g_ph_def)
+    kappa_d = float(kappa_d_override) if kappa_d_override is not None else (c.get("kappa_d_W2fit") or 2.0)
+    L_Ph = float(L_Ph_override) if L_Ph_override is not None else (c.get("L_Ph_W2fit") or 0.01)
     cmpd = Compound(name=congener, K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
                     K_cw=c["K_cw_wholecw_Lkg"]["root"], kappa_d=kappa_d,
                     Vmax_in=_CARR["Vmax_in"], Km_in=_CARR["Km_in"],
                     Vmax_out=_CARR["Vmax_out"], Km_out=_CARR["Km_out"],
-                    L_Ph=L_Ph, f_xy=f_xy, K_surf=float(K_surf))
+                    L_Ph=L_Ph, f_xy=f_xy, g_xy=g_xy, g_ph=g_ph, K_surf=float(K_surf))
     comps = _compartments()
     env = Environment(E=E_m_mV / 1000.0)
     model = RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs)
@@ -164,9 +194,10 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         cwo_ref=cwo_ref,
         B_k={k: float(B[i]) for i, k in enumerate(TISSUES)},
         N=float(env.N), eN=float(np.exp(env.N)),
-        params=dict(f_xy=f_xy, L_Ph=L_Ph, kappa_d=kappa_d, K_PL=c["K_PL_Lkg"],
-                    K_prot=c["K_prot_Lkg"], K_cw=c["K_cw_wholecw_Lkg"]["root"],
-                    K_surf=float(K_surf), n_C=c["n_C"], group=c["group"]),
+        params=dict(f_xy=f_xy, L_Ph=L_Ph, kappa_d=kappa_d, g_xy=g_xy, g_ph=g_ph,
+                    K_PL=c["K_PL_Lkg"], K_prot=c["K_prot_Lkg"],
+                    K_cw=c["K_cw_wholecw_Lkg"]["root"], K_surf=float(K_surf),
+                    n_C=c["n_C"], group=c["group"]),
     )
 
 
