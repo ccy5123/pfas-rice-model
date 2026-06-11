@@ -68,7 +68,8 @@ def chain_table():
 
 
 def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
-             f_xy_override=None, season=120.0, n_t=241, measured_forcing=True):
+             f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
+             season=120.0, n_t=241, measured_forcing=True):
     """Run the 4-compartment ODE for one congener and scenario.
 
     Parameters
@@ -78,6 +79,8 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     E_m_mV : root membrane potential [mV] (GHK anion-exclusion lever).
     f_xy_source : "recommended" (monotone) or "W2fit" (reproduces Yamazaki).
     f_xy_override : if given, use this f_xy instead.
+    L_Ph_override, kappa_d_override : if given, use these phloem-loading / root
+        membrane-conductance values instead of the per-congener W2 fits.
     measured_forcing : True -> Q_TP from forcing_rice, M from growth_rice (ORYZA);
         False -> the illustrative logistic placeholders.
 
@@ -105,8 +108,8 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         f_xy = float(f_xy_override)
     else:
         f_xy = c["f_xy_recommended"] if f_xy_source == "recommended" else (c.get("f_xy_W2fit") or c["f_xy_recommended"])
-    kappa_d = c.get("kappa_d_W2fit") or 2.0
-    L_Ph = c.get("L_Ph_W2fit") or 0.01
+    kappa_d = float(kappa_d_override) if kappa_d_override is not None else (c.get("kappa_d_W2fit") or 2.0)
+    L_Ph = float(L_Ph_override) if L_Ph_override is not None else (c.get("L_Ph_W2fit") or 0.01)
     cmpd = Compound(name=congener, K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
                     K_cw=c["K_cw_wholecw_Lkg"]["root"], kappa_d=kappa_d,
                     Vmax_in=_CARR["Vmax_in"], Km_in=_CARR["Km_in"],
