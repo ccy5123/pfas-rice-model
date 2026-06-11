@@ -1,0 +1,20 @@
+PFAS-Rice Compartmental Uptake Model - Empirical Parameter & Calibration Database,
+,
+,
+Scope (this build),"COMPLETE - covers all six categories: C1 (rice tissue BAF / Tier-1), C2 (growth & water-use forcing / Tier-0), C3 (paddy soil sorption), C4 (tissue binding B_k / Tier-3), C5 (membrane transport & translocation / Tier-2), and C6 (physchem / Tier-0). See 'Gap_Analysis' for residual data gaps and recommended experiments."
+Model context,"Four-compartment dynamic plant-uptake model (1=root, 2=stem, 3=leaf, 4=grain) for paddy rice (Oryza sativa), IOC extension of Trapp/Brunetti DPU, one-way coupled to HYDRUS-1D. PFAS as permanently dissociated anions (f_d=~1)."
+Generated,"2026-06-10, via literature search (publisher databases / Google Scholar through web search)."
+,
+Tabs,C1_Rice_Tissue_BAF | C2_Growth_Water_Forcing | C3_Soil_Sorption | C3_Chainlength_QSPR | C4_Tissue_Binding_QSPR | C5_Membrane_Translocation | C6_Physchem | Source_Shortlist | Gap_Analysis
+,
+LEGEND,
+my_symbol,"Maps the literature quantity to YOUR model notation (K_F, n, Koc, Kd, BAF, BCF, TF, RCF, SSCF, C_soil, C_porewater, C_grain)."
+n_perfluoroC,"Number of perfluorinated carbons (chain-length proxy). PFOA=C8 carboxylate has 7 perfluoro-C; convention varies, so total-C name is also given."
+DOI_status,"'verified' = DOI string was observed VERBATIM in a source during this search session. 'UNVERIFIED' = DOI was NOT directly confirmed this session - CONFIRM before citing (per your no-fabrication rule). Where only a journal/volume/PII is known, that is stated instead of a guessed DOI."
+,
+CRITICAL CAVEATS,
+Soil basis,"BAF/BCF depend strongly on TOTAL vs BIOAVAILABLE/POREWATER soil concentration (can differ ~1 order of magnitude). Most field BAFs here use TOTAL soil. For your C_free input, porewater-paired data (Kim 2019) is preferable."
+dw vs ww,Rice grain is usually reported dry-weight (dw). Convert to fresh-weight with ~12-14% moisture (polished/brown rice) if needed.
+Redox / flooding,Almost all sorption isotherms below are AEROBIC batch (CaCl2 background). Anoxic/flooded paddy redox effects (Fe-oxide reductive dissolution releasing sorbed PFAS to C_free) are under-characterized - flagged as a gap.
+f_d ~ 1,"Justified: PFCA pKa ~0-1, PFSA pKa <0, both well below paddy porewater pH (~5-7). See Gap tab Category 6."
+Chain-length rules of thumb,Sorption: log Koc rises +0.50-0.60 per CF2 and +0.23 for sulfonate vs carboxylate (Higgins & Luthy 2006). Uptake: log(grain BAF) FALLS ~0.5 per CF2 (short-chain preferentially translocated; long-chain C>=7 PFCA / C>=6 PFSA retained in root).

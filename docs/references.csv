@@ -1,0 +1,39 @@
+identifier,DOI,topic
+Adu 2023,10.1016/j.jhazmat.2023.130805,review: PFAS bioavailability·phytotoxicity·식물 흡수
+Adu 2024,10.1021/acsestengg.4c00107,ML로 RCF/SCF/TF 예측(수경)
+Al Zbedy 2024,10.1007/s11356-023-31160-w,"GenX wheat/rice, 담수/비담수"
+Alberto 2014,10.1016/j.agwat.2014.01.005,벼 dual-Kc T/E 분리(eddy covariance)
+Allen 1998,— (FAO Paper 56; ISBN 92-5-104219-5),FAO-56 작물계수 Kc 가이드라인
+Bouman 2006,10.1016/j.agsy.2004.07.011,ORYZA2000 생장모델·organ partitioning
+Briggs 1982,10.1002/ps.2780130506,RCF·TSCF 개념 정립(barley)
+Brunetti 2019,10.1029/2019WR025432,"DPU 모듈(HYDRUS), soil–plant 동적"
+Chen 2025,10.1021/acs.est.4c06734,60 PFAS K_MW + protein–water 분배
+Dettenmaier 2009,10.1021/es801751x,sigmoidal TSCF(친수성/이온성); DOI 확인 권장
+Droge 2019,10.1021/acs.est.8b05052,PFCA/PFSA 막–물 분배 K_MW
+Ebert 2020,10.1021/acs.est.0c00175,PFAA 막투과도 P_ion + 막–물 분배
+Felizeter 2012,10.1021/es302398u,lettuce 수경 RCF/FRCF/TSCF(14 PFAA)
+Felizeter 2014,10.1021/jf500674j,3작물 수경 RCF/TSCF
+Felizeter 2020,10.1016/j.chemosphere.2020.127608,lettuce 수경 vs 토양 검증(저널=Chemosphere)
+Ghisi 2019,10.1016/j.envres.2018.10.023,review: 농작물 PFAS 축적
+Guo 2025,10.1038/s41467-025-65191-3,"O. rosea 과축적, cell wall pectin/hemicellulose 결합"
+Krippner 2014,10.1016/j.chemosphere.2013.09.018,maize chain length·pH 효과
+Krippner 2015,10.1021/acs.jafc.5b00012,maize PFCA·PFSA 축적 potential
+Lan 2018,10.1007/s11356-018-3070-3,wheat–soil BAF·TF(C4/C6/C8)
+Li 2017,10.1016/j.agrformet.2017.02.025,ORYZA(v3) 갱신 모델; DOI 확인 권장
+Li 2025,10.1016/j.jhazmat.2025.138256,paddy field 생장주기 분배·노출(Bowen Li)
+Lindner 2016,10.1016/j.agrformet.2016.07.014,S.Korea paddy/rainfed 캐노피 CO2·T/ET
+Liu 2023,10.1021/acs.est.3c00504,"wheat PFAS 막횡단, slow-type anion channel"
+Mei 2021,10.1016/j.envint.2021.106642,review: soil–plant sorption·uptake·translocation
+Nay-Htoon 2018,10.1371/journal.pone.0195238,S.Korea japonica paddy ET→T/E 분리·생육
+Rein 2011,10.1080/1062936X.2010.548829,동적 식물 uptake 모델 신개념
+Sundaram 2022,10.3390/agronomy12112850,paddy 라이시미터 일별 ETa·단계별 Kc
+Tang 2026,10.1016/j.jhazmat.2025.141017,paddy rice 생장주기 PFOA/PFOS/GenX 거동
+Trapp 2000,10.1002/1526-4998(200009)56:9<767::AID-PS198>3.0.CO;2-Q,중성·이온성 root uptake·translocation 모델
+Trapp 2002,10.1002/etc.5620210128,dynamic root uptake 모델(중성 친유성)
+Trapp 2004,10.1065/espr2003.08.169,review: 중성·이온성 수송 모델
+Wang 2020,10.1016/j.scitotenv.2020.139383,"Alisma 흡수기작, anion channel, PFOS→cell wall"
+Wen 2013,10.1007/s11104-013-1637-9,maize carrier-mediated uptake(Michaelis–Menten)
+Wen 2014,10.1016/j.envpol.2013.09.040,wheat field PFAA uptake·translocation
+Wen 2016,10.1016/j.envpol.2016.06.032,식물 protein·lipid의 PFAS 분배 역할
+Xu 2022,10.1016/j.isci.2022.104061,review: 식물 PFAS translocation·bioaccumulation
+Yamazaki 2023,10.1021/acs.est.2c08767,Indica/Japonica rice 잔류·노출

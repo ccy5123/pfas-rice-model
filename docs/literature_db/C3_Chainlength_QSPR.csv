@@ -1,0 +1,9 @@
+Category 3 (Tier-3) - Chain-length & property QSPR for sorption,,,,,,,,
+"Quantitative slopes/offsets to parameterize Koc(nC, head group) and the inverse grain-BAF chain-length trend.",,,,,,,,
+relationship,descriptor,value,units,applies to,"source (author, year)",DOI,DOI_status,notes / use in model
+log Koc vs chain length,per added CF2,+0.50 to +0.60,log units / CF2,PFCA & PFSA sorption,"Higgins & Luthy, 2006",10.1021/es061000n,verified,Primary slope for Koc(nC). Dominant structural effect on Kd.
+log Koc head group,sulfonate vs carboxylate (matched CF2),+0.23,log units,PFSA relative to PFCA,"Higgins & Luthy, 2006",10.1021/es061000n,verified,Additive offset on top of the per-CF2 term.
+log(grain BAF) vs chain length,per added CF2,approx -0.5,log units / CF2,PFCA uptake into grain/aboveground,"Liu et al., 2019 (trend); Liu et al., 2017 (slope)",10.1016/j.envint.2019.04.008 (2019),verified,"INVERSE of sorption trend: longer chains sorb more in soil AND are retained in root, so less reaches grain. 2017 slope DOI unverified."
+log(grain BAF) decrease (review),per added CF2 (aboveground),up to -1.16,log units / CF2,"grains, across crops","Lesmeister et al., 2021",STOTEN 766:142640 (unverified),UNVERIFIED,Upper-bound steepness for aboveground BAF chain-length decline.
+Kd vs soil pH,per pH unit (qualitative),decreases with pH,-,anionic PFAS,Higgins & Luthy 2006; Front. 2022,10.3389/fenvc.2022.905170,verified,Anion electrostatic repulsion rises with pH. Quantify from PFOS-isomer pH study.
+Kd normalization,OC vs OC+clay,add clay term for short-chain,-,"PFBA, PFHxA, PFPeA","Jakobsen et al., 2026",10.1002/vzj2.70114,verified,Pure Koc under-predicts short-chain sorption; include clay fraction.

@@ -1,0 +1,8 @@
+compound,tissue,baf,sigma,basis,note
+PFHpA,grain,0.394,0.4,porewater,DF_rice=13.0%; field ensemble avg (unpaired)
+PFOA,grain,4.435,0.4,porewater,DF_rice=57.0%; field ensemble avg (unpaired)
+PFNA,grain,2.208,0.4,porewater,DF_rice=20.0%; field ensemble avg (unpaired)
+PFDA,grain,1.556,0.4,porewater,DF_rice=6.7%; field ensemble avg (unpaired)
+PFUnDA,grain,33.074,0.4,porewater,DF_rice=13.0%; field ensemble avg (unpaired)
+PFDoDA,grain,35.246,0.4,porewater,DF_rice=3.3%; field ensemble avg (unpaired)
+∑17PFASs,grain,2.428,0.4,porewater,DF_rice=77.0%; field ensemble avg (unpaired)

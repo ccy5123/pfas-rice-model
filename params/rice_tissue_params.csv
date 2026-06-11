@@ -1,0 +1,40 @@
+organ,parameter,basis,value_low,value_recommended,value_high,evidence,note,source_key
+root,theta_fw,fw,0.88,0.9,0.92,estimate,"Active paddy root, highly hydrated; rice-specific whole-root proximate scarce",S_physiol
+root,f_prot,dw,0.05,0.07,0.1,estimate,Monocot-root analogy; verify with direct rice-root Kjeldahl/AIR,S_physiol
+root,total_lipid,dw,0.01,0.02,0.03,estimate,Low; vegetative non-storage tissue,S_physiol
+root,f_PL_membrane,dw,0.01,0.015,0.02,estimate,PL dominates membrane lipid in non-photosynthetic root (~50-70% of low total lipid),S_memb_root
+root,f_cw_polysaccharide,dw,0.3,0.4,0.45,estimate,cellulose+hemicellulose+pectin; structural root; note your provisional 0.20 looks low if dw,S_physiol
+root,lignin,dw,0.05,0.1,0.15,estimate,Endodermis/exodermis lignified; SUBERIN is a separate aliphatic-polyester pool NOT counted here,S_rootcw
+root,Fe_plaque_inorganic,dw,0.05,0.15,0.3,estimate,NOT in 4-pool model. Paddy roots carry Fe/Mn-oxide plaque = strong PFAS sorbent; add separate surface-sorption term,S_physiol
+stem,theta_fw,fw,0.8,0.83,0.88,estimate,Active vegetative phase; mature straw dries to 0.10-0.50,S_physiol
+stem,f_prot,dw,0.03,0.05,0.07,measured,Straw crude protein 3-7% (commonly 4-5%); DM 92-96%,S_straw_fodder
+stem,total_lipid,dw,0.01,0.015,0.02,estimate,Straw low lipid,S_physiol
+stem,f_PL_membrane,dw,0.003,0.005,0.008,estimate,"Mostly structural tissue, low membrane fraction",S_memb_root
+stem,f_cw_polysaccharide,dw,0.5,0.58,0.65,measured,cellulose ~35-45% + hemicellulose ~20-25%; pectin minor,S_culm
+stem,lignin,dw,0.1,0.14,0.18,measured,Culm acid-insoluble+soluble lignin 8.5-21.7% dw,S_culm
+stem,ash_silica_inorganic,dw,0.12,0.15,0.17,measured,NOT in 4-pool model; rice straw is silica-rich (~12-17%),S_straw_cw_pmc
+leaf,theta_fw,fw,0.72,0.78,0.82,estimate,Green active leaf blade,S_physiol
+leaf,f_prot,dw,0.05,0.1,0.18,estimate,"Young leaf 10-18%, mature 5-8% dw; strongly stage-dependent",S_physiol
+leaf,total_lipid,dw,0.04,0.055,0.07,estimate,Membrane-rich; INCLUDES galactolipids (not all phospholipid),S_physiol
+leaf,f_PL_membrane,dw,0.005,0.01,0.015,estimate,CAUTION: phospholipid is a MINORITY of leaf membrane lipid; thylakoid galactolipids (MGDG/DGDG) dominate. Do NOT equate f_PL with total membrane lipid,S_memb_thylakoid
+leaf,f_cw_polysaccharide,dw,0.4,0.48,0.55,estimate,Leaf blade fibrous at maturity,S_physiol
+leaf,lignin,dw,0.05,0.08,0.12,estimate,Leaf lignin estimate,S_physiol
+husk,theta_fw,fw,0.1,0.12,0.5,measured,Mature/dry 0.10-0.14; on-plant during filling ~0.30-0.50 (use ~0.40 for filling-stage uptake),S_grainMC
+husk,f_prot,dw,0.02,0.025,0.03,measured,Husk crude protein 2-3% dw,S_husk_comp
+husk,total_lipid,dw,0.005,0.01,0.015,estimate,Low,S_physiol
+husk,f_PL_membrane,dw,0.001,0.002,0.003,estimate,Negligible; mostly dead sclerenchyma at maturity,S_memb_root
+husk,f_cw_polysaccharide,dw,0.4,0.48,0.55,measured,cellulose 26-36% + hemicellulose 12-32%,S_husk_comp
+husk,lignin,dw,0.15,0.19,0.23,measured,"Husk lignin 15-23% dw, higher than straw",S_husk_comp
+husk,ash_silica_inorganic,dw,0.13,0.18,0.23,measured,NOT in 4-pool model; amorphous silica ~15-20% = relevant PFAS sorbent,S_husk_sd
+grain_brown,theta_fw,fw,0.14,0.14,0.6,measured,"Mature/harvest ~0.14; milk 0.50-0.60, dough ~0.30, physiological maturity ~0.30 (use stage-appropriate value)",S_grainMC
+grain_brown,f_prot,dw,0.08,0.09,0.1,measured,Brown rice protein ~8-10% dw (7-9.4% as-is),S_proximate_usda
+grain_brown,total_lipid,dw,0.027,0.03,0.036,measured,Brown rice lipid ~3% dw; concentrated in bran/germ,S_proximate_rg
+grain_brown,f_PL_membrane,dw,0.0025,0.003,0.004,measured-ratio,~10% of total lipid is phospholipid (rest mostly storage TAG); ~80% of that PL sits in bran/embryo,S_PL_brownrice
+grain_brown,f_cw_polysaccharide,dw,0.01,0.025,0.04,measured,Mostly bran/aleurone wall; endosperm is starch (dietary fibre 3.5-6.7% as-is),S_FAO
+grain_brown,lignin,dw,0.005,0.01,0.02,estimate,Bran/pericarp lignin; endosperm ~0,S_branfiber
+grain_white,theta_fw,fw,0.1,0.11,0.12,measured,Stored milled rice ~10-12%,S_proximate_rg
+grain_white,f_prot,dw,0.07,0.075,0.08,measured,White rice protein ~7-8% dw,S_proximate_rg
+grain_white,total_lipid,dw,0.003,0.006,0.009,measured,Very low after bran removal,S_USDA_white
+grain_white,f_PL_membrane,dw,0.002,0.003,0.004,measured-ratio,"~50% of the (tiny) total lipid is PL, BUT largely starch-complexed lyso-phospholipid, NOT bilayer membrane; K_PL may differ",S_PL_review
+grain_white,f_cw_polysaccharide,dw,0.002,0.005,0.008,measured,"Endosperm wall; NDF 0.7-2.3%; pectin-rich, low lignin",S_FAO
+grain_white,lignin,dw,0.0005,0.001,0.002,measured,Endosperm very low lignin,S_FAO
