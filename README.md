@@ -20,11 +20,24 @@ python reproduce_demo.py                  # Yamazaki BAF via full ODE (W2 fit; l
 python reproduce_demo.py --rec            # monotone physical f_xy (single-straw mismatch — see note)
 python src/literature_params.py           # literature QSPRs (K_PL/K_prot/Koc/f_d) + Kim2019 L_Ph fit
 python validation/nstem_gradient_check.py # multi-height stem: reproduces the Yamazaki stem gradient
-pip install pytest && pytest              # 52 tests (structure, mass conservation, QSPRs, calibration)
+pip install pytest && pytest              # tests (structure, mass conservation, QSPRs, calibration, API)
 ```
 
 `reproduce_demo.py` loads `params/parameters.json` + `src/` and runs the 4-compartment ODE
 for all 12 congeners, printing predicted vs observed root/straw/grain BAF.
+
+## Interactive app
+A Streamlit dashboard to run the model and see the results (tissue concentrations/BAFs,
+binding factors, chain-length parameter trends, and the measured forcings):
+
+```bash
+pip install -r requirements.txt -r requirements-app.txt
+streamlit run app.py
+```
+
+Pick a congener and scenario (pore-water `C_wᵒ`, membrane potential `E_m`, `f_xy`
+source, measured vs placeholder forcings). Compute lives in `src/model_api.py`
+(`simulate(...)`), which is UI-agnostic and used by the app and the tests.
 
 ---
 
