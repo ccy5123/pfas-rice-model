@@ -31,9 +31,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ## 3. Repo layout
 ```
 .
-├── CLAUDE.md  README.md  requirements.txt
+├── CLAUDE.md  README.md  requirements.txt  requirements-app.txt
 ├── reproduce_demo.py                 # entry point: Yamazaki BAF via full ODE (W2 fit)
 ├── build_parameters.py               # (re)assembles params/parameters.json from source tables
+├── app.py                            # Streamlit visualization tool (plant/soil map + 4 input modes)
 ├── src/
 │   ├── pfas_rice_plant_module_4pool.py       # basis-A 4-compartment ODE (CANONICAL core)
 │   ├── pfas_rice_plant_module_4pool_surf.py  #  + K_surf (Fe/Mn-plaque dead-end pool)
@@ -43,17 +44,21 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── soil_paddy.py                         # Freundlich soil → C_w^o(t) (legacy redox sign)
 │   ├── soil_paddy_redox_corrected.py         # W3-corrected redox (dilution+leaching; USE THIS)
 │   ├── calibration.py                        # Tier-1 calibration (scipy)
-│   └── literature_params.py                  # literature QSPRs/anchors (cited) + Kim2019 BAF
+│   ├── literature_params.py                  # literature QSPRs/anchors (cited) + Kim2019 BAF
+│   ├── model_api.py                          # UI-agnostic wrapper: simulate(), driver/soil/biomon helpers
+│   └── plots.py                              # Plotly builders: fig_plant_schematic (colormap), drivers, ...
+├── examples/                         # ready-to-load CSVs for app.py (HYDRUS drivers + biomonitoring)
 ├── params/                           # parameters.json (CANONICAL) + source CSVs (Bk, f_xy, Kcw, ...)
 ├── data_obs/                         # observed BAF/TF (Yamazaki, Li2025) + yamazaki_stem_height.csv
 ├── validation/                       # S6 + nstem reproduction scripts + figures
 ├── docs/
 │   ├── pfas_rice_compartmental_model.tex / dpu_model_summary_corrected.tex
 │   ├── DELIVERABLE_GAP_A_Kcw.md / DELIVERABLE_GAP_B_fxy.md / theory_anchor.tex / H8_handoff_S6_final.md / sources.csv
+│   ├── visualization_tool.md         # app.py guide: plant/soil map, 4 modes, HYDRUS I/O, biomonitoring
 │   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
 ├── external/hydrus_source/           # git submodule → github.com/phydrus/source_code
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (52): plant, soil, calibration, literature params
+└── tests/                            # pytest (83): plant, soil, calibration, literature params, API, plots
 ```
 
 ## 4. Coupling strategy
@@ -138,16 +143,29 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **f_xy absolute scale (task #7)**: measured `Q_TP(t)` (`forcing_rice`, peak ~0.10 L/d/hill, T/ET=0.42)
   and `M_s(t)` (`growth_rice`, ORYZA IR72, HI~0.53) are built. The absolute f_xy is pinned via the
   **aggregate** root/straw/grain BAF (not the within-stem gradient) — see `validation/`.
+- **Visualization tool (`app.py` + `src/model_api.py` + `src/plots.py`)**: Streamlit dashboard whose
+  headline is the **plant + soil accumulation map** — a rice plant (fibrous roots in the paddy soil,
+  arching culms, long leaf blades, drooping grain panicles) with each compartment filled by a heat
+  **colormap** of its concentration/BAF (`plots.fig_plant_schematic`), a season **day slider / ▶ animate**
+  to watch the build-up, plus drivers / soil-profile / isotherm / chain / compare tabs. Covers **four
+  exposure modes** via `simulate(..., drivers=…)`: (1) parametric, (2) **HYDRUS/Phydrus CSV** (`t,Cwo,Qtp,M_*`
+  → `load_driver_csv`/`drivers_from_arrays`), (3) **soil inventory** (Freundlich inversion,
+  `pore_water_from_inventory`), (4) **biomonitoring** (measured tissue conc, no HYDRUS — `baf_from_measurement`).
+  `model_api`/`plots` are UI-agnostic + head-less-tested (`tests/test_model_api.py`, `tests/test_plots.py`);
+  bundled `examples/` CSVs auto-load. HYDRUS-1D input/output mapping + the biomonitoring path are documented
+  in the app's **About** tab and `docs/visualization_tool.md`.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
 - **Main reproduction**: `python reproduce_demo.py` (Yamazaki BAF, W2 fit, RMSE≈0.029);
   `--rec` uses the monotone f_xy. Rebuild params: `python build_parameters.py`.
+- **Visualization tool**: `pip install -r requirements-app.txt && streamlit run app.py`
+  (plant/soil accumulation colormap + HYDRUS/soil/biomonitoring modes; see `docs/visualization_tool.md`).
 - Plant demo: `python src/pfas_rice_plant_module_4pool_surf.py` (N, B_k, BAFs; saves `pfas_rice_demo.png`).
 - Multi-height stem: `python validation/nstem_gradient_check.py` (stem-gradient direction vs Yamazaki).
 - Soil → plant: `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
 - Calibration: `python src/calibration.py`; Literature params: `python src/literature_params.py`.
-- Tests: `pip install pytest && pytest` (52 passing).
+- Tests: `pip install pytest && pytest` (83 passing).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
   (gfortran + `makefile` / `make.bat`).

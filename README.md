@@ -26,20 +26,37 @@ pip install pytest && pytest              # tests (structure, mass conservation,
 `reproduce_demo.py` loads `params/parameters.json` + `src/` and runs the 4-compartment ODE
 for all 12 congeners, printing predicted vs observed root/straw/grain BAF.
 
-## Interactive app
-A Streamlit dashboard with **interactive Plotly charts** (hover for values, drag to zoom,
-click legend to toggle) to run the model and explore the results:
+## Interactive app — the visualization tool
+A Streamlit dashboard that **draws the soil + rice plant to scale and colours each
+compartment by its PFAS accumulation** (a heat colormap you can scrub through the season),
+alongside interactive Plotly time series (hover, zoom, legend-toggle):
 
 ```bash
 pip install -r requirements.txt -r requirements-app.txt
 streamlit run app.py
 ```
 
-Sidebar: congener, pore-water `C_wᵒ`, membrane potential `E_m`, `f_xy` source, measured-vs-
-placeholder forcings, season. Tabs: tissue dynamics, predicted-vs-Yamazaki BAF, chain-length
-trends (pick the parameter), **compare congeners**, and the measured forcings. Compute is in
-`src/model_api.py` (`simulate(...)`); the Plotly figures in `src/plots.py` — both UI-agnostic
-and covered by the tests.
+**🗺️ Plant & soil map** — the headline view: a fibrous-rooted rice plant with arching
+culms, long leaves and drooping grain panicles, each organ filled on a shared colorbar by
+its concentration (or BAF). A day slider (or ▶ animate) shows *where and when* PFAS builds
+up — leaf is xylem-terminal, grain is phloem-fed, the root retains the anion.
+
+**Four input modes** (sidebar “Data source”) cover the whole exposure space:
+
+| Mode | Pore-water `Cwᵒ(t)` from | When |
+|---|---|---|
+| **Model (parametric)** | a constant you set | quick what-ifs / teaching |
+| **HYDRUS / CSV drivers** | a HYDRUS-1D/Phydrus run (`t,Cwo,Qtp,M_*` CSV) | you have a calibrated soil model |
+| **Soil inventory** | inverting a total soil load (Freundlich) | you know soil PFAS, not pore water |
+| **Biomonitoring** | a measured pore-water value (no HYDRUS) | you have field tissue + water data |
+
+Other tabs: tissue dynamics, **soil & drivers** (`Cwᵒ(t)`, `Q_TP(t)`, `M(t)`, Freundlich
+isotherm, depth profile), BAF vs observed/measured, chain-length trends, compare congeners,
+and an **About** tab documenting the HYDRUS-1D input/output mapping and the biomonitoring
+path. Compute is in `src/model_api.py` (`simulate(...)`, soil/driver/biomonitoring helpers);
+the Plotly figures in `src/plots.py` (`fig_plant_schematic`, …) — both UI-agnostic and
+covered by the tests. Ready-to-load examples are in `examples/`. Full guide:
+`docs/visualization_tool.md`.
 
 ---
 
@@ -155,7 +172,9 @@ them, so a PFSA-specific transport term is still needed.
   predictive test). The genuine out-of-sample evidence is the water-independent **cross-field TF**
   (monotone direction) and the **nstem gradient direction** (PFCAs). `docs/H8_handoff_S6_final.md`.
 - **Tier-1 fit** — `src/literature_params.py` fits `L_Ph` to the Kim 2019 PFOA grain BAF (matches 4.43 L/kg).
-- **Tests** — 52 passing (`pytest`).
+- **Visualization tool** — `app.py` (+ `src/model_api.py`, `src/plots.py`): plant/soil accumulation
+  colormap + four exposure modes (model / HYDRUS CSV / soil inventory / biomonitoring). `docs/visualization_tool.md`.
+- **Tests** — 83 passing (`pytest`).
 
 **Open (data-limited, not modeling work):** rice (not wheat) per-congener root subcellular →
 membrane-share/α; reliable per-congener pore-water or hydroponic RCF → surface test + f_xy

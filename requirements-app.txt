@@ -1,2 +1,6 @@
 streamlit>=1.30
 plotly>=5.18
+pandas>=1.5
+# optional: static PNG export of the Plotly figures (needs Chrome for kaleido v1)
+#   pip install kaleido && plotly_get_chrome
+# kaleido>=0.2
