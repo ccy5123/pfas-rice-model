@@ -149,3 +149,72 @@ def make_stem_compartments(N, stem_kw, root_kw, grain_kw):
     comps += [Compartment(f"stem{s}", **stem_kw) for s in range(1, N + 1)]
     comps += [Compartment("grain", **grain_kw)]
     return comps
+
+
+@dataclass
+class NStemKineticModel(NStemModel):
+    """N-segment stem with a KINETIC radial xylem<->tissue exchange (sorbing column).
+
+    The equilibrium :class:`NStemModel` lets each segment export the ascending
+    xylem at its own free conc (instantaneous radial equilibrium); at realistic
+    biomass that gives a ~chain-length-independent upward gradient.  Here the
+    xylem and tissue are DECOUPLED: within each segment the (quasi-steady) xylem
+    pool exchanges radially with the tissue at a finite mass-specific conductance
+    ``k_rad`` [L/(day kg)]:
+
+        quasi-steady xylem:  Q_in*Cw_in = Q_out*Cw_xyl + k_rad*M_s*(Cw_xyl - Cw_s)
+            =>  Cw_xyl = (Q_in*Cw_in + k_rad*M_s*Cw_s) / (Q_out + k_rad*M_s)
+        tissue:              dC_s/dt = k_rad*(Cw_xyl - Cw_s) - mu_s*C_s
+
+    ``k_rad -> inf`` recovers :class:`NStemModel`.
+
+    HONEST STATUS (validation/nstem_gradient_check.py): finite ``k_rad`` lowers
+    the long-chain (high-B) top/bottom ratio somewhat, but across all ``k_rad``
+    the predicted gradient range stays ~2.4-4.9, far short of the observed range
+    (PFBA top/bot 7.4 down to PFUnDA 0.66).  The reason: here the tissue free
+    conc stays in (reversible) balance with the upward-concentrating xylem, so
+    the BOUND fraction also concentrates upward.  Reproducing the long-chain
+    REVERSAL needs the high-B bound fraction to be delivery-limited and slow to
+    re-release -- i.e. IRREVERSIBLE/hysteretic sorption (a sink that strips the
+    stream low down), an open elaboration.  This class is therefore a modest,
+    mass-conserving improvement, not a full gradient fit.
+    """
+    k_rad: float = 0.5                # radial xylem<->tissue conductance [L/(day kg)]
+
+    def rhs(self, t, C):
+        Cwo = self.inputs.Cwo_(t)
+        Q = self.inputs.Qtp_(t)
+        M = np.maximum(self.inputs.M_(t), 1e-12)
+        dM = self.inputs.dM_(t)
+        mu = dM / M
+        B = binding_factors(self.comps, self.cmpd)
+        Cw = C / B
+        g = np.array([c.gamma for c in self.comps])
+        dC = np.zeros_like(C)
+
+        top = self.N
+        Q_Phl = max(dM[self.GRAIN] * self.T_C_Ph + self.phi * Q, 0.0)
+        C_Phl = self.cmpd.L_Ph * Cw[top]
+
+        jR = root_uptake(Cwo, Cw[self.ROOT], self.cmpd, self.env)
+        dC[self.ROOT] = (jR
+                         - (Q / M[self.ROOT]) * self.cmpd.f_xy * Cw[self.ROOT]
+                         + self.phi * (Q_Phl / M[self.ROOT]) * C_Phl
+                         - g[self.ROOT] * C[self.ROOT] - mu[self.ROOT] * C[self.ROOT])
+
+        Cw_in = self.cmpd.f_xy * Cw[self.ROOT]
+        Qin = Q
+        for s in range(1, self.N + 1):
+            Qout = Qin - self.tau[s - 1] * Q
+            krm = self.k_rad * M[s]                       # k_rad * M_s  [L/day]
+            Cw_xyl = (Qin * Cw_in + krm * Cw[s]) / (Qout + krm)   # quasi-steady xylem
+            dC[s] = (self.k_rad * (Cw_xyl - Cw[s])        # radial influx into tissue
+                     - g[s] * C[s] - mu[s] * C[s])
+            Cw_in = Cw_xyl                                 # the (stripped) stream goes up
+            Qin = Qout
+        dC[top] -= (1.0 + self.phi) * (Q_Phl / M[top]) * C_Phl
+
+        dC[self.GRAIN] = ((Qin * Cw_in) / M[self.GRAIN]
+                          + (Q_Phl / M[self.GRAIN]) * C_Phl
+                          - g[self.GRAIN] * C[self.GRAIN] - mu[self.GRAIN] * C[self.GRAIN])
+        return dC
