@@ -1,0 +1,21 @@
+# Absolute f_xy fitted to the Yamazaki straw BAF with MEASURED drivers
+# (Q_TP: forcing_rice/Kumari+NayHtoon; M_s: growth_rice/ORYZA IR72), 4-pool model,
+# 1-param fit per congener (kappa_d=2.0, L_Ph=0.01 fixed). See validation/absolute_fxy_fit.py.
+# CAVEAT: f_xy_fit_measured for C10-C12 are NON-PHYSICAL fit artifacts -- the model
+# cannot deliver the observed long-chain straw via xylem (PFDoDA caps at f_xy=1 and
+# still under-predicts: straw 13.8 vs obs 49.8). The data-fitted f_xy is U-shaped
+# (decreasing C4->C9, rising C9->C12), NOT the recommended steep monotone; long-chain
+# shoot presence needs a non-xylem mechanism (high-B amplification / hysteretic sorption
+# / PFSA-ether term), not f_xy. Short/mid-chain (C4-C9) f_xy IS pinned here.
+pfas,n_C,group,f_xy_fit_measured,f_xy_recommended,fit_over_rec,straw_pred,straw_obs,capped
+PFBA,4,PFCA,1.0000,0.7900,1.27,10.22,11.03,yes
+PFPeA,5,PFCA,0.0713,0.4700,0.15,2.74,2.74,no
+PFHxA,6,PFCA,0.0240,0.2160,0.11,1.14,1.14,no
+PFHpA,7,PFCA,0.0206,0.0980,0.21,1.07,1.07,no
+PFOA,8,PFCA,0.0146,0.0400,0.36,0.83,0.83,no
+PFNA,9,PFCA,0.0114,0.0140,0.82,0.69,0.69,no
+PFDA,10,PFCA,0.0683,0.0051,13.40,3.46,3.46,no
+PFUnDA,11,PFCA,0.2471,0.0039,63.35,8.16,8.16,no
+PFDoDA,12,PFCA,1.0000,0.0030,333.33,13.79,49.75,yes
+PFBS,4,PFSA,0.0444,0.1763,0.25,2.18,2.18,no
+PFOS,8,PFSA,0.0939,0.0089,10.52,4.35,4.35,no
