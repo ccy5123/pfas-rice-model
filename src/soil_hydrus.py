@@ -119,7 +119,7 @@ class PaddyResult:
 def run_paddy_hydrus(Kd: float, season: float = 120.0, *, depth: float = 100.0,
                      dx: float = 2.0, bulk_density: float = 1.3, disper: float = 5.0,
                      flood_until: float = 90.0, percolation: float = 0.30,
-                     obs_depth: float = 10.0, exe: str = HYDRUS_EXE,
+                     obs_depth: float = 10.0, tpot_fn=None, exe: str = HYDRUS_EXE,
                      workspace: str | None = None, keep: bool = False) -> PaddyResult:
     """Build and run a one-season paddy HYDRUS-1D model for a given Kd.
 
@@ -127,6 +127,12 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, depth: float = 100.0,
     under continuous flooding to ``flood_until`` days (irrigation = ET + a
     ``percolation`` excess, clean water -> leaching) then drainage to harvest.
     Linear Kd sorption, no decay (PFAS recalcitrant).  Returns daily series.
+
+    tpot_fn : optional callable mapping a day array -> potential transpiration
+        [cm/day] for the atmospheric ``rRoot``.  Pass the MEASURED transpiration
+        (e.g. ``forcing_rice.transpiration_mm_d/10``) so HYDRUS's actual root
+        water uptake ``vRoot`` carries the measured crop-physiology shape (plus
+        any soil-water-stress feedback).  Default is an illustrative gaussian.
     """
     import phydrus as ps
     try:
@@ -174,7 +180,10 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, depth: float = 100.0,
         ml.add_root_uptake(model=0, poptm=[-25.0])
 
         days = np.arange(1, int(season) + 1)
-        tpot = 0.05 + 0.55 * np.exp(-((days - 0.62 * season) ** 2) / (2 * (season / 5.5) ** 2))
+        if tpot_fn is not None:
+            tpot = np.maximum(np.asarray(tpot_fn(days), float), 0.0)   # [cm/day]
+        else:
+            tpot = 0.05 + 0.55 * np.exp(-((days - 0.62 * season) ** 2) / (2 * (season / 5.5) ** 2))
         esoil = 0.10 * np.ones_like(days, float)
         prec = np.where(days <= flood_until, esoil + tpot + percolation, 0.0)
         import pandas as pd
@@ -213,26 +222,35 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, depth: float = 100.0,
 # ---------------------------------------------------------------------------
 def inputs_from_hydrus(congener_n_C: int, group: str = "PFCA", *, season: float = 120.0,
                        Cwo_ref: float = 1.0, f_oc: float = 0.02,
-                       qtp_from_hydrus: bool = False, qtp_peak: float = 0.10,
+                       qtp_from_hydrus: bool = True, area_per_hill_m2: float | None = None,
                        n_t: int = 241, **run_kw):
-    """Build a :class:`PlantInputs` whose ``Cwo`` is a real HYDRUS-1D pore-water
-    trajectory for the congener, with growth ``M`` from ORYZA.
+    """Build a :class:`PlantInputs` whose ``Cwo`` AND ``Q_TP`` come from a real
+    HYDRUS-1D paddy run for the congener, with growth ``M`` from ORYZA.
 
     The HYDRUS pore-water series is normalised to season-mean ``Cwo_ref`` so the
     average exposure matches a constant-Cwo run -- the difference is purely the
     realistic temporal structure (leaching during flooding, rebound on drainage).
 
-    qtp_from_hydrus : if True, transpiration shape comes from HYDRUS vRoot,
-        rescaled so its peak is ``qtp_peak`` L/day; else the measured
-        ``forcing_rice.Q_TP`` is used.
+    qtp_from_hydrus : if True (default), the soil run is driven by the MEASURED
+        transpiration (``forcing_rice.transpiration_mm_d``) and Q_TP(t) is the
+        HYDRUS actual root water uptake ``vRoot`` [cm/day] converted to L/day/hill
+        via ``area_per_hill_m2`` -- so it equals the measured forcing when the
+        paddy is unstressed and only diverges under soil-water limitation. If
+        False, the measured ``forcing_rice.Q_TP`` is used directly (soil run uses
+        the default gaussian potential transpiration).
     Returns (PlantInputs, PaddyResult).
     """
     from pfas_rice_plant_module_4pool_surf import PlantInputs
     import growth_rice as gr
     import forcing_rice as fr
 
+    if area_per_hill_m2 is None:
+        area_per_hill_m2 = fr.AREA_PER_HILL_M2
+
     Kd = paddy_kd(congener_n_C, group, f_oc)
-    res = run_paddy_hydrus(Kd, season=season, **run_kw)
+    # drive the soil run with the measured transpiration shape (mm/day -> cm/day)
+    tpot_fn = (lambda d: fr.transpiration_mm_d(d, season) / 10.0) if qtp_from_hydrus else None
+    res = run_paddy_hydrus(Kd, season=season, tpot_fn=tpot_fn, **run_kw)
 
     t = np.linspace(0.0, season, n_t)
     Cw_h = np.interp(t, res.t, res.Cw)
@@ -242,8 +260,9 @@ def inputs_from_hydrus(congener_n_C: int, group: str = "PFCA", *, season: float 
     M = np.maximum(np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-4)
 
     if qtp_from_hydrus:
-        vr = np.interp(t, res.t, res.vroot)
-        Qtp = vr * (qtp_peak / max(vr.max(), 1e-9))
+        # vRoot [cm/day] over the surface -> volumetric uptake per hill [L/day]:
+        # vRoot * area[cm^2] / 1000[cm^3/L] = vRoot * (area_m2 * 1e4) / 1e3
+        Qtp = np.maximum(np.interp(t, res.t, res.vroot), 0.0) * area_per_hill_m2 * 10.0
     else:
         Qtp = fr.Q_TP(t, season)
 

@@ -40,7 +40,7 @@ python validation/hydrus_coupled_run.py         # full soil→plant run + figure
 
 Weakly-sorbed short chains (Kd≈0.01–0.15 from `Koc·f_oc`) leach to near-zero during
 flooding, so the constant-`Cwo` placeholder **over-predicts grain/straw BAF ~2–4×**
-(PFBA grain 2.07→0.50); strongly-sorbed long chains (Kd≳7) stay buffered. The HYDRUS
+(PFBA grain 2.07→0.43); strongly-sorbed long chains (Kd≳7) stay buffered. The HYDRUS
 tests auto-skip where the executable/`phydrus` is unavailable.
 
 `reproduce_demo.py` loads `params/parameters.json` + `src/` and runs the 4-compartment ODE
@@ -180,7 +180,7 @@ them, so a PFSA-specific transport term is still needed.
 - **Soil side (Method A)** — the real HYDRUS-1D engine is now compiled and wired (`src/soil_hydrus.py`):
   per-congener `C_w^o(t)` from the soil transport solve drives the plant ODE. Short chains leach →
   the constant-`Cwo` placeholder over-predicts grain/straw BAF ~2–4×; long chains stay buffered.
-- **Tests** — 75 passing, 1 skipped (`pytest`; HYDRUS tests auto-skip without the built engine).
+- **Tests** — 76 passing, 1 skipped (`pytest`; HYDRUS tests auto-skip without the built engine).
 
 **Open (data-limited, not modeling work):** rice (not wheat) per-congener root subcellular →
 membrane-share/α; reliable per-congener pore-water or hydroponic RCF → surface test + f_xy

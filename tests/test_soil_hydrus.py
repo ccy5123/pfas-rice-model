@@ -51,3 +51,15 @@ def test_inputs_from_hydrus_normalised_and_shaped():
     assert np.mean(inp.Cwo) == pytest.approx(2.0, rel=1e-6)  # normalised to ref
     assert inp.M.shape == (121, 4)
     assert np.all(inp.M > 0) and np.all(np.isfinite(inp.Qtp))
+
+
+@hydrus
+def test_hydrus_qtp_matches_measured_forcing_when_unstressed():
+    """qtp_from_hydrus (default) must reproduce the measured forcing_rice Q_TP in
+    a well-watered flooded paddy (no soil-water stress) -- it is consistent with,
+    not a regression from, the measured crop physiology."""
+    import forcing_rice as fr
+    inp, _ = sh.inputs_from_hydrus(8, "PFCA", season=120.0, n_t=241)
+    q_meas = fr.Q_TP(inp.t, 120.0)
+    assert inp.Qtp.max() == pytest.approx(q_meas.max(), rel=0.10)   # peak within 10%
+    assert np.corrcoef(inp.Qtp, q_meas)[0, 1] > 0.98               # same shape
