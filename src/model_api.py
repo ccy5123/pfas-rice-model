@@ -297,6 +297,45 @@ def pore_water_from_inventory(t, C_total, K_F=2.0, n=0.85, theta_g=0.35,
 
 
 # ---------------------------------------------------------------------------
+# Real HYDRUS-1D soil run (live coupling) -- optional, needs the built engine
+# ---------------------------------------------------------------------------
+def hydrus_available():
+    """True if the compiled HYDRUS-1D engine + phydrus are usable here.
+
+    The live 'Run HYDRUS' mode runs a genuine HYDRUS-1D paddy soil model
+    (`src/soil_hydrus.py`); it needs the engine built from `external/hydrus_source`
+    (gfortran) and `pip install phydrus`. Gate the UI on this so the rest of the
+    tool stays usable when the engine is absent (fresh clone / Streamlit Cloud)."""
+    try:
+        import soil_hydrus as sh
+    except Exception:
+        return False
+    return bool(sh.hydrus_available())
+
+
+def hydrus_drivers(congener, season=120.0, Cwo_ref=1.0, f_oc=0.02, n_t=241,
+                   qtp_from_hydrus=True, **run_kw):
+    """Run a real HYDRUS-1D paddy soil model for `congener` and return a `drivers`
+    dict (+ the raw PaddyResult) for `simulate(drivers=…)`.
+
+    HYDRUS supplies the congener-dependent pore-water `Cwᵒ(t)` (short chains leach
+    under flooding, long chains stay buffered) and the actual root water uptake
+    `Q_TP(t)`; `M(t)` is ORYZA biomass. `Cwᵒ(t)` is normalised to season-mean
+    `Cwo_ref` so the average exposure matches a constant-Cwo run. Extra `run_kw`
+    (flood_until, percolation, …) pass through to `soil_hydrus.run_paddy_hydrus`."""
+    import soil_hydrus as sh
+    if congener not in _CONG:
+        raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
+    c = _CONG[congener]
+    pin, res = sh.inputs_from_hydrus(c["n_C"], c["group"], season=season,
+                                     Cwo_ref=Cwo_ref, f_oc=f_oc, n_t=n_t,
+                                     qtp_from_hydrus=qtp_from_hydrus, **run_kw)
+    drivers = dict(t=np.asarray(pin.t, float), Cwo=np.asarray(pin.Cwo, float),
+                   Qtp=np.asarray(pin.Qtp, float), M=np.asarray(pin.M, float))
+    return drivers, res
+
+
+# ---------------------------------------------------------------------------
 # Biomonitoring -- measured tissue concentrations, no soil model needed
 # ---------------------------------------------------------------------------
 def baf_from_measurement(conc_by_tissue, Cwo):

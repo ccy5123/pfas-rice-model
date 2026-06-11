@@ -4,3 +4,6 @@ pandas>=1.5
 # optional: static PNG export of the Plotly figures (needs Chrome for kaleido v1)
 #   pip install kaleido && plotly_get_chrome
 # kaleido>=0.2
+# optional: the live "Run HYDRUS-1D" mode (also build the engine — see
+# docs/visualization_tool.md and src/soil_hydrus.py)
+# phydrus>=0.2

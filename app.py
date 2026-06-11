@@ -14,8 +14,9 @@ plots the supporting time series.  It covers the whole input space:
 
   1. Model (parametric)        — built-in measured/illustrative forcings.
   2. HYDRUS / CSV drivers      — drop in a HYDRUS-1D/Phydrus run (Cwᵒ, Q_TP, M).
-  3. Soil inventory            — invert a soil PFAS load to pore water (Freundlich).
-  4. Biomonitoring             — measured tissue concentrations; HYDRUS not needed.
+  3. Run HYDRUS-1D (live)      — execute the real HYDRUS engine here (if built).
+  4. Soil inventory            — invert a soil PFAS load to pore water (Freundlich).
+  5. Biomonitoring             — measured tissue concentrations; HYDRUS not needed.
 
 Compute lives in src/model_api.py; the Plotly builders in src/plots.py (both
 UI-agnostic and unit-tested head-less).  See docs/visualization_tool.md.
@@ -61,14 +62,23 @@ def _drivers_tuple(d):
             tuple(np.asarray(d["M"]).ravel()), int(np.asarray(d["M"]).shape[1]))
 
 
+@st.cache_data(show_spinner="Running HYDRUS-1D…")
+def _hydrus_drivers_cached(congener, season, f_oc, flood_until, percolation):
+    """Cache a real HYDRUS-1D paddy run (a few seconds) per parameter set."""
+    drv, _ = api.hydrus_drivers(congener, season=season, f_oc=f_oc,
+                                flood_until=float(flood_until), percolation=float(percolation))
+    return drv
+
+
 # ---------------------------------------------------------------- sidebar
 with st.sidebar:
     st.header("1 · Data source")
     mode = st.radio(
         "How is the soil exposure supplied?",
-        ["Model (parametric)", "HYDRUS / CSV drivers", "Soil inventory → pore water",
-         "Biomonitoring (measured tissue)"],
-        help="The four ways to feed the plant model. Biomonitoring needs no soil model.")
+        ["Model (parametric)", "HYDRUS / CSV drivers", "Run HYDRUS-1D (live)",
+         "Soil inventory → pore water", "Biomonitoring (measured tissue)"],
+        help="Five ways to feed the plant model. 'Run HYDRUS-1D (live)' executes the "
+             "real engine (if built); biomonitoring needs no soil model.")
 
     st.header("2 · Congener & root")
     congener = st.selectbox("PFAS congener", api.CONGENERS, index=api.CONGENERS.index("PFOA"))
@@ -116,6 +126,33 @@ with st.sidebar:
                 st.info("Using examples/hydrus_drivers_example.csv (synthetic HYDRUS-style run).")
         except Exception as e:                                  # noqa: BLE001
             st.error(f"Could not read drivers: {e}")
+
+    elif mode == "Run HYDRUS-1D (live)":
+        if not api.hydrus_available():
+            st.warning(
+                "HYDRUS-1D engine not available in this environment. To enable the live run:\n\n"
+                "1. `git submodule update --init external/hydrus_source`\n"
+                "2. `cp external/hydrus_source/makefile external/hydrus_source/source/ && "
+                "(cd external/hydrus_source/source && make)`  *(needs gfortran)*\n"
+                "3. `pip install phydrus`\n\n"
+                "Meanwhile, use **HYDRUS / CSV drivers** with a CSV exported from a HYDRUS run.")
+            st.caption("Falling back to the parametric model so the rest of the tool stays usable.")
+        else:
+            st.caption("Runs a **real HYDRUS-1D** paddy model (Richards + advection–dispersion + "
+                       "linear Kd + root uptake) for this congener → Cwᵒ(t), Q_TP(t). Cached per setting.")
+            f_oc = st.slider("Soil organic carbon f_oc", 0.005, 0.05, 0.02, 0.005,
+                             help="Kd = Koc(chain length)·f_oc → per-congener retardation R = 1+ρKd/θ.")
+            flood_until = st.slider("Flooded until  [day]", 30, 120, 90, 5,
+                                    help="Continuous flooding (clean irrigation) until this day, then drainage.")
+            percolation = st.slider("Percolation excess  [cm/day]", 0.0, 1.0, 0.30, 0.05,
+                                    help="Clean-water through-flow that leaches the dissolved pool.")
+            season = 120.0
+            try:
+                drivers = _hydrus_drivers_cached(congener, season, f_oc, flood_until, percolation)
+                st.success(f"HYDRUS-1D run complete — Cwᵒ(t) for {congener} "
+                           f"(Kd-retarded; mean-normalised).")
+            except Exception as e:                                  # noqa: BLE001
+                st.error(f"HYDRUS run failed: {e}")
 
     elif mode == "Soil inventory → pore water":
         st.caption("Freundlich paddy soil S = K_F·C_wⁿ inverts a total soil load to pore water Cwᵒ(t).")
@@ -272,14 +309,22 @@ with tabs[5]:
 with tabs[6]:
     st.markdown(
         """
-### Four ways to drive the plant model
+### Five ways to drive the plant model
 
 | Mode | PFAS driver Cwᵒ(t) comes from | Q_TP, M(t) | When to use |
 |---|---|---|---|
 | **Model (parametric)** | a constant you set | measured FAO-56 / ORYZA | quick what-ifs, teaching |
 | **HYDRUS / CSV drivers** | a HYDRUS-1D / Phydrus run (CSV) | from the same CSV, or measured | you have a calibrated soil-water-solute model |
+| **Run HYDRUS-1D (live)** | a real HYDRUS-1D run executed here | HYDRUS root uptake + ORYZA | you want the engine to run in-app (needs it built) |
 | **Soil inventory** | inverting a soil load with a Freundlich isotherm | measured | you know total soil PFAS but not pore water |
 | **Biomonitoring** | a measured pore-water / soil-solution value | — (not needed) | you have field tissue + water concentrations |
+
+**Live HYDRUS-1D** runs the genuine engine (built from `external/hydrus_source`) via `phydrus`:
+a one-season paddy model (Richards flow + advection–dispersion + linear Kd sorption + root
+water uptake) gives the **congener-dependent** pore water — weakly-sorbed short chains leach
+under flooding (Cwᵒ falls), strongly-sorbed long chains stay buffered (flat). Kd comes from the
+Koc(chain-length) QSPR. Build it with `git submodule update --init external/hydrus_source`,
+`make` in `source/` (needs gfortran), and `pip install phydrus`; the mode auto-detects the engine.
 
 ### HYDRUS-1D coupling (Method A, one-way) — inputs & outputs
 

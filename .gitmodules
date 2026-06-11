@@ -1,3 +1,4 @@
 [submodule "external/hydrus_source"]
 	path = external/hydrus_source
 	url = https://github.com/phydrus/source_code
+	ignore = dirty

@@ -53,8 +53,33 @@ ORYZA IR72 biomass) and are reused across modes unless you supply your own.
 |---|---|---|---|
 | **Model (parametric)** | a constant you set | measured / placeholder | `simulate(congener, Cwo=…)` |
 | **HYDRUS / CSV drivers** | a HYDRUS-1D / Phydrus run | from the CSV, or measured | `simulate(congener, drivers=load_driver_csv(...))` |
+| **Run HYDRUS-1D (live)** | a real HYDRUS-1D run executed in-app | HYDRUS root uptake + ORYZA | `hydrus_drivers(congener, …)` → `simulate(drivers=…)` |
 | **Soil inventory** | inverting a soil load (Freundlich) | measured | `pore_water_from_inventory(...)` → `drivers_from_arrays` |
 | **Biomonitoring** | a measured pore-water value | — (not needed) | `baf_from_measurement(conc, Cwo)` |
+
+### Live HYDRUS-1D run (`src/soil_hydrus.py`)
+The "Run HYDRUS-1D (live)" mode executes the **genuine HYDRUS-1D engine** (built from the
+`external/hydrus_source` submodule) through `phydrus`: a one-season paddy model — Richards
+flow + advection–dispersion + **linear Kd** sorption + root water uptake — returns the
+**congener-dependent** pore water `Cwᵒ(t)` and the actual root water uptake `Q_TP(t)`. Kd comes
+from the Koc(chain-length) QSPR (`literature_params.koc`), so weakly-sorbed short chains leach
+under flooding (Cwᵒ falls and rebounds on drainage) while strongly-sorbed long chains stay
+buffered (flat) — structure a constant Cwᵒ cannot represent. `Cwᵒ(t)` is normalised to
+season-mean `Cwo_ref` so the average exposure matches a constant-Cwo run; only the temporal
+shape and congener-to-congener contrast differ.
+
+`model_api.hydrus_available()` gates the UI; when the engine isn't built the app shows the build
+steps and stays usable. To enable it:
+
+```bash
+git submodule update --init external/hydrus_source
+cp external/hydrus_source/makefile external/hydrus_source/source/
+(cd external/hydrus_source/source && make)      # needs gfortran
+pip install phydrus
+```
+
+This is still **Method A** (one-way): HYDRUS computes the soil water+solute, the plant ODE runs
+in Python; HYDRUS itself is not modified.
 
 ---
 

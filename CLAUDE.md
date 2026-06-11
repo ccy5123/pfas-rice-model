@@ -43,6 +43,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── pfas_rice_plant_module.py             # import alias → 4pool_surf (basis-A); legacy name
 │   ├── soil_paddy.py                         # Freundlich soil → C_w^o(t) (legacy redox sign)
 │   ├── soil_paddy_redox_corrected.py         # W3-corrected redox (dilution+leaching; USE THIS)
+│   ├── soil_hydrus.py                        # REAL HYDRUS-1D run via phydrus → Cwo(t),Qtp(t) (Method A, live)
 │   ├── calibration.py                        # Tier-1 calibration (scipy)
 │   ├── literature_params.py                  # literature QSPRs/anchors (cited) + Kim2019 BAF
 │   ├── model_api.py                          # UI-agnostic wrapper: simulate(), driver/soil/biomon helpers
@@ -154,6 +155,15 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `model_api`/`plots` are UI-agnostic + head-less-tested (`tests/test_model_api.py`, `tests/test_plots.py`);
   bundled `examples/` CSVs auto-load. HYDRUS-1D input/output mapping + the biomonitoring path are documented
   in the app's **About** tab and `docs/visualization_tool.md`.
+- **Live HYDRUS-1D coupling (`src/soil_hydrus.py`)**: the **real HYDRUS-1D engine** (built from the
+  `external/hydrus_source` submodule, gfortran) is driven through **`phydrus`** to run a one-season paddy
+  model (Richards + advection-dispersion + **linear Kd** + root uptake) → congener-dependent pore water
+  `Cwo(t)` (short chains leach under flooding, long chains buffer; verified: PFBA Cw→0.01, PFOA→0.47,
+  PFDoDA→1.00) and actual root uptake `Q_TP(t)`. Per-congener Kd from the C3 Koc(chain-length) QSPR
+  (`literature_params.koc`). Wired into the app as the 5th **"Run HYDRUS-1D (live)"** mode via
+  `model_api.hydrus_drivers`/`hydrus_available` (graceful fallback when the engine/phydrus are absent);
+  `tests/test_soil_hydrus.py` skips the engine tests when unbuilt. Still **Method A** (one-way; HYDRUS
+  unmodified). Originally implemented on branch `claude/epic-knuth-npt0cy`; the soil piece is cherry-picked here.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -161,11 +171,15 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `--rec` uses the monotone f_xy. Rebuild params: `python build_parameters.py`.
 - **Visualization tool**: `pip install -r requirements-app.txt && streamlit run app.py`
   (plant/soil accumulation colormap + HYDRUS/soil/biomonitoring modes; see `docs/visualization_tool.md`).
+- **Live HYDRUS-1D** (optional, for the "Run HYDRUS-1D (live)" mode): `git submodule update --init
+  external/hydrus_source`; `cp external/hydrus_source/makefile external/hydrus_source/source/ &&
+  (cd external/hydrus_source/source && make)` (gfortran); `pip install phydrus`. Demo: `python src/soil_hydrus.py`.
 - Plant demo: `python src/pfas_rice_plant_module_4pool_surf.py` (N, B_k, BAFs; saves `pfas_rice_demo.png`).
 - Multi-height stem: `python validation/nstem_gradient_check.py` (stem-gradient direction vs Yamazaki).
 - Soil → plant: `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
 - Calibration: `python src/calibration.py`; Literature params: `python src/literature_params.py`.
-- Tests: `pip install pytest && pytest` (83 passing).
+- Tests: `pip install pytest && pytest` (85 passing; HYDRUS engine tests in `test_soil_hydrus.py`
+  additionally run when the engine is built, else skip).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
   (gfortran + `makefile` / `make.bat`).

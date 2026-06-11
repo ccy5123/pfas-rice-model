@@ -41,14 +41,20 @@ culms, long leaves and drooping grain panicles, each organ filled on a shared co
 its concentration (or BAF). A day slider (or ▶ animate) shows *where and when* PFAS builds
 up — leaf is xylem-terminal, grain is phloem-fed, the root retains the anion.
 
-**Four input modes** (sidebar “Data source”) cover the whole exposure space:
+**Five input modes** (sidebar “Data source”) cover the whole exposure space:
 
 | Mode | Pore-water `Cwᵒ(t)` from | When |
 |---|---|---|
 | **Model (parametric)** | a constant you set | quick what-ifs / teaching |
 | **HYDRUS / CSV drivers** | a HYDRUS-1D/Phydrus run (`t,Cwo,Qtp,M_*` CSV) | you have a calibrated soil model |
+| **Run HYDRUS-1D (live)** | the real HYDRUS engine, executed in-app | you want HYDRUS to run here (needs it built) |
 | **Soil inventory** | inverting a total soil load (Freundlich) | you know soil PFAS, not pore water |
 | **Biomonitoring** | a measured pore-water value (no HYDRUS) | you have field tissue + water data |
+
+The **live HYDRUS-1D** mode runs the genuine engine (built from `external/hydrus_source` via
+`phydrus`) for a one-season paddy model → congener-dependent `Cwᵒ(t)` (short chains leach, long
+chains buffer); it auto-detects the engine and shows build steps if absent. See
+`src/soil_hydrus.py` and `docs/visualization_tool.md`.
 
 Other tabs: tissue dynamics, **soil & drivers** (`Cwᵒ(t)`, `Q_TP(t)`, `M(t)`, Freundlich
 isotherm, depth profile), BAF vs observed/measured, chain-length trends, compare congeners,
@@ -173,8 +179,12 @@ them, so a PFSA-specific transport term is still needed.
   (monotone direction) and the **nstem gradient direction** (PFCAs). `docs/H8_handoff_S6_final.md`.
 - **Tier-1 fit** — `src/literature_params.py` fits `L_Ph` to the Kim 2019 PFOA grain BAF (matches 4.43 L/kg).
 - **Visualization tool** — `app.py` (+ `src/model_api.py`, `src/plots.py`): plant/soil accumulation
-  colormap + four exposure modes (model / HYDRUS CSV / soil inventory / biomonitoring). `docs/visualization_tool.md`.
-- **Tests** — 83 passing (`pytest`).
+  colormap + five exposure modes (model / HYDRUS CSV / **live HYDRUS-1D** / soil inventory /
+  biomonitoring). `docs/visualization_tool.md`.
+- **Live HYDRUS-1D coupling** — `src/soil_hydrus.py`: runs the real HYDRUS-1D engine (built from
+  `external/hydrus_source` via `phydrus`) for congener-resolved pore water `Cwᵒ(t)` (Method A).
+  Tests skip gracefully when the engine isn't built.
+- **Tests** — 85 passing (+ HYDRUS engine tests when the engine is built; `pytest`).
 
 **Open (data-limited, not modeling work):** rice (not wheat) per-congener root subcellular →
 membrane-share/α; reliable per-congener pore-water or hydroponic RCF → surface test + f_xy
