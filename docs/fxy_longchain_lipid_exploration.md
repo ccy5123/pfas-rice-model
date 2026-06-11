@@ -75,6 +75,30 @@ version of the same physics) scores best (0.286).
   ratio per congener (root-pressure exudate) across chain length — the U-shape and its
   `K_PL`-gated lipid arm are a sharp, falsifiable prediction.
 
+## Two-pool root (the root/shoot trade-off) — TESTED, set aside
+Lipid loading fixes the long-chain grain but drains the long-chain **root** (mass balance:
+the bound pool that feeds the shoot is the same pool whose burden is the root BAF). The
+natural fix is a **two-pool root** — a mobile pool (uptake + loading) plus a slow,
+sequestered apoplast/cell-wall/Fe-Mn-plaque pool that accumulates the root burden without
+feeding the xylem. We built and fit it (5-state ODE: root_mobile, root_seq, stem, leaf,
+grain; mass-conserving; `k_seq`/`k_rel` kinetic sequestration):
+
+- **Uniform sequestration** over-inflates the *short*-chain root (PFBS root 2→24, PFOS 6→58):
+  it sequesters everything. RMSE 0.67.
+- **K_PL-gated sequestration** (only long chains park) still over-predicts mid-chain and PFSA
+  root (PFDA 4→45, PFOS 6→108). RMSE 0.51 — both worse than the single-pool lipid model (0.36).
+
+**Why it cannot work (decisive):** the observed root BAF does **not track `K_PL`**. PFOS (C8
+PFSA) and PFUnDA (C11 PFCA) have **identical `K_PL` = 31623** yet roots of **5.93 vs 19.53**
+(3.3×); and within the PFCAs the root rises ~4×/CF₂ while `K_PL` rises ~2×/CF₂. So no
+`K_PL`-gated sequestration can give PFOS a low root and PFUnDA a high one simultaneously.
+The very-long-chain root burden is governed by a **separate, chain-length-(not `K_PL`)-specific**
+process (irreversible cell-wall/plaque binding, head-group-dependent) — plus PFDoDA is a
+near-MQL outlier. Resolving it cleanly would need a per-congener root-sink descriptor, i.e.
+over-parameterising the noisiest tail. **Set aside** (cf. the nstem hysteresis avenue). The
+honest takeaway: the root sink and the shoot-delivery mechanism are **distinct**, so the
+single-pool lipid term keeps the grain fix with a known, documented root trade-off.
+
 ## Status — WIRED (opt-in, default off)
 The mechanism is now in the canonical core. `Compound` gained `g_xy`/`g_ph` (lipid-bound
 loading conductances, default 0 → free-only model recovered exactly; mass conservation and
