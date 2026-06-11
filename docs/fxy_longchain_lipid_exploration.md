@@ -75,6 +75,28 @@ version of the same physics) scores best (0.286).
   ratio per congener (root-pressure exudate) across chain length — the U-shape and its
   `K_PL`-gated lipid arm are a sharp, falsifiable prediction.
 
+## Out-of-sample test (Kim 2019 grain) — the first predictive signal
+`validation/oos_crossdataset.py` transfers the Yamazaki-fit models to data they were NOT
+fit on. Against **Kim 2019 brown-rice (grain) BAF** (porewater basis; PFOA excluded as it
+was used in the L_Ph fit), the lipid mechanism predicts the independent chain-length pattern
+— including the long-chain **rise** — far better than the alternatives:
+
+| log10 RMSE vs Kim grain | lipid | monotone | W2 |
+|---|---|---|---|
+| excl. PFOA (all) | **0.55** | 2.04 | 1.11 |
+| reliable only (PFHpA, PFNA; DF≥15%) | **0.23** | 1.91 | 1.43 |
+
+The monotone and W2 models give ~0.05 for the long-chain grain (obs PFUnDA 33, PFDoDA 35);
+the lipid model gives O(6) — under the (low-detection-frequency, unreliable) long chains but
+the only model that captures the direction and order of magnitude. **This is the project's
+first genuine out-of-sample predictive signal, and it specifically supports the
+lipid-facilitated grain-loading mechanism.** Li 2025 is inconclusive — its reported BAFs scale
+inversely with water quality (group-water denominator), so only the water-independent TF is
+usable, and even that is root-surface-confounded; W2 wins straw/root, lipid wins grain/root,
+all within factors of 2.5–30. Caveat: still not validation in full — Kim's long chains are
+low-DF and lipid under-predicts them; a tissue-/time-resolved dataset (the xylem-/phloem-sap
+experiment) remains the decisive test.
+
 ## Two-pool root (the root/shoot trade-off) — TESTED, set aside
 Lipid loading fixes the long-chain grain but drains the long-chain **root** (mass balance:
 the bound pool that feeds the shoot is the same pool whose burden is the root BAF). The
