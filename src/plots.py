@@ -6,6 +6,7 @@ Streamlit import, so they can be unit-tested head-less.  `app.py` renders them
 with `st.plotly_chart`.
 """
 from __future__ import annotations
+import re
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -109,80 +110,87 @@ def fig_compare(results, tissue="straw"):
 # Plant + soil MAP  --  the model drawn to scale, compartments coloured by the
 # accumulation metric (a heat colormap).  This is the "see the model" view.
 # ===========================================================================
-# A rice plant (Oryza sativa): a fibrous root mass in the paddy soil, arching
-# culms/tillers, long slender leaf blades, and DROOPING panicles heavy with grain
-# (the bent-over heads of ripe rice).  Geometry on a 0..10 (x) by -0.6..11 (y)
-# canvas; each compartment is stroked/filled by the colour sampled from the
-# metric scale at that compartment's value.  Paths are generated below at import.
-_SOIL = dict(x0=0.3, y0=-0.4, x1=9.7, y1=3.05)
-_WATER_Y = 2.75
-_CROWN = (5.0, 3.0)
-
-
-def _cubic(p0, p1, p2, p3, ts):
-    p0, p1, p2, p3 = (np.asarray(p, float) for p in (p0, p1, p2, p3))
-    return [(1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1
-            + 3 * (1 - t) * t * t * p2 + t ** 3 * p3 for t in ts]
-
-
-def _blade(base, tip, width=0.4, arch=0.0):
-    """SVG path for an arching, lens-shaped leaf blade from `base` to `tip`."""
-    base, tip = np.asarray(base, float), np.asarray(tip, float)
-    d = tip - base
-    L = float(np.hypot(*d)) or 1.0
-    perp = np.array([-d[1], d[0]]) / L
-    mid = (base + tip) / 2 + np.array([0.0, arch])
-    a, b = mid + perp * width, mid - perp * width
-    return (f"M {base[0]:.2f},{base[1]:.2f} Q {a[0]:.2f},{a[1]:.2f} {tip[0]:.2f},{tip[1]:.2f} "
-            f"Q {b[0]:.2f},{b[1]:.2f} {base[0]:.2f},{base[1]:.2f} Z")
-
-
-def _root_paths(n=11):
-    """Open Bézier strokes fanning down from the crown -> a fibrous rice root mass."""
-    out = []
-    for xe in np.linspace(2.6, 7.4, n):
-        s = (xe - 5.0) / 2.4
-        ex, ey = xe, 0.05 + 0.55 * abs(s)               # outer roots end shallower
-        c1 = (5.0 + s * 0.6, 2.1)
-        c2 = (xe + s * 0.3, 1.1)
-        out.append(f"M {_CROWN[0]:.2f},{_CROWN[1]+0.1:.2f} "
-                   f"C {c1[0]:.2f},{c1[1]:.2f} {c2[0]:.2f},{c2[1]:.2f} {ex:.2f},{ey:.2f}")
-    return out
-
-
-# arching culms (main + two tillers) and the long leaf blades
-_CULM_MAIN = "M 5.0,3.0 C 4.55,5.2 5.0,7.1 5.55,8.55"
-_TILLERS = ["M 5.0,3.05 C 3.95,4.6 3.25,6.0 3.0,7.0",
-            "M 5.0,3.05 C 6.05,4.5 6.85,5.6 7.2,6.6"]
-_LEAVES = [_blade((4.15, 4.8), (1.2, 3.0), 0.42, -0.8),     # long lower-left, arching down
-           _blade((5.5, 5.5), (8.6, 4.3), 0.40, -0.7),      # long lower-right, arching down
-           _blade((4.4, 5.7), (2.2, 5.0), 0.30, -0.35),     # mid-left, medium
-           _blade((5.4, 6.0), (7.3, 5.4), 0.30, -0.3)]      # mid-right, medium
-
-
-def _panicle_beads(rachis, counts, hang=0.36, droop=0.14):
-    """Grain ellipse centres hanging off an arching rachis (a drooping head)."""
-    pts = _cubic(*rachis, np.linspace(0.06, 1.0, len(counts)))
-    beads = []
-    for P, nc in zip(pts, counts):
-        beads.append((float(P[0]), float(P[1])))                 # node on the rachis
-        for j in range(int(nc)):
-            beads.append((float(P[0] - droop * j), float(P[1] - hang * (j + 1))))
-    return beads
-
-
-# main (right, large) + secondary (left, smaller) drooping panicles
-_RACHIS1 = ((5.55, 8.55), (6.8, 9.55), (8.2, 9.15), (8.75, 7.95))
-_RACHIS2 = ((3.0, 7.05), (2.45, 8.05), (1.7, 8.05), (1.35, 7.15))
-_GRAIN_RACHISES = [_RACHIS1, _RACHIS2]
-_GRAIN_BEADS = (_panicle_beads(_RACHIS1, [1, 1, 2, 2, 3, 3, 3, 2])
-                + _panicle_beads(_RACHIS2, [1, 1, 2, 2, 2]))
-# marker / label anchors (canvas coords) shared by the static + animated builders
-_MARK = {"root": (5.0, 1.25), "stem": (4.55, 4.8), "leaf": (2.6, 4.0),
-         "grain": (7.9, 8.25), "straw": (3.25, 5.3)}
-_LABEL = {"root": (1.4, 0.6), "stem": (1.1, 6.2), "leaf": (0.9, 2.5),
-          "grain": (8.9, 9.7), "straw": (0.9, 6.2)}
+# A rice plant (Oryza sativa): a fibrous root mass in a paddy-soil cross-section,
+# an arching culm with broad leaves at the nodes, and a nodding golden ear of grain.
+# The silhouette is the SVG illustration's geometry (coordinate space x:0..620,
+# y:110..690 with y DOWN); we flip y into Plotly's y-up convention (yf = _K - y)
+# so the paths render upright. Soil/rachis/nodes are fixed structural colours; the
+# root/leaf/stem/grain organs are filled/stroked with the metric-scale colour at
+# that compartment's value -- that is the accumulation map.
+_K = 800.0                       # y-flip constant (yf = _K - y_svg), keeps yf > 0
 _NONE = "rgba(0,0,0,0)"
+_NUM = re.compile(r"[-+]?\d*\.?\d+")
+
+
+def _flip_path(path):
+    """Flip the y of every coordinate in an SVG path into y-up space (yf=_K-y).
+
+    Every M/L/C/Q command consumes whole (x,y) pairs, so every 2nd number is a y."""
+    n = 0
+    def repl(m):
+        nonlocal n
+        n += 1
+        v = float(m.group())
+        return f"{(_K - v):g}" if n % 2 == 0 else f"{v:g}"
+    return _NUM.sub(repl, path)
+
+
+def _fy(y):
+    return _K - y
+
+
+def _ellipse_path(cx, cy, rx, ry, rot_deg=0.0, npts=16):
+    """Closed path for a rotated ellipse (SVG coords) flipped into y-up space."""
+    th = np.linspace(0.0, 2 * np.pi, npts, endpoint=False)
+    a = np.radians(rot_deg)
+    xs = cx + rx * np.cos(th) * np.cos(a) - ry * np.sin(th) * np.sin(a)
+    ys = _K - (cy + rx * np.cos(th) * np.sin(a) + ry * np.sin(th) * np.cos(a))
+    return " ".join(f"{'M' if i == 0 else 'L'} {x:.1f},{y:.1f}"
+                    for i, (x, y) in enumerate(zip(xs, ys))) + " Z"
+
+
+# --- the SVG silhouette (raw illustration coords), flipped to y-up at import ----
+_SOIL_PATH = _flip_path("M62 590 Q 158 576, 250 587 Q 342 597, 432 583 Q 512 573, 558 589 "
+                        "L 558 662 L 62 662 Z")
+_SOIL_BAND = _flip_path("M62 632 L 558 632 L 558 662 L 62 662 Z")
+_SOIL_TOP = _flip_path("M62 590 Q 158 576, 250 587 Q 342 597, 432 583 Q 512 573, 558 589")
+_SOIL_TEX = [(140, 612, 3, 2), (210, 640, 2.5, 1.8), (330, 615, 3, 2), (400, 645, 2.5, 1.8),
+             (470, 620, 3, 2), (500, 648, 2, 1.5), (100, 642, 2.5, 1.8), (260, 650, 2, 1.5),
+             (360, 656, 2.5, 1.8), (440, 610, 2, 1.5)]
+_CROWN = (300, 585, 11, 6)                                   # cx, cy, rx, ry
+_ROOTS = [(_flip_path(p), w) for p, w in (
+    ("M300 586 C 296 606, 284 624, 264 648", 2.6),
+    ("M300 586 C 300 610, 301 632, 297 654", 2.6),
+    ("M300 586 C 306 606, 320 624, 340 648", 2.6),
+    ("M299 588 C 290 604, 274 616, 250 632", 1.8),
+    ("M301 588 C 313 602, 331 612, 354 626", 1.8),
+    ("M300 590 C 295 612, 289 634, 281 656", 2.2),
+    ("M300 590 C 305 612, 313 634, 323 656", 2.2),
+    ("M283 624 C 276 630, 270 638, 263 646", 1.1),
+    ("M320 624 C 328 630, 334 638, 342 648", 1.1),
+    ("M297 632 C 292 640, 290 648, 288 656", 1.1))]
+_LEAVES = [_flip_path("M288 548 C 281 487, 183 366, 145 392 C 194 380, 295 489, 294 549 Z"),
+           _flip_path("M290 558 C 298 488, 396 392, 452 422 C 405 400, 308 494, 298 559 Z"),
+           _flip_path("M286 538 C 294 456, 426 312, 494 345 C 436 322, 304 464, 294 539 Z")]
+_LEAF_VEINS = [_flip_path("M288 548 C 281 487, 183 366, 145 392"),
+               _flip_path("M290 558 C 298 488, 396 392, 452 422"),
+               _flip_path("M286 538 C 294 456, 426 312, 494 345")]
+_STEM_PATH = _flip_path("M300 585 C 266 460, 260 290, 318 178")
+_NODES = [(293, 560, 6, 4, -8), (279, 471, 5.5, 3.8, 0), (276, 342, 5, 3.6, 20)]
+_RACHIS = [_flip_path("M318 178 C 332 150, 356 148, 376 172 C 398 198, 406 250, 396 306"),
+           _flip_path("M340 156 C 356 166, 364 184, 360 208")]
+_GRAINS = [(324, 172, 5, 9, 30), (332, 160, 5, 9, 25), (343, 152, 5, 9, 15), (356, 150, 5, 9, 5),
+           (369, 154, 5, 9, -10), (380, 164, 5, 9, -25), (388, 178, 5, 9, -35), (394, 196, 5, 9, -30),
+           (397, 216, 5, 9, -20), (398, 238, 5, 9, -12), (398, 260, 5, 9, -8), (397, 282, 5, 9, -5),
+           (395, 302, 5, 9, 0), (318, 162, 4.5, 8, 28), (348, 146, 4.5, 8, 4), (374, 150, 4.5, 8, -18),
+           (386, 230, 4.5, 8, -6), (385, 266, 4.5, 8, -4), (384, 296, 4.5, 8, 0)]
+_GRAIN_PATHS = [_ellipse_path(*g) for g in _GRAINS]
+
+# marker / label anchors (SVG coords -> flipped) shared by static + animated builders
+_MARK = {"root": (300, _fy(612)), "stem": (264, _fy(430)), "leaf": (210, _fy(455)),
+         "grain": (395, _fy(240)), "straw": (240, _fy(470))}
+_LABEL = {"root": (118, _fy(672)), "stem": (66, _fy(470)), "leaf": (66, _fy(360)),
+          "grain": (486, _fy(150)), "straw": (66, _fy(500))}
 
 
 def _frac(v, cmin, cmax):
@@ -199,28 +207,39 @@ def _color(v, cmin, cmax, scale, nan="#dcdcdc"):
 
 
 def _shapes_for(colors, line="#4f4f4f"):
-    """Return the rice-plant + soil shapes coloured by the per-part `colors`."""
-    S = [dict(type="rect", **_SOIL, fillcolor="#cdb891", line=dict(color="#9c8a63", width=1), layer="below"),
-         dict(type="line", x0=_SOIL["x0"], x1=_SOIL["x1"], y0=_WATER_Y, y1=_WATER_Y,
-              line=dict(color="#6fa8dc", width=2, dash="dot"), layer="below")]
-    # fibrous roots (open strokes, in soil)
-    for pth in _root_paths():
-        S.append(dict(type="path", path=pth, fillcolor=_NONE, line=dict(color=colors["root"], width=3)))
-    # leaf blades (filled, behind the culms)
+    """Return the rice-plant + paddy-soil shapes coloured by the per-organ `colors`.
+
+    Soil cross-section, rachis and nodes are fixed structural colours; the root
+    (crown + fibrous roots), leaves, stem and grain ear are filled/stroked with the
+    metric-scale colour for that compartment's value (the accumulation map)."""
+    S = [dict(type="path", path=_SOIL_PATH, fillcolor="#6B4A2A", line=dict(width=0), layer="below"),
+         dict(type="path", path=_SOIL_BAND, fillcolor="#553A1F", opacity=0.85, line=dict(width=0), layer="below"),
+         dict(type="path", path=_SOIL_TOP, fillcolor=_NONE, line=dict(color="#835C36", width=1.4), layer="below")]
+    for (cx, cy, rx, ry) in _SOIL_TEX:
+        S.append(dict(type="circle", x0=cx - rx, x1=cx + rx, y0=_fy(cy) - ry, y1=_fy(cy) + ry,
+                      fillcolor="#5A3E22", line=dict(width=0), layer="below"))
+    # root crown + fibrous roots (root colour)
+    cx, cy, rx, ry = _CROWN
+    S.append(dict(type="circle", x0=cx - rx, x1=cx + rx, y0=_fy(cy) - ry, y1=_fy(cy) + ry,
+                  fillcolor=colors["root"], line=dict(color=line, width=0.8)))
+    for pth, w in _ROOTS:
+        S.append(dict(type="path", path=pth, fillcolor=_NONE, line=dict(color=colors["root"], width=w)))
+    # leaves (leaf colour) + a subtle midrib
     for pth in _LEAVES:
         S.append(dict(type="path", path=pth, fillcolor=colors["leaf"], line=dict(color=line, width=1)))
-    # culms / tillers (thick strokes)
-    S.append(dict(type="path", path=_CULM_MAIN, fillcolor=_NONE, line=dict(color=colors["stem"], width=11)))
-    for pth in _TILLERS:
-        S.append(dict(type="path", path=pth, fillcolor=_NONE, line=dict(color=colors["stem"], width=7)))
-    # panicle rachises (thin) + drooping grain beads
-    for rc in _GRAIN_RACHISES:
-        S.append(dict(type="path", fillcolor=_NONE, line=dict(color=colors["grain"], width=2.5),
-                      path=f"M {rc[0][0]:.2f},{rc[0][1]:.2f} C {rc[1][0]:.2f},{rc[1][1]:.2f} "
-                           f"{rc[2][0]:.2f},{rc[2][1]:.2f} {rc[3][0]:.2f},{rc[3][1]:.2f}"))
-    for (bx, by) in _GRAIN_BEADS:
-        S.append(dict(type="circle", x0=bx - 0.17, y0=by - 0.27, x1=bx + 0.17, y1=by + 0.27,
-                      fillcolor=colors["grain"], line=dict(color=line, width=0.7)))
+    for pth in _LEAF_VEINS:
+        S.append(dict(type="path", path=pth, fillcolor=_NONE, line=dict(color="rgba(35,35,35,0.22)", width=1)))
+    # stem C-curve: dark outline + stem-colour fill, then nodes
+    S.append(dict(type="path", path=_STEM_PATH, fillcolor=_NONE, line=dict(color=line, width=11)))
+    S.append(dict(type="path", path=_STEM_PATH, fillcolor=_NONE, line=dict(color=colors["stem"], width=7)))
+    for (cx, cy, rx, ry, rot) in _NODES:
+        S.append(dict(type="path", path=_ellipse_path(cx, cy, rx, ry, rot, 14),
+                      fillcolor="#33401f", line=dict(width=0)))
+    # ear: rachis (structural) + nodding grains (grain colour)
+    for pth in _RACHIS:
+        S.append(dict(type="path", path=pth, fillcolor=_NONE, line=dict(color="#9c7a2a", width=2.0)))
+    for pth in _GRAIN_PATHS:
+        S.append(dict(type="path", path=pth, fillcolor=colors["grain"], line=dict(color="#C8881A", width=0.5)))
     return S
 
 
@@ -281,20 +300,20 @@ def fig_plant_schematic(values, *, cmin, cmax, label="tissue conc [µg/kg]",
                         font=dict(size=12), align="center",
                         bgcolor="rgba(255,255,255,0.75)", bordercolor="#ccc", borderwidth=1))
     if Cwo is not None:
-        ann.append(dict(x=8.6, y=2.5, text=f"pore water<br>Cwᵒ={Cwo:.3g} µg/L", showarrow=False,
-                        font=dict(size=11, color="#33597a"), align="center",
-                        bgcolor="rgba(214,233,247,0.85)", bordercolor="#9cc3e0", borderwidth=1))
+        ann.append(dict(x=476, y=_fy(610), text=f"pore water<br>Cwᵒ={Cwo:.3g} µg/L", showarrow=False,
+                        font=dict(size=11, color="#f0e6d2"), align="center",
+                        bgcolor="rgba(85,58,31,0.78)", bordercolor="#835C36", borderwidth=1))
     if title is None:
         title = "Plant + soil accumulation map"
         if t is not None:
             title += f"  (day {t:.0f})"
     fig.update_layout(
         title=title, annotations=ann,
-        xaxis=dict(visible=False, range=[0, 10], fixedrange=True),
-        yaxis=dict(visible=False, range=[-0.6, 11], fixedrange=True,
+        xaxis=dict(visible=False, range=[20, 600], fixedrange=True),
+        yaxis=dict(visible=False, range=[120, 680], fixedrange=True,
                    scaleanchor="x", scaleratio=1.0),
         template="plotly_white", margin=dict(l=10, r=10, t=50, b=10),
-        height=560, plot_bgcolor="rgba(235,244,250,0.5)")
+        height=580, plot_bgcolor="rgba(250,247,239,0.65)")
     return fig
 
 
@@ -307,7 +326,7 @@ def fig_schematic_from_res(res, metric="conc", t_index=-1, colorscale=_HEAT, obs
                                title=title, t=sv["t"], obs=obs)
 
 
-def fig_schematic_animated(res, metric="conc", n_frames=36, colorscale=_HEAT):
+def fig_schematic_animated(res, metric="conc", n_frames=24, colorscale=_HEAT):
     """Autoplay version of the plant map: a play button + slider scrub the season,
     each compartment's colour tracking its accumulation through time."""
     ms = api.metric_series(res, metric)
