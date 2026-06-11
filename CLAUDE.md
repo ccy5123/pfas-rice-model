@@ -126,11 +126,18 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   is guaranteed, NOT predictive validation; (b) the empirical ordering is **congener-dependent**
   (Yamazaki: short-chain straw≫root, long-chain root>straw) — `root>straw>grain` is NOT universal
   under basis-A; (c) **GAP B is shape-resolved, not closed** — see task #6.
-- **Multi-height stem (task #6, DONE-structural)**: `src/pfas_rice_plant_module_nstem.py` (N serial
-  stem segments: transpiration draw-off + radial exchange + growth dilution; mass-conserving) lets a
-  **monotone f_xy reproduce the Yamazaki stem gradient for PFCAs** (`validation/nstem_gradient_check.py`).
-  Crossover `B* ~ Q_s/(M_s·μ_s)` ⇒ absolute scale needs measured `Q_TP(t)/M_s(t)` (task #7); PFOS/PFSA
-  translocate up despite high binding ⇒ a PFSA-specific transport term is still open (task #8).
+- **Multi-height stem (task #6)** — `src/pfas_rice_plant_module_nstem.py`: `NStemModel` (equilibrium)
+  + `NStemKineticModel` (finite radial `k_rad`); both mass-conserving. Driven by the MEASURED
+  forcings (`src/forcing_rice.py` Q_TP from Kumari/NayHtoon; `src/growth_rice.py` M_s from ORYZA
+  IR72), the multi-height stem **reproduces the short/mid-chain UPWARD gradient but NOT the
+  long-chain reversal** (PFBA top/bot 7.4 → PFUnDA 0.66; model stays ~2.4–4.9 for all k_rad). The
+  reversal needs **irreversible/hysteretic high-B sorption** — set aside, fully recorded in
+  `docs/nstem_gradient_exploration.md`. NOTE: the earlier "monotone f_xy reproduces the gradient"
+  claim was a **placeholder-biomass artifact** (real ORYZA biomass moves the crossover `B* ~
+  Q_s/(M_s·μ_s)` above the congener range).
+- **f_xy absolute scale (task #7)**: measured `Q_TP(t)` (`forcing_rice`, peak ~0.10 L/d/hill, T/ET=0.42)
+  and `M_s(t)` (`growth_rice`, ORYZA IR72, HI~0.53) are built. The absolute f_xy is pinned via the
+  **aggregate** root/straw/grain BAF (not the within-stem gradient) — see `validation/`.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
