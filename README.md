@@ -27,17 +27,19 @@ pip install pytest && pytest              # tests (structure, mass conservation,
 for all 12 congeners, printing predicted vs observed root/straw/grain BAF.
 
 ## Interactive app
-A Streamlit dashboard to run the model and see the results (tissue concentrations/BAFs,
-binding factors, chain-length parameter trends, and the measured forcings):
+A Streamlit dashboard with **interactive Plotly charts** (hover for values, drag to zoom,
+click legend to toggle) to run the model and explore the results:
 
 ```bash
 pip install -r requirements.txt -r requirements-app.txt
 streamlit run app.py
 ```
 
-Pick a congener and scenario (pore-water `C_wᵒ`, membrane potential `E_m`, `f_xy`
-source, measured vs placeholder forcings). Compute lives in `src/model_api.py`
-(`simulate(...)`), which is UI-agnostic and used by the app and the tests.
+Sidebar: congener, pore-water `C_wᵒ`, membrane potential `E_m`, `f_xy` source, measured-vs-
+placeholder forcings, season. Tabs: tissue dynamics, predicted-vs-Yamazaki BAF, chain-length
+trends (pick the parameter), **compare congeners**, and the measured forcings. Compute is in
+`src/model_api.py` (`simulate(...)`); the Plotly figures in `src/plots.py` — both UI-agnostic
+and covered by the tests.
 
 ---
 
