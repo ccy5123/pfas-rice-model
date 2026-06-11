@@ -17,8 +17,8 @@ Only the TRANSPIRATION component drives xylem advection, so we use the basal
 
 Calibration anchors (measured, cited):
   * ET0 ~ 3.39 mm/day (mean; stagewise 3.42/3.56/.../2.97) — Kumari et al. 2022,
-    transplanted puddled-rice lysimeter (Water 14:?  doi 10.3390/w14233896).
-  * actual stagewise Kc 1.13/1.27/1.23/0.93 (initial/dev/mid/late) — Kumari 2022.
+    transplanted puddled-rice lysimeter (Agronomy 12:2850, doi 10.3390/agronomy12112850).
+  * actual stagewise Kc 1.13/1.27/1.23/0.93 (initial/dev/mid/late) — Kumari et al. 2022.
   * transpiration/evaporation split: seasonal soil evaporation = 57.9% of water
     loss (=> T/ET ~ 42%), evaporation fraction 96.6% (bare, initial) -> 43.3%
     (closed canopy) — Nay Htoon et al. 2018, PLoS ONE (FAO-56 dual-Kc partition).

@@ -116,7 +116,7 @@ REFERENCES: dict[str, Citation] = {
     "kim2019": Citation("kim2019", "Kim, Ekpe, Lee, Kim, Oh", 2019, "Sci. Total Environ. 671:714-721",
                         "10.1016/j.scitotenv.2019.03.240", "verified", "C1"),
     "tang2026": Citation("tang2026", "Tang, Xiao, Wu, Wang, Ge, Zhu, Chu, Chen", 2026,
-                         "J. Hazard. Mater. (PII S030438942503938X)", "UNVERIFIED", "UNVERIFIED", "C1/C5"),
+                         "J. Hazard. Mater.", "10.1016/j.jhazmat.2025.141017", "verified", "C1/C5"),
 }
 
 
