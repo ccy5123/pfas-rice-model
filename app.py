@@ -106,6 +106,26 @@ def _hydrus_drivers_cached(congener, season, f_oc, flood_until, percolation):
     return drv
 
 
+@st.cache_data(show_spinner=False)
+def _hydrus_soil_congener(smiles):
+    """Map a SMILES to a curated congener for the HYDRUS soil Kd: the read-across
+    match if known, else the nearest curated congener by perfluoro-C in the same
+    head-group family. Returns (name, how) or (None, None) if unparseable."""
+    try:
+        from pfas_structure import descriptors
+        d = descriptors(smiles)
+    except Exception:                                       # noqa: BLE001
+        return None, None
+    if d.matched_name:
+        return d.matched_name, "match"
+    fam = "PFSA" if d.head_group == "sulfonate" else ("ether" if d.n_ether_O else "PFCA")
+    cands = [c for c in api._CONG.values() if c["group"] == fam] \
+        or [c for c in api._CONG.values() if c["group"] == "PFCA"]
+    npfc = lambda c: c["n_C"] - 1 if c["group"] == "PFCA" else c["n_C"]   # noqa: E731
+    best = min(cands, key=lambda c: abs(npfc(c) - d.n_perfluoroC))
+    return best["name"], "nearest"
+
+
 # ---------------------------------------------------------------- sidebar
 with st.sidebar:
     st.header("1 · Data source")
@@ -195,6 +215,12 @@ with st.sidebar:
             st.error(f"Could not read drivers: {e}")
 
     elif mode == "Run HYDRUS-1D (live)":
+        # SMILES compounds have no congener name -> use a curated congener for the soil
+        # Kd (read-across match, else nearest by chain length). The PLANT run still uses
+        # the actual SMILES compound (the drivers are just Cwᵒ(t)/Q_TP).
+        soil_cong, how = (congener, None)
+        if smiles:
+            soil_cong, how = _hydrus_soil_congener(smiles)
         if not api.hydrus_available():
             st.warning("HYDRUS-1D engine not built in this environment yet — build it once "
                        "(compiles the FORTRAN solver with gfortran; ~1 min, cached).")
@@ -211,9 +237,16 @@ with st.sidebar:
                        "`phydrus` (requirements.txt). Locally: `git submodule update --init "
                        "external/hydrus_source`, `make` in `source/`, `pip install phydrus`. "
                        "Until built, the tool falls back to the parametric model.")
+        elif smiles and soil_cong is None:
+            st.error("Could not parse the SMILES for the HYDRUS soil run — check the structure "
+                     "or switch the compound to a curated congener.")
         else:
+            if smiles:
+                st.caption(f"SMILES compound → soil Kd uses **{soil_cong}** "
+                           f"({'read-across match' if how == 'match' else 'nearest curated congener by chain length'}); "
+                           f"the plant uptake still uses your structure.")
             st.caption("Runs a **real HYDRUS-1D** paddy model (Richards + advection–dispersion + "
-                       "linear Kd + root uptake) for this congener → Cwᵒ(t), Q_TP(t). Cached per setting.")
+                       "linear Kd + root uptake) → Cwᵒ(t), Q_TP(t). Cached per setting.")
             f_oc = st.slider("Soil organic carbon f_oc", 0.005, 0.05, 0.02, 0.005,
                              help="Kd = Koc(chain length)·f_oc → per-congener retardation R = 1+ρKd/θ.")
             flood_until = st.slider("Flooded until  [day]", 30, 120, 90, 5,
@@ -222,8 +255,8 @@ with st.sidebar:
                                     help="Clean-water through-flow that leaches the dissolved pool.")
             season = 120.0
             try:
-                drivers = _hydrus_drivers_cached(congener, season, f_oc, flood_until, percolation)
-                st.success(f"HYDRUS-1D run complete — Cwᵒ(t) for {congener} "
+                drivers = _hydrus_drivers_cached(soil_cong, season, f_oc, flood_until, percolation)
+                st.success(f"HYDRUS-1D run complete — Cwᵒ(t) for {soil_cong} "
                            f"(Kd-retarded; mean-normalised).")
             except Exception as e:                                  # noqa: BLE001
                 st.error(f"HYDRUS run failed: {e}")
