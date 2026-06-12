@@ -1,7 +1,7 @@
 {
   "_meta": {
     "title": "PFAS–rice 4-compartment uptake model — consolidated parameters",
-    "model": "IOC extension of DPU/Trapp; 12 congeners (PFCA C4–C12 + PFSA C4/C6/C8)",
+    "model": "IOC extension of DPU/Trapp; 12 calibrated congeners (PFCA C4–C12 + PFSA C4/C6/C8) + GenX (ether-PFAS, provisional)",
     "binding_basis": "A (fresh-weight): B_k = theta_fw + (1-theta_fw)*sum_i f_i,dw * K_i  [L/kg fw]",
     "units": {
       "K_*": "L/kg pool-dw",
@@ -377,6 +377,32 @@
         "leaf": 73.101,
         "grain": 84.991
       }
+    },
+    {
+      "name": "GenX",
+      "n_C": 5,
+      "group": "ether",
+      "K_prot_Lkg": 12.3,
+      "K_PL_Lkg": 117.5,
+      "K_cw_wholecw_Lkg": {
+        "root": 3.44,
+        "stem": 3.4,
+        "leaf": 3.03,
+        "grain": 4.06
+      },
+      "K_cw_poly_rec_Lkg": 2.0,
+      "K_lignin_rec_Lkg": 9.2,
+      "f_xy_recommended": 0.2334,
+      "f_xy_W2fit": null,
+      "L_Ph_W2fit": null,
+      "kappa_d_W2fit": null,
+      "B_k_basisA_Lkg_fw": {
+        "root": 1.334,
+        "stem": 1.451,
+        "leaf": 1.682,
+        "grain": 1.517
+      },
+      "provisional": "ether-PFAS (HFPO-DA/GenX): K_PL measured (Chen2025), K_prot/K_cw≈PFPeA (matched K_MW), f_xy=PFCA(nPFC5)·exp(-0.7) (Tang2026 ether offset); NOT calibrated to BAF data."
     }
   ],
   "status": {

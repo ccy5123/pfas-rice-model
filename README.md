@@ -2,8 +2,9 @@
 
 Mechanistic uptake model for **permanently-anionic PFAS in paddy rice** (*Oryza sativa*):
 an IOC (ionizable organic compound) extension of the DPU / Trapp framework over four
-compartments (root → stem → leaf → grain). Covers **12 congeners**: PFCA C4–C12
-(PFBA…PFDoDA) and PFSA C4/C6/C8 (PFBS, PFHxS, PFOS).
+compartments (root → stem → leaf → grain). Covers **12 calibrated congeners**: PFCA C4–C12
+(PFBA…PFDoDA) and PFSA C4/C6/C8 (PFBS, PFHxS, PFOS), **plus GenX** (HFPO-DA, an ether-PFAS —
+provisional, added for the Tang 2026 validation; `docs/VALIDATION_TANG2026_KR.md`).
 
 This package consolidates the two closed open-parameter workstreams — **GAP A (cell-wall
 partition `K_cw`)** and **GAP B (root→shoot loading `f_xy`)** — plus the model code, the

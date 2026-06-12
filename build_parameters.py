@@ -71,10 +71,38 @@ for r in S5:
         "B_k_basisA_Lkg_fw": Bk,
     })
 
+# --- GenX (HFPO-DA), an ETHER-PFAS — PROVISIONAL addition (not in the calibrated 12) ---
+# Binding ~ PFPeA: GenX Chen2025 log K_MW = 2.07 ~ PFPeA 2.02, so the membrane K_PL is
+# the MEASURED Chen2025 HFPO-DA value and K_prot / K_cw are borrowed from PFPeA (Zhou2025
+# has no GenX). Translocation f_xy = carboxylate f_xy at nPFC=5 (PFPeA) × the ether
+# head-group offset exp(-0.7) (Tang 2026): GenX is short-chain so it stays MORE shoot-
+# mobile than PFOA despite the ether penalty (f_xy 0.23 ≫ PFOA 0.04). Soil Kd uses the
+# carboxylate Koc at nPFC=5 (weakly sorbed). Added for ether-PFAS support + the Tang OOS test.
+import math
+_pe = next(x for x in S5 if x["PFAS"] == "PFPeA")
+_pe_kcw = KCW["PFPeA"]
+GENX_ETHER_LN_OFFSET = -0.7                                   # literature_params.FXY_HEADGROUP_LN_OFFSET["ether"]
+_gx_kprot, _gx_kpl = float(_pe["K_prot"]), 117.5             # K_prot≈PFPeA; K_PL=Chen2025 HFPO-DA
+_gx_kcw = {o: float(_pe_kcw[f"K_cw_wholecw_{o}"]) for o in ORGANS}
+_gx_fxy = round(float(_pe["f_xy"]) * math.exp(GENX_ETHER_LN_OFFSET), 4)
+congeners.append({
+    "name": "GenX", "n_C": 5, "group": "ether",
+    "K_prot_Lkg": _gx_kprot, "K_PL_Lkg": _gx_kpl,
+    "K_cw_wholecw_Lkg": {("grain" if o == "grain_brown" else o): _gx_kcw[o] for o in ORGANS},
+    "K_cw_poly_rec_Lkg": float(_pe_kcw["K_cw_poly_rec"]),
+    "K_lignin_rec_Lkg": float(_pe_kcw["K_lignin_rec"]),
+    "f_xy_recommended": _gx_fxy,
+    "f_xy_W2fit": None, "L_Ph_W2fit": None, "kappa_d_W2fit": None,
+    "B_k_basisA_Lkg_fw": {("grain" if o == "grain_brown" else o):
+                          Bk_basisA(composition[o], _gx_kprot, _gx_kpl, _gx_kcw[o]) for o in ORGANS},
+    "provisional": "ether-PFAS (HFPO-DA/GenX): K_PL measured (Chen2025), K_prot/K_cw≈PFPeA (matched K_MW), "
+                   "f_xy=PFCA(nPFC5)·exp(-0.7) (Tang2026 ether offset); NOT calibrated to BAF data.",
+})
+
 doc = {
     "_meta": {
         "title": "PFAS–rice 4-compartment uptake model — consolidated parameters",
-        "model": "IOC extension of DPU/Trapp; 12 congeners (PFCA C4–C12 + PFSA C4/C6/C8)",
+        "model": "IOC extension of DPU/Trapp; 12 calibrated congeners (PFCA C4–C12 + PFSA C4/C6/C8) + GenX (ether-PFAS, provisional)",
         "binding_basis": "A (fresh-weight): B_k = theta_fw + (1-theta_fw)*sum_i f_i,dw * K_i  [L/kg fw]",
         "units": {"K_*": "L/kg pool-dw", "B_k": "L/kg fw", "theta": "L/kg fw", "f_*": "kg/kg dw"},
         "provenance": {
