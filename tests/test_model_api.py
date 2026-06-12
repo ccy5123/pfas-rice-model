@@ -13,9 +13,10 @@ _ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 
 
 def test_congener_list_and_chain_table():
-    assert len(api.CONGENERS) == 12
+    assert len(api.CONGENERS) == 13          # 12 calibrated + GenX (ether-PFAS, provisional)
+    assert "GenX" in api.CONGENERS
     rows = api.chain_table()
-    assert len(rows) == 12
+    assert len(rows) == 13
     assert all({"name", "n_C", "group", "K_PL", "f_xy_recommended"} <= set(r) for r in rows)
 
 
