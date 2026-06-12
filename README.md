@@ -24,6 +24,22 @@ python validation/nstem_gradient_check.py # multi-height stem: reproduces the Ya
 pip install pytest && pytest              # tests (structure, mass conservation, QSPRs, calibration, API)
 ```
 
+### Parameterise any PFAS from its structure (SMILES)
+
+`src/pfas_structure.py` maps a **chemical structure** onto the model, so it runs for *any*
+PFAS, not only the curated 13. RDKit parses the SMILES → descriptors → a `Compound` by
+measured read-across (known congener → curated params) or a fragment QSPR (novel → provisional):
+
+```bash
+pip install -r requirements-structure.txt        # RDKit (optional)
+python src/pfas_structure.py                      # SMILES -> descriptors -> Compound demo
+```
+```python
+import model_api as api
+api.simulate_from_smiles("OC(=O)" + "C(F)(F)"*11 + "C(F)(F)F")   # a novel C13 PFCA, run from SMILES
+```
+See `docs/structure_input.md` (binding/speciation come from structure; `f_xy` ordering only — absolute scale stays fitted).
+
 ### Real soil side — HYDRUS-1D (Method A, now wired)
 
 The soil half of Method A runs the genuine HYDRUS-1D engine (compiled from the

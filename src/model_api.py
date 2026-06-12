@@ -113,7 +113,7 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
              f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
              lipid_loading=False, g_xy_override=None, g_ph_override=None,
              season=120.0, n_t=241, measured_forcing=True,
-             drivers=None, K_surf=0.0):
+             drivers=None, K_surf=0.0, record=None):
     """Run the 4-compartment ODE for one congener and scenario.
 
     Parameters
@@ -138,9 +138,12 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     Returns a dict with t, per-compartment conc & BAF time series, finals, straw,
     the driver series actually used (Cwo, Qtp, M), B_k, and the effective params.
     """
-    if congener not in _CONG:
+    if record is not None:
+        c = record                       # custom (e.g. SMILES-derived) congener record
+    elif congener not in _CONG:
         raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
-    c = _CONG[congener]
+    else:
+        c = _CONG[congener]
 
     if drivers is not None:
         t = np.asarray(drivers["t"], dtype=float)
@@ -199,6 +202,37 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
                     K_cw=c["K_cw_wholecw_Lkg"]["root"], K_surf=float(K_surf),
                     n_C=c["n_C"], group=c["group"]),
     )
+
+
+def simulate_from_smiles(smiles, *, name=None, f_xy=None, f_xy_override=None, **kw):
+    """Run the 4-compartment model for an arbitrary PFAS given by a SMILES string.
+
+    Uses the RDKit structure adapter (``pfas_structure``): a structure that matches
+    a known congener is run through the canonical curated parameters; a novel
+    structure gets binding from the QSPR and a head-group-offset f_xy (PROVISIONAL).
+    Extra keyword args (Cwo, season, drivers, lipid_loading, ...) pass to ``simulate``.
+
+    Returns the usual ``simulate`` dict plus ``descriptors`` (the parsed structure)
+    and ``provisional`` (True for novel / non-calibrated structures).  Requires RDKit.
+    """
+    from pfas_structure import compound_from_smiles
+    cmpd, d = compound_from_smiles(smiles, name=name, f_xy=f_xy)
+    fxy_ov = f_xy_override if f_xy_override is not None else f_xy
+    known = name or d.matched_name
+    if known in _CONG:
+        res = simulate(known, f_xy_override=fxy_ov, **kw)
+    else:
+        group = ("PFSA" if d.head_group == "sulfonate"
+                 else "ether" if d.n_ether_O > 0 else "PFCA")
+        record = {"name": cmpd.name, "n_C": d.n_C, "group": group,
+                  "K_prot_Lkg": cmpd.K_prot, "K_PL_Lkg": cmpd.K_PL,
+                  "K_cw_wholecw_Lkg": {"root": cmpd.K_cw},
+                  "f_xy_recommended": cmpd.f_xy, "f_xy_W2fit": None,
+                  "kappa_d_W2fit": cmpd.kappa_d, "L_Ph_W2fit": cmpd.L_Ph}
+        res = simulate(cmpd.name, record=record, f_xy_override=fxy_ov, **kw)
+    res["descriptors"] = d
+    res["provisional"] = (d.matched_name is None) or (not d.is_linear)
+    return res
 
 
 def _compound_for(congener, f_xy_source="recommended", f_xy_override=None,

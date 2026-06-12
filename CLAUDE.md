@@ -47,7 +47,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── soil_hydrus.py                        # REAL HYDRUS-1D run via phydrus → Cwo(t),Qtp(t) (Method A; wired + app live mode)
 │   ├── calibration.py                        # Tier-1 calibration (scipy)
 │   ├── literature_params.py                  # literature QSPRs/anchors (cited) + Kim2019 BAF
-│   ├── model_api.py                          # UI-agnostic wrapper: simulate(), driver/soil/biomon helpers
+│   ├── model_api.py                          # UI-agnostic wrapper: simulate(), simulate_from_smiles(), driver/soil/biomon helpers
+│   ├── pfas_structure.py                      # SMILES (structure) → Compound adapter (RDKit; read-across + QSPR)
 │   └── plots.py                              # Plotly builders: fig_plant_schematic (colormap), drivers, ...
 ├── examples/                         # ready-to-load CSVs for app.py (HYDRUS drivers + biomonitoring)
 ├── params/                           # parameters.json (CANONICAL) + source CSVs (Bk, f_xy, Kcw, ...)
@@ -60,7 +61,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
 ├── external/hydrus_source/           # git submodule → github.com/phydrus/source_code
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (92): plant, soil, hydrus, calibration, literature params, API, plots
+└── tests/                            # pytest (108): plant, soil, hydrus, calibration, lit params, API, plots, structure(SMILES)
 
 ```
 
@@ -206,6 +207,21 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `tests/test_soil_hydrus.py` skips the engine tests when unbuilt. Still **Method A** (one-way; HYDRUS
   unmodified). Originally implemented on branch `claude/epic-knuth-npt0cy`; the soil piece is cherry-picked here.
 
+- **Structure (SMILES) input — parameterise ANY PFAS (`src/pfas_structure.py`)**: the "option-3"
+  front end that lets a **chemical structure** be the model input, not only the curated 13 congeners.
+  RDKit parses the SMILES → structural descriptors (`n_perfluoroC`, `head_group` via SMARTS, `n_ether_O`,
+  `n_CF3`, `branched`, MW/formula, `is_linear`) → a `Compound` by **(1) MEASURED read-across** when the
+  (canonical) structure matches a curated congener (uses `params/parameters.json` exactly — a SMILES-built
+  PFOA reproduces the named PFOA) **or (2) the literature_params QSPR** for a novel structure (per-CF2 slope
+  + head-group offset; ether/sulfonamide flagged PROVISIONAL). Binding (`K_PL/K_prot/K_cw`) + speciation
+  (`f_d` from head-group pKa) come from structure; **`f_xy` is NOT structure-derivable** — curated monotone
+  for knowns, PFCA-series interpolation × head-group offset for novels (provisional). `model_api.simulate_from_smiles()`
+  runs the full ODE (delegates to the canonical path for knowns; injects a custom record via the new
+  `simulate(..., record=)` arg for novels) and returns the usual dict + `descriptors` + `provisional`.
+  Sulfonamides/neutral species are detected and flagged (violate the permanent-anion `f_d≈1` assumption).
+  RDKit is **optional** (`requirements-structure.txt`); `tests/test_pfas_structure.py` (22) skips when absent.
+  Docs: `docs/structure_input.md`. Follow-up: ether/sulfonamide **fragment QSPR** terms (close the GenX Koc gap).
+
 ## 7. Build & run
 - `pip install -r requirements.txt`
 - **Main reproduction**: `python reproduce_demo.py` (Yamazaki BAF, W2 fit, RMSE≈0.029);
@@ -228,7 +244,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   python validation/hydrus_coupled_run.py             # full soil→plant + figure/CSV
   ```
 - Calibration: `python src/calibration.py`; Literature params: `python src/literature_params.py`.
-- Tests: `pip install pytest && pytest` (92 passing; HYDRUS engine tests in `test_soil_hydrus.py`
+- **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
+  `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
+  `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
+- Tests: `pip install pytest && pytest` (108 passing; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
   additionally run when the engine is built, else auto-skip).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
