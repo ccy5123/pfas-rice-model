@@ -10,3 +10,5 @@ plotly>=5.18
 pandas>=1.5
 # SMILES (structure) compound input mode in the app (src/pfas_structure.py):
 rdkit>=2023.9
+# live "Run HYDRUS-1D" mode: drives the engine (built in-app via gfortran; see packages.txt):
+phydrus>=0.2

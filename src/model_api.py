@@ -483,6 +483,17 @@ def hydrus_available():
     return bool(sh.hydrus_available())
 
 
+def build_hydrus_engine():
+    """Best-effort in-place build of the HYDRUS-1D engine (gfortran). Returns
+    (ok, log_lines). Used by the app's 'Run HYDRUS-1D (live)' mode so the engine
+    can be compiled on Streamlit Cloud (needs gfortran/make via packages.txt)."""
+    try:
+        import soil_hydrus as sh
+    except Exception as e:                                   # noqa: BLE001
+        return False, [f"soil_hydrus import failed: {e}"]
+    return sh.build_hydrus_engine()
+
+
 def hydrus_drivers(congener, season=120.0, Cwo_ref=1.0, f_oc=0.02, n_t=241,
                    qtp_from_hydrus=True, **run_kw):
     """Run a real HYDRUS-1D paddy soil model for `congener` and return a `drivers`
