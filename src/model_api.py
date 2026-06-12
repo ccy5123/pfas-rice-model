@@ -201,6 +201,98 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     )
 
 
+def _compound_for(congener, f_xy_source="recommended", f_xy_override=None,
+                  L_Ph_override=None, kappa_d_override=None, lipid_loading=False,
+                  g_xy_override=None, g_ph_override=None, K_cw_organ="stem"):
+    """Build a Compound for `congener` with the same parameter resolution as
+    simulate() (f_xy source / lipid loading / overrides). `K_cw_organ` picks the
+    cell-wall K used (the nstem stem segments use the stem cell wall)."""
+    c = _CONG[congener]
+    if lipid_loading:
+        f_xy_def, g_xy_def, g_ph_def = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"])
+    else:
+        f_xy_def = c["f_xy_recommended"] if f_xy_source == "recommended" else (c.get("f_xy_W2fit") or c["f_xy_recommended"])
+        g_xy_def = g_ph_def = 0.0
+    f_xy = float(f_xy_override) if f_xy_override is not None else float(f_xy_def)
+    g_xy = float(g_xy_override) if g_xy_override is not None else float(g_xy_def)
+    g_ph = float(g_ph_override) if g_ph_override is not None else float(g_ph_def)
+    kappa_d = float(kappa_d_override) if kappa_d_override is not None else (c.get("kappa_d_W2fit") or 2.0)
+    L_Ph = float(L_Ph_override) if L_Ph_override is not None else (c.get("L_Ph_W2fit") or 0.01)
+    return Compound(name=congener, K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
+                    K_cw=c["K_cw_wholecw_Lkg"][K_cw_organ], kappa_d=kappa_d,
+                    Vmax_in=_CARR["Vmax_in"], Km_in=_CARR["Km_in"],
+                    Vmax_out=_CARR["Vmax_out"], Km_out=_CARR["Km_out"],
+                    L_Ph=L_Ph, f_xy=f_xy, g_xy=g_xy, g_ph=g_ph)
+
+
+def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
+                        f_xy_source="recommended", f_xy_override=None,
+                        L_Ph_override=None, kappa_d_override=None,
+                        lipid_loading=False, g_xy_override=None, g_ph_override=None,
+                        season=150.0, n_t=361, N=4, stem_transp_frac=0.45,
+                        lam_grain=0.05, retention=0.6):
+    """Redistributed-shoot uptake run (N stem segments + explicit leaf), the Tang
+    2026 over-translocation fix (see `pfas_rice_plant_module_nstem_leaf`).
+
+    Mirrors `simulate()` for the congener/transport parameters but resolves the
+    stem into N transpiration terminals and applies the deposition+retention
+    redistribution so the leaf no longer monopolizes the shoot burden. Returns a
+    dict with the SAME tissue keys as `simulate()` (root/stem/leaf/grain), where
+    `stem` is the mass-weighted mean over the N segments, so the Tang validation
+    and plots can treat the two models interchangeably.
+
+    stem_transp_frac : fraction of canopy transpiration terminating on the stalk
+        (the leaf takes the remainder, minus `lam_grain`). Crop-architecture lever.
+    retention : fraction of each organ's transpiration deposit that is retained
+        (terminal); 1-retention flows on to the grain as residual xylem.
+    """
+    from pfas_rice_plant_module_nstem_leaf import (
+        NStemLeafModel, PlantInputsNL, make_stem_leaf_compartments, split_from_stem_frac)
+    if congener not in _CONG:
+        raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
+
+    t = np.linspace(0.0, float(season), int(n_t))
+    Qtp = fr.Q_TP(t, season)
+    b = gr.organ_biomass(t, season)
+    M = np.column_stack(
+        [np.maximum(b["root"], 1e-9)]
+        + [np.maximum(b["stem"] / N, 1e-9)] * N
+        + [np.maximum(b["leaf"], 1e-9), np.maximum(b["grain"], 1e-9)])
+    inputs = PlantInputsNL(t=t, Cwo=np.full_like(t, float(Cwo)), Qtp=Qtp, M=M)
+
+    g = _COMP
+    _kw = lambda d: dict(theta=d["theta_fw"], f_prot=d["f_prot"], f_PL=d["f_PL"], f_cw=d["f_cw"])
+    comps = make_stem_leaf_compartments(
+        N, _kw(g["stem"]), _kw(g["root"]), _kw(g["leaf"]), _kw(g["grain_brown"]))
+    cmpd = _compound_for(congener, f_xy_source, f_xy_override, L_Ph_override,
+                         kappa_d_override, lipid_loading, g_xy_override, g_ph_override,
+                         K_cw_organ="stem")
+    tau, lam_leaf, lam_grain = split_from_stem_frac(N, stem_transp_frac, lam_grain)
+    env = Environment(E=E_m_mV / 1000.0)
+    model = NStemLeafModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs, tau=tau,
+                           lam_leaf=lam_leaf, lam_grain=lam_grain, retention=retention)
+    sol = model.solve(t)
+    Y = sol.y                                            # (N+3, n_t)
+    seg = slice(1, N + 1)
+    Mseg = M[:, seg]
+    stem_conc = np.sum(Y[seg, :] * Mseg.T, axis=0) / np.sum(Mseg.T, axis=0)
+    conc = {"root": Y[0], "stem": stem_conc, "leaf": Y[model.LEAF], "grain": Y[model.GRAIN]}
+    cwo_ref = float(Cwo) if Cwo else 1.0
+    baf_final = {k: float(v[-1] / cwo_ref) for k, v in conc.items()}
+    return dict(
+        t=t, congener=congener, success=bool(sol.success), season=float(season),
+        conc=conc,
+        baf={k: v / cwo_ref for k, v in conc.items()},
+        baf_final=baf_final,
+        tf_final={k: baf_final[k] / baf_final["root"] for k in conc},
+        M=M, N=N,
+        params=dict(f_xy=float(cmpd.f_xy), retention=float(retention),
+                    stem_transp_frac=float(stem_transp_frac), lam_leaf=float(lam_leaf),
+                    lam_grain=float(lam_grain), n_C=_CONG[congener]["n_C"],
+                    group=_CONG[congener]["group"]),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Schematic / colormap helpers (UI-agnostic; used by plots.fig_plant_schematic)
 # ---------------------------------------------------------------------------

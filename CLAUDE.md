@@ -39,7 +39,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── pfas_rice_plant_module_4pool.py       # basis-A 4-compartment ODE (CANONICAL core)
 │   ├── pfas_rice_plant_module_4pool_surf.py  #  + K_surf (Fe/Mn-plaque dead-end pool)
 │   ├── pfas_rice_plant_module_5pool.py       #  + explicit lignin pool
-│   ├── pfas_rice_plant_module_nstem.py       # N serial stem segments (multi-height; GAP-B fix)
+│   ├── pfas_rice_plant_module_nstem.py       # N serial stem segments (multi-height MIXER; Yamazaki gradient)
+│   ├── pfas_rice_plant_module_nstem_leaf.py  # N stem segs + explicit leaf (transpiration deposition+RETENTION; Tang over-translocation fix)
 │   ├── pfas_rice_plant_module.py             # import alias → 4pool_surf (basis-A); legacy name
 │   ├── soil_paddy.py                         # Freundlich soil → C_w^o(t) (legacy redox sign)
 │   ├── soil_paddy_redox_corrected.py         # W3-corrected redox (dilution+leaching; USE THIS)
@@ -160,6 +161,21 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `docs/nstem_gradient_exploration.md`. NOTE: the earlier "monotone f_xy reproduces the gradient"
   claim was a **placeholder-biomass artifact** (real ORYZA biomass moves the crossover `B* ~
   Q_s/(M_s·μ_s)` above the congener range).
+- **Tang over-translocation fix (redistributed shoot)** — `src/pfas_rice_plant_module_nstem_leaf.py`
+  (`NStemLeafModel`; `model_api.simulate_nstem_leaf`): the Tang 2026 OOS check flagged the single-straw
+  core's **empty stem (pass-through) + leaf-sink runaway** (leaf held ~81% of the plant burden). Fixed by
+  resolving the stem into N segments AND **applying transpiration deposition+RETENTION to every shoot organ
+  (not just the leaf)** — each organ retains its own transpired solute (a partial terminal), so the shoot
+  burden is redistributed root→stem→leaf→grain. Two crop-architecture levers: `stem_transp_frac`,
+  `retention` (default 0.45/0.6, NOT point-fit to Tang); mass-conserving (sole source `M_root·j_R`;
+  `tests/test_nstem_leaf.py`). **Result** (`validation/tang2026_nstem_validation.py`,
+  `docs/VALIDATION_TANG2026_NSTEM_KR.md`): the shoot **tissue PATTERN is cured** (shape RMSE 0.84→0.11;
+  PFOA stalk 0.03→1.27, leaf 5.95→2.04, grain 0.41→0.93, PFOA RMSE 1.03→0.06; leaf burden 81%→30%).
+  **Residual = across-congener absolute LEVEL** (`TF ∝ f_xy/B_root`): the Yamazaki `f_xy` (PFOS 0.013,
+  GenX 0.233) + basis-A `B_root` (PFOS 49) spread leave PFOS too root-bound (TF low) / GenX too mobile
+  (TF high) — a binding/translocation **calibration** issue, NOT the shoot structure. This is
+  COMPLEMENTARY to `nstem` (mixer, Yamazaki within-stem gradient): nstem_leaf uses RETENTION for the
+  Tang stalk/leaf/grain split. Default model unchanged (4pool_surf); this is an opt-in module.
 - **f_xy absolute scale (task #7)**: measured `Q_TP(t)` (`forcing_rice`, peak ~0.10 L/d/hill, T/ET=0.42)
   and `M_s(t)` (`growth_rice`, ORYZA IR72, HI~0.53) are built. The absolute f_xy is pinned via the
   **aggregate** root/straw/grain BAF (not the within-stem gradient) — see `validation/`.
