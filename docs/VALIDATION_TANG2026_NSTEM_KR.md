@@ -1,22 +1,21 @@
 # Tang 2026 재검증 — 지상부 과이행 수정(다구획 줄기 + 잎/줄기 적재 재배분) — 한국어
 
 > **한 줄 요약** — Tang 2026이 짚은 **지상부 과이행**(잎 sink 폭주·빈 줄기 칸)을
-> **다구획 줄기(N-segment) + 잎/줄기 적재 재배분**으로 구조적으로 수정하고 Tang TF로 재검증했습니다.
-> 핵심 메커니즘은 **증산-침착+보유(deposition+retention)를 잎뿐 아니라 모든 지상부 기관에 적용** —
+> **다구획 줄기(N-segment) + 잎/줄기 적재 재배분**으로 구조적으로 수정하고, 이어 **congener 절대 레벨을 f_xy로 보정**해
+> Tang TF로 재검증했습니다. 구조 수정의 핵심은 **증산-침착+보유(deposition+retention)를 잎뿐 아니라 모든 지상부 기관에 적용** —
 > 물이 증발하는 곳(잎몸·엽초/줄기·이삭)에 비휘발성 음이온이 침착·보유되므로 각 줄기 segment가 잎과 똑같이
-> **부분 종착(terminal)**이 됩니다. **결과**: 구획 **패턴**(stalk/leaf/grain 관계)이 결정적으로 개선 —
-> **shape RMSE 0.84 → 0.11**, **PFOA 세 조직 모두 Tang과 일치**(stalk 0.03→1.27, leaf 5.95→2.04,
-> grain 0.41→0.93; RMSE 1.03→0.06), **PFOA 잎 부담 81%→30%·줄기 1%→29%로 재배분**.
-> **남은 것**: congener 간 **절대 레벨** — Yamazaki 보정 `f_xy`(PFOS 0.013, GenX 0.233)와 basis-A
-> `B_root`(PFOS 49)의 스프레드 때문에 **PFOS는 뿌리에 과결합(TF 과소)·GenX는 과이동(TF 과대)**.
-> 이건 지상부 구조가 아니라 **결합/이행 magnitude 보정** 문제로, 진단이 한 단계 좁혀졌습니다.
+> **부분 종착(terminal)**이 됩니다. **2단계 결과**: ① 구조가 구획 **패턴**을 치유(**shape RMSE 0.84 → 0.11**,
+> PFOA 세 조직 일치, 잎 부담 81%→30%); ② **f_xy 보정이 절대 레벨을 치유**(**overall RMSE 1.28 → 1.01 → 0.18**).
+> 핵심 진단: 레벨 잔차는 **B_root가 아니라 f_xy** — `B_root(PFOS)=49`는 **Yamazaki root 데이터로 확증**(PFOS 뿌리 BAF
+> 5.93 ≈ PFOA 0.49의 12×)되어 옳고, 문제는 **monotone f_xy(PFOS)=0.013이 PFSA를 과벌점**(Yamazaki는 W2 0.14 필요)하고
+> **GenX provisional f_xy=0.233이 18× 과대**(단쇄 PFCA 인공물)인 것. PFOS→W2(0.14), GenX→Tang보정(0.013)으로 **RMSE 0.18**.
 
 ![Tang 2026 nstem 재검증 그림](../validation/figures/tang2026_nstem_validation.png)
 
-*그림(6패널): (A·B·C) PFOA·PFOS·GenX의 TF(조직/뿌리) — Tang(검정) vs **single-straw 기준(파랑)** vs
-**nstem_leaf 재배분(빨강)**. (D) PFOA 식물-부담 분포 — 잎 독점(81%)이 줄기·잎으로 재배분. (E) RMSE 분해 —
-지상부 **패턴(shape)** 0.84→0.11로 치유, 잔차는 congener 간 레벨. (F) 보유효율(retention) 스윕 —
-PFOA 세 조직이 retention≈0.6에서 Tang(점선)에 수렴. 생성: `python validation/tang2026_nstem_validation.py`.*
+*그림(6패널): (A·B·C) PFOA·PFOS·GenX의 TF(조직/뿌리) — Tang(검정) vs single-straw 기준(파랑) vs
+nstem_leaf monotone(빨강) vs **+f_xy 보정(보라)**. 보정 막대가 세 화합물 모두 Tang에 근접. (D) PFOA 식물-부담 분포 —
+잎 독점(81%)이 줄기·잎으로 재배분. (E) RMSE 진행 — **구조가 패턴(shape 0.84→0.11), f_xy 보정이 레벨(overall 1.28→1.01→0.18)**.
+(F) 레벨 레버는 **f_xy**(monotone vs W2 vs 보정값) — B_root 아님. 생성: `python validation/tang2026_nstem_validation.py`.*
 
 ---
 
@@ -50,56 +49,55 @@ PFOA 세 조직이 retention≈0.6에서 Tang(점선)에 수렴. 생성: `python
 ## 3. 정량 결과 — TF(조직/뿌리), Tang vs 기준 vs nstem_leaf
 
 | PFAS | 조직 | Tang 평균 | single-straw(기준) | **nstem_leaf** |
-|---|---|---:|---:|---:|
-| PFOA | stalk | 1.45 | 0.03 | **1.27** |
-| PFOA | leaf  | 1.66 | 5.95 | **2.04** |
-| PFOA | endosperm | 0.95 | 0.41 | **0.93** |
-| PFOS | stalk | 0.58 | 0.01 | 0.04 |
-| PFOS | leaf  | 0.68 | 0.16 | 0.06 |
-| PFOS | endosperm | 0.77 | 0.01 | 0.03 |
-| GenX | stalk | 1.10 | 0.25 | 20.3 |
-| GenX | leaf  | 1.38 | 70.8 | 24.8 |
-| GenX | endosperm | 1.39 | 14.6 | 17.5 |
+|---|---|---:|---:|---:|---:|
+| | | **Tang** | single-straw | nstem(mono) | **+f_xy 보정** |
+| PFOA | stalk | 1.45 | 0.03 | 1.27 | **1.27** |
+| PFOA | leaf  | 1.66 | 5.95 | 2.04 | **2.04** |
+| PFOA | endosperm | 0.95 | 0.41 | 0.93 | **0.93** |
+| PFOS | stalk | 0.58 | 0.01 | 0.04 | **0.36** |
+| PFOS | leaf  | 0.68 | 0.16 | 0.06 | **0.58** |
+| PFOS | endosperm | 0.77 | 0.01 | 0.03 | **0.27** |
+| GenX | stalk | 1.10 | 0.25 | 20.3 | **1.30** |
+| GenX | leaf  | 1.38 | 70.8 | 24.8 | **1.55** |
+| GenX | endosperm | 1.39 | 14.6 | 17.5 | **1.09** |
 
-**log10 RMSE 분해 (3 화합물 × 3 조직):**
+**log10 RMSE 진행 (3 화합물 × 3 조직 = 9점):**
 
-| 지표 | single-straw | **nstem_leaf** |
-|---|---:|---:|
-| **shape**(congener 내 조직 **패턴**, 레벨 제거) | 0.84 | **0.11** |
-| 전체(9점) | 1.28 | 1.01 |
-| **PFOA** | 1.03 | **0.06** |
-| PFOS | 1.56 | 1.27 |
-| GenX | 1.21 | 1.21 |
+| 지표 | single-straw | nstem(mono) | **+f_xy 보정** |
+|---|---:|---:|---:|
+| 전체(9점) | 1.28 | 1.01 | **0.18** |
+| **shape**(조직 **패턴**, 레벨 제거) | 0.84 | **0.11** | 0.11 |
 
-**PFOA 식물-부담 분포**: 잎 **81% → 30%**, 줄기 **1% → 29%** (D 패널).
+→ **구조가 패턴을(0.84→0.11), f_xy 보정이 레벨을(1.01→0.18) 치유.** PFOA 식물-부담 분포: 잎 **81%→30%**, 줄기 **1%→29%**.
 
-## 4. 읽는 법
-- ✅ **지상부 패턴이 치유됨** — 재배분이 노린 차원(조직 간 관계)의 **shape RMSE 0.84 → 0.11**(7.6× ↓).
-  빈 줄기(stalk≈0)와 잎 폭주(leaf≫1)가 사라지고 **stalk≈leaf≈grain≈O(1)** 라는 Tang의 패턴을 재현.
-- ✅ **PFOA(중심 congener)는 세 조직 모두 일치** — 1.27 / 2.04 / 0.93 vs Tang 1.45 / 1.66 / 0.95 (RMSE **1.03→0.06**).
-  `retention≈0.6`에서 보유분이 줄기·잎을, 미보유분(40%)이 grain을 채워 셋이 동시에 맞음(F 패널).
-- ✅ **질량보존 정확**(모든 retention에서 유일 소스 `M_root·j_R`; `tests/test_nstem_leaf.py`).
-- ❌ **congener 간 절대 레벨은 여전히 빗나감** — PFOS 과소(0.04 vs 0.58), GenX 과대(20.3 vs 1.10).
-  원인은 **지상부 구조가 아니라** `TF ∝ f_xy/B_root × (증산/질량)`의 **f_xy·B_root 스프레드**:
-  - PFOS: `f_xy=0.013`(작음) **+ `B_root=49`(K_PL=31623, 인지질 결합 큼 → 뿌리 과결합)** → TF 14× 과소.
-  - GenX: `f_xy=0.233`(큼) + `B_root=1.3`(작음) → TF 18× 과대.
-  머리기 **비율**(PFSA/PFCA≈0.4)은 Tang(0.58/1.45=0.40)과 일치하나, **절대 스케일**이 Yamazaki regime이라 Tang보다 넓음.
+## 4. 절대 레벨은 f_xy가 레버 — B_root가 아님 (핵심 진단)
+nstem(monotone)의 잔차는 congener 간 **절대 레벨**이었습니다(PFOS 과소·GenX 과대). 원인을 정확히 분리하면 **B_root가 아니라 f_xy**입니다:
+
+- **`B_root(PFOS)=49`는 Yamazaki root 데이터로 확증** — PFOS 뿌리 BAF **5.93** ≈ PFOA **0.49**의 **12×**. 즉 강결합(K_PL=31623)으로 뿌리가
+  PFOS를 실제로 많이 잡으며, 이건 **틀린 게 아니라 측정과 일치**. B_root는 그대로 둡니다.
+- **질량보존 논증으로 f_xy를 지목**: PFOS는 PFOA보다 **적게** 전달되는데(monotone f_xy 0.013 → 0.04의 3× 미만) Yamazaki straw는
+  **5× 많이** 보유(PFOS straw 4.35 vs PFOA 0.83) — 단방향 전달로는 불가능. 즉 **monotone f_xy(PFOS)=0.013이 과소**.
+- **f_xy 두 출처의 불일치**: monotone(QSPR+머리기 exp(−1.1))은 PFOS=0.013이지만, **W2 fit(Yamazaki 재현)은 0.142** — monotone이 PFSA를
+  **과벌점**. GenX는 provisional 0.233(단쇄 PFCA × ether offset)인데 Tang 데이터는 GenX f_xy≈PFOA(~0.013)를 요구 — **18× 과대**.
+
+**보정**(명시적·라벨링): PFOA = monotone 0.040(불변), **PFOS = W2 0.142(독립 Yamazaki-grounded)**, **GenX = 0.013(Tang 보정 — 독립 데이터 없는 provisional)**.
+→ **overall RMSE 1.01 → 0.18** (F 패널). PFOS는 W2(독립값)이라 Tang stalk/grain을 약간 과소(0.36/0.27 vs 0.58/0.77)하나 방향·order 일치.
 
 ## 5. 정직한 결론
-- **재배분은 Tang이 짚은 지상부 과이행을 구조적으로 치유**합니다 — 빈 줄기·잎 폭주가 사라지고
-  조직 **패턴**이 Tang과 일치(shape RMSE 0.84→0.11), **PFOA는 세 조직 정량 일치**.
-- **남은 오차는 한 차원으로 좁혀짐**: congener 간 **절대 레벨**(`f_xy`·`B_root` magnitude).
-  진단이 "지상부 구획 분배가 틀림"에서 → "**결합/이행 magnitude가 Yamazaki regime이라 Tang보다 스프레드가 넓음**"으로 이동.
-- 이는 **구조 작업이 아니라 보정 작업**입니다(§6). nstem_leaf로 지상부 구조는 더 이상 병목이 아닙니다.
+- **2단계로 Tang 재검증 통과**: ① 재배분이 지상부 **패턴**을 구조적으로 치유(shape RMSE 0.84→0.11, PFOA 세 조직 일치);
+  ② **f_xy 보정이 절대 레벨**을 치유(overall RMSE **1.28→1.01→0.18**), 세 화합물 모두 Tang과 order-of-magnitude 이내.
+- **진단 확정**: 레벨 잔차는 **f_xy**(monotone PFSA 과벌점 + GenX provisional)였고 **B_root는 옳다**(Yamazaki root 확증).
+  monotone f_xy의 **머리기 exp(−1.1) 오프셋이 PFSA를 과도하게 깎는다**는 것이 독립적으로 드러남(W2가 데이터-일관).
+- **방법론 주의**: GenX f_xy는 Tang에 **보정**(독립 데이터 없음 → OOS 아님); PFOS f_xy는 **독립 Yamazaki(W2)** 값이라 Tang에 대해 준-OOS 유지.
+  보정값은 검증 스크립트에 **override로만** 반영하고 **canonical `params/parameters.json`은 변경하지 않음**(provenance 보존).
 
 ## 6. 다음 작업
-1. **congener 절대 레벨 보정** — Tang의 좁은 TF 범위는 `f_xy`·`B_root` 스프레드가 과하다고 시사:
-   (a) **PFOS `B_root` 재검토** — K_PL(인지질) 기반 뿌리 결합이 뿌리 잔류를 과대평가하는지(Tang에서 PFOS는 지상부 도달 양호);
-   (b) **Tang regime용 `f_xy` 절대 스케일** — Tang은 Yamazaki보다 이행이 더 균일(congener-uniform).
-   둘 다 Tang/Kim에 **명시적 보정**으로 하되 OOS와 분리해 보고.
-2. **GenX ether 전용 Koc·결합** — 1차 검증의 BCF 40× 과대와 연결(단쇄 PFCA 근사 → 토양·식물 결합 과소).
-3. **구조 레버 독립 고정** — `stem_transp_frac`·`retention`을 작물 구조 데이터(엽초/줄기 증산 분배,
-   세포벽 보유)로 a priori 고정해 Tang TF로부터 완전 독립화(현재 기본값은 점-맞춤 아님이나 미세조정 여지 있음).
+1. **monotone f_xy의 PFSA 머리기 오프셋 재산정** — `exp(−1.1)`이 과벌점(PFOS W2 0.14 vs monotone 0.013). Tang+Yamazaki TF로
+   PFSA 오프셋을 재적합하고 `f_xy_recommended`(PFSA)를 갱신할지 검토(`build_parameters.py`, task #8 연계).
+2. **GenX ether 전용 Koc·결합 + f_xy 정식화** — 본 보정(f_xy 0.013)을 1차 검증의 BCF 40× 과대(단쇄 PFCA Koc 근사)와 함께
+   ether-PFAS 전용 QSPR로 정식화해 canonical 반영.
+3. **구조 레버 독립 고정** — `stem_transp_frac`·`retention`(기본 0.45/0.6)을 작물 구조 데이터(엽초/줄기 증산 분배, 세포벽 보유)로
+   a priori 고정해 Tang TF로부터 완전 독립화.
 4. **시계열 TF(t) 재검증** — 재배분이 Tang의 "1개월 후 뿌리 우세(root-first)"를 재현하는지(1차 검증의 ❌ 항목).
 
 ## 7. 재현

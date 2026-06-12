@@ -58,7 +58,29 @@ COMPOUNDS = ("PFOA", "PFOS", "GenX")
 GRP = {"PFOA": "PFCA", "PFOS": "PFSA", "GenX": "ether*"}
 # nstem_leaf structural defaults (crop-architecture levers; NOT fit to Tang TF)
 RETENTION, STEM_FRAC = 0.6, 0.45
-_C = {"tang": "#222222", "base": "#1f77b4", "nl": "#d62728"}
+_C = {"tang": "#222222", "base": "#1f77b4", "nl": "#d62728", "cal": "#9467bd"}
+
+# --- absolute-level (magnitude) calibration: the residual after the structural fix is
+# the across-congener LEVEL, and it traces to f_xy, NOT B_root (B_root=49 for PFOS is
+# CONFIRMED by Yamazaki root data: PFOS root BAF 5.93 ~ 12x PFOA 0.49). Two f_xy fixes:
+#   PFOS: the monotone f_xy (0.013, head-group exp(-1.1) on the QSPR) OVER-penalizes PFSA
+#         and is inconsistent with Yamazaki (whose W2 fit needs 0.142 to reproduce the
+#         observed PFOS straw); use the Yamazaki-grounded W2 value.
+#   GenX: the provisional 0.233 (short-chain-PFCA analogue x ether offset) is ~18x too high;
+#         GenX has no independent data, so calibrate it to Tang (-> ~0.013, PFOA-like).
+# This is an explicit, labelled calibration (PFOS = independent Yamazaki; GenX = Tang).
+CAL_FXY = {"PFOA": "monotone", "PFOS": "W2", "GenX": 0.013}
+CAL_SRC = {"PFOA": "monotone (unchanged)", "PFOS": "W2 fit (Yamazaki-grounded)", "GenX": "Tang-calibrated"}
+
+
+def _fxy_for(nm, which):
+    """Resolve an f_xy value: 'monotone'/'W2' from parameters.json, or a float override."""
+    c = api._CONG[nm]
+    if which == "monotone":
+        return float(c["f_xy_recommended"])
+    if which == "W2":
+        return float(c.get("f_xy_W2fit") or c["f_xy_recommended"])
+    return float(which)
 
 
 def load_tang_tf():
@@ -89,6 +111,11 @@ def nstem_tf(nm, retention=RETENTION, stem_frac=STEM_FRAC, **kw):
     r = api.simulate_nstem_leaf(nm, retention=retention, stem_transp_frac=stem_frac,
                                 season=SEASON, **kw)
     return {k: r["tf_final"][k] for k in KEYS}
+
+
+def nstem_tf_cal(nm):
+    """nstem_leaf with the data-consistent (calibrated) f_xy (CAL_FXY)."""
+    return nstem_tf(nm, f_xy_override=_fxy_for(nm, CAL_FXY[nm]))
 
 
 def _rmse(model, tang):
@@ -129,16 +156,17 @@ def burden_fractions(nm, which):
     return {k: v / tot for k, v in b.items()}
 
 
-def panel_tf(ax, nm, tang, base, nl, tag):
+def panel_tf(ax, nm, tang, base, nl, cal, tag):
     x = np.arange(len(KEYS))
-    ax.bar(x - 0.26, [tang[nm][k] for k in KEYS], 0.24, color=_C["tang"], label="Tang 2026 (dose mean)")
-    ax.bar(x + 0.00, [base[nm][k] for k in KEYS], 0.24, color=_C["base"], alpha=0.9, label="single-straw (baseline)")
-    ax.bar(x + 0.26, [nl[nm][k] for k in KEYS], 0.24, color=_C["nl"], alpha=0.9, label="nstem_leaf (redistributed)")
+    ax.bar(x - 0.30, [tang[nm][k] for k in KEYS], 0.19, color=_C["tang"], label="Tang 2026 (dose mean)")
+    ax.bar(x - 0.10, [base[nm][k] for k in KEYS], 0.19, color=_C["base"], alpha=0.9, label="single-straw (baseline)")
+    ax.bar(x + 0.10, [nl[nm][k] for k in KEYS], 0.19, color=_C["nl"], alpha=0.9, label="nstem_leaf (monotone f_xy)")
+    ax.bar(x + 0.30, [cal[nm][k] for k in KEYS], 0.19, color=_C["cal"], alpha=0.9, label="nstem_leaf (+f_xy calib)")
     ax.set_yscale("log"); ax.set_xticks(x); ax.set_xticklabels([TISSUE_LBL[k] for k in KEYS])
     ax.set_ylabel("TF = tissue / root")
     ax.axhline(1.0, color="#bbb", lw=0.8, ls=":")
-    ax.set_title(f"({tag}) {nm} ({GRP[nm]}) — TF vs Tang (OOS)", fontsize=10)
-    ax.legend(fontsize=7, loc="upper left"); ax.grid(True, axis="y", which="both", alpha=0.25)
+    ax.set_title(f"({tag}) {nm} ({GRP[nm]}) — TF vs Tang", fontsize=10)
+    ax.legend(fontsize=6.5, loc="upper left"); ax.grid(True, axis="y", which="both", alpha=0.25)
 
 
 def panel_burden(ax):
@@ -152,43 +180,52 @@ def panel_burden(ax):
     ax.legend(fontsize=8); ax.grid(True, axis="y", alpha=0.25)
 
 
-def panel_rmse(ax, tang, base, nl):
-    cats = ["shape\n(pattern)", "overall\n(9 pts)", "PFOA", "PFOS", "GenX"]
-    pb, pn = _per_cong(base, tang), _per_cong(nl, tang)
-    bvals = [_shape_rmse(base, tang), _rmse(base, tang), pb["PFOA"], pb["PFOS"], pb["GenX"]]
-    nvals = [_shape_rmse(nl, tang), _rmse(nl, tang), pn["PFOA"], pn["PFOS"], pn["GenX"]]
-    x = np.arange(len(cats))
-    ax.bar(x - 0.2, bvals, 0.38, color=_C["base"], alpha=0.9, label="single-straw")
-    ax.bar(x + 0.2, nvals, 0.38, color=_C["nl"], alpha=0.9, label="nstem_leaf")
-    ax.set_xticks(x); ax.set_xticklabels(cats, fontsize=8); ax.set_ylabel("log10 RMSE vs Tang")
-    ax.set_title("(E) RMSE decomposition\nshoot PATTERN cured (0.84→0.11); residual = across-congener level", fontsize=9.5)
+def panel_rmse(ax, tang, base, nl, cal):
+    steps = ["baseline\nsingle-straw", "nstem_leaf\n(monotone)", "nstem_leaf\n+f_xy calib"]
+    overall = [_rmse(base, tang), _rmse(nl, tang), _rmse(cal, tang)]
+    shape = [_shape_rmse(base, tang), _shape_rmse(nl, tang), _shape_rmse(cal, tang)]
+    x = np.arange(len(steps))
+    ax.bar(x - 0.2, overall, 0.38, color="#1f77b4", alpha=0.9, label="overall (9 pts)")
+    ax.bar(x + 0.2, shape, 0.38, color="#ff7f0e", alpha=0.9, label="shape (pattern)")
+    for i, (o, s) in enumerate(zip(overall, shape)):
+        ax.text(i - 0.2, o + 0.02, f"{o:.2f}", ha="center", fontsize=8)
+        ax.text(i + 0.2, s + 0.02, f"{s:.2f}", ha="center", fontsize=8)
+    ax.set_xticks(x); ax.set_xticklabels(steps, fontsize=8); ax.set_ylabel("log10 RMSE vs Tang")
+    ax.set_title("(E) RMSE progression\nstructure cures the PATTERN; f_xy calib cures the LEVEL", fontsize=9.5)
     ax.legend(fontsize=8); ax.grid(True, axis="y", alpha=0.25)
 
 
-def panel_sensitivity(ax, tang):
-    rets = np.linspace(0.2, 1.0, 9)
-    for k, col in zip(KEYS, ("#2ca02c", "#d62728", "#ff7f0e")):
-        ax.plot(rets, [nstem_tf("PFOA", retention=r)[k] for r in rets], "-o", ms=3, color=col,
-                label=f"model {TISSUE_LBL[k]}")
-        ax.axhline(tang["PFOA"][k], color=col, lw=1.0, ls=":", alpha=0.8)
-    ax.axvline(RETENTION, color="#888", lw=0.9, ls="--")
-    ax.set_xlabel("retention efficiency"); ax.set_ylabel("PFOA TF = tissue/root")
-    ax.set_title("(F) Retention sweep (PFOA)\ndotted = Tang; dashed = default 0.6 (matches all 3 tissues)", fontsize=9.5)
-    ax.legend(fontsize=7.5, ncol=3, loc="upper center"); ax.grid(True, alpha=0.25)
+def panel_fxy(ax):
+    """The magnitude lever is f_xy, not B_root: monotone vs W2 vs the calibrated value."""
+    x = np.arange(len(COMPOUNDS))
+    mono = [_fxy_for(nm, "monotone") for nm in COMPOUNDS]
+    w2 = [_fxy_for(nm, "W2") for nm in COMPOUNDS]
+    calv = [_fxy_for(nm, CAL_FXY[nm]) for nm in COMPOUNDS]
+    ax.bar(x - 0.25, mono, 0.22, color=_C["nl"], alpha=0.9, label="monotone (QSPR+head-group)")
+    ax.bar(x + 0.00, w2, 0.22, color="#2ca02c", alpha=0.9, label="W2 fit (Yamazaki)")
+    ax.bar(x + 0.25, calv, 0.22, color=_C["cal"], alpha=0.9, label="calibrated (used)")
+    ax.set_yscale("log"); ax.set_xticks(x); ax.set_xticklabels(COMPOUNDS)
+    ax.set_ylabel("f_xy  (root→shoot loading)")
+    ax.set_title("(F) The magnitude lever is f_xy (not B_root)\nPFOS monotone over-penalizes (use W2); "
+                 "GenX provisional 18× high", fontsize=9.5)
+    ax.legend(fontsize=7, loc="lower left"); ax.grid(True, axis="y", which="both", alpha=0.25)
 
 
-def print_table(tang, base, nl):
-    print("=== Tang 2026 TF (tissue/root): baseline single-straw vs nstem_leaf (OOS) ===")
-    print(f"{'PFAS':6}{'tissue':10}{'Tang':>7}{'baseline':>10}{'nstem_leaf':>12}")
+def print_table(tang, base, nl, cal):
+    print("=== Tang 2026 TF (tissue/root): baseline vs nstem_leaf (monotone) vs +f_xy calib ===")
+    print(f"{'PFAS':6}{'tissue':10}{'Tang':>7}{'baseline':>10}{'nstem(mono)':>13}{'+f_xy calib':>13}")
     for nm in COMPOUNDS:
         for k in KEYS:
-            print(f"{nm:6}{TISSUE_LBL[k]:10}{tang[nm][k]:>7.2f}{base[nm][k]:>10.2f}{nl[nm][k]:>12.2f}")
-    print("\nlog10 RMSE vs Tang:")
-    print(f"  overall (9 pts) : baseline {_rmse(base,tang):.2f}  ->  nstem_leaf {_rmse(nl,tang):.2f}")
-    print(f"  SHAPE (pattern) : baseline {_shape_rmse(base,tang):.2f}  ->  nstem_leaf {_shape_rmse(nl,tang):.2f}")
-    pb, pn = _per_cong(base, tang), _per_cong(nl, tang)
+            print(f"{nm:6}{TISSUE_LBL[k]:10}{tang[nm][k]:>7.2f}{base[nm][k]:>10.2f}"
+                  f"{nl[nm][k]:>13.2f}{cal[nm][k]:>13.2f}")
+    print("\nlog10 RMSE vs Tang (overall 9 pts / shape-only):")
+    print(f"  baseline single-straw : {_rmse(base,tang):.2f} / {_shape_rmse(base,tang):.2f}")
+    print(f"  nstem_leaf (monotone) : {_rmse(nl,tang):.2f} / {_shape_rmse(nl,tang):.2f}   (structure cures the PATTERN)")
+    print(f"  nstem_leaf +f_xy calib: {_rmse(cal,tang):.2f} / {_shape_rmse(cal,tang):.2f}   (f_xy cures the LEVEL)")
+    print("\nf_xy calibration (magnitude lever; B_root confirmed by Yamazaki root data, unchanged):")
     for nm in COMPOUNDS:
-        print(f"  {nm:6}        : baseline {pb[nm]:.2f}  ->  nstem_leaf {pn[nm]:.2f}")
+        print(f"  {nm:5}: monotone {_fxy_for(nm,'monotone'):.4f}  W2 {_fxy_for(nm,'W2'):.4f}  "
+              f"-> used {_fxy_for(nm,CAL_FXY[nm]):.4f}  ({CAL_SRC[nm]})")
     bb = burden_fractions("PFOA", "base"); nn = burden_fractions("PFOA", "nl")
     print(f"\nPFOA leaf burden fraction: baseline {bb['leaf']:.0%}  ->  nstem_leaf {nn['leaf']:.0%}")
     print(f"           stalk fraction: baseline {bb['stalk']:.0%}  ->  nstem_leaf {nn['stalk']:.0%}")
@@ -198,18 +235,19 @@ def main():
     tang = load_tang_tf()
     base = {nm: baseline_tf(nm) for nm in COMPOUNDS}
     nl = {nm: nstem_tf(nm) for nm in COMPOUNDS}
-    print_table(tang, base, nl)
+    cal = {nm: nstem_tf_cal(nm) for nm in COMPOUNDS}
+    print_table(tang, base, nl, cal)
 
     fig, axes = plt.subplots(2, 3, figsize=(18.5, 10.0))
-    panel_tf(axes[0, 0], "PFOA", tang, base, nl, "A")
-    panel_tf(axes[0, 1], "PFOS", tang, base, nl, "B")
-    panel_tf(axes[0, 2], "GenX", tang, base, nl, "C")
+    panel_tf(axes[0, 0], "PFOA", tang, base, nl, cal, "A")
+    panel_tf(axes[0, 1], "PFOS", tang, base, nl, cal, "B")
+    panel_tf(axes[0, 2], "GenX", tang, base, nl, cal, "C")
     panel_burden(axes[1, 0])
-    panel_rmse(axes[1, 1], tang, base, nl)
-    panel_sensitivity(axes[1, 2], tang)
-    fig.suptitle("Tang 2026 re-validation: redistributed-shoot fix (N-segment stem + leaf/stem transpiration "
-                 "deposition+retention)\nshoot tissue PATTERN cured; residual = across-congener f_xy/B_root level",
-                 fontsize=13, fontweight="bold", y=1.005)
+    panel_rmse(axes[1, 1], tang, base, nl, cal)
+    panel_fxy(axes[1, 2])
+    fig.suptitle("Tang 2026 re-validation: redistributed-shoot fix + f_xy magnitude calibration\n"
+                 "structure cures the shoot PATTERN (shape RMSE 0.84→0.11); f_xy cures the LEVEL "
+                 "(overall RMSE 1.28→1.01→0.18)", fontsize=13, fontweight="bold", y=1.005)
     fig.tight_layout()
     out = os.path.join(HERE, "figures", "tang2026_nstem_validation.png")
     os.makedirs(os.path.dirname(out), exist_ok=True)

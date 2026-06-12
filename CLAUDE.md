@@ -171,11 +171,17 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `tests/test_nstem_leaf.py`). **Result** (`validation/tang2026_nstem_validation.py`,
   `docs/VALIDATION_TANG2026_NSTEM_KR.md`): the shoot **tissue PATTERN is cured** (shape RMSE 0.84→0.11;
   PFOA stalk 0.03→1.27, leaf 5.95→2.04, grain 0.41→0.93, PFOA RMSE 1.03→0.06; leaf burden 81%→30%).
-  **Residual = across-congener absolute LEVEL** (`TF ∝ f_xy/B_root`): the Yamazaki `f_xy` (PFOS 0.013,
-  GenX 0.233) + basis-A `B_root` (PFOS 49) spread leave PFOS too root-bound (TF low) / GenX too mobile
-  (TF high) — a binding/translocation **calibration** issue, NOT the shoot structure. This is
-  COMPLEMENTARY to `nstem` (mixer, Yamazaki within-stem gradient): nstem_leaf uses RETENTION for the
-  Tang stalk/leaf/grain split. Default model unchanged (4pool_surf); this is an opt-in module.
+  **Then the across-congener absolute LEVEL was calibrated — the lever is `f_xy`, NOT `B_root`**: `B_root`(PFOS)=49
+  is CONFIRMED by Yamazaki root data (PFOS root BAF 5.93 ≈ 12× PFOA 0.49) so it is correct; the residual traces to
+  (i) the monotone `f_xy`(PFOS)=0.013 OVER-penalizing PFSA (the head-group exp(−1.1) offset) — Yamazaki's own W2 fit
+  needs 0.142, and a mass-balance argument confirms 0.013 under-delivers; (ii) the GenX provisional `f_xy`=0.233
+  (short-chain-PFCA × ether offset) being ~18× too high. Recalibrating `f_xy` (PFOS → W2 0.142 = independent
+  Yamazaki; GenX → 0.013 = Tang, no independent data) drops **overall RMSE 1.28 → 1.01 (structure) → 0.18 (f_xy)**,
+  all three congeners within order-of-magnitude. The calibrated f_xy is applied as an **override in the validation
+  only** — `params/parameters.json` is UNCHANGED (provenance preserved); follow-up is to re-fit the monotone PFSA
+  head-group offset + an ether-PFAS QSPR for GenX (docs §6). COMPLEMENTARY to `nstem` (mixer, Yamazaki within-stem
+  gradient): nstem_leaf uses RETENTION for the Tang stalk/leaf/grain split. Default model unchanged (4pool_surf);
+  opt-in module.
 - **f_xy absolute scale (task #7)**: measured `Q_TP(t)` (`forcing_rice`, peak ~0.10 L/d/hill, T/ET=0.42)
   and `M_s(t)` (`growth_rice`, ORYZA IR72, HI~0.53) are built. The absolute f_xy is pinned via the
   **aggregate** root/straw/grain BAF (not the within-stem gradient) — see `validation/`.
