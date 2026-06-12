@@ -456,6 +456,19 @@ def pore_water_from_inventory(t, C_total, K_F=2.0, n=0.85, theta_g=0.35,
 # ---------------------------------------------------------------------------
 # Real HYDRUS-1D soil run (live coupling) -- optional, needs the built engine
 # ---------------------------------------------------------------------------
+def rdkit_available():
+    """True if RDKit is importable (needed for SMILES/structure input).
+
+    The app's 'SMILES (structure)' compound input parameterises any PFAS from its
+    structure via `src/pfas_structure.py` (RDKit). Gate the UI on this so the rest
+    of the tool stays usable when RDKit is absent."""
+    try:
+        import rdkit  # noqa: F401
+    except Exception:
+        return False
+    return True
+
+
 def hydrus_available():
     """True if the compiled HYDRUS-1D engine + phydrus are usable here.
 

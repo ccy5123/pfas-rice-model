@@ -18,6 +18,9 @@ plots the supporting time series.  It covers the whole input space:
   4. Soil inventory            — invert a soil PFAS load to pore water (Freundlich).
   5. Biomonitoring             — measured tissue concentrations; HYDRUS not needed.
 
+The compound can be one of the 13 curated congeners OR **any PFAS by SMILES
+structure** (RDKit → descriptors → read-across/QSPR → Compound; src/pfas_structure.py).
+
 Compute lives in src/model_api.py; the Plotly builders in src/plots.py (both
 UI-agnostic and unit-tested head-less).  See docs/visualization_tool.md.
 """
@@ -62,6 +65,17 @@ def _drivers_tuple(d):
             tuple(np.asarray(d["M"]).ravel()), int(np.asarray(d["M"]).shape[1]))
 
 
+@st.cache_data(show_spinner="Parameterising structure (RDKit)…")
+def _simulate_smiles(smiles, **kw):
+    """Cache a SMILES (structure) run: RDKit → descriptors → Compound → full ODE."""
+    drv = kw.pop("drivers_tuple", None)
+    if drv is not None:
+        t, Cwo, Qtp, Mflat, ncol = drv
+        kw["drivers"] = dict(t=np.array(t), Cwo=np.array(Cwo), Qtp=np.array(Qtp),
+                             M=np.array(Mflat).reshape(-1, ncol))
+    return api.simulate_from_smiles(smiles, **kw)
+
+
 @st.cache_data(show_spinner="Running HYDRUS-1D…")
 def _hydrus_drivers_cached(congener, season, f_oc, flood_until, percolation):
     """Cache a real HYDRUS-1D paddy run (a few seconds) per parameter set."""
@@ -80,8 +94,29 @@ with st.sidebar:
         help="Five ways to feed the plant model. 'Run HYDRUS-1D (live)' executes the "
              "real engine (if built); biomonitoring needs no soil model.")
 
-    st.header("2 · Congener & root")
-    congener = st.selectbox("PFAS congener", api.CONGENERS, index=api.CONGENERS.index("PFOA"))
+    st.header("2 · PFAS compound")
+    spec = st.radio("Specify by", ["Curated congener", "SMILES (structure)"], horizontal=True,
+                    help="Pick one of the 13 curated congeners, or paste ANY PFAS structure (SMILES) "
+                         "to parameterise it from chemistry (RDKit read-across / QSPR).")
+    smiles = None
+    if spec == "Curated congener":
+        congener = st.selectbox("PFAS congener", api.CONGENERS, index=api.CONGENERS.index("PFOA"))
+    else:
+        congener = None
+        _EXSMI = {
+            "PFOA  (known)": "OC(=O)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)F",
+            "PFOS  (known)": "OS(=O)(=O)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)F",
+            "GenX / HFPO-DA  (known ether)": "OC(=O)C(F)(OC(F)(F)C(F)(F)C(F)(F)F)C(F)(F)F",
+            "PFTrDA — NOVEL C13 PFCA": "OC(=O)" + "C(F)(F)" * 11 + "C(F)(F)F",
+            "ADONA-like — NOVEL ether-PFCA": "OC(=O)C(F)(F)OC(F)(F)C(F)(F)OC(F)(F)C(F)(F)F",
+        }
+        ex = st.selectbox("Example structure", list(_EXSMI), index=0,
+                          help="Known → reads the curated parameters; NOVEL → QSPR (provisional).")
+        smiles = st.text_area("SMILES", _EXSMI[ex], height=70).strip()
+        if not api.rdkit_available():
+            st.warning("RDKit is not installed — the SMILES mode needs it.\n\n"
+                       "`pip install rdkit`  (or `-r requirements-structure.txt`). "
+                       "Meanwhile use **Curated congener**.")
     E_m = st.slider("Root membrane potential E_m  [mV]", -160, -90, -120, 5,
                     help="GHK anion-exclusion lever (rice −116…−140 mV; NH₄⁺ depolarises).")
     fxy_label = st.radio("Root→shoot loading f_xy",
@@ -200,7 +235,26 @@ with st.sidebar:
 
 # ---------------------------------------------------------------- run the model
 sim_kw = dict(E_m_mV=E_m, f_xy_source=fxy_source)
-if drivers is not None:
+desc = None
+provisional = False
+if smiles:                                              # compound specified by structure
+    if not api.rdkit_available():
+        st.error("RDKit not installed — cannot parameterise a SMILES structure. "
+                 "`pip install rdkit`, or switch to **Curated congener** in the sidebar.")
+        st.stop()
+    try:
+        if drivers is not None:
+            res = _simulate_smiles(smiles, drivers_tuple=_drivers_tuple(drivers), **sim_kw)
+        else:
+            res = _simulate_smiles(smiles, Cwo=Cwo_const, season=season,
+                                   measured_forcing=measured, **sim_kw)
+    except Exception as e:                              # noqa: BLE001
+        st.error(f"Could not build a compound from that SMILES — check the structure.\n\n`{e}`")
+        st.stop()
+    congener = res["congener"]
+    desc = res.get("descriptors")
+    provisional = bool(res.get("provisional", False))
+elif drivers is not None:
     res = _simulate(congener, drivers_tuple=_drivers_tuple(drivers), **sim_kw)
 else:
     res = _simulate(congener, Cwo=Cwo_const, season=season, measured_forcing=measured, **sim_kw)
@@ -222,6 +276,33 @@ for col, tis in zip((c1, c2, c3), ("root", "straw", "grain")):
         sub = f"measured {bio_baf[tis]:.2f}"
     col.metric(f"{tis} BAF [L/kg]", f"{pred:.2f}", sub, delta_color="off")
 c4.metric("anion exclusion eᴺ", f"{res['eN']:.0f}", f"N={res['N']:.2f}", delta_color="off")
+
+# ---- structure → parameters panel (SMILES mode) -----------------------------
+if desc is not None:
+    kind = "read-across (matches a curated congener)" if desc.matched_name else "QSPR (novel structure)"
+    with st.expander(f"🧬 Structure → parameters  ·  {kind}", expanded=True):
+        if provisional:
+            st.warning("⚠ **PROVISIONAL** — novel / non-calibrated structure. Binding (K_PL/K_prot) "
+                       "is from the QSPR and translocation `f_xy` is a head-group estimate, so treat "
+                       "the magnitudes as indicative (ordering is more reliable than absolute level).")
+        else:
+            st.success(f"Matches **{desc.matched_name}** — uses the curated, measured-anchored parameters.")
+        dc1, dc2 = st.columns(2)
+        dc1.markdown(
+            f"**Structure** &nbsp;`{desc.formula}`, MW {desc.mol_weight:.1f}\n\n"
+            f"- perfluoro-C: **{desc.n_perfluoroC}** &nbsp;·&nbsp; head group: **{desc.head_group}**\n"
+            f"- ether-O: {desc.n_ether_O} &nbsp;·&nbsp; CF₃: {desc.n_CF3} &nbsp;·&nbsp; "
+            f"branched: {desc.branched} &nbsp;·&nbsp; linear: {desc.is_linear}\n"
+            f"- read-across match: **{desc.matched_name or 'none (novel)'}**")
+        dc2.markdown(
+            f"**Model parameters**\n\n"
+            f"- K_PL = {p['K_PL']:.0f} &nbsp;·&nbsp; K_prot = {p['K_prot']:.0f} &nbsp;·&nbsp; "
+            f"K_cw = {p['K_cw']:.0f}  [L/kg]\n"
+            f"- f_xy = {p['f_xy']:.4g} &nbsp;·&nbsp; L_Ph = {p['L_Ph']:.3g} &nbsp;·&nbsp; "
+            f"κ_d = {p['kappa_d']:.3g}\n"
+            f"- B_k: " + ", ".join(f"{k} {v:.1f}" for k, v in res["B_k"].items()))
+        for n in getattr(desc, "notes", []):
+            st.caption("• " + n)
 
 tabs = st.tabs(["🗺️ Plant & soil map", "📈 Tissue dynamics", "🟫 Soil & drivers",
                 "📊 BAF vs observed", "🔗 Chain-length trends", "⚖️ Compare congeners",
@@ -289,7 +370,13 @@ with tabs[3]:
 with tabs[4]:
     key = st.selectbox("Parameter", ["K_PL", "K_prot", "K_cw_root",
                                      "f_xy_recommended", "B_root", "B_grain"], index=0)
-    st.plotly_chart(plots.fig_chain(api.chain_table(), congener, key), width="stretch")
+    # a novel SMILES compound is not in the curated chain series -> ring a reference instead
+    chain_cong = congener if congener in api.CONGENERS else (
+        desc.matched_name if desc and desc.matched_name in api.CONGENERS else "PFOA")
+    st.plotly_chart(plots.fig_chain(api.chain_table(), chain_cong, key), width="stretch")
+    if congener not in api.CONGENERS:
+        st.caption(f"'{congener}' is a novel structure (not in the curated 13); the ring marks "
+                   f"**{chain_cong}** for reference. Its own parameters are in the 🧬 panel above.")
 
 # ---- Tab 6: compare congeners -----------------------------------------------
 with tabs[5]:

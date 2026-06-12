@@ -8,3 +8,5 @@ matplotlib>=3.6
 streamlit>=1.30
 plotly>=5.18
 pandas>=1.5
+# SMILES (structure) compound input mode in the app (src/pfas_structure.py):
+rdkit>=2023.9
