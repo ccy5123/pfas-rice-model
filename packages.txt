@@ -1,6 +1,3 @@
-# apt packages for Streamlit Community Cloud.
-# Needed only for the in-app "Run HYDRUS-1D (live)" engine build (gfortran).
-# The rest of the app works without these.
 gfortran
 make
 git
