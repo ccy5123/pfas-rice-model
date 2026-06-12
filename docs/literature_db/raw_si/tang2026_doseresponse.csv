@@ -1,0 +1,63 @@
+# Tang et al. 2026 (J. Hazard. Mater. 502:141017; DOI 10.1016/j.jhazmat.2025.141017)
+# "Fate, bioaccumulation, and toxic responses of PFOA, PFOS, GenX in the paddy soil-rice
+#  system across the full growth cycle." Nipponbare rice, 150 d, monthly sampling, flooded paddy.
+# FULL dose-response at HARVEST, transcribed from SI Tables S7 (BCF) and S8 (TF), mean(±SD).
+# Definitions (main text Eq.1-5): BCF = C_rice/C_soil ;  TF_x = C_x/C_root  (x in stalk/leaf/chaff/endosperm).
+# Exposure = soil-water slurry, nominal soil dose [ug/g] (Table S3 measured ~= nominal).
+# endpoint: BCF (whole rice / soil) or TF (tissue / root) ; value mean ; sd
+compound,group,dose_ugg,endpoint,value,sd
+PFOA,PFCA,0.1,BCF,0.240,0.051
+PFOA,PFCA,1,BCF,0.225,0.058
+PFOA,PFCA,10,BCF,0.191,0.025
+PFOA,PFCA,50,BCF,0.209,0.022
+PFOA,PFCA,100,BCF,0.181,0.024
+PFOS,PFSA,0.1,BCF,0.254,0.025
+PFOS,PFSA,1,BCF,0.228,0.017
+PFOS,PFSA,10,BCF,0.295,0.022
+PFOS,PFSA,50,BCF,0.294,0.013
+PFOS,PFSA,100,BCF,0.217,0.019
+GenX,ether,0.1,BCF,0.472,0.075
+GenX,ether,1,BCF,0.514,0.026
+GenX,ether,10,BCF,0.523,0.008
+GenX,ether,50,BCF,0.358,0.055
+GenX,ether,100,BCF,0.507,0.040
+PFOA,PFCA,0.1,TF_stalk,2.222,0.979
+PFOA,PFCA,1,TF_stalk,1.963,0.678
+PFOA,PFCA,10,TF_stalk,1.174,0.294
+PFOA,PFCA,50,TF_stalk,0.920,0.251
+PFOA,PFCA,100,TF_stalk,0.968,0.131
+PFOA,PFCA,0.1,TF_leaf,2.476,0.726
+PFOA,PFCA,1,TF_leaf,2.084,0.546
+PFOA,PFCA,10,TF_leaf,1.314,0.563
+PFOA,PFCA,50,TF_leaf,1.251,0.218
+PFOA,PFCA,100,TF_leaf,1.173,0.055
+PFOA,PFCA,0.1,TF_chaff,1.099,0.302
+PFOA,PFCA,1,TF_chaff,1.240,0.362
+PFOA,PFCA,10,TF_chaff,0.754,0.319
+PFOA,PFCA,50,TF_chaff,1.073,0.254
+PFOA,PFCA,100,TF_chaff,0.651,0.081
+PFOA,PFCA,0.1,TF_endosperm,1.371,0.126
+PFOA,PFCA,1,TF_endosperm,1.200,0.173
+PFOA,PFCA,10,TF_endosperm,0.793,0.171
+PFOA,PFCA,50,TF_endosperm,0.785,0.263
+PFOA,PFCA,100,TF_endosperm,0.613,0.121
+PFOS,PFSA,0.1,TF_stalk,0.571,0.145
+PFOS,PFSA,1,TF_stalk,0.560,0.137
+PFOS,PFSA,10,TF_stalk,0.553,0.140
+PFOS,PFSA,50,TF_stalk,0.672,0.239
+PFOS,PFSA,100,TF_stalk,0.565,0.123
+PFOS,PFSA,0.1,TF_leaf,0.684,0.158
+PFOS,PFSA,1,TF_leaf,0.678,0.157
+PFOS,PFSA,10,TF_leaf,0.786,0.141
+PFOS,PFSA,50,TF_leaf,0.677,0.196
+PFOS,PFSA,100,TF_leaf,0.574,0.121
+PFOS,PFSA,0.1,TF_chaff,0.652,0.104
+PFOS,PFSA,1,TF_chaff,0.499,0.051
+PFOS,PFSA,10,TF_chaff,0.664,0.158
+PFOS,PFSA,50,TF_chaff,0.778,0.236
+PFOS,PFSA,100,TF_chaff,0.605,0.109
+PFOS,PFSA,0.1,TF_endosperm,0.944,0.210
+PFOS,PFSA,1,TF_endosperm,0.780,0.188
+PFOS,PFSA,10,TF_endosperm,0.929,0.392
+PFOS,PFSA,50,TF_endosperm,0.702,0.272
+PFOS,PFSA,100,TF_endosperm,0.500,0.050
