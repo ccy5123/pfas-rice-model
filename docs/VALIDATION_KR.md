@@ -92,10 +92,11 @@
   - Li 2025는 **교란으로 판별 불가**.
   - 그 외엔 **방향·부호 수준**의 일관성(cross-field TF, head-group).
 - **결론**: 이 모델은 *완전히 예측 검증된 모델이 아니라*, **결합은 독립 측정으로 받치고 이행은 Yamazaki로 보정한 뒤, 제한된 OOS로 방향성을 확인한 단계**입니다.
-- **가장 큰 공백(부분 해소)**: 깨끗한 **독립 compartment-resolved 데이터**가 필요했는데, **Tang 2026(통제 용량,
-  150일, root/stalk/leaf/chaff/endosperm)으로 OOS 검증을 수행**했습니다 → **`docs/VALIDATION_TANG2026_KR.md`**.
-  결과: 이삭 이행은 order-of-magnitude로 맞지만(특히 lipid·PFOS), 모델의 **줄기 칸 약점**이 정량적으로 드러남.
-  **남은 것**: 절대 BCF(토양→공극수 변환)와 월별 원시 시계열(Fig.4a 디지타이즈).
+- **가장 큰 공백(대폭 해소)**: 깨끗한 **독립 compartment-resolved 데이터**가 필요했는데, **Tang 2026(통제 용량,
+  150일, root/stalk/leaf/chaff/endosperm)으로 OOS 검증을 3축(TF·절대 BCF·시계열 TF(t))으로 수행**했습니다 →
+  **`docs/VALIDATION_TANG2026_KR.md`**. 결과: 이삭 이행 order-of-magnitude·머리기 순서·BCF 크기는 맞지만,
+  모델의 **지상부 구획 분배(줄기 빈 칸·잎 과대·초기 뿌리우세 미재현 = 과이행)** 약점이 정량적으로 드러남(→ nstem 개선 방향).
+  **남은 것**: 정량 월별 시계열(저자 원시데이터 필요), GenX(core 12 외).
 
 ---
 
