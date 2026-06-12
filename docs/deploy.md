@@ -30,10 +30,10 @@ Notes:
 - Streamlit Cloud installs **`requirements.txt`** (that is why the app deps live there, not
   only in `requirements-app.txt`). It deploys as-is. RDKit is included so the **SMILES**
   compound mode works on Cloud — the first build is a bit slower (RDKit wheel ~40 MB).
-- The **live HYDRUS-1D** mode will not run on Cloud (it needs the compiled FORTRAN engine);
-  the app detects this and shows the build steps instead — the other four modes demo fully.
-- `phydrus` is **not** installed on Cloud (only the live-HYDRUS mode needs it); the app gates
-  on `hydrus_available()` and stays usable.
+- The **live HYDRUS-1D** mode now works on Cloud too: `packages.txt` (gfortran/make) and
+  `phydrus` (requirements.txt) are bundled, and the app has a **"⚙ Build the HYDRUS-1D engine
+  now"** button that fetches the FORTRAN source and compiles it in place (~1 min, once per
+  container). If the build can't run (no gfortran), the app falls back to the parametric model.
 - To redeploy after changes: just `git push` to the deployed branch — Cloud auto-rebuilds.
 
 ## C. No install at all (non-interactive backup)

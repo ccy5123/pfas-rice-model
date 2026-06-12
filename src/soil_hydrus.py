@@ -60,6 +60,64 @@ def hydrus_available(exe: str = HYDRUS_EXE) -> bool:
     return os.path.isfile(exe) and os.access(exe, os.X_OK)
 
 
+def _has_fortran_source(source_dir: str) -> bool:
+    return os.path.isdir(source_dir) and any(
+        f.lower().endswith(".for") for f in os.listdir(source_dir))
+
+
+def build_hydrus_engine(exe: str = HYDRUS_EXE):
+    """Best-effort, in-place build of the HYDRUS-1D engine (for Streamlit Cloud / a
+    fresh clone). Fetches the source (git submodule, else clone), copies the makefile
+    into ``source/`` and runs ``make`` with gfortran. Returns ``(ok, log_lines)``.
+
+    Needs ``gfortran`` + ``make`` on PATH — on Streamlit Cloud add a ``packages.txt``
+    with ``gfortran`` and ``make``; ``phydrus`` must be installed (requirements.txt)."""
+    import subprocess
+    log: list[str] = []
+
+    def _say(m):
+        log.append(m)
+
+    if hydrus_available(exe):
+        _say("HYDRUS-1D engine already built.")
+        return True, log
+    if shutil.which("gfortran") is None or shutil.which("make") is None:
+        _say("gfortran/make not found on PATH. On Streamlit Cloud add a `packages.txt` "
+             "containing `gfortran` and `make`, then redeploy.")
+        return False, log
+
+    src_dir = os.path.join(_ROOT, "external", "hydrus_source")
+    source = os.path.join(src_dir, "source")
+    if not _has_fortran_source(source):
+        _say("fetching HYDRUS-1D source…")
+        subprocess.run(["git", "submodule", "update", "--init", "external/hydrus_source"],
+                       cwd=_ROOT, capture_output=True, text=True)
+        if not _has_fortran_source(source):                 # submodule not available -> clone
+            try:
+                if os.path.isdir(src_dir) and not os.listdir(src_dir):
+                    os.rmdir(src_dir)
+                subprocess.run(["git", "clone", "--depth", "1",
+                                "https://github.com/phydrus/source_code", src_dir],
+                               capture_output=True, text=True, check=False)
+            except Exception as e:                          # noqa: BLE001
+                _say(f"clone failed: {e}")
+    if not _has_fortran_source(source):
+        _say("could not obtain the HYDRUS-1D FORTRAN source (no network / submodule).")
+        return False, log
+
+    mk = os.path.join(src_dir, "makefile")                   # top-level makefile -> source/
+    if os.path.isfile(mk):
+        shutil.copy(mk, os.path.join(source, "makefile"))
+    _say("compiling with gfortran (this takes ~1 minute)…")
+    r = subprocess.run(["make"], cwd=source, capture_output=True, text=True)
+    if hydrus_available(exe):
+        _say("✓ HYDRUS-1D engine built successfully.")
+        return True, log
+    _say("build did not produce the executable. make output (tail):")
+    _say((r.stderr or r.stdout or "")[-1500:])
+    return False, log
+
+
 def paddy_kd(n_C: int, group: str = "PFCA", f_oc: float = 0.02) -> float:
     """Linear soil distribution coefficient Kd [L/kg] for a congener.
 

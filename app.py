@@ -76,6 +76,24 @@ def _simulate_smiles(smiles, **kw):
     return api.simulate_from_smiles(smiles, **kw)
 
 
+@st.cache_data(show_spinner=False)
+def _mol_png(smiles, w=330, h=190):
+    """Render a SMILES to a 2-D structure PNG (RDKit); None if it can't be parsed."""
+    try:
+        from rdkit import Chem
+        from rdkit.Chem.Draw import rdMolDraw2D
+        m = Chem.MolFromSmiles(smiles)
+        if m is None:
+            return None
+        d = rdMolDraw2D.MolDraw2DCairo(w, h)
+        d.drawOptions().padding = 0.12
+        d.DrawMolecule(m)
+        d.FinishDrawing()
+        return d.GetDrawingText()
+    except Exception:                                       # noqa: BLE001
+        return None
+
+
 @st.cache_data(show_spinner="Running HYDRUS-1D…")
 def _hydrus_drivers_cached(congener, season, f_oc, flood_until, percolation):
     """Cache a real HYDRUS-1D paddy run (a few seconds) per parameter set."""
@@ -117,6 +135,12 @@ with st.sidebar:
             st.warning("RDKit is not installed — the SMILES mode needs it.\n\n"
                        "`pip install rdkit`  (or `-r requirements-structure.txt`). "
                        "Meanwhile use **Curated congener**.")
+        elif smiles:                                        # show the 2-D structure
+            png = _mol_png(smiles)
+            if png is not None:
+                st.image(png, caption="structure (RDKit)", use_container_width=True)
+            else:
+                st.caption("⚠ could not parse this SMILES into a structure")
     E_m = st.slider("Root membrane potential E_m  [mV]", -160, -90, -120, 5,
                     help="GHK anion-exclusion lever (rice −116…−140 mV; NH₄⁺ depolarises).")
     fxy_label = st.radio("Root→shoot loading f_xy",
@@ -164,14 +188,21 @@ with st.sidebar:
 
     elif mode == "Run HYDRUS-1D (live)":
         if not api.hydrus_available():
-            st.warning(
-                "HYDRUS-1D engine not available in this environment. To enable the live run:\n\n"
-                "1. `git submodule update --init external/hydrus_source`\n"
-                "2. `cp external/hydrus_source/makefile external/hydrus_source/source/ && "
-                "(cd external/hydrus_source/source && make)`  *(needs gfortran)*\n"
-                "3. `pip install phydrus`\n\n"
-                "Meanwhile, use **HYDRUS / CSV drivers** with a CSV exported from a HYDRUS run.")
-            st.caption("Falling back to the parametric model so the rest of the tool stays usable.")
+            st.warning("HYDRUS-1D engine not built in this environment yet — build it once "
+                       "(compiles the FORTRAN solver with gfortran; ~1 min, cached).")
+            if st.button("⚙ Build the HYDRUS-1D engine now"):
+                with st.spinner("Fetching source + compiling HYDRUS-1D with gfortran…"):
+                    ok, blog = api.build_hydrus_engine()
+                if ok:
+                    st.success("✓ Engine built — loading the live mode…")
+                    st.rerun()
+                else:
+                    st.error("Build failed — details below.")
+                    st.code("\n".join(blog))
+            st.caption("On **Streamlit Cloud** the build uses `packages.txt` (gfortran/make, bundled) + "
+                       "`phydrus` (requirements.txt). Locally: `git submodule update --init "
+                       "external/hydrus_source`, `make` in `source/`, `pip install phydrus`. "
+                       "Until built, the tool falls back to the parametric model.")
         else:
             st.caption("Runs a **real HYDRUS-1D** paddy model (Richards + advection–dispersion + "
                        "linear Kd + root uptake) for this congener → Cwᵒ(t), Q_TP(t). Cached per setting.")

@@ -229,17 +229,17 @@ def _shapes_for(colors, line="#4f4f4f"):
                   fillcolor=colors["root"], line=dict(color=line, width=0.8)))
     for pth, w in _ROOTS:
         S.append(dict(type="path", path=pth, fillcolor=_NONE, line=dict(color=colors["root"], width=w)))
-    # leaves (leaf colour) + a subtle midrib
-    for pth in _LEAVES:
-        S.append(dict(type="path", path=pth, fillcolor=colors["leaf"], line=dict(color=line, width=1)))
-    for pth in _LEAF_VEINS:
-        S.append(dict(type="path", path=pth, fillcolor=_NONE, line=dict(color="rgba(35,35,35,0.22)", width=1)))
-    # stem C-curve: thin dark edge + stem-colour fill, then nodes
+    # stem C-curve (drawn BEFORE the leaves so the leaves sit in front): edge + fill + nodes
     S.append(dict(type="path", path=_STEM_PATH, fillcolor=_NONE, line=dict(color=line, width=8)))
     S.append(dict(type="path", path=_STEM_PATH, fillcolor=_NONE, line=dict(color=colors["stem"], width=7)))
     for (cx, cy, rx, ry, rot) in _NODES:
         S.append(dict(type="path", path=_ellipse_path(cx, cy, rx, ry, rot, 14),
                       fillcolor="#33401f", line=dict(width=0)))
+    # leaves (leaf colour) + a subtle midrib -- in front of the stem
+    for pth in _LEAVES:
+        S.append(dict(type="path", path=pth, fillcolor=colors["leaf"], line=dict(color=line, width=1)))
+    for pth in _LEAF_VEINS:
+        S.append(dict(type="path", path=pth, fillcolor=_NONE, line=dict(color="rgba(35,35,35,0.22)", width=1)))
     # ear: rachis (structural) + nodding grains (grain colour)
     for pth in _RACHIS:
         S.append(dict(type="path", path=pth, fillcolor=_NONE, line=dict(color="#9c7a2a", width=2.0)))
