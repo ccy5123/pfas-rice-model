@@ -169,29 +169,42 @@ def f_d(pKa: float, pH: float = PADDY_PH):
 # ===========================================================================
 KOC_PER_CF2 = 0.55             # log10 L/kg per CF2 (higgins2006; range 0.50-0.60)  [verified]
 KOC_SULFONATE_OFFSET = 0.23    # log10 L/kg, sulfonate vs CF2-matched carboxylate    [verified]
+# Per-ether-O soil-Koc offset.  GAP: no measured ether/PFECA Koc in the database
+# (Higgins&Luthy is PFCA/PFSA only; C3 sheet has NO ether sorption row), so this is
+# kept at 0.0 (= the carboxylate approximation) and flagged.  The GenX BCF
+# over-prediction (1st Tang validation) is primarily resolved by the f_xy
+# recalibration (nstem work), NOT by Koc -- see docs/structure_input.md.
+KOC_ETHER_LOG_OFFSET = 0.0     # log10 L/kg per backbone ether-O  [GAP -- no data, provisional]
 # measured Koc anchors (milinovic2015), L/kg == mL/g  [verified]
 KOC_ANCHORS_LKG: dict[str, float] = {"PFBS": 17.0, "PFOA": 96.0, "PFOS": 710.0}
 _KOC_QSPR_ANCHOR = ("PFOA", 7, 96.0)   # (name, n_perfluoroC, Koc) carboxylate anchor
 
 
-def koc(n_perfluoroC: float, head_group: str = "carboxylate", *, log10: bool = False):
+def koc(n_perfluoroC: float, head_group: str = "carboxylate", *,
+        n_ether_O: int = 0, log10: bool = False):
     """Predicted organic-carbon-normalized partition Koc [L/kg].  [C3]
 
-    QSPR anchored on the measured PFOA Koc (96 L/kg, milinovic2015) with the
-    Higgins & Luthy per-CF2 slope and sulfonate offset:
+    Group-contribution QSPR anchored on the measured PFOA Koc (96 L/kg,
+    milinovic2015) with the Higgins & Luthy per-CF2 slope, the sulfonate offset,
+    and a (currently GAP) per-ether-O term::
 
-        log Koc = log10(96) + 0.55*(nPFC - 7) + (0.23 if sulfonate else 0)
+        log Koc = log10(96) + 0.55*(nPFC - 7)
+                  + (0.23 if sulfonate) + n_ether_O * KOC_ETHER_LOG_OFFSET
 
-    Caveat (jakobsen2026): pure Koc UNDER-predicts short-chain (C4-C6) sorption;
-    add a clay term there.  Where a measured anchor exists
-    (``KOC_ANCHORS_LKG``) prefer it over this extrapolation.
+    Sulfonamide / ether *acids* use the carboxylate or sulfonate base (the head
+    group sets the ionic offset; the ether bond is the ``n_ether_O`` term).
+    ``KOC_ETHER_LOG_OFFSET`` is 0 -- no measured ether-PFAS Koc exists in the
+    database (a documented gap), so ether soil sorption is still the carboxylate
+    approximation.  Caveat (jakobsen2026): pure Koc UNDER-predicts short-chain
+    (C4-C6) sorption.  Prefer a measured anchor (``KOC_ANCHORS_LKG``) when present.
     """
     _, anch_npfc, anch_koc = _KOC_QSPR_ANCHOR
     logK = np.log10(anch_koc) + KOC_PER_CF2 * (np.asarray(n_perfluoroC, float) - anch_npfc)
     if head_group == "sulfonate":
         logK = logK + KOC_SULFONATE_OFFSET
-    elif head_group != "carboxylate":
-        raise ValueError("head_group must be 'carboxylate' or 'sulfonate'")
+    elif head_group not in ("carboxylate", "ether", "sulfonamide"):
+        raise ValueError("head_group must be carboxylate/sulfonate/ether/sulfonamide")
+    logK = logK + int(n_ether_O) * KOC_ETHER_LOG_OFFSET
     return logK if log10 else np.power(10.0, logK)
 
 
@@ -253,6 +266,12 @@ KPROW_ZHOU2025_LOG: dict[str, dict[str, float]] = {
 # used only as a FALLBACK for congeners absent from the measured dict.
 KPL_PER_CF2: dict[str, float] = {"carboxylate": 0.36, "sulfonate": 0.37}
 KPL_PER_CF2_DROGE = 0.53       # alt PFSA slope (droge2019)                          [verified]
+# Per-ether-O membrane-binding (K_PL) offset, ANCHORED on the GenX measurement:
+# Chen2025 K_MW(GenX) = 117.5 vs the CF2-only carboxylate QSPR at nPFC=5 (363 L/kg)
+# => -0.49 log per backbone ether-O.  Consistent with Chen2025's finding that the
+# ether bond REDUCES K_MW (PFECA < polyfluoro-COOH).  PROVISIONAL: a single anchor
+# (GenX), assumed linear in the number of ether oxygens.
+KPL_ETHER_LOG_OFFSET = -0.49   # log10 L/kg per backbone ether-O  [GenX-anchored, provisional]
 KPL_ANCHOR_LKG = 10.0 ** KMW_CHEN2025_LOG["PFOA"]   # measured PFOA anchor (~1905 L/kg)
 KPL_ANCHOR_NPFC = 7
 KPROT_ANCHOR_LKG = 12.0        # K_prot last-resort fallback [L/kg] (~ measured soy PFOA),
@@ -265,19 +284,28 @@ KCW_ANCHOR_LKG = 20.0          # K_cw cell-wall  [PLACEHOLDER -- no coefficient 
 
 def k_pl(n_perfluoroC: float | None = None, head_group: str = "carboxylate",
          anchor: float = KPL_ANCHOR_LKG, anchor_npfc: int = KPL_ANCHOR_NPFC,
-         *, name: str | None = None) -> float:
+         *, n_ether_O: int = 0, name: str | None = None) -> float:
     """Phospholipid membrane-water partition K_PL [L/kg lipid].  [C4]
 
     Prefers the MEASURED chen2025 K_MW when ``name`` is a known congener; otherwise
-    falls back to the per-CF2 slope from the measured PFOA anchor:
-        log K_PL = log(anchor) + slope*(nPFC - anchor_npfc).
+    a group-contribution QSPR: the per-CF2 slope from the measured PFOA anchor plus
+    a per-ether-O term (GenX-anchored)::
+
+        log K_PL = log(anchor) + slope*(nPFC - anchor_npfc)
+                   + n_ether_O * KPL_ETHER_LOG_OFFSET
+
+    So a novel ether-PFCA (e.g. an ADONA-type PFECA) gets the Chen2025 ether
+    REDUCTION instead of the plain carboxylate value.  Sulfonamide head groups have
+    no measured slope -> the carboxylate slope is used (flagged by the caller).
     """
     if name is not None and name in KMW_CHEN2025_LOG:
         return float(np.power(10.0, KMW_CHEN2025_LOG[name]))
     if n_perfluoroC is None:
         raise ValueError("k_pl needs a measured `name` or an `n_perfluoroC` (fallback)")
-    slope = KPL_PER_CF2[head_group]
-    return float(anchor) * float(np.power(10.0, slope * (n_perfluoroC - anchor_npfc)))
+    slope = KPL_PER_CF2.get(head_group, KPL_PER_CF2["carboxylate"])
+    logK = (np.log10(anchor) + slope * (n_perfluoroC - anchor_npfc)
+            + int(n_ether_O) * KPL_ETHER_LOG_OFFSET)
+    return float(np.power(10.0, logK))
 
 
 def _kprot_chain_factor(n_perfluoroC: float) -> float:

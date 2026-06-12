@@ -236,3 +236,23 @@ def test_literature_parametrised_model_runs_and_orders_root_straw_grain():
 if __name__ == "__main__":
     import sys
     sys.exit(pytest.main([__file__, "-v"]))
+
+
+def test_ether_kpl_term_reproduces_genx():
+    """The GenX-anchored ether K_PL term: a novel nPFC=5 1-ether carboxylate
+    reproduces the measured GenX K_PL (~118), not the plain carboxylate (~363)."""
+    plain = lp.k_pl(5, "carboxylate")
+    ether1 = lp.k_pl(5, "carboxylate", n_ether_O=1)
+    assert plain == pytest.approx(363, abs=5)
+    assert ether1 == pytest.approx(117.5, rel=0.05)         # GenX measured K_MW (Chen2025)
+    assert lp.k_pl(5, "carboxylate", n_ether_O=2) < ether1  # more ether-O -> lower binding
+
+
+def test_koc_accepts_ether_and_sulfonamide():
+    """koc no longer raises for ether/sulfonamide (the ether term is a documented GAP=0)."""
+    base = lp.koc(5, "carboxylate")
+    assert lp.koc(5, "ether", n_ether_O=1) == pytest.approx(base)   # GAP -> carboxylate approx
+    assert lp.koc(5, "sulfonamide") == pytest.approx(base)
+    assert lp.koc(5, "sulfonate") > base                            # sulfonate offset still applies
+    with pytest.raises(ValueError):
+        lp.koc(5, "phosphate-diester")                              # unknown head group rejected

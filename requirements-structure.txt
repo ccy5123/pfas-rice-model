@@ -1,0 +1,3 @@
+# Optional: SMILES (chemical structure) -> model parameters adapter (src/pfas_structure.py)
+# Lets any PFAS be parameterised from its structure (RDKit substructure/descriptors).
+rdkit>=2023.9

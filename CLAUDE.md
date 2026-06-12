@@ -39,27 +39,30 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── pfas_rice_plant_module_4pool.py       # basis-A 4-compartment ODE (CANONICAL core)
 │   ├── pfas_rice_plant_module_4pool_surf.py  #  + K_surf (Fe/Mn-plaque dead-end pool)
 │   ├── pfas_rice_plant_module_5pool.py       #  + explicit lignin pool
-│   ├── pfas_rice_plant_module_nstem.py       # N serial stem segments (multi-height; GAP-B fix)
+│   ├── pfas_rice_plant_module_nstem.py       # N serial stem segments (multi-height MIXER; Yamazaki gradient)
+│   ├── pfas_rice_plant_module_nstem_leaf.py  # N stem segs + explicit leaf (transpiration deposition+RETENTION; Tang over-translocation fix)
 │   ├── pfas_rice_plant_module.py             # import alias → 4pool_surf (basis-A); legacy name
 │   ├── soil_paddy.py                         # Freundlich soil → C_w^o(t) (legacy redox sign)
 │   ├── soil_paddy_redox_corrected.py         # W3-corrected redox (dilution+leaching; USE THIS)
 │   ├── soil_hydrus.py                        # REAL HYDRUS-1D run via phydrus → Cwo(t),Qtp(t) (Method A; wired + app live mode)
 │   ├── calibration.py                        # Tier-1 calibration (scipy)
 │   ├── literature_params.py                  # literature QSPRs/anchors (cited) + Kim2019 BAF
-│   ├── model_api.py                          # UI-agnostic wrapper: simulate(), driver/soil/biomon helpers
+│   ├── model_api.py                          # UI-agnostic wrapper: simulate(), simulate_from_smiles(), driver/soil/biomon helpers
+│   ├── pfas_structure.py                      # SMILES (structure) → Compound adapter (RDKit; read-across + QSPR)
 │   └── plots.py                              # Plotly builders: fig_plant_schematic (colormap), drivers, ...
 ├── examples/                         # ready-to-load CSVs for app.py (HYDRUS drivers + biomonitoring)
 ├── params/                           # parameters.json (CANONICAL) + source CSVs (Bk, f_xy, Kcw, ...)
 ├── data_obs/                         # observed BAF/TF (Yamazaki, Li2025) + yamazaki_stem_height.csv
 ├── validation/                       # S6 + nstem + hydrus_coupled_run reproduction scripts + figures
 ├── docs/
+│   ├── OVERVIEW_KR.md                # ★ 종합 진입점: 기능·검증·데이터공백·필요실험·notation 표 (+모식도)
 │   ├── pfas_rice_compartmental_model.tex / dpu_model_summary_corrected.tex
 │   ├── DELIVERABLE_GAP_A_Kcw.md / DELIVERABLE_GAP_B_fxy.md / theory_anchor.tex / H8_handoff_S6_final.md / sources.csv
 │   ├── visualization_tool.md         # app.py guide: plant/soil map, 4 modes, HYDRUS I/O, biomonitoring
 │   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
 ├── external/hydrus_source/           # git submodule → github.com/phydrus/source_code
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (92): plant, soil, hydrus, calibration, literature params, API, plots
+└── tests/                            # pytest (111): plant, soil, hydrus, calibration, lit params, API, plots, structure(SMILES)
 
 ```
 
@@ -160,6 +163,27 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `docs/nstem_gradient_exploration.md`. NOTE: the earlier "monotone f_xy reproduces the gradient"
   claim was a **placeholder-biomass artifact** (real ORYZA biomass moves the crossover `B* ~
   Q_s/(M_s·μ_s)` above the congener range).
+- **Tang over-translocation fix (redistributed shoot)** — `src/pfas_rice_plant_module_nstem_leaf.py`
+  (`NStemLeafModel`; `model_api.simulate_nstem_leaf`): the Tang 2026 OOS check flagged the single-straw
+  core's **empty stem (pass-through) + leaf-sink runaway** (leaf held ~81% of the plant burden). Fixed by
+  resolving the stem into N segments AND **applying transpiration deposition+RETENTION to every shoot organ
+  (not just the leaf)** — each organ retains its own transpired solute (a partial terminal), so the shoot
+  burden is redistributed root→stem→leaf→grain. Two crop-architecture levers: `stem_transp_frac`,
+  `retention` (default 0.45/0.6, NOT point-fit to Tang); mass-conserving (sole source `M_root·j_R`;
+  `tests/test_nstem_leaf.py`). **Result** (`validation/tang2026_nstem_validation.py`,
+  `docs/VALIDATION_TANG2026_NSTEM_KR.md`): the shoot **tissue PATTERN is cured** (shape RMSE 0.84→0.11;
+  PFOA stalk 0.03→1.27, leaf 5.95→2.04, grain 0.41→0.93, PFOA RMSE 1.03→0.06; leaf burden 81%→30%).
+  **Then the across-congener absolute LEVEL was calibrated — the lever is `f_xy`, NOT `B_root`**: `B_root`(PFOS)=49
+  is CONFIRMED by Yamazaki root data (PFOS root BAF 5.93 ≈ 12× PFOA 0.49) so it is correct; the residual traces to
+  (i) the monotone `f_xy`(PFOS)=0.013 OVER-penalizing PFSA (the head-group exp(−1.1) offset) — Yamazaki's own W2 fit
+  needs 0.142, and a mass-balance argument confirms 0.013 under-delivers; (ii) the GenX provisional `f_xy`=0.233
+  (short-chain-PFCA × ether offset) being ~18× too high. Recalibrating `f_xy` (PFOS → W2 0.142 = independent
+  Yamazaki; GenX → 0.013 = Tang, no independent data) drops **overall RMSE 1.28 → 1.01 (structure) → 0.18 (f_xy)**,
+  all three congeners within order-of-magnitude. The calibrated f_xy is applied as an **override in the validation
+  only** — `params/parameters.json` is UNCHANGED (provenance preserved); follow-up is to re-fit the monotone PFSA
+  head-group offset + an ether-PFAS QSPR for GenX (docs §6). COMPLEMENTARY to `nstem` (mixer, Yamazaki within-stem
+  gradient): nstem_leaf uses RETENTION for the Tang stalk/leaf/grain split. Default model unchanged (4pool_surf);
+  opt-in module.
 - **f_xy absolute scale (task #7)**: measured `Q_TP(t)` (`forcing_rice`, peak ~0.10 L/d/hill, T/ET=0.42)
   and `M_s(t)` (`growth_rice`, ORYZA IR72, HI~0.53) are built. The absolute f_xy is pinned via the
   **aggregate** root/straw/grain BAF (not the within-stem gradient) — see `validation/`.
@@ -184,6 +208,30 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `tests/test_soil_hydrus.py` skips the engine tests when unbuilt. Still **Method A** (one-way; HYDRUS
   unmodified). Originally implemented on branch `claude/epic-knuth-npt0cy`; the soil piece is cherry-picked here.
 
+- **Structure (SMILES) input — parameterise ANY PFAS (`src/pfas_structure.py`)**: the "option-3"
+  front end that lets a **chemical structure** be the model input, not only the curated 13 congeners.
+  RDKit parses the SMILES → structural descriptors (`n_perfluoroC`, `head_group` via SMARTS, `n_ether_O`,
+  `n_CF3`, `branched`, MW/formula, `is_linear`) → a `Compound` by **(1) MEASURED read-across** when the
+  (canonical) structure matches a curated congener (uses `params/parameters.json` exactly — a SMILES-built
+  PFOA reproduces the named PFOA) **or (2) the literature_params QSPR** for a novel structure (per-CF2 slope
+  + head-group offset; ether/sulfonamide flagged PROVISIONAL). Binding (`K_PL/K_prot/K_cw`) + speciation
+  (`f_d` from head-group pKa) come from structure; **`f_xy` is NOT structure-derivable** — curated monotone
+  for knowns, PFCA-series interpolation × head-group offset for novels (provisional). `model_api.simulate_from_smiles()`
+  runs the full ODE (delegates to the canonical path for knowns; injects a custom record via the new
+  `simulate(..., record=)` arg for novels) and returns the usual dict + `descriptors` + `provisional`.
+  Sulfonamides/neutral species are detected and flagged (violate the permanent-anion `f_d≈1` assumption).
+  RDKit is **optional** (`requirements-structure.txt`); `tests/test_pfas_structure.py` (23) skips when absent.
+  Docs: `docs/structure_input.md`.
+- **Ether fragment QSPR term (`literature_params.k_pl`/`koc`)**: `koc`/`k_pl` are now group-contribution —
+  `k_pl` adds a per-ether-O term `KPL_ETHER_LOG_OFFSET = -0.49 log` **anchored on the GenX measurement**
+  (Chen2025 K_MW 117.5 vs the CF2-only QSPR at nPFC=5 → −0.49; matches "ether REDUCES K_MW"; provisional,
+  single anchor). So a novel ether-PFCA (ADONA-type) gets a reduced K_PL, not the carboxylate value. `koc`
+  now accepts `ether`/`sulfonamide` head groups (was a ValueError) but `KOC_ETHER_LOG_OFFSET = 0` is an
+  explicit **GAP** (no measured ether/sulfonamide soil Koc in the DB; the GenX BCF over-prediction was fixed
+  by the f_xy recalibration, not Koc). Wired into `pfas_structure` (novel ethers use the ether term).
+  Tests in `test_literature_params.py` (ether term reproduces GenX; koc graceful). Remaining: sulfonamide
+  K_PL slope + ether/sulfonamide Koc need data (docs/structure_input.md §Next steps).
+
 ## 7. Build & run
 - `pip install -r requirements.txt`
 - **Main reproduction**: `python reproduce_demo.py` (Yamazaki BAF, W2 fit, RMSE≈0.029);
@@ -206,7 +254,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   python validation/hydrus_coupled_run.py             # full soil→plant + figure/CSV
   ```
 - Calibration: `python src/calibration.py`; Literature params: `python src/literature_params.py`.
-- Tests: `pip install pytest && pytest` (92 passing; HYDRUS engine tests in `test_soil_hydrus.py`
+- **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
+  `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
+  `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
+- Tests: `pip install pytest && pytest` (111 passing; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
   additionally run when the engine is built, else auto-skip).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
