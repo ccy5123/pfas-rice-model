@@ -90,7 +90,21 @@ C_k = B_k · C_w,k          BAF = C_k / C_w^o          TF = C_k / C_root
 
 단쇄(약흡착)는 담수 중 거의 0으로 누출 → 상수-`C_wo` 가정이 grain/straw BAF를 ~2–4× 과대; 장쇄는 완충됨.
 
-### 3.3 정직한 결론
+### 3.3 재검증(일관성/과적합) 점검 — `validation/revalidation_crosscheck.py`
+이번 세션의 Tang-기반 변경(재배분 shoot 모델 + f_xy 재보정)이 **다른 데이터셋에서도 성립하는지(과적합 아닌지)**
+교차 점검했습니다. *canonical 파라미터·기본 4pool은 불변*이라 이전 검증을 그대로 재실행하면 **수치가 동일**(테스트
+111개가 이미 보증) — 의미 있는 건 일관성 점검입니다:
+
+| 점검 | 결과 | 결론 |
+|---|---|---|
+| Yamazaki(보정) — 재배분 shoot이 재현하나 | nstem-W2 RMSE **0.34** ≈ 4pool-W2 0.37 | shoot 수정이 **보정데이터를 그대로 재현**(과적합 아님) |
+| 〃 nstem-mono | 0.99 | 나쁜 건 **monotone f_xy** 탓이지 shoot 모델 탓 아님 |
+| PFOS f_xy 재보정(0.013→0.142) | straw 0.26→2.37 (obs 4.35) | monotone PFSA f_xy 과소가 **Tang·Yamazaki 양쪽에서 확인**(교차 확증) |
+| Kim grain(OOS) — shoot 모델 영향 | nstem-W2 0.96 < 4pool-W2 1.31 | 깨뜨리지 않고 약간 개선; 장쇄 grain 급등은 여전히 lipid 메커니즘 필요 |
+
+→ **변경은 Tang에 과적합이 아니며, "monotone f_xy 과소" 진단은 교차 데이터셋으로 확증**됩니다.
+
+### 3.4 정직한 결론
 이 모델은 **(a) 결합을 독립 측정으로 받치고 (b) 이행을 Yamazaki로 보정한 뒤 (c) 제한된 OOS로 방향성을
 확인한 단계**입니다. *완전한 예측 검증이 아님* — 가장 큰 공백은 깨끗한 **조직·시간 분해 독립 데이터**입니다(§4–5).
 
@@ -208,6 +222,7 @@ pip install -r requirements.txt
 python reproduce_demo.py                          # Yamazaki 보정 (log10 RMSE 0.029)
 python validation/validation_summary.py           # (A)Yamazaki/(B)Kim/(C)Li 그림
 python validation/tang2026_nstem_validation.py     # Tang 구조+f_xy 보정 그림 (RMSE 0.18)
+python validation/revalidation_crosscheck.py       # 변경의 교차 일관성(과적합) 점검
 python validation/hydrus_coupled_run.py            # 실제 HYDRUS-1D 토양→식물 (엔진 빌드 시)
 pip install -r requirements-structure.txt          # RDKit (구조 입력)
 python src/pfas_structure.py                        # SMILES → descriptors → Compound
