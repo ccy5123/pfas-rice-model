@@ -1,0 +1,11 @@
+# Streamlit dashboard theme (cosmetic; safe to delete). Used by `streamlit run app.py`
+# and by Streamlit Community Cloud.
+[theme]
+base = "light"
+primaryColor = "#2e7d32"          # rice green (accent: sliders, buttons)
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f3f6f0"
+font = "sans serif"
+
+[server]
+headless = true

@@ -1,3 +1,10 @@
+# PFAS-rice model + Streamlit dashboard -- the full stack the app needs.
+# This single file is what Streamlit Community Cloud installs (deploy app.py).
+# core model:
 numpy>=1.23
 scipy>=1.10
 matplotlib>=3.6
+# dashboard (app.py / `streamlit run app.py`):
+streamlit>=1.30
+plotly>=5.18
+pandas>=1.5

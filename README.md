@@ -69,9 +69,15 @@ compartment by its PFAS accumulation** (a heat colormap you can scrub through th
 alongside interactive Plotly time series (hover, zoom, legend-toggle):
 
 ```bash
-pip install -r requirements.txt -r requirements-app.txt
+pip install -r requirements.txt     # full app stack (numpy/scipy/matplotlib + streamlit/plotly/pandas)
 streamlit run app.py
 ```
+
+**Deploy to the web (Streamlit Community Cloud — free, share by URL):** push this repo to
+GitHub, then on [share.streamlit.io](https://share.streamlit.io) pick the repo, branch, and
+`app.py` → Deploy. `requirements.txt` is the full app stack, so it deploys as-is (RDKit/HYDRUS
+are optional and the app hides the live-HYDRUS mode when the engine is absent). `requirements-app.txt`
+holds only optional extras (kaleido PNG export, phydrus). See `docs/deploy.md`.
 
 **🗺️ Plant & soil map** — the headline view: a fibrous-rooted rice plant with arching
 culms, long leaves and drooping grain panicles, each organ filled on a shared colorbar by

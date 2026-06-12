@@ -1,9 +1,11 @@
-streamlit>=1.30
-plotly>=5.18
-pandas>=1.5
-# optional: static PNG export of the Plotly figures (needs Chrome for kaleido v1)
-#   pip install kaleido && plotly_get_chrome
+# Optional EXTRAS for the dashboard. The app runs WITHOUT these -- the core app
+# deps (streamlit/plotly/pandas) now live in requirements.txt, so `streamlit run
+# app.py` only needs `pip install -r requirements.txt`.
+#
+# Uncomment if you want them locally:
+#   kaleido  -- static PNG export of the Plotly figures (needs Chrome for kaleido v1):
+#               pip install kaleido && plotly_get_chrome
+#   phydrus  -- the live "Run HYDRUS-1D" mode (also build the engine -- see
+#               docs/visualization_tool.md and src/soil_hydrus.py)
 # kaleido>=0.2
-# optional: the live "Run HYDRUS-1D" mode (also build the engine — see
-# docs/visualization_tool.md and src/soil_hydrus.py)
 # phydrus>=0.2
