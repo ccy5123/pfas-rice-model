@@ -100,10 +100,17 @@ Curated DB: `literature_db/` C1 (rice BAF) · C2 (forcing) · C3 (QSPR/sorption)
   → all current isotherms are aerobic; flooded redox governs C_w^o (DB gap, HIGH).
 - **Real field flooding schedule + site soil/loading**, and reliable **per-congener** pore
   water (Li is group-water).
+- **Ether/sulfonamide soil Koc** — no measured PFECA/sulfonamide paddy Koc exists, so the
+  structure adapter's `KOC_ETHER_LOG_OFFSET = 0` (carboxylate approximation; Gap_Analysis C3).
+  Needs batch Koc on ether-PFCAs (GenX/ADONA) + FOSA-type sulfonamides.
 
 ### ⑤ Scope & reliability
 - **GenX / F-53B / 6:2 FTS** rice data (very sparse; authentic standards already procured).
 - **Very-long-chain (PFDoDA+)** analytical reliability — extend data above MQL.
+- **Structure-adapter binding QSPR** (`src/pfas_structure.py`) — the per-ether-O **K_PL** term
+  (`KPL_ETHER_LOG_OFFSET = −0.49 log`) rests on a **single anchor (GenX)**, and the
+  **sulfonamide K_PL slope has no data** (uses the carboxylate slope). Needs more measured
+  ether/sulfonamide K_MW to multi-anchor (Gap_Analysis C4).
 
 ---
 
