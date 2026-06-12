@@ -61,7 +61,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
 ├── external/hydrus_source/           # git submodule → github.com/phydrus/source_code
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (108): plant, soil, hydrus, calibration, lit params, API, plots, structure(SMILES)
+└── tests/                            # pytest (111): plant, soil, hydrus, calibration, lit params, API, plots, structure(SMILES)
 
 ```
 
@@ -219,8 +219,17 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   runs the full ODE (delegates to the canonical path for knowns; injects a custom record via the new
   `simulate(..., record=)` arg for novels) and returns the usual dict + `descriptors` + `provisional`.
   Sulfonamides/neutral species are detected and flagged (violate the permanent-anion `f_d≈1` assumption).
-  RDKit is **optional** (`requirements-structure.txt`); `tests/test_pfas_structure.py` (22) skips when absent.
-  Docs: `docs/structure_input.md`. Follow-up: ether/sulfonamide **fragment QSPR** terms (close the GenX Koc gap).
+  RDKit is **optional** (`requirements-structure.txt`); `tests/test_pfas_structure.py` (23) skips when absent.
+  Docs: `docs/structure_input.md`.
+- **Ether fragment QSPR term (`literature_params.k_pl`/`koc`)**: `koc`/`k_pl` are now group-contribution —
+  `k_pl` adds a per-ether-O term `KPL_ETHER_LOG_OFFSET = -0.49 log` **anchored on the GenX measurement**
+  (Chen2025 K_MW 117.5 vs the CF2-only QSPR at nPFC=5 → −0.49; matches "ether REDUCES K_MW"; provisional,
+  single anchor). So a novel ether-PFCA (ADONA-type) gets a reduced K_PL, not the carboxylate value. `koc`
+  now accepts `ether`/`sulfonamide` head groups (was a ValueError) but `KOC_ETHER_LOG_OFFSET = 0` is an
+  explicit **GAP** (no measured ether/sulfonamide soil Koc in the DB; the GenX BCF over-prediction was fixed
+  by the f_xy recalibration, not Koc). Wired into `pfas_structure` (novel ethers use the ether term).
+  Tests in `test_literature_params.py` (ether term reproduces GenX; koc graceful). Remaining: sulfonamide
+  K_PL slope + ether/sulfonamide Koc need data (docs/structure_input.md §Next steps).
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -247,7 +256,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (108 passing; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
+- Tests: `pip install pytest && pytest` (111 passing; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
   additionally run when the engine is built, else auto-skip).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html

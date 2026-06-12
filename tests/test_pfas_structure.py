@@ -104,3 +104,13 @@ def test_simulate_from_smiles_runs_novel():
     r = api.simulate_from_smiles("OC(=O)" + "C(F)(F)" * 11 + "C(F)(F)F", season=150.0)  # C13
     assert r["success"] and r["provisional"] is True
     assert r["baf_final"]["root"] > 0 and r["descriptors"].n_perfluoroC == 12
+
+
+def test_novel_ether_kpl_is_reduced_via_adapter():
+    """A novel ether-PFCA (ADONA-like, 2 backbone O) gets the ether-reduced K_PL."""
+    import literature_params as L
+    cmpd, d = ps.compound_from_smiles("OC(=O)C(F)(F)OC(F)(F)C(F)(F)OC(F)(F)C(F)(F)F")
+    assert d.matched_name is None and d.n_ether_O == 2
+    # ether-corrected K_PL is well below the plain carboxylate value at this nPFC
+    assert cmpd.K_PL < L.k_pl(d.n_perfluoroC, "carboxylate")
+    assert any("ether" in n for n in d.notes)

@@ -268,7 +268,9 @@ def compound_from_smiles(smiles: str, *, name: str | None = None,
             K_PL = float(10.0 ** _KMW_LOG_EXTRA[known]); kpl_src = f"measured (Chen2025, {known})"
         else:
             binding_hg = d.head_group if d.head_group in L.KPL_PER_CF2 else "carboxylate"
-            K_PL = L.k_pl(npf, binding_hg); kpl_src = f"QSPR (CF2 slope, {binding_hg})"
+            K_PL = L.k_pl(npf, binding_hg, n_ether_O=d.n_ether_O)
+            kpl_src = (f"QSPR (CF2 slope, {binding_hg}"
+                       + (f", {d.n_ether_O}x ether {L.KPL_ETHER_LOG_OFFSET:+.2f}log)" if d.n_ether_O else ")"))
         K_prot = L.k_prot(npf, plant=plant_protein); kprot_src = "QSPR (chain factor)"
         off_class = d.transport_class if d.transport_class in L.FXY_HEADGROUP_LN_OFFSET else "carboxylate"
         f_xy_rec = L.f_xy_headgroup(_fxy_carboxylate(npf), off_class)
