@@ -189,8 +189,13 @@ _GRAIN_PATHS = [_ellipse_path(*g) for g in _GRAINS]
 # marker / label anchors (SVG coords -> flipped) shared by static + animated builders
 _MARK = {"root": (300, _fy(612)), "stem": (264, _fy(430)), "leaf": (210, _fy(455)),
          "grain": (395, _fy(240)), "straw": (240, _fy(470))}
-_LABEL = {"root": (118, _fy(672)), "stem": (66, _fy(470)), "leaf": (66, _fy(360)),
-          "grain": (486, _fy(150)), "straw": (66, _fy(500))}
+# label-box anchors (SVG coords -> flipped) + grow-inward (xanchor,yanchor) so the
+# boxes always stay inside the [20,600]x[120,680] frame regardless of side.
+_LABEL = {"root":  (150, _fy(645), "center", "bottom"),
+          "stem":  (45,  _fy(478), "left",   "middle"),
+          "leaf":  (45,  _fy(330), "left",   "middle"),
+          "grain": (560, _fy(168), "right",  "top"),
+          "straw": (45,  _fy(500), "left",   "middle")}
 
 
 def _frac(v, cmin, cmax):
@@ -229,8 +234,8 @@ def _shapes_for(colors, line="#4f4f4f"):
         S.append(dict(type="path", path=pth, fillcolor=colors["leaf"], line=dict(color=line, width=1)))
     for pth in _LEAF_VEINS:
         S.append(dict(type="path", path=pth, fillcolor=_NONE, line=dict(color="rgba(35,35,35,0.22)", width=1)))
-    # stem C-curve: dark outline + stem-colour fill, then nodes
-    S.append(dict(type="path", path=_STEM_PATH, fillcolor=_NONE, line=dict(color=line, width=11)))
+    # stem C-curve: thin dark edge + stem-colour fill, then nodes
+    S.append(dict(type="path", path=_STEM_PATH, fillcolor=_NONE, line=dict(color=line, width=8)))
     S.append(dict(type="path", path=_STEM_PATH, fillcolor=_NONE, line=dict(color=colors["stem"], width=7)))
     for (cx, cy, rx, ry, rot) in _NODES:
         S.append(dict(type="path", path=_ellipse_path(cx, cy, rx, ry, rot, 14),
@@ -281,39 +286,47 @@ def fig_plant_schematic(values, *, cmin, cmax, label="tissue conc [µg/kg]",
 
     # marker points (carry the colorbar + hover); labelled with arrows
     pts = _marker_points(values, straw_only)
+    _ink = "#4a463c"                                     # dark ink (readable on the cream bg)
     fig.add_scatter(
         x=[p[2] for p in pts], y=[p[3] for p in pts], mode="markers",
         marker=dict(size=15, color=[p[1] for p in pts], colorscale=colorscale,
                     cmin=cmin, cmax=cmax, line=dict(color="#333", width=1),
-                    colorbar=dict(title=label, thickness=16, len=0.85)),
+                    colorbar=dict(title=dict(text=label, font=dict(color=_ink)),
+                                  tickfont=dict(color=_ink), thickness=16, len=0.85,
+                                  outlinecolor="#c9c2b2", outlinewidth=1)),
         text=[p[0] for p in pts], customdata=[p[1] for p in pts],
         hovertemplate="%{text}: %{customdata:.3g}<extra></extra>", showlegend=False)
 
     ann = []
     for name, v, mx, my in pts:
-        lx, ly = _LABEL.get(name, (mx, my))
+        lx, ly, xa, ya = _LABEL.get(name, (mx, my, "center", "middle"))
         txt = f"<b>{name}</b><br>{v:.3g}"
         if obs and name in obs and obs[name] is not None:
-            txt += f"<br><span style='color:#888'>obs {obs[name]:.3g}</span>"
+            txt += f"<br><span style='color:#8a8270'>obs {obs[name]:.3g}</span>"
         ann.append(dict(x=mx, y=my, ax=lx, ay=ly, axref="x", ayref="y",
-                        text=txt, showarrow=True, arrowhead=0, arrowcolor="#999",
-                        font=dict(size=12), align="center",
-                        bgcolor="rgba(255,255,255,0.75)", bordercolor="#ccc", borderwidth=1))
+                        xanchor=xa, yanchor=ya,
+                        text=txt, showarrow=True, arrowhead=0, arrowcolor="#9a9384", arrowwidth=1,
+                        font=dict(size=12, color=_ink), align="center",
+                        bgcolor="rgba(255,253,247,0.92)", bordercolor="#b9b2a2", borderwidth=1))
     if Cwo is not None:
         ann.append(dict(x=476, y=_fy(610), text=f"pore water<br>Cwᵒ={Cwo:.3g} µg/L", showarrow=False,
-                        font=dict(size=11, color="#f0e6d2"), align="center",
-                        bgcolor="rgba(85,58,31,0.78)", bordercolor="#835C36", borderwidth=1))
+                        xanchor="center", yanchor="middle",
+                        font=dict(size=11, color="#f3ead4"), align="center",
+                        bgcolor="rgba(85,58,31,0.85)", bordercolor="#835C36", borderwidth=1))
     if title is None:
         title = "Plant + soil accumulation map"
         if t is not None:
             title += f"  (day {t:.0f})"
+    # Self-contained light styling (explicit cream paper + dark ink) so the figure
+    # stays readable under Streamlit dark mode too (render it with theme=None).
     fig.update_layout(
-        title=title, annotations=ann,
+        title=dict(text=title, font=dict(color="#5a554a")), annotations=ann,
         xaxis=dict(visible=False, range=[20, 600], fixedrange=True),
         yaxis=dict(visible=False, range=[120, 680], fixedrange=True,
                    scaleanchor="x", scaleratio=1.0),
-        template="plotly_white", margin=dict(l=10, r=10, t=50, b=10),
-        height=580, plot_bgcolor="rgba(250,247,239,0.65)")
+        template="plotly_white", margin=dict(l=14, r=14, t=52, b=14),
+        height=580, paper_bgcolor="#FAF7EF", plot_bgcolor="#FAF7EF",
+        font=dict(color="#5a554a"))
     return fig
 
 
