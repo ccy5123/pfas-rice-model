@@ -236,7 +236,7 @@ with tabs[0]:
         fig = plots.fig_plant_schematic(
             vals, cmin=0.0, cmax=cmax, label="measured conc [µg/kg]",
             Cwo=measured_bio.get("Cwo"), title=f"{congener} — measured tissue map")
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, width="stretch", theme=None)
         st.caption("Compartments coloured by the MEASURED concentration. Stem/leaf share the "
                    "straw colour when only straw is reported.")
     else:
@@ -248,11 +248,11 @@ with tabs[0]:
         day = cc3.slider("Day after transplant", float(res["t"][0]), float(res["t"][-1]),
                          float(res["t"][-1]), 1.0, disabled=animate)
         if animate:
-            st.plotly_chart(plots.fig_schematic_animated(res, metric_key), width="stretch")
+            st.plotly_chart(plots.fig_schematic_animated(res, metric_key), width="stretch", theme=None)
         else:
             ti = _nearest_index(res["t"], day)
             st.plotly_chart(plots.fig_schematic_from_res(res, metric_key, ti, obs=None),
-                            width="stretch")
+                            width="stretch", theme=None)
         st.caption("Each compartment is filled by its accumulation on a shared colorbar — drag the "
                    "day slider (or hit ▶) to watch where PFAS builds up. Leaf is xylem-terminal, "
                    "grain is phloem-fed; the root retains the anion (low f_xy).")
