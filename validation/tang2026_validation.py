@@ -41,12 +41,17 @@ import model_api as api          # noqa: E402
 
 plt.rcParams["axes.unicode_minus"] = False
 SEASON = 150.0                                  # Tang: 150-day cycle
+F_OC = 0.016                                    # Tang soil: OM 27.4 g/kg (Table S2) -> ~1.6% OC
+THETA_G = 0.35                                  # gravimetric water content [L/kg]
+THETA_FW = np.array([0.90, 0.83, 0.78, 0.14])   # root/stem/leaf/grain fresh-water fraction
 _C = {"lipid": "#d62728", "mono": "#1f77b4", "W2": "#2ca02c", "obs": "#222222"}
 _LBL = {"lipid": "model: lipid (opt-in)", "mono": "model: monotone f_xy", "W2": "model: W2 fit"}
 # Tang tissue -> model compartment (model has one grain pool for husk+endosperm)
 TISSUE_MAP = [("TF_stalk", "stem", "stalk→stem"),
               ("TF_leaf", "leaf", "leaf→leaf"),
               ("TF_endosperm", "grain", "endosperm→grain")]
+CONG = {"PFOA": (8, "PFCA"), "PFOS": (8, "PFSA")}
+TANG_BCF_RANGE = {"PFOA": (0.181, 0.240), "PFOS": (0.217, 0.295)}   # Table S7 min..max over doses
 
 
 def load_tang():
@@ -60,17 +65,44 @@ def load_tang():
     return out
 
 
-def model_tf(nm, mode):
-    """Model TF = C_tissue/C_root at maturity (dose-independent: BAF ratio)."""
+def _run(nm, mode):
     kw = dict(measured_forcing=True, season=SEASON)
     if mode == "lipid":
-        r = api.simulate(nm, lipid_loading=True, **kw)
-    elif mode == "mono":
-        r = api.simulate(nm, f_xy_source="recommended", **kw)
-    else:
-        r = api.simulate(nm, f_xy_source="W2fit", **kw)
+        return api.simulate(nm, lipid_loading=True, **kw)
+    if mode == "mono":
+        return api.simulate(nm, f_xy_source="recommended", **kw)
+    return api.simulate(nm, f_xy_source="W2fit", **kw)
+
+
+def model_tf(nm, mode):
+    """Model TF = C_tissue/C_root at maturity (dose-independent: BAF ratio)."""
+    r = _run(nm, mode)
     root = r["baf_final"]["root"]
     return {k: r["baf_final"][k] / root for k in ("stem", "leaf", "grain")}
+
+
+def model_bcf(nm, mode):
+    """Model BCF = C_rice(dw)/C_soil, denominator built from the soil Kd (Koc·f_oc).
+
+    BCF = [Σ M·BAF / Σ M·(1−θ_fw)] / (Kd + θ_g)   (the Cw cancels; dw whole-plant
+    BAF over the soil partition Kd). Kd from the chain-length Koc QSPR at Tang's f_oc.
+    """
+    import soil_hydrus as sh
+    r = _run(nm, mode)
+    BAF = np.array([r["baf_final"][k] for k in ("root", "stem", "leaf", "grain")])
+    Mf = r["M"][-1]
+    dw_baf = float(np.sum(Mf * BAF) / np.sum(Mf * (1 - THETA_FW)))
+    n_C, grp = CONG[nm]
+    Kd = sh.paddy_kd(n_C, grp, f_oc=F_OC)
+    return dw_baf / (Kd + THETA_G), Kd
+
+
+def model_tf_traj(nm, mode):
+    """C_leaf/C_root and C_grain/C_root over the season (temporal TF)."""
+    r = _run(nm, mode)
+    t = r["t"]
+    root = np.maximum(r["conc"]["root"], 1e-9)
+    return t, r["conc"]["leaf"] / root, r["conc"]["grain"] / root
 
 
 def panel_tf(ax, nm, tang):
@@ -78,7 +110,6 @@ def panel_tf(ax, nm, tang):
     mt = {m: model_tf(nm, m) for m in ("mono", "W2", "lipid")}
     labels = [lab for _, _, lab in TISSUE_MAP]
     x = np.arange(len(labels))
-    # Tang: across-dose mean with min..max range as the error bar
     means, lo, hi = [], [], []
     for tk, _, _ in TISSUE_MAP:
         vals = np.array([v for v, _ in tf[tk].values()])
@@ -90,29 +121,55 @@ def panel_tf(ax, nm, tang):
                color=_C[m], alpha=0.9, label=_LBL[m])
     ax.set_yscale("log"); ax.set_xticks(x); ax.set_xticklabels(labels, fontsize=9)
     ax.set_ylabel("TF = tissue / root")
-    ax.set_title(f"{nm} — TF vs Tang 2026 (out-of-sample, denominator-free)", fontsize=11)
+    ax.set_title(f"({'A' if nm=='PFOA' else 'B'}) {nm} — TF vs Tang 2026 (out-of-sample, denominator-free)",
+                 fontsize=10.5)
     ax.axhline(1.0, color="#bbb", lw=0.8, ls=":")
-    ax.legend(fontsize=8, ncol=1, loc="lower left")
+    ax.legend(fontsize=7.5, ncol=1, loc="lower left")
     ax.grid(True, axis="y", which="both", alpha=0.25)
 
 
-def panel_time(ax):
-    """Model 150-d tissue trajectory (PFOA) — qualitative temporal check vs Tang."""
-    r = api.simulate("PFOA", measured_forcing=True, season=SEASON, lipid_loading=True)
-    t = r["t"]
-    for k in ("root", "stem", "leaf", "grain"):
-        ax.plot(t, r["conc"][k], lw=2, label=k)
+def panel_bcf(ax):
+    """Absolute BCF = C_rice/C_soil: model (soil Kd from Koc·f_oc) vs Tang range."""
+    names = ["PFOA", "PFOS"]
+    x = np.arange(len(names))
+    lo = [TANG_BCF_RANGE[n][0] for n in names]; hi = [TANG_BCF_RANGE[n][1] for n in names]
+    mean = [(a + b) / 2 for a, b in zip(lo, hi)]
+    ax.bar(x - 0.30, mean, 0.22, yerr=[[m - l for m, l in zip(mean, lo)], [h - m for h, m in zip(hi, mean)]],
+           capsize=4, color=_C["obs"], label="Tang 2026 (dose range)")
+    for k, m in enumerate(("mono", "W2", "lipid")):
+        ax.bar(x - 0.08 + k * 0.20, [model_bcf(n, m)[0] for n in names], 0.18,
+               color=_C[m], alpha=0.9, label=_LBL[m])
+    ax.set_yscale("log"); ax.set_xticks(x); ax.set_xticklabels(names)
+    ax.set_ylabel("BCF = C_rice(dw) / C_soil")
+    kd = {n: model_bcf(n, "mono")[1] for n in names}
+    ax.set_title(f"(C) Absolute BCF vs Tang  (soil f_oc={F_OC}; Kd PFOA={kd['PFOA']:.1f}, PFOS={kd['PFOS']:.1f} L/kg)\n"
+                 "order-of-magnitude OK; model tends to over-predict uptake", fontsize=10)
+    ax.legend(fontsize=7.5, loc="upper right")
+    ax.grid(True, axis="y", which="both", alpha=0.25)
+
+
+def panel_traj(ax):
+    """Temporal TF(t): does the model reproduce Tang's root-dominance early?"""
+    for mode, c in (("mono", _C["mono"]), ("lipid", _C["lipid"])):
+        t, lr, gr = model_tf_traj("PFOA", mode)
+        ax.plot(t, lr, color=c, lw=2, label=f"leaf/root ({mode})")
+    t, lr, gr = model_tf_traj("PFOA", "lipid")
+    ax.plot(t, np.clip(gr, 0, 30), color="#ff7f0e", lw=1.6, ls="--", label="grain/root (lipid)")
+    ax.axhline(1.0, color="#444", lw=1.0, ls=":")
+    ax.axhspan(0.01, 1.0, color="#e8f0e8", alpha=0.7)
+    ax.text(8, 0.4, "root-dominant\n(Tang: month 1)", fontsize=8, color="#3a7a3a")
     for mo in range(1, 6):
-        ax.axvline(mo * 30, color="#ddd", lw=0.7)
-    ax.set_xlabel("days after transplant (Tang: 150 d, monthly sampling)")
-    ax.set_ylabel("tissue conc [µg/kg]  (Cwᵒ=1)")
-    ax.set_title("Model PFOA 150-d trajectory (lipid)\nTang: builds over months (Table S6 time p<0.001),\n"
-                 "grain fills late, upward migration within month 1", fontsize=10)
-    ax.legend(fontsize=8.5, loc="upper left"); ax.grid(True, alpha=0.25)
+        ax.axvline(mo * 30, color="#eee", lw=0.7)
+    ax.set_yscale("log"); ax.set_ylim(0.05, 40)
+    ax.set_xlabel("days after transplant (Tang: 150 d, monthly)")
+    ax.set_ylabel("model TF = tissue / root")
+    ax.set_title("(D) Temporal TF(t), PFOA — model vs Tang's root-first finding\n"
+                 "Tang: roots dominate after month 1 (TF<1); model keeps leaf/root≫1 → over-translocation",
+                 fontsize=10)
+    ax.legend(fontsize=8, loc="upper right"); ax.grid(True, which="both", alpha=0.2)
 
 
 def scores(tang):
-    """log10 RMSE on the clean mappings (leaf, endosperm→grain) for PFOA+PFOS."""
     print(f"{'PFAS':6}{'tissue':16}{'Tang mean':>10}{'mono':>8}{'W2':>8}{'lipid':>8}")
     err = {m: [] for m in ("mono", "W2", "lipid")}
     err_clean = {m: [] for m in ("mono", "W2", "lipid")}
@@ -124,22 +181,28 @@ def scores(tang):
             for m in ("mono", "W2", "lipid"):
                 e = (np.log10(max(mt[m][mk], 1e-6)) - np.log10(to)) ** 2
                 err[m].append(e)
-                if mk != "stem":                       # stalk/stem is the known weak mapping
+                if mk != "stem":
                     err_clean[m].append(e)
     print("log10 RMSE (all 3 tissues) : " + "  ".join(f"{m}={np.sqrt(np.mean(err[m])):.2f}" for m in ("mono", "W2", "lipid")))
     print("log10 RMSE (leaf+grain only): " + "  ".join(f"{m}={np.sqrt(np.mean(err_clean[m])):.2f}" for m in ("mono", "W2", "lipid")))
+    print("\nAbsolute BCF = C_rice/C_soil (f_oc=%.3f):" % F_OC)
+    for nm in ("PFOA", "PFOS"):
+        b = {m: model_bcf(nm, m)[0] for m in ("mono", "W2", "lipid")}
+        print(f"  {nm}: Tang {TANG_BCF_RANGE[nm][0]:.2f}-{TANG_BCF_RANGE[nm][1]:.2f}  | "
+              + "  ".join(f"{m}={b[m]:.2f}" for m in ("mono", "W2", "lipid")))
 
 
 def main():
     tang = load_tang()
     print("=== Tang 2026 TF (tissue/root) — model vs observed (OOS) ===")
     scores(tang)
-    fig, axes = plt.subplots(1, 3, figsize=(16.5, 5.2))
-    panel_tf(axes[0], "PFOA", tang)
-    panel_tf(axes[1], "PFOS", tang)
-    panel_time(axes[2])
-    fig.suptitle("Out-of-sample validation vs Tang 2026 (paddy soil–rice, 150 d, 5 doses): "
-                 "TF tissue/root is denominator-free", fontsize=13, fontweight="bold", y=1.02)
+    fig, axes = plt.subplots(2, 2, figsize=(13.5, 9.6))
+    panel_tf(axes[0, 0], "PFOA", tang)
+    panel_tf(axes[0, 1], "PFOS", tang)
+    panel_bcf(axes[1, 0])
+    panel_traj(axes[1, 1])
+    fig.suptitle("Out-of-sample validation vs Tang 2026 (paddy soil–rice, 150 d, 5 doses):  "
+                 "TF (denominator-free), absolute BCF, and temporal TF(t)", fontsize=13, fontweight="bold", y=1.01)
     fig.tight_layout()
     out = os.path.join(HERE, "figures", "tang2026_validation.png")
     os.makedirs(os.path.dirname(out), exist_ok=True)
