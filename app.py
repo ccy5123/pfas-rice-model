@@ -77,21 +77,25 @@ def _simulate_smiles(smiles, **kw):
 
 
 @st.cache_data(show_spinner=False)
-def _mol_png(smiles, w=330, h=190):
-    """Render a SMILES to a 2-D structure PNG (RDKit); None if it can't be parsed."""
+def _mol_svg(smiles, w=290, h=170):
+    """2-D structure as an SVG string (RDKit, Cairo-free → works on Streamlit Cloud).
+    Returns (svg, None) on success or (None, reason) so the UI can show why it failed."""
     try:
         from rdkit import Chem
         from rdkit.Chem.Draw import rdMolDraw2D
+    except Exception as e:                                   # noqa: BLE001
+        return None, f"RDKit import failed: {e}"
+    try:
         m = Chem.MolFromSmiles(smiles)
         if m is None:
-            return None
-        d = rdMolDraw2D.MolDraw2DCairo(w, h)
+            return None, "RDKit could not parse this SMILES."
+        d = rdMolDraw2D.MolDraw2DSVG(w, h)
         d.drawOptions().padding = 0.12
         d.DrawMolecule(m)
         d.FinishDrawing()
-        return d.GetDrawingText()
-    except Exception:                                       # noqa: BLE001
-        return None
+        return d.GetDrawingText(), None
+    except Exception as e:                                   # noqa: BLE001
+        return None, f"draw error ({type(e).__name__}): {e}"
 
 
 @st.cache_data(show_spinner="Running HYDRUS-1D…")
@@ -136,11 +140,15 @@ with st.sidebar:
                        "`pip install rdkit`  (or `-r requirements-structure.txt`). "
                        "Meanwhile use **Curated congener**.")
         elif smiles:                                        # show the 2-D structure
-            png = _mol_png(smiles)
-            if png is not None:
-                st.image(png, caption="structure (RDKit)", use_container_width=True)
+            svg, why = _mol_svg(smiles)
+            if svg is not None:
+                import streamlit.components.v1 as components
+                components.html(
+                    "<div style='background:#fff;border:1px solid #ddd;border-radius:6px;"
+                    f"display:flex;justify-content:center'>{svg}</div>", height=185)
+                st.caption("structure (RDKit)")
             else:
-                st.caption("⚠ could not parse this SMILES into a structure")
+                st.caption(f"⚠ {why}")
     E_m = st.slider("Root membrane potential E_m  [mV]", -160, -90, -120, 5,
                     help="GHK anion-exclusion lever (rice −116…−140 mV; NH₄⁺ depolarises).")
     fxy_label = st.radio("Root→shoot loading f_xy",
