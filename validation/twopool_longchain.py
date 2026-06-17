@@ -157,6 +157,41 @@ def lc5_uptake_scan(name="PFDoDA", k_off=0.02):
               f"{r['grain']:6.1f}/{o['grain']:<7.1f}")
 
 
+def lc6_carrier_qspr(k_off=0.02):
+    """LC6: is the long-chain active-carrier enhancement QSPR-able? For each long chain
+    fit the Vmax multiplier (g_xy=g_ph=0, isolating uptake->root) that reproduces the
+    measured ROOT, then test whether log10(multiplier) scales smoothly with chain
+    length n_C (and with the membrane partition K_PL). A high R^2 => predictive lever;
+    a scattered set => ad-hoc."""
+    base = carr["Vmax_in"]
+    names = ["PFOA", "PFNA", "PFDA", "PFUnDA", "PFDoDA"]
+    nC, lk, lm = [], [], []
+    print("\nLC6 carrier-enhancement QSPR (Vmax multiplier to reproduce measured root):")
+    print(f"  {'PFAS':7}{'nC':>3}{'log10 K_PL':>11}{'Vmax x':>9}{'root p/o':>14}")
+    for name in names:
+        c = CONG[name]; o = obs[name]
+        f_xy = c.get("f_xy_oryza") or c["f_xy_recommended"]
+        def g(lm_):
+            r = simulate2(name, f_xy, 0.0, 0.0, k_off, vmax_in=base*10**lm_)["root"]
+            return np.log10(max(r, 1e-6)) - np.log10(o["root"])
+        a, b = 0.0, 4.0
+        if g(a)*g(b) < 0:
+            mult = 10**brentq(g, a, b, xtol=1e-2, maxiter=40)
+        else:
+            mult = 10**a if abs(g(a)) < abs(g(b)) else 10**b
+        r = simulate2(name, f_xy, 0.0, 0.0, k_off, vmax_in=base*mult)["root"]
+        nC.append(c["n_C"]); lk.append(np.log10(c["K_PL_Lkg"])); lm.append(np.log10(mult))
+        print(f"  {name:7}{c['n_C']:>3}{np.log10(c['K_PL_Lkg']):>11.2f}{mult:>8.1f}x{r:>7.1f}/{o['root']:<6.1f}")
+    nC, lk, lm = map(np.array, (nC, lk, lm))
+    def r2(x, y):
+        sl, ic = np.polyfit(x, y, 1); yp = sl*x+ic
+        ss = 1 - np.sum((y-yp)**2)/np.sum((y-np.mean(y))**2); return sl, ic, ss
+    s1, i1, r1 = r2(nC, lm); s2, i2, r2_ = r2(lk, lm)
+    print(f"  log10(Vmax mult) ~ n_C   : slope {s1:.2f}/CF2, R^2 {r1:.3f}")
+    print(f"  log10(Vmax mult) ~ logK_PL: slope {s2:.2f},     R^2 {r2_:.3f}")
+    print(f"  => carrier enhancement is {'QSPR-able (smooth in chain length)' if r1 > 0.9 else 'NOT cleanly QSPR-able'}")
+
+
 def main():
     k_off = 0.02
     print(f"2-POOL root prototype (k_off={k_off}/d slow bound store; lipid loads from mobile pool)\n")
@@ -179,6 +214,7 @@ def main():
     print("LC4 question: can the 2-pool match long-chain ROOT and SHOOT simultaneously?")
     lc5_uptake_scan("PFDoDA")
     lc5b_carrier_scan("PFDoDA")
+    lc6_carrier_qspr()
 
 
 if __name__ == "__main__":
