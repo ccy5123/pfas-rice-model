@@ -97,8 +97,8 @@ def test_fig_tang_tf_builds():
     assert len(plots.fig_tang_tf(val).data) == 2
 
 
-def test_fig_mass_builds():
+def test_fig_burden_builds():
     import model_api as api, plots
-    fig = plots.fig_mass(api.simulate("PFOA", biomass="oryza"))
+    fig = plots.fig_burden(api.simulate("PFOA", biomass="oryza"))
     assert len(fig.data) == 5                                    # 4 organs + whole plant
-    assert "kg" in fig.layout.yaxis.title.text
+    assert "µg" in fig.layout.yaxis.title.text                  # PFAS mass (burden), not biomass

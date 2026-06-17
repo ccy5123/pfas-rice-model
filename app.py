@@ -421,14 +421,14 @@ with tabs[0]:
 # ---- Tab 2: tissue concentration dynamics -----------------------------------
 with tabs[1]:
     st.plotly_chart(plots.fig_tissue(res), width="stretch")
-    st.plotly_chart(plots.fig_mass(res), width="stretch")
+    st.plotly_chart(plots.fig_burden(res), width="stretch")
     st.markdown(f"**B_k [L/kg fw]** — " + ", ".join(f"{k}: {v:.2f}" for k, v in res["B_k"].items())
                 + f"  ·  f_xy={p['f_xy']:.4g}, L_Ph={p['L_Ph']:.4g}, κ_d={p['kappa_d']:.3g}")
-    _bm = "ORYZA2000 (mechanistic carbon balance)" if biomass == "oryza" else "growth_rice (ORYZA partition + logistic)"
-    st.caption(f"Top: tissue concentration C_k(t). Bottom: organ biomass M_k(t) — the growth-dilution "
-               f"sink (μ = (dM/dt)/M → 0 at maturity, so terminal leaf/grain keep accumulating). When the "
-               f"scenario uses built-in forcings, M comes from the **{_bm}** driver (sidebar); "
-               f"HYDRUS/CSV modes use the M in the loaded driver data.")
+    st.caption("Top: tissue **concentration** C_k(t) [µg/kg] (intensive). Bottom: **PFAS mass** "
+               "(burden) = C_k(t)·M_k(t) [µg/hill] (extensive) — where the chemical actually ends up. "
+               "A tissue can be high-concentration yet low-mass (small organ), so the two views differ; "
+               "the terminal leaf/grain keep gaining mass as the organ grows. (Organ *biomass* M_k(t) is "
+               "in the **🟫 Soil & drivers** tab.)")
 
 # ---- Tab 3: soil & drivers --------------------------------------------------
 with tabs[2]:

@@ -73,9 +73,10 @@ The sidebar **“Biomass driver M(t)”** radio chooses the organ-biomass forcin
 - **growth_rice (partition + logistic)** — ORYZA IR72 partitioning imposed on a logistic total-biomass curve;
   the lightweight reconstruction and the historical **calibration basis**.
 
-The **Tissue dynamics** tab now shows two plots: tissue concentration `C_k(t)` (top) and **organ biomass
-`M_k(t)`** (bottom, `plots.fig_mass`) — the growth-dilution sink that makes the terminal leaf/grain accumulate
-(μ = (dM/dt)/M → 0 at maturity). HYDRUS/CSV modes plot the `M` supplied by the driver data. **Caveat:** the
+The **Tissue dynamics** tab now shows two plots: tissue **concentration** `C_k(t)` [µg/kg] (top, intensive) and
+the per-tissue **PFAS mass / burden** `C_k(t)·M_k(t)` [µg/hill] (bottom, `plots.fig_burden`, extensive) — *where
+the chemical actually ends up* (a tissue can be high-concentration yet low-mass). The organ **biomass** `M_k(t)`
+itself is in the *Soil & drivers* tab (`fig_drivers`). **Caveat (biomass driver):** the
 `f_xy` calibration was done on `growth_rice`, so switching to ORYZA2000 shifts BAFs (short-chain straw/grain
 ~+40–70%); the code-level `simulate(biomass=)` default stays `growth_rice` for reproducibility, while the app
 leads with ORYZA2000.

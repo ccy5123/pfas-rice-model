@@ -294,8 +294,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   balance `oryza_growth`; the more first-principles choice, consistent with the model's mechanistic/HYDRUS-coupled
   philosophy) or **`"growth_rice"`** (ORYZA IR72 partitioning on a logistic; the lightweight reconstruction). The
   **app now leads with ORYZA2000** (sidebar "Biomass driver M(t)" radio, default ORYZA2000) so Tissue-dynamics / map /
-  BAF run on the mechanistic biomass unless switched; the **Tissue-dynamics tab plots M(t)** (`plots.fig_mass`, the
-  growth-dilution sink) under the concentration plot. ORYZA biomass is ~0.01 s (no app-speed cost; `_simulate` is
+  BAF run on the mechanistic biomass unless switched; the **Tissue-dynamics tab plots the per-tissue PFAS *mass*
+  (burden) C_k·M_k** (`plots.fig_burden`, µg/hill, EXTENSIVE) under the concentration plot — where the chemical
+  actually ends up (organ *biomass* M_k(t) is already in the Soil & drivers tab). ORYZA biomass is ~0.01 s (no app-speed cost; `_simulate` is
   cached). **Honest caveat / provenance**: the f_xy/L_Ph calibration was done on `growth_rice`, and switching biomass
   shifts BAFs (short-chain straw/grain +40–70%), so the **global `simulate(biomass=)` default stays `"growth_rice"`**
   (keeps `reproduce_demo`/tests/calibration reproducible); only the *app* defaults to ORYZA2000. A full ORYZA2000-default
