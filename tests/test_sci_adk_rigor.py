@@ -32,6 +32,7 @@ RUN_LC = ROOT / "sci_adk_review" / "runs" / "pfas-rice-longchain"
 RUN_CARRIER = ROOT / "sci_adk_review" / "runs" / "pfas-rice-carrier"
 RUN_OOS = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-tang"
 RUN_OOS_LIPID = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-lipid"
+RUN_OOS_MULTI = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-multidataset"
 TRAP = ROOT / "sci_adk_review" / "runs" / "pfas-rice-trap"
 
 # Empirical predictive claims that MUST NOT be SUPPORTED (the over-claim guard).
@@ -113,6 +114,17 @@ def test_oos_lipid_run_reproduces():
     the mechanism generalizing, NOT in-sample reproduction -- it is a genuine predictive
     success and may legitimately be SUPPORTED (cf. the hyp-yamazaki/grain over-claim guard)."""
     report = verify_run(RUN_OOS_LIPID)
+    assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
+
+
+@pytest.mark.skipif(not RUN_OOS_MULTI.exists(), reason="multi-dataset OOS robustness run absent")
+def test_oos_multidataset_run_reproduces():
+    """The multi-dataset OOS robustness test (compiled via the `sci-adk run` CLI) re-derives
+    from its record (hyp-001 SUPPORTED -- the lipid mechanism's OOS generalization holds across
+    BOTH clean independent datasets: Tang per-organ TF 0.52<1.23 and Kim grain 0.48<2.05, not a
+    Tang artifact; Li 2025 confounded/inconclusive as pre-registered). Strengthens the n=3 Tang
+    result to a robust multi-dataset cross-validation."""
+    report = verify_run(RUN_OOS_MULTI)
     assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
 
 

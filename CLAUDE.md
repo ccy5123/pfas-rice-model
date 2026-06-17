@@ -393,6 +393,17 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   gained a `lipid_loading` arg; `validation/oos_tang_lipid.py`; guard `test_oos_lipid_run_reproduces` (verify exit 0,
   digest 684c31e2). This is a genuine OOS success (not in-sample reproduction), so SUPPORTED is justified — distinct from
   the hyp-yamazaki/grain over-claim guard. EXPLORATORY: lipid loading stays opt-in (default off); the core is unchanged.
+- **Multi-dataset OOS robustness (this session) — SUPPORTED, via the `sci-adk run` CLI**: the §8.1 lipid OOS success was
+  only 3 Tang congeners. `sci_adk_review/proposal_oos_multidataset.md` → `runs/pfas-rice-oos-multidataset` (CLI `sci-adk
+  run` → evi-oos-multidataset SUPPORTS → `resolve`/`verify`) transfers three model variants (monotone/free-anion, saturated
+  W2, K_PL-gated lipid) WITHOUT refit to three independent datasets via `validation/oos_multidataset.py` (= `oos_tang_lipid.py`
+  + `oos_crossdataset.py`). The lipid mechanism wins decisively on BOTH clean datasets: **Tang 2026** per-organ TF 0.52 vs
+  free-anion 1.23, and **Kim 2019** brown-rice grain BAF (excl PFOA) 0.48 vs monotone 2.05 vs W2 1.07 (reliable DF≥15%: 0.20
+  vs 1.92 vs 1.44) — and lipid uniquely captures the Kim grain long-chain RISE the baselines structurally miss. So the OOS
+  generalization is **NOT a Tang artifact** — it holds across two independent datasets (Korean field grain + Chinese pot
+  per-organ). Honest limits (pre-registered): **Li 2025** is field/group-water/surface-confounded and inconclusive (W2 wins
+  straw/root TF 0.33 vs lipid 0.57, but lipid wins grain/root 0.72 vs 1.15/1.47), and Kim long chains are low-DF (3–13%).
+  hyp-001 SUPPORTED (digest 68ebaf39); guard `test_oos_multidataset_run_reproduces`. Core unchanged; lipid stays opt-in.
 - **Leaf senescence-loss flux (this session) — fixes the ORYZA leaf-TF artifact**: with the mechanistic
   ORYZA biomass the leaf shrinks (senescence), so the growth-dilution sink `μ=(dM/dt)/M` goes NEGATIVE and the
   `−μ·C` term spuriously CONCENTRATES the leaf — but `oryza_growth` models that loss as leaf DEATH (carbon removed

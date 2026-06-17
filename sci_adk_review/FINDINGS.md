@@ -45,6 +45,9 @@ record digest `sha256:493ec872…`.
 **지질-촉진 로딩**(Yamazaki-적합, Tang 미적합)을 켜면 그 Tang 표본외 RMSE가 **1.23 → 0.52**로
 떨어져 in-sample 수준에 도달하고 지배적 실패(PFOS ~40–200× 과소)가 교정된다 — **프로젝트의 첫
 강한 교차데이터셋 표본외 예측 성공**(올바른 *메커니즘* 추가, 추가 적합 아님; Chen2025 corroborate).
+이 일반화는 **Tang 한정 우연이 아니다**(§8.2, `pfas-rice-oos-multidataset`): 두 번째 독립
+데이터셋 **Kim 2019 곡립**에서도 지질이 명확히 우세(0.48 vs mono 2.05; 신뢰 0.20 vs 1.92)해
+**두 깨끗한 데이터셋에 걸쳐 견고**(Li 현장 데이터는 사전등록상 교란/inconclusive).
 
 ---
 
@@ -316,6 +319,29 @@ REFUTED.** `sci-adk run`(Spec 컴파일) → evi-oos-tang(measured, REFUTES) + v
 재현: `python validation/oos_tang_lipid.py`. NOTE: 이는 in-sample 재현을 예측으로 오칭한 것이
 아니라 **진짜 표본외 성공**이므로 SUPPORTED가 정당(hyp-yamazaki/grain 과대주장 가드와 구분).
 
+### 8.2 다중 데이터셋 견고성 — Tang 한정 우연이 아니다 (`runs/pfas-rice-oos-multidataset`)
+
+§8.1은 강하나 **3 동족체(Tang)뿐**이다. 일반화가 여러 독립 데이터셋에 걸쳐 견고한지 검증
+(별도 `sci-adk run`). 세 모델 변형(monotone=자유음이온, 포화 W2, 지질)을 **재적합 없이** 세
+독립 데이터셋에 전이:
+
+| 독립 데이터셋 (Yamazaki-적합, 표본외) | lipid | mono | W2 |
+|---|---|---|---|
+| **Tang 2026** 조직별 TF (dw) — 깨끗 | **0.52** | 1.23 | — |
+| **Kim 2019** 곡립 BAF (PFOA 제외) — 깨끗 | **0.48** | 2.05 | 1.07 |
+| **Kim 2019** 곡립, 신뢰(DF≥15%) | **0.20** | 1.92 | 1.44 |
+| Li 2025 straw/root TF — 현장 교란 | 0.57 | 1.03 | **0.33** |
+| Li 2025 grain/root TF — 현장 교란 | **0.72** | 1.15 | 1.47 |
+
+**판정 SUPPORTED**: 지질이 **두 깨끗한 데이터셋(Tang·Kim) 모두에서 명확히 우세**(서로 다른 국가
+·엔드포인트 — 한국 현장 곡립 + 중국 pot 조직별), 특히 mono/W2가 구조적으로 놓치는 **Kim 곡립
+장쇄 RISE**(mono O(0.05) vs 관측 PFUnDA/PFDoDA ~33–35)를 지질만 포착. → 일반화는 **Tang 한정
+우연이 아니라 다중 데이터셋에 걸쳐 견고**. 정직한 한계(사전등록): Li는 group-water·표면흡착
+교란으로 inconclusive(straw/root는 W2 우세 0.33 vs 0.57이나 grain/root는 지질 우세) — 깨끗-
+데이터셋 주장에 영향 없음; Kim 장쇄는 저-DF(3–13%). `sci-adk run` → evi-oos-multidataset
+(measured, SUPPORTS) → `resolve`/`verify` 재현(exit 0, digest 68ebaf39). 가드
+`test_oos_multidataset_run_reproduces`. 재현: `python validation/oos_multidataset.py`.
+
 ## 5. 산출물 (`sci_adk_review/`)
 
 ```
@@ -331,6 +357,7 @@ runs/pfas-rice-longchain/       # §7 장쇄 메커니즘 (LC1–LC6; build_long
 runs/pfas-rice-carrier/         # §7 LC6 운반체-QSPR (CLI `sci-adk run`; hyp-001 REFUTED)
 runs/pfas-rice-oos-tang/        # §8 표본외 교차데이터셋 (CLI `sci-adk run`; hyp-001 REFUTED)
 runs/pfas-rice-oos-lipid/       # §8.1 지질-메커니즘 표본외 일반화 (CLI; hyp-001 SUPPORTED)
+runs/pfas-rice-oos-multidataset/ # §8.2 다중 데이터셋 견고성 (CLI; hyp-001 SUPPORTED)
 runs/pfas-rice-trap/
   VALIDITY_HALT.txt             # 거부 증거 (synthetic_proxy → HALT)
 ```

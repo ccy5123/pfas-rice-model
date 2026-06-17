@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-001",
+  "spec_id": "pfas-rice-oos-multidataset",
+  "answers": "hyp-001",
+  "statement": "Yamazaki에만 적합된 지질-촉진 로딩 메커니즘은, **깨끗한 독립 데이터셋**(Tang 2026 조직별 TF,\nKim 2019 곡립 BAF)을 자유음이온(monotone f_xy)·포화 W2 기준선보다 표본외로 더 잘 예측하며,\n이 일반화는 여러 데이터셋에 걸쳐 견고하다(현장 교란 데이터셋 Li 2025은 사전등록상 group-water·\n표면흡착 교란으로 inconclusive로 취급).",
+  "status": "supported",
+  "confidence": {
+    "type": "graded",
+    "value": null,
+    "level": "strong",
+    "basis": "qualitative judge: The lipid-facilitated loading mechanism's out-of-sample generalization is ROBUST across multiple independent datasets, not a Tang artifact: with all params fit on Yamazaki and transferred without refit, lipid wins decisively on BOTH clean datasets (Tang per-organ TF 0.52 vs 1.23; Kim grain 0.48 vs 2.05, reliable 0.20 vs 1.92) and uniquely captures the Kim grain long-chain rise the baselines miss. The only counter-signal is on the pre-registered-as-confounded Li 2025 field data (W2 wins straw/root TF), which does not bear on the clean-dataset claim and where lipid still wins grain/root. Hypothesis supported, with the honest caveats recorded (Li confound; Kim long-chain low-DF). This strengthens hyp-oos-lipid from n=3 (Tang only) to a robust multi-dataset cross-validation."
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-oos-multidataset",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "exploratory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T17:04:48.998250Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-oos-multidataset",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}
