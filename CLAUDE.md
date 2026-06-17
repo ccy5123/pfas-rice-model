@@ -231,6 +231,22 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   by the f_xy recalibration, not Koc). Wired into `pfas_structure` (novel ethers use the ether term).
   Tests in `test_literature_params.py` (ether term reproduces GenX; koc graceful). Remaining: sulfonamide
   K_PL slope + ether/sulfonamide Koc need data (docs/structure_input.md §Next steps).
+- **Mechanistic ORYZA2000 biomass driver (`src/oryza_growth.py`)**: a Python re-implementation of the
+  **ORYZA2000 / ORYZA(v3) potential-production (Level-1) carbon balance** — SUCROS astronomy → Gaussian
+  day×canopy gross CO₂ assimilation → maintenance+growth respiration → DVS-driven partitioning → SLA-based
+  LAI (juvenile RGRL + senescence) → grain fill — so per-organ `M_s(t)` **responds to radiation/temperature**
+  instead of the imposed logistic in `growth_rice`. NOT the IRRI binary (Windows exe needing a full weather/
+  crop deck; gfortran/`pyoryza` unavailable here) — it is the published Level-1 equation set (Bouman & van Laar
+  2006; Goudriaan & van Laar 1994 SUCROS) re-coded, with IR72 standard-set parameters anchored so the potential
+  run reproduces the IR72 field anchors (flowering ~day 66, maturity ~116, LAImax 6.6, HI 0.46, shoot scaled to
+  1740 g/m²). `oryza_drivers(congener)` returns a `model_api.simulate(drivers=…)` dict (wired via the same
+  `drivers=` extension point as HYDRUS); `organ_biomass_oryza(t)` gives kg/hill per organ; `weather=` overrides
+  the built-in climatology with a real series. Validation (`validation/oryza_growth_validation.py`) contrasts it
+  with `growth_rice` and propagates BOTH biomass drivers through the PFAS ODE: the mechanistic biomass (leaf
+  senescence + stem retention) **raises short-chain straw/grain BAF ~40-70%** (e.g. PFBA grain 2.07→3.53) but
+  leaves the root-dominated long chains ~unchanged. `tests/test_oryza_growth.py` (6). Opt-in; the canonical path
+  (`growth_rice`) is unchanged. Candidate next step: drive it with the measured `M_s(t)`/weather to pin the f_xy
+  absolute scale (task #7).
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -243,6 +259,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (cd external/hydrus_source/source && make)` (gfortran); `pip install phydrus`. Demo: `python src/soil_hydrus.py`.
 - Plant demo: `python src/pfas_rice_plant_module_4pool_surf.py` (N, B_k, BAFs; saves `pfas_rice_demo.png`).
 - Multi-height stem: `python validation/nstem_gradient_check.py` (stem-gradient direction vs Yamazaki).
+- Mechanistic ORYZA biomass: `python src/oryza_growth.py` (IR72 potential sanity);
+  `python validation/oryza_growth_validation.py` (vs `growth_rice` + BAF driver-sensitivity + figure).
 - Soil → plant (analytic): `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
 - **Soil → plant (REAL HYDRUS-1D)**: build the engine once, then run the coupling:
   ```
