@@ -14,3 +14,7 @@ proof/qualitative hypotheses awaiting an in-session agent verdict (no autonomous
 - Criterion: model grain (brown-rice) BAF/TF matches measured within a factor adequate for dietary risk assessment => support; systematic structural under/over-prediction => refute
 - Finding: Tang 2026 OOS: PFOA endosperm TF model 0.11 vs measured 0.95 (dw); grain structurally ~3-8x under across congeners; not closable by L_Ph / lipid tuning (docs/tang2026_grain_units_exploration.md).
 Kim 2019: grain BAF reproduced only by FORCING L_Ph (0.07 -> 4.43, L_Ph~0.84) as a single-point in-sample anchor; Kim is grain-only, so root/straw TF are unconstrained.
+
+## hyp-smiles (qualitative)
+- Criterion: the SMILES front-end reproduces the curated measured-parameter model for a KNOWN PFAS via read-across (structure -> same Compound) => support; a mismatch => refute
+- Finding: tests/test_pfas_structure.py: 23 passed (RDKit). A canonical SMILES that matches a curated congener rebuilds the SAME Compound from params/parameters.json (measured read-across). CAVEAT: for NOVEL structures f_xy is provisional (QSPR/interpolated), NOT validated — this claim is scoped to known structures only.

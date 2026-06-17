@@ -21,7 +21,7 @@
   "renders_to": null,
   "history": [
     {
-      "at": "2026-06-17T13:02:21.995695Z",
+      "at": "2026-06-17T13:15:41.280224Z",
       "from_status": "proposed",
       "to_status": "supported",
       "triggered_by": "evi-mass",

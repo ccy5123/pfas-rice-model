@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-smiles",
+  "spec_id": "pfas-rice",
+  "answers": "hyp-smiles",
+  "statement": "The SMILES structure front-end parameterizes a known PFAS by measured read-across, reproducing the curated congener record.",
+  "status": "supported",
+  "confidence": {
+    "type": "graded",
+    "value": null,
+    "level": "strong",
+    "basis": "qualitative judge: Both panelists agree this is a faithful structure->parameter mapping, an independently tested software property (23/23). It is SUPPORTED only for KNOWN structures (read-across); novel-structure prediction is out of scope and remains provisional."
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-smiles",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T13:15:41.281691Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-smiles",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

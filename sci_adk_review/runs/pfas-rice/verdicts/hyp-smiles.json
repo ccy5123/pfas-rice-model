@@ -1,0 +1,34 @@
+{
+  "hypothesis_id": "hyp-smiles",
+  "rule_kind": "qualitative",
+  "rubric_expression": "the SMILES front-end reproduces the curated measured-parameter model for a KNOWN PFAS via read-across (structure -> same Compound) => support; a mismatch => refute",
+  "rubric_params": null,
+  "panel": [
+    {
+      "direction": "supports",
+      "level": "strong",
+      "basis": "tests/test_pfas_structure.py passes 23/23: a SMILES-built known PFAS equals the curated record.",
+      "counterexample": false
+    },
+    {
+      "direction": "supports",
+      "level": "moderate",
+      "basis": "the rule is scoped to read-across reproducibility, which is deterministic and verified; it does not over-claim novel-structure prediction.",
+      "counterexample": false
+    }
+  ],
+  "chief": {
+    "direction": "supports",
+    "level": "strong",
+    "basis": "Both panelists agree this is a faithful structure->parameter mapping, an independently tested software property (23/23). It is SUPPORTED only for KNOWN structures (read-across); novel-structure prediction is out of scope and remains provisional.",
+    "counterexample": false
+  },
+  "provenance": {
+    "spec_version": 1,
+    "timestamp": "2026-06-17T00:00:00+00:00",
+    "agent_ids": [
+      "claude-in-session"
+    ],
+    "cost_ids": null
+  }
+}

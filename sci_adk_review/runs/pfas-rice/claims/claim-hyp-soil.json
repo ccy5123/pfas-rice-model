@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-soil",
+  "spec_id": "pfas-rice",
+  "answers": "hyp-soil",
+  "statement": "Per-congener soil sorption (Koc chain-length QSPR) is strongly congener-dependent, so the one-way soil coupling cannot be replaced by a single constant pore-water concentration.",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.9092820467105875,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=4.4 > 2 is met (combine='latest', margin=2.4)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-soil",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T13:15:41.281557Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-soil",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

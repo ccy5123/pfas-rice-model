@@ -1,32 +1,32 @@
 {
-  "id": "evi-grain-tang",
+  "id": "evi-soil",
   "created_at": "2026-06-17T00:00:00Z",
   "spec_id": "pfas-rice",
   "kind": "experiment_run",
   "provenance": {
     "code_ref": "9fef50e72318a3a0ec8c312d8a5f996e878a9561",
     "data_ref": null,
-    "data_source": "measured",
+    "data_source": "generated",
     "seed": null,
-    "environment": "validation/tang2026_nstem_validation.py; raw_si/tang2026_doseresponse.csv",
+    "environment": "src/literature_params.koc (live)",
     "cost": null
   },
   "result": {
     "type": "quantitative",
-    "point": 0.11,
+    "point": 4.4,
     "effect_size": null,
     "ci": null,
     "p_value": null,
     "posterior": null,
     "residual": null,
     "predictive_error": null,
-    "finding": "Tang 2026 OOS: PFOA endosperm TF model 0.11 vs measured 0.95 (dw); grain structurally ~3-8x under across congeners; not closable by L_Ph / lipid tuning (docs/tang2026_grain_units_exploration.md).",
+    "finding": "literature_params.koc (Higgins-Luthy +0.55/CF2 QSPR): Koc(PFBA C4)=2.15 vs Koc(PFDoDA C12)=53985 L/kg => 4.40 log10 spread (~25119x). Soil retardation R=1+rho*Kd/theta is therefore strongly congener-dependent; one constant Cwo cannot represent all congeners (CLAUDE.md: short chains leach, long chains buffer).",
     "artifact_ref": null
   },
   "bears_on": [
     {
-      "target_id": "hyp-grain",
-      "direction": "refutes",
+      "target_id": "hyp-soil",
+      "direction": "supports",
       "weight": null
     }
   ],

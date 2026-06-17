@@ -88,6 +88,13 @@ R_YAMA = ("the Yamazaki agreement is OUT-OF-SAMPLE predictive validation (indepe
 R_GRAIN = ("model grain (brown-rice) BAF/TF matches measured within a factor adequate "
            "for dietary risk assessment => support; systematic structural "
            "under/over-prediction => refute")
+R_SOIL = ("per-congener soil sorption (Koc chain-length QSPR) spans > 2 log10 units "
+          "across the congener set, so a single constant pore-water Cwo cannot "
+          "represent all congeners (the soil-coupling rationale) => support; < 2 log10 "
+          "spread => refute")
+R_SMILES = ("the SMILES front-end reproduces the curated measured-parameter model for a "
+            "KNOWN PFAS via read-across (structure -> same Compound) => support; a "
+            "mismatch => refute")
 R_DEMO = ("the bundled demonstration BAFs establish that the model predicts field PFAS "
           "bioaccumulation in rice => support")
 
@@ -149,6 +156,39 @@ def build_spec() -> Spec:
             decision_rule=DecisionRule(kind=DecisionRuleKind.QUALITATIVE, expression=R_GRAIN),
             referent="empirical",
         ),
+        Hypothesis(
+            id="hyp-soil",
+            statement="Per-congener soil sorption (Koc chain-length QSPR) is strongly "
+                      "congener-dependent, so the one-way soil coupling cannot be "
+                      "replaced by a single constant pore-water concentration.",
+            mode=HypothesisMode.CONFIRMATORY,
+            decision_rule=DecisionRule(
+                kind=DecisionRuleKind.THRESHOLD, expression=R_SOIL,
+                params={"statistic": "point", "op": ">", "value": 2.0, "combine": "latest"},
+            ),
+            referent="formal",
+            non_circularity=(
+                "the Koc spread is computed from the independently-anchored Higgins-Luthy "
+                "+0.55/CF2 QSPR (literature_params.koc), NOT from any plant BAF; the "
+                "congener-dependence of soil retardation is a property of the soil "
+                "sub-model, not assumed by the plant ODE."
+            ),
+        ),
+        Hypothesis(
+            id="hyp-smiles",
+            statement="The SMILES structure front-end parameterizes a known PFAS by "
+                      "measured read-across, reproducing the curated congener record.",
+            mode=HypothesisMode.CONFIRMATORY,
+            decision_rule=DecisionRule(kind=DecisionRuleKind.QUALITATIVE, expression=R_SMILES),
+            referent="formal",
+            non_circularity=(
+                "read-across reproducibility is a software property verified by an "
+                "independent test (tests/test_pfas_structure.py) that builds the Compound "
+                "from a canonical SMILES and checks it equals the curated "
+                "params/parameters.json record; it asserts the structure->parameter "
+                "mapping is FAITHFUL, not that the parameters are physically correct."
+            ),
+        ),
     ]
     target_claims = [
         TargetClaim(id="tc-mass", statement="The transport ODE is mass-conserving.",
@@ -161,6 +201,12 @@ def build_spec() -> Spec:
         TargetClaim(id="tc-grain",
                     statement="The model predicts grain accumulation for risk assessment.",
                     answers="hyp-grain"),
+        TargetClaim(id="tc-soil",
+                    statement="The soil coupling is congener-resolved (not a constant Cwo).",
+                    answers="hyp-soil"),
+        TargetClaim(id="tc-smiles",
+                    statement="SMILES read-across reproduces the curated model.",
+                    answers="hyp-smiles"),
     ]
     method = MethodPlan(approaches=[
         "four-compartment dynamic ODE (BDF)",
@@ -257,6 +303,39 @@ def evidence(spec, workspace):
         [Bearing(target_id="hyp-grain", direction=BearingDirection.REFUTES)],
         "literature_params.kim2019_grain_baf(); raw_si/kim2019_*"))
 
+    # H5 soil coupling — GENERATED (a computed property of the Koc QSPR), numeric.
+    # Compute the congener Koc spread LIVE from the model's own QSPR.
+    import math, sys as _sys
+    _sys.path.insert(0, str(HERE.parent / "src"))
+    from literature_params import koc
+    koc_short = koc(n_perfluoroC=4, head_group="carboxylate")    # PFBA
+    koc_long = koc(n_perfluoroC=12, head_group="carboxylate")    # PFDoDA
+    spread = math.log10(koc_long / koc_short)
+    items.append(_ev(
+        "evi-soil", EvidenceKind.EXPERIMENT_RUN, "generated",
+        Result(type="quantitative", point=round(spread, 3),
+               finding=f"literature_params.koc (Higgins-Luthy +0.55/CF2 QSPR): "
+                       f"Koc(PFBA C4)={koc_short:.2f} vs Koc(PFDoDA C12)={koc_long:.0f} "
+                       f"L/kg => {spread:.2f} log10 spread (~{koc_long/koc_short:.0f}x). "
+                       f"Soil retardation R=1+rho*Kd/theta is therefore strongly "
+                       f"congener-dependent; one constant Cwo cannot represent all "
+                       f"congeners (CLAUDE.md: short chains leach, long chains buffer)."),
+        [Bearing(target_id="hyp-soil", direction=BearingDirection.SUPPORTS)],
+        "src/literature_params.koc (live)"))
+
+    # H6 SMILES read-across — GENERATED (a software/formal property), qualitative.
+    items.append(_ev(
+        "evi-smiles", EvidenceKind.EXPERIMENT_RUN, "generated",
+        Result(type="qualitative",
+               finding="tests/test_pfas_structure.py: 23 passed (RDKit). A canonical "
+                       "SMILES that matches a curated congener rebuilds the SAME "
+                       "Compound from params/parameters.json (measured read-across). "
+                       "CAVEAT: for NOVEL structures f_xy is provisional (QSPR/"
+                       "interpolated), NOT validated — this claim is scoped to known "
+                       "structures only."),
+        [Bearing(target_id="hyp-smiles", direction=BearingDirection.SUPPORTS)],
+        "pytest tests/test_pfas_structure.py (RDKit); src/pfas_structure.py"))
+
     return items
 
 
@@ -316,6 +395,19 @@ def verdicts():
              PanelVerdict(direction=REF, level=STRONG,
                           basis="the only 'match' (Kim) is an in-sample forced anchor on "
                                 "grain alone; no independent grain prediction exists.")]),
+        "hyp-smiles": _trail(
+            "hyp-smiles", R_SMILES, SUP, STRONG,
+            "Both panelists agree this is a faithful structure->parameter mapping, an "
+            "independently tested software property (23/23). It is SUPPORTED only for "
+            "KNOWN structures (read-across); novel-structure prediction is out of scope "
+            "and remains provisional.",
+            [PanelVerdict(direction=SUP, level=STRONG,
+                          basis="tests/test_pfas_structure.py passes 23/23: a SMILES-built "
+                                "known PFAS equals the curated record."),
+             PanelVerdict(direction=SUP, level=MOD,
+                          basis="the rule is scoped to read-across reproducibility, which "
+                                "is deterministic and verified; it does not over-claim "
+                                "novel-structure prediction.")]),
     }
 
 

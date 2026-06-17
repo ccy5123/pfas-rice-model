@@ -1,5 +1,5 @@
 {
-  "id": "evi-anion",
+  "id": "evi-smiles",
   "created_at": "2026-06-17T00:00:00Z",
   "spec_id": "pfas-rice",
   "kind": "experiment_run",
@@ -8,7 +8,7 @@
     "data_ref": null,
     "data_source": "generated",
     "seed": null,
-    "environment": "pfas_rice_plant_module_4pool_surf + test_plant_module",
+    "environment": "pytest tests/test_pfas_structure.py (RDKit); src/pfas_structure.py",
     "cost": null
   },
   "result": {
@@ -20,12 +20,12 @@
     "posterior": null,
     "residual": null,
     "predictive_error": null,
-    "finding": "N = z*E_m*F/RT = +4.67 at E_m=-120 mV, z=-1, T=298.15 K => e^N = 106.8 (test_plant_module asserts e^N ~ 107); the GHK term in root_uptake() excludes the anion accordingly.",
+    "finding": "tests/test_pfas_structure.py: 23 passed (RDKit). A canonical SMILES that matches a curated congener rebuilds the SAME Compound from params/parameters.json (measured read-across). CAVEAT: for NOVEL structures f_xy is provisional (QSPR/interpolated), NOT validated — this claim is scoped to known structures only.",
     "artifact_ref": null
   },
   "bears_on": [
     {
-      "target_id": "hyp-anion",
+      "target_id": "hyp-smiles",
       "direction": "supports",
       "weight": null
     }
