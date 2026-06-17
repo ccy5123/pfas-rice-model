@@ -19,3 +19,11 @@ proof/qualitative hypotheses awaiting an in-session agent verdict (no autonomous
 - Criterion: a 2-pool root (mobile water+protein pool feeding the xylem + a slow-exchanging lipid/cell-wall bound store holding the measured root burden) reproduces the long-chain shoot WHILE keeping the measured root high, closing the LC3 single-pool tradeoff => support; it cannot match root and shoot simultaneously => refute
 - Finding: validation/twopool_longchain.py (ORYZA2000): the 2-pool root (mobile + slow lipid/cell-wall bound store; lipid loads from the mobile pool) matches MID-LONG chains root AND shoot SIMULTANEOUSLY -- PFDA(C10) root 3.5 vs 4.2, straw 5.0 vs 3.5, grain 4.1 vs 3.4; PFUnDA(C11) root 9.8 vs 19.5 (~2x), straw 13.4 vs 8.2, grain 3.6 vs 3.1. The single pool could not (LC3 root drain). Shoot RMSE 0.32.
 validation/twopool_longchain.py: PFDoDA(C12) FAILS -- root collapses to 1.2 vs 69.3 (mobile pool rm=0.02 starves -> bound store rb only 1.2; straw 8.6 vs 49.7, grain 26 vs 45.5). The mobile-pool soil uptake (jR) is too small to sustain a high bound root AND feed the shoot: a mass-balance/UPTAKE limit, not internal distribution. The 2-pool does not close the longest chain.
+
+## hyp-lc-cond (qualitative)
+- Criterion: enhancing the root membrane CONDUCTANCE (kappa_d) closes the PFDoDA long-chain residual => support; conductance has no effect (the GHK anion-exclusion ceiling caps Cw at Cwo/e^N regardless of kappa_d) => refute
+- Finding: validation/twopool_longchain.py kappa_d scan (PFDoDA): increasing the membrane conductance 1x->5000x leaves root at 1.0-1.2 vs 69 (unchanged). The GHK term is capped by anion exclusion -- Cw_m -> Cwo/e^N (e^N~107) regardless of kappa_d -- so conductance is NOT the lever.
+
+## hyp-lc-carrier (qualitative)
+- Criterion: enhancing the long-chain ACTIVE CARRIER capacity (Vmax) closes the PFDoDA root and grain (the carrier overcomes the anion-exclusion ceiling) => support; the carrier cannot reach it => refute
+- Finding: validation/twopool_longchain.py carrier scan (PFDoDA): at Vmax_in ~5x base (20->100) the 2-pool reaches root 62 vs 69 and grain 46 vs 45.5 (straw 102 vs 50, ~2x over). The ACTIVE carrier overcomes the anion-exclusion ceiling the GHK pathway cannot -- the longest-chain residual is a carrier-capacity limit, closable. Consistent with the literature (active carrier-mediated root uptake).

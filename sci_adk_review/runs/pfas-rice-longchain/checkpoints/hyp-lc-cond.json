@@ -1,0 +1,8 @@
+{
+  "checkpoint_type": "judge",
+  "hypothesis_id": "hyp-lc-cond",
+  "kind": "qualitative",
+  "expression": "enhancing the root membrane CONDUCTANCE (kappa_d) closes the PFDoDA long-chain residual => support; conductance has no effect (the GHK anion-exclusion ceiling caps Cw at Cwo/e^N regardless of kappa_d) => refute",
+  "finding": "validation/twopool_longchain.py kappa_d scan (PFDoDA): increasing the membrane conductance 1x->5000x leaves root at 1.0-1.2 vs 69 (unchanged). The GHK term is capped by anion exclusion -- Cw_m -> Cwo/e^N (e^N~107) regardless of kappa_d -- so conductance is NOT the lever.",
+  "spec_version": 1
+}

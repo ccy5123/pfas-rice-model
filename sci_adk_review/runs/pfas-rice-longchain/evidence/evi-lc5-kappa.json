@@ -1,5 +1,5 @@
 {
-  "id": "evi-lc-lipid",
+  "id": "evi-lc5-kappa",
   "created_at": "2026-06-17T00:00:00Z",
   "spec_id": "pfas-rice-longchain",
   "kind": "experiment_run",
@@ -8,25 +8,25 @@
     "data_ref": null,
     "data_source": "measured",
     "seed": null,
-    "environment": "validation/longchain_mechanism.py (real run; ORYZA2000)",
+    "environment": "validation/twopool_longchain.py lc5_uptake_scan (real run)",
     "cost": null
   },
   "result": {
     "type": "quantitative",
-    "point": 0.428,
+    "point": null,
     "effect_size": null,
     "ci": null,
     "p_value": null,
     "posterior": null,
     "residual": null,
     "predictive_error": null,
-    "finding": "validation/longchain_mechanism.py: the B-independent lipid term (g_xy*C, g_ph*C; K_PL-gated) cuts long-chain straw+grain log10 RMSE 2.026 -> 0.428 (~100x -> ~2.7x; whole series 1.035 -> 0.386). PFDA straw 0.08->5.95 (obs 3.46), PFUnDA straw 0.16->11.15 (obs 8.16), PFOS straw 0.17->5.17 (obs 4.35).",
+    "finding": "validation/twopool_longchain.py kappa_d scan (PFDoDA): increasing the membrane conductance 1x->5000x leaves root at 1.0-1.2 vs 69 (unchanged). The GHK term is capped by anion exclusion -- Cw_m -> Cwo/e^N (e^N~107) regardless of kappa_d -- so conductance is NOT the lever.",
     "artifact_ref": null
   },
   "bears_on": [
     {
-      "target_id": "hyp-lc-lipidfix",
-      "direction": "supports",
+      "target_id": "hyp-lc-cond",
+      "direction": "refutes",
       "weight": null
     }
   ],

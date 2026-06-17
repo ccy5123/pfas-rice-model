@@ -60,6 +60,32 @@
       "referent": "empirical",
       "non_circularity": null,
       "novelty": false
+    },
+    {
+      "id": "hyp-lc-cond",
+      "statement": "PFDoDA's residual closes by enhancing the root membrane conductance (kappa_d).",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "qualitative",
+        "expression": "enhancing the root membrane CONDUCTANCE (kappa_d) closes the PFDoDA long-chain residual => support; conductance has no effect (the GHK anion-exclusion ceiling caps Cw at Cwo/e^N regardless of kappa_d) => refute",
+        "params": null
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-lc-carrier",
+      "statement": "PFDoDA's residual closes by enhancing the long-chain active carrier capacity (Vmax), which overcomes the GHK anion-exclusion ceiling.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "qualitative",
+        "expression": "enhancing the long-chain ACTIVE CARRIER capacity (Vmax) closes the PFDoDA root and grain (the carrier overcomes the anion-exclusion ceiling) => support; the carrier cannot reach it => refute",
+        "params": null
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
     }
   ],
   "method": {
@@ -90,6 +116,16 @@
       "id": "tc-lc4",
       "statement": "A 2-pool split closes the long-chain tradeoff.",
       "answers": "hyp-lc-twopool"
+    },
+    {
+      "id": "tc-lc5a",
+      "statement": "Conductance closes PFDoDA.",
+      "answers": "hyp-lc-cond"
+    },
+    {
+      "id": "tc-lc5b",
+      "statement": "Carrier capacity closes PFDoDA.",
+      "answers": "hyp-lc-carrier"
     }
   ],
   "amendment_rationale": null,

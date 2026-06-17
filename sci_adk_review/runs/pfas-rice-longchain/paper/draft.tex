@@ -86,6 +86,24 @@ Planned approaches:
   \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
 \end{itemize}
 
+\subsection{PFDoDA's residual closes by enhancing the root membrane conductance (kappa\_d).}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-lc-cond} (confirmatory)
+  \item Decision rule (qualitative): enhancing the root membrane CONDUCTANCE (kappa\_d) closes the PFDoDA long-chain residual => support; conductance has no effect (the GHK anion-exclusion ceiling caps Cw at Cwo/e\textasciicircum{}N regardless of kappa\_d) => refute
+  \item \textbf{Status: refuted} --- confidence strong (graded)
+  \item Basis: qualitative judge: Decisive: increasing the membrane conductance kappa\_d 1x->5000x leaves PFDoDA root at \textasciitilde{}1 vs 69 (unchanged). The GHK pathway is capped by anion exclusion -- the internal free conc ceiling is Cwo/e\textasciicircum{}N (e\textasciicircum{}N\textasciitilde{}107) independent of kappa\_d -- so conductance cannot lift the long chain. Refuted.
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\subsection{PFDoDA's residual closes by enhancing the long-chain active carrier capacity (Vmax), which overcomes the GHK anion-exclusion ceiling.}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-lc-carrier} (confirmatory)
+  \item Decision rule (qualitative): enhancing the long-chain ACTIVE CARRIER capacity (Vmax) closes the PFDoDA root and grain (the carrier overcomes the anion-exclusion ceiling) => support; the carrier cannot reach it => refute
+  \item \textbf{Status: supported} --- confidence strong (graded)
+  \item Basis: qualitative judge: Decisive: the active carrier (Vmax) overcomes the anion-exclusion ceiling the GHK route cannot. At \textasciitilde{}5x base Vmax (20->100) the 2-pool reaches PFDoDA root 62 vs 69 and grain 46 vs 45.5 (straw 102 vs 50, \textasciitilde{}2x over) -- so the longest-chain residual is an active-carrier-capacity limit, closable. SCOPE: in-sample, straw \textasciitilde{}2x over, and the \textasciitilde{}5x enhancement is a long-chain-specific lever (not yet QSPR-derived).
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
 \section{Evidence}
 \begin{itemize}
   \item \texttt{evi-lc-2pool-mid} (experiment\_run): point=0.315, finding=validation/twopool\_longchain.py (ORYZA2000): the 2-pool root (mobile + slow lipid/cell-wall bound store; lipid loads fro
@@ -94,8 +112,10 @@ Planned approaches:
   \item \texttt{evi-lc-free} (experiment\_run): point=2.026, finding=validation/longchain\_mechanism.py (ORYZA2000 biomass): free-only (monotone f\_xy) long-chain (nC>=10) straw+grain log10 R
   \item \texttt{evi-lc-lipid} (experiment\_run): point=0.428, finding=validation/longchain\_mechanism.py: the B-independent lipid term (g\_xy*C, g\_ph*C; K\_PL-gated) cuts long-chain straw+grain
   \item \texttt{evi-lc-litread} (literature): finding=5 of 7 corroborating papers obtained out-of-band (paperforge found NO OA PDF for any; 5 supplied manually) and READ to v
-  \item \texttt{evi-lit-20260617-153519-b80e9bb0} (literature): finding=\{"acquired": [], "failed": [\{"doi": "10.1021/acs.est.4c06734", "error": "no OA PDF"\}, \{"doi": "10.1021/acs.est.5c11716",
-  \item \texttt{evi-pw-decision-20260617-153519-606b27b8} (prior\_work\_decision): finding=searched: DOIs=['10.1021/acs.est.4c06734', '10.1021/acs.est.5c11716', '10.1021/acs.est.7b06128', '10.1021/acsestengg.4c0
+  \item \texttt{evi-lc5-carrier} (experiment\_run): finding=validation/twopool\_longchain.py carrier scan (PFDoDA): at Vmax\_in \textasciitilde{}5x base (20->100) the 2-pool reaches root 62 vs 69 an
+  \item \texttt{evi-lc5-kappa} (experiment\_run): finding=validation/twopool\_longchain.py kappa\_d scan (PFDoDA): increasing the membrane conductance 1x->5000x leaves root at 1.0-
+  \item \texttt{evi-lit-20260617-154436-dc03d0d5} (literature): finding=\{"acquired": [], "failed": [\{"doi": "10.1021/acs.est.4c06734", "error": "no OA PDF"\}, \{"doi": "10.1021/acs.est.5c11716",
+  \item \texttt{evi-pw-decision-20260617-154436-c7827bc8} (prior\_work\_decision): finding=searched: DOIs=['10.1021/acs.est.4c06734', '10.1021/acs.est.5c11716', '10.1021/acs.est.7b06128', '10.1021/acsestengg.4c0
 \end{itemize}
 
 \section{Pending agent judgments}
@@ -111,6 +131,10 @@ These hypotheses use a non-numeric rule and await an in-session agent verdict (n
   \item \texttt{hyp-lc-twopool} (qualitative): a 2-pool root (mobile water+protein pool feeding the xylem + a slow-exchanging lipid/cell-wall bound store holding the measured root burden) reproduces the long-chain shoot WHILE keeping the measured root high, closing the LC3 single-pool tradeoff => support; it cannot match root and shoot simultaneously => refute
   \item finding: validation/twopool\_longchain.py (ORYZA2000): the 2-pool root (mobile + slow lipid/cell-wall bound store; lipid loads from the mobile pool) matches MID-LONG chains root AND shoot SIMULTANEOUSLY -- PFDA(C10) root 3.5 vs 4.2, straw 5.0 vs 3.5, grain 4.1 vs 3.4; PFUnDA(C11) root 9.8 vs 19.5 (\textasciitilde{}2x), straw 13.4 vs 8.2, grain 3.6 vs 3.1. The single pool could not (LC3 root drain). Shoot RMSE 0.32.
 validation/twopool\_longchain.py: PFDoDA(C12) FAILS -- root collapses to 1.2 vs 69.3 (mobile pool rm=0.02 starves -> bound store rb only 1.2; straw 8.6 vs 49.7, grain 26 vs 45.5). The mobile-pool soil uptake (jR) is too small to sustain a high bound root AND feed the shoot: a mass-balance/UPTAKE limit, not internal distribution. The 2-pool does not close the longest chain.
+  \item \texttt{hyp-lc-cond} (qualitative): enhancing the root membrane CONDUCTANCE (kappa\_d) closes the PFDoDA long-chain residual => support; conductance has no effect (the GHK anion-exclusion ceiling caps Cw at Cwo/e\textasciicircum{}N regardless of kappa\_d) => refute
+  \item finding: validation/twopool\_longchain.py kappa\_d scan (PFDoDA): increasing the membrane conductance 1x->5000x leaves root at 1.0-1.2 vs 69 (unchanged). The GHK term is capped by anion exclusion -- Cw\_m -> Cwo/e\textasciicircum{}N (e\textasciicircum{}N\textasciitilde{}107) regardless of kappa\_d -- so conductance is NOT the lever.
+  \item \texttt{hyp-lc-carrier} (qualitative): enhancing the long-chain ACTIVE CARRIER capacity (Vmax) closes the PFDoDA root and grain (the carrier overcomes the anion-exclusion ceiling) => support; the carrier cannot reach it => refute
+  \item finding: validation/twopool\_longchain.py carrier scan (PFDoDA): at Vmax\_in \textasciitilde{}5x base (20->100) the 2-pool reaches root 62 vs 69 and grain 46 vs 45.5 (straw 102 vs 50, \textasciitilde{}2x over). The ACTIVE carrier overcomes the anion-exclusion ceiling the GHK pathway cannot -- the longest-chain residual is a carrier-capacity limit, closable. Consistent with the literature (active carrier-mediated root uptake).
 \end{itemize}
 
 \section{References}

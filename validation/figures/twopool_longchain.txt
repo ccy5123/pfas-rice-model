@@ -1,10 +1,16 @@
-2-POOL root prototype (k_off=0.02/d slow bound store; lipid loads from mobile pool)
 
-PFAS    nC |         root p/o       straw p/o       grain p/o  rm/rb
-PFOA     8 |    0.4/0.5       1.5/0.8       0.6/0.5      0.12/0.3
-PFDA    10 |    3.5/4.2       5.0/3.5       4.1/3.4      0.21/3.3
-PFUnDA  11 |    9.8/19.5     13.4/8.2       3.6/3.1      0.31/9.5
-PFDoDA  12 |    1.2/69.3      8.6/49.7     26.0/45.5     0.02/1.2
+LC5 uptake-enhancement scan for PFDoDA (base kappa_d_oryza=0.01):
+   kappa_d x_base |        root p/o      straw p/o      grain p/o
+      0.01     1x |    1.2/69.3      8.6/49.7     26.0/45.5   
+       0.5    50x |    1.2/69.3      8.6/49.7     26.0/45.5   
+         2   200x |    1.2/69.3      8.5/49.7     25.7/45.5   
+        10  1000x |    1.1/69.3      7.9/49.7     24.8/45.5   
+        50  5000x |    1.0/69.3      6.6/49.7     22.3/45.5   
 
-long-incl root RMSE 0.889  shoot RMSE 0.315
-LC4 question: can the 2-pool match long-chain ROOT and SHOOT simultaneously?
+LC5b carrier-capacity scan for PFDoDA (base Vmax_in=20):
+   Vmax_in x_base |        root p/o      straw p/o      grain p/o
+        20     1x |    1.2/69.3      8.6/49.7     26.0/45.5   
+       100     5x |   62.1/69.3    101.8/49.7     46.1/45.5   
+       500    25x |  317.9/69.3    520.4/49.7    234.7/45.5   
+      2000   100x | 1304.3/69.3   2131.8/49.7    958.9/45.5   
+     10000   500x | 6613.3/69.3   10804.9/49.7   4857.0/45.5   

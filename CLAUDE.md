@@ -338,6 +338,14 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (mobile pool rm=0.02 starves → bound root 1.2 vs 69). The PFDoDA residual is an **uptake (jR) mass-balance limit**, not
   internal distribution → needs a different long-chain uptake / irreversible-sorption mechanism. Recorded as hyp-lc-twopool
   (CONTESTED) in `runs/pfas-rice-longchain`. Prototype only (not wired into the core).
+  **LC5 (PFDoDA uptake lever)**: scanning the 2-pool, membrane **conductance kappa_d is REFUTED** (LC5a)
+  — ×5000 leaves PFDoDA root ~1 vs 69 because GHK anion exclusion caps the internal free conc at Cwo/e^N
+  (e^N≈107) regardless of conductance; the **active carrier Vmax is SUPPORTED** (LC5b) — ×5 (20→100)
+  overcomes the exclusion and reaches PFDoDA root 62/69 and grain 46/45.5 (straw 102, ~2× over). So the
+  longest-chain residual is an **active-carrier-capacity limit**; the complete long-chain resolution =
+  2-pool (free+lipid-bound) + lipid-facilitated loading + enhanced long-chain active-carrier uptake
+  (consistent with the literature's active carrier-mediated root uptake). `runs/pfas-rice-longchain` now
+  holds LC1–LC5 (6 hypotheses); in-sample/prototype, core unchanged.
   **Literature (genuine sci-adk acquisition + source verification)**: `sci-adk prior-work --searched` ran paperforge +
   Unpaywall (contact email `~/.config/sci-adk/config.toml`) over 7 DOIs that corroborate LC1/LC2; ALL 7 are paywalled
   (no OA PDF) → recorded `acquired 0/failed 7` in `evi-lit-*` + a `prior_work_decision` item + `literature/manifest.csv`

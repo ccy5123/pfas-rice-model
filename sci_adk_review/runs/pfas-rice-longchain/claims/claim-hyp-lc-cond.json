@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-lc-cond",
+  "spec_id": "pfas-rice-longchain",
+  "answers": "hyp-lc-cond",
+  "statement": "PFDoDA's residual closes by enhancing the root membrane conductance (kappa_d).",
+  "status": "refuted",
+  "confidence": {
+    "type": "graded",
+    "value": null,
+    "level": "strong",
+    "basis": "qualitative judge: Decisive: increasing the membrane conductance kappa_d 1x->5000x leaves PFDoDA root at ~1 vs 69 (unchanged). The GHK pathway is capped by anion exclusion -- the internal free conc ceiling is Cwo/e^N (e^N~107) independent of kappa_d -- so conductance cannot lift the long chain. Refuted."
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-lc5-kappa",
+      "role": "refuting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T15:44:35.577527Z",
+      "from_status": "proposed",
+      "to_status": "refuted",
+      "triggered_by": "evi-lc5-kappa",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

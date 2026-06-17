@@ -61,6 +61,12 @@ R_LC4 = ("a 2-pool root (mobile water+protein pool feeding the xylem + a slow-ex
          "lipid/cell-wall bound store holding the measured root burden) reproduces the "
          "long-chain shoot WHILE keeping the measured root high, closing the LC3 single-pool "
          "tradeoff => support; it cannot match root and shoot simultaneously => refute")
+R_LC5A = ("enhancing the root membrane CONDUCTANCE (kappa_d) closes the PFDoDA long-chain "
+          "residual => support; conductance has no effect (the GHK anion-exclusion ceiling "
+          "caps Cw at Cwo/e^N regardless of kappa_d) => refute")
+R_LC5B = ("enhancing the long-chain ACTIVE CARRIER capacity (Vmax) closes the PFDoDA root "
+          "and grain (the carrier overcomes the anion-exclusion ceiling) => support; the "
+          "carrier cannot reach it => refute")
 
 
 def build_spec():
@@ -86,6 +92,12 @@ def build_spec():
           "lipid/cell-wall bound store holding the measured root burden) reproduces the "
           "long-chain shoot while preserving the high measured root, closing the LC3 "
           "single-pool tradeoff.", R_LC4),
+        H("hyp-lc-cond",
+          "PFDoDA's residual closes by enhancing the root membrane conductance (kappa_d).",
+          R_LC5A),
+        H("hyp-lc-carrier",
+          "PFDoDA's residual closes by enhancing the long-chain active carrier capacity "
+          "(Vmax), which overcomes the GHK anion-exclusion ceiling.", R_LC5B),
     ]
     tcs = [TargetClaim(id="tc-lc1", statement="Free loading is the long-chain shortfall cause.",
                        answers="hyp-lc-freethrottle"),
@@ -94,7 +106,9 @@ def build_spec():
            TargetClaim(id="tc-lc3", statement="The lipid fix is cost-free.",
                        answers="hyp-lc-nocost"),
            TargetClaim(id="tc-lc4", statement="A 2-pool split closes the long-chain tradeoff.",
-                       answers="hyp-lc-twopool")]
+                       answers="hyp-lc-twopool"),
+           TargetClaim(id="tc-lc5a", statement="Conductance closes PFDoDA.", answers="hyp-lc-cond"),
+           TargetClaim(id="tc-lc5b", statement="Carrier capacity closes PFDoDA.", answers="hyp-lc-carrier")]
     method = MethodPlan(approaches=["free-only vs lipid on ORYZA2000 biomass vs Yamazaki",
                                     "Cw=C/B collapse diagnosis", "refit f_xy=1 ceiling check"])
     return Spec(id="pfas-rice-longchain", created_at=NOW, version=1, raw_proposal=raw,
@@ -188,6 +202,21 @@ def evidence(spec, ws):
             "distribution. The 2-pool does not close the longest chain.",
             [B(target_id="hyp-lc-twopool", direction=BearingDirection.REFUTES)],
             "validation/twopool_longchain.py (real run; ORYZA2000)"),
+        _ev("evi-lc5-kappa", "measured", None,
+            "validation/twopool_longchain.py kappa_d scan (PFDoDA): increasing the membrane "
+            "conductance 1x->5000x leaves root at 1.0-1.2 vs 69 (unchanged). The GHK term is "
+            "capped by anion exclusion -- Cw_m -> Cwo/e^N (e^N~107) regardless of kappa_d -- "
+            "so conductance is NOT the lever.",
+            [B(target_id="hyp-lc-cond", direction=BearingDirection.REFUTES)],
+            "validation/twopool_longchain.py lc5_uptake_scan (real run)"),
+        _ev("evi-lc5-carrier", "measured", None,
+            "validation/twopool_longchain.py carrier scan (PFDoDA): at Vmax_in ~5x base "
+            "(20->100) the 2-pool reaches root 62 vs 69 and grain 46 vs 45.5 (straw 102 vs "
+            "50, ~2x over). The ACTIVE carrier overcomes the anion-exclusion ceiling the GHK "
+            "pathway cannot -- the longest-chain residual is a carrier-capacity limit, "
+            "closable. Consistent with the literature (active carrier-mediated root uptake).",
+            [B(target_id="hyp-lc-carrier", direction=BearingDirection.SUPPORTS)],
+            "validation/twopool_longchain.py lc5b_carrier_scan (real run)"),
     ]
 
 
@@ -248,6 +277,23 @@ def verdicts():
                           basis="C10/C11: 2-pool matches root AND shoot simultaneously (closes LC3 there)."),
              PanelVerdict(direction=REF, level=ST,
                           basis="C12 PFDoDA: mobile-pool uptake starves -> root 1.2 vs 69; the 2-pool cannot close it.")]),
+        "hyp-lc-cond": _trail(
+            "hyp-lc-cond", R_LC5A, REF,
+            "Decisive: increasing the membrane conductance kappa_d 1x->5000x leaves PFDoDA "
+            "root at ~1 vs 69 (unchanged). The GHK pathway is capped by anion exclusion -- "
+            "the internal free conc ceiling is Cwo/e^N (e^N~107) independent of kappa_d -- so "
+            "conductance cannot lift the long chain. Refuted.",
+            [PanelVerdict(direction=REF, level=ST, basis="root unchanged at ~1 vs 69 across 5000x kappa_d -- exclusion ceiling, not a conductance limit."),
+             PanelVerdict(direction=REF, level=ST, basis="GHK drives Cw_m->Cwo/e^N regardless of kappa_d; the passive route is capped.")]),
+        "hyp-lc-carrier": _trail(
+            "hyp-lc-carrier", R_LC5B, SUP,
+            "Decisive: the active carrier (Vmax) overcomes the anion-exclusion ceiling the GHK "
+            "route cannot. At ~5x base Vmax (20->100) the 2-pool reaches PFDoDA root 62 vs 69 "
+            "and grain 46 vs 45.5 (straw 102 vs 50, ~2x over) -- so the longest-chain residual "
+            "is an active-carrier-capacity limit, closable. SCOPE: in-sample, straw ~2x over, "
+            "and the ~5x enhancement is a long-chain-specific lever (not yet QSPR-derived).",
+            [PanelVerdict(direction=SUP, level=ST, basis="5x Vmax reaches root 62/69 and grain 46/46 -- the carrier overcomes exclusion."),
+             PanelVerdict(direction=SUP, level=MO, basis="straw ~2x over and the enhancement is illustrative, but the direction (carrier-limited) is clear and literature-consistent.")]),
     }
 
 
