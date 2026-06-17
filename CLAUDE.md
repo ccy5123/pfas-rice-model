@@ -346,6 +346,15 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   2-pool (free+lipid-bound) + lipid-facilitated loading + enhanced long-chain active-carrier uptake
   (consistent with the literature's active carrier-mediated root uptake). `runs/pfas-rice-longchain` now
   holds LC1–LC5 (6 hypotheses); in-sample/prototype, core unchanged.
+  **LC6 (carrier-enhancement QSPR) — REFUTED, via the canonical `sci-adk run` CLI**: a separate run
+  `runs/pfas-rice-carrier` compiled from `sci_adk_review/proposal_carrier_qspr.md` with the CLI
+  (`sci-adk run` → author evidence/verdict → `sci-adk resolve`/`verify`/`prior-work`, not a programmatic
+  builder). Tests whether the long-chain carrier enhancement (LC5b's PFDoDA ~5× Vmax) is a smooth
+  function of chain length: per-congener Vmax multiplier reproducing the measured root is PFOA 1.2× ·
+  PFNA 1.3× · PFDA 1.2× · PFUnDA 2.0× · PFDoDA 5.5×, and log10(multiplier) regresses on n_C at R²=0.70
+  (on log K_PL R²=0.62) — NOT log-linear (<0.9): ~no enhancement to C10 then a steep threshold-like
+  onset at C11–C12. So the long-chain carrier enhancement is **NOT cleanly QSPR-able** from chain
+  length; it stays a longest-chain-specific (ad-hoc) lever. Guard `test_carrier_run_reproduces`.
   **Literature (genuine sci-adk acquisition + source verification)**: `sci-adk prior-work --searched` ran paperforge +
   Unpaywall (contact email `~/.config/sci-adk/config.toml`) over 7 DOIs that corroborate LC1/LC2; ALL 7 are paywalled
   (no OA PDF) → recorded `acquired 0/failed 7` in `evi-lit-*` + a `prior_work_decision` item + `literature/manifest.csv`

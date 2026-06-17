@@ -29,6 +29,7 @@ from sci_adk.loop.verify import verify_run  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 RUN = ROOT / "sci_adk_review" / "runs" / "pfas-rice"
 RUN_LC = ROOT / "sci_adk_review" / "runs" / "pfas-rice-longchain"
+RUN_CARRIER = ROOT / "sci_adk_review" / "runs" / "pfas-rice-carrier"
 TRAP = ROOT / "sci_adk_review" / "runs" / "pfas-rice-trap"
 
 # Empirical predictive claims that MUST NOT be SUPPORTED (the over-claim guard).
@@ -80,6 +81,14 @@ def test_longchain_run_reproduces():
     """The long-chain mechanism sub-investigation re-derives from its record (LC1/LC2
     SUPPORTED, LC3 REFUTED)."""
     report = verify_run(RUN_LC)
+    assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
+
+
+@pytest.mark.skipif(not RUN_CARRIER.exists(), reason="carrier-QSPR sub-investigation absent")
+def test_carrier_run_reproduces():
+    """The carrier-QSPR sub-investigation (compiled via the `sci-adk run` CLI) re-derives
+    from its record (hyp-001 REFUTED -- the long-chain carrier enhancement is not QSPR-able)."""
+    report = verify_run(RUN_CARRIER)
     assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
 
 

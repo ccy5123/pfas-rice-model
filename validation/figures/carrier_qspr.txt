@@ -1,0 +1,10 @@
+LC6 carrier-enhancement QSPR (Vmax multiplier to reproduce measured root):
+  PFAS    nC log10 K_PL   Vmax x      root p/o
+  PFOA     8       3.28     1.2x    0.5/0.5   
+  PFNA     9       3.75     1.3x    0.6/0.6   
+  PFDA    10       4.18     1.2x    4.2/4.2   
+  PFUnDA  11       4.50     2.0x   19.6/19.5  
+  PFDoDA  12       4.82     5.5x   68.9/69.3  
+  log10(Vmax mult) ~ n_C   : slope 0.15/CF2, R^2 0.701
+  log10(Vmax mult) ~ logK_PL: slope 0.37,     R^2 0.620
+  => carrier enhancement is NOT cleanly QSPR-able

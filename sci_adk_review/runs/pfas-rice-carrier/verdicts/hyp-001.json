@@ -1,0 +1,34 @@
+{
+  "hypothesis_id": "hyp-001",
+  "rule_kind": "qualitative",
+  "rubric_expression": "Expert judgment based on evidence",
+  "rubric_params": null,
+  "panel": [
+    {
+      "direction": "refutes",
+      "level": "strong",
+      "basis": "log10(Vmax mult) vs n_C R^2 0.70 (<0.9) and vs log K_PL 0.62 -- not a clean log-linear law.",
+      "counterexample": false
+    },
+    {
+      "direction": "refutes",
+      "level": "moderate",
+      "basis": "multiplier is ~1.2x flat to C10 then jumps 2.0x (C11), 5.5x (C12) -- threshold-like, not smooth/predictable.",
+      "counterexample": false
+    }
+  ],
+  "chief": {
+    "direction": "refutes",
+    "level": "strong",
+    "basis": "The carrier-enhancement factor is NOT a smooth log-linear function of chain length (R^2 0.70 on n_C, 0.62 on K_PL; both <0.9): essentially no enhancement is needed to C10, then a steep onset at C11-C12. So the long-chain active-carrier enhancement is NOT cleanly QSPR-able -- it stays a longest-chain-specific (ad-hoc) lever, not a chain-length-predictable one. Hypothesis refuted.",
+    "counterexample": false
+  },
+  "provenance": {
+    "spec_version": 1,
+    "timestamp": "2026-06-17T00:00:00+00:00",
+    "agent_ids": [
+      "claude-in-session"
+    ],
+    "cost_ids": null
+  }
+}
