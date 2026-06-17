@@ -1,0 +1,79 @@
+{
+  "id": "pfas-rice-longchain",
+  "created_at": "2026-06-17T00:00:00Z",
+  "version": 1,
+  "raw_proposal": {
+    "background": "PFAS-벼 모델은 단쇄~중쇄 동족체의 조직 BAF는 보정으로 재현하지만, **장쇄(C10–C12)\n는 구조적으로 과소예측**한다. ORYZA2000 biomass에서 per-congener 재적합을 해도\nPFDoDA(C12)는 f_xy=1·L_Ph=1·kappa_d 한계값에서조차 straw 14.6 vs 49.8, grain 7.4 vs\n45.5로 도달하지 못한다. 원인 가설은 **자유음이온(free-anion) 로딩의 구조적 throttle**\n이다: 물관·체관 적재 플럭스는 자유 수상농도 Cw=C/B에 비례하는데, 결합 B는 사슬\n길이에 따라 ~10^(0.5–0.6/CF₂)로 커지므로 장쇄에서 Cw가 붕괴하여 f_xy를 아무리 키워도\nshoot가 굶는다. 문서가 제시한 대안은 **지질-촉진(lipid-facilitated) 결합 로딩**\n(`g_xy·C_root`, `g_ph·C_leaf`; B-비의존, 막/지질 결합 풀이 그대로 이동)이다.",
+    "goal": "sci-adk로 장쇄 메커니즘을 정직하게 판정한다. 독립 검증 가능한 가설:\n\n가설 LC1. 자유음이온 로딩은 장쇄(C10–C12) shoot 축적을 구조적으로 과소예측한다 —\nf_xy=1 천장에서도 적재 플럭스가 Cw=C/B 붕괴로 묶여 shoot가 관측에 도달하지 못한다.\n\n가설 LC2. B-비의존 지질-촉진 결합 로딩 항(g_xy·C, g_ph·C)은 자유 로딩이 닫지 못하는\n장쇄 shoot(straw+grain) 격차의 대부분을 닫는다.\n\n가설 LC3. 이 지질 메커니즘은 root나 단·중쇄 적합을 악화시키지 않고 장쇄 shoot를\n재현한다(단일 메커니즘의 깨끗한 해법이다).",
+    "method": "ORYZA2000 biomass(`oryza_growth`) + 측정 증산에서, 각 동족체를 free-only(monotone\nf_xy, lipid off)와 lipid-loading(K_PL-gated g_xy/g_ph)로 풀어 root/straw/grain BAF를\nYamazaki 측정과 비교한다(`validation/longchain_mechanism.py`). 장쇄(nC≥10)\nstraw+grain의 log10 RMSE를 두 경우로 산출하고, 자유농도 Cw=C/B의 붕괴를 B_root와 함께\n제시한다. 재적합의 f_xy=1 천장 미달(`validation/refit_oryza.py`)을 LC1의 보강 증거로\n쓴다. 모든 비교는 측정(Yamazaki)에 대한 in-sample 평가임을 명시한다.",
+    "expected_output": "장쇄 메커니즘에 대한 판정: (1) 자유 로딩 throttle이 원인인가(LC1), (2) 지질 결합이\n이를 닫는가(LC2), (3) 대가 없이 닫는가(LC3). 각 판정의 정직한 범위 — in-sample(보정\n데이터), 지질 항의 단일-풀 한계(root 트레이드오프), PFDoDA 잔여 floor — 를 기록하고,\n후속(2-풀 자유+결합 분리, PFDoDA 잔여 메커니즘)을 제시한다."
+  },
+  "hypotheses": [
+    {
+      "id": "hyp-lc-freethrottle",
+      "statement": "Free-anion loading structurally under-predicts long-chain (C10-C12) shoot accumulation; even at the f_xy=1 ceiling the loaded flux is throttled by the Cw=C/B collapse, so straw/grain cannot reach the observed values.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "qualitative",
+        "expression": "free-anion xylem/phloem loading structurally under-predicts long-chain (C10-C12) shoot accumulation -- even at the f_xy=1 ceiling the flux is throttled by Cw=C/B collapse => support; long chains are reachable by free loading => refute",
+        "params": null
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-lc-lipidfix",
+      "statement": "A B-independent lipid-facilitated bound-loading term (g_xy*C_root, g_ph*C_leaf) closes most of the long-chain shoot gap that free loading cannot.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "qualitative",
+        "expression": "a B-independent lipid-facilitated bound-loading term (g_xy*C, g_ph*C) closes most of the long-chain shoot gap that free loading cannot => support; no improvement => refute",
+        "params": null
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-lc-nocost",
+      "statement": "The lipid mechanism reproduces the long-chain shoot without degrading the root or the short/mid-chain fits (a clean single-mechanism fix).",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "qualitative",
+        "expression": "the lipid mechanism reproduces the long-chain shoot WITHOUT degrading the root or the short/mid-chain fits (a clean single-mechanism fix) => support; it trades off root / leaves a residual => refute",
+        "params": null
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    }
+  ],
+  "method": {
+    "approaches": [
+      "free-only vs lipid on ORYZA2000 biomass vs Yamazaki",
+      "Cw=C/B collapse diagnosis",
+      "refit f_xy=1 ceiling check"
+    ],
+    "tools": null
+  },
+  "target_claims": [
+    {
+      "id": "tc-lc1",
+      "statement": "Free loading is the long-chain shortfall cause.",
+      "answers": "hyp-lc-freethrottle"
+    },
+    {
+      "id": "tc-lc2",
+      "statement": "Lipid bound-loading closes the long-chain shoot.",
+      "answers": "hyp-lc-lipidfix"
+    },
+    {
+      "id": "tc-lc3",
+      "statement": "The lipid fix is cost-free.",
+      "answers": "hyp-lc-nocost"
+    }
+  ],
+  "amendment_rationale": null,
+  "prior_version_id": null
+}

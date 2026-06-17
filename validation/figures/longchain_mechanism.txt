@@ -1,0 +1,23 @@
+Long-chain mechanism on ORYZA2000 biomass: FREE-only (monotone f_xy) vs LIPID-loading
+
+PFAS    nC   B_root  Cw_root |     straw free/lip/obs    grain free/lip/obs     root free/lip/obs
+PFBA     4      1.2   0.1884 |       11.20/7.24/11.03        3.48/2.28/1.06        0.22/0.42/0.68
+PFPeA    5      1.3   0.1445 |         5.79/2.52/2.74        1.68/0.80/0.26        0.19/0.24/0.27
+PFHxA    6      1.6   0.1493 |         2.88/1.41/1.14        0.93/0.58/0.42        0.24/0.26/0.28
+PFHpA    7      2.3   0.2931 |         2.58/1.93/1.07        0.84/1.05/0.42        0.68/0.70/0.78
+PFOA     8      4.2   0.1147 |         0.43/0.97/0.83        0.15/0.78/0.46        0.48/0.46/0.49
+PFNA     9      9.9   0.0575 |         0.08/1.25/0.69        0.03/1.41/0.41        0.57/0.53/0.57
+PFDA    10     24.3   0.1735 |         0.08/5.95/3.46        0.03/7.37/3.37        4.21/2.38/4.16
+PFUnDA  11     49.1   0.4189 |        0.16/11.15/8.16       0.05/10.59/3.13      20.59/3.91/19.53
+PFDoDA  12    101.0   1.5771 |       0.33/14.68/49.75      0.10/11.67/45.51     159.26/4.44/69.28
+PFBS     4      2.4   0.4339 |         9.03/4.59/2.18        2.72/1.54/0.25        1.05/1.70/2.28
+PFOS     8     49.4   0.1217 |         0.17/5.17/4.35        0.05/2.56/1.97        6.02/4.50/5.93
+
+log10 RMSE                         free-only   lipid
+  long-chain (nC>=10) straw+grain   2.026      0.428
+  long-chain (nC>=10) all tissues   1.659      0.584
+  whole series       all tissues    1.035      0.386
+
+Cw_root = C_root/B_root is the FREE conc the xylem loads (f_xy*Cw). It collapses
+as B_root grows with chain length -> the free-only shoot starves the long chains;
+the B-independent lipid term (g_xy*C, g_ph*C) is what does NOT collapse.

@@ -1,0 +1,36 @@
+{
+  "id": "evi-lc-free",
+  "created_at": "2026-06-17T00:00:00Z",
+  "spec_id": "pfas-rice-longchain",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "715f489f21ca5cf776f0db0738ac440c4604a45f",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/longchain_mechanism.py + validation/refit_oryza.py (real runs)",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 2.026,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "validation/longchain_mechanism.py (ORYZA2000 biomass): free-only (monotone f_xy) long-chain (nC>=10) straw+grain log10 RMSE 2.026 (~100x); PFDA straw 0.08 vs 3.46, PFDoDA straw 0.33 vs 49.8 / grain 0.10 vs 45.5. refit_oryza.py: even f_xy=1/L_Ph=1 ceilings leave PFDoDA straw 14.6 vs 49.8 -- the Cw=C/B collapse throttles free loading regardless of f_xy.",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-lc-freethrottle",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

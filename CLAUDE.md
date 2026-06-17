@@ -320,6 +320,16 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   calibration (the ORYZA analog of `"W2fit"`). Test: `test_model_api.py::test_oryza_refit_reproduces`. The constrained
   DOF>0 structural-adequacy result (straw ~0.18; `validation/structural_adequacy_fit.py`) is the meaningful goodness-of-fit;
   this saturated re-fit is the operational calibration on the new default driver.
+- **Long-chain (C10-C12) mechanism sci-adk sub-investigation (this session)**: `sci_adk_review/proposal_longchain.md`
+  + `build_longchain.py` (→ `runs/pfas-rice-longchain`) + `validation/longchain_mechanism.py` adjudicate WHY long chains
+  are under-predicted, on the ORYZA2000 biomass. Verdicts: **LC1 SUPPORTED** (free-anion loading structurally starves
+  long-chain shoot — free-only long-chain straw+grain log10 RMSE 2.03 ~100×, and the re-fit hits f_xy=1/L_Ph=1 ceilings
+  yet PFDoDA straw 14.6 vs 49.8 → the Cw=C/B free-conc collapse throttles loading); **LC2 SUPPORTED** (the B-independent
+  lipid bound-loading term `g_xy·C`/`g_ph·C` cuts long-chain straw+grain RMSE 2.03→0.43 ~5×, whole series 1.04→0.39);
+  **LC3 REFUTED** (single-pool cost: long-chain root degrades, PFUnDA 20.6→3.9 / PFDoDA 159→4.4, and PFDoDA shoot still
+  ~3-4× under). **Conclusion**: lipid-facilitated bound loading is the correct long-chain *direction* but needs a **2-pool
+  (free + lipid-bound) split** (so the bound pool feeds the shoot without draining the root) + a PFDoDA residual mechanism
+  (irreversible/hysteretic sorption). In-sample. Guard `test_sci_adk_rigor.py::test_longchain_run_reproduces`.
 - **Leaf senescence-loss flux (this session) — fixes the ORYZA leaf-TF artifact**: with the mechanistic
   ORYZA biomass the leaf shrinks (senescence), so the growth-dilution sink `μ=(dM/dt)/M` goes NEGATIVE and the
   `−μ·C` term spuriously CONCENTRATES the leaf — but `oryza_growth` models that loss as leaf DEATH (carbon removed

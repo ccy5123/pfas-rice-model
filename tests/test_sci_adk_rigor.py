@@ -28,6 +28,7 @@ from sci_adk.loop.verify import verify_run  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 RUN = ROOT / "sci_adk_review" / "runs" / "pfas-rice"
+RUN_LC = ROOT / "sci_adk_review" / "runs" / "pfas-rice-longchain"
 TRAP = ROOT / "sci_adk_review" / "runs" / "pfas-rice-trap"
 
 # Empirical predictive claims that MUST NOT be SUPPORTED (the over-claim guard).
@@ -72,6 +73,14 @@ def test_formal_claims_supported():
     status = _claim_status()
     for hyp in _FORMAL_SUPPORTED:
         assert status.get(hyp) == "supported", f"{hyp} regressed to {status.get(hyp)!r}"
+
+
+@pytest.mark.skipif(not RUN_LC.exists(), reason="long-chain sub-investigation absent")
+def test_longchain_run_reproduces():
+    """The long-chain mechanism sub-investigation re-derives from its record (LC1/LC2
+    SUPPORTED, LC3 REFUTED)."""
+    report = verify_run(RUN_LC)
+    assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
 
 
 def test_synthetic_proxy_halt_recorded():
