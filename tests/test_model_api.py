@@ -170,3 +170,22 @@ def test_nstem_leaf_biomass_fn_override():
     # different biomass trajectory -> different leaf transfer factor
     assert abs(oryza["tf_final"]["leaf"] - base["tf_final"]["leaf"]) > 1e-3
     assert all(np.isfinite(v) for v in oryza["tf_final"].values())
+
+
+def test_tang_tf_validation_and_observed():
+    """Tang per-organ TF (dry weight) for the 3 Tang congeners; None for others."""
+    assert api.tang_tf_validation("PFNA") is None
+    assert api.tang_observed_tf("PFNA") == {}
+    for c in api.TANG_CONGENERS:
+        v = api.tang_tf_validation(c)
+        assert set(v["organs"]) == {"stalk", "leaf", "endosperm"}
+        assert set(v["model_tf"]) == set(v["organs"])
+        assert v["tang_tf"] and all(t > 0 for t in v["tang_tf"].values())
+        assert all(np.isfinite(m) and m >= 0 for m in v["model_tf"].values())
+        assert api.tang_tf_validation(c, use_refit=True)["f_xy"] == api.TANG_REFIT_FXY[c]
+    # GenX refit LOWERS f_xy (0.233 -> 0.017, the documented ~12x over-prediction)
+    assert (api.tang_tf_validation("GenX", use_refit=True)["f_xy"]
+            < api.tang_tf_validation("GenX")["f_xy"])
+    # Tang TF declines with dose -> 0.1 ug/g (low) value exceeds the across-dose mean
+    low, mean = api.tang_observed_tf("PFOA", "low"), api.tang_observed_tf("PFOA", "mean")
+    assert low["stalk"] > mean["stalk"]

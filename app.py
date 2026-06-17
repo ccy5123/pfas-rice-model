@@ -378,7 +378,7 @@ if desc is not None:
 
 tabs = st.tabs(["🗺️ Plant & soil map", "📈 Tissue dynamics", "🟫 Soil & drivers",
                 "📊 BAF vs observed", "🔗 Chain-length trends", "⚖️ Compare congeners",
-                "ℹ️ About / coupling"])
+                "✅ Tang TF (OOS)", "ℹ️ About / coupling"])
 
 # ---- Tab 1: the plant + soil accumulation map -------------------------------
 with tabs[0]:
@@ -490,6 +490,38 @@ with tabs[5]:
 
 # ---- Tab 7: about / coupling ------------------------------------------------
 with tabs[6]:
+    st.markdown("**Tang 2026** (flooded paddy, Nipponbare, 150 d; PFOA/PFOS/GenX) — per-organ "
+                "transfer factor **TF = C_organ/C_root**, an *out-of-sample* check of the root→shoot "
+                "loading `f_xy` (only Tang's head-group *sign* went into the model build).")
+    if smiles or congener not in api.TANG_CONGENERS:
+        st.info(f"Tang 2026 covers **{', '.join(api.TANG_CONGENERS)}** only — "
+                "pick one of these curated congeners (sidebar) to see the comparison.")
+    else:
+        c1, c2 = st.columns(2)
+        dose = ("low" if c1.radio("Tang dose", ["across-dose mean", "0.1 µg/g (env-closest)"],
+                                  horizontal=True).startswith("0.1") else "mean")
+        bm = ("oryza" if c2.checkbox("ORYZA biomass driver", value=False,
+                                     help="Drive the shoot model with the mechanistic ORYZA2000 "
+                                          "biomass instead of the logistic (slower).") else "growth_rice")
+        val = api.tang_tf_validation(congener, dose=dose, biomass=bm)
+        valr = api.tang_tf_validation(congener, dose=dose, biomass=bm, use_refit=True)
+        st.plotly_chart(plots.fig_tang_tf(val, valr), width="stretch")
+        _verdict = {"GenX": "GenX over-predicted ~12× by the provisional 0.233; the refit ≈ the documented 0.013.",
+                    "PFOS": "PFOS is **dataset-dependent** — Yamazaki W2 0.142 vs Tang ~0.32; report the **range with conditions**, not one value.",
+                    "PFOA": "PFOA f_xy is dose-sensitive (0.064 across-dose mean → 0.097 at 0.1 µg/g)."}[congener]
+        st.markdown(
+            f"- **f_xy**: recommended **{val['f_xy']:.3g}** → Tang-refit **{valr['f_xy']:.3g}**. {_verdict}\n"
+            f"- **Dry-weight basis** — `TF_dw = TF_fw·(1−θ_root)/(1−θ_tissue)`; comparing the model's "
+            f"fresh-weight TF to Tang's dry-weight TF (without this factor) is a units error that "
+            f"flatters the grain ~8×.\n"
+            f"- **Grain/endosperm is structurally under-predicted ~3–8×** and is **not** closable by "
+            f"`L_Ph`/lipid — a phloem-delivery + dry-weight limit, not a calibration gap.")
+    st.caption("Source: docs/literature_db/raw_si/tang2026_doseresponse.csv (SI S7/S8). Model: "
+               "redistributed-shoot `simulate_nstem_leaf`; the f_xy refit is OVERRIDE-only (parameters.json "
+               "unchanged). Details: docs/VALIDATION_TANG2026_NSTEM_KR.md · docs/tang2026_grain_units_exploration.md.")
+
+# ---- Tab 8: About -----------------------------------------------------------
+with tabs[7]:
     st.markdown(
         """
 ### Five ways to drive the plant model

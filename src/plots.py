@@ -54,6 +54,32 @@ def fig_baf(res, obs):
     return fig
 
 
+def fig_tang_tf(val, val_refit=None):
+    """Tang 2026 per-organ TF (DRY weight): measured vs model, optional refit-f_xy bar.
+
+    `val` (and optional `val_refit`) come from `model_api.tang_tf_validation`. Log-y
+    grouped bars over stalk/leaf/endosperm.
+    """
+    organs = val["organs"]
+    fig = go.Figure()
+    fig.add_bar(x=organs, y=[val["tang_tf"].get(o) for o in organs], name="Tang 2026 (measured)",
+                marker_color="#444444", hovertemplate="Tang %{x}: %{y:.2f}<extra></extra>")
+    fig.add_bar(x=organs, y=[val["model_tf"][o] for o in organs],
+                name=f"model · f_xy={val['f_xy']:.3g}", marker_color="#bdbdbd",
+                marker_line=dict(width=0.5, color="#333"),
+                hovertemplate="model %{x}: %{y:.3g}<extra></extra>")
+    if val_refit is not None:
+        fig.add_bar(x=organs, y=[val_refit["model_tf"][o] for o in organs],
+                    name=f"model · Tang-refit f_xy={val_refit['f_xy']:.3g}", marker_color="#2ca02c",
+                    marker_line=dict(width=0.5, color="#333"),
+                    hovertemplate="refit %{x}: %{y:.3g}<extra></extra>")
+    fig.update_layout(barmode="group", yaxis_type="log",
+                      title=f"{val['congener']} — per-organ TF (dry weight) vs Tang 2026 (OOS)",
+                      yaxis_title="TF = C_organ / C_root  [dry wt]",
+                      xaxis_title="tissue (model grain ↔ Tang endosperm)", **_LAYOUT)
+    return fig
+
+
 _CHAIN_LOG = {"K_PL", "K_prot", "f_xy_recommended", "f_xy_W2fit", "B_root", "B_grain"}
 
 

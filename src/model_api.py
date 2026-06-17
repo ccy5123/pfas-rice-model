@@ -79,6 +79,67 @@ def observed_baf(congener):
     return out
 
 
+# --- Tang 2026 per-organ TF validation (dry-weight basis) -----------------------
+TANG_CONGENERS = ("PFOA", "PFOS", "GenX")
+# f_xy re-fit to Tang TF at the 0.1 ug/g dose (OVERRIDE-only; validation/tang2026_fxy_refit.py).
+# PFOS is dataset-dependent (Yamazaki W2 0.142 vs Tang ~0.32) -> a condition, not one value.
+TANG_REFIT_FXY = {"PFOA": 0.097, "PFOS": 0.320, "GenX": 0.017}
+_TANG_TF_ENDPOINT = {"TF_stalk": "stalk", "TF_leaf": "leaf", "TF_endosperm": "endosperm"}
+# (model grain pool, Tang organ name, theta key) for the fresh->dry conversion
+_TANG_ORGANS = (("stem", "stalk", "stem"), ("leaf", "leaf", "leaf"), ("grain", "endosperm", "grain_brown"))
+
+
+def tang_observed_tf(congener, dose="mean"):
+    """Tang 2026 MEASURED per-organ TF (DRY weight) -> {stalk,leaf,endosperm: TF}, or {}.
+
+    dose='mean' averages the 5 soil doses; 'low' uses 0.1 ug/g (environmentally closest,
+    least toxicity-confounded). Source: raw_si/tang2026_doseresponse.csv (SI Table S8).
+    """
+    if congener not in TANG_CONGENERS:
+        return {}
+    import csv
+    path = os.path.join(_ROOT, "docs", "literature_db", "raw_si", "tang2026_doseresponse.csv")
+    by = {}
+    with open(path) as f:
+        for r in csv.DictReader(x for x in f if not x.lstrip().startswith("#")):
+            org = _TANG_TF_ENDPOINT.get(r["endpoint"])
+            if org and r["compound"] == congener:
+                by.setdefault(org, {})[float(r["dose_ugg"])] = float(r["value"])
+    if dose == "low":
+        return {o: v[min(v)] for o, v in by.items()}
+    return {o: float(np.mean(list(v.values()))) for o, v in by.items()}
+
+
+def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
+                       dose="mean", biomass="growth_rice", season=150.0):
+    """Model per-organ transfer factor (DRY-weight) vs Tang 2026, for a Tang congener.
+
+    The model conc is fresh-weight (C=B_k*Cw, basis A); Tang TF is dry/dry, and the
+    (1-theta_fw) factor differs by tissue (root 0.90 vs grain 0.14) so it does NOT cancel
+    in C_tissue/C_root: TF_dw = TF_fw*(1-theta_root)/(1-theta_tissue). Uses the
+    redistributed-shoot model (`simulate_nstem_leaf`) for a sensible stem~leaf split;
+    biomass='oryza' drives it with the mechanistic ORYZA2000 biomass. use_refit applies
+    the Tang-calibrated f_xy override. Returns None for non-Tang congeners.
+    NOTE: grain/endosperm is structurally under-predicted ~3-8x (docs/tang2026_grain_units_exploration.md).
+    """
+    if congener not in TANG_CONGENERS:
+        return None
+    fxy = TANG_REFIT_FXY[congener] if use_refit else None
+    bfn = None
+    if biomass == "oryza":
+        import oryza_growth as og
+        bfn = lambda t, s: og.organ_biomass_oryza(t, p=og.OryzaParams(season=s))
+    r = simulate_nstem_leaf(congener, Cwo=1.0, season=season, biomass_fn=bfn,
+                            f_xy_source=f_xy_source, f_xy_override=fxy)
+    froot = 1.0 - _COMP["root"]["theta_fw"]
+    model = {org: r["tf_final"][mk] * froot / (1.0 - _COMP[tk]["theta_fw"])
+             for mk, org, tk in _TANG_ORGANS}
+    return dict(congener=congener, organs=[o for _, o, _ in _TANG_ORGANS],
+                model_tf=model, tang_tf=tang_observed_tf(congener, dose),
+                f_xy=float(r["params"]["f_xy"]), use_refit=bool(use_refit), dose=dose,
+                biomass=biomass, refit_fxy=TANG_REFIT_FXY[congener])
+
+
 def chain_table():
     """Per-congener summary parameters (for the chain-length overview)."""
     rows = []

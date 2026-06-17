@@ -43,6 +43,27 @@ colour.
 
 ---
 
+## Tang 2026 validation tab (out-of-sample)
+
+The **✅ Tang TF (OOS)** tab checks the root→shoot loading `f_xy` against **Tang et al. 2026**
+(flooded paddy, Nipponbare, 150 d; PFOA/PFOS/GenX) — the per-organ transfer factor
+**TF = C_organ/C_root** (SI Table S8), shown for the selected congener as grouped bars:
+**Tang (measured)** vs **model** vs **model with the Tang-refit `f_xy`** (`model_api.tang_tf_validation`
+→ `plots.fig_tang_tf`). Only Tang's head-group *sign* went into the build, so the magnitudes are OOS.
+
+Three things the tab makes explicit (the rigor points from this work):
+- **Dry-weight basis.** Tang's TF is dry/dry; the model conc is fresh-weight, and the
+  `(1−θ)` factor differs by tissue, so `TF_dw = TF_fw·(1−θ_root)/(1−θ_tissue)` is applied
+  (comparing fresh model TF to dry Tang TF flatters the grain ~8×).
+- **`f_xy` is condition-dependent.** PFOS `f_xy` ≈ 0.14 (Yamazaki, clean water) vs ~0.32
+  (Tang, flooded soil); GenX's provisional 0.233 is ~12× too high (refit ≈ 0.013). The refit
+  is **override-only** (`parameters.json` unchanged). Dose toggle (across-dose mean vs 0.1 µg/g)
+  and an optional ORYZA-biomass driver are exposed.
+- **Grain is structurally under-predicted** ~3–8× and is *not* closable by `L_Ph`/lipid
+  (`docs/tang2026_grain_units_exploration.md`).
+
+---
+
 ## Four ways to drive the model
 
 Only the pore-water free-anion concentration `Cwᵒ(t)` is PFAS-specific. The transpiration
