@@ -2,24 +2,25 @@
 # =============================================================================
 # validation/structural_adequacy_fit.py
 # -----------------------------------------------------------------------------
-# STRUCTURAL ADEQUACY via a CONSTRAINED (DOF>0) fit.
+# STRUCTURAL ADEQUACY via CONSTRAINED (DOF>0) fits, driven by the MECHANISTIC
+# ORYZA2000 biomass (src/oryza_growth.py) + the measured transpiration
+# (src/forcing_rice.py) -- NOT the illustrative logistic placeholder.
 #
-# The question is NOT prediction but: "can the model STRUCTURE reproduce the
-# measured experiments when calibrated?" A fit only answers this with degrees of
-# freedom > 0 -- the W2 fit (3 params/congener vs 3 obs/congener; 33 params / 33
-# obs globally) is SATURATED (DOF 0), so its RMSE 0.029 is guaranteed and says
-# nothing about the structure.
+# Question (the user's reframe): not out-of-sample prediction, but "can the model
+# STRUCTURE reproduce the measured experiments via fitting?" A fit only answers
+# this with degrees of freedom > 0 (the W2 fit is 33 params / 33 obs, DOF 0 --
+# saturated, so its RMSE 0.029 is guaranteed and structure-blind).
 #
-# CONSTRAINED fit: per-congener f_xy (the physical TSCF, the one lever expected to
-# vary by chain) but a SINGLE shared L_Ph and a SINGLE shared kappa_d across ALL
-# congeners. 11 + 2 = 13 params for 11 congeners x 3 tissues = 33 obs -> DOF = 20.
+# Three constrained scenarios decide WHICH per-congener lever the structure needs,
+# always keeping DOF > 0 (11 congeners x 3 tissues = 33 obs):
+#   A  per-congener f_xy + global L_Ph + global kappa_d        (13 params, DOF 20)  [shoot]
+#   B  per-congener f_xy + per-congener L_Ph + global kappa_d  (23 params, DOF 10)  [grain]
+#   C  per-congener f_xy + global L_Ph + per-congener kappa_d  (23 params, DOF 10)  [root]
 #
-# Fit by a fast STAGED procedure that exploits the model's near-separability
-# (root<-kappa_d+binding, straw<-f_xy, grain<-L_Ph), so it is ~500 ODE solves
-# instead of the tens of thousands a joint least_squares needs. The result is an
-# ACHIEVABLE RMSE at DOF 20 (an upper bound on the joint optimum) -- enough to
-# decide structural adequacy. Reported with the per-tissue breakdown + DOF so the
-# claim is honest.
+# Each is fit by a fast staged procedure exploiting the model's near-separability
+# (root<-kappa_d, straw<-f_xy, grain<-L_Ph) with 1-D brentq solves on the
+# monotone tissue responses, and a loose-tol terminal-only ODE solve. Reports the
+# per-tissue log10 RMSE + DOF per scenario so the adequacy claim is honest.
 #
 #   python validation/structural_adequacy_fit.py
 # =============================================================================
@@ -33,7 +34,9 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "src"))
 from pfas_rice_plant_module_4pool_surf import (  # noqa: E402
     Environment, Compound, Compartment, RiceUptakeModel, PlantInputs,
-    _logistic, ROOT as R, STEM, LEAF, FRUIT)
+    ROOT as R, STEM, LEAF, FRUIT)
+import oryza_growth as og        # noqa: E402  (the user's mechanistic ORYZA2000)
+import forcing_rice as fr        # noqa: E402  (measured FAO-56 transpiration)
 
 PAR = json.load(open(os.path.join(ROOT, "params", "parameters.json")))
 obs = {}
@@ -44,12 +47,14 @@ with open(os.path.join(ROOT, "data_obs", "obs_baf_Yamazaki.csv"), newline="") as
 comp = PAR["tissue_composition_recommended"]
 carr = PAR["carrier_MichaelisMenten"]
 env = Environment()
-t = np.linspace(0.0, 120.0, 121)
-inputs = PlantInputs(
-    t=t, Cwo=np.full_like(t, 1.0),
-    Qtp=0.05 + 0.35 * np.exp(-((t - 75.0) ** 2) / (2 * 25.0 ** 2)),
-    M=np.column_stack([_logistic(t, 1e-3, 0.030, 0.10, 20.0), _logistic(t, 1e-3, 0.040, 0.10, 25.0),
-                       _logistic(t, 1e-3, 0.050, 0.12, 30.0), _logistic(t, 1e-5, 0.025, 0.18, 80.0)]))
+
+# ---- biomass driver: the MECHANISTIC ORYZA2000 (oryza_growth) + measured Q_TP --
+SEASON = 120.0
+t = np.linspace(0.0, SEASON, 121)
+_b = og.organ_biomass_oryza(t, p=og.OryzaParams(season=SEASON))
+M = np.maximum(np.column_stack([_b["root"], _b["stem"], _b["leaf"], _b["grain"]]), 1e-4)
+inputs = PlantInputs(t=t, Cwo=np.full_like(t, 1.0), Qtp=fr.Q_TP(t, SEASON), M=M,
+                     leaf_loss=_b.get("leaf_death_rate"))
 Mf = inputs.M_(t[-1])
 
 
@@ -66,9 +71,7 @@ _cache = {}
 
 
 def _predict(c, f_xy, L_Ph, kappa_d):
-    """Final-time tissue BAFs. Fast solve: only the terminal value is needed, and
-    the structural-adequacy question is robust to a looser tol (rtol 1e-4)."""
-    key = (c["name"], round(f_xy, 5), round(L_Ph, 5), round(kappa_d, 4))
+    key = (c["name"], round(f_xy, 5), round(L_Ph, 6), round(kappa_d, 4))
     if key in _cache:
         return _cache[key]
     cmpd = Compound(name=c["name"], K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
@@ -85,84 +88,107 @@ def _predict(c, f_xy, L_Ph, kappa_d):
     return out
 
 
-def _le(a, b):  # squared log10 error, guarded
+def _le(a, b):
     return (np.log10(max(a, 1e-6)) - np.log10(max(b, 1e-6))) ** 2
 
 
-def _best_fxy(c, L_Ph, kappa_d, lo=1e-3, hi=1.0):
-    """per-congener f_xy matching the observed straw (straw is monotone in f_xy);
-    brentq on log10(straw_pred/straw_obs), clamped when the target is unreachable."""
+def _fit_scalar(c, tissue, var, lo, hi, f_xy, L_Ph, kappa_d):
+    """1-D brentq for the scalar `var` ('f_xy'|'L_Ph'|'kappa_d') matching the
+    observed `tissue` (monotone response), clamped when the target is unreachable."""
     o = obs[c["name"]]
-    if "straw" not in o:
-        return c["f_xy_recommended"]
-    def g(lx):
-        return np.log10(max(_predict(c, 10.0 ** lx, L_Ph, kappa_d)["straw"], 1e-6)) - np.log10(o["straw"])
+    if tissue not in o:
+        return {"f_xy": f_xy, "L_Ph": L_Ph, "kappa_d": kappa_d}[var]
+    def pred(x):
+        kw = {"f_xy": f_xy, "L_Ph": L_Ph, "kappa_d": kappa_d}; kw[var] = 10.0 ** x
+        return _predict(c, kw["f_xy"], kw["L_Ph"], kw["kappa_d"])[tissue]
     a, b = np.log10(lo), np.log10(hi)
-    ga, gb = g(a), g(b)
+    ga = np.log10(max(pred(a), 1e-6)) - np.log10(o[tissue])
+    gb = np.log10(max(pred(b), 1e-6)) - np.log10(o[tissue])
     if ga * gb < 0:
-        return 10.0 ** brentq(g, a, b, xtol=1e-2, rtol=1e-3, maxiter=40)
-    return lo if abs(ga) < abs(gb) else hi          # target outside reach -> nearest bound
+        return 10.0 ** brentq(lambda x: np.log10(max(pred(x), 1e-6)) - np.log10(o[tissue]),
+                              a, b, xtol=1e-2, rtol=1e-3, maxiter=40)
+    return lo if abs(ga) < abs(gb) else hi
 
 
-def _rmse(fxy_by, L_Ph, kappa_d):
-    errs = []
+def _global_grid(tissue, grid, fxy_by, L_Ph, kappa_d, var):
+    best = (1e9, grid[0])
+    for v in grid:
+        e = 0.0
+        for c in CONG:
+            if tissue in obs[c["name"]]:
+                kw = {"f_xy": fxy_by[c["name"]], "L_Ph": L_Ph, "kappa_d": kappa_d}; kw[var] = v
+                e += _le(_predict(c, kw["f_xy"], kw["L_Ph"], kw["kappa_d"])[tissue], obs[c["name"]][tissue])
+        best = min(best, (e, v))
+    return best[1]
+
+
+def _rmse(params_by, glob):
+    per = {k: [] for k in TISS}
     for c in CONG:
-        pr = _predict(c, fxy_by[c["name"]], L_Ph, kappa_d); o = obs[c["name"]]
-        errs += [_le(pr[k], o[k]) for k in TISS if k in o]
-    return float(np.sqrt(np.mean(errs))), errs
+        f_xy = params_by[c["name"]]["f_xy"]
+        L_Ph = params_by[c["name"]].get("L_Ph", glob.get("L_Ph"))
+        kappa_d = params_by[c["name"]].get("kappa_d", glob.get("kappa_d"))
+        pr = _predict(c, f_xy, L_Ph, kappa_d); o = obs[c["name"]]
+        for k in TISS:
+            if k in o:
+                per[k].append(_le(pr[k], o[k]))
+    allp = sum(per.values(), [])
+    return (float(np.sqrt(np.mean(allp))),
+            {k: float(np.sqrt(np.mean(v))) for k, v in per.items()})
+
+
+KD_GRID = np.logspace(-2, np.log10(50), 9)
+LPH_GRID = np.logspace(-4, 0, 9)
+FXY = (1e-3, 1.0); LPH = (1e-5, 1.0); KD = (1e-2, 50.0)
+
+
+def scenario(name, per_lph, per_kd):
+    """Fit with f_xy always per-congener; L_Ph and kappa_d per-congener or global."""
+    fxy_by = {c["name"]: c["f_xy_recommended"] for c in CONG}
+    glob = {}
+    # kappa_d (root)
+    if per_kd:
+        kd_by = {c["name"]: _fit_scalar(c, "root", "kappa_d", *KD, fxy_by[c["name"]], 0.01, 2.0) for c in CONG}
+    else:
+        kd_g = _global_grid("root", KD_GRID, fxy_by, 0.01, 2.0, "kappa_d"); glob["kappa_d"] = kd_g
+        kd_by = {c["name"]: kd_g for c in CONG}
+    # f_xy (straw) given kappa_d, a starting L_Ph
+    L0 = 0.003
+    for c in CONG:
+        fxy_by[c["name"]] = _fit_scalar(c, "straw", "f_xy", *FXY, fxy_by[c["name"]], L0, kd_by[c["name"]])
+    # L_Ph (grain)
+    if per_lph:
+        lph_by = {c["name"]: _fit_scalar(c, "grain", "L_Ph", *LPH, fxy_by[c["name"]], L0, kd_by[c["name"]]) for c in CONG}
+    else:
+        lph_g = _global_grid("grain", LPH_GRID, fxy_by, L0, kd_by[CONG[0]["name"]], "L_Ph"); glob["L_Ph"] = lph_g
+        lph_by = {c["name"]: lph_g for c in CONG}
+    # one refine of f_xy with final L_Ph
+    for c in CONG:
+        fxy_by[c["name"]] = _fit_scalar(c, "straw", "f_xy", *FXY, fxy_by[c["name"]], lph_by[c["name"]], kd_by[c["name"]])
+
+    params_by = {c["name"]: {"f_xy": fxy_by[c["name"]], "L_Ph": lph_by[c["name"]], "kappa_d": kd_by[c["name"]]}
+                 for c in CONG}
+    rmse, per = _rmse(params_by, glob)
+    n_obs = sum(len([k for k in TISS if k in obs[c["name"]]]) for c in CONG)
+    n_par = len(CONG) + (len(CONG) if per_lph else 1) + (len(CONG) if per_kd else 1)
+    dof = n_obs - n_par
+    gtxt = ", ".join(f"{k}={v:.4g}" for k, v in glob.items()) or "(none)"
+    print(f"[{name}]  params={n_par}/{n_obs}  DOF={dof}  global: {gtxt}")
+    print(f"        per-tissue RMSE: root {per['root']:.3f}  straw {per['straw']:.3f}  grain {per['grain']:.3f}"
+          f"   overall {rmse:.3f}")
+    return name, dof, per, rmse
 
 
 def main():
-    kd_grid = np.logspace(-2, np.log10(50), 9)
-    lph_grid = np.logspace(-4, 0, 9)
-
-    # Stage 1: global kappa_d from ROOT (root ~ uptake/dilution; weak in f_xy/L_Ph).
-    L_Ph = 0.1
-    best = (1e9, kd_grid[0])
-    for kd in kd_grid:
-        e = sum(_le(_predict(c, c["f_xy_recommended"], L_Ph, kd)["root"], obs[c["name"]]["root"])
-                for c in CONG if "root" in obs[c["name"]])
-        best = min(best, (e, kd))
-    kappa_d = best[1]
-
-    # Stage 2: per-congener f_xy from STRAW (kappa_d fixed) via brentq.
-    fxy_by = {c["name"]: _best_fxy(c, L_Ph, kappa_d) for c in CONG}
-
-    # Stage 3: global L_Ph from GRAIN (kappa_d, f_xy fixed).
-    best = (1e9, lph_grid[0])
-    for lph in lph_grid:
-        e = sum(_le(_predict(c, fxy_by[c["name"]], lph, kappa_d)["grain"], obs[c["name"]]["grain"])
-                for c in CONG if "grain" in obs[c["name"]])
-        best = min(best, (e, lph))
-    L_Ph = best[1]
-
-    # one refinement pass of f_xy with the updated L_Ph
-    fxy_by = {c["name"]: _best_fxy(c, L_Ph, kappa_d) for c in CONG}
-
-    rmse, errs = _rmse(fxy_by, L_Ph, kappa_d)
-    n_obs = len(errs); n_par = len(CONG) + 2; dof = n_obs - n_par
-    # per-tissue RMSE
-    per = {}
-    for k in TISS:
-        ek = [_le(_predict(c, fxy_by[c["name"]], L_Ph, kappa_d)[k], obs[c["name"]][k])
-              for c in CONG if k in obs[c["name"]]]
-        per[k] = float(np.sqrt(np.mean(ek)))
-
-    print(f"CONSTRAINED global fit: per-congener f_xy ({len(CONG)}) + global L_Ph + global kappa_d "
-          f"= {n_par} params for {n_obs} obs  ->  DOF = {dof}")
-    print(f"global L_Ph = {L_Ph:.4g}   global kappa_d = {kappa_d:.4g}\n")
-    print(f"{'PFAS':8}{'nC':>3}{'f_xy':>8} | {'root p/o':>16}{'straw p/o':>16}{'grain p/o':>16}")
-    for c in CONG:
-        pr = _predict(c, fxy_by[c["name"]], L_Ph, kappa_d); o = obs[c["name"]]
-        print(f"{c['name']:8}{c['n_C']:>3}{fxy_by[c['name']]:>8.4f} | "
-              f"{pr['root']:>7.2f}/{o.get('root', float('nan')):<7.2f}"
-              f"{pr['straw']:>7.2f}/{o.get('straw', float('nan')):<7.2f}"
-              f"{pr['grain']:>7.2f}/{o.get('grain', float('nan')):<7.2f}")
-    print(f"\nper-tissue log10 RMSE: root {per['root']:.3f}  straw {per['straw']:.3f}  "
-          f"grain {per['grain']:.3f}")
-    print(f"CONSTRAINED-fit log10 RMSE = {rmse:.3f}   (DOF {dof}; vs saturated W2 0.029 at DOF 0, "
-          f"a-priori monotone ~0.84)")
-    return rmse, dof, per
+    print("biomass driver: MECHANISTIC ORYZA2000 (oryza_growth) + measured Q_TP (forcing_rice)\n")
+    rows = [scenario("A shoot   (f_xy; global L_Ph, global kappa_d)", per_lph=False, per_kd=False),
+            scenario("B +grain  (f_xy, per-cong L_Ph; global kappa_d)", per_lph=True, per_kd=False),
+            scenario("C +root   (f_xy, per-cong kappa_d; global L_Ph)", per_lph=False, per_kd=True)]
+    print("\nSUMMARY (vs saturated W2 0.029 at DOF 0; a-priori monotone ~0.84):")
+    for name, dof, per, rmse in rows:
+        print(f"  DOF {dof:>2}  overall {rmse:.3f}  | root {per['root']:.3f} straw {per['straw']:.3f} "
+              f"grain {per['grain']:.3f}  | {name}")
+    return rows
 
 
 if __name__ == "__main__":
