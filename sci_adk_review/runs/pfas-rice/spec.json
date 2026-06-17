@@ -96,6 +96,19 @@
       "referent": "formal",
       "non_circularity": "read-across reproducibility is a software property verified by an independent test (tests/test_pfas_structure.py) that builds the Compound from a canonical SMILES and checks it equals the curated params/parameters.json record; it asserts the structure->parameter mapping is FAITHFUL, not that the parameters are physically correct.",
       "novelty": false
+    },
+    {
+      "id": "hyp-adequacy",
+      "statement": "The model's translocation structure reproduces the measured straw (shoot) BAFs across the C4-C12 PFCA/PFSA series under a CONSTRAINED (DOF>0) calibration -- per-congener f_xy + a single shared L_Ph and kappa_d (13 params / 33 obs, DOF 20), NOT the saturated W2 fit.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "qualitative",
+        "expression": "a CONSTRAINED (degrees-of-freedom > 0) calibration of the structure reproduces the measured STRAW (shoot translocation) BAFs across the C4-C12 PFCA/PFSA series => support; only a saturated (DOF 0) per-congener fit reproduces => refute",
+        "params": null
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
     }
   ],
   "method": {
@@ -138,6 +151,11 @@
       "id": "tc-smiles",
       "statement": "SMILES read-across reproduces the curated model.",
       "answers": "hyp-smiles"
+    },
+    {
+      "id": "tc-adequacy",
+      "statement": "The structure reproduces shoot translocation via a constrained fit.",
+      "answers": "hyp-adequacy"
     }
   ],
   "amendment_rationale": null,

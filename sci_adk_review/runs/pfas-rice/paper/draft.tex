@@ -155,6 +155,15 @@ Planned approaches:
   \item \textit{Evidence validity:} referent=formal; data\_source(s)=generated --- in-silico/computational result
 \end{itemize}
 
+\subsection{The model's translocation structure reproduces the measured straw (shoot) BAFs across the C4-C12 PFCA/PFSA series under a CONSTRAINED (DOF>0) calibration -- per-congener f\_xy + a single shared L\_Ph and kappa\_d (13 params / 33 obs, DOF 20), NOT the saturated W2 fit.}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-adequacy} (confirmatory)
+  \item Decision rule (qualitative): a CONSTRAINED (degrees-of-freedom > 0) calibration of the structure reproduces the measured STRAW (shoot translocation) BAFs across the C4-C12 PFCA/PFSA series => support; only a saturated (DOF 0) per-congener fit reproduces => refute
+  \item \textbf{Status: supported} --- confidence strong (graded)
+  \item Basis: qualitative judge: Decisive panel reasoning: the rule asks whether a CONSTRAINED (DOF>0) fit reproduces the straw series. The DOF-20 fit reaches straw RMSE 0.048 across the full C4-C12 PFCA/PFSA range -- including the long chains the a-priori monotone f\_xy collapsed on -- with per-congener f\_xy and only a SHARED L\_Ph and kappa\_d. So the translocation structure (GHK exclusion + f\_xy TSCF + binding) is adequate to reproduce shoot accumulation under calibration (distinct from the grain sub-model, which fails even constrained).
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
 \section{Evidence}
 \begin{itemize}
   \item \texttt{evi-literature} (literature): finding=\{"acquired": [\{"doi": "10.1016/j.jhazmat.2025.141017"\}, \{"doi": "10.1016/j.scitotenv.2019.03.240"\}, \{"doi": "10.1029/201
@@ -166,6 +175,7 @@ Planned approaches:
   \item \texttt{evi-grain-tang} (experiment\_run): point=0.11, finding=Tang 2026 OOS: PFOA endosperm TF model 0.11 vs measured 0.95 (dw); grain structurally \textasciitilde{}3-8x under across congeners; not 
   \item \texttt{evi-grain-kim} (experiment\_run): finding=Kim 2019: grain BAF reproduced only by FORCING L\_Ph (0.07 -> 4.43, L\_Ph\textasciitilde{}0.84) as a single-point in-sample anchor; Kim is
   \item \texttt{evi-soil} (experiment\_run): point=4.4, finding=literature\_params.koc (Higgins-Luthy +0.55/CF2 QSPR): Koc(PFBA C4)=2.15 vs Koc(PFDoDA C12)=53985 L/kg => 4.40 log10 spre
+  \item \texttt{evi-adequacy} (experiment\_run): point=0.048, finding=validation/structural\_adequacy\_fit.py: CONSTRAINED fit (per-congener f\_xy + global L\_Ph=3.2e-3 + global kappa\_d=2.05; 13
   \item \texttt{evi-smiles} (experiment\_run): finding=tests/test\_pfas\_structure.py: 23 passed (RDKit). A canonical SMILES that matches a curated congener rebuilds the SAME Co
 \end{itemize}
 
@@ -181,8 +191,11 @@ validation/apriori\_prediction.py: redistributed-shoot model (nstem\_leaf, N ste
   \item \texttt{hyp-grain} (qualitative): model grain (brown-rice) BAF/TF matches measured within a factor adequate for dietary risk assessment => support; systematic structural under/over-prediction => refute
   \item finding: Tang 2026 OOS: PFOA endosperm TF model 0.11 vs measured 0.95 (dw); grain structurally \textasciitilde{}3-8x under across congeners; not closable by L\_Ph / lipid tuning (docs/tang2026\_grain\_units\_exploration.md).
 Kim 2019: grain BAF reproduced only by FORCING L\_Ph (0.07 -> 4.43, L\_Ph\textasciitilde{}0.84) as a single-point in-sample anchor; Kim is grain-only, so root/straw TF are unconstrained.
+validation/structural\_adequacy\_fit.py: CONSTRAINED fit (per-congener f\_xy + global L\_Ph=3.2e-3 + global kappa\_d=2.05; 13 params / 33 obs, DOF 20) vs Yamazaki. Per-tissue log10 RMSE: STRAW 0.048 (reproduced across the WHOLE series incl. long chains PFUnDA 8.18/8.16, PFDoDA 34/49), root 0.384 (within \textasciitilde{}2-3x on one global kappa\_d), GRAIN 0.987 (short over \textasciitilde{}10x: PFBA 11 vs 1; long under \textasciitilde{}75x: PFDoDA 0.6 vs 46). Overall 0.612 (vs saturated W2 0.029 at DOF 0; a-priori 0.84). => structure reproduces SHOOT translocation under a constrained fit; GRAIN does not (needs per-congener phloem loading).
   \item \texttt{hyp-smiles} (qualitative): the SMILES front-end reproduces the curated measured-parameter model for a KNOWN PFAS via read-across (structure -> same Compound) => support; a mismatch => refute
   \item finding: tests/test\_pfas\_structure.py: 23 passed (RDKit). A canonical SMILES that matches a curated congener rebuilds the SAME Compound from params/parameters.json (measured read-across). CAVEAT: for NOVEL structures f\_xy is provisional (QSPR/interpolated), NOT validated --- this claim is scoped to known structures only.
+  \item \texttt{hyp-adequacy} (qualitative): a CONSTRAINED (degrees-of-freedom > 0) calibration of the structure reproduces the measured STRAW (shoot translocation) BAFs across the C4-C12 PFCA/PFSA series => support; only a saturated (DOF 0) per-congener fit reproduces => refute
+  \item finding: validation/structural\_adequacy\_fit.py: CONSTRAINED fit (per-congener f\_xy + global L\_Ph=3.2e-3 + global kappa\_d=2.05; 13 params / 33 obs, DOF 20) vs Yamazaki. Per-tissue log10 RMSE: STRAW 0.048 (reproduced across the WHOLE series incl. long chains PFUnDA 8.18/8.16, PFDoDA 34/49), root 0.384 (within \textasciitilde{}2-3x on one global kappa\_d), GRAIN 0.987 (short over \textasciitilde{}10x: PFBA 11 vs 1; long under \textasciitilde{}75x: PFDoDA 0.6 vs 46). Overall 0.612 (vs saturated W2 0.029 at DOF 0; a-priori 0.84). => structure reproduces SHOOT translocation under a constrained fit; GRAIN does not (needs per-congener phloem loading).
 \end{itemize}
 
 \section{References}

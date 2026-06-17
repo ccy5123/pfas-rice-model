@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-adequacy",
+  "spec_id": "pfas-rice",
+  "answers": "hyp-adequacy",
+  "statement": "The model's translocation structure reproduces the measured straw (shoot) BAFs across the C4-C12 PFCA/PFSA series under a CONSTRAINED (DOF>0) calibration -- per-congener f_xy + a single shared L_Ph and kappa_d (13 params / 33 obs, DOF 20), NOT the saturated W2 fit.",
+  "status": "supported",
+  "confidence": {
+    "type": "graded",
+    "value": null,
+    "level": "strong",
+    "basis": "qualitative judge: Decisive panel reasoning: the rule asks whether a CONSTRAINED (DOF>0) fit reproduces the straw series. The DOF-20 fit reaches straw RMSE 0.048 across the full C4-C12 PFCA/PFSA range -- including the long chains the a-priori monotone f_xy collapsed on -- with per-congener f_xy and only a SHARED L_Ph and kappa_d. So the translocation structure (GHK exclusion + f_xy TSCF + binding) is adequate to reproduce shoot accumulation under calibration (distinct from the grain sub-model, which fails even constrained)."
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-adequacy",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T14:17:15.003017Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-adequacy",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

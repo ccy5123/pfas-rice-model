@@ -95,6 +95,10 @@ R_SOIL = ("per-congener soil sorption (Koc chain-length QSPR) spans > 2 log10 un
 R_SMILES = ("the SMILES front-end reproduces the curated measured-parameter model for a "
             "KNOWN PFAS via read-across (structure -> same Compound) => support; a "
             "mismatch => refute")
+R_ADEQ = ("a CONSTRAINED (degrees-of-freedom > 0) calibration of the structure "
+          "reproduces the measured STRAW (shoot translocation) BAFs across the C4-C12 "
+          "PFCA/PFSA series => support; only a saturated (DOF 0) per-congener fit "
+          "reproduces => refute")
 R_DEMO = ("the bundled demonstration BAFs establish that the model predicts field PFAS "
           "bioaccumulation in rice => support")
 
@@ -189,6 +193,16 @@ def build_spec() -> Spec:
                 "mapping is FAITHFUL, not that the parameters are physically correct."
             ),
         ),
+        Hypothesis(
+            id="hyp-adequacy",
+            statement="The model's translocation structure reproduces the measured straw "
+                      "(shoot) BAFs across the C4-C12 PFCA/PFSA series under a CONSTRAINED "
+                      "(DOF>0) calibration -- per-congener f_xy + a single shared L_Ph and "
+                      "kappa_d (13 params / 33 obs, DOF 20), NOT the saturated W2 fit.",
+            mode=HypothesisMode.CONFIRMATORY,
+            decision_rule=DecisionRule(kind=DecisionRuleKind.QUALITATIVE, expression=R_ADEQ),
+            referent="empirical",
+        ),
     ]
     target_claims = [
         TargetClaim(id="tc-mass", statement="The transport ODE is mass-conserving.",
@@ -207,6 +221,9 @@ def build_spec() -> Spec:
         TargetClaim(id="tc-smiles",
                     statement="SMILES read-across reproduces the curated model.",
                     answers="hyp-smiles"),
+        TargetClaim(id="tc-adequacy",
+                    statement="The structure reproduces shoot translocation via a constrained fit.",
+                    answers="hyp-adequacy"),
     ]
     method = MethodPlan(approaches=[
         "four-compartment dynamic ODE (BDF)",
@@ -360,6 +377,26 @@ def evidence(spec, workspace):
         [Bearing(target_id="hyp-soil", direction=BearingDirection.SUPPORTS)],
         "src/literature_params.koc (live)"))
 
+    # H-adequacy + H4(grain): the CONSTRAINED (DOF 20) structural-adequacy fit.
+    # One measured experiment bearing on TWO hypotheses: it SUPPORTS shoot
+    # translocation adequacy (straw RMSE 0.048) and REFUTES grain (RMSE 0.987).
+    items.append(_ev(
+        "evi-adequacy", EvidenceKind.EXPERIMENT_RUN, "measured",
+        Result(type="quantitative", point=0.048,
+               finding="validation/structural_adequacy_fit.py: CONSTRAINED fit "
+                       "(per-congener f_xy + global L_Ph=3.2e-3 + global kappa_d=2.05; "
+                       "13 params / 33 obs, DOF 20) vs Yamazaki. Per-tissue log10 RMSE: "
+                       "STRAW 0.048 (reproduced across the WHOLE series incl. long chains "
+                       "PFUnDA 8.18/8.16, PFDoDA 34/49), root 0.384 (within ~2-3x on one "
+                       "global kappa_d), GRAIN 0.987 (short over ~10x: PFBA 11 vs 1; long "
+                       "under ~75x: PFDoDA 0.6 vs 46). Overall 0.612 (vs saturated W2 0.029 "
+                       "at DOF 0; a-priori 0.84). => structure reproduces SHOOT "
+                       "translocation under a constrained fit; GRAIN does not (needs "
+                       "per-congener phloem loading)."),
+        [Bearing(target_id="hyp-adequacy", direction=BearingDirection.SUPPORTS),
+         Bearing(target_id="hyp-grain", direction=BearingDirection.REFUTES)],
+        "validation/structural_adequacy_fit.py (real run; numpy/scipy)"))
+
     # H6 SMILES read-across — GENERATED (a software/formal property), qualitative.
     items.append(_ev(
         "evi-smiles", EvidenceKind.EXPERIMENT_RUN, "generated",
@@ -446,6 +483,23 @@ def verdicts():
                           basis="the rule is scoped to read-across reproducibility, which "
                                 "is deterministic and verified; it does not over-claim "
                                 "novel-structure prediction.")]),
+        "hyp-adequacy": _trail(
+            "hyp-adequacy", R_ADEQ, SUP, STRONG,
+            "Decisive panel reasoning: the rule asks whether a CONSTRAINED (DOF>0) fit "
+            "reproduces the straw series. The DOF-20 fit reaches straw RMSE 0.048 across "
+            "the full C4-C12 PFCA/PFSA range -- including the long chains the a-priori "
+            "monotone f_xy collapsed on -- with per-congener f_xy and only a SHARED L_Ph "
+            "and kappa_d. So the translocation structure (GHK exclusion + f_xy TSCF + "
+            "binding) is adequate to reproduce shoot accumulation under calibration "
+            "(distinct from the grain sub-model, which fails even constrained).",
+            [PanelVerdict(direction=SUP, level=STRONG,
+                          basis="straw log10 RMSE 0.048 at DOF 20 is a genuine (non-"
+                                "saturated) goodness-of-fit -- structural adequacy, not "
+                                "expressiveness."),
+             PanelVerdict(direction=SUP, level=MOD,
+                          basis="root is within ~2-3x on a single global kappa_d "
+                                "(per-congener kappa_d, as in W2, nails it); the shoot "
+                                "translocation claim holds, scoped away from grain.")]),
     }
 
 

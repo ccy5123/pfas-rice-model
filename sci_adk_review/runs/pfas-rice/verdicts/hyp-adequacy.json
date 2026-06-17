@@ -1,0 +1,34 @@
+{
+  "hypothesis_id": "hyp-adequacy",
+  "rule_kind": "qualitative",
+  "rubric_expression": "a CONSTRAINED (degrees-of-freedom > 0) calibration of the structure reproduces the measured STRAW (shoot translocation) BAFs across the C4-C12 PFCA/PFSA series => support; only a saturated (DOF 0) per-congener fit reproduces => refute",
+  "rubric_params": null,
+  "panel": [
+    {
+      "direction": "supports",
+      "level": "strong",
+      "basis": "straw log10 RMSE 0.048 at DOF 20 is a genuine (non-saturated) goodness-of-fit -- structural adequacy, not expressiveness.",
+      "counterexample": false
+    },
+    {
+      "direction": "supports",
+      "level": "moderate",
+      "basis": "root is within ~2-3x on a single global kappa_d (per-congener kappa_d, as in W2, nails it); the shoot translocation claim holds, scoped away from grain.",
+      "counterexample": false
+    }
+  ],
+  "chief": {
+    "direction": "supports",
+    "level": "strong",
+    "basis": "Decisive panel reasoning: the rule asks whether a CONSTRAINED (DOF>0) fit reproduces the straw series. The DOF-20 fit reaches straw RMSE 0.048 across the full C4-C12 PFCA/PFSA range -- including the long chains the a-priori monotone f_xy collapsed on -- with per-congener f_xy and only a SHARED L_Ph and kappa_d. So the translocation structure (GHK exclusion + f_xy TSCF + binding) is adequate to reproduce shoot accumulation under calibration (distinct from the grain sub-model, which fails even constrained).",
+    "counterexample": false
+  },
+  "provenance": {
+    "spec_version": 1,
+    "timestamp": "2026-06-17T00:00:00+00:00",
+    "agent_ids": [
+      "claude-in-session"
+    ],
+    "cost_ids": null
+  }
+}

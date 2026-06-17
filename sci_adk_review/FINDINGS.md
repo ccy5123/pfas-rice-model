@@ -15,7 +15,8 @@
 입력하면 sci-adk는 **인증을 거부(HALT)**한다 — sci-adk가 만들어진 계기인
 "rice-failure"의 재현이자 차단이다.
 
-가설 6개는 `proposal.md`의 **5개 연구 목표**를 독립 검증 가능한 형태로 형식화한 것.
+가설 7개는 `proposal.md`의 **5개 연구 목표**를 독립 검증 가능한 형태로 형식화한 것
+(H7은 사용자 재정의: "예측 말고 fitting으로 구조가 실험을 재현 가능한가").
 
 | 가설 (목표) | referent | 판정 | 근거 |
 |---|---|---|---|
@@ -25,11 +26,14 @@
 | H4 곡립 위해성 예측 (목표4) | empirical | **REFUTED** | Tang 곡립 3–8× 과소예측 (measured) |
 | H5 토양 결합 동족체 의존 (목표3) | formal | **SUPPORTED** | Koc 스프레드 4.4 log10 ~25000× (generated) |
 | H6 SMILES read-across 재현 (목표5) | formal | **SUPPORTED** | test_pfas_structure 23/23 (generated) |
+| **H7 구조적 적합성: shoot 재현(제약 적합)** | empirical | **SUPPORTED** | **straw RMSE 0.048 @ DOF 20** (measured) |
 | (trap) 데모 BAF=현장 예측 | empirical | **HALT** | 데모는 **synthetic_proxy** → 인증 거부 |
 
-**패턴**: formal/계산적 주장(H1·H2·H5·H6) → SUPPORTED, **경험적 예측 주장(H3·H4)
-→ REFUTED**. `sci-adk verify`: 6개 claim 전부 기록으로부터 재현(REPRODUCED), exit 0,
-record digest `sha256:4916c740…`.
+**패턴**: formal/계산적 주장(H1·H2·H5·H6) → SUPPORTED, **표본외 예측(H3·H4) →
+REFUTED**, 그러나 **"구조가 fitting으로 실험을 재현 가능한가"(H7, 사용자의 핵심
+질문)는 shoot에서 SUPPORTED**(straw 0.048, 자유도 20 — 포화 아님), grain은 미입증.
+`sci-adk verify`: 7개 claim 전부 기록으로부터 재현(REPRODUCED), exit 0,
+record digest `sha256:6d84f1e6…`.
 
 ---
 
@@ -139,6 +143,20 @@ SMILES가 `params/parameters.json`의 동일 Compound를 재구성(measured read
 **주의**: 신규(novel) 구조의 f_xy는 provisional(QSPR/보간)이라 이 주장은 **알려진
 구조에만** 한정된다.
 
+### H7 구조적 적합성 — SUPPORTED (empirical; 사용자 재정의의 핵심)
+"표본외 예측"이 아니라 **"구조가 fitting으로 실험을 재현 가능한가"**를 묻되, 의미가
+있으려면 **자유도>0의 제약 적합**이어야 한다(포화 W2는 33/33=DOF0이라 무의미).
+`validation/structural_adequacy_fit.py`: **동족체별 f_xy + 전역 L_Ph(3.2e-3) + 전역
+kappa_d(2.05) = 13파라미터/33관측, DOF=20**으로 Yamazaki를 적합.
+- **straw(전류) log10 RMSE 0.048** — 전 동족체(장쇄 PFUnDA 8.18/8.16, PFDoDA 34/49
+  포함)를 **재현**. 이는 포화가 아닌 진짜 goodness-of-fit → **전류 구조(GHK 배제 +
+  f_xy TSCF + 결합)의 적합성 입증**(a-priori monotone이 무너지던 장쇄까지).
+- root 0.384(단일 전역 kappa_d로 ~2–3배 이내; 동족체별 kappa_d면 W2처럼 정확).
+- **grain 0.987 — 실패**: 단쇄 ~10배 과대(PFBA 11 vs 1), 장쇄 ~75배 과소(PFDoDA 0.6
+  vs 46). 전역 L_Ph로는 곡립 재현 불가 → 동족체별 phloem loading 필요(H4 보강).
+- 전체 0.612. **결론: 구조는 shoot 전류를 제약 적합으로 재현(SUPPORTED), grain은
+  미입증.** 사용자의 목표("fitting으로 구조 모사 입증")는 **shoot에서 달성**됐다.
+
 ### trap — HALT (synthetic_proxy 거부)
 동봉 데모(`_demo()`)의 BAF를 경험적 가설에 입력하자 게이트가 멈췄다:
 
@@ -221,3 +239,8 @@ belief를 갱신하는 루프**다. REFUTED 판정을 받아 다음을 실행했
    가드**: 경험적 예측 claim이 SUPPORTED가 되면 실패), `.github/workflows/rigor.yml`(push/PR
    마다 가드 실행), `sci_adk_review/run_rigor.sh`(로컬 전체 재생성+verify). sci-adk 미설치
    시 graceful skip. → 앞으로 같은 과대주장은 **자동 차단**된다.
+5. **목표 재정의 → 구조적 적합성 입증(H7)**: "예측 말고 fitting으로 구조가 실험을 재현
+   가능함을 보이자"는 재정의에 따라, 자유도>0의 **제약 적합**(DOF 20)을 실제로 돌려
+   (`validation/structural_adequacy_fit.py`) **shoot 전류 재현을 입증**(straw RMSE
+   0.048)하고 **grain 한계를 정량화**(0.987). `evi-adequacy`(measured, hyp-adequacy
+   SUPPORTS + hyp-grain REFUTES 동시) + verdict로 기록. → **H7 SUPPORTED.**
