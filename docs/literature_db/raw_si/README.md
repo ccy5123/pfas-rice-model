@@ -13,6 +13,9 @@ are kept here — the publisher PDFs/DOCX themselves are **not** committed
 | `zhou2025_bsa_ka.csv` | Zhou et al. 2025 (SI Table S4) | `10.1016/j.ecoenv.2025.117902` | **BSA** binding constant K_A [L/mol] and n (300 K), 6 PFAS — fluorescence quenching (a binding constant, not a partition coefficient) |
 | `kim2019_field_conc.csv` | Kim et al. 2019, STOTEN (Table 4) | `10.1016/j.scitotenv.2019.03.240` | per-congener field averages: pore (void) water [ng/L], paddy soil [ng/g dw], brown rice [ng/g], rice DF [%] |
 | `kim2019_grain_baf.csv` | derived from Kim 2019 | — | brown-rice (grain) **BAF** [L/kg], pore-water basis — `calibration.load_baf_csv`-ready |
+| `tang2026_doseresponse.csv` | Tang et al. 2026, JHM (SI **S7/S8**) | `10.1016/j.jhazmat.2025.141017` | per-organ **BCF** (rice/soil) + **TF** (stalk/leaf/chaff/endosperm vs root) at **all 5 soil doses** 0.1–100 µg/g; Nipponbare, flooded paddy, 150 d, harvest. Canonical Tang TF/BCF source (f_xy head-group + OOS TF). |
+| `tang2026_tf_bcf.csv` | derived from Tang 2026 (S7/S8) | `10.1016/j.jhazmat.2025.141017` | the **0.1 µg/g** (environmentally-closest, least toxicity-confounded) BCF/TF slice — the basis of the `f_xy` PFSA/ether head-group **offset**. |
+| `tang2026_harvest_biomass.csv` | Tang 2026, **Fig 1a/1b** (figure-digitized) | `10.1016/j.jhazmat.2025.141017` | harvest **whole-plant ~33.5 g FW** + **ear ~6.8 g FW** (control) → final-mass/HI anchor only. **No** per-organ biomass time series exists in Tang (cannot drive `M(t)`). |
 
 ## Notes / caveats
 - **K_MW units**: Chen and Droge both use the SSLM/TRANSIL method; their PFCA

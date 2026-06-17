@@ -54,6 +54,16 @@ plt.rcParams["axes.unicode_minus"] = False
 SEASON = 150.0
 KEYS = ("stem", "leaf", "grain")
 TISSUE_LBL = {"stem": "stalk", "leaf": "leaf", "grain": "endosperm"}
+# fresh->dry conversion: Tang TF is dry/dry; the model conc is fresh-weight (C=B_k*Cw,
+# basis A), and the (1-theta_fw) factor differs by tissue (root 0.90 vs grain 0.14) so it
+# does NOT cancel in the C_tissue/C_root ratio: TF_dw = TF_fw*(1-theta_root)/(1-theta_tissue).
+# (units fix, consistent with the other Tang scripts; docs/tang2026_grain_units_exploration.md)
+THETA_FW = {"root": 0.90, "stem": 0.83, "leaf": 0.78, "grain": 0.14}
+_DW = {k: (1.0 - THETA_FW["root"]) / (1.0 - THETA_FW[k]) for k in KEYS}
+
+
+def _to_dw(tf_fw):
+    return {k: tf_fw[k] * _DW[k] for k in KEYS}
 COMPOUNDS = ("PFOA", "PFOS", "GenX")
 GRP = {"PFOA": "PFCA", "PFOS": "PFSA", "GenX": "ether*"}
 # nstem_leaf structural defaults (crop-architecture levers; NOT fit to Tang TF)
@@ -104,13 +114,13 @@ def load_tang_tf():
 def baseline_tf(nm, src="recommended"):
     r = api.simulate(nm, f_xy_source=src, measured_forcing=True, season=SEASON, n_t=361)
     root = r["baf_final"]["root"]
-    return {k: r["baf_final"][k] / root for k in KEYS}
+    return _to_dw({k: r["baf_final"][k] / root for k in KEYS})
 
 
 def nstem_tf(nm, retention=RETENTION, stem_frac=STEM_FRAC, **kw):
     r = api.simulate_nstem_leaf(nm, retention=retention, stem_transp_frac=stem_frac,
                                 season=SEASON, **kw)
-    return {k: r["tf_final"][k] for k in KEYS}
+    return _to_dw({k: r["tf_final"][k] for k in KEYS})
 
 
 def nstem_tf_cal(nm):

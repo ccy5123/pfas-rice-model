@@ -84,3 +84,14 @@ def test_biomon_compare_builds():
 if __name__ == "__main__":
     import sys
     sys.exit(pytest.main([__file__, "-v"]))
+
+
+def test_fig_tang_tf_builds():
+    import model_api as api, plots
+    val = api.tang_tf_validation("PFOA")
+    valr = api.tang_tf_validation("PFOA", use_refit=True)
+    fig = plots.fig_tang_tf(val, valr)
+    assert len(fig.data) == 3                       # Tang + model + refit
+    assert fig.layout.yaxis.type == "log"
+    # single-arg form (no refit bar) also builds
+    assert len(plots.fig_tang_tf(val).data) == 2

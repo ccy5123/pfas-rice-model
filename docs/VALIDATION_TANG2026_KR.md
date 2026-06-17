@@ -8,6 +8,13 @@
 > **잎은 과대**(이동성 큰 **GenX에서 극심**), **초기 뿌리 우세(root-first)를 재현 못 함** — Tang이 모델의 **지상부 구획 분배(과이행)
 > 약점**을 정량적으로 짚어줍니다(→ 다구획 줄기 nstem이 개선 방향).
 
+> ⚠️ **정정 (단위, fresh/dry)** — 위 "이삭 이행 lipid·PFOS **0.80 vs 0.77**"은 **모델 *신선중* TF를 Tang *건중* TF와
+> 비교한 단위 아티팩트**였습니다. TF는 *노출* 기준(`Cw`: 토양 vs 공극수)엔 무관하지만 *조직 수분* 기준(fw/dw)엔
+> 무관하지 **않습니다**(뿌리 θ=0.90 vs 이삭 θ=0.14 → `TF_dw = TF_fw·(1−θ_root)/(1−θ_tissue)`, 이삭 ×0.116).
+> `tang2026_validation.py`를 dw 일관으로 **수정**한 결과 PFOS 이삭은 **0.09 vs 0.77 (≈8배 과소)**입니다. 즉
+> **이삭/낟알은 구조적으로 크게 과소**이며 `L_Ph`(최대) 나 lipid 항으로도 못 닫힙니다(천장 ~0.3–0.7). 전말·천장표:
+> **`docs/tang2026_grain_units_exploration.md`**. (줄기 과소·잎 과대 결론은 유지; 부호·순서·BCF 결론도 유지.)
+
 ![Tang 2026 검증 그림](../validation/figures/tang2026_validation.png)
 
 *그림(6패널): (A·B·C) PFOA·PFOS·**GenX**의 TF(조직/뿌리) — Tang(검정, 5용량 평균±범위) vs 모델 3변형(monotone/W2/lipid),

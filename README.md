@@ -237,7 +237,7 @@ them, so a PFSA-specific transport term is still needed.
 - **Opt-in lipid-facilitated loading** — `simulate(lipid_loading=True)` adds a K_PL-gated, B-independent
   xylem/phloem term (`g_xy`/`g_ph`; default 0) so high-binding long chains reach the shoot; in-sample/
   exploratory (`docs/fxy_longchain_lipid_exploration.md`).
-- **Tests** — 92 passing (`pytest`; HYDRUS engine tests additionally run when the engine is built).
+- **Tests** — 135 passing, 4 skipped (`pytest`; 139 collected — the 4 skips are the HYDRUS engine tests, which run when the engine is built).
 
 **Open (data-limited, not modeling work):** rice (not wheat) per-congener root subcellular →
 membrane-share/α; reliable per-congener pore-water or hydroponic RCF → surface test + f_xy
