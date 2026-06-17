@@ -5,9 +5,19 @@ Tang 2026 transfer-factor (TF) — out-of-sample f_xy validation
 
 Tests whether the model's root->shoot loading f_xy (the `f_xy_recommended` monotone
 TSCF + the PFSA exp(-1.1) / ether exp(-0.7) head-group offsets) reproduces the
-per-organ transfer factors MEASURED by Tang 2026 (JHM 502:141017, Table S8;
-archived in data_obs/tang2026_TF.csv).  Independent of the Yamazaki/Kim calibration
-that set f_xy, so this is a genuine out-of-sample check.
+per-organ transfer factors MEASURED by Tang 2026 (JHM 502:141017, Table S8).
+Reads the CANONICAL extraction docs/literature_db/raw_si/tang2026_doseresponse.csv
+(all 5 soil doses 0.1-100 ug/g). Independent of the Yamazaki/Kim calibration that
+set f_xy, so this is a genuine out-of-sample check.
+
+DOSE CONDITION: Tang TF decreases with dose (toxicity/saturation). Here we use the
+across-dose MEAN (matching validation/tang2026_validation.py); the f_xy head-group
+offset itself was derived from the lowest dose 0.1 ug/g (raw_si/tang2026_tf_bcf.csv,
+environmentally closest). NOTE this 4-pool check OVERLAPS validation/tang2026_validation.py
+and re-confirms its documented finding (stem pass-through under, leaf-sink over);
+the *new* contribution is the explicit f_xy verdict + the ORYZA biomass driver. The
+structural fix + f_xy re-calibration live in validation/tang2026_fxy_refit.py and
+docs/VALIDATION_TANG2026_NSTEM_KR.md.
 
 DRIVER: the mechanistic ORYZA2000 biomass M_s(t) (`oryza_growth.oryza_drivers`),
 NOT the logistic growth_rice -- the biomass driver changes the leaf TF ~2x
@@ -50,12 +60,19 @@ def load_theta():
     return {k: tc[k]["theta_fw"] for k in tc}
 
 
+TANG_DOSERESPONSE = os.path.join(ROOT, "docs", "literature_db", "raw_si", "tang2026_doseresponse.csv")
+_TF_ENDPOINT = {"TF_stalk": "stalk", "TF_leaf": "leaf", "TF_endosperm": "endosperm"}
+
+
 def load_tang_tf():
-    """-> dict[(congener, organ)] = {conc: mean}; plus helpers mean()/low()."""
+    """Canonical Tang TF (SI S8) from raw_si/tang2026_doseresponse.csv.
+    -> dict[(congener, organ)] = {dose_ugg: TF_mean}."""
     d = {}
-    with open(os.path.join(ROOT, "data_obs", "tang2026_TF.csv"), newline="") as f:
-        for r in (row for row in csv.DictReader(x for x in f if not x.lstrip().startswith("#"))):
-            d.setdefault((r["congener"], r["organ"]), {})[float(r["conc_ugg"])] = float(r["TF_mean"])
+    with open(TANG_DOSERESPONSE, newline="") as f:
+        for r in csv.DictReader(x for x in f if not x.lstrip().startswith("#")):
+            org = _TF_ENDPOINT.get(r["endpoint"])
+            if org:
+                d.setdefault((r["compound"], org), {})[float(r["dose_ugg"])] = float(r["value"])
     return d
 
 

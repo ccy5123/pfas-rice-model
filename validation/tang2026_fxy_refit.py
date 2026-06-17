@@ -6,12 +6,22 @@ Tang 2026 TF — f_xy re-calibration on the redistributed-shoot (nstem_leaf) mod
 Part A (refit) + Part B (ORYZA driver) of the Tang TF workstream.
 
 The 4-pool model mal-distributes the shoot (stem pass-through ~0, leaf-sink huge),
-so fitting f_xy to per-organ TF there is ill-posed (see tang2026_fxy_TF_validation).
-The redistributed-shoot model (`simulate_nstem_leaf`) restores a sensible stem~leaf
-split, so here we:
+so fitting f_xy to per-organ TF there is ill-posed (see tang2026_fxy_TF_validation
+and the documented finding in docs/VALIDATION_TANG2026_KR.md).  The redistributed-
+shoot model (`simulate_nstem_leaf`) restores a sensible stem~leaf split, so here we:
   (B) drive nstem_leaf with the MECHANISTIC ORYZA biomass (biomass_fn=ORYZA), and
-  (A) re-calibrate f_xy per congener to the MEASURED Tang TF (data_obs/tang2026_TF.csv),
-      holding the crop-architecture levers (stem_transp_frac/retention) and L_Ph fixed.
+  (A) re-calibrate f_xy per congener to the MEASURED Tang TF, holding the crop-
+      architecture levers (stem_transp_frac/retention) and L_Ph fixed.
+This EXTENDS docs/VALIDATION_TANG2026_NSTEM_KR.md (which already recalibrated f_xy to
+PFOS 0.142 / GenX 0.013 with growth_rice) by (i) the ORYZA biomass driver and (ii) an
+explicit 1-D fit + RMSE against the canonical data file.
+
+DATA: docs/literature_db/raw_si/tang2026_doseresponse.csv (SI S7/S8, all 5 doses).
+DOSE CONDITION (made explicit -- the point of this audit pass): Tang TF declines with
+dose (toxicity/saturation), while the linear model predicts one dose-independent TF.
+The PRIMARY fit uses the LOWEST dose 0.1 ug/g (environmentally closest, least toxicity-
+confounded -- the basis of the f_xy head-group offset in raw_si/tang2026_tf_bcf.csv);
+the across-dose MEAN is reported as a sensitivity.
 
 f_xy is fit (1-D, log-space) to the two f_xy-controlled shoot organs (stalk, leaf);
 grain/endosperm is phloem-fed (L_Ph) and only reported.  TF is dw-converted to match
@@ -56,12 +66,27 @@ def load_theta():
     return {k: tc[k]["theta_fw"] for k in tc}
 
 
-def load_tang_mean():
+TANG_DOSERESPONSE = os.path.join(ROOT, "docs", "literature_db", "raw_si", "tang2026_doseresponse.csv")
+_TF_ENDPOINT = {"TF_stalk": "stalk", "TF_leaf": "leaf", "TF_endosperm": "endosperm"}
+
+
+def load_tang_dose():
+    """-> dict[(congener, organ)] = {dose_ugg: TF} from the canonical SI extraction."""
     d = {}
-    with open(os.path.join(ROOT, "data_obs", "tang2026_TF.csv"), newline="") as f:
+    with open(TANG_DOSERESPONSE, newline="") as f:
         for r in csv.DictReader(x for x in f if not x.lstrip().startswith("#")):
-            d.setdefault((r["congener"], r["organ"]), []).append(float(r["TF_mean"]))
-    return {k: float(np.mean(v)) for k, v in d.items()}
+            org = _TF_ENDPOINT.get(r["endpoint"])
+            if org:
+                d.setdefault((r["compound"], org), {})[float(r["dose_ugg"])] = float(r["value"])
+    return d
+
+
+def tang_agg(dd, mode):
+    """Collapse the dose-response to one TF per (congener, organ).
+    mode 'low' -> 0.1 ug/g (primary, least toxicity-confounded); 'mean' -> across-dose mean."""
+    if mode == "low":
+        return {k: v[min(v)] for k, v in dd.items()}
+    return {k: float(np.mean(list(v.values()))) for k, v in dd.items()}
 
 
 def model_tf_dw(cong, theta, f_xy=None):
@@ -93,31 +118,40 @@ def rmse_all(cong, theta, tang, f_xy):
     return float(np.sqrt(np.mean(np.square(r)))), tf
 
 
-def main():
-    theta = load_theta()
-    tang = load_tang_mean()
-    cur = {c: api._CONG[c]["f_xy_recommended"] for c in CONGENERS}
-
-    print(f"{'cong':6}{'f_xy_cur':>10}{'f_xy_fit':>10}{'doc_recal':>11}"
-          f"{'RMSE_before':>13}{'RMSE_after':>12}")
-    fitted, before, after = {}, {}, {}
-    tf_before, tf_after = {}, {}
-    rb_all, ra_all = [], []
+def run_mode(theta, dd, mode):
+    tang = tang_agg(dd, mode)
+    res = {}
     for c in CONGENERS:
         fx = fit_fxy(c, theta, tang)
-        fitted[c] = fx
-        rb, tfb = rmse_all(c, theta, tang, cur[c])
+        rb, tfb = rmse_all(c, theta, tang, api._CONG[c]["f_xy_recommended"])
         ra, tfa = rmse_all(c, theta, tang, fx)
-        before[c], after[c], tf_before[c], tf_after[c] = rb, ra, tfb, tfa
-        rb_all.append(rb); ra_all.append(ra)
-        print(f"{c:6}{cur[c]:>10.4f}{fx:>10.4f}{DOC_RECAL.get(c, float('nan')):>11.4f}"
-              f"{rb:>13.2f}{ra:>12.2f}")
-    print(f"\noverall log10 RMSE  before={np.sqrt(np.mean(np.square(rb_all))):.2f}"
-          f"  ->  after={np.sqrt(np.mean(np.square(ra_all))):.2f}")
-    print("(f_xy fit to shoot stalk+leaf; grain/endosperm phloem-fed, reported not fit.")
-    print(" fitted f_xy is OVERRIDE-only; params/parameters.json unchanged.)")
+        res[c] = dict(fxy=fx, rb=rb, ra=ra, tfb=tfb, tfa=tfa)
+    return tang, res
 
-    _figure(theta, tang, cur, fitted, tf_before, tf_after)
+
+def main():
+    theta = load_theta()
+    dd = load_tang_dose()
+    cur = {c: api._CONG[c]["f_xy_recommended"] for c in CONGENERS}
+    results = {m: run_mode(theta, dd, m) for m in ("low", "mean")}
+
+    print(f"{'cong':6}{'f_xy_cur':>10}{'fit@0.1':>9}{'fit@mean':>10}{'doc_recal':>11}"
+          f"{'  RMSE@0.1 b->a':>16}")
+    for c in CONGENERS:
+        rl, rm = results["low"][1][c], results["mean"][1][c]
+        print(f"{c:6}{cur[c]:>10.4f}{rl['fxy']:>9.4f}{rm['fxy']:>10.4f}"
+              f"{DOC_RECAL.get(c, float('nan')):>11.4f}   {rl['rb']:>5.2f} -> {rl['ra']:<5.2f}")
+    for m in ("low", "mean"):
+        res = results[m][1]
+        rb = np.sqrt(np.mean([res[c]["rb"] ** 2 for c in CONGENERS]))
+        ra = np.sqrt(np.mean([res[c]["ra"] ** 2 for c in CONGENERS]))
+        print(f"  overall log10 RMSE @ dose={m:4}:  before {rb:.2f} -> after {ra:.2f}")
+    print("(PRIMARY = 0.1 ug/g dose; mean = sensitivity. f_xy fit to stalk+leaf;")
+    print(" grain phloem-fed (reported, not fit). OVERRIDE-only; parameters.json unchanged.)")
+
+    tang_low, res_low = results["low"]
+    _figure(theta, tang_low, cur, {c: res_low[c]["fxy"] for c in CONGENERS},
+            {c: res_low[c]["tfb"] for c in CONGENERS}, {c: res_low[c]["tfa"] for c in CONGENERS})
 
 
 def _figure(theta, tang, cur, fitted, tf_before, tf_after):
