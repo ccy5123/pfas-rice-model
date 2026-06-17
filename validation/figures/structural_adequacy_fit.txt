@@ -1,18 +1,13 @@
-CONSTRAINED global fit: per-congener f_xy (11) + global L_Ph + global kappa_d = 13 params for 33 obs  ->  DOF = 20
-global L_Ph = 0.003162   global kappa_d = 2.05
+biomass driver: MECHANISTIC ORYZA2000 (oryza_growth) + measured Q_TP (forcing_rice)
 
-PFAS     nC    f_xy |         root p/o       straw p/o       grain p/o
-PFBA      4  0.1716 |    0.34/0.68     11.07/11.03    11.25/1.06   
-PFPeA     5  0.0355 |    0.40/0.27      2.74/2.74      2.89/0.26   
-PFHxA     6  0.0141 |    0.49/0.28      1.14/1.14      1.04/0.42   
-PFHpA     7  0.0129 |    0.71/0.78      1.08/1.07      0.68/0.42   
-PFOA      8  0.0097 |    1.27/0.49      0.84/0.83      0.31/0.46   
-PFNA      9  0.0080 |    3.01/0.57      0.69/0.69      0.11/0.41   
-PFDA     10  0.0432 |    7.31/4.16      3.46/3.46      0.21/3.37   
-PFUnDA   11  0.1180 |   14.31/19.53     8.18/8.16      0.24/3.13   
-PFDoDA   12  1.0000 |   21.07/69.28    34.46/49.75     0.59/45.51  
-PFBS      4  0.0265 |    0.73/2.28      2.18/2.18      1.13/0.25   
-PFOS      8  0.0584 |   14.76/5.93      4.35/4.35      0.14/1.97   
+[A shoot   (f_xy; global L_Ph, global kappa_d)]  params=13/33  DOF=20  global: kappa_d=2.05, L_Ph=0.0001
+        per-tissue RMSE: root 0.451  straw 0.184  grain 0.523   overall 0.413
+[B +grain  (f_xy, per-cong L_Ph; global kappa_d)]  params=23/33  DOF=10  global: kappa_d=2.05
+        per-tissue RMSE: root 0.449  straw 0.206  grain 0.358   overall 0.352
+[C +root   (f_xy, per-cong kappa_d; global L_Ph)]  params=23/33  DOF=10  global: L_Ph=0.0001
+        per-tissue RMSE: root 0.258  straw 0.158  grain 0.511   overall 0.343
 
-per-tissue log10 RMSE: root 0.384  straw 0.048  grain 0.987
-CONSTRAINED-fit log10 RMSE = 0.612   (DOF 20; vs saturated W2 0.029 at DOF 0, a-priori monotone ~0.84)
+SUMMARY (vs saturated W2 0.029 at DOF 0; a-priori monotone ~0.84):
+  DOF 20  overall 0.413  | root 0.451 straw 0.184 grain 0.523  | A shoot   (f_xy; global L_Ph, global kappa_d)
+  DOF 10  overall 0.352  | root 0.449 straw 0.206 grain 0.358  | B +grain  (f_xy, per-cong L_Ph; global kappa_d)
+  DOF 10  overall 0.343  | root 0.258 straw 0.158 grain 0.511  | C +root   (f_xy, per-cong kappa_d; global L_Ph)

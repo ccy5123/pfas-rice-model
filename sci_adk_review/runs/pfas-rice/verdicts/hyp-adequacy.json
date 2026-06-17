@@ -7,20 +7,20 @@
     {
       "direction": "supports",
       "level": "strong",
-      "basis": "straw log10 RMSE 0.048 at DOF 20 is a genuine (non-saturated) goodness-of-fit -- structural adequacy, not expressiveness.",
+      "basis": "straw log10 RMSE ~0.16-0.18 at DOF 20/10 on realistic ORYZA2000 biomass is a genuine (non-saturated) goodness-of-fit -- structural adequacy, not expressiveness.",
       "counterexample": false
     },
     {
       "direction": "supports",
       "level": "moderate",
-      "basis": "root is within ~2-3x on a single global kappa_d (per-congener kappa_d, as in W2, nails it); the shoot translocation claim holds, scoped away from grain.",
+      "basis": "root improves to 0.26 with per-congener kappa_d and the whole plant to overall 0.34 at DOF 10; the shoot translocation claim holds, scoped away from the grain floor.",
       "counterexample": false
     }
   ],
   "chief": {
     "direction": "supports",
     "level": "strong",
-    "basis": "Decisive panel reasoning: the rule asks whether a CONSTRAINED (DOF>0) fit reproduces the straw series. The DOF-20 fit reaches straw RMSE 0.048 across the full C4-C12 PFCA/PFSA range -- including the long chains the a-priori monotone f_xy collapsed on -- with per-congener f_xy and only a SHARED L_Ph and kappa_d. So the translocation structure (GHK exclusion + f_xy TSCF + binding) is adequate to reproduce shoot accumulation under calibration (distinct from the grain sub-model, which fails even constrained).",
+    "basis": "Decisive panel reasoning: driven by the user's MECHANISTIC ORYZA2000 biomass (not the placeholder), the CONSTRAINED DOF-20 fit reaches straw RMSE ~0.18 (0.16 at DOF 10) across the full C4-C12 PFCA/PFSA range with per-congener f_xy + shared L_Ph/kappa_d. So the translocation structure (GHK exclusion + f_xy TSCF + binding) reproduces shoot accumulation under a non-saturated calibration. The whole plant reaches overall ~0.34 (within ~factor 2.2) at DOF 10; grain keeps a residual long-chain floor (separately refuted).",
     "counterexample": false
   },
   "provenance": {

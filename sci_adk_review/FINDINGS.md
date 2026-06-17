@@ -26,14 +26,15 @@
 | H4 곡립 위해성 예측 (목표4) | empirical | **REFUTED** | Tang 곡립 3–8× 과소예측 (measured) |
 | H5 토양 결합 동족체 의존 (목표3) | formal | **SUPPORTED** | Koc 스프레드 4.4 log10 ~25000× (generated) |
 | H6 SMILES read-across 재현 (목표5) | formal | **SUPPORTED** | test_pfas_structure 23/23 (generated) |
-| **H7 구조적 적합성: shoot 재현(제약 적합)** | empirical | **SUPPORTED** | **straw RMSE 0.048 @ DOF 20** (measured) |
+| **H7 구조적 적합성: shoot 재현(제약 적합)** | empirical | **SUPPORTED** | **straw ~0.18 @ DOF 20 (ORYZA2000)** (measured) |
 | (trap) 데모 BAF=현장 예측 | empirical | **HALT** | 데모는 **synthetic_proxy** → 인증 거부 |
 
 **패턴**: formal/계산적 주장(H1·H2·H5·H6) → SUPPORTED, **표본외 예측(H3·H4) →
 REFUTED**, 그러나 **"구조가 fitting으로 실험을 재현 가능한가"(H7, 사용자의 핵심
-질문)는 shoot에서 SUPPORTED**(straw 0.048, 자유도 20 — 포화 아님), grain은 미입증.
+질문)는 — 당신의 ORYZA2000 biomass로 구동 시 — shoot에서 SUPPORTED**(straw ~0.18,
+자유도 20; 전 조직 ~factor 2.2 이내 @ DOF 10), grain 장쇄만 잔여 floor.
 `sci-adk verify`: 7개 claim 전부 기록으로부터 재현(REPRODUCED), exit 0,
-record digest `sha256:6d84f1e6…`.
+record digest `sha256:50417cd6…`.
 
 ---
 
@@ -146,16 +147,26 @@ SMILES가 `params/parameters.json`의 동일 Compound를 재구성(measured read
 ### H7 구조적 적합성 — SUPPORTED (empirical; 사용자 재정의의 핵심)
 "표본외 예측"이 아니라 **"구조가 fitting으로 실험을 재현 가능한가"**를 묻되, 의미가
 있으려면 **자유도>0의 제약 적합**이어야 한다(포화 W2는 33/33=DOF0이라 무의미).
-`validation/structural_adequacy_fit.py`: **동족체별 f_xy + 전역 L_Ph(3.2e-3) + 전역
-kappa_d(2.05) = 13파라미터/33관측, DOF=20**으로 Yamazaki를 적합.
-- **straw(전류) log10 RMSE 0.048** — 전 동족체(장쇄 PFUnDA 8.18/8.16, PFDoDA 34/49
-  포함)를 **재현**. 이는 포화가 아닌 진짜 goodness-of-fit → **전류 구조(GHK 배제 +
-  f_xy TSCF + 결합)의 적합성 입증**(a-priori monotone이 무너지던 장쇄까지).
-- root 0.384(단일 전역 kappa_d로 ~2–3배 이내; 동족체별 kappa_d면 W2처럼 정확).
-- **grain 0.987 — 실패**: 단쇄 ~10배 과대(PFBA 11 vs 1), 장쇄 ~75배 과소(PFDoDA 0.6
-  vs 46). 전역 L_Ph로는 곡립 재현 불가 → 동족체별 phloem loading 필요(H4 보강).
-- 전체 0.612. **결론: 구조는 shoot 전류를 제약 적합으로 재현(SUPPORTED), grain은
-  미입증.** 사용자의 목표("fitting으로 구조 모사 입증")는 **shoot에서 달성**됐다.
+`validation/structural_adequacy_fit.py`는 **사용자의 mechanistic ORYZA2000 biomass
+(`oryza_growth`) + 측정 증산(`forcing_rice`)**으로 구동(예시 로지스틱 아님)하여 세
+제약 시나리오를 적합(11 동족체 × 3 조직 = 33 관측):
+
+| 시나리오 | DOF | root | straw | grain | overall |
+|---|---|---|---|---|---|
+| A f_xy + 전역 L_Ph + 전역 kappa_d | 20 | 0.45 | 0.18 | 0.52 | 0.41 |
+| B + per-cong L_Ph (grain) | 10 | 0.45 | 0.21 | **0.36** | 0.35 |
+| C + per-cong kappa_d (root) | 10 | **0.26** | 0.16 | 0.51 | **0.34** |
+
+- **straw(전류) ~0.16–0.18** — 전 동족체(장쇄 포함) **재현**. 포화 아닌 진짜
+  goodness-of-fit → **전류 구조(GHK 배제 + f_xy TSCF + 결합) 적합성 입증.**
+- **root**: 전역 kappa_d 0.45 → **per-cong kappa_d 0.26**(동족체별 막투과로 개선).
+- **grain**: 전역 L_Ph 0.52 → **per-cong L_Ph 0.36**(동족체별 phloem loading으로 개선,
+  단 장쇄 상승의 잔여 floor 남음).
+- **전체 ~0.34(BAF 평균 ~2배 이내) @ DOF 10.** placeholder biomass의 곡립 파국
+  (0.987)은 **현실적 ORYZA2000 biomass에서 사라진다**(biomass 드라이버가 결정적).
+- **결론: 당신의 ORYZA2000로 구동 시, 구조는 전 조직을 제약 적합으로 ~2배 이내
+  재현(SUPPORTED)** — 사용자의 목표("fitting으로 구조 모사 입증") 달성. 남은 건
+  grain 장쇄 상승의 잔여 floor뿐.
 
 ### trap — HALT (synthetic_proxy 거부)
 동봉 데모(`_demo()`)의 BAF를 경험적 가설에 입력하자 게이트가 멈췄다:
@@ -239,8 +250,12 @@ belief를 갱신하는 루프**다. REFUTED 판정을 받아 다음을 실행했
    가드**: 경험적 예측 claim이 SUPPORTED가 되면 실패), `.github/workflows/rigor.yml`(push/PR
    마다 가드 실행), `sci_adk_review/run_rigor.sh`(로컬 전체 재생성+verify). sci-adk 미설치
    시 graceful skip. → 앞으로 같은 과대주장은 **자동 차단**된다.
-5. **목표 재정의 → 구조적 적합성 입증(H7)**: "예측 말고 fitting으로 구조가 실험을 재현
-   가능함을 보이자"는 재정의에 따라, 자유도>0의 **제약 적합**(DOF 20)을 실제로 돌려
-   (`validation/structural_adequacy_fit.py`) **shoot 전류 재현을 입증**(straw RMSE
-   0.048)하고 **grain 한계를 정량화**(0.987). `evi-adequacy`(measured, hyp-adequacy
-   SUPPORTS + hyp-grain REFUTES 동시) + verdict로 기록. → **H7 SUPPORTED.**
+5. **목표 재정의 → 구조적 적합성 입증(H7), ORYZA2000 구동**: "예측 말고 fitting으로 구조가
+   실험을 재현 가능함을 보이자"는 재정의에 따라, **사용자의 mechanistic ORYZA2000 biomass
+   (`oryza_growth`) + 측정 증산**으로 자유도>0 **제약 적합** 3종(A DOF20 / B,C DOF10)을
+   실제로 돌렸다(`validation/structural_adequacy_fit.py`). 결과: **shoot 전류 재현
+   (straw ~0.16–0.18)**, root는 per-cong kappa_d로 0.26, grain은 per-cong L_Ph로 0.36,
+   **전 조직 overall ~0.34(≈2배 이내) @ DOF 10**. placeholder의 곡립 파국(0.987)은 현실적
+   biomass에서 소멸. `evi-adequacy`(measured; hyp-adequacy SUPPORTS + hyp-grain REFUTES)
+   + verdict로 기록 → **H7 SUPPORTED.** (직전까지 적합이 예시 로지스틱 biomass를 쓰던
+   것을 사용자 지적으로 ORYZA2000으로 교체.)

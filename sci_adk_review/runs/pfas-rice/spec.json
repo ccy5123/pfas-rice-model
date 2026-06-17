@@ -99,7 +99,7 @@
     },
     {
       "id": "hyp-adequacy",
-      "statement": "The model's translocation structure reproduces the measured straw (shoot) BAFs across the C4-C12 PFCA/PFSA series under a CONSTRAINED (DOF>0) calibration -- per-congener f_xy + a single shared L_Ph and kappa_d (13 params / 33 obs, DOF 20), NOT the saturated W2 fit.",
+      "statement": "Driven by the mechanistic ORYZA2000 biomass (oryza_growth) + measured transpiration, the model's translocation structure reproduces the measured straw (shoot) BAFs across the C4-C12 PFCA/PFSA series under a CONSTRAINED (DOF>0) calibration -- per-congener f_xy + a single shared L_Ph and kappa_d (13 params / 33 obs, DOF 20), NOT the saturated W2 fit.",
       "mode": "confirmatory",
       "decision_rule": {
         "kind": "qualitative",

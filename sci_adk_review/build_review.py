@@ -195,10 +195,11 @@ def build_spec() -> Spec:
         ),
         Hypothesis(
             id="hyp-adequacy",
-            statement="The model's translocation structure reproduces the measured straw "
-                      "(shoot) BAFs across the C4-C12 PFCA/PFSA series under a CONSTRAINED "
-                      "(DOF>0) calibration -- per-congener f_xy + a single shared L_Ph and "
-                      "kappa_d (13 params / 33 obs, DOF 20), NOT the saturated W2 fit.",
+            statement="Driven by the mechanistic ORYZA2000 biomass (oryza_growth) + measured "
+                      "transpiration, the model's translocation structure reproduces the "
+                      "measured straw (shoot) BAFs across the C4-C12 PFCA/PFSA series under a "
+                      "CONSTRAINED (DOF>0) calibration -- per-congener f_xy + a single shared "
+                      "L_Ph and kappa_d (13 params / 33 obs, DOF 20), NOT the saturated W2 fit.",
             mode=HypothesisMode.CONFIRMATORY,
             decision_rule=DecisionRule(kind=DecisionRuleKind.QUALITATIVE, expression=R_ADEQ),
             referent="empirical",
@@ -382,20 +383,22 @@ def evidence(spec, workspace):
     # translocation adequacy (straw RMSE 0.048) and REFUTES grain (RMSE 0.987).
     items.append(_ev(
         "evi-adequacy", EvidenceKind.EXPERIMENT_RUN, "measured",
-        Result(type="quantitative", point=0.048,
-               finding="validation/structural_adequacy_fit.py: CONSTRAINED fit "
-                       "(per-congener f_xy + global L_Ph=3.2e-3 + global kappa_d=2.05; "
-                       "13 params / 33 obs, DOF 20) vs Yamazaki. Per-tissue log10 RMSE: "
-                       "STRAW 0.048 (reproduced across the WHOLE series incl. long chains "
-                       "PFUnDA 8.18/8.16, PFDoDA 34/49), root 0.384 (within ~2-3x on one "
-                       "global kappa_d), GRAIN 0.987 (short over ~10x: PFBA 11 vs 1; long "
-                       "under ~75x: PFDoDA 0.6 vs 46). Overall 0.612 (vs saturated W2 0.029 "
-                       "at DOF 0; a-priori 0.84). => structure reproduces SHOOT "
-                       "translocation under a constrained fit; GRAIN does not (needs "
-                       "per-congener phloem loading)."),
+        Result(type="quantitative", point=0.184,
+               finding="validation/structural_adequacy_fit.py, driven by the MECHANISTIC "
+                       "ORYZA2000 biomass (oryza_growth) + measured Q_TP (forcing_rice) -- "
+                       "NOT the logistic placeholder. CONSTRAINED (DOF>0) fits vs Yamazaki:"
+                       " A f_xy+global L_Ph+global kappa_d (DOF 20): root 0.45 straw 0.18 "
+                       "grain 0.52 overall 0.41; B +per-cong L_Ph (DOF 10): grain 0.36 "
+                       "overall 0.35; C +per-cong kappa_d (DOF 10): root 0.26 straw 0.16 "
+                       "grain 0.51 overall 0.34. => structure reproduces SHOOT translocation "
+                       "(straw ~0.16-0.18, i.e. within ~1.5x) under a constrained fit; root "
+                       "needs per-congener kappa_d (->0.26); grain improves with per-congener "
+                       "L_Ph (->0.36) but keeps a long-chain residual floor. Whole plant "
+                       "within ~factor 2.2 (overall 0.34) at DOF 10 -- vs saturated W2 0.029 "
+                       "(DOF 0) and a-priori 0.84."),
         [Bearing(target_id="hyp-adequacy", direction=BearingDirection.SUPPORTS),
          Bearing(target_id="hyp-grain", direction=BearingDirection.REFUTES)],
-        "validation/structural_adequacy_fit.py (real run; numpy/scipy)"))
+        "validation/structural_adequacy_fit.py (ORYZA2000 biomass; real run; numpy/scipy)"))
 
     # H6 SMILES read-across — GENERATED (a software/formal property), qualitative.
     items.append(_ev(
@@ -485,21 +488,21 @@ def verdicts():
                                 "novel-structure prediction.")]),
         "hyp-adequacy": _trail(
             "hyp-adequacy", R_ADEQ, SUP, STRONG,
-            "Decisive panel reasoning: the rule asks whether a CONSTRAINED (DOF>0) fit "
-            "reproduces the straw series. The DOF-20 fit reaches straw RMSE 0.048 across "
-            "the full C4-C12 PFCA/PFSA range -- including the long chains the a-priori "
-            "monotone f_xy collapsed on -- with per-congener f_xy and only a SHARED L_Ph "
-            "and kappa_d. So the translocation structure (GHK exclusion + f_xy TSCF + "
-            "binding) is adequate to reproduce shoot accumulation under calibration "
-            "(distinct from the grain sub-model, which fails even constrained).",
+            "Decisive panel reasoning: driven by the user's MECHANISTIC ORYZA2000 biomass "
+            "(not the placeholder), the CONSTRAINED DOF-20 fit reaches straw RMSE ~0.18 "
+            "(0.16 at DOF 10) across the full C4-C12 PFCA/PFSA range with per-congener f_xy "
+            "+ shared L_Ph/kappa_d. So the translocation structure (GHK exclusion + f_xy "
+            "TSCF + binding) reproduces shoot accumulation under a non-saturated calibration. "
+            "The whole plant reaches overall ~0.34 (within ~factor 2.2) at DOF 10; grain "
+            "keeps a residual long-chain floor (separately refuted).",
             [PanelVerdict(direction=SUP, level=STRONG,
-                          basis="straw log10 RMSE 0.048 at DOF 20 is a genuine (non-"
-                                "saturated) goodness-of-fit -- structural adequacy, not "
-                                "expressiveness."),
+                          basis="straw log10 RMSE ~0.16-0.18 at DOF 20/10 on realistic "
+                                "ORYZA2000 biomass is a genuine (non-saturated) goodness-of-"
+                                "fit -- structural adequacy, not expressiveness."),
              PanelVerdict(direction=SUP, level=MOD,
-                          basis="root is within ~2-3x on a single global kappa_d "
-                                "(per-congener kappa_d, as in W2, nails it); the shoot "
-                                "translocation claim holds, scoped away from grain.")]),
+                          basis="root improves to 0.26 with per-congener kappa_d and the "
+                                "whole plant to overall 0.34 at DOF 10; the shoot "
+                                "translocation claim holds, scoped away from the grain floor.")]),
     }
 
 
