@@ -9,6 +9,7 @@ proof/qualitative hypotheses awaiting an in-session agent verdict (no autonomous
 ## hyp-yamazaki (qualitative)
 - Criterion: the Yamazaki agreement is OUT-OF-SAMPLE predictive validation (independent data not used to fit the per-congener transport parameters) => support; an in-sample / saturated reproduction => refute
 - Finding: reproduce_demo.py: W2 transport fit reproduces Yamazaki root/straw/grain BAFs across 11 congeners at log10 RMSE 0.029 (e.g. PFOA root 0.49/0.49, straw 0.83/0.83 pred/obs). The fit assigns ~3 transport params per congener against 3 tissue observations => SATURATED: reproduction is structurally guaranteed and is NOT out-of-sample prediction (CLAUDE.md §6).
+reproduce_demo.py --rec: with the theory/QSPR MONOTONE f_xy (a-priori, NOT fit to the tissue BAFs) the predictive error is log10 RMSE 0.837 vs the saturated W2 fit's 0.029. Straw is off 6-40x (PFBA 45/11, PFBS 33/2.2). The model does NOT a-priori predict the Yamazaki tissue BAFs -- a quantitative confirmation of the REFUTED verdict.
 
 ## hyp-grain (qualitative)
 - Criterion: model grain (brown-rice) BAF/TF matches measured within a factor adequate for dietary risk assessment => support; systematic structural under/over-prediction => refute

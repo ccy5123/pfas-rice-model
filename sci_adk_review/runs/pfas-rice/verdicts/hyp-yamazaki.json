@@ -20,7 +20,7 @@
   "chief": {
     "direction": "refutes",
     "level": "strong",
-    "basis": "Decisive panel reasoning: the W2 transport parameters are FIT to the same Yamazaki tissues they then 'predict' (~3 params / 3 obs per congener), so RMSE 0.029 is saturated in-sample reproduction, not out-of-sample validation. The hypothesis as stated (predictive validation) is refuted; the model is consistent with — not validated against — Yamazaki.",
+    "basis": "Decisive panel reasoning: the W2 transport parameters are FIT to the same Yamazaki tissues they then 'predict' (~3 params / 3 obs per congener), so RMSE 0.029 is saturated in-sample reproduction. The a-priori test (monotone f_xy, --rec) gives the REAL predictive error log10 RMSE 0.837 (straw off 6-40x) -- the model does not predict out of sample. The predictive-validation hypothesis is refuted quantitatively.",
     "counterexample": false
   },
   "provenance": {

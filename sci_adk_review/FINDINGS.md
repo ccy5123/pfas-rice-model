@@ -21,7 +21,7 @@
 |---|---|---|---|
 | H1 질량보존 (목표1) | formal | **SUPPORTED** | 잔차 < 1e-5 (테스트 검증, generated) |
 | H2 음이온 배제 e^N≈107 (목표1) | formal | **SUPPORTED** | E_m·z의 closed-form 귀결 (generated) |
-| H3 Yamazaki=표본외 예측검증 (목표4) | empirical | **REFUTED** | RMSE 0.029는 **포화 in-sample 적합** (measured) |
+| H3 Yamazaki=표본외 예측검증 (목표4) | empirical | **REFUTED** | 포화 적합 0.029 vs **사전적 예측 0.837** (measured) |
 | H4 곡립 위해성 예측 (목표4) | empirical | **REFUTED** | Tang 곡립 3–8× 과소예측 (measured) |
 | H5 토양 결합 동족체 의존 (목표3) | formal | **SUPPORTED** | Koc 스프레드 4.4 log10 ~25000× (generated) |
 | H6 SMILES read-across 재현 (목표5) | formal | **SUPPORTED** | test_pfas_structure 23/23 (generated) |
@@ -29,7 +29,7 @@
 
 **패턴**: formal/계산적 주장(H1·H2·H5·H6) → SUPPORTED, **경험적 예측 주장(H3·H4)
 → REFUTED**. `sci-adk verify`: 6개 claim 전부 기록으로부터 재현(REPRODUCED), exit 0,
-record digest `sha256:76a12ad1…`.
+record digest `sha256:88b9920a…`.
 
 ---
 
@@ -112,8 +112,11 @@ sci-adk 소스가 직접 밝힌다.
 ### H3 Yamazaki 표본외 예측검증 — REFUTED (empirical, 목표4)
 `reproduce_demo.py`가 11개 동족체 BAF를 **log10 RMSE 0.029**로 재현하나, W2 적합은
 **동족체당 ~3 파라미터를 3 관측에** 맞춘 **포화 적합**이다 → pred≈obs(0.49/0.49)는
-*예측*이 아니라 *재현*의 서명. CLAUDE.md 자신이 "saturated W2 fit … NOT predictive
-validation"이라 명시. **measured 근거**이지만 "표본외 예측검증" 가설은 **거부**된다.
+*예측*이 아니라 *재현*의 서명. **루프 이어가기(iteration 2)**: 실제 사전적(a-priori)
+예측 — 이론/QSPR monotone f_xy(적합 아님, `reproduce_demo.py --rec`) — 의 오차는
+**log10 RMSE 0.837**(포화 0.029의 ~29배, 줄기 6~40배 빗나감)이다. 즉 per-congener로
+맞추지 못하게 하면 모델은 조직 BAF를 **예측하지 못한다**. "표본외 예측검증" 가설은
+**정량적으로 거부**된다(evi-yamazaki + evi-yamazaki-apriori, 둘 다 measured).
 
 ### H4 곡립 위해성 예측 — REFUTED (empirical, 목표4)
 measured 비교에서 곡립을 구조적으로 **3–8× 과소예측**(Tang PFOA endosperm 0.11 vs

@@ -124,7 +124,7 @@ Planned approaches:
   \item Hypothesis id: \texttt{hyp-yamazaki} (confirmatory)
   \item Decision rule (qualitative): the Yamazaki agreement is OUT-OF-SAMPLE predictive validation (independent data not used to fit the per-congener transport parameters) => support; an in-sample / saturated reproduction => refute
   \item \textbf{Status: refuted} --- confidence strong (graded)
-  \item Basis: qualitative judge: Decisive panel reasoning: the W2 transport parameters are FIT to the same Yamazaki tissues they then 'predict' (\textasciitilde{}3 params / 3 obs per congener), so RMSE 0.029 is saturated in-sample reproduction, not out-of-sample validation. The hypothesis as stated (predictive validation) is refuted; the model is consistent with --- not validated against --- Yamazaki.
+  \item Basis: qualitative judge: Decisive panel reasoning: the W2 transport parameters are FIT to the same Yamazaki tissues they then 'predict' (\textasciitilde{}3 params / 3 obs per congener), so RMSE 0.029 is saturated in-sample reproduction. The a-priori test (monotone f\_xy, --rec) gives the REAL predictive error log10 RMSE 0.837 (straw off 6-40x) -- the model does not predict out of sample. The predictive-validation hypothesis is refuted quantitatively.
   \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
 \end{itemize}
 
@@ -161,6 +161,7 @@ Planned approaches:
   \item \texttt{evi-mass} (experiment\_run): point=1e-06, finding=mass-balance residual bounded by rel 1e-6 / abs 1e-9; tests/test\_plant\_module.py::test\_mass\_conservation\_source\_is\_root\_
   \item \texttt{evi-anion} (experiment\_run): finding=N = z*E\_m*F/RT = +4.67 at E\_m=-120 mV, z=-1, T=298.15 K => e\textasciicircum{}N = 106.8 (test\_plant\_module asserts e\textasciicircum{}N \textasciitilde{} 107); the GHK te
   \item \texttt{evi-yamazaki} (experiment\_run): point=0.029, finding=reproduce\_demo.py: W2 transport fit reproduces Yamazaki root/straw/grain BAFs across 11 congeners at log10 RMSE 0.029 (e
+  \item \texttt{evi-yamazaki-apriori} (experiment\_run): point=0.837, finding=reproduce\_demo.py --rec: with the theory/QSPR MONOTONE f\_xy (a-priori, NOT fit to the tissue BAFs) the predictive error 
   \item \texttt{evi-grain-tang} (experiment\_run): point=0.11, finding=Tang 2026 OOS: PFOA endosperm TF model 0.11 vs measured 0.95 (dw); grain structurally \textasciitilde{}3-8x under across congeners; not 
   \item \texttt{evi-grain-kim} (experiment\_run): finding=Kim 2019: grain BAF reproduced only by FORCING L\_Ph (0.07 -> 4.43, L\_Ph\textasciitilde{}0.84) as a single-point in-sample anchor; Kim is
   \item \texttt{evi-soil} (experiment\_run): point=4.4, finding=literature\_params.koc (Higgins-Luthy +0.55/CF2 QSPR): Koc(PFBA C4)=2.15 vs Koc(PFDoDA C12)=53985 L/kg => 4.40 log10 spre
@@ -174,6 +175,7 @@ These hypotheses use a non-numeric rule and await an in-session agent verdict (n
   \item finding: N = z*E\_m*F/RT = +4.67 at E\_m=-120 mV, z=-1, T=298.15 K => e\textasciicircum{}N = 106.8 (test\_plant\_module asserts e\textasciicircum{}N \textasciitilde{} 107); the GHK term in root\_uptake() excludes the anion accordingly.
   \item \texttt{hyp-yamazaki} (qualitative): the Yamazaki agreement is OUT-OF-SAMPLE predictive validation (independent data not used to fit the per-congener transport parameters) => support; an in-sample / saturated reproduction => refute
   \item finding: reproduce\_demo.py: W2 transport fit reproduces Yamazaki root/straw/grain BAFs across 11 congeners at log10 RMSE 0.029 (e.g. PFOA root 0.49/0.49, straw 0.83/0.83 pred/obs). The fit assigns \textasciitilde{}3 transport params per congener against 3 tissue observations => SATURATED: reproduction is structurally guaranteed and is NOT out-of-sample prediction (CLAUDE.md ?6).
+reproduce\_demo.py --rec: with the theory/QSPR MONOTONE f\_xy (a-priori, NOT fit to the tissue BAFs) the predictive error is log10 RMSE 0.837 vs the saturated W2 fit's 0.029. Straw is off 6-40x (PFBA 45/11, PFBS 33/2.2). The model does NOT a-priori predict the Yamazaki tissue BAFs -- a quantitative confirmation of the REFUTED verdict.
   \item \texttt{hyp-grain} (qualitative): model grain (brown-rice) BAF/TF matches measured within a factor adequate for dietary risk assessment => support; systematic structural under/over-prediction => refute
   \item finding: Tang 2026 OOS: PFOA endosperm TF model 0.11 vs measured 0.95 (dw); grain structurally \textasciitilde{}3-8x under across congeners; not closable by L\_Ph / lipid tuning (docs/tang2026\_grain\_units\_exploration.md).
 Kim 2019: grain BAF reproduced only by FORCING L\_Ph (0.07 -> 4.43, L\_Ph\textasciitilde{}0.84) as a single-point in-sample anchor; Kim is grain-only, so root/straw TF are unconstrained.

@@ -8,11 +8,15 @@
     "type": "graded",
     "value": null,
     "level": "strong",
-    "basis": "qualitative judge: Decisive panel reasoning: the W2 transport parameters are FIT to the same Yamazaki tissues they then 'predict' (~3 params / 3 obs per congener), so RMSE 0.029 is saturated in-sample reproduction, not out-of-sample validation. The hypothesis as stated (predictive validation) is refuted; the model is consistent with — not validated against — Yamazaki."
+    "basis": "qualitative judge: Decisive panel reasoning: the W2 transport parameters are FIT to the same Yamazaki tissues they then 'predict' (~3 params / 3 obs per congener), so RMSE 0.029 is saturated in-sample reproduction. The a-priori test (monotone f_xy, --rec) gives the REAL predictive error log10 RMSE 0.837 (straw off 6-40x) -- the model does not predict out of sample. The predictive-validation hypothesis is refuted quantitatively."
   },
   "evidence_set": [
     {
       "evidence_id": "evi-yamazaki",
+      "role": "refuting"
+    },
+    {
+      "evidence_id": "evi-yamazaki-apriori",
       "role": "refuting"
     }
   ],
@@ -21,10 +25,10 @@
   "renders_to": null,
   "history": [
     {
-      "at": "2026-06-17T13:15:41.281211Z",
+      "at": "2026-06-17T13:32:52.066189Z",
       "from_status": "proposed",
       "to_status": "refuted",
-      "triggered_by": "evi-yamazaki",
+      "triggered_by": "evi-yamazaki-apriori",
       "note": "Initial evaluation via DecisionEngine"
     }
   ]

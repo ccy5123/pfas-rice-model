@@ -1,32 +1,32 @@
 {
-  "id": "evi-mass",
+  "id": "evi-yamazaki-apriori",
   "created_at": "2026-06-17T00:00:00Z",
   "spec_id": "pfas-rice",
   "kind": "experiment_run",
   "provenance": {
     "code_ref": "f8c3627b7abd3ff945dcc3ad9837512fa9c0d403",
     "data_ref": null,
-    "data_source": "generated",
+    "data_source": "measured",
     "seed": null,
-    "environment": "pytest tests/test_plant_module.py -k mass (numpy/scipy)",
+    "environment": "reproduce_demo.py --rec (real run; numpy/scipy)",
     "cost": null
   },
   "result": {
     "type": "quantitative",
-    "point": 1e-06,
+    "point": 0.837,
     "effect_size": null,
     "ci": null,
     "p_value": null,
     "posterior": null,
     "residual": null,
     "predictive_error": null,
-    "finding": "mass-balance residual bounded by rel 1e-6 / abs 1e-9; tests/test_plant_module.py::test_mass_conservation_source_is_root_uptake PASSES (2 passed)",
+    "finding": "reproduce_demo.py --rec: with the theory/QSPR MONOTONE f_xy (a-priori, NOT fit to the tissue BAFs) the predictive error is log10 RMSE 0.837 vs the saturated W2 fit's 0.029. Straw is off 6-40x (PFBA 45/11, PFBS 33/2.2). The model does NOT a-priori predict the Yamazaki tissue BAFs -- a quantitative confirmation of the REFUTED verdict.",
     "artifact_ref": null
   },
   "bears_on": [
     {
-      "target_id": "hyp-mass",
-      "direction": "supports",
+      "target_id": "hyp-yamazaki",
+      "direction": "refutes",
       "weight": null
     }
   ],

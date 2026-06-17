@@ -284,6 +284,23 @@ def evidence(spec, workspace):
         [Bearing(target_id="hyp-yamazaki", direction=BearingDirection.REFUTES)],
         "reproduce_demo.py (real run; numpy/scipy); data_obs/Yamazaki"))
 
+    # H3 (loop iteration 2): the ACTUAL a-priori prediction. Using the theory/QSPR
+    # monotone f_xy (NOT fit to the tissue BAFs; reproduce_demo.py --rec), the genuine
+    # out-of-sample predictive error is log10 RMSE 0.837 -- ~29x worse than the saturated
+    # 0.029; straw is off 6-40x. The engine REFUTED "0.029 = validation"; the agent then
+    # ran the real prediction and recorded its honest error (the loop driving forward).
+    items.append(_ev(
+        "evi-yamazaki-apriori", EvidenceKind.EXPERIMENT_RUN, "measured",
+        Result(type="quantitative", point=0.837,
+               finding="reproduce_demo.py --rec: with the theory/QSPR MONOTONE f_xy "
+                       "(a-priori, NOT fit to the tissue BAFs) the predictive error is "
+                       "log10 RMSE 0.837 vs the saturated W2 fit's 0.029. Straw is off "
+                       "6-40x (PFBA 45/11, PFBS 33/2.2). The model does NOT a-priori "
+                       "predict the Yamazaki tissue BAFs -- a quantitative confirmation "
+                       "of the REFUTED verdict."),
+        [Bearing(target_id="hyp-yamazaki", direction=BearingDirection.REFUTES)],
+        "reproduce_demo.py --rec (real run; numpy/scipy)"))
+
     # H4 grain — MEASURED comparisons; the model is structurally UNDER -> REFUTES.
     items.append(_ev(
         "evi-grain-tang", EvidenceKind.EXPERIMENT_RUN, "measured",
@@ -373,9 +390,10 @@ def verdicts():
             "hyp-yamazaki", R_YAMA, REF, STRONG,
             "Decisive panel reasoning: the W2 transport parameters are FIT to the same "
             "Yamazaki tissues they then 'predict' (~3 params / 3 obs per congener), so "
-            "RMSE 0.029 is saturated in-sample reproduction, not out-of-sample "
-            "validation. The hypothesis as stated (predictive validation) is refuted; "
-            "the model is consistent with — not validated against — Yamazaki.",
+            "RMSE 0.029 is saturated in-sample reproduction. The a-priori test "
+            "(monotone f_xy, --rec) gives the REAL predictive error log10 RMSE 0.837 "
+            "(straw off 6-40x) -- the model does not predict out of sample. The "
+            "predictive-validation hypothesis is refuted quantitatively.",
             [PanelVerdict(direction=REF, level=STRONG,
                           basis="pred ~ obs to 2 decimals (0.49/0.49) is the signature of "
                                 "a saturated fit, not prediction."),
