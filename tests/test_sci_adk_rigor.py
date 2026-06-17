@@ -30,6 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 RUN = ROOT / "sci_adk_review" / "runs" / "pfas-rice"
 RUN_LC = ROOT / "sci_adk_review" / "runs" / "pfas-rice-longchain"
 RUN_CARRIER = ROOT / "sci_adk_review" / "runs" / "pfas-rice-carrier"
+RUN_OOS = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-tang"
 TRAP = ROOT / "sci_adk_review" / "runs" / "pfas-rice-trap"
 
 # Empirical predictive claims that MUST NOT be SUPPORTED (the over-claim guard).
@@ -89,6 +90,16 @@ def test_carrier_run_reproduces():
     """The carrier-QSPR sub-investigation (compiled via the `sci-adk run` CLI) re-derives
     from its record (hyp-001 REFUTED -- the long-chain carrier enhancement is not QSPR-able)."""
     report = verify_run(RUN_CARRIER)
+    assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
+
+
+@pytest.mark.skipif(not RUN_OOS.exists(), reason="OOS Tang cross-dataset run absent")
+def test_oos_tang_run_reproduces():
+    """The out-of-sample cross-dataset test (compiled via the `sci-adk run` CLI) re-derives
+    from its record (hyp-001 REFUTED -- theory params do NOT predict the independent Tang
+    dataset out-of-sample: OOS RMSE 1.23 vs in-sample 0.52). This is the project's central
+    predictive-validation result on data NOT used to fit, and must stay REFUTED."""
+    report = verify_run(RUN_OOS)
     assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
 
 

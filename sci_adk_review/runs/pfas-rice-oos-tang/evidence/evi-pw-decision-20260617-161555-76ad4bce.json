@@ -1,0 +1,30 @@
+{
+  "id": "evi-pw-decision-20260617-161555-76ad4bce",
+  "created_at": "2026-06-17T16:15:55.317319Z",
+  "spec_id": "pfas-rice-oos-tang",
+  "kind": "prior_work_decision",
+  "provenance": {
+    "code_ref": "prior_work:skip",
+    "data_ref": null,
+    "data_source": null,
+    "seed": null,
+    "environment": "prior-work decision (Spec-time trigger); no search performed",
+    "cost": null
+  },
+  "result": {
+    "type": "qualitative",
+    "point": null,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "skipped: Tang 2026 (10.1016/j.jhazmat.2025.141017) is the evaluation dataset; f_xy dataset-dependence is documented (docs/VALIDATION_TANG2026_NSTEM_KR.md). OOS evaluation, not a novelty claim.",
+    "artifact_ref": null
+  },
+  "bears_on": [],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

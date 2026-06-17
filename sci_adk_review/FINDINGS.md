@@ -36,6 +36,11 @@ REFUTED**, 그러나 **"구조가 fitting으로 실험을 재현 가능한가"(H
 `sci-adk verify`: 7개 claim 전부 기록으로부터 재현(REPRODUCED), exit 0,
 record digest `sha256:493ec872…`.
 
+**표본외 확증(§8, 별도 CLI run `pfas-rice-oos-tang`)**: H3/H4의 예측-REFUTED는 **독립
+데이터셋 교차검증**으로도 확증된다 — 이론 파라미터(Tang 미적합)의 Tang 2026 조직별 TF
+**표본외 RMSE 1.23** vs in-sample 재적합 0.52(~5배 악화). 즉 구조는 *fitting으로* 재현
+가능(H7)하나 *적합 안 쓴 파라미터로* 독립 데이터셋을 **예측하지 못한다**.
+
 ---
 
 ## 1. sci-adk란 무엇인가 (왜 "배경/목표/방법/예상결과물"을 먼저 쓰게 했나)
@@ -259,6 +264,30 @@ C11–C12에서 문턱형 급상승. **hyp-001 = REFUTED** — 장쇄 운반체 
 → 즉 **장쇄 floor의 원인(LC1)과 지질-촉진 해법 방향(LC2)이 독립 문헌으로 뒷받침**되며, 남은
 과제는 모델 측 *2-풀 구현*과 PFDoDA 잔여 메커니즘이다.
 
+## 8. 표본외 교차데이터셋 예측 검증 (`runs/pfas-rice-oos-tang`)
+
+H3는 "Yamazaki 보정 = 예측검증"을 REFUTED로 판정했으나 그것은 **Yamazaki 자기 자신**에 대한
+in-sample 평가였다(포화 적합 vs 사전적 적합). 예측 타당성의 **결정적** 시험은 **보정에 쓰지
+않은 독립 데이터셋**으로의 표본외(out-of-sample) 예측이다. 별도 사전등록
+(`proposal_oos_tang.md`)을 **정식 `sci-adk run`(CLI)** 으로 컴파일하고, 이론/QSPR(monotone,
+Tang 미적합) transport 파라미터로 구동한 모델이 **Tang 2026**(다른 토양=담수 paddy pot, 품종
+=Nipponbare, 투여량 집합)의 조직별 전이계수(TF, stalk/leaf/endosperm, dry weight)를 표본외로
+예측하는지 시험했다(`validation/oos_tang.py`, PFOA·PFOS·GenX, 0.1 µg/g 저용량).
+
+| 가설 | 판정 | 근거 |
+|---|---|---|
+| 이론 파라미터가 독립 Tang 데이터셋을 표본외 예측 | **REFUTED** | **OOS log10 RMSE 1.232** (이론 monotone, Tang 미적합) vs **in-sample Tang-재적합 0.519** — 표본외가 in-sample을 0.71 log 초과; 계통적 miss(PFSA ~40–200× 과소, GenX ~10× 과대) |
+
+**의미**: in-sample 재적합(0.52)은 구조가 *fitting으로* Tang을 재현할 수 있음을 보이지만(H7과
+일관), **적합에 쓰지 않은 파라미터로는 독립 데이터셋을 예측하지 못한다**(1.23, ~5배 악화). 이는
+H3/H4의 "표본외 예측 REFUTED"를 **교차데이터셋 수준에서 독립적으로 확증**한다 — 데모/Yamazaki
+숫자의 재현(0.029)이 예측이 아니라는 sci-adk의 핵심 판정과 정확히 합치. PFSA·GenX의 계통적
+방향성 miss는 §6의 `f_xy` 헤드그룹 오프셋·ether QSPR가 **데이터셋-조건 의존**(Yamazaki Andosol
+clean water vs Tang flooded paddy)임을 재확인한다(단일 값으로 못 박을 수 없음). **hyp-001 =
+REFUTED.** `sci-adk run`(Spec 컴파일) → evi-oos-tang(measured, REFUTES) + verdict(REFUTES) →
+`sci-adk resolve`(REFUTED) → `sci-adk verify` 재현(exit 0, digest 46d71f24). 가드
+`test_oos_tang_run_reproduces`. 재현: `python validation/oos_tang.py`.
+
 ## 5. 산출물 (`sci_adk_review/`)
 
 ```
@@ -270,6 +299,9 @@ runs/pfas-rice/
   verdicts/*.json               # chief-over-N 판정 trail (H2/H3/H4/H6)
   claims/*.json                 # 믿음 상태 (SUPPORTED×4, REFUTED×2) + 이력
   paper/draft.tex               # 결정론적 논문 초안 스켈레톤
+runs/pfas-rice-longchain/       # §7 장쇄 메커니즘 (LC1–LC6; build_longchain.py)
+runs/pfas-rice-carrier/         # §7 LC6 운반체-QSPR (CLI `sci-adk run`; hyp-001 REFUTED)
+runs/pfas-rice-oos-tang/        # §8 표본외 교차데이터셋 (CLI `sci-adk run`; hyp-001 REFUTED)
 runs/pfas-rice-trap/
   VALIDITY_HALT.txt             # 거부 증거 (synthetic_proxy → HALT)
 ```
