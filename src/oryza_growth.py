@@ -186,7 +186,7 @@ def simulate_oryza(p: OryzaParams | None = None, weather: dict | None = None):
     dvs = 0.0
     out = {k: np.zeros(n) for k in
            ("dvs", "lai", "wrt", "wlv", "wst", "wso", "wagt",
-            "fsh", "flv", "fst", "fso", "cgr")}
+            "fsh", "flv", "fst", "fso", "cgr", "drlv")}
 
     for d in range(n):
         tavg = 0.5 * (tmax[d] + tmin[d])
@@ -233,6 +233,7 @@ def simulate_oryza(p: OryzaParams | None = None, weather: dict | None = None):
         out["fsh"][d], out["flv"][d] = fsh, flv
         out["fst"][d], out["fso"][d] = fst, fso
         out["cgr"][d] = gcrop
+        out["drlv"][d] = drlv                                    # leaf death rate [1/d]
 
         # --- integrate (Euler, dt=1 d) ---
         wrt += grt
@@ -300,6 +301,10 @@ def organ_biomass_oryza(t: np.ndarray, p: OryzaParams | None = None,
         f = target / shoot_final if shoot_final > 0 else 1.0
         organs = {k: v * f for k, v in organs.items()}
     out = {k: np.maximum(np.interp(t, td, v * kg_hill), 1e-9) for k, v in organs.items()}
+    # leaf senescence loss RATE [1/day] (NOT a mass -> no kg_hill / anchor scaling). The
+    # PFAS leaf ODE adds -leaf_death_rate*C so the dead leaf carries its PFAS away
+    # (D/M_leaf = drlv exactly), cancelling the spurious senescence concentration.
+    out["leaf_death_rate"] = np.maximum(np.interp(t, td, sim["drlv"]), 0.0)
     return out
 
 
@@ -318,9 +323,11 @@ def oryza_drivers(congener: str = "PFOA", Cwo: float = 1.0, season: float = 120.
     forcing_rice transpiration; M is the mechanistic ORYZA biomass."""
     import forcing_rice as fr
     t = np.linspace(0.0, season, n_t)
-    M = M_matrix_oryza(t, p, weather)
+    b = organ_biomass_oryza(t, p, weather)
+    M = np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]])
     Qtp = fr.Q_TP(t, season) if Qtp is None else np.asarray(Qtp, float)
-    return dict(t=t, Cwo=np.full_like(t, float(Cwo)), Qtp=Qtp, M=M)
+    return dict(t=t, Cwo=np.full_like(t, float(Cwo)), Qtp=Qtp, M=M,
+                leaf_loss=b["leaf_death_rate"])
 
 
 if __name__ == "__main__":

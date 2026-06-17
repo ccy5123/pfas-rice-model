@@ -83,6 +83,7 @@ class PlantInputsNL:
     Cwo: np.ndarray
     Qtp: np.ndarray
     M: np.ndarray
+    leaf_loss: np.ndarray | None = None   # leaf senescence loss RATE [1/day] (opt; 0 if None)
 
     def __post_init__(self):
         self.M = np.asarray(self.M, dtype=float)
@@ -93,11 +94,14 @@ class PlantInputsNL:
         self._M = [interp1d(self.t, self.M[:, k], **kw) for k in range(self.n_comp)]
         dM = np.gradient(self.M, self.t, axis=0)
         self._dM = [interp1d(self.t, dM[:, k], **kw) for k in range(self.n_comp)]
+        ll = np.zeros(len(self.t)) if self.leaf_loss is None else np.asarray(self.leaf_loss, float)
+        self._leaf_loss = interp1d(self.t, ll, **kw)
 
     def Cwo_(self, t): return float(self._Cwo(t))
     def Qtp_(self, t): return float(self._Qtp(t))
     def M_(self, t):   return np.array([float(f(t)) for f in self._M])
     def dM_(self, t):  return np.array([float(f(t)) for f in self._dM])
+    def leaf_loss_(self, t):  return max(float(self._leaf_loss(t)), 0.0)
 
 
 @dataclass
@@ -165,10 +169,12 @@ class NStemLeafModel:
             dC[s] = (r * self.tau[s - 1] * xyl_flux / M[s]
                      - g[s] * C[s] - mu[s] * C[s])
 
-        # --- leaf: retains its transpiration deposit; phloem source (grain + root recirc) ---
+        # --- leaf: retains its transpiration deposit; phloem source (grain + root recirc);
+        #     senescence loss (-leaf_loss*C) so a shed/dead leaf carries its PFAS away ---
         dC[leaf] = (r * self.lam_leaf * xyl_flux / M[leaf]
                     - (1.0 + self.phi) * (Q_Phl / M[leaf]) * C_Phl
-                    - g[leaf] * C[leaf] - mu[leaf] * C[leaf])
+                    - g[leaf] * C[leaf] - mu[leaf] * C[leaf]
+                    - self.inputs.leaf_loss_(t) * C[leaf])
 
         # --- grain: own panicle deposit + the non-retained residual xylem + phloem ---
         residual = (self.lam_grain + (1.0 - r) * (self.tau.sum() + self.lam_leaf)) * xyl_flux

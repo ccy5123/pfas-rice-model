@@ -146,6 +146,7 @@ class PlantInputs:
     Cwo: np.ndarray
     Qtp: np.ndarray
     M: np.ndarray            # shape (len(t), 4)
+    leaf_loss: np.ndarray | None = None   # leaf senescence loss RATE [1/day] (opt; 0 if None)
 
     def __post_init__(self):
         self.M = np.asarray(self.M, dtype=float)
@@ -157,11 +158,14 @@ class PlantInputs:
         # dM/dt by finite difference, then interpolate
         dM = np.gradient(self.M, self.t, axis=0)
         self._dM = [interp1d(self.t, dM[:, k], **kw) for k in range(4)]
+        ll = np.zeros(len(self.t)) if self.leaf_loss is None else np.asarray(self.leaf_loss, float)
+        self._leaf_loss = interp1d(self.t, ll, **kw)
 
     def Cwo_(self, t):  return float(self._Cwo(t))
     def Qtp_(self, t):  return float(self._Qtp(t))
     def M_(self, t):    return np.array([float(f(t)) for f in self._M])
     def dM_(self, t):   return np.array([float(f(t)) for f in self._dM])
+    def leaf_loss_(self, t):  return max(float(self._leaf_loss(t)), 0.0)
 
 
 # ----------------------------------------------------------------------------
@@ -262,9 +266,13 @@ class RiceUptakeModel:
         # phloem export: the grain sink (Q_Phl*C_Phl) plus the fraction phi*Q_Phl
         # that recirculates to the root -> total (1+phi)*Q_Phl*C_Phl. This closes
         # the phloem mass balance (leaf loss = grain gain + root recirculation).
+        # leaf senescence loss: the dead/shed leaf carries its PFAS away at the leaf
+        # death rate (D/M_leaf), cancelling the spurious -mu*C concentration when the
+        # leaf shrinks. 0 unless a senescing biomass driver (ORYZA) supplies the rate.
         dC[LEAF] = (f3 * (Qtp / M[LEAF]) * Cw[STEM]
                     - (1.0 + self.phi) * (Q_Phl / M[LEAF]) * C_Phl
-                    - g[LEAF] * C[LEAF] - mu[LEAF] * C[LEAF])
+                    - g[LEAF] * C[LEAF] - mu[LEAF] * C[LEAF]
+                    - self.inputs.leaf_loss_(t) * C[LEAF])
         # fruit/grain (small xylem in; phloem-dominated; terminal sink)
         dC[FRUIT] = (f4 * (Qtp / M[FRUIT]) * Cw[STEM]
                      + (Q_Phl / M[FRUIT]) * C_Phl

@@ -25,9 +25,12 @@ def test_organ_biomass_scaled_to_anchor():
     """Anchored output reproduces the IR72 shoot anchor (~1740 g/m^2 -> kg/hill)."""
     t = np.linspace(0, 120.0, 241)
     b = oz.organ_biomass_oryza(t, scale_to_anchor=True)
-    assert set(b) == {"root", "stem", "leaf", "grain"}
-    for k in b:
+    assert {"root", "stem", "leaf", "grain"} <= set(b)
+    for k in ("root", "stem", "leaf", "grain"):
         assert b[k].shape == t.shape and np.all(b[k] > 0)
+    # leaf senescence loss RATE [1/d] is also exposed (>=0, nonzero after flowering)
+    assert b["leaf_death_rate"].shape == t.shape and np.all(b["leaf_death_rate"] >= 0)
+    assert np.max(b["leaf_death_rate"]) > 0
     shoot = b["stem"][-1] + b["leaf"][-1] + b["grain"][-1]
     target = oz.OryzaParams().shoot_anchor_g_m2 * 10.0 * oz.HA_PER_HILL   # kg/hill
     assert shoot == pytest.approx(target, rel=1e-2)

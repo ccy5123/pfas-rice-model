@@ -15,16 +15,14 @@ Key finding (season 120 d, dry g/hill):
             (a terminal accumulator; no decline).
   * leaf  — THE decisive difference: growth_rice plateaus (NO senescence) while
             ORYZA2000 peaks ~71 d then DECLINES ~57% (leaf senescence + remobilisation).
-The leaf senescence is why driving the model with ORYZA biomass RAISES the leaf TF: the
-growth-dilution sink mu=(dM/dt)/M goes NEGATIVE on a senescing leaf, so the -mu*C term
-concentrates. BUT that rise is likely a PARTIAL ARTIFACT: `oryza_growth` models the loss as
-leaf DEATH (dlv=drlv*wlv, carbon REMOVED from the plant), yet the PFAS ODE only sees the net
-M(t) and conserves the leaf burden -- there is NO flux removing PFAS with the dead/fallen
-leaf. A consistent litterfall term (-drlv*C) would cancel the death part of -mu*C, leaving
-only the (always-diluting) growth term -G/M*C. So the concentration rise is defensible ONLY
-if the senescing leaf stays attached and sheds mobile dry matter while retaining the
-(immobile, bound) PFAS; under the biomass model's own "death = removed" bookkeeping it
-OVER-states the leaf TF. Open issue (the M(t) shape is robust; its PFAS coupling is not).
+The leaf senescence inflated the ORYZA leaf TF via the growth-dilution sink (mu=(dM/dt)/M < 0
+on a senescing leaf -> -mu*C concentrates). That was a PARTIAL ARTIFACT: `oryza_growth` models
+the loss as leaf DEATH (carbon REMOVED from the plant), so the dead leaf should carry its PFAS
+away. FIXED (this session): `oryza_growth` now exposes the leaf death rate `drlv`, and the PFAS
+leaf ODE subtracts a senescence-loss flux -leaf_loss*C (D/M_leaf = drlv exactly), cancelling the
+death part of -mu*C so only the always-diluting growth term remains. ONLY the ORYZA path is
+affected (growth_rice has no senescence -> no leaf_loss). Effect: PFOA leaf BAF 4.88 (artifact)
+-> 2.51 (~ growth_rice 2.26). The residual small rise is the real continued-input effect.
 
 Run:  python validation/biomass_shape_compare.py
       -> table + figure validation/figures/biomass_shape_compare.png
