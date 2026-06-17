@@ -1,0 +1,30 @@
+{
+  "id": "evi-pw-decision-20260617-162820-6703b7ed",
+  "created_at": "2026-06-17T16:28:20.700515Z",
+  "spec_id": "pfas-rice-oos-lipid",
+  "kind": "prior_work_decision",
+  "provenance": {
+    "code_ref": "prior_work:skip",
+    "data_ref": null,
+    "data_source": null,
+    "seed": null,
+    "environment": "prior-work decision (Spec-time trigger); no search performed",
+    "cost": null
+  },
+  "result": {
+    "type": "qualitative",
+    "point": null,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "skipped: Corroborating literature (Chen 2025 membrane K_MW monotone; the lipid pool carries the most-sorptive species) was already acquired and source-verified in the long-chain run (runs/pfas-rice-longchain, evi-lc-litread). This run is an out-of-sample MODEL test of that established mechanism on Tang 2026 (measured), not a new literature claim.",
+    "artifact_ref": null
+  },
+  "bears_on": [],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

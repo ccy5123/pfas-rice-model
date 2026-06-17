@@ -31,6 +31,7 @@ RUN = ROOT / "sci_adk_review" / "runs" / "pfas-rice"
 RUN_LC = ROOT / "sci_adk_review" / "runs" / "pfas-rice-longchain"
 RUN_CARRIER = ROOT / "sci_adk_review" / "runs" / "pfas-rice-carrier"
 RUN_OOS = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-tang"
+RUN_OOS_LIPID = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-lipid"
 TRAP = ROOT / "sci_adk_review" / "runs" / "pfas-rice-trap"
 
 # Empirical predictive claims that MUST NOT be SUPPORTED (the over-claim guard).
@@ -100,6 +101,18 @@ def test_oos_tang_run_reproduces():
     dataset out-of-sample: OOS RMSE 1.23 vs in-sample 0.52). This is the project's central
     predictive-validation result on data NOT used to fit, and must stay REFUTED."""
     report = verify_run(RUN_OOS)
+    assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
+
+
+@pytest.mark.skipif(not RUN_OOS_LIPID.exists(), reason="OOS lipid-generalization run absent")
+def test_oos_lipid_run_reproduces():
+    """The lipid-mechanism out-of-sample GENERALIZATION test (compiled via the `sci-adk run`
+    CLI) re-derives from its record (hyp-001 SUPPORTED -- the K_PL-gated lipid loading fit on
+    YAMAZAKI, NOT Tang, drops the independent-dataset Tang OOS RMSE 1.23 -> 0.52, matching the
+    in-sample refit; the project's first strong cross-dataset OOS predictive success). This is
+    the mechanism generalizing, NOT in-sample reproduction -- it is a genuine predictive
+    success and may legitimately be SUPPORTED (cf. the hyp-yamazaki/grain over-claim guard)."""
+    report = verify_run(RUN_OOS_LIPID)
     assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
 
 

@@ -41,6 +41,11 @@ record digest `sha256:493ec872…`.
 **표본외 RMSE 1.23** vs in-sample 재적합 0.52(~5배 악화). 즉 구조는 *fitting으로* 재현
 가능(H7)하나 *적합 안 쓴 파라미터로* 독립 데이터셋을 **예측하지 못한다**.
 
+**그러나 메커니즘은 일반화한다(§8.1, CLI run `pfas-rice-oos-lipid`)**: 장쇄에서 찾은
+**지질-촉진 로딩**(Yamazaki-적합, Tang 미적합)을 켜면 그 Tang 표본외 RMSE가 **1.23 → 0.52**로
+떨어져 in-sample 수준에 도달하고 지배적 실패(PFOS ~40–200× 과소)가 교정된다 — **프로젝트의 첫
+강한 교차데이터셋 표본외 예측 성공**(올바른 *메커니즘* 추가, 추가 적합 아님; Chen2025 corroborate).
+
 ---
 
 ## 1. sci-adk란 무엇인가 (왜 "배경/목표/방법/예상결과물"을 먼저 쓰게 했나)
@@ -288,6 +293,29 @@ REFUTED.** `sci-adk run`(Spec 컴파일) → evi-oos-tang(measured, REFUTES) + v
 `sci-adk resolve`(REFUTED) → `sci-adk verify` 재현(exit 0, digest 46d71f24). 가드
 `test_oos_tang_run_reproduces`. 재현: `python validation/oos_tang.py`.
 
+### 8.1 메커니즘은 표본외로 일반화하는가 — 지질-촉진 로딩 (`runs/pfas-rice-oos-lipid`)
+
+위 REFUTED는 **자유음이온** 모델에 대한 것이었다. 그렇다면 장쇄 sub-investigation이 찾은
+**지질-촉진 결합 로딩**(LC2 SUPPORTED; B-비의존 g_xy·C/g_ph·C, K_PL-gated)이 — **Yamazaki에만
+적합되고 Tang에는 적합되지 않았으므로**(상수 출처 `docs/fxy_longchain_lipid_exploration.md`:
+"LIPID_LOADING constants, fit to Yamazaki excl. PFDoDA") — 독립 Tang 데이터셋으로 **일반화**하는가?
+별도 사전등록(`proposal_oos_lipid.md`)을 정식 `sci-adk run`으로 컴파일해 시험.
+
+| 가설 | 판정 | 근거 |
+|---|---|---|
+| 지질-촉진 로딩(Yamazaki-적합, Tang 미적합)이 독립 Tang 표본외 예측을 개선·일반화 | **SUPPORTED** | **표본외 RMSE 1.232(자유음이온) → 0.516(지질)** — Tang에 무엇도 적합하지 않고 in-sample 재적합(0.519) 수준 도달; 지배적 실패 **PFOS 교정**(stalk 0.013→0.620 vs Tang 0.571, ~40–200× 과소 붕괴 해소); Chen2025 막 K_MW로 독립 corroborate |
+
+**의미**: 자유음이온은 표본외 실패(1.232)하나, **메커니즘(지질-촉진 로딩)을 켜면 표본외 예측이
+복원된다(0.516)** — 한 데이터셋(Yamazaki)에 적합한 메커니즘이 다른 데이터셋(Tang)의 조직별
+패턴을 예측. **프로젝트의 첫 강한 교차데이터셋 표본외 예측 성공**이며, §8의 REFUTED 기준선을
+**메커니즘 수준에서 해소**한다(파라미터를 더 적합한 게 아니라 *올바른 메커니즘*을 추가). 정직한
+잔여: **GenX(ether)는 여전히 과대예측**(provisional ether f_xy 오프셋 — 지질 로딩과 무관한 별개의
+조건의존 이슈), PFOS endosperm은 여전히 ~5× 과소. 따라서 "완벽한 적합"이 아니라 "메커니즘이
+일반화"(SUPPORTED). `sci-adk run` → evi-oos-lipid(measured, SUPPORTS) + verdict(SUPPORTS) →
+`resolve`(SUPPORTED) → `verify` 재현(exit 0, digest 684c31e2). 가드 `test_oos_lipid_run_reproduces`.
+재현: `python validation/oos_tang_lipid.py`. NOTE: 이는 in-sample 재현을 예측으로 오칭한 것이
+아니라 **진짜 표본외 성공**이므로 SUPPORTED가 정당(hyp-yamazaki/grain 과대주장 가드와 구분).
+
 ## 5. 산출물 (`sci_adk_review/`)
 
 ```
@@ -302,6 +330,7 @@ runs/pfas-rice/
 runs/pfas-rice-longchain/       # §7 장쇄 메커니즘 (LC1–LC6; build_longchain.py)
 runs/pfas-rice-carrier/         # §7 LC6 운반체-QSPR (CLI `sci-adk run`; hyp-001 REFUTED)
 runs/pfas-rice-oos-tang/        # §8 표본외 교차데이터셋 (CLI `sci-adk run`; hyp-001 REFUTED)
+runs/pfas-rice-oos-lipid/       # §8.1 지질-메커니즘 표본외 일반화 (CLI; hyp-001 SUPPORTED)
 runs/pfas-rice-trap/
   VALIDITY_HALT.txt             # 거부 증거 (synthetic_proxy → HALT)
 ```

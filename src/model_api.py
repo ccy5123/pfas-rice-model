@@ -111,7 +111,7 @@ def tang_observed_tf(congener, dose="mean"):
 
 
 def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
-                       dose="mean", biomass="oryza", season=150.0):
+                       dose="mean", biomass="oryza", season=150.0, lipid_loading=False):
     """Model per-organ transfer factor (DRY-weight) vs Tang 2026, for a Tang congener.
 
     The model conc is fresh-weight (C=B_k*Cw, basis A); Tang TF is dry/dry, and the
@@ -119,14 +119,16 @@ def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
     in C_tissue/C_root: TF_dw = TF_fw*(1-theta_root)/(1-theta_tissue). Uses the
     redistributed-shoot model (`simulate_nstem_leaf`) for a sensible stem~leaf split;
     biomass='oryza' drives it with the mechanistic ORYZA2000 biomass. use_refit applies
-    the Tang-calibrated f_xy override. Returns None for non-Tang congeners.
+    the Tang-calibrated f_xy override. ``lipid_loading`` turns on the K_PL-gated
+    lipid-facilitated loading mechanism (constants fit on Yamazaki, NOT Tang -> applying it
+    here is out-of-sample; see validation/oos_tang_lipid.py). Returns None for non-Tang congeners.
     NOTE: grain/endosperm is structurally under-predicted ~3-8x (docs/tang2026_grain_units_exploration.md).
     """
     if congener not in TANG_CONGENERS:
         return None
     fxy = TANG_REFIT_FXY[congener] if use_refit else None
     r = simulate_nstem_leaf(congener, Cwo=1.0, season=season, biomass_fn=_biomass_fn(biomass),
-                            f_xy_source=f_xy_source, f_xy_override=fxy)
+                            f_xy_source=f_xy_source, f_xy_override=fxy, lipid_loading=lipid_loading)
     froot = 1.0 - _COMP["root"]["theta_fw"]
     model = {org: r["tf_final"][mk] * froot / (1.0 - _COMP[tk]["theta_fw"])
              for mk, org, tk in _TANG_ORGANS}
