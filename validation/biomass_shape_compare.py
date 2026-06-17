@@ -15,9 +15,16 @@ Key finding (season 120 d, dry g/hill):
             (a terminal accumulator; no decline).
   * leaf  — THE decisive difference: growth_rice plateaus (NO senescence) while
             ORYZA2000 peaks ~71 d then DECLINES ~57% (leaf senescence + remobilisation).
-This leaf senescence is why driving the model with ORYZA biomass RAISES the leaf TF
-(growth-dilution sink mu=(dM/dt)/M goes negative on a senescing leaf -> concentrating),
-and is the more realistic late-season canopy.
+The leaf senescence is why driving the model with ORYZA biomass RAISES the leaf TF: the
+growth-dilution sink mu=(dM/dt)/M goes NEGATIVE on a senescing leaf, so the -mu*C term
+concentrates. BUT that rise is likely a PARTIAL ARTIFACT: `oryza_growth` models the loss as
+leaf DEATH (dlv=drlv*wlv, carbon REMOVED from the plant), yet the PFAS ODE only sees the net
+M(t) and conserves the leaf burden -- there is NO flux removing PFAS with the dead/fallen
+leaf. A consistent litterfall term (-drlv*C) would cancel the death part of -mu*C, leaving
+only the (always-diluting) growth term -G/M*C. So the concentration rise is defensible ONLY
+if the senescing leaf stays attached and sheds mobile dry matter while retaining the
+(immobile, bound) PFAS; under the biomass model's own "death = removed" bookkeeping it
+OVER-states the leaf TF. Open issue (the M(t) shape is robust; its PFAS coupling is not).
 
 Run:  python validation/biomass_shape_compare.py
       -> table + figure validation/figures/biomass_shape_compare.png
