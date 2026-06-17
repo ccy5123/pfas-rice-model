@@ -29,7 +29,7 @@
 
 **패턴**: formal/계산적 주장(H1·H2·H5·H6) → SUPPORTED, **경험적 예측 주장(H3·H4)
 → REFUTED**. `sci-adk verify`: 6개 claim 전부 기록으로부터 재현(REPRODUCED), exit 0,
-record digest `sha256:88b9920a…`.
+record digest `sha256:4916c740…`.
 
 ---
 
@@ -198,3 +198,26 @@ sci-adk verify sci_adk_review/runs/pfas-rice   # exit 0, 전 claim REPRODUCED
 > 바뀌어 출력이 달라지면 증거를 **새 항목으로 append**해야 한다(Evidence는
 > append-only). prior-work는 모델이 실제로 인용하는 문헌(Yamazaki/Tang/Kim/Brunetti
 > …)을 LITERATURE 증거로 기록했다.
+
+---
+
+## 6. 판정을 받아 실행한 수정 (sci-adk = player가 아니라 referee, 행동은 agent가 이어감)
+
+sci-adk는 판정만 내고 끝이 아니라, **그 판정을 받아 agent가 다음 실험·수정을 돌리고
+belief를 갱신하는 루프**다. REFUTED 판정을 받아 다음을 실행했다.
+
+1. **루프 이어가기 (예측 정량화)**: H3 REFUTED가 요구하는 실제 사전적 예측을 돌렸다.
+   monotone f_xy(적합 아님, `reproduce_demo.py --rec`)의 **OOS log10 RMSE = 0.837**
+   (포화 0.029의 ~29배, straw 6~40배). append-only Evidence `evi-yamazaki-apriori`로 기록.
+2. **모델 개선 시도 (bounded, 정직한 음성)**: 오차가 straw 지배라 재배분-shoot
+   모델(`nstem_leaf`)을 같은 monotone f_xy로 시도(`validation/apriori_prediction.py`):
+   **OOS RMSE 0.987 → 0.951**(소폭 개선). 단쇄 straw는 가까워지나 **장쇄 straw/grain
+   붕괴**(PFDoDA straw 0.35 vs 49.75)는 그대로 — hysteretic 고-B sorption 갭. Evidence
+   `evi-yamazaki-improve`로 기록. **개선은 미미, REFUTED 유지.**
+3. **문서 과대주장 교정**: 저장소는 "0.029=재현"은 이미 정직히 적었으나 **실제 예측오차
+   숫자가 없었다.** `reproduce_demo.py`(footer)·`CLAUDE.md`§6·`docs/OVERVIEW_KR.md`에
+   **a-priori RMSE ≈0.84/≈0.95**를 명시 추가(0.029은 in-sample이라고 못박음).
+4. **엄밀성 루프 상시화**: `tests/test_sci_adk_rigor.py`(커밋된 run 재검증 + **과대주장
+   가드**: 경험적 예측 claim이 SUPPORTED가 되면 실패), `.github/workflows/rigor.yml`(push/PR
+   마다 가드 실행), `sci_adk_review/run_rigor.sh`(로컬 전체 재생성+verify). sci-adk 미설치
+   시 graceful skip. → 앞으로 같은 과대주장은 **자동 차단**된다.

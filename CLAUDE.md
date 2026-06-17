@@ -155,7 +155,11 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `soil_paddy_redox_corrected`). `pfas_rice_plant_module` is now an **alias to the basis-A
   4pool_surf** core. Key honest-status corrections from the review: (a) `reproduce_demo.py`'s
   log10 RMSE 0.029 is a **saturated W2 fit** (3 transport params/3 obs per congener) — reproduction
-  is guaranteed, NOT predictive validation; (b) the empirical ordering is **congener-dependent**
+  is guaranteed, NOT predictive validation. The genuine **a-priori predictive error** (theory/QSPR
+  monotone f_xy, NOT fit) is **log10 RMSE ≈0.84** (single-straw, `reproduce_demo.py --rec`) /
+  **≈0.95** (redistributed-shoot, `validation/apriori_prediction.py`) — straw 6–40× off, long chains
+  collapse; i.e. the model does NOT predict out-of-sample. Adjudicated by the sci-adk rigor review
+  (`sci_adk_review/FINDINGS.md`: hyp-yamazaki **REFUTED**). (b) the empirical ordering is **congener-dependent**
   (Yamazaki: short-chain straw≫root, long-chain root>straw) — `root>straw>grain` is NOT universal
   under basis-A; (c) **GAP B is shape-resolved, not closed** — see task #6.
 - **Multi-height stem (task #6)** — `src/pfas_rice_plant_module_nstem.py`: `NStemModel` (equilibrium)

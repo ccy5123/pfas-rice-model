@@ -63,6 +63,10 @@ C_k = B_k · C_w,k          BAF = C_k / C_w^o          TF = C_k / C_root
 
 > **핵심 구분**: "Yamazaki에 fit해서 RMSE 0.029로 재현"은 **검증이 아니라 재현**(포화 fit, congener마다
 > 3파라미터=3관측). 진짜 검증은 **보정에 안 쓴** 데이터로의 예측입니다.
+> ⚠️ **사전적(a-priori) 예측오차**(이론/QSPR monotone f_xy, 적합 아님)는 **log10 RMSE ≈0.84**
+> (단일-straw, `reproduce_demo.py --rec`) / **≈0.95**(재배분-shoot, `validation/apriori_prediction.py`) —
+> 즉 0.029과 ~29배 차이로 **표본외 예측은 안 됩니다**. sci-adk 엄밀성 심사가 이를 자동 판정(REFUTED):
+> `sci_adk_review/FINDINGS.md`.
 
 ![검증 요약 (Yamazaki 보정 / Kim·Li OOS)](../validation/figures/validation_summary.png)
 

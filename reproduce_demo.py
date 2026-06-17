@@ -87,3 +87,9 @@ for c in PAR["congeners"]:
           f"{pr['grain']:>7.2f}/{o.get('grain', float('nan')):<7.2f}")
 print(f"\nlog10 RMSE (pred vs obs) = {np.sqrt(np.mean(errs)):.3f}"
       f"   {'(monotone f_xy does NOT reproduce obs via this structure — straw mismatch, single-compartment limit; see note)' if USE_REC else '(W2 fit reproduces; PFDoDA near-MQL outlier)'}")
+if not USE_REC:
+    print("NOTE: 0.029 is IN-SAMPLE saturated reproduction (3 fitted transport params per "
+          "congener vs 3 obs), NOT predictive validation. The genuine a-priori predictive "
+          "error (monotone f_xy: `reproduce_demo.py --rec`) is log10 RMSE ~0.84, straw 6-40x "
+          "off. See validation/apriori_prediction.py and the sci-adk rigor review "
+          "(sci_adk_review/FINDINGS.md: hyp-yamazaki REFUTED).")

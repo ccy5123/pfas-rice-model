@@ -18,6 +18,10 @@
     {
       "evidence_id": "evi-yamazaki-apriori",
       "role": "refuting"
+    },
+    {
+      "evidence_id": "evi-yamazaki-improve",
+      "role": "refuting"
     }
   ],
   "scope_limitations": "",
@@ -25,10 +29,10 @@
   "renders_to": null,
   "history": [
     {
-      "at": "2026-06-17T13:32:52.066189Z",
+      "at": "2026-06-17T13:41:20.754814Z",
       "from_status": "proposed",
       "to_status": "refuted",
-      "triggered_by": "evi-yamazaki-apriori",
+      "triggered_by": "evi-yamazaki-improve",
       "note": "Initial evaluation via DecisionEngine"
     }
   ]

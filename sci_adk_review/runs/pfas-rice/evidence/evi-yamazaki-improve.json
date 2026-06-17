@@ -1,5 +1,5 @@
 {
-  "id": "evi-yamazaki",
+  "id": "evi-yamazaki-improve",
   "created_at": "2026-06-17T00:00:00Z",
   "spec_id": "pfas-rice",
   "kind": "experiment_run",
@@ -8,19 +8,19 @@
     "data_ref": null,
     "data_source": "measured",
     "seed": null,
-    "environment": "reproduce_demo.py (real run; numpy/scipy); data_obs/Yamazaki",
+    "environment": "validation/apriori_prediction.py (real run; model_api simulate vs nstem_leaf)",
     "cost": null
   },
   "result": {
     "type": "quantitative",
-    "point": 0.029,
+    "point": 0.951,
     "effect_size": null,
     "ci": null,
     "p_value": null,
     "posterior": null,
     "residual": null,
     "predictive_error": null,
-    "finding": "reproduce_demo.py: W2 transport fit reproduces Yamazaki root/straw/grain BAFs across 11 congeners at log10 RMSE 0.029 (e.g. PFOA root 0.49/0.49, straw 0.83/0.83 pred/obs). The fit assigns ~3 transport params per congener against 3 tissue observations => SATURATED: reproduction is structurally guaranteed and is NOT out-of-sample prediction (CLAUDE.md §6).",
+    "finding": "validation/apriori_prediction.py: redistributed-shoot model (nstem_leaf, N stem segments + retention) lowers the a-priori OOS log10 RMSE 0.987 -> 0.951 (same monotone f_xy + drivers) -- MARGINAL. Short-chain straw improves but long-chain straw/grain still collapse (PFDoDA straw 0.35 vs 49.75); needs hysteretic high-B sorption (docs/nstem_gradient_exploration.md). Predictive claim remains refuted.",
     "artifact_ref": null
   },
   "bears_on": [

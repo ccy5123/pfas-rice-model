@@ -301,6 +301,26 @@ def evidence(spec, workspace):
         [Bearing(target_id="hyp-yamazaki", direction=BearingDirection.REFUTES)],
         "reproduce_demo.py --rec (real run; numpy/scipy)"))
 
+    # H3 (loop iteration 3): a bounded MODEL-IMPROVEMENT attempt. The a-priori error
+    # is straw-dominated, so the redistributed-shoot model (nstem_leaf) is tried with
+    # the SAME monotone f_xy + drivers. Result: a-priori OOS RMSE 0.987 -> 0.951 (a
+    # real but MARGINAL gain); short-chain straw improves (PFBA 14.8->10.7 vs 11.0)
+    # but the long-chain straw/grain collapse remains (PFDoDA straw 0.35 vs 49.75,
+    # ~140x) -- the documented hysteretic-sorption gap. An honest negative: the
+    # improvement does not change the REFUTED verdict.
+    items.append(_ev(
+        "evi-yamazaki-improve", EvidenceKind.EXPERIMENT_RUN, "measured",
+        Result(type="quantitative", point=0.951,
+               finding="validation/apriori_prediction.py: redistributed-shoot model "
+                       "(nstem_leaf, N stem segments + retention) lowers the a-priori "
+                       "OOS log10 RMSE 0.987 -> 0.951 (same monotone f_xy + drivers) -- "
+                       "MARGINAL. Short-chain straw improves but long-chain straw/grain "
+                       "still collapse (PFDoDA straw 0.35 vs 49.75); needs hysteretic "
+                       "high-B sorption (docs/nstem_gradient_exploration.md). Predictive "
+                       "claim remains refuted."),
+        [Bearing(target_id="hyp-yamazaki", direction=BearingDirection.REFUTES)],
+        "validation/apriori_prediction.py (real run; model_api simulate vs nstem_leaf)"))
+
     # H4 grain — MEASURED comparisons; the model is structurally UNDER -> REFUTES.
     items.append(_ev(
         "evi-grain-tang", EvidenceKind.EXPERIMENT_RUN, "measured",
