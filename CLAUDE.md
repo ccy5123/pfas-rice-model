@@ -66,7 +66,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
 ├── external/hydrus_source/           # git submodule → github.com/phydrus/source_code
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (141 collected → 137 pass, 4 HYDRUS-engine skip): plant, soil, hydrus, calibration, lit params, API, plots, structure(SMILES), oryza, measured-biomass
+└── tests/                            # pytest (142 collected → 138 pass, 4 HYDRUS-engine skip): plant, soil, hydrus, calibration, lit params, API, plots, structure(SMILES), oryza, measured-biomass
 
 ```
 
@@ -280,7 +280,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     sink `μ=(dM/dt)/M → 0` at maturity (terminal leaf/grain ⇒ no steady state).
 - **Doc↔code reproducibility audit (this session)**: verified every file referenced in CLAUDE.md/README resolves to a
   real repo file (only the runtime artifact `pfas_rice_demo.png` is "missing" by design), and corrected stale test
-  counts (was "111"/"92 passing" → **141 collected, 137 pass, 4 HYDRUS-skip**). The one real doc-ahead-of-code gap
+  counts (was "111"/"92 passing" → **142 collected, 138 pass, 4 HYDRUS-skip**). The one real doc-ahead-of-code gap
   (`oryza_growth`) was closed by d1f5339.
 - **App integration — Tang 2026 validation tab (this session)**: surfaced the Tang TF work in the
   Streamlit app as a new **"✅ Tang TF (OOS)"** tab (`app.py` tabs[6]; About moved to tabs[7]) backed by the
@@ -294,12 +294,26 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   balance `oryza_growth`; the more first-principles choice, consistent with the model's mechanistic/HYDRUS-coupled
   philosophy) or **`"growth_rice"`** (ORYZA IR72 partitioning on a logistic; the lightweight reconstruction). The
   **app now leads with ORYZA2000** (sidebar "Biomass driver M(t)" radio, default ORYZA2000) so Tissue-dynamics / map /
-  BAF run on the mechanistic biomass unless switched; the **Tissue-dynamics tab plots M(t)** (`plots.fig_mass`, the
-  growth-dilution sink) under the concentration plot. ORYZA biomass is ~0.01 s (no app-speed cost; `_simulate` is
+  BAF run on the mechanistic biomass unless switched; the **Tissue-dynamics tab plots the per-tissue PFAS *mass*
+  (burden) C_k·M_k** (`plots.fig_burden`, µg/hill, EXTENSIVE) under the concentration plot — where the chemical
+  actually ends up (organ *biomass* M_k(t) is already in the Soil & drivers tab). ORYZA biomass is ~0.01 s (no app-speed cost; `_simulate` is
   cached). **Honest caveat / provenance**: the f_xy/L_Ph calibration was done on `growth_rice`, and switching biomass
   shifts BAFs (short-chain straw/grain +40–70%), so the **global `simulate(biomass=)` default stays `"growth_rice"`**
   (keeps `reproduce_demo`/tests/calibration reproducible); only the *app* defaults to ORYZA2000. A full ORYZA2000-default
   would want an f_xy re-fit. Tests: `test_model_api.py` (biomass selectable; default == growth_rice), `test_plots.py`.
+- **Leaf senescence-loss flux (this session) — fixes the ORYZA leaf-TF artifact**: with the mechanistic
+  ORYZA biomass the leaf shrinks (senescence), so the growth-dilution sink `μ=(dM/dt)/M` goes NEGATIVE and the
+  `−μ·C` term spuriously CONCENTRATES the leaf — but `oryza_growth` models that loss as leaf DEATH (carbon removed
+  from the plant), so the dead/shed leaf should carry its PFAS away. FIX: `oryza_growth` now exposes the leaf death
+  rate `drlv(t)` (`organ_biomass_oryza`/`oryza_drivers` extra key `leaf_death_rate`/`leaf_loss`), and the PFAS leaf
+  ODE (`4pool_surf` + `nstem_leaf`, via a new optional `PlantInputs.leaf_loss`) subtracts `−leaf_loss·C` with
+  `leaf_loss = drlv` (since `D/M_leaf = drlv` EXACTLY), cancelling the death part of `−μ·C` so only the always-diluting
+  growth term remains. **Scoped to the ORYZA path** — `growth_rice` has no senescence and supplies no rate (`leaf_loss`
+  defaults to 0), so the default/calibration/`reproduce_demo`/tests are UNCHANGED. Effect: PFOA leaf BAF 4.88 (artifact)
+  → 2.51 (≈ growth_rice 2.26); the residual small rise is the REAL continued-xylem-input effect (and nudges the Tang
+  leaf TF toward the data: 0.93 growth_rice → 1.31 ORYZA vs Tang 1.66). `tests/test_model_api.py::test_oryza_leaf_senescence_loss`.
+  NOTE the assumption it encodes: PFAS leaves with the dead leaf at the leaf concentration (uniform); the alternative
+  (immobile PFAS retained in situ as mobile dry matter is remobilised) would keep some rise — unmeasured.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -332,7 +346,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (141 collected → 137 passing, 4 skip; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
+- Tests: `pip install pytest && pytest` (142 collected → 138 passing, 4 skip; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
   additionally run when the engine is built, else auto-skip).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html

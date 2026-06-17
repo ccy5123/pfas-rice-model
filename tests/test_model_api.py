@@ -200,3 +200,17 @@ def test_simulate_biomass_driver():
     assert all(np.isfinite(v) and v >= 0 for v in oz["baf_final"].values())
     assert not np.allclose(np.asarray(gr_["M"][-1]), np.asarray(oz["M"][-1]))   # different M(t)
     assert oz["baf_final"]["grain"] != gr_["baf_final"]["grain"]
+
+
+def test_oryza_leaf_senescence_loss():
+    """ORYZA exposes a leaf death rate; the leaf senescence-loss flux (-leaf_loss*C) removes
+    the spurious senescence concentration. growth_rice (no senescence) is unaffected."""
+    import oryza_growth as og
+    drv = og.oryza_drivers("PFOA", Cwo=1.0, season=120.0, p=og.OryzaParams(season=120.0))
+    assert "leaf_loss" in drv and float(np.max(drv["leaf_loss"])) > 0.0   # rate exposed
+    leaf_fix = api.simulate("PFOA", drivers=drv)["baf_final"]["leaf"]
+    leaf_nofix = api.simulate(
+        "PFOA", drivers={k: v for k, v in drv.items() if k != "leaf_loss"})["baf_final"]["leaf"]
+    assert leaf_fix < leaf_nofix                              # senescence loss lowers the leaf
+    # growth_rice path carries no leaf_death_rate -> default behaviour unchanged
+    assert api.simulate("PFOA")["baf_final"] == api.simulate("PFOA", biomass="growth_rice")["baf_final"]

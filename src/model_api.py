@@ -170,14 +170,16 @@ def _default_drivers(t, season, Cwo, measured_forcing, biomass="growth_rice"):
         Qtp = fr.Q_TP(t, season)
         b = _biomass_fn(biomass)(t, season)
         M = np.maximum(np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-4)
+        leaf_loss = b.get("leaf_death_rate")            # only the senescing ORYZA driver supplies it
     else:
         Qtp = 0.05 + 0.35 * np.exp(-((t - 0.62 * season) ** 2) / (2 * (season / 4.8) ** 2))
         M = np.column_stack([_logistic(t, 1e-3, 0.030, 0.10, season * 0.17),
                              _logistic(t, 1e-3, 0.040, 0.10, season * 0.21),
                              _logistic(t, 1e-3, 0.050, 0.12, season * 0.25),
                              _logistic(t, 1e-5, 0.025, 0.18, season * 0.67)])
+        leaf_loss = None
     Cwo_series = np.full_like(t, float(Cwo))
-    return Cwo_series, Qtp, M
+    return Cwo_series, Qtp, M, leaf_loss
 
 
 def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
@@ -224,11 +226,12 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         Cwo_series = np.asarray(drivers["Cwo"], dtype=float)
         Qtp = np.asarray(drivers["Qtp"], dtype=float)
         M = np.asarray(drivers["M"], dtype=float)
+        leaf_loss = drivers.get("leaf_loss")            # e.g. ORYZA senescence rate
         season = float(t[-1])
     else:
         t = np.linspace(0.0, season, n_t)
-        Cwo_series, Qtp, M = _default_drivers(t, season, Cwo, measured_forcing, biomass)
-    inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M)
+        Cwo_series, Qtp, M, leaf_loss = _default_drivers(t, season, Cwo, measured_forcing, biomass)
+    inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
 
     if lipid_loading:
         f_xy_def, g_xy_def, g_ph_def = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"])
@@ -370,7 +373,8 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
         [np.maximum(b["root"], 1e-9)]
         + [np.maximum(b["stem"] / N, 1e-9)] * N
         + [np.maximum(b["leaf"], 1e-9), np.maximum(b["grain"], 1e-9)])
-    inputs = PlantInputsNL(t=t, Cwo=np.full_like(t, float(Cwo)), Qtp=Qtp, M=M)
+    inputs = PlantInputsNL(t=t, Cwo=np.full_like(t, float(Cwo)), Qtp=Qtp, M=M,
+                           leaf_loss=b.get("leaf_death_rate"))
 
     g = _COMP
     _kw = lambda d: dict(theta=d["theta_fw"], f_prot=d["f_prot"], f_PL=d["f_PL"], f_cw=d["f_cw"])

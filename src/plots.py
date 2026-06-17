@@ -39,20 +39,25 @@ def fig_tissue(res):
     return fig
 
 
-def fig_mass(res):
-    """Per-organ biomass M(t) [kg/hill] over the season -- the growth driver feeding
-    the ODE (the growth-dilution sink). Pairs with `fig_tissue` (concentration)."""
+def fig_burden(res):
+    """Per-tissue PFAS *mass* (burden) over the season [µg/hill] = C_k(t)·M_k(t).
+
+    The chemical inventory in each organ (EXTENSIVE), complementing the intensive
+    concentration in `fig_tissue`: a tissue can be high-concentration yet low-mass
+    (small organ) or vice-versa. Organ biomass M_k(t) itself is in the Soil & drivers
+    tab (`fig_drivers`)."""
     M = np.asarray(res["M"], float)
     fig = go.Figure()
-    for j, tis in enumerate(api.TISSUES):
-        fig.add_scatter(x=res["t"], y=M[:, j], name=tis, mode="lines",
+    burden = {tis: np.asarray(res["conc"][tis], float) * M[:, j] for j, tis in enumerate(api.TISSUES)}
+    for tis in api.TISSUES:
+        fig.add_scatter(x=res["t"], y=burden[tis], name=tis, mode="lines",
                         line=dict(width=2.5, color=_COL[tis]),
-                        hovertemplate=f"{tis}: %{{y:.3g}} kg<extra></extra>")
-    fig.add_scatter(x=res["t"], y=M.sum(axis=1), name="whole plant", mode="lines",
+                        hovertemplate=f"{tis}: %{{y:.3g}} µg<extra></extra>")
+    fig.add_scatter(x=res["t"], y=sum(burden.values()), name="whole plant", mode="lines",
                     line=dict(width=1.5, dash="dash", color="black"),
-                    hovertemplate="total: %{y:.3g} kg<extra></extra>")
-    fig.update_layout(title=f"{res['congener']} — organ biomass M(t)",
-                      xaxis_title="days after transplant", yaxis_title="organ mass [kg/hill]",
+                    hovertemplate="total: %{y:.3g} µg<extra></extra>")
+    fig.update_layout(title=f"{res['congener']} — PFAS mass per tissue (burden)",
+                      xaxis_title="days after transplant", yaxis_title="PFAS mass [µg/hill]",
                       **_LAYOUT)
     return fig
 
