@@ -49,7 +49,11 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── literature_params.py                  # literature QSPRs/anchors (cited) + Kim2019 BAF
 │   ├── model_api.py                          # UI-agnostic wrapper: simulate(), simulate_from_smiles(), driver/soil/biomon helpers
 │   ├── pfas_structure.py                      # SMILES (structure) → Compound adapter (RDKit; read-across + QSPR)
-│   └── plots.py                              # Plotly builders: fig_plant_schematic (colormap), drivers, ...
+│   ├── plots.py                              # Plotly builders: fig_plant_schematic (colormap), drivers, ...
+│   ├── forcing_rice.py                       # measured transpiration Q_TP(t) (FAO-56 dual-Kc; Kumari2022 + NayHtoon2018)
+│   ├── growth_rice.py                        # ORYZA IR72 partitioning on a logistic → organ M_s(t) (DEFAULT biomass driver)
+│   ├── oryza_growth.py                       # MECHANISTIC ORYZA2000 Level-1 carbon balance → weather-responsive M_s(t) (opt-in; drivers=/weather=)
+│   └── measured_biomass.py                   # ingest a MEASURED per-organ biomass table → M(t) driver (units→kg/hill; Tang etc.)
 ├── examples/                         # ready-to-load CSVs for app.py (HYDRUS drivers + biomonitoring)
 ├── params/                           # parameters.json (CANONICAL) + source CSVs (Bk, f_xy, Kcw, ...)
 ├── data_obs/                         # observed BAF/TF (Yamazaki, Li2025) + yamazaki_stem_height.csv
@@ -62,7 +66,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
 ├── external/hydrus_source/           # git submodule → github.com/phydrus/source_code
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (111): plant, soil, hydrus, calibration, lit params, API, plots, structure(SMILES)
+└── tests/                            # pytest (137 collected → 133 pass, 4 HYDRUS-engine skip): plant, soil, hydrus, calibration, lit params, API, plots, structure(SMILES), oryza, measured-biomass
 
 ```
 
@@ -246,7 +250,35 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   senescence + stem retention) **raises short-chain straw/grain BAF ~40-70%** (e.g. PFBA grain 2.07→3.53) but
   leaves the root-dominated long chains ~unchanged. `tests/test_oryza_growth.py` (6). Opt-in; the canonical path
   (`growth_rice`) is unchanged. Candidate next step: drive it with the measured `M_s(t)`/weather to pin the f_xy
-  absolute scale (task #7).
+  absolute scale (task #7). **Provenance note**: `oryza_growth.py` + `tests/test_oryza_growth.py` + `validation/
+  oryza_growth_validation.py` were *first actually committed* in commit d1f5339 — this §6 description previously
+  predated the code (doc-ahead-of-code); they are now in sync (verified by the doc↔code audit below).
+- **Measured-biomass ingestion + Tang 2026 TF f_xy re-calibration (this session)**:
+  - `src/measured_biomass.py` (+ `examples/measured_biomass_template.csv`, `tests/test_measured_biomass.py`): ingest a
+    MEASURED per-organ biomass table → `M(t)` driver (units g/plant·t/ha·g/m²·… → kg/hill; interpolate; optional
+    root:shoot reconstruction; pairs with `forcing_rice.Q_TP`). The data-grounded alternative to `growth_rice`/`oryza_growth`.
+  - `model_api.simulate_nstem_leaf(biomass_fn=…)`: the redistributed-shoot model can now be driven by the mechanistic
+    ORYZA biomass (default still `growth_rice`).
+  - **Tang 2026 finding (key, condition-specified)**: Tang reports **NO per-organ biomass time series** — biomass is
+    HARVEST-ONLY (whole-plant ~33.5 g FW + ear ~6.8 g FW, control; `raw_si/tang2026_harvest_biomass.csv`, Fig-1
+    digitized) so it can anchor final-mass/HI but **cannot drive `M(t)`**. What Tang DOES constrain is the per-organ
+    **TF (S8)/BCF (S7)** → `f_xy`. Canonical extraction: `docs/literature_db/raw_si/tang2026_doseresponse.csv` (all 5
+    soil doses 0.1–100 µg/g). NOTE the dose CONDITION: TF declines with dose (toxicity) while the linear model gives one
+    dose-independent TF, so fits use the **0.1 µg/g** lowest dose (environmentally closest) as PRIMARY, the across-dose
+    mean as sensitivity.
+  - `validation/tang2026_fxy_refit.py` (ORYZA-driven nstem_leaf; OVERRIDE-only, `parameters.json` UNCHANGED) re-fits
+    `f_xy` to Tang TF: overall log10 RMSE 1.23→0.53 (@0.1). **GenX 0.233→0.017–0.020** (independently confirms the
+    documented ~12× over-prediction; ≈ the 0.013 recalibration). **PFOS 0.013→~0.32** (current value far too low) — but
+    note this **DISAGREES with the Yamazaki-W2 0.142**: PFOS `f_xy` is **dataset/condition-dependent** (Yamazaki = Andosol
+    clean per-congener water, greenhouse, Indica+Japonica; Tang = flooded paddy-soil pot, Nipponbare, 5 doses) → do NOT
+    pin PFOS `f_xy` to a single value. **PFOA 0.040→0.064–0.097** (dose-condition dependent). This EXTENDS
+    `VALIDATION_TANG2026_NSTEM_KR.md` (ORYZA driver + explicit data-file fit), not a re-derivation.
+  - `validation/mass_drivers_plot.py`: diagnostic that `M_k(t)` is a time-varying growth curve and the growth-dilution
+    sink `μ=(dM/dt)/M → 0` at maturity (terminal leaf/grain ⇒ no steady state).
+- **Doc↔code reproducibility audit (this session)**: verified every file referenced in CLAUDE.md/README resolves to a
+  real repo file (only the runtime artifact `pfas_rice_demo.png` is "missing" by design), and corrected stale test
+  counts (was "111"/"92 passing" → **137 collected, 133 pass, 4 HYDRUS-skip**). The one real doc-ahead-of-code gap
+  (`oryza_growth`) was closed by d1f5339.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -261,6 +293,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - Multi-height stem: `python validation/nstem_gradient_check.py` (stem-gradient direction vs Yamazaki).
 - Mechanistic ORYZA biomass: `python src/oryza_growth.py` (IR72 potential sanity);
   `python validation/oryza_growth_validation.py` (vs `growth_rice` + BAF driver-sensitivity + figure).
+- Measured-biomass driver: `python src/measured_biomass.py` (template → M(t) drivers demo).
+- Mass drivers: `python validation/mass_drivers_plot.py` (M_k(t), dM/dt, growth-dilution μ figure).
+- Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
+  `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
 - Soil → plant (analytic): `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
 - **Soil → plant (REAL HYDRUS-1D)**: build the engine once, then run the coupling:
   ```
@@ -275,7 +311,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (111 passing; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
+- Tests: `pip install pytest && pytest` (137 collected → 133 passing, 4 skip; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
   additionally run when the engine is built, else auto-skip).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
