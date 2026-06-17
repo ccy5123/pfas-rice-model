@@ -16,7 +16,7 @@
       "role": "supporting"
     },
     {
-      "evidence_id": "evi-lit-20260617-152654-b2a40a7b",
+      "evidence_id": "evi-lit-20260617-153519-b80e9bb0",
       "role": "refuting"
     }
   ],
@@ -25,7 +25,7 @@
   "renders_to": null,
   "history": [
     {
-      "at": "2026-06-17T15:26:53.123234Z",
+      "at": "2026-06-17T15:35:19.066444Z",
       "from_status": "proposed",
       "to_status": "supported",
       "triggered_by": "evi-lc-lipid",

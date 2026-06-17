@@ -57,6 +57,10 @@ R_LC2 = ("a B-independent lipid-facilitated bound-loading term (g_xy*C, g_ph*C) 
 R_LC3 = ("the lipid mechanism reproduces the long-chain shoot WITHOUT degrading the "
          "root or the short/mid-chain fits (a clean single-mechanism fix) => support; "
          "it trades off root / leaves a residual => refute")
+R_LC4 = ("a 2-pool root (mobile water+protein pool feeding the xylem + a slow-exchanging "
+         "lipid/cell-wall bound store holding the measured root burden) reproduces the "
+         "long-chain shoot WHILE keeping the measured root high, closing the LC3 single-pool "
+         "tradeoff => support; it cannot match root and shoot simultaneously => refute")
 
 
 def build_spec():
@@ -77,13 +81,20 @@ def build_spec():
         H("hyp-lc-nocost",
           "The lipid mechanism reproduces the long-chain shoot without degrading the root "
           "or the short/mid-chain fits (a clean single-mechanism fix).", R_LC3),
+        H("hyp-lc-twopool",
+          "A 2-pool root (mobile water+protein pool feeding the xylem + a slow-exchanging "
+          "lipid/cell-wall bound store holding the measured root burden) reproduces the "
+          "long-chain shoot while preserving the high measured root, closing the LC3 "
+          "single-pool tradeoff.", R_LC4),
     ]
     tcs = [TargetClaim(id="tc-lc1", statement="Free loading is the long-chain shortfall cause.",
                        answers="hyp-lc-freethrottle"),
            TargetClaim(id="tc-lc2", statement="Lipid bound-loading closes the long-chain shoot.",
                        answers="hyp-lc-lipidfix"),
            TargetClaim(id="tc-lc3", statement="The lipid fix is cost-free.",
-                       answers="hyp-lc-nocost")]
+                       answers="hyp-lc-nocost"),
+           TargetClaim(id="tc-lc4", statement="A 2-pool split closes the long-chain tradeoff.",
+                       answers="hyp-lc-twopool")]
     method = MethodPlan(approaches=["free-only vs lipid on ORYZA2000 biomass vs Yamazaki",
                                     "Cw=C/B collapse diagnosis", "refit f_xy=1 ceiling check"])
     return Spec(id="pfas-rice-longchain", created_at=NOW, version=1, raw_proposal=raw,
@@ -161,6 +172,22 @@ def evidence(spec, ws):
             "residual long-chain mechanism.",
             [B(target_id="hyp-lc-nocost", direction=BearingDirection.REFUTES)],
             "validation/longchain_mechanism.py (real run; ORYZA2000)"),
+        _ev("evi-lc-2pool-mid", "measured", 0.315,
+            "validation/twopool_longchain.py (ORYZA2000): the 2-pool root (mobile + slow "
+            "lipid/cell-wall bound store; lipid loads from the mobile pool) matches MID-LONG "
+            "chains root AND shoot SIMULTANEOUSLY -- PFDA(C10) root 3.5 vs 4.2, straw 5.0 vs "
+            "3.5, grain 4.1 vs 3.4; PFUnDA(C11) root 9.8 vs 19.5 (~2x), straw 13.4 vs 8.2, "
+            "grain 3.6 vs 3.1. The single pool could not (LC3 root drain). Shoot RMSE 0.32.",
+            [B(target_id="hyp-lc-twopool", direction=BearingDirection.SUPPORTS)],
+            "validation/twopool_longchain.py (real run; ORYZA2000)"),
+        _ev("evi-lc-2pool-pfdoda", "measured", None,
+            "validation/twopool_longchain.py: PFDoDA(C12) FAILS -- root collapses to 1.2 vs "
+            "69.3 (mobile pool rm=0.02 starves -> bound store rb only 1.2; straw 8.6 vs 49.7, "
+            "grain 26 vs 45.5). The mobile-pool soil uptake (jR) is too small to sustain a "
+            "high bound root AND feed the shoot: a mass-balance/UPTAKE limit, not internal "
+            "distribution. The 2-pool does not close the longest chain.",
+            [B(target_id="hyp-lc-twopool", direction=BearingDirection.REFUTES)],
+            "validation/twopool_longchain.py (real run; ORYZA2000)"),
     ]
 
 
@@ -208,6 +235,19 @@ def verdicts():
             "the root, plus a residual long-chain mechanism.",
             [PanelVerdict(direction=REF, level=ST, basis="long-chain root degrades (single-pool drains root into the bound shoot flux)."),
              PanelVerdict(direction=REF, level=ST, basis="PFDoDA shoot residual ~3-4x under even with lipid on.")]),
+        "hyp-lc-twopool": _trail(
+            "hyp-lc-twopool", R_LC4, BearingDirection.NEUTRAL,
+            "PARTIAL (contested): the 2-pool split RESOLVES the LC3 root tradeoff for mid-long "
+            "chains -- PFDA(C10) matches root AND shoot simultaneously (3.5/4.2, 5.0/3.5, "
+            "4.1/3.4) and PFUnDA(C11) root within ~2x -- which the single pool could not. But "
+            "it FAILS for PFDoDA(C12): the mobile pool starves (rm=0.02), so the bound root "
+            "store (1.2 vs 69) and the shoot both collapse. The PFDoDA residual is an UPTAKE "
+            "(jR) mass-balance limit, not internal distribution -> a partial fix; PFDoDA needs "
+            "a different long-chain uptake/irreversible-sorption mechanism.",
+            [PanelVerdict(direction=SUP, level=ST,
+                          basis="C10/C11: 2-pool matches root AND shoot simultaneously (closes LC3 there)."),
+             PanelVerdict(direction=REF, level=ST,
+                          basis="C12 PFDoDA: mobile-pool uptake starves -> root 1.2 vs 69; the 2-pool cannot close it.")]),
     }
 
 

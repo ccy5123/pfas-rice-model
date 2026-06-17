@@ -1,0 +1,34 @@
+{
+  "hypothesis_id": "hyp-lc-twopool",
+  "rule_kind": "qualitative",
+  "rubric_expression": "a 2-pool root (mobile water+protein pool feeding the xylem + a slow-exchanging lipid/cell-wall bound store holding the measured root burden) reproduces the long-chain shoot WHILE keeping the measured root high, closing the LC3 single-pool tradeoff => support; it cannot match root and shoot simultaneously => refute",
+  "rubric_params": null,
+  "panel": [
+    {
+      "direction": "supports",
+      "level": "strong",
+      "basis": "C10/C11: 2-pool matches root AND shoot simultaneously (closes LC3 there).",
+      "counterexample": false
+    },
+    {
+      "direction": "refutes",
+      "level": "strong",
+      "basis": "C12 PFDoDA: mobile-pool uptake starves -> root 1.2 vs 69; the 2-pool cannot close it.",
+      "counterexample": false
+    }
+  ],
+  "chief": {
+    "direction": "neutral",
+    "level": "strong",
+    "basis": "PARTIAL (contested): the 2-pool split RESOLVES the LC3 root tradeoff for mid-long chains -- PFDA(C10) matches root AND shoot simultaneously (3.5/4.2, 5.0/3.5, 4.1/3.4) and PFUnDA(C11) root within ~2x -- which the single pool could not. But it FAILS for PFDoDA(C12): the mobile pool starves (rm=0.02), so the bound root store (1.2 vs 69) and the shoot both collapse. The PFDoDA residual is an UPTAKE (jR) mass-balance limit, not internal distribution -> a partial fix; PFDoDA needs a different long-chain uptake/irreversible-sorption mechanism.",
+    "counterexample": false
+  },
+  "provenance": {
+    "spec_version": 1,
+    "timestamp": "2026-06-17T00:00:00+00:00",
+    "agent_ids": [
+      "claude-in-session"
+    ],
+    "cost_ids": null
+  }
+}

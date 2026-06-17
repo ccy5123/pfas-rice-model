@@ -47,6 +47,19 @@
       "referent": "empirical",
       "non_circularity": null,
       "novelty": false
+    },
+    {
+      "id": "hyp-lc-twopool",
+      "statement": "A 2-pool root (mobile water+protein pool feeding the xylem + a slow-exchanging lipid/cell-wall bound store holding the measured root burden) reproduces the long-chain shoot while preserving the high measured root, closing the LC3 single-pool tradeoff.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "qualitative",
+        "expression": "a 2-pool root (mobile water+protein pool feeding the xylem + a slow-exchanging lipid/cell-wall bound store holding the measured root burden) reproduces the long-chain shoot WHILE keeping the measured root high, closing the LC3 single-pool tradeoff => support; it cannot match root and shoot simultaneously => refute",
+        "params": null
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
     }
   ],
   "method": {
@@ -72,6 +85,11 @@
       "id": "tc-lc3",
       "statement": "The lipid fix is cost-free.",
       "answers": "hyp-lc-nocost"
+    },
+    {
+      "id": "tc-lc4",
+      "statement": "A 2-pool split closes the long-chain tradeoff.",
+      "answers": "hyp-lc-twopool"
     }
   ],
   "amendment_rationale": null,

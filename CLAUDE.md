@@ -330,6 +330,14 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   ~3-4× under). **Conclusion**: lipid-facilitated bound loading is the correct long-chain *direction* but needs a **2-pool
   (free + lipid-bound) split** (so the bound pool feeds the shoot without draining the root) + a PFDoDA residual mechanism
   (irreversible/hysteretic sorption). In-sample. Guard `test_sci_adk_rigor.py::test_longchain_run_reproduces`.
+  **LC4 (2-pool root prototype) — CONTESTED**: `validation/twopool_longchain.py` splits the root into a mobile pool
+  (water+protein, low binding; feeds the xylem + soil uptake) and a slow-exchanging lipid/cell-wall bound store (holds the
+  measured root burden), so lipid-facilitated loading draws from the mobile pool WITHOUT subtracting the large bound store.
+  Result: it **closes the LC3 root tradeoff for mid-long chains** (PFDA C10 matches root AND shoot simultaneously
+  3.5/4.2·5.0/3.5·4.1/3.4; PFUnDA C11 root within ~2×) — which the single pool could not — **but FAILS for PFDoDA C12**
+  (mobile pool rm=0.02 starves → bound root 1.2 vs 69). The PFDoDA residual is an **uptake (jR) mass-balance limit**, not
+  internal distribution → needs a different long-chain uptake / irreversible-sorption mechanism. Recorded as hyp-lc-twopool
+  (CONTESTED) in `runs/pfas-rice-longchain`. Prototype only (not wired into the core).
   **Literature (genuine sci-adk acquisition + source verification)**: `sci-adk prior-work --searched` ran paperforge +
   Unpaywall (contact email `~/.config/sci-adk/config.toml`) over 7 DOIs that corroborate LC1/LC2; ALL 7 are paywalled
   (no OA PDF) → recorded `acquired 0/failed 7` in `evi-lit-*` + a `prior_work_decision` item + `literature/manifest.csv`

@@ -77,14 +77,25 @@ Planned approaches:
   \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
 \end{itemize}
 
+\subsection{A 2-pool root (mobile water+protein pool feeding the xylem + a slow-exchanging lipid/cell-wall bound store holding the measured root burden) reproduces the long-chain shoot while preserving the high measured root, closing the LC3 single-pool tradeoff.}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-lc-twopool} (confirmatory)
+  \item Decision rule (qualitative): a 2-pool root (mobile water+protein pool feeding the xylem + a slow-exchanging lipid/cell-wall bound store holding the measured root burden) reproduces the long-chain shoot WHILE keeping the measured root high, closing the LC3 single-pool tradeoff => support; it cannot match root and shoot simultaneously => refute
+  \item \textbf{Status: contested} --- confidence strong (graded)
+  \item Basis: qualitative judge: PARTIAL (contested): the 2-pool split RESOLVES the LC3 root tradeoff for mid-long chains -- PFDA(C10) matches root AND shoot simultaneously (3.5/4.2, 5.0/3.5, 4.1/3.4) and PFUnDA(C11) root within \textasciitilde{}2x -- which the single pool could not. But it FAILS for PFDoDA(C12): the mobile pool starves (rm=0.02), so the bound root store (1.2 vs 69) and the shoot both collapse. The PFDoDA residual is an UPTAKE (jR) mass-balance limit, not internal distribution -> a partial fix; PFDoDA needs a different long-chain uptake/irreversible-sorption mechanism.
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
 \section{Evidence}
 \begin{itemize}
+  \item \texttt{evi-lc-2pool-mid} (experiment\_run): point=0.315, finding=validation/twopool\_longchain.py (ORYZA2000): the 2-pool root (mobile + slow lipid/cell-wall bound store; lipid loads fro
+  \item \texttt{evi-lc-2pool-pfdoda} (experiment\_run): finding=validation/twopool\_longchain.py: PFDoDA(C12) FAILS -- root collapses to 1.2 vs 69.3 (mobile pool rm=0.02 starves -> boun
   \item \texttt{evi-lc-cost} (experiment\_run): finding=validation/longchain\_mechanism.py: the single-pool lipid term TRADES OFF root for long chains -- PFUnDA root 20.6->3.9 (
   \item \texttt{evi-lc-free} (experiment\_run): point=2.026, finding=validation/longchain\_mechanism.py (ORYZA2000 biomass): free-only (monotone f\_xy) long-chain (nC>=10) straw+grain log10 R
   \item \texttt{evi-lc-lipid} (experiment\_run): point=0.428, finding=validation/longchain\_mechanism.py: the B-independent lipid term (g\_xy*C, g\_ph*C; K\_PL-gated) cuts long-chain straw+grain
   \item \texttt{evi-lc-litread} (literature): finding=5 of 7 corroborating papers obtained out-of-band (paperforge found NO OA PDF for any; 5 supplied manually) and READ to v
-  \item \texttt{evi-lit-20260617-152654-b2a40a7b} (literature): finding=\{"acquired": [], "failed": [\{"doi": "10.1021/acs.est.4c06734", "error": "no OA PDF"\}, \{"doi": "10.1021/acs.est.5c11716",
-  \item \texttt{evi-pw-decision-20260617-152654-88c3882e} (prior\_work\_decision): finding=searched: DOIs=['10.1021/acs.est.4c06734', '10.1021/acs.est.5c11716', '10.1021/acs.est.7b06128', '10.1021/acsestengg.4c0
+  \item \texttt{evi-lit-20260617-153519-b80e9bb0} (literature): finding=\{"acquired": [], "failed": [\{"doi": "10.1021/acs.est.4c06734", "error": "no OA PDF"\}, \{"doi": "10.1021/acs.est.5c11716",
+  \item \texttt{evi-pw-decision-20260617-153519-606b27b8} (prior\_work\_decision): finding=searched: DOIs=['10.1021/acs.est.4c06734', '10.1021/acs.est.5c11716', '10.1021/acs.est.7b06128', '10.1021/acsestengg.4c0
 \end{itemize}
 
 \section{Pending agent judgments}
@@ -97,6 +108,9 @@ These hypotheses use a non-numeric rule and await an in-session agent verdict (n
 \{"acquired": [], "failed": [\{"doi": "10.1021/acs.est.4c06734", "error": "no OA PDF"\}, \{"doi": "10.1021/acs.est.5c11716", "error": "no OA PDF"\}, \{"doi": "10.1021/acs.est.7b06128", "error": "no OA PDF"\}, \{"doi": "10.1021/acsestengg.4c00107", "error": "no OA PDF"\}, \{"doi": "10.48130/newcontam-0025-0007", "error": "no OA PDF"\}, \{"doi": "10.1007/s40726-020-00168-y", "error": "no OA PDF"\}, \{"doi": "10.1139/er-2025-0116", "error": "no OA PDF"\}], "counts": \{"succeeded": 0, "failed": 7\}, "normalization": \{"pdfs": [], "counts": \{"normalized": 0, "already\_extractable": 0, "locked": 0, "error": 0\}\}, "citation\_keys": \{\}, "citation\_key\_collisions": []\}
   \item \texttt{hyp-lc-nocost} (qualitative): the lipid mechanism reproduces the long-chain shoot WITHOUT degrading the root or the short/mid-chain fits (a clean single-mechanism fix) => support; it trades off root / leaves a residual => refute
   \item finding: validation/longchain\_mechanism.py: the single-pool lipid term TRADES OFF root for long chains -- PFUnDA root 20.6->3.9 (obs 19.5), PFDoDA root 159->4.4 (obs 69); and PFDoDA shoot is STILL \textasciitilde{}3-4x under (straw 14.7 vs 49.8). A clean cost-free fix is refuted: it needs a 2-pool (free + bound) split and a residual long-chain mechanism.
+  \item \texttt{hyp-lc-twopool} (qualitative): a 2-pool root (mobile water+protein pool feeding the xylem + a slow-exchanging lipid/cell-wall bound store holding the measured root burden) reproduces the long-chain shoot WHILE keeping the measured root high, closing the LC3 single-pool tradeoff => support; it cannot match root and shoot simultaneously => refute
+  \item finding: validation/twopool\_longchain.py (ORYZA2000): the 2-pool root (mobile + slow lipid/cell-wall bound store; lipid loads from the mobile pool) matches MID-LONG chains root AND shoot SIMULTANEOUSLY -- PFDA(C10) root 3.5 vs 4.2, straw 5.0 vs 3.5, grain 4.1 vs 3.4; PFUnDA(C11) root 9.8 vs 19.5 (\textasciitilde{}2x), straw 13.4 vs 8.2, grain 3.6 vs 3.1. The single pool could not (LC3 root drain). Shoot RMSE 0.32.
+validation/twopool\_longchain.py: PFDoDA(C12) FAILS -- root collapses to 1.2 vs 69.3 (mobile pool rm=0.02 starves -> bound store rb only 1.2; straw 8.6 vs 49.7, grain 26 vs 45.5). The mobile-pool soil uptake (jR) is too small to sustain a high bound root AND feed the shoot: a mass-balance/UPTAKE limit, not internal distribution. The 2-pool does not close the longest chain.
 \end{itemize}
 
 \section{References}

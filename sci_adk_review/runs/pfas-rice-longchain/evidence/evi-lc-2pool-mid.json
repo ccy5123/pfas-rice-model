@@ -1,5 +1,5 @@
 {
-  "id": "evi-lc-free",
+  "id": "evi-lc-2pool-mid",
   "created_at": "2026-06-17T00:00:00Z",
   "spec_id": "pfas-rice-longchain",
   "kind": "experiment_run",
@@ -8,24 +8,24 @@
     "data_ref": null,
     "data_source": "measured",
     "seed": null,
-    "environment": "validation/longchain_mechanism.py + validation/refit_oryza.py (real runs)",
+    "environment": "validation/twopool_longchain.py (real run; ORYZA2000)",
     "cost": null
   },
   "result": {
     "type": "quantitative",
-    "point": 2.026,
+    "point": 0.315,
     "effect_size": null,
     "ci": null,
     "p_value": null,
     "posterior": null,
     "residual": null,
     "predictive_error": null,
-    "finding": "validation/longchain_mechanism.py (ORYZA2000 biomass): free-only (monotone f_xy) long-chain (nC>=10) straw+grain log10 RMSE 2.026 (~100x); PFDA straw 0.08 vs 3.46, PFDoDA straw 0.33 vs 49.8 / grain 0.10 vs 45.5. refit_oryza.py: even f_xy=1/L_Ph=1 ceilings leave PFDoDA straw 14.6 vs 49.8 -- the Cw=C/B collapse throttles free loading regardless of f_xy.",
+    "finding": "validation/twopool_longchain.py (ORYZA2000): the 2-pool root (mobile + slow lipid/cell-wall bound store; lipid loads from the mobile pool) matches MID-LONG chains root AND shoot SIMULTANEOUSLY -- PFDA(C10) root 3.5 vs 4.2, straw 5.0 vs 3.5, grain 4.1 vs 3.4; PFUnDA(C11) root 9.8 vs 19.5 (~2x), straw 13.4 vs 8.2, grain 3.6 vs 3.1. The single pool could not (LC3 root drain). Shoot RMSE 0.32.",
     "artifact_ref": null
   },
   "bears_on": [
     {
-      "target_id": "hyp-lc-freethrottle",
+      "target_id": "hyp-lc-twopool",
       "direction": "supports",
       "weight": null
     }
