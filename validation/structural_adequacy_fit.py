@@ -5,25 +5,26 @@
 # STRUCTURAL ADEQUACY via a CONSTRAINED (DOF>0) fit.
 #
 # The question is NOT prediction but: "can the model STRUCTURE reproduce the
-# measured experiments when calibrated?" A fit only answers this if it has
-# degrees of freedom > 0 -- the W2 fit (3 params/congener vs 3 obs/congener;
-# 33 params / 33 obs globally) is SATURATED (DOF 0), so its RMSE 0.029 is
-# guaranteed and says nothing about the structure.
+# measured experiments when calibrated?" A fit only answers this with degrees of
+# freedom > 0 -- the W2 fit (3 params/congener vs 3 obs/congener; 33 params / 33
+# obs globally) is SATURATED (DOF 0), so its RMSE 0.029 is guaranteed and says
+# nothing about the structure.
 #
-# This runs a CONSTRAINED global fit: per-congener f_xy (the physical TSCF, the
-# one lever expected to vary by chain) but a SINGLE shared L_Ph and a SINGLE
-# shared kappa_d across ALL congeners. That is 11 + 2 = 13 parameters for
-# 11 congeners x 3 tissues = 33 observations  ->  DOF = 20.
+# CONSTRAINED fit: per-congener f_xy (the physical TSCF, the one lever expected to
+# vary by chain) but a SINGLE shared L_Ph and a SINGLE shared kappa_d across ALL
+# congeners. 11 + 2 = 13 params for 11 congeners x 3 tissues = 33 obs -> DOF = 20.
 #
-# If the structure reproduces the data at DOF 20, structural adequacy is
-# demonstrated (not just expressiveness). The result is reported with the RMSE
-# AND the degrees of freedom so the claim is honest.
+# Fit by a fast STAGED procedure that exploits the model's near-separability
+# (root<-kappa_d+binding, straw<-f_xy, grain<-L_Ph), so it is ~500 ODE solves
+# instead of the tens of thousands a joint least_squares needs. The result is an
+# ACHIEVABLE RMSE at DOF 20 (an upper bound on the joint optimum) -- enough to
+# decide structural adequacy. Reported with the per-tissue breakdown + DOF so the
+# claim is honest.
 #
 #   python validation/structural_adequacy_fit.py
 # =============================================================================
 import json, csv, os, sys
 import numpy as np
-from scipy.optimize import least_squares
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -57,70 +58,99 @@ def _compartments():
             Compartment("grain", comp["grain_brown"]["theta_fw"], comp["grain_brown"]["f_prot"], comp["grain_brown"]["f_PL"], comp["grain_brown"]["f_cw"], S=2.0)]
 
 
-# congeners with obs + a (W2) transport entry, as in reproduce_demo
 CONG = [c for c in PAR["congeners"] if c["name"] in obs and c.get("f_xy_W2fit") is not None]
-NAMES = [c["name"] for c in CONG]
 TISS = ("root", "straw", "grain")
+_cache = {}
 
 
 def _predict(c, f_xy, L_Ph, kappa_d):
+    key = (c["name"], round(f_xy, 5), round(L_Ph, 5), round(kappa_d, 4))
+    if key in _cache:
+        return _cache[key]
     cmpd = Compound(name=c["name"], K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
                     K_cw=c["K_cw_wholecw_Lkg"]["root"], kappa_d=kappa_d,
                     Vmax_in=carr["Vmax_in"], Km_in=carr["Km_in"],
                     Vmax_out=carr["Vmax_out"], Km_out=carr["Km_out"], L_Ph=L_Ph, f_xy=f_xy)
     C = RiceUptakeModel(env=env, cmpd=cmpd, comps=_compartments(), inputs=inputs).solve(t).y[:, -1]
     straw = (C[STEM] * Mf[STEM] + C[LEAF] * Mf[LEAF]) / (Mf[STEM] + Mf[LEAF])
-    return {"root": C[R], "straw": straw, "grain": C[FRUIT]}
+    out = {"root": C[R], "straw": straw, "grain": C[FRUIT]}
+    _cache[key] = out
+    return out
 
 
-def _unpack(x):
-    f_xy = 10.0 ** x[:len(CONG)]
-    L_Ph = 10.0 ** x[-2]
-    kappa_d = 10.0 ** x[-1]
-    return f_xy, L_Ph, kappa_d
+def _le(a, b):  # squared log10 error, guarded
+    return (np.log10(max(a, 1e-6)) - np.log10(max(b, 1e-6))) ** 2
 
 
-def _resid(x):
-    f_xy, L_Ph, kappa_d = _unpack(x)
-    r = []
-    for c, fx in zip(CONG, f_xy):
-        try:
-            pr = _predict(c, fx, L_Ph, kappa_d)
-        except Exception:
-            r += [10.0] * 3; continue
-        o = obs[c["name"]]
-        for k in TISS:
-            if k in o:
-                r.append(np.log10(max(pr[k], 1e-6)) - np.log10(o[k]))
-    return np.asarray(r)
+def _best_fxy(c, L_Ph, kappa_d, grid):
+    """per-congener f_xy minimising the straw log-error (monotone in f_xy)."""
+    o = obs[c["name"]]
+    if "straw" not in o:
+        return c["f_xy_recommended"]
+    errs = [(_le(_predict(c, fx, L_Ph, kappa_d)["straw"], o["straw"]), fx) for fx in grid]
+    return min(errs)[1]
+
+
+def _rmse(fxy_by, L_Ph, kappa_d):
+    errs = []
+    for c in CONG:
+        pr = _predict(c, fxy_by[c["name"]], L_Ph, kappa_d); o = obs[c["name"]]
+        errs += [_le(pr[k], o[k]) for k in TISS if k in o]
+    return float(np.sqrt(np.mean(errs))), errs
 
 
 def main():
-    n = len(CONG)
-    # warm start: recommended monotone f_xy; global L_Ph/kappa_d mid-range
-    x0 = np.concatenate([np.log10([max(c["f_xy_recommended"], 1e-3) for c in CONG]),
-                         [np.log10(0.1), np.log10(2.0)]])
-    lo = np.concatenate([np.full(n, np.log10(1e-3)), [np.log10(1e-4), np.log10(1e-2)]])
-    hi = np.concatenate([np.full(n, np.log10(1.0)), [np.log10(1.0), np.log10(50.0)]])
-    res = least_squares(_resid, x0, bounds=(lo, hi), method="trf",
-                        diff_step=1e-2, xtol=1e-9, ftol=1e-9, max_nfev=400)
-    f_xy, L_Ph, kappa_d = _unpack(res.x)
-    n_obs = len(res.fun); n_par = n + 2; dof = n_obs - n_par
-    rmse = float(np.sqrt(np.mean(res.fun ** 2)))
+    fxy_grid = np.concatenate([np.logspace(-3, 0, 19), [1.0]])
+    kd_grid = np.logspace(-2, np.log10(50), 11)
+    lph_grid = np.logspace(-4, 0, 13)
 
-    print(f"CONSTRAINED global fit: per-congener f_xy ({n}) + global L_Ph + global kappa_d "
+    # Stage 1: global kappa_d from ROOT (root ~ uptake/dilution; weak in f_xy/L_Ph).
+    L_Ph = 0.1
+    best = (1e9, kd_grid[0])
+    for kd in kd_grid:
+        e = sum(_le(_predict(c, c["f_xy_recommended"], L_Ph, kd)["root"], obs[c["name"]]["root"])
+                for c in CONG if "root" in obs[c["name"]])
+        best = min(best, (e, kd))
+    kappa_d = best[1]
+
+    # Stage 2: per-congener f_xy from STRAW (kappa_d fixed).
+    fxy_by = {c["name"]: _best_fxy(c, L_Ph, kappa_d, fxy_grid) for c in CONG}
+
+    # Stage 3: global L_Ph from GRAIN (kappa_d, f_xy fixed).
+    best = (1e9, lph_grid[0])
+    for lph in lph_grid:
+        e = sum(_le(_predict(c, fxy_by[c["name"]], lph, kappa_d)["grain"], obs[c["name"]]["grain"])
+                for c in CONG if "grain" in obs[c["name"]])
+        best = min(best, (e, lph))
+    L_Ph = best[1]
+
+    # one refinement pass of f_xy with the updated L_Ph
+    fxy_by = {c["name"]: _best_fxy(c, L_Ph, kappa_d, fxy_grid) for c in CONG}
+
+    rmse, errs = _rmse(fxy_by, L_Ph, kappa_d)
+    n_obs = len(errs); n_par = len(CONG) + 2; dof = n_obs - n_par
+    # per-tissue RMSE
+    per = {}
+    for k in TISS:
+        ek = [_le(_predict(c, fxy_by[c["name"]], L_Ph, kappa_d)[k], obs[c["name"]][k])
+              for c in CONG if k in obs[c["name"]]]
+        per[k] = float(np.sqrt(np.mean(ek)))
+
+    print(f"CONSTRAINED global fit: per-congener f_xy ({len(CONG)}) + global L_Ph + global kappa_d "
           f"= {n_par} params for {n_obs} obs  ->  DOF = {dof}")
     print(f"global L_Ph = {L_Ph:.4g}   global kappa_d = {kappa_d:.4g}\n")
     print(f"{'PFAS':8}{'nC':>3}{'f_xy':>8} | {'root p/o':>16}{'straw p/o':>16}{'grain p/o':>16}")
-    for c, fx in zip(CONG, f_xy):
-        pr = _predict(c, fx, L_Ph, kappa_d); o = obs[c["name"]]
-        print(f"{c['name']:8}{c['n_C']:>3}{fx:>8.4f} | "
+    for c in CONG:
+        pr = _predict(c, fxy_by[c["name"]], L_Ph, kappa_d); o = obs[c["name"]]
+        print(f"{c['name']:8}{c['n_C']:>3}{fxy_by[c['name']]:>8.4f} | "
               f"{pr['root']:>7.2f}/{o.get('root', float('nan')):<7.2f}"
               f"{pr['straw']:>7.2f}/{o.get('straw', float('nan')):<7.2f}"
               f"{pr['grain']:>7.2f}/{o.get('grain', float('nan')):<7.2f}")
-    print(f"\nCONSTRAINED-fit log10 RMSE = {rmse:.3f}   (DOF {dof}; vs saturated W2 0.029 at DOF 0, "
+    print(f"\nper-tissue log10 RMSE: root {per['root']:.3f}  straw {per['straw']:.3f}  "
+          f"grain {per['grain']:.3f}")
+    print(f"CONSTRAINED-fit log10 RMSE = {rmse:.3f}   (DOF {dof}; vs saturated W2 0.029 at DOF 0, "
           f"a-priori monotone ~0.84)")
-    return rmse, dof
+    return rmse, dof, per
 
 
 if __name__ == "__main__":
