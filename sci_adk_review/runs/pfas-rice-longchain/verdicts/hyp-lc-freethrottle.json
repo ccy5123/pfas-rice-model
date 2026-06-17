@@ -13,14 +13,14 @@
     {
       "direction": "supports",
       "level": "strong",
-      "basis": "free-only long-chain RMSE 2.03 (~100x) vs measured Yamazaki.",
+      "basis": "free-only long-chain RMSE 2.03 (~100x) vs measured Yamazaki; corroborated by the long-chain root-retention literature.",
       "counterexample": false
     }
   ],
   "chief": {
     "direction": "supports",
     "level": "strong",
-    "basis": "Decisive: free-only long-chain straw+grain RMSE 2.026 (~100x under), and the ORYZA re-fit hits f_xy=1/L_Ph=1 ceilings yet PFDoDA straw stays 14.6 vs 49.8 -- the loaded flux scales with Cw=C/B, which collapses as B grows, so the free-anion shoot cannot reach the long chains. Cause confirmed.",
+    "basis": "Decisive: free-only long-chain straw+grain RMSE 2.026 (~100x under), and the ORYZA re-fit hits f_xy=1/L_Ph=1 ceilings yet PFDoDA straw stays 14.6 vs 49.8 -- the loaded flux scales with Cw=C/B, which collapses as B grows, so the free-anion shoot cannot reach the long chains. Cause confirmed. Literature corroborates: the Casparian strip restricts long-chain (C>=7 PFCA) translocation and long chains are root-retained (soil-plant reviews, evi-lc-literature).",
     "counterexample": false
   },
   "provenance": {

@@ -21,7 +21,7 @@
   "renders_to": null,
   "history": [
     {
-      "at": "2026-06-17T15:00:33.665847Z",
+      "at": "2026-06-17T15:08:01.561561Z",
       "from_status": "proposed",
       "to_status": "refuted",
       "triggered_by": "evi-lc-cost",

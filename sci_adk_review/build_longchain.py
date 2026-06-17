@@ -98,9 +98,49 @@ def _ev(id_, ds, point, finding, bears, env):
                         bears_on=bears)
 
 
+def _lit():
+    """Prior-work LITERATURE record (sci-adk: discovery via the agent's web_search is
+    upstream; this records the result). paperforge OA-PDF acquisition is unavailable
+    here (private [tools]), so the DOIs are recorded without local PDFs."""
+    dois = [
+        {"doi": "10.1021/acs.est.4c06734",
+         "note": "Chen2025 ES&T: membrane-water partition +0.36/CF2 (C4-C16) RISES for long "
+                 "chains while protein (HSA) PLATEAUS ~C6-C8 -> lipid pool dominates long-chain "
+                 "partitioning. Direct mechanistic basis for LC2 (B-independent lipid loading)."},
+        {"doi": "10.1021/acs.est.5c11716",
+         "note": "Biomimetic chromatography membrane-water + protein-water partition for PFAS (LC2)."},
+        {"doi": "10.1021/acs.est.7b06128",
+         "note": "Chain-length-dependent tissue distribution (membrane vs protein) in crucian carp."},
+        {"doi": "10.1021/acsestengg.4c00107",
+         "note": "ML plant uptake/translocation: MW dominates RCF/SCF/TF; PFCA log BCF concave, "
+                 "PFSA rises with chain length (LC1 chain-length dependence)."},
+        {"doi": "10.48130/newcontam-0025-0007",
+         "note": "Soil-plant systems review: Casparian strip restricts long-chain (C>=7 PFCA, "
+                 ">=6 PFSA) translocation; long chains root-retained (LC1)."},
+        {"doi": "10.1007/s40726-020-00168-y",
+         "note": "Current Pollution Reports: PFAS plant uptake by chain length / functional group."},
+        {"doi": "10.1139/er-2025-0116",
+         "note": "Critical review: PFAS uptake, translocation, toxicity in plants (context)."},
+    ]
+    finding = json.dumps({
+        "acquired": dois, "failed": [],
+        "corroboration": "LC1 corroborated (Casparian long-chain translocation barrier; long "
+                         "chains root-retained). LC2 mechanism corroborated (membrane/lipid "
+                         "partition keeps rising with chain length while protein plateaus, so a "
+                         "lipid-facilitated bound pool -- not protein -- carries long chains; "
+                         "phospholipids facilitate anion transfer to the lipid phase). NOT a "
+                         "novelty claim: these mechanisms are literature-established."})
+    return EvidenceItem(id="evi-lc-literature", created_at=NOW, spec_id="pfas-rice-longchain",
+                        kind=EvidenceKind.LITERATURE,
+                        provenance=Provenance(code_ref=CODE_REF, data_source=None,
+                                              environment="agent web_search (paperforge OA acquisition unavailable)"),
+                        result=Result(type="qualitative", finding=finding), bears_on=[])
+
+
 def evidence(spec, ws):
     B = Bearing
     return [
+        _lit(),
         _ev("evi-lc-free", "measured", 2.026,
             "validation/longchain_mechanism.py (ORYZA2000 biomass): free-only (monotone "
             "f_xy) long-chain (nC>=10) straw+grain log10 RMSE 2.026 (~100x); PFDA straw "
@@ -143,18 +183,24 @@ def verdicts():
             "Decisive: free-only long-chain straw+grain RMSE 2.026 (~100x under), and the "
             "ORYZA re-fit hits f_xy=1/L_Ph=1 ceilings yet PFDoDA straw stays 14.6 vs 49.8 "
             "-- the loaded flux scales with Cw=C/B, which collapses as B grows, so the "
-            "free-anion shoot cannot reach the long chains. Cause confirmed.",
+            "free-anion shoot cannot reach the long chains. Cause confirmed. Literature "
+            "corroborates: the Casparian strip restricts long-chain (C>=7 PFCA) translocation "
+            "and long chains are root-retained (soil-plant reviews, evi-lc-literature).",
             [PanelVerdict(direction=SUP, level=ST, basis="f_xy=1 ceiling still under -> not an f_xy value issue but the Cw=C/B throttle."),
-             PanelVerdict(direction=SUP, level=ST, basis="free-only long-chain RMSE 2.03 (~100x) vs measured Yamazaki.")]),
+             PanelVerdict(direction=SUP, level=ST, basis="free-only long-chain RMSE 2.03 (~100x) vs measured Yamazaki; corroborated by the long-chain root-retention literature.")]),
         "hyp-lc-lipidfix": _trail(
             "hyp-lc-lipidfix", R_LC2, SUP,
             "Decisive: the B-independent lipid term cuts the long-chain straw+grain RMSE "
             "2.026 -> 0.428 (~100x -> ~2.7x) and the whole series 1.035 -> 0.386, recovering "
             "PFDA/PFUnDA/PFOS shoot the free model starved. The mechanism is the right "
             "direction. SCOPE: in-sample (K_PL-gated fit), and PFDoDA shoot is still ~3-4x "
-            "under -- a residual floor remains.",
+            "under -- a residual floor remains. Literature corroborates the MECHANISM "
+            "(evi-lc-literature): Chen2025 (ES&T 10.1021/acs.est.4c06734) shows the "
+            "membrane-water partition keeps rising +0.36/CF2 for long chains while protein "
+            "(HSA) plateaus ~C6-C8, so the lipid (membrane) pool -- not protein -- is what "
+            "carries long chains; phospholipids facilitate anion transfer to the lipid phase.",
             [PanelVerdict(direction=SUP, level=ST, basis="long-chain straw+grain RMSE 0.43 vs free 2.03 -- ~5x closer in log space."),
-             PanelVerdict(direction=SUP, level=MO, basis="reproduces PFDA/PFUnDA/PFOS straw+grain; PFDoDA improved but residual.")]),
+             PanelVerdict(direction=SUP, level=MO, basis="mechanism literature-grounded: membrane partition rises while protein plateaus for long chains (Chen2025).")]),
         "hyp-lc-nocost": _trail(
             "hyp-lc-nocost", R_LC3, REF,
             "Decisive: the single-pool lipid term reproduces shoot at the COST of root -- "

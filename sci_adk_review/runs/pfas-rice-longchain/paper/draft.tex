@@ -55,7 +55,7 @@ Planned approaches:
   \item Hypothesis id: \texttt{hyp-lc-freethrottle} (confirmatory)
   \item Decision rule (qualitative): free-anion xylem/phloem loading structurally under-predicts long-chain (C10-C12) shoot accumulation -- even at the f\_xy=1 ceiling the flux is throttled by Cw=C/B collapse => support; long chains are reachable by free loading => refute
   \item \textbf{Status: supported} --- confidence strong (graded)
-  \item Basis: qualitative judge: Decisive: free-only long-chain straw+grain RMSE 2.026 (\textasciitilde{}100x under), and the ORYZA re-fit hits f\_xy=1/L\_Ph=1 ceilings yet PFDoDA straw stays 14.6 vs 49.8 -- the loaded flux scales with Cw=C/B, which collapses as B grows, so the free-anion shoot cannot reach the long chains. Cause confirmed.
+  \item Basis: qualitative judge: Decisive: free-only long-chain straw+grain RMSE 2.026 (\textasciitilde{}100x under), and the ORYZA re-fit hits f\_xy=1/L\_Ph=1 ceilings yet PFDoDA straw stays 14.6 vs 49.8 -- the loaded flux scales with Cw=C/B, which collapses as B grows, so the free-anion shoot cannot reach the long chains. Cause confirmed. Literature corroborates: the Casparian strip restricts long-chain (C>=7 PFCA) translocation and long chains are root-retained (soil-plant reviews, evi-lc-literature).
   \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
 \end{itemize}
 
@@ -64,7 +64,7 @@ Planned approaches:
   \item Hypothesis id: \texttt{hyp-lc-lipidfix} (confirmatory)
   \item Decision rule (qualitative): a B-independent lipid-facilitated bound-loading term (g\_xy*C, g\_ph*C) closes most of the long-chain shoot gap that free loading cannot => support; no improvement => refute
   \item \textbf{Status: supported} --- confidence strong (graded)
-  \item Basis: qualitative judge: Decisive: the B-independent lipid term cuts the long-chain straw+grain RMSE 2.026 -> 0.428 (\textasciitilde{}100x -> \textasciitilde{}2.7x) and the whole series 1.035 -> 0.386, recovering PFDA/PFUnDA/PFOS shoot the free model starved. The mechanism is the right direction. SCOPE: in-sample (K\_PL-gated fit), and PFDoDA shoot is still \textasciitilde{}3-4x under -- a residual floor remains.
+  \item Basis: qualitative judge: Decisive: the B-independent lipid term cuts the long-chain straw+grain RMSE 2.026 -> 0.428 (\textasciitilde{}100x -> \textasciitilde{}2.7x) and the whole series 1.035 -> 0.386, recovering PFDA/PFUnDA/PFOS shoot the free model starved. The mechanism is the right direction. SCOPE: in-sample (K\_PL-gated fit), and PFDoDA shoot is still \textasciitilde{}3-4x under -- a residual floor remains. Literature corroborates the MECHANISM (evi-lc-literature): Chen2025 (ES\&T 10.1021/acs.est.4c06734) shows the membrane-water partition keeps rising +0.36/CF2 for long chains while protein (HSA) plateaus \textasciitilde{}C6-C8, so the lipid (membrane) pool -- not protein -- is what carries long chains; phospholipids facilitate anion transfer to the lipid phase.
   \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
 \end{itemize}
 
@@ -79,6 +79,7 @@ Planned approaches:
 
 \section{Evidence}
 \begin{itemize}
+  \item \texttt{evi-lc-literature} (literature): finding=\{"acquired": [\{"doi": "10.1021/acs.est.4c06734", "note": "Chen2025 ES\&T: membrane-water partition +0.36/CF2 (C4-C16) RIS
   \item \texttt{evi-lc-free} (experiment\_run): point=2.026, finding=validation/longchain\_mechanism.py (ORYZA2000 biomass): free-only (monotone f\_xy) long-chain (nC>=10) straw+grain log10 R
   \item \texttt{evi-lc-lipid} (experiment\_run): point=0.428, finding=validation/longchain\_mechanism.py: the B-independent lipid term (g\_xy*C, g\_ph*C; K\_PL-gated) cuts long-chain straw+grain
   \item \texttt{evi-lc-cost} (experiment\_run): finding=validation/longchain\_mechanism.py: the single-pool lipid term TRADES OFF root for long chains -- PFUnDA root 20.6->3.9 (
@@ -96,6 +97,14 @@ These hypotheses use a non-numeric rule and await an in-session agent verdict (n
 \end{itemize}
 
 \section{References}
-No literature cited.
+\begin{itemize}
+  \item \url{https://doi.org/10.1021/acs.est.4c06734}
+  \item \url{https://doi.org/10.1021/acs.est.5c11716}
+  \item \url{https://doi.org/10.1021/acs.est.7b06128}
+  \item \url{https://doi.org/10.1021/acsestengg.4c00107}
+  \item \url{https://doi.org/10.48130/newcontam-0025-0007}
+  \item \url{https://doi.org/10.1007/s40726-020-00168-y}
+  \item \url{https://doi.org/10.1139/er-2025-0116}
+\end{itemize}
 
 \end{document}

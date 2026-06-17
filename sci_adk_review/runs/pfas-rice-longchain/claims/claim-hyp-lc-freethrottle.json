@@ -8,7 +8,7 @@
     "type": "graded",
     "value": null,
     "level": "strong",
-    "basis": "qualitative judge: Decisive: free-only long-chain straw+grain RMSE 2.026 (~100x under), and the ORYZA re-fit hits f_xy=1/L_Ph=1 ceilings yet PFDoDA straw stays 14.6 vs 49.8 -- the loaded flux scales with Cw=C/B, which collapses as B grows, so the free-anion shoot cannot reach the long chains. Cause confirmed."
+    "basis": "qualitative judge: Decisive: free-only long-chain straw+grain RMSE 2.026 (~100x under), and the ORYZA re-fit hits f_xy=1/L_Ph=1 ceilings yet PFDoDA straw stays 14.6 vs 49.8 -- the loaded flux scales with Cw=C/B, which collapses as B grows, so the free-anion shoot cannot reach the long chains. Cause confirmed. Literature corroborates: the Casparian strip restricts long-chain (C>=7 PFCA) translocation and long chains are root-retained (soil-plant reviews, evi-lc-literature)."
   },
   "evidence_set": [
     {
@@ -21,7 +21,7 @@
   "renders_to": null,
   "history": [
     {
-      "at": "2026-06-17T15:00:33.665147Z",
+      "at": "2026-06-17T15:08:01.560866Z",
       "from_status": "proposed",
       "to_status": "supported",
       "triggered_by": "evi-lc-free",

@@ -13,14 +13,14 @@
     {
       "direction": "supports",
       "level": "moderate",
-      "basis": "reproduces PFDA/PFUnDA/PFOS straw+grain; PFDoDA improved but residual.",
+      "basis": "mechanism literature-grounded: membrane partition rises while protein plateaus for long chains (Chen2025).",
       "counterexample": false
     }
   ],
   "chief": {
     "direction": "supports",
     "level": "strong",
-    "basis": "Decisive: the B-independent lipid term cuts the long-chain straw+grain RMSE 2.026 -> 0.428 (~100x -> ~2.7x) and the whole series 1.035 -> 0.386, recovering PFDA/PFUnDA/PFOS shoot the free model starved. The mechanism is the right direction. SCOPE: in-sample (K_PL-gated fit), and PFDoDA shoot is still ~3-4x under -- a residual floor remains.",
+    "basis": "Decisive: the B-independent lipid term cuts the long-chain straw+grain RMSE 2.026 -> 0.428 (~100x -> ~2.7x) and the whole series 1.035 -> 0.386, recovering PFDA/PFUnDA/PFOS shoot the free model starved. The mechanism is the right direction. SCOPE: in-sample (K_PL-gated fit), and PFDoDA shoot is still ~3-4x under -- a residual floor remains. Literature corroborates the MECHANISM (evi-lc-literature): Chen2025 (ES&T 10.1021/acs.est.4c06734) shows the membrane-water partition keeps rising +0.36/CF2 for long chains while protein (HSA) plateaus ~C6-C8, so the lipid (membrane) pool -- not protein -- is what carries long chains; phospholipids facilitate anion transfer to the lipid phase.",
     "counterexample": false
   },
   "provenance": {
