@@ -428,7 +428,8 @@ with tabs[1]:
                "(burden) = C_k(t)·M_k(t) [µg/hill] (extensive) — where the chemical actually ends up. "
                "A tissue can be high-concentration yet low-mass (small organ), so the two views differ; "
                "the terminal leaf/grain keep gaining mass as the organ grows. (Organ *biomass* M_k(t) is "
-               "in the **🟫 Soil & drivers** tab.)")
+               "in the **🟫 Soil & drivers** tab.) The **grain is blank until it forms (~flowering)** — "
+               "the panicle is physically absent before then, so its concentration is undefined.")
 
 # ---- Tab 3: soil & drivers --------------------------------------------------
 with tabs[2]:
