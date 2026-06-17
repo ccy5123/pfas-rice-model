@@ -111,18 +111,34 @@ def simulate2(name, f_xy, g_xy, g_ph, k_off=0.02, L_Ph=None, kappa_d=None):
     return {"root": rm+rb, "straw": straw, "grain": gr, "rm": rm, "rb": rb}
 
 
-def _fit(name, k_off):
-    """fit g_xy->straw and g_ph->grain (brentq, monotone); f_xy from oryza refit."""
+def _fit(name, k_off, kappa_d=None):
+    """fit g_xy->straw and g_ph->grain (brentq, monotone); f_xy from oryza refit.
+    Optional kappa_d override (LC5: long-chain membrane-uptake enhancement)."""
     c = CONG[name]; o = obs[name]
     f_xy = c.get("f_xy_oryza") or c["f_xy_recommended"]
     def gx(lg):
-        return np.log10(max(simulate2(name, f_xy, 10**lg, 0.0, k_off)["straw"], 1e-6)) - np.log10(o["straw"])
+        return np.log10(max(simulate2(name, f_xy, 10**lg, 0.0, k_off, kappa_d=kappa_d)["straw"], 1e-6)) - np.log10(o["straw"])
     a, b = -6, 1
     g_xy = 10**brentq(gx, a, b, xtol=1e-2, maxiter=40) if gx(a)*gx(b) < 0 else (10**a if abs(gx(a))<abs(gx(b)) else 10**b)
     def gp(lg):
-        return np.log10(max(simulate2(name, f_xy, g_xy, 10**lg, k_off)["grain"], 1e-6)) - np.log10(o["grain"])
+        return np.log10(max(simulate2(name, f_xy, g_xy, 10**lg, k_off, kappa_d=kappa_d)["grain"], 1e-6)) - np.log10(o["grain"])
     g_ph = 10**brentq(gp, a, b, xtol=1e-2, maxiter=40) if gp(a)*gp(b) < 0 else (10**a if abs(gp(a))<abs(gp(b)) else 10**b)
     return f_xy, g_xy, g_ph
+
+
+def lc5_uptake_scan(name="PFDoDA", k_off=0.02):
+    """LC5: does enhancing the long-chain root membrane uptake (kappa_d -- the
+    lipophilic-tail direct permeation the anion-exclusion GHK term misses) let the
+    2-pool reach PFDoDA's measured ROOT and SHOOT? Scan kappa_d, fit g_xy/g_ph."""
+    c = CONG[name]; o = obs[name]; base = c.get("kappa_d_oryza") or 2.0
+    print(f"\nLC5 uptake-enhancement scan for {name} (base kappa_d_oryza={base:.3g}):")
+    print(f"  {'kappa_d':>8}{'x_base':>7} | {'root p/o':>15}{'straw p/o':>15}{'grain p/o':>15}")
+    for kd in (base, 0.5, 2.0, 10.0, 50.0):
+        f_xy, g_xy, g_ph = _fit(name, k_off, kappa_d=kd)
+        r = simulate2(name, f_xy, g_xy, g_ph, k_off, kappa_d=kd)
+        print(f"  {kd:>8.3g}{kd/base:>6.0f}x | "
+              f"{r['root']:6.1f}/{o['root']:<7.1f}{r['straw']:6.1f}/{o['straw']:<7.1f}"
+              f"{r['grain']:6.1f}/{o['grain']:<7.1f}")
 
 
 def main():
@@ -145,6 +161,7 @@ def main():
     print(f"\nlong-incl root RMSE {math.sqrt(np.mean(errs['root'])):.3f}  shoot RMSE "
           f"{math.sqrt(np.mean(errs['shoot'])):.3f}")
     print("LC4 question: can the 2-pool match long-chain ROOT and SHOOT simultaneously?")
+    lc5_uptake_scan("PFDoDA")
 
 
 if __name__ == "__main__":
