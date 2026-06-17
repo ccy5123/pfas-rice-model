@@ -34,7 +34,7 @@ REFUTED**, 그러나 **"구조가 fitting으로 실험을 재현 가능한가"(H
 질문)는 — 당신의 ORYZA2000 biomass로 구동 시 — shoot에서 SUPPORTED**(straw ~0.18,
 자유도 20; 전 조직 ~factor 2.2 이내 @ DOF 10), grain 장쇄만 잔여 floor.
 `sci-adk verify`: 7개 claim 전부 기록으로부터 재현(REPRODUCED), exit 0,
-record digest `sha256:50417cd6…`.
+record digest `sha256:493ec872…`.
 
 ---
 
@@ -259,3 +259,12 @@ belief를 갱신하는 루프**다. REFUTED 판정을 받아 다음을 실행했
    biomass에서 소멸. `evi-adequacy`(measured; hyp-adequacy SUPPORTS + hyp-grain REFUTES)
    + verdict로 기록 → **H7 SUPPORTED.** (직전까지 적합이 예시 로지스틱 biomass를 쓰던
    것을 사용자 지적으로 ORYZA2000으로 교체.)
+6. **ORYZA2000을 기본 biomass로 전환 + 전송 파라미터 재적합**: 사용자 지시("일단 ORYZA2000이
+   기본")로 `model_api`(simulate/_default_drivers/_biomass_fn/simulate_nstem_leaf/tang_tf)
+   기본을 `"oryza"`로 전환. 이어 per-congener (f_xy,L_Ph,kappa_d)를 ORYZA2000 biomass에
+   **재적합**(`validation/refit_oryza.py` → `params/parameters.json`의 `f_xy_oryza` 등 +
+   `refit_oryza.csv`; `build_parameters.py`가 재빌드 시 보존). `f_xy_source="oryza"`로 배선 →
+   `simulate(f_xy_source="oryza", biomass="oryza")`가 Yamazaki를 **log10 RMSE 0.236**으로 재현
+   (saturated/DOF0 = 재현이지 예측 아님; PFDoDA 장쇄는 한계값에서도 ~4–6배 미달). 레거시
+   `*_W2fit`(placeholder)·`reproduce_demo`(0.029)은 보존. `evi-oryza-refit`로 기록(hyp-yamazaki
+   REFUTES 보강). 테스트 `test_oryza_refit_reproduces`. **전체 133 passed.**

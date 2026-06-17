@@ -237,16 +237,12 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         Cwo_series, Qtp, M, leaf_loss = _default_drivers(t, season, Cwo, measured_forcing, biomass)
     inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
 
-    if lipid_loading:
-        f_xy_def, g_xy_def, g_ph_def = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"])
-    else:
-        f_xy_def = c["f_xy_recommended"] if f_xy_source == "recommended" else (c.get("f_xy_W2fit") or c["f_xy_recommended"])
-        g_xy_def = g_ph_def = 0.0
+    f_xy_def, L_Ph_def, kappa_d_def, g_xy_def, g_ph_def = _transport_defaults(c, f_xy_source, lipid_loading)
     f_xy = float(f_xy_override) if f_xy_override is not None else float(f_xy_def)
     g_xy = float(g_xy_override) if g_xy_override is not None else float(g_xy_def)
     g_ph = float(g_ph_override) if g_ph_override is not None else float(g_ph_def)
-    kappa_d = float(kappa_d_override) if kappa_d_override is not None else (c.get("kappa_d_W2fit") or 2.0)
-    L_Ph = float(L_Ph_override) if L_Ph_override is not None else (c.get("L_Ph_W2fit") or 0.01)
+    kappa_d = float(kappa_d_override) if kappa_d_override is not None else float(kappa_d_def)
+    L_Ph = float(L_Ph_override) if L_Ph_override is not None else float(L_Ph_def)
     cmpd = Compound(name=congener, K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
                     K_cw=c["K_cw_wholecw_Lkg"]["root"], kappa_d=kappa_d,
                     Vmax_in=_CARR["Vmax_in"], Km_in=_CARR["Km_in"],
@@ -316,6 +312,25 @@ def simulate_from_smiles(smiles, *, name=None, f_xy=None, f_xy_override=None, **
     return res
 
 
+def _transport_defaults(c, f_xy_source, lipid_loading):
+    """Resolve the (f_xy, L_Ph, kappa_d, g_xy, g_ph) defaults for a congener record.
+
+    f_xy_source: 'recommended' (monotone physical TSCF), 'W2fit' (per-congener fit on
+    the placeholder/growth_rice driver -- reproduces Yamazaki there; reproduce_demo),
+    or 'oryza' (per-congener fit on the mechanistic ORYZA2000 biomass -- the
+    reproduction calibration for the new default driver; validation/refit_oryza.py).
+    """
+    if lipid_loading:
+        f_xy, g_xy, g_ph = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"])
+        return f_xy, (c.get("L_Ph_W2fit") or 0.01), (c.get("kappa_d_W2fit") or 2.0), g_xy, g_ph
+    if f_xy_source == "oryza":
+        return (c.get("f_xy_oryza") or c["f_xy_recommended"],
+                c.get("L_Ph_oryza") or (c.get("L_Ph_W2fit") or 0.01),
+                c.get("kappa_d_oryza") or (c.get("kappa_d_W2fit") or 2.0), 0.0, 0.0)
+    f_xy = c["f_xy_recommended"] if f_xy_source == "recommended" else (c.get("f_xy_W2fit") or c["f_xy_recommended"])
+    return f_xy, (c.get("L_Ph_W2fit") or 0.01), (c.get("kappa_d_W2fit") or 2.0), 0.0, 0.0
+
+
 def _compound_for(congener, f_xy_source="recommended", f_xy_override=None,
                   L_Ph_override=None, kappa_d_override=None, lipid_loading=False,
                   g_xy_override=None, g_ph_override=None, K_cw_organ="stem"):
@@ -323,16 +338,12 @@ def _compound_for(congener, f_xy_source="recommended", f_xy_override=None,
     simulate() (f_xy source / lipid loading / overrides). `K_cw_organ` picks the
     cell-wall K used (the nstem stem segments use the stem cell wall)."""
     c = _CONG[congener]
-    if lipid_loading:
-        f_xy_def, g_xy_def, g_ph_def = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"])
-    else:
-        f_xy_def = c["f_xy_recommended"] if f_xy_source == "recommended" else (c.get("f_xy_W2fit") or c["f_xy_recommended"])
-        g_xy_def = g_ph_def = 0.0
+    f_xy_def, L_Ph_def, kappa_d_def, g_xy_def, g_ph_def = _transport_defaults(c, f_xy_source, lipid_loading)
     f_xy = float(f_xy_override) if f_xy_override is not None else float(f_xy_def)
     g_xy = float(g_xy_override) if g_xy_override is not None else float(g_xy_def)
     g_ph = float(g_ph_override) if g_ph_override is not None else float(g_ph_def)
-    kappa_d = float(kappa_d_override) if kappa_d_override is not None else (c.get("kappa_d_W2fit") or 2.0)
-    L_Ph = float(L_Ph_override) if L_Ph_override is not None else (c.get("L_Ph_W2fit") or 0.01)
+    kappa_d = float(kappa_d_override) if kappa_d_override is not None else float(kappa_d_def)
+    L_Ph = float(L_Ph_override) if L_Ph_override is not None else float(L_Ph_def)
     return Compound(name=congener, K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
                     K_cw=c["K_cw_wholecw_Lkg"][K_cw_organ], kappa_d=kappa_d,
                     Vmax_in=_CARR["Vmax_in"], Km_in=_CARR["Km_in"],

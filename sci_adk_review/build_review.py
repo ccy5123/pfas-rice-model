@@ -339,6 +339,25 @@ def evidence(spec, workspace):
         [Bearing(target_id="hyp-yamazaki", direction=BearingDirection.REFUTES)],
         "validation/apriori_prediction.py (real run; model_api simulate vs nstem_leaf)"))
 
+    # H3 (operational): the per-congener transport RE-FIT on the new default ORYZA2000
+    # biomass (validation/refit_oryza.py; f_xy_source='oryza'). It reproduces in-sample
+    # at log10 RMSE 0.236 -- SATURATED per congener (3 params / 3 obs, DOF 0), so it is
+    # expressiveness/reproduction on the new default driver, NOT predictive validation;
+    # PFDoDA (C12) is unreachable even at all-parameter ceilings (long-chain floor).
+    # Confirms hyp-yamazaki stays REFUTED after re-calibrating on the realistic biomass.
+    items.append(_ev(
+        "evi-oryza-refit", EvidenceKind.EXPERIMENT_RUN, "measured",
+        Result(type="quantitative", point=0.236,
+               finding="validation/refit_oryza.py: per-congener (f_xy,L_Ph,kappa_d) re-fit "
+                       "to Yamazaki on the MECHANISTIC ORYZA2000 biomass (the new default) "
+                       "reproduces in-sample at log10 RMSE 0.236 -- SATURATED (DOF 0), i.e. "
+                       "reproduction not prediction. PFDoDA(C12) hits f_xy=1/L_Ph=1/"
+                       "kappa_d=0.01 ceilings yet stays ~4-6x under (root 19 vs 69, grain "
+                       "7.4 vs 46) -- a structural long-chain floor. Wired as model_api "
+                       "f_xy_source='oryza' so the default-biomass model reproduces."),
+        [Bearing(target_id="hyp-yamazaki", direction=BearingDirection.REFUTES)],
+        "validation/refit_oryza.py (real run; ORYZA2000 biomass) + params/refit_oryza.csv"))
+
     # H4 grain — MEASURED comparisons; the model is structurally UNDER -> REFUTES.
     items.append(_ev(
         "evi-grain-tang", EvidenceKind.EXPERIMENT_RUN, "measured",

@@ -208,6 +208,22 @@ def test_simulate_biomass_driver():
     assert oz["baf_final"]["grain"] != gr_["baf_final"]["grain"]
 
 
+def test_oryza_refit_reproduces():
+    """f_xy_source='oryza' (per-congener transport re-fit on the ORYZA2000 biomass,
+    validation/refit_oryza.py) reproduces the Yamazaki tissue BAFs under the new
+    default biomass -- the W2 fit (placeholder driver) does not."""
+    o = api.observed_baf("PFOA")
+    r = api.simulate("PFOA", f_xy_source="oryza", biomass="oryza")
+    # PFOA reproduces to well within a factor of ~1.4 in log space on the ORYZA refit
+    assert abs(np.log10(r["baf_final"]["root"]) - np.log10(o["root"])) < 0.15
+    assert abs(np.log10(r["straw_baf"]) - np.log10(o["straw"])) < 0.15
+    assert api._CONG["PFOA"]["f_xy_oryza"] > 0          # refit fields are present
+    # the three sources resolve to different f_xy (recommended / W2 / oryza)
+    fxy = {s: api.simulate("PFOA", f_xy_source=s)["params"]["f_xy"]
+           for s in ("recommended", "W2fit", "oryza")}
+    assert len({round(v, 4) for v in fxy.values()}) == 3
+
+
 def test_oryza_leaf_senescence_loss():
     """ORYZA exposes a leaf death rate; the leaf senescence-loss flux (-leaf_loss*C) removes
     the spurious senescence concentration. growth_rice (no senescence) is unaffected."""

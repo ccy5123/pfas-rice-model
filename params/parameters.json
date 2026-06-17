@@ -15,6 +15,7 @@
       "K_cw": "GAP A / Prompt2 v2 (Guo2025 Fig.3f DFT + Mel2024 lignin anchor; rice whole-cw per organ)",
       "f_xy_recommended": "GAP B / S4 + docs/theory_anchor.tex (Trapp+Briggs LFER: MONOTONE logistic)",
       "f_xy_W2fit": "S6 W2 transport fit to Yamazaki (SATURATED 3param/3obs; long-chain values NON-physical, see docs/DELIVERABLE_GAP_B_fxy.md)",
+      "f_xy_oryza": "per-congener (f_xy,L_Ph,kappa_d) re-fit to Yamazaki on the MECHANISTIC ORYZA2000 biomass (the default driver); validation/refit_oryza.py, params/refit_oryza.csv (reproduction log10 RMSE 0.236; PFDoDA long-chain outlier at param ceilings). Use model_api f_xy_source='oryza'.",
       "composition": "rice_tissue package (recommended anchors)"
     },
     "WARNING_f_xy": "Use f_xy_recommended (monotone). f_xy_W2fit rises spuriously for C10+ (single-straw-compartment entanglement, H7 §7.2); theory + cross-field TF both require monotone decline."
@@ -101,7 +102,10 @@
         "stem": 1.296,
         "leaf": 1.413,
         "grain": 1.179
-      }
+      },
+      "f_xy_oryza": 0.364652,
+      "L_Ph_oryza": 1e-05,
+      "kappa_d_oryza": 0.265365
     },
     {
       "name": "PFPeA",
@@ -126,7 +130,10 @@
         "stem": 1.44,
         "leaf": 1.654,
         "grain": 1.484
-      }
+      },
+      "f_xy_oryza": 0.142669,
+      "L_Ph_oryza": 1e-05,
+      "kappa_d_oryza": 2.73622
     },
     {
       "name": "PFHxA",
@@ -151,7 +158,10 @@
         "stem": 1.682,
         "leaf": 2.127,
         "grain": 2.061
-      }
+      },
+      "f_xy_oryza": 0.071375,
+      "L_Ph_oryza": 0.002101,
+      "kappa_d_oryza": 3.68852
     },
     {
       "name": "PFHpA",
@@ -176,7 +186,10 @@
         "stem": 2.193,
         "leaf": 3.211,
         "grain": 3.176
-      }
+      },
+      "f_xy_oryza": 0.035417,
+      "L_Ph_oryza": 0.004076,
+      "kappa_d_oryza": 1.72181
     },
     {
       "name": "PFOA",
@@ -201,7 +214,10 @@
         "stem": 3.353,
         "leaf": 5.965,
         "grain": 6.24
-      }
+      },
+      "f_xy_oryza": 0.083361,
+      "L_Ph_oryza": 0.016357,
+      "kappa_d_oryza": 5.91171
     },
     {
       "name": "PFNA",
@@ -226,7 +242,10 @@
         "stem": 6.747,
         "leaf": 14.423,
         "grain": 16.251
-      }
+      },
+      "f_xy_oryza": 0.138851,
+      "L_Ph_oryza": 0.047578,
+      "kappa_d_oryza": 13.6699
     },
     {
       "name": "PFDA",
@@ -251,7 +270,10 @@
         "stem": 15.134,
         "leaf": 35.716,
         "grain": 41.363
-      }
+      },
+      "f_xy_oryza": 0.238568,
+      "L_Ph_oryza": 0.306836,
+      "kappa_d_oryza": 2.67194
     },
     {
       "name": "PFUnDA",
@@ -276,7 +298,10 @@
         "stem": 29.483,
         "leaf": 72.291,
         "grain": 83.997
-      }
+      },
+      "f_xy_oryza": 0.338914,
+      "L_Ph_oryza": 0.151,
+      "kappa_d_oryza": 1.01331
     },
     {
       "name": "PFDoDA",
@@ -301,7 +326,10 @@
         "stem": 59.174,
         "leaf": 148.443,
         "grain": 172.989
-      }
+      },
+      "f_xy_oryza": 1.0,
+      "L_Ph_oryza": 1.0,
+      "kappa_d_oryza": 0.01
     },
     {
       "name": "PFBS",
@@ -326,7 +354,10 @@
         "stem": 2.721,
         "leaf": 3.736,
         "grain": 4.644
-      }
+      },
+      "f_xy_oryza": 0.024771,
+      "L_Ph_oryza": 1e-05,
+      "kappa_d_oryza": 0.376051
     },
     {
       "name": "PFHxS",
@@ -376,7 +407,10 @@
         "stem": 30.119,
         "leaf": 73.101,
         "grain": 84.991
-      }
+      },
+      "f_xy_oryza": 0.401896,
+      "L_Ph_oryza": 0.218969,
+      "kappa_d_oryza": 4.54425
     },
     {
       "name": "GenX",
