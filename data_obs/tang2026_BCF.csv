@@ -1,0 +1,19 @@
+# Tang 2026 (JHM 502:141017) Table S7 — bioaccumulation/bioconcentration factor.
+# BCF = C_rice / C_soil (whole-plant, dry weight), Nipponbare paddy, harvest. mean +/- SD, n=3.
+# conc_ugg = soil exposure level. Order GenX > PFOS ~ PFOA (GenX more bioavailable).
+congener,conc_ugg,BCF_mean,BCF_sd,source
+PFOA,0.1,0.240,0.051,Tang2026_S7
+PFOA,1,0.225,0.058,Tang2026_S7
+PFOA,10,0.191,0.025,Tang2026_S7
+PFOA,50,0.209,0.022,Tang2026_S7
+PFOA,100,0.181,0.024,Tang2026_S7
+PFOS,0.1,0.254,0.0254,Tang2026_S7
+PFOS,1,0.228,0.017,Tang2026_S7
+PFOS,10,0.295,0.022,Tang2026_S7
+PFOS,50,0.294,0.013,Tang2026_S7
+PFOS,100,0.217,0.019,Tang2026_S7
+GenX,0.1,0.472,0.075,Tang2026_S7
+GenX,1,0.514,0.026,Tang2026_S7
+GenX,10,0.523,0.008,Tang2026_S7
+GenX,50,0.358,0.055,Tang2026_S7
+GenX,100,0.507,0.040,Tang2026_S7

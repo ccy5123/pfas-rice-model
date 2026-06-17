@@ -1,0 +1,16 @@
+# Tang 2026 (JHM 502:141017) Fig. 1a (biomass) + 1b (ear of rice) — HARVEST biomass.
+# IMPORTANT: Tang reports biomass ONLY at harvest (after 150 d), as whole-plant and ear,
+#   FRESH weight, per plant (pot experiment, Nipponbare, 20 seedlings/2.5 kg soil). There is
+#   NO per-organ (root/stem/leaf) biomass and NO time series in the paper or SI -- the
+#   time-resolved, per-organ data Tang provides is PFAS CONCENTRATION/TF/BCF, not biomass.
+# So this anchors only the FINAL total mass + harvest index (HI), NOT the M(t) trajectory.
+# Values for the CONTROL (0 ug/g, no PFAS) bars, read from Fig 1a/1b => APPROXIMATE (+/- ~1 g).
+# Units: g fresh weight per plant. HI_fw = ear/total ~ 0.20 (=> ~0.5 on a dry-weight basis,
+#   grain ~14% vs vegetative ~80% water) -- consistent with modern rice.
+quantity,value_gfw_per_plant,basis,source,note
+whole_plant_biomass_control,33.5,fresh_weight,Tang2026_Fig1a,"digitized from control bar; ~consistent across PFOA/PFOS/GenX panels"
+ear_panicle_control,6.8,fresh_weight,Tang2026_Fig1b,"digitized from control bar"
+harvest_index_fw,0.20,ear/total,Tang2026_Fig1,"=6.8/33.5; ~0.5 on dry-weight basis"
+# Toxicity context (EXACT, from main text; dose-response, not needed by the uptake model):
+#   whole-plant biomass reduction at 100 ug/g: PFOA -43.75%, PFOS -34.56%, GenX -24.59%.
+#   ear weight reduction (0.1->100 ug/g): PFOA -33.22..-73.25%, PFOS -29.34..-68.51%, GenX -20.54..-65.93%.
