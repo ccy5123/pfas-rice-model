@@ -189,3 +189,14 @@ def test_tang_tf_validation_and_observed():
     # Tang TF declines with dose -> 0.1 ug/g (low) value exceeds the across-dose mean
     low, mean = api.tang_observed_tf("PFOA", "low"), api.tang_observed_tf("PFOA", "mean")
     assert low["stalk"] > mean["stalk"]
+
+
+def test_simulate_biomass_driver():
+    """Biomass driver is selectable; default == growth_rice; oryza differs and stays finite."""
+    base = api.simulate("PFOA")
+    gr_ = api.simulate("PFOA", biomass="growth_rice")
+    oz = api.simulate("PFOA", biomass="oryza")
+    assert base["baf_final"] == gr_["baf_final"]                 # default is growth_rice (provenance)
+    assert all(np.isfinite(v) and v >= 0 for v in oz["baf_final"].values())
+    assert not np.allclose(np.asarray(gr_["M"][-1]), np.asarray(oz["M"][-1]))   # different M(t)
+    assert oz["baf_final"]["grain"] != gr_["baf_final"]["grain"]

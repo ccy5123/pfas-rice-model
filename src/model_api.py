@@ -125,11 +125,7 @@ def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
     if congener not in TANG_CONGENERS:
         return None
     fxy = TANG_REFIT_FXY[congener] if use_refit else None
-    bfn = None
-    if biomass == "oryza":
-        import oryza_growth as og
-        bfn = lambda t, s: og.organ_biomass_oryza(t, p=og.OryzaParams(season=s))
-    r = simulate_nstem_leaf(congener, Cwo=1.0, season=season, biomass_fn=bfn,
+    r = simulate_nstem_leaf(congener, Cwo=1.0, season=season, biomass_fn=_biomass_fn(biomass),
                             f_xy_source=f_xy_source, f_xy_override=fxy)
     froot = 1.0 - _COMP["root"]["theta_fw"]
     model = {org: r["tf_final"][mk] * froot / (1.0 - _COMP[tk]["theta_fw"])
@@ -154,11 +150,25 @@ def chain_table():
     return rows
 
 
-def _default_drivers(t, season, Cwo, measured_forcing):
+def _biomass_fn(biomass="growth_rice"):
+    """Organ-biomass callable (t, season) -> dict{root,stem,leaf,grain} [kg/hill].
+
+    'oryza'       -> the mechanistic ORYZA2000 Level-1 carbon balance (`oryza_growth`;
+                     radiation/temperature-driven), the more first-principles driver;
+    'growth_rice' -> ORYZA IR72 DVS-partitioning on a logistic total-biomass curve
+                     (`growth_rice`; the lightweight reconstruction, calibration default).
+    """
+    if biomass == "oryza":
+        import oryza_growth as og
+        return lambda t, s: og.organ_biomass_oryza(t, p=og.OryzaParams(season=s))
+    return gr.organ_biomass
+
+
+def _default_drivers(t, season, Cwo, measured_forcing, biomass="growth_rice"):
     """Build the (Cwo, Qtp, M) driver arrays for the built-in scenarios."""
     if measured_forcing:
         Qtp = fr.Q_TP(t, season)
-        b = gr.organ_biomass(t, season)
+        b = _biomass_fn(biomass)(t, season)
         M = np.maximum(np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-4)
     else:
         Qtp = 0.05 + 0.35 * np.exp(-((t - 0.62 * season) ** 2) / (2 * (season / 4.8) ** 2))
@@ -173,7 +183,7 @@ def _default_drivers(t, season, Cwo, measured_forcing):
 def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
              f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
              lipid_loading=False, g_xy_override=None, g_ph_override=None,
-             season=120.0, n_t=241, measured_forcing=True,
+             season=120.0, n_t=241, measured_forcing=True, biomass="growth_rice",
              drivers=None, K_surf=0.0, record=None):
     """Run the 4-compartment ODE for one congener and scenario.
 
@@ -186,8 +196,11 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     f_xy_override : if given, use this f_xy instead.
     L_Ph_override, kappa_d_override : if given, use these phloem-loading / root
         membrane-conductance values instead of the per-congener W2 fits.
-    measured_forcing : True -> Q_TP from forcing_rice, M from growth_rice (ORYZA);
-        False -> the illustrative logistic placeholders.
+    measured_forcing : True -> Q_TP from forcing_rice, organ biomass M from the
+        `biomass` driver; False -> the illustrative logistic placeholders.
+    biomass : 'growth_rice' (ORYZA IR72 partitioning on a logistic; default, the
+        calibration basis) or 'oryza' (the mechanistic ORYZA2000 Level-1 carbon
+        balance, `oryza_growth`). Ignored when `drivers` supply M.
     drivers : optional dict with arrays {'t','Cwo','Qtp','M'} (M shape (n,4)) that
         OVERRIDE the built-in forcings -- the entry point for a HYDRUS-1D / Phydrus
         run or a soil-inventory inversion (see `drivers_from_arrays`,
@@ -214,7 +227,7 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         season = float(t[-1])
     else:
         t = np.linspace(0.0, season, n_t)
-        Cwo_series, Qtp, M = _default_drivers(t, season, Cwo, measured_forcing)
+        Cwo_series, Qtp, M = _default_drivers(t, season, Cwo, measured_forcing, biomass)
     inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M)
 
     if lipid_loading:

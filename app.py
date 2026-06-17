@@ -174,6 +174,13 @@ with st.sidebar:
     fxy_label = st.radio("Root→shoot loading f_xy",
                          ["recommended (monotone, physical)", "W2 fit (reproduces Yamazaki)"])
     fxy_source = "recommended" if fxy_label.startswith("recommended") else "W2fit"
+    bm_label = st.radio("Biomass driver M(t)",
+                        ["ORYZA2000 (mechanistic)", "growth_rice (partition + logistic)"],
+                        help="ORYZA2000 = the Level-1 carbon balance (radiation/temperature-driven; "
+                             "first-principles). growth_rice = ORYZA IR72 partitioning imposed on a "
+                             "logistic (lightweight; the historical calibration basis). Drives M(t) "
+                             "when the scenario uses built-in forcings (ignored if a driver CSV supplies M).")
+    biomass = "oryza" if bm_label.startswith("ORYZA2000") else "growth_rice"
 
     st.header("3 · Scenario")
     drivers = None
@@ -188,7 +195,8 @@ with st.sidebar:
         Cwo_const = st.number_input("Pore-water Cwᵒ  [µg/L]", min_value=0.0, value=1.0, step=0.1,
                                     help="Free anion conc. driving root uptake. 1.0 → tissue conc equals BAF.")
         measured = st.checkbox("Measured forcings (Q_TP, M_s)", value=True,
-                               help="On: transpiration from Kumari/NayHtoon, biomass from ORYZA IR72.")
+                               help="On: transpiration from Kumari/NayHtoon, biomass M(t) from the "
+                                    "sidebar biomass driver (ORYZA2000 mechanistic, or growth_rice).")
         season = float(st.slider("Season length  [days]", 90, 160, 120, 5))
 
     elif mode == "HYDRUS / CSV drivers":
@@ -306,7 +314,7 @@ with st.sidebar:
 
 
 # ---------------------------------------------------------------- run the model
-sim_kw = dict(E_m_mV=E_m, f_xy_source=fxy_source)
+sim_kw = dict(E_m_mV=E_m, f_xy_source=fxy_source, biomass=biomass)
 desc = None
 provisional = False
 if smiles:                                              # compound specified by structure
@@ -413,8 +421,14 @@ with tabs[0]:
 # ---- Tab 2: tissue concentration dynamics -----------------------------------
 with tabs[1]:
     st.plotly_chart(plots.fig_tissue(res), width="stretch")
+    st.plotly_chart(plots.fig_mass(res), width="stretch")
     st.markdown(f"**B_k [L/kg fw]** — " + ", ".join(f"{k}: {v:.2f}" for k, v in res["B_k"].items())
                 + f"  ·  f_xy={p['f_xy']:.4g}, L_Ph={p['L_Ph']:.4g}, κ_d={p['kappa_d']:.3g}")
+    _bm = "ORYZA2000 (mechanistic carbon balance)" if biomass == "oryza" else "growth_rice (ORYZA partition + logistic)"
+    st.caption(f"Top: tissue concentration C_k(t). Bottom: organ biomass M_k(t) — the growth-dilution "
+               f"sink (μ = (dM/dt)/M → 0 at maturity, so terminal leaf/grain keep accumulating). When the "
+               f"scenario uses built-in forcings, M comes from the **{_bm}** driver (sidebar); "
+               f"HYDRUS/CSV modes use the M in the loaded driver data.")
 
 # ---- Tab 3: soil & drivers --------------------------------------------------
 with tabs[2]:
@@ -424,7 +438,7 @@ with tabs[2]:
                         width="stretch")
     st.plotly_chart(plots.fig_soil_profile(res, profile=profile), width="stretch")
     st.caption("Cwᵒ(t) is the only PFAS-specific driver; Q_TP(t) and M(t) are crop physiology "
-               "(measured FAO-56 transpiration + ORYZA IR72 biomass) reused across modes.")
+               "(measured FAO-56 transpiration + the selected biomass driver) reused across modes.")
 
 # ---- Tab 4: BAF vs observed -------------------------------------------------
 with tabs[3]:

@@ -95,3 +95,10 @@ def test_fig_tang_tf_builds():
     assert fig.layout.yaxis.type == "log"
     # single-arg form (no refit bar) also builds
     assert len(plots.fig_tang_tf(val).data) == 2
+
+
+def test_fig_mass_builds():
+    import model_api as api, plots
+    fig = plots.fig_mass(api.simulate("PFOA", biomass="oryza"))
+    assert len(fig.data) == 5                                    # 4 organs + whole plant
+    assert "kg" in fig.layout.yaxis.title.text
