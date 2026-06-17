@@ -1,11 +1,11 @@
 {
-  "id": "evi-pw-decision-20260617-151405-10a1c5df",
-  "created_at": "2026-06-17T15:14:05.915930Z",
+  "id": "evi-pw-decision-20260617-152654-88c3882e",
+  "created_at": "2026-06-17T15:26:54.078336Z",
   "spec_id": "pfas-rice-longchain",
   "kind": "prior_work_decision",
   "provenance": {
     "code_ref": "prior_work:searched",
-    "data_ref": "literature_evidence=evi-lit-20260617-151405-874d51ee; manifest=sci_adk_review/runs/pfas-rice-longchain/literature",
+    "data_ref": "literature_evidence=evi-lit-20260617-152654-b2a40a7b; manifest=sci_adk_review/runs/pfas-rice-longchain/literature",
     "data_source": null,
     "seed": null,
     "environment": "prior-work decision (Spec-time trigger); see referenced LITERATURE item for the acquired corpus",

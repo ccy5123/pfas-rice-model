@@ -13,14 +13,14 @@
     {
       "direction": "supports",
       "level": "moderate",
-      "basis": "mechanism literature-grounded: membrane partition rises while protein plateaus for long chains (Chen2025).",
+      "basis": "mechanism verified at source: membrane K_MW rises +0.36/CF2 to C16 while HSA peaks C6-C10 (Chen2025, read).",
       "counterexample": false
     }
   ],
   "chief": {
     "direction": "supports",
     "level": "strong",
-    "basis": "Decisive: the B-independent lipid term cuts the long-chain straw+grain RMSE 2.026 -> 0.428 (~100x -> ~2.7x) and the whole series 1.035 -> 0.386, recovering PFDA/PFUnDA/PFOS shoot the free model starved. The mechanism is the right direction. SCOPE: in-sample (K_PL-gated fit), and PFDoDA shoot is still ~3-4x under -- a residual floor remains. Literature corroborates the MECHANISM (evi-lc-literature): Chen2025 (ES&T 10.1021/acs.est.4c06734) shows the membrane-water partition keeps rising +0.36/CF2 for long chains while protein (HSA) plateaus ~C6-C8, so the lipid (membrane) pool -- not protein -- is what carries long chains; phospholipids facilitate anion transfer to the lipid phase.",
+    "basis": "Decisive: the B-independent lipid term cuts the long-chain straw+grain RMSE 2.026 -> 0.428 (~100x -> ~2.7x) and the whole series 1.035 -> 0.386, recovering PFDA/PFUnDA/PFOS shoot the free model starved. The mechanism is the right direction. SCOPE: in-sample (K_PL-gated fit), and PFDoDA shoot is still ~3-4x under -- a residual floor remains. Literature corroborates the MECHANISM, VERIFIED at source (evi-lc-litread): Chen2025 (ES&T 2025,59,82-91, 10.1021/acs.est.4c06734) -- membrane-water K_MW rises +0.36/CF2 MONOTONE C4-C16 while HSA (protein) affinity PEAKS at C6-C10, so the lipid (membrane) pool, not protein, carries the longest chains; binding shifts to the membrane with conc.",
     "counterexample": false
   },
   "provenance": {

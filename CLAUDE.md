@@ -330,14 +330,16 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   ~3-4× under). **Conclusion**: lipid-facilitated bound loading is the correct long-chain *direction* but needs a **2-pool
   (free + lipid-bound) split** (so the bound pool feeds the shoot without draining the root) + a PFDoDA residual mechanism
   (irreversible/hysteretic sorption). In-sample. Guard `test_sci_adk_rigor.py::test_longchain_run_reproduces`.
-  **Literature (genuine sci-adk acquisition)**: `sci-adk prior-work --searched` ran paperforge + Unpaywall (contact email
-  `~/.config/sci-adk/config.toml`) over 7 DOIs that corroborate LC1/LC2 — Chen2025 ES&T `10.1021/acs.est.4c06734`
-  (membrane–water partition rises +0.36/CF₂ for long chains while protein HSA plateaus ~C6–C8 → the lipid pool, not
-  protein, carries long chains: the basis for the B-independent lipid term), `10.1021/acs.est.5c11716`,
-  `10.1021/acs.est.7b06128`, `10.1021/acsestengg.4c00107`, `10.48130/newcontam-0025-0007`, `10.1007/s40726-020-00168-y`,
-  `10.1139/er-2025-0116`. All 7 are paywalled (no OA PDF) → recorded `acquired 0/failed 7` in `evi-lit-*` + a
-  `prior_work_decision` item + `literature/manifest.csv` (honest record; DOIs still cited in the paper draft). paperforge
-  is the optional `[tools]` extra (`pip install -e ".[tools]"`); the contact email is required for the polite pool (E4).
+  **Literature (genuine sci-adk acquisition + source verification)**: `sci-adk prior-work --searched` ran paperforge +
+  Unpaywall (contact email `~/.config/sci-adk/config.toml`) over 7 DOIs that corroborate LC1/LC2; ALL 7 are paywalled
+  (no OA PDF) → recorded `acquired 0/failed 7` in `evi-lit-*` + a `prior_work_decision` item + `literature/manifest.csv`
+  (DOIs still cited in the draft). **5 of 7 were then obtained out-of-band and READ to verify the corroboration at source**
+  (`evi-lc-litread`; paywalled PDFs NOT committed — copyright): Chen2025 ES&T 2025,59,82–91 `10.1021/acs.est.4c06734`
+  confirms membrane–water K_MW rises **+0.36/CF₂ monotone C4→C16** while protein **HSA affinity peaks at C6–C10** → the
+  lipid (membrane) pool, not protein, carries the longest chains (the B-independent lipid-term basis); `newcontam-0025-0007`
+  (long-chain root/soil adsorption vs short-chain shoot mobility) + `acsestengg.4c00107` (MW top predictor of TF) +
+  `s40726-020-00168-y` + `acs.est.7b06128` corroborate LC1. NOT obtained (2025): `10.1021/acs.est.5c11716`,
+  `10.1139/er-2025-0116`. paperforge is the optional `[tools]` extra; the contact email is required for the polite pool (E4).
 - **Leaf senescence-loss flux (this session) — fixes the ORYZA leaf-TF artifact**: with the mechanistic
   ORYZA biomass the leaf shrinks (senescence), so the growth-dilution sink `μ=(dM/dt)/M` goes NEGATIVE and the
   `−μ·C` term spuriously CONCENTRATES the leaf — but `oryza_growth` models that loss as leaf DEATH (carbon removed

@@ -99,13 +99,45 @@ def _ev(id_, ds, point, finding, bears, env):
 
 
 # Prior-work LITERATURE is recorded by the GENUINE sci-adk acquisition
-# (`sci-adk prior-work <run> --searched <DOIs>`; paperforge OA-PDF + manifest +
-# references.bib), run after build_longchain.py -- not inline here. The DOIs and their
-# LC1/LC2 corroboration are cited in the verdict trails below and in FINDINGS sec7.
+# (`sci-adk prior-work <run> --searched <DOIs>`; paperforge OA-PDF + manifest), run
+# after build_longchain.py. paperforge found NO OA PDF for any of the 7 (all
+# paywalled); 5 were then obtained out-of-band and READ to verify the corroboration
+# at source (recorded by _litread; the paywalled PDFs are NOT committed -- copyright).
+
+def _litread():
+    """VERIFIED-reading record: 5/7 corroborating papers obtained out-of-band (paperforge
+    auto-acquisition found no OA PDF) and read at source to confirm the LC1/LC2
+    corroboration. The paywalled PDFs are NOT committed (copyright)."""
+    finding = (
+        "5 of 7 corroborating papers obtained out-of-band (paperforge found NO OA PDF for "
+        "any; 5 supplied manually) and READ to verify the corroboration at source; PDFs NOT "
+        "committed (paywalled/copyright). VERIFIED:\n"
+        "- Chen2025 ES&T 2025,59,82-91 (10.1021/acs.est.4c06734): membrane-water K_MW rises "
+        "+0.36+/-0.01 log/CF2 (PFCA) and +0.37+/-0.02 (PFSA) MONOTONE C4->C16, while HSA "
+        "(protein) affinity is HIGHEST at C6-C10; conc-dependent -- low conc favours HSA, "
+        "higher conc shifts to the membrane. => LC2 confirmed at source: membrane partition "
+        "keeps rising while protein peaks at C6-C10, so the lipid pool (not protein) carries "
+        "the longest chains.\n"
+        "- newcontam2025 (10.48130/newcontam-0025-0007): long-chain PFAS strongly adsorb in "
+        "roots/soil; short-chain are mobile -> leaves/grains via transpiration. => LC1.\n"
+        "- ML2024 (10.1021/acsestengg.4c00107): molecular weight is the MOST important "
+        "predictor of RCF/SCF/TF; shorter chains more taken up. => LC1.\n"
+        "- CurrPollRep2020 (10.1007/s40726-020-00168-y): shorter chains readily taken up; "
+        "root->shoot via active+passive transport. => LC1.\n"
+        "- Shi2018 ES&T (10.1021/acs.est.7b06128): chain-length/functional-group differential "
+        "tissue distribution. => chain-length partitioning context.\n"
+        "NOT obtained (no OA PDF, 2025): 10.1021/acs.est.5c11716, 10.1139/er-2025-0116.")
+    return EvidenceItem(id="evi-lc-litread", created_at=NOW, spec_id="pfas-rice-longchain",
+                        kind=EvidenceKind.LITERATURE,
+                        provenance=Provenance(code_ref=CODE_REF, data_source=None,
+                                              environment="user-provided PDFs, read via pypdf (paywalled; not committed)"),
+                        result=Result(type="qualitative", finding=finding), bears_on=[])
+
 
 def evidence(spec, ws):
     B = Bearing
     return [
+        _litread(),
         _ev("evi-lc-free", "measured", 2.026,
             "validation/longchain_mechanism.py (ORYZA2000 biomass): free-only (monotone "
             "f_xy) long-chain (nC>=10) straw+grain log10 RMSE 2.026 (~100x); PFDA straw "
@@ -149,8 +181,9 @@ def verdicts():
             "ORYZA re-fit hits f_xy=1/L_Ph=1 ceilings yet PFDoDA straw stays 14.6 vs 49.8 "
             "-- the loaded flux scales with Cw=C/B, which collapses as B grows, so the "
             "free-anion shoot cannot reach the long chains. Cause confirmed. Literature "
-            "corroborates: the Casparian strip restricts long-chain (C>=7 PFCA) translocation "
-            "and long chains are root-retained (soil-plant reviews, evi-lc-literature).",
+            "corroborates (VERIFIED at source, evi-lc-litread): long-chain PFAS strongly adsorb "
+            "in roots/soil while short chains are mobile to leaves/grains (newcontam2025); MW is "
+            "the top predictor of translocation (ML2024).",
             [PanelVerdict(direction=SUP, level=ST, basis="f_xy=1 ceiling still under -> not an f_xy value issue but the Cw=C/B throttle."),
              PanelVerdict(direction=SUP, level=ST, basis="free-only long-chain RMSE 2.03 (~100x) vs measured Yamazaki; corroborated by the long-chain root-retention literature.")]),
         "hyp-lc-lipidfix": _trail(
@@ -159,13 +192,13 @@ def verdicts():
             "2.026 -> 0.428 (~100x -> ~2.7x) and the whole series 1.035 -> 0.386, recovering "
             "PFDA/PFUnDA/PFOS shoot the free model starved. The mechanism is the right "
             "direction. SCOPE: in-sample (K_PL-gated fit), and PFDoDA shoot is still ~3-4x "
-            "under -- a residual floor remains. Literature corroborates the MECHANISM "
-            "(evi-lc-literature): Chen2025 (ES&T 10.1021/acs.est.4c06734) shows the "
-            "membrane-water partition keeps rising +0.36/CF2 for long chains while protein "
-            "(HSA) plateaus ~C6-C8, so the lipid (membrane) pool -- not protein -- is what "
-            "carries long chains; phospholipids facilitate anion transfer to the lipid phase.",
+            "under -- a residual floor remains. Literature corroborates the MECHANISM, "
+            "VERIFIED at source (evi-lc-litread): Chen2025 (ES&T 2025,59,82-91, "
+            "10.1021/acs.est.4c06734) -- membrane-water K_MW rises +0.36/CF2 MONOTONE C4-C16 "
+            "while HSA (protein) affinity PEAKS at C6-C10, so the lipid (membrane) pool, not "
+            "protein, carries the longest chains; binding shifts to the membrane with conc.",
             [PanelVerdict(direction=SUP, level=ST, basis="long-chain straw+grain RMSE 0.43 vs free 2.03 -- ~5x closer in log space."),
-             PanelVerdict(direction=SUP, level=MO, basis="mechanism literature-grounded: membrane partition rises while protein plateaus for long chains (Chen2025).")]),
+             PanelVerdict(direction=SUP, level=MO, basis="mechanism verified at source: membrane K_MW rises +0.36/CF2 to C16 while HSA peaks C6-C10 (Chen2025, read).")]),
         "hyp-lc-nocost": _trail(
             "hyp-lc-nocost", R_LC3, REF,
             "Decisive: the single-pool lipid term reproduces shoot at the COST of root -- "

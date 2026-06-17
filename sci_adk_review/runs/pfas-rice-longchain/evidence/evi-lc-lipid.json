@@ -4,7 +4,7 @@
   "spec_id": "pfas-rice-longchain",
   "kind": "experiment_run",
   "provenance": {
-    "code_ref": "ec80191082e40063414892f98d2505030b3fd24f",
+    "code_ref": "2c951de0c3f2b6a598e055e43ce778ffc7fcdf7a",
     "data_ref": null,
     "data_source": "measured",
     "seed": null,

@@ -221,12 +221,14 @@ verify` 3 claim 재현(exit 0). 재현: `python sci_adk_review/build_longchain.p
 `ccy5123@uos.ac.kr`)로 수행. 7개 DOI를 조회 → **모두 paywalled(OA PDF 없음)**라
 `acquired 0 / failed 7`로 정직 기록(`evidence/evi-lit-…874d51ee.json`(LITERATURE) +
 `evi-pw-decision-…`(searched 결정) + `literature/manifest.csv`); DOI는 인용으로 보존되어
-`paper/draft.tex` 서지에 반영(`sci-adk resolve`로 재렌더). 결과는 LC1·LC2를 **외부
-corroborate**(novelty 주장 아님 — 메커니즘은 문헌 확립):
-- **LC2 메커니즘 직접 근거 — Chen 2025, ES&T `10.1021/acs.est.4c06734`**: 막–물 분배계수가
-  C4→C16에서 **+0.36/CF₂ 선형 증가**, 단백질(HSA)은 **~C6–C8 plateau** → 장쇄에선 **지질(막)
-  풀이 지배** ⇒ 단백질 아닌 *지질-촉진* 결합 항이 장쇄를 운반. "인지질이 음이온을 지질상으로
-  전달 촉진"도 합치.
+`paper/draft.tex` 서지에 반영(`sci-adk resolve`로 재렌더). 이후 **7편 중 5편을 out-of-band로
+입수해 본문을 직접 READ·검증**(`evi-lc-litread`; paywalled PDF는 저작권상 미커밋; 2025년 2편
+`...5c11716`·`er-2025-0116`은 미입수). 결과는 LC1·LC2를 **소스 수준에서 corroborate**
+(novelty 주장 아님 — 메커니즘은 문헌 확립):
+- **LC2 메커니즘 직접 근거(본문 검증) — Chen 2025, ES&T 2025,59,82–91 `10.1021/acs.est.4c06734`**:
+  막–물 분배계수 K_MW가 C4→C16에서 **+0.36±0.01/CF₂(PFCA), +0.37±0.02(PFSA) 단조 증가**,
+  반면 단백질(HSA) 친화도는 **C6–C10에서 최고(피크)** → 최장쇄에선 막은 계속 상승·단백질은 정체
+  ⇒ **지질(막) 풀이 장쇄를 운반**(단백질 아님). 농도↑시 결합이 단백질→막으로 이동도 확인.
 - 막/단백질 분배 측정(biomimetic chromatography) `10.1021/acs.est.5c11716`; 어류 사슬길이별
   조직분포 `10.1021/acs.est.7b06128`.
 - **LC1 근거 — Casparian strip가 장쇄(C≥7 PFCA, ≥6 PFSA) 전류 제한·장쇄 root 잔류**: 토양–식물
