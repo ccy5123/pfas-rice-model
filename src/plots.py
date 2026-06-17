@@ -39,6 +39,24 @@ def fig_tissue(res):
     return fig
 
 
+def fig_mass(res):
+    """Per-organ biomass M(t) [kg/hill] over the season -- the growth driver feeding
+    the ODE (the growth-dilution sink). Pairs with `fig_tissue` (concentration)."""
+    M = np.asarray(res["M"], float)
+    fig = go.Figure()
+    for j, tis in enumerate(api.TISSUES):
+        fig.add_scatter(x=res["t"], y=M[:, j], name=tis, mode="lines",
+                        line=dict(width=2.5, color=_COL[tis]),
+                        hovertemplate=f"{tis}: %{{y:.3g}} kg<extra></extra>")
+    fig.add_scatter(x=res["t"], y=M.sum(axis=1), name="whole plant", mode="lines",
+                    line=dict(width=1.5, dash="dash", color="black"),
+                    hovertemplate="total: %{y:.3g} kg<extra></extra>")
+    fig.update_layout(title=f"{res['congener']} — organ biomass M(t)",
+                      xaxis_title="days after transplant", yaxis_title="organ mass [kg/hill]",
+                      **_LAYOUT)
+    return fig
+
+
 def fig_baf(res, obs):
     """Predicted vs observed (Yamazaki) root/straw/grain BAF, grouped bars."""
     tis = ["root", "straw", "grain"]

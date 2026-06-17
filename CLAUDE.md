@@ -66,7 +66,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
 ├── external/hydrus_source/           # git submodule → github.com/phydrus/source_code
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (139 collected → 135 pass, 4 HYDRUS-engine skip): plant, soil, hydrus, calibration, lit params, API, plots, structure(SMILES), oryza, measured-biomass
+└── tests/                            # pytest (141 collected → 137 pass, 4 HYDRUS-engine skip): plant, soil, hydrus, calibration, lit params, API, plots, structure(SMILES), oryza, measured-biomass
 
 ```
 
@@ -280,7 +280,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     sink `μ=(dM/dt)/M → 0` at maturity (terminal leaf/grain ⇒ no steady state).
 - **Doc↔code reproducibility audit (this session)**: verified every file referenced in CLAUDE.md/README resolves to a
   real repo file (only the runtime artifact `pfas_rice_demo.png` is "missing" by design), and corrected stale test
-  counts (was "111"/"92 passing" → **139 collected, 135 pass, 4 HYDRUS-skip**). The one real doc-ahead-of-code gap
+  counts (was "111"/"92 passing" → **141 collected, 137 pass, 4 HYDRUS-skip**). The one real doc-ahead-of-code gap
   (`oryza_growth`) was closed by d1f5339.
 - **App integration — Tang 2026 validation tab (this session)**: surfaced the Tang TF work in the
   Streamlit app as a new **"✅ Tang TF (OOS)"** tab (`app.py` tabs[6]; About moved to tabs[7]) backed by the
@@ -289,6 +289,17 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   TF (model vs Tang vs Tang-refit `f_xy`), with the dose toggle (mean / 0.1 µg/g), an optional ORYZA-biomass
   driver, and the three caveats made explicit in-UI (dw basis; `f_xy` condition-dependence incl. PFOS
   0.14–0.32; grain structurally ~3–8× under). Refit `f_xy` is override-only (`parameters.json` unchanged).
+- **Selectable biomass driver + Tissue-dynamics mass graph (this session)**: `model_api.simulate(biomass=…)`
+  (via `_biomass_fn`) selects the organ-biomass driver — **`"oryza"`** (the mechanistic ORYZA2000 Level-1 carbon
+  balance `oryza_growth`; the more first-principles choice, consistent with the model's mechanistic/HYDRUS-coupled
+  philosophy) or **`"growth_rice"`** (ORYZA IR72 partitioning on a logistic; the lightweight reconstruction). The
+  **app now leads with ORYZA2000** (sidebar "Biomass driver M(t)" radio, default ORYZA2000) so Tissue-dynamics / map /
+  BAF run on the mechanistic biomass unless switched; the **Tissue-dynamics tab plots M(t)** (`plots.fig_mass`, the
+  growth-dilution sink) under the concentration plot. ORYZA biomass is ~0.01 s (no app-speed cost; `_simulate` is
+  cached). **Honest caveat / provenance**: the f_xy/L_Ph calibration was done on `growth_rice`, and switching biomass
+  shifts BAFs (short-chain straw/grain +40–70%), so the **global `simulate(biomass=)` default stays `"growth_rice"`**
+  (keeps `reproduce_demo`/tests/calibration reproducible); only the *app* defaults to ORYZA2000. A full ORYZA2000-default
+  would want an f_xy re-fit. Tests: `test_model_api.py` (biomass selectable; default == growth_rice), `test_plots.py`.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -321,7 +332,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (139 collected → 135 passing, 4 skip; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
+- Tests: `pip install pytest && pytest` (141 collected → 137 passing, 4 skip; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
   additionally run when the engine is built, else auto-skip).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html

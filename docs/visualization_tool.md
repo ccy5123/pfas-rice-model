@@ -64,6 +64,24 @@ Three things the tab makes explicit (the rigor points from this work):
 
 ---
 
+## Biomass driver M(t) & the Tissue-dynamics mass plot
+
+The sidebar **“Biomass driver M(t)”** radio chooses the organ-biomass forcing for the built-in scenarios:
+- **ORYZA2000 (mechanistic)** — the Level-1 carbon balance (`oryza_growth`): radiation/temperature →
+  assimilation → respiration → DVS partitioning. **The app default** (the first-principles choice for this
+  mechanistic, HYDRUS-coupled model).
+- **growth_rice (partition + logistic)** — ORYZA IR72 partitioning imposed on a logistic total-biomass curve;
+  the lightweight reconstruction and the historical **calibration basis**.
+
+The **Tissue dynamics** tab now shows two plots: tissue concentration `C_k(t)` (top) and **organ biomass
+`M_k(t)`** (bottom, `plots.fig_mass`) — the growth-dilution sink that makes the terminal leaf/grain accumulate
+(μ = (dM/dt)/M → 0 at maturity). HYDRUS/CSV modes plot the `M` supplied by the driver data. **Caveat:** the
+`f_xy` calibration was done on `growth_rice`, so switching to ORYZA2000 shifts BAFs (short-chain straw/grain
+~+40–70%); the code-level `simulate(biomass=)` default stays `growth_rice` for reproducibility, while the app
+leads with ORYZA2000.
+
+---
+
 ## Four ways to drive the model
 
 Only the pore-water free-anion concentration `Cwᵒ(t)` is PFAS-specific. The transpiration
