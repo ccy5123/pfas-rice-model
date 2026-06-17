@@ -1,0 +1,24 @@
+# Measured per-organ rice biomass -> M(t) driver for the PFAS uptake model.
+# Fill from a paper SI (e.g. Tang 2026 JHM, Nipponbare, full growth cycle) or your field data.
+#
+#   day   = days after transplanting (0 = transplant). One row per sampling time.
+#   root,stem,leaf,grain = per-organ DRY weight in ONE consistent unit (see below).
+#                          'stem' = culm/stalk; 'grain' = panicle/grain (0 before heading).
+#                          'root' is optional — leave blank if not measured (I can reconstruct
+#                          it from a root:shoot ratio, or it is floored and plays no transport role).
+#
+# Tell me, alongside this table:
+#   * units: one of  kg/hill | g/hill | mg/hill | g/plant | g/m2 | kg/ha | t/ha
+#   * if g/plant   -> plants_per_hill (tillers/plants pooled per hill)
+#   * if area unit -> hills_per_m2 (planting density; default 25)
+#   * season length (transplant -> maturity, days)  [Tang ~150 d]
+#   * (optional) measured transpiration / water use, if the SI reports it
+#
+# Example below is ILLUSTRATIVE g/plant numbers — replace every value with the SI's.
+day,root,stem,leaf,grain
+0,0.05,0.02,0.03,0
+30,0.40,0.70,0.90,0
+60,0.90,3.50,3.20,0
+90,1.05,6.20,4.10,2.50
+120,1.10,6.80,4.40,7.50
+150,1.10,7.00,4.50,12.00
