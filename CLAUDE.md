@@ -314,6 +314,20 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   leaf TF toward the data: 0.93 growth_rice → 1.31 ORYZA vs Tang 1.66). `tests/test_model_api.py::test_oryza_leaf_senescence_loss`.
   NOTE the assumption it encodes: PFAS leaves with the dead leaf at the leaf concentration (uniform); the alternative
   (immobile PFAS retained in situ as mobile dry matter is remobilised) would keep some rise — unmeasured.
+- **Grain formation gate (this session) — DPU-consistent; kills the pre-flowering grain spike**: the
+  grain/panicle is physically absent until ~flowering, but the ODE floors `M_grain` (1e-4 kg) to avoid 0/0, so a
+  trickle of xylem/phloem loaded a tiny burden into the frozen-floor mass → `C=burden/M` ballooned (PFOA grain
+  conc spike 2.09 @ d52, **pre**-flowering) then crashed at fruit-set. This is a deviation from the Trapp/Brunetti
+  DPU framework, where the grain is a phloem sink whose import is tied to its growth/existence (no loading of a
+  not-yet-formed organ). FIX (`4pool_surf` + `nstem_leaf`): a **formation gate** `γ(t)` on `PlantInputs` ramps 0→1
+  as `M_grain` LEAVES its floor (glo→1.5·glo); the grain's xylem/phloem influx is scaled by `γ`, and the
+  pre-formation share is **rerouted to the leaf (xylem) / not exported (phloem export → (γ+φ))** so the balance
+  still closes (mass-conserving). Result: grain rises **monotonically from 0 at flowering** (no spike), terminal
+  accumulation intact. **Scoped/robust**: `γ=1` for the whole of grain filling (loading unchanged → `reproduce_demo`
+  log10 RMSE stays **0.029**; grain BAF shifts <~5%) and `γ=1` throughout for a **constant-mass driver** (HYDRUS/CSV
+  M, no floor → grain always present). `tests/test_model_api.py::test_grain_formation_gate`. The earlier
+  display-mask (PR #20) is now backed by the physics gate. NOTE the wrong first cut used a 2%-of-max threshold that
+  gated *filling* too (RMSE 0.029→0.34); keying on "mass left the floor" is the correct criterion.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
