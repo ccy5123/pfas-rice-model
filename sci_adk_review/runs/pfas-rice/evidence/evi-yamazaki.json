@@ -1,0 +1,36 @@
+{
+  "id": "evi-yamazaki",
+  "created_at": "2026-06-17T00:00:00Z",
+  "spec_id": "pfas-rice",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "b5aa9a56b7a42d449b475f71ee3c0a6f4eb5fe7c",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "reproduce_demo.py (real run; numpy/scipy); data_obs/Yamazaki",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 0.029,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "reproduce_demo.py: W2 transport fit reproduces Yamazaki root/straw/grain BAFs across 11 congeners at log10 RMSE 0.029 (e.g. PFOA root 0.49/0.49, straw 0.83/0.83 pred/obs). The fit assigns ~3 transport params per congener against 3 tissue observations => SATURATED: reproduction is structurally guaranteed and is NOT out-of-sample prediction (CLAUDE.md §6).",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-yamazaki",
+      "direction": "refutes",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

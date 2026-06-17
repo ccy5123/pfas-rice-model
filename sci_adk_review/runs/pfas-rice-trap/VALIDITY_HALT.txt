@@ -1,0 +1,2 @@
+evidence-validity halt on 'hyp-demo':
+synthetic_proxy Evidence bears on an empirical hypothesis -- a category error: a fabricated stand-in does not contain the external referent the empirical claim is about (declare data_source='measured' for real data, or mark the hypothesis referent='formal' only if the claim is genuinely about a formal/generated object). See design/evidence-validity.md Guard 3.

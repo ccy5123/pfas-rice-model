@@ -1,0 +1,34 @@
+{
+  "hypothesis_id": "hyp-grain",
+  "rule_kind": "qualitative",
+  "rubric_expression": "model grain (brown-rice) BAF/TF matches measured within a factor adequate for dietary risk assessment => support; systematic structural under/over-prediction => refute",
+  "rubric_params": null,
+  "panel": [
+    {
+      "direction": "refutes",
+      "level": "strong",
+      "basis": "Tang OOS shows a structural grain floor not closable by L_Ph/lipid (docs/tang2026_grain_units_exploration.md).",
+      "counterexample": false
+    },
+    {
+      "direction": "refutes",
+      "level": "strong",
+      "basis": "the only 'match' (Kim) is an in-sample forced anchor on grain alone; no independent grain prediction exists.",
+      "counterexample": false
+    }
+  ],
+  "chief": {
+    "direction": "refutes",
+    "level": "strong",
+    "basis": "Decisive panel reasoning: against MEASURED data the model under-predicts grain by ~3-8x (Tang PFOA endosperm 0.11 vs 0.95) and only matches Kim by forcing a single-point L_Ph anchor. A structural under-prediction of the risk-relevant compartment cannot support dietary risk assessment => refute.",
+    "counterexample": false
+  },
+  "provenance": {
+    "spec_version": 1,
+    "timestamp": "2026-06-17T00:00:00+00:00",
+    "agent_ids": [
+      "claude-in-session"
+    ],
+    "cost_ids": null
+  }
+}

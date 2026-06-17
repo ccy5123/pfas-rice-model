@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-yamazaki",
+  "spec_id": "pfas-rice",
+  "answers": "hyp-yamazaki",
+  "statement": "Calibration to the Yamazaki (2023) dataset constitutes out-of-sample predictive validation of the model's tissue BAFs.",
+  "status": "refuted",
+  "confidence": {
+    "type": "graded",
+    "value": null,
+    "level": "strong",
+    "basis": "qualitative judge: Decisive panel reasoning: the W2 transport parameters are FIT to the same Yamazaki tissues they then 'predict' (~3 params / 3 obs per congener), so RMSE 0.029 is saturated in-sample reproduction, not out-of-sample validation. The hypothesis as stated (predictive validation) is refuted; the model is consistent with — not validated against — Yamazaki."
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-yamazaki",
+      "role": "refuting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T13:02:21.996537Z",
+      "from_status": "proposed",
+      "to_status": "refuted",
+      "triggered_by": "evi-yamazaki",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

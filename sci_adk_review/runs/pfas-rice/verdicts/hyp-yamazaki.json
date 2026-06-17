@@ -1,0 +1,34 @@
+{
+  "hypothesis_id": "hyp-yamazaki",
+  "rule_kind": "qualitative",
+  "rubric_expression": "the Yamazaki agreement is OUT-OF-SAMPLE predictive validation (independent data not used to fit the per-congener transport parameters) => support; an in-sample / saturated reproduction => refute",
+  "rubric_params": null,
+  "panel": [
+    {
+      "direction": "refutes",
+      "level": "strong",
+      "basis": "pred ~ obs to 2 decimals (0.49/0.49) is the signature of a saturated fit, not prediction.",
+      "counterexample": false
+    },
+    {
+      "direction": "refutes",
+      "level": "moderate",
+      "basis": "CLAUDE.md itself flags RMSE 0.029 as 'a saturated W2 fit ... reproduction is guaranteed, NOT predictive validation' and notes the ordering is congener-dependent.",
+      "counterexample": false
+    }
+  ],
+  "chief": {
+    "direction": "refutes",
+    "level": "strong",
+    "basis": "Decisive panel reasoning: the W2 transport parameters are FIT to the same Yamazaki tissues they then 'predict' (~3 params / 3 obs per congener), so RMSE 0.029 is saturated in-sample reproduction, not out-of-sample validation. The hypothesis as stated (predictive validation) is refuted; the model is consistent with — not validated against — Yamazaki.",
+    "counterexample": false
+  },
+  "provenance": {
+    "spec_version": 1,
+    "timestamp": "2026-06-17T00:00:00+00:00",
+    "agent_ids": [
+      "claude-in-session"
+    ],
+    "cost_ids": null
+  }
+}

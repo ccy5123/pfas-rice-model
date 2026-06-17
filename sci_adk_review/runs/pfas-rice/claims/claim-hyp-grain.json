@@ -1,0 +1,35 @@
+{
+  "id": "claim-hyp-grain",
+  "spec_id": "pfas-rice",
+  "answers": "hyp-grain",
+  "statement": "The model predicts brown-rice grain PFAS accumulation accurately enough to support dietary risk assessment.",
+  "status": "refuted",
+  "confidence": {
+    "type": "graded",
+    "value": null,
+    "level": "strong",
+    "basis": "qualitative judge: Decisive panel reasoning: against MEASURED data the model under-predicts grain by ~3-8x (Tang PFOA endosperm 0.11 vs 0.95) and only matches Kim by forcing a single-point L_Ph anchor. A structural under-prediction of the risk-relevant compartment cannot support dietary risk assessment => refute."
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-grain-tang",
+      "role": "refuting"
+    },
+    {
+      "evidence_id": "evi-grain-kim",
+      "role": "refuting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T13:02:21.996700Z",
+      "from_status": "proposed",
+      "to_status": "refuted",
+      "triggered_by": "evi-grain-kim",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

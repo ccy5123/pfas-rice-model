@@ -1,0 +1,41 @@
+{
+  "id": "pfas-rice-trap",
+  "created_at": "2026-06-17T00:00:00Z",
+  "version": 1,
+  "raw_proposal": {
+    "background": "과불화화합물(PFAS)은 탄소–불소 결합의 안정성 때문에 환경에서 거의 분해되지\n않고 인체에 축적된다. 특히 담수–배수를 반복하는 논(paddy)은 산화환원 환경이\n토양 흡착과 공극수 농도를 크게 바꾸어 다른 작물과 구별되는 흡수 조건을 만들고,\n벼는 세계 인구 절반의 주식이므로 \"논 토양의 PFAS가 현미로 얼마나 들어오는가\"는\n직접적인 식품안전 문제다. 그러나 기존 식물흡수 모델(Trapp/Briggs, DPU)은 중성\n유기화합물이 옥탄올–물 분배(Kow)로 막을 수동 투과한다는 가정 위에 서 있어, 환경\npH에서 사실상 완전히 해리되는 음이온(f_d≈1)인 PFAS에는 그대로 적용되지 않는다.\n음이온은 안쪽이 음전위인 세포막에서 정전기적으로 배제되며(전기화학 구배 e^N≈10^2),\n체내 이동·결합도 중성분자식 분배 코어로 설명되지 않는다. 또한 잎·곡립은 성숙기에\n성장이 멈추면 희석이 사라지는 말단 축적 구획이어서 평형 BAF 한 값으로 표현할 수\n없다. 이 공백을 메우는, 논 토양과 결합 가능한 기계론적 벼 흡수 모델이 필요하다.",
+    "goal": "DPU 프레임워크의 이온성 유기화합물(IOC) 확장으로서, 벼의 4구획(뿌리–줄기–잎–곡립)\n동적 PFAS 생체축적 모델을 구축하고 그 주장을 정직하게 검증한다. 구체적으로 다음을\n독립적으로 평가 가능한 가설로 제시한다.\n\n가설 1. 4구획 흡수 ODE는 결합·수송 정식화 하에서 PFAS 질량을 보존한다(구획 총\n부하량 = 누적 순(純) 뿌리 유입 - 수출 - 성장희석, 적분기 허용오차 이내).\n\n가설 2. 안쪽이 음전위인 뿌리 원형질막은 PFAS 음이온을 정전기적으로 배제하여\n전기화학 인자 e^N이 약 10^2가 되며, 수동 확산만으로는 순 흡수를 만들 수 없다.\n\n가설 3. Yamazaki(2023) 데이터에 대한 보정은 모델 조직별 BAF의 표본외(out-of-sample)\n예측 검증에 해당한다.\n\n가설 4. 모델은 식이 위해성 평가를 뒷받침할 만큼 현미(brown-rice) 곡립 축적을\n정확히 예측한다.",
+    "method": "상태변수는 네 구획의 조직농도 C_k(µg/kg)이며 강성 ODE를 BDF로 적분한다.\n뿌리 흡수 j_R은 GHK 이온전기확산(음이온 배제 e^N)과 포화성 운반체(Michaelis–Menten)의\n하이브리드다. 결합계수 B_k = θ_fw + (1-θ_fw)·Σ_i f_i·K_i (basis-A, 신선중량)는\n문헌 측정값(Chen2025 K_PL, Zhou2025 K_prot 등)으로 채운다. 상행 물관은 뿌리\n자유농도의 분율 f_xy(TSCF 유사)만 적재하고, 곡립은 체관(L_Ph)으로 공급한다.\n질량보존(체관 재순환 φ, 곡립 형성 게이트, 잎 노쇠 손실)을 엄격히 닫는다. 토양측은\nFreundlich/선형 Kd 흡착으로 공극수 C_w^o(t)를 만들거나 실제 HYDRUS-1D 엔진(phydrus)을\n단방향 결합한다. 검증은 Yamazaki(2023, 조직 BAF), Tang(2026, 조직 TF), Kim(2019,\n현미 BAF)의 측정 데이터에 대해 수행하며, 각 가설의 근거는 측정(measured)·생성\n(generated, 모델의 형식적 성질)·합성대리(synthetic_proxy, 예시용 데모 수치)로\n정직하게 분류하여 기록한다.",
+    "expected_output": "1. 4구획 동적 ODE 코어와 변형 모듈(표면흡착/지질결합/다단 줄기/줄기+잎 재분배).\n2. 출처·DOI가 명시된 문헌 파라미터 데이터베이스와 미해결 공백(예: 세포벽 K_cw 계수\n   부재)의 명시적 정리.\n3. 실제 HYDRUS-1D 단방향 결합 파이프라인(동족체별 공극수·증산 시계열).\n4. Yamazaki/Tang/Kim에 대한 보정·검증 결과와 한계의 정직한 기록(곡립 구조적 과소예측,\n   f_xy의 데이터셋 의존성, RMSE 0.029가 포화 in-sample 적합이라는 점).\n5. 임의 PFAS 구조(SMILES) 입력과 식물·토양 축적을 시각화하는 도구."
+  },
+  "hypotheses": [
+    {
+      "id": "hyp-demo",
+      "statement": "The model's bundled demonstration BAFs establish that it predicts field PFAS bioaccumulation in rice.",
+      "mode": "exploratory",
+      "decision_rule": {
+        "kind": "qualitative",
+        "expression": "the bundled demonstration BAFs establish that the model predicts field PFAS bioaccumulation in rice => support",
+        "params": null
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    }
+  ],
+  "method": {
+    "approaches": [
+      "bundled _demo()"
+    ],
+    "tools": null
+  },
+  "target_claims": [
+    {
+      "id": "tc-demo",
+      "statement": "The demo proves field prediction.",
+      "answers": "hyp-demo"
+    }
+  ],
+  "amendment_rationale": null,
+  "prior_version_id": null
+}

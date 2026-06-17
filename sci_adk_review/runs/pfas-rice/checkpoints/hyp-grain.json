@@ -1,0 +1,8 @@
+{
+  "checkpoint_type": "judge",
+  "hypothesis_id": "hyp-grain",
+  "kind": "qualitative",
+  "expression": "model grain (brown-rice) BAF/TF matches measured within a factor adequate for dietary risk assessment => support; systematic structural under/over-prediction => refute",
+  "finding": "Tang 2026 OOS: PFOA endosperm TF model 0.11 vs measured 0.95 (dw); grain structurally ~3-8x under across congeners; not closable by L_Ph / lipid tuning (docs/tang2026_grain_units_exploration.md).\nKim 2019: grain BAF reproduced only by FORCING L_Ph (0.07 -> 4.43, L_Ph~0.84) as a single-point in-sample anchor; Kim is grain-only, so root/straw TF are unconstrained.",
+  "spec_version": 1
+}
