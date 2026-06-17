@@ -24,8 +24,11 @@ confounded -- the basis of the f_xy head-group offset in raw_si/tang2026_tf_bcf.
 the across-dose MEAN is reported as a sensitivity.
 
 f_xy is fit (1-D, log-space) to the two f_xy-controlled shoot organs (stalk, leaf);
-grain/endosperm is phloem-fed (L_Ph) and only reported.  TF is dw-converted to match
-Tang: TF_dw = TF_fw * (1-theta_root)/(1-theta_organ).
+grain/endosperm is phloem-fed (L_Ph) and only reported -- and NOTE that L_Ph CANNOT
+close the grain gap: even maxed (and with the lipid g_ph term) grain TF_dw ceilings at
+~0.3-0.7 vs Tang's 0.9-1.6, so the grain under-prediction is STRUCTURAL on a dry-weight
+basis, not an L_Ph calibration issue (docs/tang2026_grain_units_exploration.md).  TF is
+dw-converted to match Tang: TF_dw = TF_fw * (1-theta_root)/(1-theta_organ).
 
 Provenance: the fitted f_xy is reported as an OVERRIDE only -- params/parameters.json
 is NOT modified (same policy as the existing Tang nstem validation).

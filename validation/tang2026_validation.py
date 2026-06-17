@@ -77,10 +77,22 @@ def _run(nm, mode):
 
 
 def model_tf(nm, mode):
-    """Model TF = C_tissue/C_root at maturity (dose-independent: BAF ratio)."""
+    """Model TF = C_tissue(dw)/C_root(dw) at maturity, on Tang's DRY-WEIGHT basis.
+
+    TF is independent of the EXPOSURE basis (Cw cancels: Tang soil vs model pore water),
+    but NOT of the tissue-moisture basis: the model concentrations are FRESH-weight
+    (C = B_k·Cw, basis A) while Tang's TF is dry/dry, and the fresh->dry factor (1−θ_fw)
+    differs between tissues (root θ=0.90 vs grain θ=0.14), so it does NOT cancel. It must
+    be applied:  TF_dw = TF_fw · (1−θ_root)/(1−θ_tissue).
+    [Correction: earlier this returned the FRESH-weight ratio, which understated what
+    Tang's dry-weight TF requires by (1−θ_root)/(1−θ_tissue) — ~0.59 stem, ~0.45 leaf,
+    ~0.12 grain. The "grain matches" result was a fw/dw artifact; see
+    docs/tang2026_grain_units_exploration.md.]"""
     r = _run(nm, mode)
+    th = {"stem": THETA_FW[1], "leaf": THETA_FW[2], "grain": THETA_FW[3]}
+    froot = 1.0 - THETA_FW[0]
     root = r["baf_final"]["root"]
-    return {k: r["baf_final"][k] / root for k in ("stem", "leaf", "grain")}
+    return {k: (r["baf_final"][k] / root) * froot / (1.0 - th[k]) for k in ("stem", "leaf", "grain")}
 
 
 def model_bcf(nm, mode):
