@@ -14,6 +14,10 @@
     {
       "evidence_id": "evi-lc-lipid",
       "role": "supporting"
+    },
+    {
+      "evidence_id": "evi-lit-20260617-151405-874d51ee",
+      "role": "refuting"
     }
   ],
   "scope_limitations": "",
@@ -21,7 +25,7 @@
   "renders_to": null,
   "history": [
     {
-      "at": "2026-06-17T15:08:01.561360Z",
+      "at": "2026-06-17T15:14:04.450747Z",
       "from_status": "proposed",
       "to_status": "supported",
       "triggered_by": "evi-lc-lipid",
