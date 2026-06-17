@@ -72,13 +72,14 @@ def _Bmobile(d, c):
     return d["theta_fw"] + (1 - d["theta_fw"]) * d["f_prot"] * c["K_prot_Lkg"]
 
 
-def simulate2(name, f_xy, g_xy, g_ph, k_off=0.02, L_Ph=None, kappa_d=None):
+def simulate2(name, f_xy, g_xy, g_ph, k_off=0.02, L_Ph=None, kappa_d=None, vmax_in=None):
     c = CONG[name]; cc = _comps()
     L_Ph = c.get("L_Ph_oryza") or 0.01 if L_Ph is None else L_Ph
     kappa_d = c.get("kappa_d_oryza") or 2.0 if kappa_d is None else kappa_d
+    vmax_in = carr["Vmax_in"] if vmax_in is None else vmax_in
     cmpd = Compound(name=name, K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
                     K_cw=c["K_cw_wholecw_Lkg"]["root"], kappa_d=kappa_d,
-                    Vmax_in=carr["Vmax_in"], Km_in=carr["Km_in"],
+                    Vmax_in=vmax_in, Km_in=carr["Km_in"],
                     Vmax_out=carr["Vmax_out"], Km_out=carr["Km_out"], L_Ph=L_Ph, f_xy=f_xy)
     Bm = _Bmobile(cc["root"], c); Bt = _Bfull(cc["root"], c)
     ratio = max((Bt - Bm) / Bm, 0.0); k_on = ratio * k_off
@@ -111,19 +112,34 @@ def simulate2(name, f_xy, g_xy, g_ph, k_off=0.02, L_Ph=None, kappa_d=None):
     return {"root": rm+rb, "straw": straw, "grain": gr, "rm": rm, "rb": rb}
 
 
-def _fit(name, k_off, kappa_d=None):
+def _fit(name, k_off, kappa_d=None, vmax_in=None):
     """fit g_xy->straw and g_ph->grain (brentq, monotone); f_xy from oryza refit.
-    Optional kappa_d override (LC5: long-chain membrane-uptake enhancement)."""
+    Optional kappa_d / vmax_in overrides (LC5: long-chain uptake enhancement)."""
     c = CONG[name]; o = obs[name]
     f_xy = c.get("f_xy_oryza") or c["f_xy_recommended"]
     def gx(lg):
-        return np.log10(max(simulate2(name, f_xy, 10**lg, 0.0, k_off, kappa_d=kappa_d)["straw"], 1e-6)) - np.log10(o["straw"])
+        return np.log10(max(simulate2(name, f_xy, 10**lg, 0.0, k_off, kappa_d=kappa_d, vmax_in=vmax_in)["straw"], 1e-6)) - np.log10(o["straw"])
     a, b = -6, 1
     g_xy = 10**brentq(gx, a, b, xtol=1e-2, maxiter=40) if gx(a)*gx(b) < 0 else (10**a if abs(gx(a))<abs(gx(b)) else 10**b)
     def gp(lg):
-        return np.log10(max(simulate2(name, f_xy, g_xy, 10**lg, k_off, kappa_d=kappa_d)["grain"], 1e-6)) - np.log10(o["grain"])
+        return np.log10(max(simulate2(name, f_xy, g_xy, 10**lg, k_off, kappa_d=kappa_d, vmax_in=vmax_in)["grain"], 1e-6)) - np.log10(o["grain"])
     g_ph = 10**brentq(gp, a, b, xtol=1e-2, maxiter=40) if gp(a)*gp(b) < 0 else (10**a if abs(gp(a))<abs(gp(b)) else 10**b)
     return f_xy, g_xy, g_ph
+
+
+def lc5b_carrier_scan(name="PFDoDA", k_off=0.02):
+    """LC5b: the GHK term is capped by anion exclusion (Cw_m -> Cwo/e^N regardless of
+    kappa_d), so only the ACTIVE CARRIER (Vmax_in) can raise sustained uptake. Scan
+    the carrier capacity -- does it let the 2-pool reach PFDoDA's root AND shoot?"""
+    c = CONG[name]; o = obs[name]; base = carr["Vmax_in"]
+    print(f"\nLC5b carrier-capacity scan for {name} (base Vmax_in={base:g}):")
+    print(f"  {'Vmax_in':>8}{'x_base':>7} | {'root p/o':>15}{'straw p/o':>15}{'grain p/o':>15}")
+    for vm in (base, 100.0, 500.0, 2000.0, 1e4):
+        f_xy, g_xy, g_ph = _fit(name, k_off, vmax_in=vm)
+        r = simulate2(name, f_xy, g_xy, g_ph, k_off, vmax_in=vm)
+        print(f"  {vm:>8.0f}{vm/base:>6.0f}x | "
+              f"{r['root']:6.1f}/{o['root']:<7.1f}{r['straw']:6.1f}/{o['straw']:<7.1f}"
+              f"{r['grain']:6.1f}/{o['grain']:<7.1f}")
 
 
 def lc5_uptake_scan(name="PFDoDA", k_off=0.02):
@@ -162,6 +178,7 @@ def main():
           f"{math.sqrt(np.mean(errs['shoot'])):.3f}")
     print("LC4 question: can the 2-pool match long-chain ROOT and SHOOT simultaneously?")
     lc5_uptake_scan("PFDoDA")
+    lc5b_carrier_scan("PFDoDA")
 
 
 if __name__ == "__main__":
