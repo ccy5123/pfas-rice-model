@@ -264,7 +264,7 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
                         L_Ph_override=None, kappa_d_override=None,
                         lipid_loading=False, g_xy_override=None, g_ph_override=None,
                         season=150.0, n_t=361, N=4, stem_transp_frac=0.45,
-                        lam_grain=0.05, retention=0.6):
+                        lam_grain=0.05, retention=0.6, biomass_fn=None):
     """Redistributed-shoot uptake run (N stem segments + explicit leaf), the Tang
     2026 over-translocation fix (see `pfas_rice_plant_module_nstem_leaf`).
 
@@ -279,6 +279,10 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
         (the leaf takes the remainder, minus `lam_grain`). Crop-architecture lever.
     retention : fraction of each organ's transpiration deposit that is retained
         (terminal); 1-retention flows on to the grain as residual xylem.
+    biomass_fn : callable (t, season) -> dict{root,stem,leaf,grain} [kg/hill] for the
+        organ biomass driver. Default None -> growth_rice (logistic). Pass e.g.
+        `lambda t, s: oryza_growth.organ_biomass_oryza(t, p=oryza_growth.OryzaParams(season=s))`
+        to drive the redistributed-shoot model with the mechanistic ORYZA biomass.
     """
     from pfas_rice_plant_module_nstem_leaf import (
         NStemLeafModel, PlantInputsNL, make_stem_leaf_compartments, split_from_stem_frac)
@@ -287,7 +291,7 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
 
     t = np.linspace(0.0, float(season), int(n_t))
     Qtp = fr.Q_TP(t, season)
-    b = gr.organ_biomass(t, season)
+    b = (biomass_fn or gr.organ_biomass)(t, season)
     M = np.column_stack(
         [np.maximum(b["root"], 1e-9)]
         + [np.maximum(b["stem"] / N, 1e-9)] * N

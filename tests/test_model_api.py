@@ -156,3 +156,17 @@ def test_lipid_conductances_are_KPL_gated():
 if __name__ == "__main__":
     import sys
     sys.exit(pytest.main([__file__, "-v"]))
+
+
+def test_nstem_leaf_biomass_fn_override():
+    """simulate_nstem_leaf accepts a custom biomass driver (e.g. ORYZA) and it
+    actually changes the result (ORYZA leaf senescence raises leaf TF)."""
+    import oryza_growth as og
+    ob = lambda t, s: og.organ_biomass_oryza(t, p=og.OryzaParams(season=s))
+    base = api.simulate_nstem_leaf("PFOA", Cwo=1.0)
+    oryza = api.simulate_nstem_leaf("PFOA", Cwo=1.0, biomass_fn=ob)
+    assert oryza["success"]
+    assert set(oryza["tf_final"]) == set(base["tf_final"])
+    # different biomass trajectory -> different leaf transfer factor
+    assert abs(oryza["tf_final"]["leaf"] - base["tf_final"]["leaf"]) > 1e-3
+    assert all(np.isfinite(v) for v in oryza["tf_final"].values())
