@@ -83,12 +83,26 @@ are ~3–6× under. **`L_Ph` saturates well below Tang.**
   negative result (`data_inventory_and_gaps.md` §3).
 
 ## 4. What changed in the repo
-- `validation/tang2026_validation.py` — `model_tf` now dw-converts (consistent with the
-  other two Tang scripts); figure regenerated.
+- `validation/tang2026_validation.py` — `model_tf` now dw-converts; figure regenerated.
+- `validation/tang2026_nstem_validation.py` — `baseline_tf`/`nstem_tf` now dw-convert.
+  This MOVED the headline numbers: shape RMSE 0.84→0.11 ⇒ **0.85→0.39**, overall
+  1.28→1.01→0.18 ⇒ **1.53→1.20→0.71** (the nstem_leaf pattern cure is real but more
+  modest; the grain under-prediction now shows). `VALIDATION_TANG2026_NSTEM_KR.md` + the
+  CLAUDE.md §6 nstem bullet corrected to match.
 - `VALIDATION_TANG2026_KR.md` — grain "match" corrected (units note added).
-- `validation/tang2026_fxy_refit.py` — grain is reported, **not** fit; note added that
-  `L_Ph` cannot close the grain gap (this doc).
+- `validation/tang2026_fxy_refit.py` — note added that `L_Ph` cannot close the grain gap.
 - No model or `parameters.json` change; the Tang-refit f_xy stays override-only.
+
+### Exhaustive fw/dw audit (this session)
+Every script that compares model output to observed data was checked for the basis on
+both sides. Only the **two Tang TF scripts above** had the mismatch (they consume the
+**dry-weight** `raw_si/tang2026_doseresponse.csv` and compared a fresh-weight model TF).
+All other comparisons are self-consistent:
+- `data_obs/obs_baf_{Yamazaki,Li2025}.csv` are **fw-converted** (so `reproduce_demo`,
+  `calibration`, `revalidation_crosscheck`, `validation_summary`, `oos_crossdataset`
+  compare fw↔fw);
+- `validation/S6_Gap4.py` uses the `_fw` (not `_dw`) columns of `Li2025_BAF_TF.csv`;
+- `validation/tang2026_fxy_{TF_validation,refit}.py` already dw-converted.
 
 ## 5. Open follow-up
 A grain-enrichment mechanism is a **data** question first: per-organ subcellular PFAS in
