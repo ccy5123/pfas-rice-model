@@ -159,17 +159,22 @@ if __name__ == "__main__":
 
 
 def test_nstem_leaf_biomass_fn_override():
-    """simulate_nstem_leaf accepts a custom biomass driver (e.g. ORYZA) and it
-    actually changes the result (ORYZA leaf senescence raises leaf TF)."""
+    """simulate_nstem_leaf accepts a custom biomass driver; the two drivers
+    (growth_rice vs ORYZA) give different leaf transfer factors. Driver-explicit on
+    both sides so it is robust to the default (now ORYZA2000)."""
     import oryza_growth as og
+    import growth_rice as gr2
     ob = lambda t, s: og.organ_biomass_oryza(t, p=og.OryzaParams(season=s))
-    base = api.simulate_nstem_leaf("PFOA", Cwo=1.0)
+    growth = api.simulate_nstem_leaf("PFOA", Cwo=1.0, biomass_fn=gr2.organ_biomass)
     oryza = api.simulate_nstem_leaf("PFOA", Cwo=1.0, biomass_fn=ob)
-    assert oryza["success"]
-    assert set(oryza["tf_final"]) == set(base["tf_final"])
+    assert oryza["success"] and growth["success"]
+    assert set(oryza["tf_final"]) == set(growth["tf_final"])
     # different biomass trajectory -> different leaf transfer factor
-    assert abs(oryza["tf_final"]["leaf"] - base["tf_final"]["leaf"]) > 1e-3
+    assert abs(oryza["tf_final"]["leaf"] - growth["tf_final"]["leaf"]) > 1e-3
     assert all(np.isfinite(v) for v in oryza["tf_final"].values())
+    # the no-arg default now resolves to ORYZA2000
+    assert api.simulate_nstem_leaf("PFOA", Cwo=1.0)["tf_final"]["leaf"] == pytest.approx(
+        oryza["tf_final"]["leaf"], rel=1e-9)
 
 
 def test_tang_tf_validation_and_observed():
@@ -192,12 +197,13 @@ def test_tang_tf_validation_and_observed():
 
 
 def test_simulate_biomass_driver():
-    """Biomass driver is selectable; default == growth_rice; oryza differs and stays finite."""
+    """Biomass driver is selectable; DEFAULT == oryza (mechanistic ORYZA2000);
+    growth_rice differs and both stay finite."""
     base = api.simulate("PFOA")
     gr_ = api.simulate("PFOA", biomass="growth_rice")
     oz = api.simulate("PFOA", biomass="oryza")
-    assert base["baf_final"] == gr_["baf_final"]                 # default is growth_rice (provenance)
-    assert all(np.isfinite(v) and v >= 0 for v in oz["baf_final"].values())
+    assert base["baf_final"] == oz["baf_final"]                  # default is ORYZA2000
+    assert all(np.isfinite(v) and v >= 0 for v in gr_["baf_final"].values())
     assert not np.allclose(np.asarray(gr_["M"][-1]), np.asarray(oz["M"][-1]))   # different M(t)
     assert oz["baf_final"]["grain"] != gr_["baf_final"]["grain"]
 
@@ -212,8 +218,8 @@ def test_oryza_leaf_senescence_loss():
     leaf_nofix = api.simulate(
         "PFOA", drivers={k: v for k, v in drv.items() if k != "leaf_loss"})["baf_final"]["leaf"]
     assert leaf_fix < leaf_nofix                              # senescence loss lowers the leaf
-    # growth_rice path carries no leaf_death_rate -> default behaviour unchanged
-    assert api.simulate("PFOA")["baf_final"] == api.simulate("PFOA", biomass="growth_rice")["baf_final"]
+    # the default path is now ORYZA2000 (carries the senescence loss); growth_rice differs
+    assert api.simulate("PFOA")["baf_final"] == api.simulate("PFOA", biomass="oryza")["baf_final"]
 
 
 def test_grain_formation_gate():

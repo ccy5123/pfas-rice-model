@@ -111,7 +111,7 @@ def tang_observed_tf(congener, dose="mean"):
 
 
 def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
-                       dose="mean", biomass="growth_rice", season=150.0):
+                       dose="mean", biomass="oryza", season=150.0):
     """Model per-organ transfer factor (DRY-weight) vs Tang 2026, for a Tang congener.
 
     The model conc is fresh-weight (C=B_k*Cw, basis A); Tang TF is dry/dry, and the
@@ -150,13 +150,16 @@ def chain_table():
     return rows
 
 
-def _biomass_fn(biomass="growth_rice"):
+def _biomass_fn(biomass="oryza"):
     """Organ-biomass callable (t, season) -> dict{root,stem,leaf,grain} [kg/hill].
 
     'oryza'       -> the mechanistic ORYZA2000 Level-1 carbon balance (`oryza_growth`;
-                     radiation/temperature-driven), the more first-principles driver;
+                     radiation/temperature-driven). THE DEFAULT (first-principles).
     'growth_rice' -> ORYZA IR72 DVS-partitioning on a logistic total-biomass curve
-                     (`growth_rice`; the lightweight reconstruction, calibration default).
+                     (`growth_rice`; the lightweight reconstruction). NOTE: the per-congener
+                     f_xy_W2fit/L_Ph_W2fit and `reproduce_demo.py` reproduction were tuned on
+                     a placeholder/growth_rice driver, so use 'growth_rice' to match those
+                     legacy artifacts; the live default is the mechanistic ORYZA2000.
     """
     if biomass == "oryza":
         import oryza_growth as og
@@ -164,7 +167,7 @@ def _biomass_fn(biomass="growth_rice"):
     return gr.organ_biomass
 
 
-def _default_drivers(t, season, Cwo, measured_forcing, biomass="growth_rice"):
+def _default_drivers(t, season, Cwo, measured_forcing, biomass="oryza"):
     """Build the (Cwo, Qtp, M) driver arrays for the built-in scenarios."""
     if measured_forcing:
         Qtp = fr.Q_TP(t, season)
@@ -185,7 +188,7 @@ def _default_drivers(t, season, Cwo, measured_forcing, biomass="growth_rice"):
 def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
              f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
              lipid_loading=False, g_xy_override=None, g_ph_override=None,
-             season=120.0, n_t=241, measured_forcing=True, biomass="growth_rice",
+             season=120.0, n_t=241, measured_forcing=True, biomass="oryza",
              drivers=None, K_surf=0.0, record=None):
     """Run the 4-compartment ODE for one congener and scenario.
 
@@ -200,9 +203,10 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         membrane-conductance values instead of the per-congener W2 fits.
     measured_forcing : True -> Q_TP from forcing_rice, organ biomass M from the
         `biomass` driver; False -> the illustrative logistic placeholders.
-    biomass : 'growth_rice' (ORYZA IR72 partitioning on a logistic; default, the
-        calibration basis) or 'oryza' (the mechanistic ORYZA2000 Level-1 carbon
-        balance, `oryza_growth`). Ignored when `drivers` supply M.
+    biomass : 'oryza' (the mechanistic ORYZA2000 Level-1 carbon balance,
+        `oryza_growth`; THE DEFAULT, first-principles) or 'growth_rice' (ORYZA IR72
+        partitioning on a logistic; the lightweight reconstruction that matches the
+        legacy f_xy_W2fit/`reproduce_demo` calibration). Ignored when `drivers` supply M.
     drivers : optional dict with arrays {'t','Cwo','Qtp','M'} (M shape (n,4)) that
         OVERRIDE the built-in forcings -- the entry point for a HYDRUS-1D / Phydrus
         run or a soil-inventory inversion (see `drivers_from_arrays`,
@@ -357,9 +361,8 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
     retention : fraction of each organ's transpiration deposit that is retained
         (terminal); 1-retention flows on to the grain as residual xylem.
     biomass_fn : callable (t, season) -> dict{root,stem,leaf,grain} [kg/hill] for the
-        organ biomass driver. Default None -> growth_rice (logistic). Pass e.g.
-        `lambda t, s: oryza_growth.organ_biomass_oryza(t, p=oryza_growth.OryzaParams(season=s))`
-        to drive the redistributed-shoot model with the mechanistic ORYZA biomass.
+        organ biomass driver. Default None -> the mechanistic ORYZA2000 (`oryza_growth`).
+        Pass `gr.organ_biomass` for the lightweight growth_rice reconstruction.
     """
     from pfas_rice_plant_module_nstem_leaf import (
         NStemLeafModel, PlantInputsNL, make_stem_leaf_compartments, split_from_stem_frac)
@@ -368,7 +371,7 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
 
     t = np.linspace(0.0, float(season), int(n_t))
     Qtp = fr.Q_TP(t, season)
-    b = (biomass_fn or gr.organ_biomass)(t, season)
+    b = (biomass_fn or _biomass_fn("oryza"))(t, season)   # default: mechanistic ORYZA2000
     M = np.column_stack(
         [np.maximum(b["root"], 1e-9)]
         + [np.maximum(b["stem"] / N, 1e-9)] * N
