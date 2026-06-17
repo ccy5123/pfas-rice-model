@@ -23,11 +23,26 @@ _LAYOUT = dict(template="plotly_white", hoverlabel=dict(namelength=-1),
 _HEAT = "YlOrRd"
 
 
+def _formed(res, j, y):
+    """Mask the GRAIN's pre-formation transient. The panicle/grain is physically absent
+    until ~flowering, but the ODE floors its mass to avoid 0/0, so a tiny xylem/phloem
+    influx divides into a SPURIOUS concentration spike before the grain exists (it then
+    crashes via growth dilution once the grain bulks up). Blank the grain while its mass is
+    still <2% of its season max. Root/stem/leaf form early (no such floor), and a
+    constant-mass driver (HYDRUS/CSV) never trips the threshold, so both are untouched."""
+    y = np.asarray(y, float).copy()
+    if api.TISSUES[j] == "grain":
+        M = np.asarray(res["M"], float)[:, j]
+        if M.max() > 0.0:
+            y[M < 0.02 * M.max()] = np.nan
+    return y
+
+
 def fig_tissue(res):
     """Tissue concentration vs time (hover-unified, legend-toggle, zoom)."""
     fig = go.Figure()
-    for tis in api.TISSUES:
-        fig.add_scatter(x=res["t"], y=res["conc"][tis], name=tis, mode="lines",
+    for j, tis in enumerate(api.TISSUES):
+        fig.add_scatter(x=res["t"], y=_formed(res, j, res["conc"][tis]), name=tis, mode="lines",
                         line=dict(width=2.5, color=_COL[tis]),
                         hovertemplate=f"{tis}: %{{y:.3g}} µg/kg<extra></extra>")
     fig.add_scatter(x=res["t"], y=res["straw"], name="straw", mode="lines",
@@ -49,8 +64,8 @@ def fig_burden(res):
     M = np.asarray(res["M"], float)
     fig = go.Figure()
     burden = {tis: np.asarray(res["conc"][tis], float) * M[:, j] for j, tis in enumerate(api.TISSUES)}
-    for tis in api.TISSUES:
-        fig.add_scatter(x=res["t"], y=burden[tis], name=tis, mode="lines",
+    for j, tis in enumerate(api.TISSUES):
+        fig.add_scatter(x=res["t"], y=_formed(res, j, burden[tis]), name=tis, mode="lines",
                         line=dict(width=2.5, color=_COL[tis]),
                         hovertemplate=f"{tis}: %{{y:.3g}} µg<extra></extra>")
     fig.add_scatter(x=res["t"], y=sum(burden.values()), name="whole plant", mode="lines",

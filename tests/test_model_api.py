@@ -214,3 +214,18 @@ def test_oryza_leaf_senescence_loss():
     assert leaf_fix < leaf_nofix                              # senescence loss lowers the leaf
     # growth_rice path carries no leaf_death_rate -> default behaviour unchanged
     assert api.simulate("PFOA")["baf_final"] == api.simulate("PFOA", biomass="growth_rice")["baf_final"]
+
+
+def test_grain_formation_gate():
+    """The grain takes NO PFAS before the panicle forms (no pre-flowering spike), then
+    rises to its harvest value; a constant-mass driver still loads the grain (gate=1)."""
+    r = api.simulate("PFOA", biomass="oryza", season=120.0)
+    t, cg = r["t"], np.asarray(r["conc"]["grain"])
+    assert np.all(cg[t < 45] < 1e-3)                 # ~0 well before flowering (~d66)
+    assert cg[-1] > 1e-3                              # accumulates by harvest (terminal sink)
+    assert cg.max() <= cg[-1] * 1.5                   # NO pre-formation spike above harvest
+    # constant-mass driver (e.g. HYDRUS CSV): grain must still load
+    t2 = np.linspace(0, 120, 121)
+    Mc = np.tile([0.003, 0.02, 0.013, 0.03], (121, 1))
+    rc = api.simulate("PFOA", drivers=api.drivers_from_arrays(t2, np.ones(121), M=Mc))
+    assert rc["baf_final"]["grain"] > 0.0

@@ -160,12 +160,25 @@ class PlantInputs:
         self._dM = [interp1d(self.t, dM[:, k], **kw) for k in range(4)]
         ll = np.zeros(len(self.t)) if self.leaf_loss is None else np.asarray(self.leaf_loss, float)
         self._leaf_loss = interp1d(self.t, ll, **kw)
+        # grain FORMATION gate gamma(t): 0 while the grain mass is held at its floor (the
+        # panicle has not set, ~pre-flowering), ramping to 1 once it forms (>2% of its
+        # season max). The grain's PFAS influx is gated by this, so no solute loads a
+        # not-yet-formed organ (DPU-consistent: import is tied to organ existence). It is
+        # 1 throughout for a constant-mass driver (no floor period -> grain always present).
+        gm = self.M[:, FRUIT]
+        glo, ghi = float(gm.min()), float(gm.max())
+        # ramp 0->1 as the grain mass LEAVES its floor (glo -> 1.5*glo): gam=1 for the whole
+        # of grain filling (so loading is normal), 0 only while it sits at the floor (not set).
+        gate = (np.clip((gm - glo) / (0.5 * glo + 1e-30), 0.0, 1.0)
+                if (ghi > 0.0 and glo < 0.05 * ghi) else np.ones(len(self.t)))
+        self._grain_gate = interp1d(self.t, gate, **kw)
 
     def Cwo_(self, t):  return float(self._Cwo(t))
     def Qtp_(self, t):  return float(self._Qtp(t))
     def M_(self, t):    return np.array([float(f(t)) for f in self._M])
     def dM_(self, t):   return np.array([float(f(t)) for f in self._dM])
     def leaf_loss_(self, t):  return max(float(self._leaf_loss(t)), 0.0)
+    def grain_gate_(self, t):  return min(1.0, max(0.0, float(self._grain_gate(t))))
 
 
 # ----------------------------------------------------------------------------
@@ -269,13 +282,17 @@ class RiceUptakeModel:
         # leaf senescence loss: the dead/shed leaf carries its PFAS away at the leaf
         # death rate (D/M_leaf), cancelling the spurious -mu*C concentration when the
         # leaf shrinks. 0 unless a senescing biomass driver (ORYZA) supplies the rate.
-        dC[LEAF] = (f3 * (Qtp / M[LEAF]) * Cw[STEM]
-                    - (1.0 + self.phi) * (Q_Phl / M[LEAF]) * C_Phl
+        # grain FORMATION gate: before the panicle sets (gam~0) the grain takes NO xylem/
+        # phloem; its share is rerouted to the leaf (xylem f4 -> leaf; phloem export drops
+        # to (gam+phi)) so the balance still closes. gam->1 at formation (DPU-consistent).
+        gam = self.inputs.grain_gate_(t)
+        dC[LEAF] = ((f3 + (1.0 - gam) * f4) * (Qtp / M[LEAF]) * Cw[STEM]
+                    - (gam + self.phi) * (Q_Phl / M[LEAF]) * C_Phl
                     - g[LEAF] * C[LEAF] - mu[LEAF] * C[LEAF]
                     - self.inputs.leaf_loss_(t) * C[LEAF])
-        # fruit/grain (small xylem in; phloem-dominated; terminal sink)
-        dC[FRUIT] = (f4 * (Qtp / M[FRUIT]) * Cw[STEM]
-                     + (Q_Phl / M[FRUIT]) * C_Phl
+        # fruit/grain (small xylem in; phloem-dominated; terminal sink) -- gated by gam
+        dC[FRUIT] = (gam * f4 * (Qtp / M[FRUIT]) * Cw[STEM]
+                     + gam * (Q_Phl / M[FRUIT]) * C_Phl
                      - g[FRUIT] * C[FRUIT] - mu[FRUIT] * C[FRUIT])
         return dC
 

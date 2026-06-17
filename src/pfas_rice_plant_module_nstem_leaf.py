@@ -96,12 +96,24 @@ class PlantInputsNL:
         self._dM = [interp1d(self.t, dM[:, k], **kw) for k in range(self.n_comp)]
         ll = np.zeros(len(self.t)) if self.leaf_loss is None else np.asarray(self.leaf_loss, float)
         self._leaf_loss = interp1d(self.t, ll, **kw)
+        # grain FORMATION gate gamma(t): 0 while the grain mass (last column) sits at its
+        # floor (panicle not set), ramping to 1 at formation (>2% of season max). Gates the
+        # grain's PFAS influx so a not-yet-formed organ takes no solute (DPU-consistent);
+        # =1 throughout for a constant-mass driver (no floor period).
+        gm = self.M[:, -1]
+        glo, ghi = float(gm.min()), float(gm.max())
+        # ramp 0->1 as the grain mass LEAVES its floor (glo -> 1.5*glo): gam=1 for the whole
+        # of grain filling (loading normal), 0 only while it sits at the floor (panicle unset).
+        gate = (np.clip((gm - glo) / (0.5 * glo + 1e-30), 0.0, 1.0)
+                if (ghi > 0.0 and glo < 0.05 * ghi) else np.ones(len(self.t)))
+        self._grain_gate = interp1d(self.t, gate, **kw)
 
     def Cwo_(self, t): return float(self._Cwo(t))
     def Qtp_(self, t): return float(self._Qtp(t))
     def M_(self, t):   return np.array([float(f(t)) for f in self._M])
     def dM_(self, t):  return np.array([float(f(t)) for f in self._dM])
     def leaf_loss_(self, t):  return max(float(self._leaf_loss(t)), 0.0)
+    def grain_gate_(self, t):  return min(1.0, max(0.0, float(self._grain_gate(t))))
 
 
 @dataclass
@@ -169,17 +181,23 @@ class NStemLeafModel:
             dC[s] = (r * self.tau[s - 1] * xyl_flux / M[s]
                      - g[s] * C[s] - mu[s] * C[s])
 
-        # --- leaf: retains its transpiration deposit; phloem source (grain + root recirc);
-        #     senescence loss (-leaf_loss*C) so a shed/dead leaf carries its PFAS away ---
+        # grain FORMATION gate: before the panicle sets (gam~0) the grain takes NO xylem/
+        # phloem -- its residual xylem is rerouted to the leaf and its phloem share is not
+        # exported (leaf export drops to (gam+phi)) so the balance closes (DPU-consistent).
+        gam = self.inputs.grain_gate_(t)
+        residual = (self.lam_grain + (1.0 - r) * (self.tau.sum() + self.lam_leaf)) * xyl_flux
+
+        # --- leaf: own deposit (+ the grain's rerouted residual pre-formation); phloem
+        #     source (gated grain share + root recirc); senescence loss carries PFAS away ---
         dC[leaf] = (r * self.lam_leaf * xyl_flux / M[leaf]
-                    - (1.0 + self.phi) * (Q_Phl / M[leaf]) * C_Phl
+                    + (1.0 - gam) * residual / M[leaf]
+                    - (gam + self.phi) * (Q_Phl / M[leaf]) * C_Phl
                     - g[leaf] * C[leaf] - mu[leaf] * C[leaf]
                     - self.inputs.leaf_loss_(t) * C[leaf])
 
-        # --- grain: own panicle deposit + the non-retained residual xylem + phloem ---
-        residual = (self.lam_grain + (1.0 - r) * (self.tau.sum() + self.lam_leaf)) * xyl_flux
-        dC[grain] = (residual / M[grain]
-                     + (Q_Phl / M[grain]) * C_Phl
+        # --- grain (formation-gated): panicle deposit + non-retained residual xylem + phloem ---
+        dC[grain] = (gam * residual / M[grain]
+                     + gam * (Q_Phl / M[grain]) * C_Phl
                      - g[grain] * C[grain] - mu[grain] * C[grain])
         return dC
 
