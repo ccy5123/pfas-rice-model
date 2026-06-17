@@ -25,6 +25,8 @@
 # =============================================================================
 import json, csv, os, sys
 import numpy as np
+from scipy.integrate import solve_ivp
+from scipy.optimize import brentq
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -64,6 +66,8 @@ _cache = {}
 
 
 def _predict(c, f_xy, L_Ph, kappa_d):
+    """Final-time tissue BAFs. Fast solve: only the terminal value is needed, and
+    the structural-adequacy question is robust to a looser tol (rtol 1e-4)."""
     key = (c["name"], round(f_xy, 5), round(L_Ph, 5), round(kappa_d, 4))
     if key in _cache:
         return _cache[key]
@@ -71,7 +75,10 @@ def _predict(c, f_xy, L_Ph, kappa_d):
                     K_cw=c["K_cw_wholecw_Lkg"]["root"], kappa_d=kappa_d,
                     Vmax_in=carr["Vmax_in"], Km_in=carr["Km_in"],
                     Vmax_out=carr["Vmax_out"], Km_out=carr["Km_out"], L_Ph=L_Ph, f_xy=f_xy)
-    C = RiceUptakeModel(env=env, cmpd=cmpd, comps=_compartments(), inputs=inputs).solve(t).y[:, -1]
+    model = RiceUptakeModel(env=env, cmpd=cmpd, comps=_compartments(), inputs=inputs)
+    sol = solve_ivp(model.rhs, (float(t[0]), float(t[-1])), np.zeros(4), method="BDF",
+                    rtol=1e-4, atol=1e-7, t_eval=[float(t[-1])])
+    C = sol.y[:, -1]
     straw = (C[STEM] * Mf[STEM] + C[LEAF] * Mf[LEAF]) / (Mf[STEM] + Mf[LEAF])
     out = {"root": C[R], "straw": straw, "grain": C[FRUIT]}
     _cache[key] = out
@@ -82,13 +89,19 @@ def _le(a, b):  # squared log10 error, guarded
     return (np.log10(max(a, 1e-6)) - np.log10(max(b, 1e-6))) ** 2
 
 
-def _best_fxy(c, L_Ph, kappa_d, grid):
-    """per-congener f_xy minimising the straw log-error (monotone in f_xy)."""
+def _best_fxy(c, L_Ph, kappa_d, lo=1e-3, hi=1.0):
+    """per-congener f_xy matching the observed straw (straw is monotone in f_xy);
+    brentq on log10(straw_pred/straw_obs), clamped when the target is unreachable."""
     o = obs[c["name"]]
     if "straw" not in o:
         return c["f_xy_recommended"]
-    errs = [(_le(_predict(c, fx, L_Ph, kappa_d)["straw"], o["straw"]), fx) for fx in grid]
-    return min(errs)[1]
+    def g(lx):
+        return np.log10(max(_predict(c, 10.0 ** lx, L_Ph, kappa_d)["straw"], 1e-6)) - np.log10(o["straw"])
+    a, b = np.log10(lo), np.log10(hi)
+    ga, gb = g(a), g(b)
+    if ga * gb < 0:
+        return 10.0 ** brentq(g, a, b, xtol=1e-2, rtol=1e-3, maxiter=40)
+    return lo if abs(ga) < abs(gb) else hi          # target outside reach -> nearest bound
 
 
 def _rmse(fxy_by, L_Ph, kappa_d):
@@ -100,9 +113,8 @@ def _rmse(fxy_by, L_Ph, kappa_d):
 
 
 def main():
-    fxy_grid = np.concatenate([np.logspace(-3, 0, 19), [1.0]])
-    kd_grid = np.logspace(-2, np.log10(50), 11)
-    lph_grid = np.logspace(-4, 0, 13)
+    kd_grid = np.logspace(-2, np.log10(50), 9)
+    lph_grid = np.logspace(-4, 0, 9)
 
     # Stage 1: global kappa_d from ROOT (root ~ uptake/dilution; weak in f_xy/L_Ph).
     L_Ph = 0.1
@@ -113,8 +125,8 @@ def main():
         best = min(best, (e, kd))
     kappa_d = best[1]
 
-    # Stage 2: per-congener f_xy from STRAW (kappa_d fixed).
-    fxy_by = {c["name"]: _best_fxy(c, L_Ph, kappa_d, fxy_grid) for c in CONG}
+    # Stage 2: per-congener f_xy from STRAW (kappa_d fixed) via brentq.
+    fxy_by = {c["name"]: _best_fxy(c, L_Ph, kappa_d) for c in CONG}
 
     # Stage 3: global L_Ph from GRAIN (kappa_d, f_xy fixed).
     best = (1e9, lph_grid[0])
@@ -125,7 +137,7 @@ def main():
     L_Ph = best[1]
 
     # one refinement pass of f_xy with the updated L_Ph
-    fxy_by = {c["name"]: _best_fxy(c, L_Ph, kappa_d, fxy_grid) for c in CONG}
+    fxy_by = {c["name"]: _best_fxy(c, L_Ph, kappa_d) for c in CONG}
 
     rmse, errs = _rmse(fxy_by, L_Ph, kappa_d)
     n_obs = len(errs); n_par = len(CONG) + 2; dof = n_obs - n_par
