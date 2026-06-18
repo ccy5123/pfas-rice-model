@@ -31,14 +31,18 @@ self-certification.*
 | `runs/pfas-rice-oos-tang` | cross-dataset OOS (free-anion) | REFUTED — OOS 1.23 vs in-sample 0.52 |
 | `runs/pfas-rice-oos-lipid` | OOS with lipid mechanism | SUPPORTED — OOS 1.23 → 0.52 (mechanism generalizes) |
 | `runs/pfas-rice-oos-multidataset` | robustness (Tang + Kim + Li) | SUPPORTED — robust across two clean independent datasets |
+| `runs/pfas-rice-longchain-complete` | the 3-lever "complete resolution" as one model | 4/4 SUPPORTED — root+grain close but shoot does NOT (carrier over-feeds): not a simultaneous closure |
 | `runs/pfas-rice-consolidation` | engine-rendered synthesis paper | 5/5 SUPPORTED — reproducibility, naive-OOS-fails, lipid-generalizes, lipid-robust, structural-adequacy |
 
 ## Specs / drivers
 
 - `proposal.md` — frozen four-pane pre-registration for the main run.
-- `proposal_*.md` — pre-registrations (incl. `proposal_consolidation.md`).
-- `build_review.py`, `build_longchain.py`, `build_consolidation.py` —
-  reproducible run drivers (the engine compiles/judges/renders).
+- `proposal_*.md` — pre-registrations (incl. `proposal_consolidation.md`,
+  `proposal_longchain_complete.md`).
+- `build_review.py`, `build_longchain.py`, `build_longchain_complete.py`,
+  `build_consolidation.py` — reproducible run drivers (the engine
+  compiles/judges/renders); `validation/longchain_complete.py` is the
+  live experiment behind the complete-resolution run.
 - `run_rigor.sh` — local full regenerate + verify.
 
 ## Reproduce
@@ -46,11 +50,12 @@ self-certification.*
 ```bash
 pip install -e /path/to/sci-adk          # or PYTHONPATH=sci-adk/src
 pip install numpy scipy pytest rdkit     # for the model-output evidence
-python sci_adk_review/build_review.py          # main run
-python sci_adk_review/build_consolidation.py   # engine-rendered synthesis paper
+python sci_adk_review/build_review.py             # main run
+python sci_adk_review/build_longchain_complete.py # long-chain "complete resolution" test
+python sci_adk_review/build_consolidation.py      # engine-rendered synthesis paper
 for r in pfas-rice pfas-rice-longchain pfas-rice-carrier \
          pfas-rice-oos-tang pfas-rice-oos-lipid pfas-rice-oos-multidataset \
-         pfas-rice-consolidation; do
+         pfas-rice-longchain-complete pfas-rice-consolidation; do
   sci-adk verify sci_adk_review/runs/$r   # exit 0, all claims REPRODUCED
 done
 ```

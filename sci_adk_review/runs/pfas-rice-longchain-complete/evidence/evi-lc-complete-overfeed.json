@@ -1,0 +1,36 @@
+{
+  "id": "evi-lc-complete-overfeed",
+  "created_at": "2026-06-18T01:08:43.787244Z",
+  "spec_id": "pfas-rice-longchain-complete",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "pfas-rice-model@0df893b",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/longchain_complete.py",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 2.27,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "validation/longchain_complete.py: the active carrier that closes the PFDoDA (C12) ROOT (carrier 5.5x) over-feeds its SHOOT -- predicted/observed straw 2.27x (PFUnDA 3.27x). The enhanced mobile pool's free loading f_xy*Cw_m alone exceeds the observed straw, and the lipid term (g_xy>=0) cannot subtract -> the shoot over-prediction is a structural carrier-root coupling, not a fitting choice. The long chains need a root->shoot DECOUPLING (irreversible root sequestration that does not translocate), consistent with the long-chain root-retention literature (LC1).",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-lc-carrier-overfeeds",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

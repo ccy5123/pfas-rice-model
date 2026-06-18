@@ -1,0 +1,36 @@
+{
+  "id": "evi-lc-complete-root",
+  "created_at": "2026-06-18T01:08:43.787244Z",
+  "spec_id": "pfas-rice-longchain-complete",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "pfas-rice-model@0df893b",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/longchain_complete.py",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 0.002,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "validation/longchain_complete.py vs Yamazaki: with the LC6 root-matching carrier the complete recipe reproduces the long-chain ROOT at log10 RMSE 0.002 (by construction the carrier is fit to root, confirming the active carrier CAN lift the long-chain root). Per congener -- PFOA(C8) carrier 1.2x root 0.5/0.5 straw 1.8/0.8 grain 0.7/0.5; PFNA(C9) carrier 1.3x root 0.6/0.6 straw 1.5/0.7 grain 0.6/0.4; PFDA(C10) carrier 1.2x root 4.2/4.2 straw 5.9/3.5 grain 4.9/3.4; PFUnDA(C11) carrier 2.0x root 19.6/19.5 straw 26.7/8.2 grain 7.2/3.1; PFDoDA(C12) carrier 5.5x root 68.9/69.3 straw 113.1/49.7 grain 51.2/45.5.",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-lc-complete-root",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

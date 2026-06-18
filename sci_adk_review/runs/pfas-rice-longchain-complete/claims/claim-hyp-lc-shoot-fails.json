@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-lc-shoot-fails",
+  "spec_id": "pfas-rice-longchain-complete",
+  "answers": "hyp-lc-shoot-fails",
+  "statement": "Even when the root is closed by the active carrier, the complete recipe FAILS to close the long-chain (C10-C12) SHOOT (straw): straw log10 RMSE stays above 0.3, so root and shoot are NOT reproduced simultaneously.",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.08240576877984906,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=0.386 > 0.3 is met (combine='latest', margin=0.086)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-lc-complete-shoot",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T01:09:24.931975Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-lc-complete-shoot",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

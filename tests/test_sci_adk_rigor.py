@@ -33,6 +33,7 @@ RUN_CARRIER = ROOT / "sci_adk_review" / "runs" / "pfas-rice-carrier"
 RUN_OOS = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-tang"
 RUN_OOS_LIPID = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-lipid"
 RUN_OOS_MULTI = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-multidataset"
+RUN_LC_COMPLETE = ROOT / "sci_adk_review" / "runs" / "pfas-rice-longchain-complete"
 RUN_CONSOLIDATION = ROOT / "sci_adk_review" / "runs" / "pfas-rice-consolidation"
 TRAP = ROOT / "sci_adk_review" / "runs" / "pfas-rice-trap"
 
@@ -126,6 +127,19 @@ def test_oos_multidataset_run_reproduces():
     Tang artifact; Li 2025 confounded/inconclusive as pre-registered). Strengthens the n=3 Tang
     result to a robust multi-dataset cross-validation."""
     report = verify_run(RUN_OOS_MULTI)
+    assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
+
+
+@pytest.mark.skipif(not RUN_LC_COMPLETE.exists(), reason="long-chain complete run absent")
+def test_longchain_complete_run_reproduces():
+    """The long-chain COMPLETE-resolution test (build_longchain_complete.py: combines the 3
+    proposed levers -- 2-pool + lipid + LC6 root-matching carrier -- into ONE model) re-derives
+    from its record: 4/4 SUPPORTED -- root closes (RMSE 0.002), grain closes (0.23), but the
+    SHOOT does NOT close (straw RMSE 0.39) because the root-fixing carrier over-feeds the shoot
+    (PFDoDA straw 2.27x). FINDINGS sec.7's 'complete resolution' is NOT a simultaneous closure;
+    the long chains need a root->shoot decoupling. This is a true factual finding, not a
+    predictive over-claim."""
+    report = verify_run(RUN_LC_COMPLETE)
     assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
 
 

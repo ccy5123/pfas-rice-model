@@ -1,0 +1,118 @@
+{
+  "id": "pfas-rice-longchain-complete",
+  "created_at": "2026-06-18T01:08:43.787244Z",
+  "version": 1,
+  "raw_proposal": {
+    "background": "The long-chain sub-investigation (runs/pfas-rice-longchain, LC1-LC6) found that\nfree-anion loading structurally starves the long-chain (C10-C12) shoot (LC1), a\nB-independent lipid-facilitated loading term closes most of the gap (LC2), a\nsingle pool does so only by draining the root (LC3), a 2-pool root closes C10/C11\nbut not PFDoDA (LC4), membrane conductance cannot lift PFDoDA (LC5a) while an\nenhanced active carrier can reach its root and grain (LC5b), and the carrier\nenhancement is not QSPR-able from chain length (LC6). From these, FINDINGS sec.7\nPROPOSED a \"complete long-chain resolution = 2-pool (free + lipid-bound) root +\nlipid-facilitated loading + enhanced long-chain active carrier.\" But each lever\nwas only ever tested in isolation; the proposed combination was never run as one\nmodel and tested for the property that matters -- reproducing the long-chain ROOT\nand SHOOT simultaneously. This run tests that proposal.",
+    "goal": "Does the proposed complete long-chain resolution close the long chains? Testing 2-pool + lipid + carrier as one model for simultaneous root and shoot reproduction.\n\nThe goal is to combine all three levers into one model and adjudicate, against the\nmeasured Yamazaki BAFs across C8-C12, whether the complete recipe reproduces the\nlong-chain (nC>=10) ROOT and SHOOT (straw) and grain SIMULTANEOUSLY:\n\n1. Root: with the LC6 root-matching active-carrier multiplier, does the long-chain\n   root close?\n2. Grain: with the fitted lipid phloem term, does the long-chain grain close?\n3. Shoot: does the straw close at the same time, or does the carrier that fixes the\n   root over-feed the shoot?\n4. Diagnosis: quantify any straw over-feeding for the longest chains (C11-C12).",
+    "method": "Reuse the committed LC 2-pool prototype (validation/twopool_longchain.py) without\nchanging it. For each congener, find the active-carrier multiplier (Vmax_in) that\nreproduces the measured root (the LC6 root-matching multiplier), then, WITH that\ncarrier, fit the lipid-facilitated loading g_xy (to straw) and g_ph (to grain) on\nthe 2-pool root. Run validation/longchain_complete.py and report root/straw/grain\npred vs observed (Yamazaki) and the long-chain (nC>=10) log10 RMSE per tissue, plus\nthe C11-C12 predicted/observed straw ratio. Freeze the resulting statistics as\nthreshold hypotheses; the sci-adk engine resolves them autonomously and renders the\npaper. All evidence is measured (vs Yamazaki). No core model is changed; this is a\nprototype synthesis test of an already-recorded mechanism set.",
+    "expected_output": "An engine-rendered run (runs/pfas-rice-longchain-complete) whose claims state,\nfactually, whether the complete recipe closes the long-chain root, grain and shoot\nsimultaneously -- with the honest verdict (whatever it is) recorded and reproducible\nunder sci-adk verify. This refines the FINDINGS sec.7 \"complete resolution\" claim\nfrom a proposal into a tested result and, if simultaneous closure fails, names the\nprecise remaining open problem."
+  },
+  "hypotheses": [
+    {
+      "id": "hyp-lc-complete-root",
+      "statement": "With the LC6 root-matching active-carrier multiplier, the complete 2-pool recipe reproduces the measured long-chain (C10-C12) ROOT BAFs.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "the complete recipe (2-pool + LC6 root-matching active carrier + fitted lipid) reproduces the long-chain (nC>=10) ROOT at log10 RMSE < 0.05 => support; >= 0.05 => refute",
+        "params": {
+          "statistic": "point",
+          "op": "<",
+          "value": 0.05,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-lc-complete-grain",
+      "statement": "With the fitted lipid phloem term, the complete 2-pool recipe reproduces the measured long-chain (C10-C12) GRAIN BAFs within a factor ~2.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "the complete recipe reproduces the long-chain (nC>=10) GRAIN at log10 RMSE < 0.3 => support; >= 0.3 => refute",
+        "params": {
+          "statistic": "point",
+          "op": "<",
+          "value": 0.3,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-lc-shoot-fails",
+      "statement": "Even when the root is closed by the active carrier, the complete recipe FAILS to close the long-chain (C10-C12) SHOOT (straw): straw log10 RMSE stays above 0.3, so root and shoot are NOT reproduced simultaneously.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "even with the root closed, the complete recipe FAILS to close the long-chain (nC>=10) SHOOT: straw log10 RMSE > 0.3 => support (shoot not closed); <= 0.3 => refute",
+        "params": {
+          "statistic": "point",
+          "op": ">",
+          "value": 0.3,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-lc-carrier-overfeeds",
+      "statement": "The mechanism of the shoot failure is the carrier-root coupling: the active carrier that closes the long-chain ROOT structurally OVER-feeds the SHOOT (the enhanced mobile pool's free loading exceeds the observed straw and the lipid term, g_xy>=0, cannot subtract), so the C12 straw is over-predicted by more than a factor 1.5.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "the active carrier that closes the long-chain ROOT structurally OVER-feeds the SHOOT: the PFDoDA (C12) predicted/observed straw ratio > 1.5 => support; <= 1.5 => refute",
+        "params": {
+          "statistic": "point",
+          "op": ">",
+          "value": 1.5,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    }
+  ],
+  "method": {
+    "approaches": [
+      "find the LC6 root-matching active-carrier multiplier per congener",
+      "with that carrier, fit lipid g_xy (straw) and g_ph (grain) on the 2-pool root",
+      "report long-chain (nC>=10) per-tissue log10 RMSE and the C12 straw over-feed ratio",
+      "freeze as threshold hypotheses; engine resolves and renders; sci-adk verify"
+    ],
+    "tools": null
+  },
+  "target_claims": [
+    {
+      "id": "tc-root",
+      "statement": "The complete recipe closes the long-chain root.",
+      "answers": "hyp-lc-complete-root"
+    },
+    {
+      "id": "tc-grain",
+      "statement": "The complete recipe closes the long-chain grain.",
+      "answers": "hyp-lc-complete-grain"
+    },
+    {
+      "id": "tc-shoot",
+      "statement": "The complete recipe does NOT close the long-chain shoot.",
+      "answers": "hyp-lc-shoot-fails"
+    },
+    {
+      "id": "tc-over",
+      "statement": "The root-fixing carrier over-feeds the shoot.",
+      "answers": "hyp-lc-carrier-overfeeds"
+    }
+  ],
+  "amendment_rationale": null,
+  "prior_version_id": null
+}

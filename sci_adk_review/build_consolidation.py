@@ -60,6 +60,7 @@ DIGESTS = {
     "pfas-rice-oos-tang":         "46d71f2486365e1c9a5b675f4ff070f301ed43f45a082d51ec299e4131b2564d",
     "pfas-rice-oos-lipid":        "684c31e2d12587b359d2531613afa92e1f6532598e7b1259b1159f336d27c10a",
     "pfas-rice-oos-multidataset": "68ebaf3960873c0e2968c46701ebe2fab65b5d555834f8dbfd60f2cc0b7207da",
+    "pfas-rice-longchain-complete": "4aafc4957fdfdab77f50ec90801ae620747b1aca9be7fd8fc1dbbe3d4d20f2ef",
 }
 
 # Decision-rule prose (criterion strings).
@@ -96,7 +97,7 @@ def build_spec() -> Spec:
     hypotheses = [
         Hypothesis(
             id="hyp-reproduce",
-            statement="Every committed sci-adk sub-run (all seven) re-derives from its "
+            statement="Every committed sci-adk sub-run (all eight) re-derives from its "
                       "frozen record under sci-adk verify with exit 0, so the consolidated "
                       "audit record is reproducible.",
             mode=HypothesisMode.CONFIRMATORY,
@@ -217,7 +218,7 @@ def evidence(spec, workspace):
     items.append(_ev(
         "evi-reproduce", EvidenceKind.EXPERIMENT_RUN, "generated",
         Result(type="quantitative", point=1.0, finding=(
-            "sci-adk verify on all seven committed sub-runs: exit 0, every recorded claim "
+            "sci-adk verify on all eight committed sub-runs: exit 0, every recorded claim "
             "REPRODUCED (reproduced fraction = 1.0). Verified record digests -- " + digtxt +
             ". The pfas-rice-trap run carries NO claim (synthetic_proxy HALT), which is the "
             "intended record. LLM-free re-derivation (verify_run).")),
@@ -355,7 +356,13 @@ PROSE = PaperProse(
         "cross-dataset out-of-sample prediction (1.232 vs 0.519). Run pfas-rice-oos-lipid "
         "(684c31e2): the lipid mechanism, fit on Yamazaki and not on Tang, generalizes "
         "out-of-sample (1.232 -> 0.516). Run pfas-rice-oos-multidataset (68ebaf39): the win is "
-        "robust across Tang and Kim, not a single-dataset artifact. "
+        "robust across Tang and Kim, not a single-dataset artifact. Run pfas-rice-longchain-complete "
+        "(4aafc495): combining the three proposed long-chain levers (2-pool + lipid + LC6 "
+        "root-matching carrier) into ONE model closes the long-chain root (RMSE 0.002) and grain "
+        "(0.23) but NOT the shoot (straw RMSE 0.39): the carrier that fixes the root structurally "
+        "over-feeds the shoot (PFUnDA 3.3x, PFDoDA 2.3x over), so FINDINGS sec.7's 'complete "
+        "resolution' is not a simultaneous closure -- the long chains need a root-to-shoot "
+        "decoupling (irreversible root sequestration), a now-precise open problem. "
         "Centralized caveats (read no single figure out of context): (1) the 0.029 Yamazaki "
         "figure is in-sample reproduction (saturated, DOF 0); the a-priori predictive error is "
         "about 0.84-0.95. (2) Grain is structurally under-predicted ~3-8x and cannot support "

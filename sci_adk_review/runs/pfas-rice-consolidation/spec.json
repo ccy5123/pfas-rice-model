@@ -1,6 +1,6 @@
 {
   "id": "pfas-rice-consolidation",
-  "created_at": "2026-06-18T00:36:18.977975Z",
+  "created_at": "2026-06-18T01:10:34.034773Z",
   "version": 1,
   "raw_proposal": {
     "background": "This repository's four-compartment dynamic uptake model for PFAS in rice\n(Oryza sativa) has been subjected to an adversarial rigor audit with\nsci-adk across seven independent runs: the main audit (pfas-rice), a\nsynthetic-data trap (pfas-rice-trap), a long-chain mechanism\nsub-investigation (pfas-rice-longchain), a carrier-QSPR test\n(pfas-rice-carrier), and three cross-dataset out-of-sample runs\n(pfas-rice-oos-tang, pfas-rice-oos-lipid, pfas-rice-oos-multidataset).\nsci-adk itself was created in response to a failure of this project: a\nrun on an empirical proposal once used synthetic data and the harness\nreported \"4/4 SUPPORTED\" (the rice-failure defect named in\ncore/validity.py). The empirical investigation is now complete, but its\nfindings are scattered across seven run records and a Korean narrative\n(FINDINGS.md). The per-run papers were rendered by sci-adk but their\nnon-ASCII bodies did not typeset, and there is no single citable\nsynthesis. This run consolidates the completed investigation into one\nengine-rendered paper whose every headline claim is resolved by the\nengine from the verified sub-run statistics, so the consolidation is\nitself a reproducible sci-adk artifact rather than a hand-authored\ndocument.",
@@ -11,7 +11,7 @@
   "hypotheses": [
     {
       "id": "hyp-reproduce",
-      "statement": "Every committed sci-adk sub-run (all seven) re-derives from its frozen record under sci-adk verify with exit 0, so the consolidated audit record is reproducible.",
+      "statement": "Every committed sci-adk sub-run (all eight) re-derives from its frozen record under sci-adk verify with exit 0, so the consolidated audit record is reproducible.",
       "mode": "confirmatory",
       "decision_rule": {
         "kind": "threshold",
