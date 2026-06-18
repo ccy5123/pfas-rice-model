@@ -79,6 +79,32 @@ def observed_baf(congener):
     return out
 
 
+def simulate_two_pool(congener, *, f_xy, vmax_in, g_xy=0.0, g_ph=0.0, k_off=0.02,
+                      seq=1.0, biomass="oryza", season=120.0):
+    """Opt-in TWO-POOL root model (the long-chain breakthrough; src/pfas_rice_two_pool.py).
+
+    Splits the root into a mobile pool (feeds the xylem / sets the uptake gradient) and a
+    slow bound store (holds the measured root burden), so a LOW f_xy (strong root retention)
+    and an ENHANCED active carrier (high uptake) are independent levers -- which closes the
+    long chains the single-pool core cannot. Returns root/straw/grain BAF (Cwo=1). The
+    canonical ``simulate`` (4pool_surf) is unchanged; this is additive."""
+    import pfas_rice_two_pool as tp
+    return tp.simulate(congener, f_xy, vmax_in, g_xy=g_xy, g_ph=g_ph, k_off=k_off,
+                       seq=seq, biomass=biomass, season=season)
+
+
+def close_longchain_2pool(congener, *, obs=None, biomass="oryza", season=120.0):
+    """Saturated 3-param structural-adequacy fit of the 2-pool model to the measured
+    BAFs (free f_xy -> straw, active carrier -> root, g_ph -> grain). ``obs`` defaults to
+    the Yamazaki BAF for the congener. Returns the fitted (f_xy, vmax_in, g_ph) + the
+    reproduced root/straw/grain. Reproduction (DOF 0), NOT a-priori prediction."""
+    import pfas_rice_two_pool as tp
+    obs = obs or observed_baf(congener)
+    if not {"root", "straw", "grain"} <= set(obs):
+        raise KeyError(f"need root/straw/grain BAF for {congener!r}; got {sorted(obs)}")
+    return tp.close_longchain(congener, obs, biomass=biomass, season=season)
+
+
 # --- Tang 2026 per-organ TF validation (dry-weight basis) -----------------------
 TANG_CONGENERS = ("PFOA", "PFOS", "GenX")
 # f_xy re-fit to Tang TF at the 0.1 ug/g dose (OVERRIDE-only; validation/tang2026_fxy_refit.py).

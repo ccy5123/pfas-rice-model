@@ -1,0 +1,104 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{url}
+\title{Does the promoted src/ two-pool component reproduce the long-chain breakthrough? Verifying the wired core component, and confirming the two independent physical levers.}
+\author{sci-adk (deterministic render)}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\noindent\textit{Draft compiled by sci-adk from Spec \texttt{pfas-rice-2pool-core} (v1). Belief state is revisable as Evidence accrues.}
+
+\begin{abstract}
+The long-chain breakthrough -- a two-pool root with a low per-congener f\_xy (strong root retention) and an enhanced active carrier (high uptake) reproduces C10-C12 at log10 RMSE about 0.08, where the single-pool core could not -- has been promoted from a validation script to a proper, reusable model component, src/pfas\_rice\_two\_pool.py, with a model\_api hook, additive to and leaving unchanged the canonical 4pool\_surf core. This run verifies the promoted component against the measured Yamazaki long chains: it reproduces the closure (root+straw+grain log10 RMSE 0.081), and the closure requires both a low f\_xy for every long chain (max 0.436, the retention lever) and an enhanced carrier for the longest chain (PFDoDA 2.79x, the uptake lever) -- confirming the two levers are independent and both necessary. The reproduction is saturated (structural adequacy), not a-priori prediction; the value is that the long-chain-capable model is now a reusable component for dietary risk screening rather than a one-off prototype.
+\end{abstract}
+
+\section{Introduction}
+A breakthrough that lives only in a validation script is not usable. For the model to serve as the long-chain-capable configuration a risk screen needs, the two-pool root had to become a first-class component. It now is: src/pfas\_rice\_two\_pool.py reuses the canonical Compound / GHK + carrier root\_uptake and the measured drivers, exposes simulate and close\_longchain, and is reachable through model\_api (simulate\_two\_pool / close\_longchain\_2pool). The canonical single-pool core is untouched, so nothing regresses. This run is the engine-adjudicated acceptance test of that wiring; the narrative is agent-authored prose input.
+
+\section{Goal}
+Does the promoted src/ two-pool component reproduce the long-chain breakthrough? Verifying the wired core component, and confirming the two independent physical levers.
+
+Verify, against the measured Yamazaki long chains, that the wired src module:
+
+1. reproduces the long-chain closure (root+straw+grain log10 RMSE at the breakthrough level);
+2. requires a LOW f\_xy for every long chain (the strong-root-retention lever);
+3. requires an ENHANCED active carrier for the longest chain (the high-uptake lever),
+   confirming the two levers are independent and both necessary.
+
+\section{Background}
+The breakthrough (validation/longchain\_closure.py) showed the long chains ARE
+structurally closable: a 2-pool root (mobile + bound) with a LOW per-congener f\_xy
+(strong root retention) and an ENHANCED active carrier (high uptake) reproduces
+C10-C12 root, straw and grain at log10 RMSE \textasciitilde{}0.08, where the single-pool core could
+not (refit\_oryza hit ceilings \textasciitilde{}4-6x under). For the model to be usable -- in
+particular as the long-chain-capable configuration for dietary risk screening -- the
+breakthrough must be a proper, reusable model component, not a validation script. It
+has now been PROMOTED to src/pfas\_rice\_two\_pool.py with a clean API and a model\_api
+hook (simulate\_two\_pool / close\_longchain\_2pool), additive to (and leaving unchanged)
+the canonical 4pool\_surf core. This run verifies that the promoted core component
+reproduces the breakthrough.
+
+\section{Method}
+Import src/pfas\_rice\_two\_pool.py and run its close\_longchain (the saturated 3-param
+structural-adequacy fit: free f\_xy -> straw, active carrier -> root, g\_ph -> grain)
+for PFDA, PFUnDA and PFDoDA against the Yamazaki BAFs. Compute the long-chain
+root+straw+grain log10 RMSE and read the fitted f\_xy and carrier multipliers. Freeze
+these as threshold hypotheses; the sci-adk engine resolves them and renders the paper.
+All evidence is measured (vs Yamazaki). The canonical core is unchanged; this verifies
+the additive component, and is structural ADEQUACY (reproduction, DOF 0), not a-priori
+prediction.
+
+Planned approaches:
+\begin{itemize}
+  \item import src/pfas\_rice\_two\_pool.py and run close\_longchain for PFDA/PFUnDA/PFDoDA
+  \item compute the long-chain root+straw+grain log10 RMSE and read fitted f\_xy / carrier
+  \item freeze as threshold hypotheses; engine resolves and renders; sci-adk verify
+\end{itemize}
+
+\section{Hypotheses and findings}
+
+\subsection{The breakthrough promoted to src/pfas\_rice\_two\_pool.py reproduces the long-chain closure: the C10-C12 root+straw+grain log10 RMSE is at the breakthrough level (< 0.15) -- the wired core component works, not just the validation prototype.}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-2pool-reproduces} (confirmatory)
+  \item Decision rule (threshold): the PROMOTED src/pfas\_rice\_two\_pool.py component reproduces the long-chain closure (C10-C12 root+straw+grain log10 RMSE < 0.15, at the breakthrough level) => support; >= 0.15 => refute
+  \item \textbf{Status: supported} --- confidence 0.0667 (credence)
+  \item Basis: threshold rule: statistic 'point'=0.081 < 0.15 is met (combine='latest', margin=0.069)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\subsection{The closure requires a LOW xylem-loading f\_xy for every long chain (max f\_xy across C10-C12 < 0.6) -- the strong-root-retention lever.}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-2pool-low-fxy} (confirmatory)
+  \item Decision rule (threshold): the closure requires a LOW f\_xy for EVERY long chain (max f\_xy across C10-C12 < 0.6 = strong root retention / low TSCF) => support; >= 0.6 => refute
+  \item \textbf{Status: supported} --- confidence 0.151 (credence)
+  \item Basis: threshold rule: statistic 'point'=0.436 < 0.6 is met (combine='latest', margin=0.164)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\subsection{The closure requires an ENHANCED active carrier for the longest chain (PFDoDA carrier > 2x base) -- the high-uptake lever, independent of f\_xy.}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-2pool-enhanced-carrier} (confirmatory)
+  \item Decision rule (threshold): the closure requires an ENHANCED active carrier for the longest chain (PFDoDA carrier > 2x base) => support; <= 2x => refute
+  \item \textbf{Status: supported} --- confidence 0.546 (credence)
+  \item Basis: threshold rule: statistic 'point'=2.79 > 2 is met (combine='latest', margin=0.79)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\section{Evidence}
+\begin{itemize}
+  \item \texttt{evi-2pool-literature} (literature): finding=cited prior work: long-chain root retention / low TSCF (newcontam 2025; Adu 2024 ML 10.1021/acsestengg.4c00107); Chen 20
+  \item \texttt{evi-2pool-reproduces} (experiment\_run): point=0.081, finding=src/pfas\_rice\_two\_pool.close\_longchain vs Yamazaki: the PROMOTED component reproduces the long chains at root+straw+grai
+  \item \texttt{evi-2pool-low-fxy} (experiment\_run): point=0.436, finding=the closure's fitted f\_xy is LOW for every long chain (PFDA 0.139, PFUnDA 0.100, PFDoDA 0.436; max 0.436 < 0.6) -- the s
+  \item \texttt{evi-2pool-carrier} (experiment\_run): point=2.79, finding=the closure needs an ENHANCED active carrier for PFDoDA (2.79x base) -- the high-uptake lever, independent of the (low) 
+\end{itemize}
+
+\section{Discussion}
+The promoted component reproduces the breakthrough numbers exactly, so the long-chain capability is now reusable: a risk assessor can call close\_longchain\_2pool to obtain the long-chain root/straw/grain reproduction, or simulate\_two\_pool with chosen levers. The two mechanistic levers are confirmed independent -- a low f\_xy (the long chain is retained in the root) and an enhanced carrier (the high uptake that builds the measured root) -- which is the precise correction to the earlier single-pool fits that conflated them by forcing a high f\_xy. Honesty conditions carry over unchanged: this is a saturated per-congener fit (structural adequacy / reproduction, degrees of freedom zero), not a-priori prediction, and the active-carrier enhancement is not QSPR-able from chain length (the carrier run, REFUTED), so novel long chains still inherit wide bounds. Within those bounds the model now has no long-chain structural blind spot and is a reusable component for screening-level dietary risk assessment. The three claims reproduce under sci-adk verify; the component is guarded by tests/test\_two\_pool.py; the canonical core is unchanged.
+
+\section{References}
+No literature cited.
+
+\end{document}

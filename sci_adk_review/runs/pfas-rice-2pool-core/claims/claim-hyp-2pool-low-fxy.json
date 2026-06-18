@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-2pool-low-fxy",
+  "spec_id": "pfas-rice-2pool-core",
+  "answers": "hyp-2pool-low-fxy",
+  "statement": "The closure requires a LOW xylem-loading f_xy for every long chain (max f_xy across C10-C12 < 0.6) -- the strong-root-retention lever.",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.15125797811979325,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=0.436 < 0.6 is met (combine='latest', margin=0.164)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-2pool-low-fxy",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T02:39:15.705245Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-2pool-low-fxy",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

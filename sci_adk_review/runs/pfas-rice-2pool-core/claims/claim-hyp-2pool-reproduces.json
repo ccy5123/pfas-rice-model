@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-2pool-reproduces",
+  "spec_id": "pfas-rice-2pool-core",
+  "answers": "hyp-2pool-reproduces",
+  "statement": "The breakthrough promoted to src/pfas_rice_two_pool.py reproduces the long-chain closure: the C10-C12 root+straw+grain log10 RMSE is at the breakthrough level (< 0.15) -- the wired core component works, not just the validation prototype.",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.06667331992179804,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=0.081 < 0.15 is met (combine='latest', margin=0.069)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-2pool-reproduces",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T02:39:15.704833Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-2pool-reproduces",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

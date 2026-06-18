@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-2pool-enhanced-carrier",
+  "spec_id": "pfas-rice-2pool-core",
+  "answers": "hyp-2pool-enhanced-carrier",
+  "statement": "The closure requires an ENHANCED active carrier for the longest chain (PFDoDA carrier > 2x base) -- the high-uptake lever, independent of f_xy.",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.5461552047176441,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=2.79 > 2 is met (combine='latest', margin=0.79)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-2pool-carrier",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T02:39:15.705520Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-2pool-carrier",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}
