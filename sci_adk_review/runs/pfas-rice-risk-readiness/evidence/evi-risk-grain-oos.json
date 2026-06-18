@@ -1,0 +1,36 @@
+{
+  "id": "evi-risk-grain-oos",
+  "created_at": "2026-06-18T02:07:53.907057Z",
+  "spec_id": "pfas-rice-risk-readiness",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "pfas-rice-model@177e753",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "runs/pfas-rice-oos-multidataset",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 0.48,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "runs/pfas-rice-oos-multidataset: the K_PL-gated lipid mechanism (fit on Yamazaki, NOT on Kim) predicts the independent Kim 2019 brown-rice grain BAF (excl. PFOA) out-of-sample at log10 RMSE 0.48 (~factor 3) vs the free/monotone baseline 2.05 -- screening-adequate dietary prediction, uniquely capturing the grain long-chain rise.",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-risk-grain-oos",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

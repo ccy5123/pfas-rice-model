@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-risk-grain-reliable",
+  "spec_id": "pfas-rice-risk-readiness",
+  "answers": "hyp-risk-grain-reliable",
+  "statement": "On the reliable-detection grain subset (DF>=15%), the out-of-sample grain prediction is within ~factor 1.6 (log10 RMSE < 0.3).",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.09516258196404037,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=0.2 < 0.3 is met (combine='latest', margin=0.1)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-risk-grain-reliable",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T02:09:39.871027Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-risk-grain-reliable",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

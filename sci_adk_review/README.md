@@ -35,6 +35,7 @@ self-certification.*
 | `runs/pfas-rice-longchain-decouple` | irreversible root sequestration as the decoupling fix | 3/3 SUPPORTED — the lever inflates root (6.9×), no clean closure, marginal gain: wrong lever (break the uptake↔mobile-conc coupling instead) |
 | `runs/pfas-rice-consolidation` | engine-rendered synthesis paper (9 investigative runs) | 5/5 SUPPORTED — reproducibility, naive-OOS-fails, lipid-generalizes, lipid-robust, structural-adequacy |
 | `runs/pfas-rice-model-selection` | transport model-selection / recommendation | 4/4 SUPPORTED — lipid is the consistent winner across all measured data (in-sample + Tang + Kim); recommend lipid (opt-in) |
+| `runs/pfas-rice-risk-readiness` | **breakthrough** + dietary risk-tool readiness | 4/4 SUPPORTED — long chains close (2-pool + free f_xy + carrier, RMSE 0.08); grain predicted OOS within ~factor 3; usable as a SCREENING-level dietary risk tool (bounded ~5× worst case, not regulatory precision) |
 
 ## Specs / drivers
 
@@ -60,10 +61,11 @@ python sci_adk_review/build_longchain_complete.py # long-chain "complete resolut
 python sci_adk_review/build_longchain_decouple.py # root->shoot decoupling test
 python sci_adk_review/build_consolidation.py      # engine-rendered synthesis paper
 python sci_adk_review/build_model_selection.py    # transport model-selection verdict
+python sci_adk_review/build_risk_readiness.py     # breakthrough + dietary risk-tool readiness
 for r in pfas-rice pfas-rice-longchain pfas-rice-carrier \
          pfas-rice-oos-tang pfas-rice-oos-lipid pfas-rice-oos-multidataset \
          pfas-rice-longchain-complete pfas-rice-longchain-decouple \
-         pfas-rice-consolidation pfas-rice-model-selection; do
+         pfas-rice-consolidation pfas-rice-model-selection pfas-rice-risk-readiness; do
   sci-adk verify sci_adk_review/runs/$r   # exit 0, all claims REPRODUCED
 done
 ```

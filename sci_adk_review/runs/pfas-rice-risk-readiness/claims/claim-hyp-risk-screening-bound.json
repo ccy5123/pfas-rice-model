@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-risk-screening-bound",
+  "spec_id": "pfas-rice-risk-readiness",
+  "answers": "hyp-risk-screening-bound",
+  "statement": "The tool is SCREENING-level, not regulatory-precision: the worst-case out-of-sample grain miss (PFOS endosperm, ~5x) exceeds a factor 3 (log10 > 0.5), so dietary use must carry congener-specific uncertainty factors.",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.18126924692201807,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=0.7 > 0.5 is met (combine='latest', margin=0.2)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-risk-bound",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T02:09:39.871337Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-risk-bound",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

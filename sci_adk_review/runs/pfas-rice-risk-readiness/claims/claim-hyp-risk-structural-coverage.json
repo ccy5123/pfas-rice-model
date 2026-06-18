@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-risk-structural-coverage",
+  "spec_id": "pfas-rice-risk-readiness",
+  "answers": "hyp-risk-structural-coverage",
+  "statement": "With the 2-pool + free per-congener f_xy + active carrier, the model reproduces the full C4-C12 series INCLUDING the long chains (saturated structural-adequacy fit, log10 RMSE < 0.2) -- there is no structural blind spot across the diet-relevant congener range (the long-chain gap is closed).",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.1121921992380499,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=0.081 < 0.2 is met (combine='latest', margin=0.119)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-risk-coverage",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T02:09:39.870435Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-risk-coverage",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

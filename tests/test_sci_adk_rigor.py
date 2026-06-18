@@ -37,6 +37,7 @@ RUN_LC_COMPLETE = ROOT / "sci_adk_review" / "runs" / "pfas-rice-longchain-comple
 RUN_LC_DECOUPLE = ROOT / "sci_adk_review" / "runs" / "pfas-rice-longchain-decouple"
 RUN_CONSOLIDATION = ROOT / "sci_adk_review" / "runs" / "pfas-rice-consolidation"
 RUN_SELECTION = ROOT / "sci_adk_review" / "runs" / "pfas-rice-model-selection"
+RUN_RISK = ROOT / "sci_adk_review" / "runs" / "pfas-rice-risk-readiness"
 TRAP = ROOT / "sci_adk_review" / "runs" / "pfas-rice-trap"
 
 # Empirical predictive claims that MUST NOT be SUPPORTED (the over-claim guard).
@@ -177,6 +178,18 @@ def test_model_selection_run_reproduces():
     so it is the recommended transport configuration (kept opt-in pending a reliable 2-pool
     root). A selection over already-adjudicated results; the wins are genuine, so SUPPORTED."""
     report = verify_run(RUN_SELECTION)
+    assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
+
+
+@pytest.mark.skipif(not RUN_RISK.exists(), reason="risk-readiness run absent")
+def test_risk_readiness_run_reproduces():
+    """The risk-assessment-readiness verdict (build_risk_readiness.py) re-derives: 4/4 SUPPORTED.
+    Incorporates the BREAKTHROUGH (validation/longchain_closure.py: the 2-pool + free f_xy +
+    active carrier reproduces C10-C12 at RMSE ~0.08, closing the long-chain structural blind spot
+    the single-pool core could not) + the grain out-of-sample prediction (Kim 0.48, reliable 0.20)
+    + the honest screening bound (PFOS endosperm ~5x). Verdict: usable as a SCREENING-level dietary
+    risk tool with congener-specific uncertainty factors, NOT regulatory precision."""
+    report = verify_run(RUN_RISK)
     assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
 
 
