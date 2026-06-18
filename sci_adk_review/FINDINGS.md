@@ -5,7 +5,8 @@
 > 입력 Spec: `proposal.md` (연구 배경/목표/방법/기대 산출물 **전문** — 동결된 사전등록)
 > 재현: `python sci_adk_review/build_review.py` → `sci-adk verify sci_adk_review/runs/pfas-rice`
 > 기준 커밋: 이 브랜치(`claude/practical-brahmagupta-q4tlv3`) HEAD
-> 영문 통합본(논문 형식): **`docs/sci_adk_rigor_review.tex`** (7개 run → 1 manuscript)
+> sci-adk가 렌더한 영문 통합본: **`sci_adk_review/runs/pfas-rice-consolidation/paper/draft.tex`**
+> (별도 consolidation run; `python sci_adk_review/build_consolidation.py`)
 
 ---
 
@@ -244,21 +245,26 @@ runs/pfas-rice-trap/
 | `pfas-rice-oos-tang` | `46d71f24…31b2564d` | 1/1 REPRODUCED |
 | `pfas-rice-oos-lipid` | `684c31e2…6d27c10a` | 1/1 REPRODUCED |
 | `pfas-rice-oos-multidataset` | `68ebaf39…0b7207da` | 1/1 REPRODUCED |
+| `pfas-rice-consolidation` | `8211dfa7…47916a78` | 5/5 REPRODUCED (engine-rendered 통합본) |
 
 ### 재현
 ```bash
 pip install -e /path/to/sci-adk          # 또는 PYTHONPATH=sci-adk/src
 pip install numpy scipy pytest rdkit     # 모델 실행/근거 수치용
-python sci_adk_review/build_review.py     # 메인 run 재생성
+python sci_adk_review/build_review.py          # 메인 run 재생성
+python sci_adk_review/build_consolidation.py   # 통합본 run 재생성 (sci-adk가 paper 렌더)
 for r in pfas-rice pfas-rice-longchain pfas-rice-carrier \
-         pfas-rice-oos-tang pfas-rice-oos-lipid pfas-rice-oos-multidataset; do
+         pfas-rice-oos-tang pfas-rice-oos-lipid pfas-rice-oos-multidataset \
+         pfas-rice-consolidation; do
   sci-adk verify sci_adk_review/runs/$r   # exit 0, 전 claim REPRODUCED
 done
 ```
 
-> **영문 통합본(논문 형식)**: `docs/sci_adk_rigor_review.tex` — 7개 run을 하나의
-> 인용가능 manuscript로 통합(master ledger·서사 아크·중앙화 caveat·digest 표).
-> 기계 렌더된 per-run `paper/draft.tex` 스켈레톤(비-ASCII 본문 미렌더)을 대체한다.
+> **영문 통합본(sci-adk가 렌더)**: `sci_adk_review/runs/pfas-rice-consolidation/paper/draft.tex`.
+> `build_consolidation.py`가 7개 sub-run의 **검증된 통계**를 threshold 가설 Spec으로 동결 →
+> 엔진이 numeric claim을 자동 판정하고 **paper를 렌더**(서사는 LaTeX-safe prose로 *입력*; 손으로
+> 저작한 문서가 아님). master ledger·서사 아크·중앙화 caveat·digest를 담고, 5/5 claim이
+> `sci-adk verify`로 재현된다(digest `8211dfa7…`).
 
 > 주의: `runs/`의 증거 수치는 기준 커밋의 모델 출력을 그대로 옮긴 것이고, 각 증거는
 > `provenance.code_ref`(커밋)와 `environment`(실행 경로)를 기록한다. 모델 코드가

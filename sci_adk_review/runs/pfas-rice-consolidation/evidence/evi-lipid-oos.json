@@ -1,0 +1,36 @@
+{
+  "id": "evi-lipid-oos",
+  "created_at": "2026-06-18T00:36:18.977975Z",
+  "spec_id": "pfas-rice-consolidation",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "pfas-rice-model@ca7a8e9",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/oos_tang_lipid.py",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 0.516,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": 0.516,
+    "finding": "runs/pfas-rice-oos-lipid (digest sha256:684c31e2..6d27c10a): with NO parameter fit to Tang, lipid_loading=True drops the Tang OOS log10 RMSE from 1.232 (free-anion) to 0.516, matching the in-sample refit (0.519). The dominant free-anion failure (PFOS, the high-K_PL sulfonate, ~40-200x under) is fixed at the mechanism level (stalk 0.013 -> 0.620 vs Tang 0.571), as the K_PL-gated lipid term predicts and Chen 2025 (membrane K_MW monotone) corroborates. First strong cross-dataset out-of-sample predictive success. Honest residual: GenX (ether) stays over-predicted (separate provisional-offset issue); PFOS endosperm ~5x under.",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-lipid-generalizes",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

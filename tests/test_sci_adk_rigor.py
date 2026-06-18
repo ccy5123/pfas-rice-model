@@ -33,6 +33,7 @@ RUN_CARRIER = ROOT / "sci_adk_review" / "runs" / "pfas-rice-carrier"
 RUN_OOS = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-tang"
 RUN_OOS_LIPID = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-lipid"
 RUN_OOS_MULTI = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-multidataset"
+RUN_CONSOLIDATION = ROOT / "sci_adk_review" / "runs" / "pfas-rice-consolidation"
 TRAP = ROOT / "sci_adk_review" / "runs" / "pfas-rice-trap"
 
 # Empirical predictive claims that MUST NOT be SUPPORTED (the over-claim guard).
@@ -125,6 +126,18 @@ def test_oos_multidataset_run_reproduces():
     Tang artifact; Li 2025 confounded/inconclusive as pre-registered). Strengthens the n=3 Tang
     result to a robust multi-dataset cross-validation."""
     report = verify_run(RUN_OOS_MULTI)
+    assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
+
+
+@pytest.mark.skipif(not RUN_CONSOLIDATION.exists(), reason="consolidation run absent")
+def test_consolidation_run_reproduces():
+    """The engine-rendered consolidation (built by `build_consolidation.py`: a frozen
+    threshold-hypothesis Spec whose statistics ARE the verified sub-run outputs; the paper is
+    rendered by sci-adk, the narrative supplied as LaTeX-safe prose INPUT, not hand-authored)
+    re-derives from its record: 5/5 SUPPORTED -- reproducibility, naive-OOS-fails,
+    lipid-generalizes, lipid-robust, structural-adequacy. The synthesis claims are restatements
+    of the sub-run records, so they may legitimately be SUPPORTED."""
+    report = verify_run(RUN_CONSOLIDATION)
     assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
 
 

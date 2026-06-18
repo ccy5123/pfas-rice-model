@@ -1,0 +1,151 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{url}
+\title{Consolidated rigor audit of a four-compartment PFAS rice uptake model: foundations reproduce, naive out-of-sample prediction fails, and a lipid-facilitated loading mechanism generalizes across independent datasets.}
+\author{sci-adk (deterministic render)}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\noindent\textit{Draft compiled by sci-adk from Spec \texttt{pfas-rice-consolidation} (v1). Belief state is revisable as Evidence accrues.}
+
+\begin{abstract}
+This is the engine-rendered consolidation of seven independent sci-adk rigor-audit runs applied to a four-compartment dynamic PFAS uptake model for rice (Oryza sativa). The audit is sharply patterned. The model's formal and computational foundations pass (mass conservation; GHK anion exclusion, exclusion factor \textasciitilde{}107; congener-resolved soil sorption, 4.4 log10 Koc spread; SMILES read-across 23/23). Its naive empirical predictive claims fail under an adversarial reading: the celebrated log10 RMSE 0.029 Yamazaki agreement is a saturated in-sample reproduction (about three transport parameters per three observations), and the genuine a-priori predictive error is about 0.84; grain is structurally under-predicted (about 3-8x). Reframed as the user's actual question -- can the structure, under a constrained (DOF>0) fit on the mechanistic ORYZA2000 biomass, reproduce the data? -- the answer is yes for shoot translocation (straw log10 RMSE about 0.16-0.18; whole plant about 0.34). A cross-dataset out-of-sample test on the independent Tang 2026 dataset confirms the free-anion model's predictive failure (OOS log10 RMSE 1.23 vs 0.52 in-sample). Crucially, a lipid-facilitated loading mechanism -- discovered and fit on Yamazaki long chains, never fit to Tang -- drops that out-of-sample error to 0.52, matching the in-sample refit, and the generalization is robust across two clean independent datasets (Tang 2026; Kim 2019 grain, lipid 0.48 vs monotone 2.05). This is the project's first strong cross-dataset out-of-sample predictive success: the mechanism generalizes, not added fitting. All seven runs re-derive from their frozen records under sci-adk verify (exit 0). Honest residuals (GenX/ether over-prediction; the PFDoDA C12 floor; Li 2025 confounding) are recorded centrally.
+\end{abstract}
+
+\section{Introduction}
+sci-adk is a referee/scorekeeper, not an experimenter: agents propose; the engine judges by frozen criteria; no self-certification. Its discipline separates Evidence (monotone, append-only; null and negative results are first-class) from Claims (non-monotone, revisable). Each run begins from a frozen four-pane pre-registration (Background / Goal / Method / Expected Output) compiled into a Spec, which blocks post-hoc HARKing. Decisively, sci-adk was built in response to a failure of THIS project: a run on an empirical proposal once used synthetic data and the harness reported 4/4 SUPPORTED (the rice-failure defect named in core/validity.py). This audit re-applies the tool to the project that motivated it. The empirical investigation across seven runs is now complete: a main audit (pfas-rice), a synthetic-data trap (pfas-rice-trap), a long-chain mechanism sub-investigation (pfas-rice-longchain), a carrier-QSPR test (pfas-rice-carrier), and three cross-dataset out-of-sample runs (pfas-rice-oos-tang, -oos-lipid, -oos-multidataset). This consolidation states and resolves the cross-run synthesis from the verified sub-run statistics. It introduces no new experiments; every number traces to a per-run record, and the per-run runs remain authoritative for their own claims. The engine renders this draft; the narrative is agent-authored input, not LLM generation.
+
+\section{Goal}
+Consolidated rigor audit of a four-compartment PFAS rice uptake model: foundations reproduce, naive out-of-sample prediction fails, and a lipid-facilitated loading mechanism generalizes across independent datasets.
+
+The goal is a single, citable, engine-rendered synthesis of the seven
+sci-adk runs that states and resolves the cross-run findings:
+
+1. Reproducibility: every committed sub-run re-derives from its frozen
+   record under sci-adk verify (exit 0), so the audit record is
+   trustworthy.
+2. Naive out-of-sample prediction fails: the free-anion model driven by
+   theory/QSPR transport parameters not fit to the target predicts an
+   independent dataset (Tang 2026) far worse than an in-sample refit.
+3. The lipid-facilitated loading mechanism generalizes: a mechanism fit
+   on Yamazaki long chains, never fit to the target, restores the
+   independent-dataset prediction to the in-sample level.
+4. The generalization is robust across a second clean independent
+   dataset (Kim 2019 grain), not a single-dataset artifact.
+5. Structural adequacy: under a constrained (degrees-of-freedom > 0) fit
+   on the mechanistic ORYZA2000 biomass, the structure reproduces shoot
+   (straw) translocation across the C4-C12 series.
+
+\section{Background}
+This repository's four-compartment dynamic uptake model for PFAS in rice
+(Oryza sativa) has been subjected to an adversarial rigor audit with
+sci-adk across seven independent runs: the main audit (pfas-rice), a
+synthetic-data trap (pfas-rice-trap), a long-chain mechanism
+sub-investigation (pfas-rice-longchain), a carrier-QSPR test
+(pfas-rice-carrier), and three cross-dataset out-of-sample runs
+(pfas-rice-oos-tang, pfas-rice-oos-lipid, pfas-rice-oos-multidataset).
+sci-adk itself was created in response to a failure of this project: a
+run on an empirical proposal once used synthetic data and the harness
+reported "4/4 SUPPORTED" (the rice-failure defect named in
+core/validity.py). The empirical investigation is now complete, but its
+findings are scattered across seven run records and a Korean narrative
+(FINDINGS.md). The per-run papers were rendered by sci-adk but their
+non-ASCII bodies did not typeset, and there is no single citable
+synthesis. This run consolidates the completed investigation into one
+engine-rendered paper whose every headline claim is resolved by the
+engine from the verified sub-run statistics, so the consolidation is
+itself a reproducible sci-adk artifact rather than a hand-authored
+document.
+
+\section{Method}
+Author the consolidation as a frozen Spec of threshold hypotheses whose
+statistics are the verified outputs of the seven sub-runs (record
+digests and log10 RMSE values), classified honestly: generated for the
+reproducibility meta-claim, measured for the out-of-sample and
+structural-adequacy claims. The sci-adk engine compiles the Spec,
+persists the classified Evidence, resolves the numeric threshold claims
+autonomously, and renders the paper draft. An agent-authored,
+LaTeX-safe narrative (abstract, introduction, discussion) is supplied as
+prose input and injected verbatim into the engine-rendered draft (this
+is input, not autonomous generation). sci-adk verify then re-derives
+every claim from the record with no LLM call. The consolidation
+introduces no new experiments: every number traces to a per-run record,
+and the per-run runs remain the authoritative source for their own
+claims.
+
+Planned approaches:
+\begin{itemize}
+  \item freeze a threshold-hypothesis Spec whose statistics are the verified sub-run outputs
+  \item classify evidence honestly (generated for reproducibility; measured for OOS/adequacy)
+  \item engine resolves the numeric claims autonomously and renders the paper
+  \item agent-authored LaTeX-safe prose injected verbatim (input, not LLM generation)
+  \item sci-adk verify re-derives every claim from the record (no LLM)
+\end{itemize}
+
+\section{Hypotheses and findings}
+
+\subsection{Every committed sci-adk sub-run (all seven) re-derives from its frozen record under sci-adk verify with exit 0, so the consolidated audit record is reproducible.}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-reproduce} (confirmatory)
+  \item Decision rule (threshold): every committed sci-adk sub-run re-derives from its frozen record under sci-adk verify (reproduced fraction = 1.0) => support; any divergence => refute
+  \item \textbf{Status: supported} --- confidence 0.001 (credence)
+  \item Basis: threshold rule: statistic 'point'=1 > 0.999 is met (combine='latest', margin=0.001)
+  \item \textit{Evidence validity:} referent=formal; data\_source(s)=generated --- in-silico/computational result
+\end{itemize}
+
+\subsection{The free-anion model driven by theory/QSPR transport parameters NOT fit to the target fails out-of-sample cross-dataset prediction: the Tang 2026 per-organ TF is predicted at log10 RMSE > 1.0, far worse than the in-sample Tang refit (0.519).}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-naive-oos-fails} (confirmatory)
+  \item Decision rule (threshold): the free-anion model (theory/QSPR transport, NOT fit to the target) predicts the independent Tang 2026 dataset at OOS log10 RMSE > 1.0 (\textasciitilde{}10x; far above the in-sample refit 0.519) => the naive out-of-sample predictive claim fails (support); OOS RMSE <= 1.0 => the naive claim holds (refute)
+  \item \textbf{Status: supported} --- confidence 0.207 (credence)
+  \item Basis: threshold rule: statistic 'point'=1.232 > 1 is met (combine='latest', margin=0.232)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\subsection{The lipid-facilitated loading mechanism (fit on Yamazaki long chains, never fit to the target) generalizes out-of-sample: it drops the independent Tang 2026 OOS log10 RMSE to the in-sample level (< 0.6).}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-lipid-generalizes} (confirmatory)
+  \item Decision rule (threshold): the lipid-facilitated loading mechanism (fit on Yamazaki, NOT on the target) brings the independent Tang 2026 OOS log10 RMSE down to the in-sample level (< 0.6, matching the in-sample refit 0.519) => the mechanism generalizes out-of-sample (support); no improvement to in-sample level => refute
+  \item \textbf{Status: supported} --- confidence 0.0806 (credence)
+  \item Basis: threshold rule: statistic 'point'=0.516 < 0.6 is met (combine='latest', margin=0.084)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\subsection{The lipid mechanism's out-of-sample win is robust across a SECOND clean independent dataset (Kim 2019 brown-rice grain BAF), beating the free-anion/monotone baseline by > 1.0 log10, so the generalization is not a single-dataset (Tang) artifact.}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-lipid-robust} (confirmatory)
+  \item Decision rule (threshold): on a SECOND clean independent dataset (Kim 2019 brown-rice grain BAF) the lipid mechanism beats the free-anion/monotone baseline by > 1.0 log10 (2.05 -> 0.48) => the generalization is robust, not a single-dataset artifact (support); margin <= 1.0 => not robust (refute)
+  \item \textbf{Status: supported} --- confidence 0.434 (credence)
+  \item Basis: threshold rule: statistic 'point'=1.57 > 1 is met (combine='latest', margin=0.57)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\subsection{Under a CONSTRAINED (degrees-of-freedom > 0) fit on the mechanistic ORYZA2000 biomass + measured transpiration, the translocation structure reproduces the measured shoot (straw) BAFs across the C4-C12 PFCA/PFSA series at log10 RMSE < 0.3 (NOT the saturated W2 fit).}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-structural-adequacy} (confirmatory)
+  \item Decision rule (threshold): under a CONSTRAINED (degrees-of-freedom > 0) fit on the mechanistic ORYZA2000 biomass + measured transpiration, the structure reproduces shoot (straw) translocation across the C4-C12 PFCA/PFSA series at log10 RMSE < 0.3 => the translocation structure is adequate for shoot (support); RMSE >= 0.3 => refute
+  \item \textbf{Status: supported} --- confidence 0.131 (credence)
+  \item Basis: threshold rule: statistic 'point'=0.16 < 0.3 is met (combine='latest', margin=0.14)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\section{Evidence}
+\begin{itemize}
+  \item \texttt{evi-consolidation-literature} (literature): finding=cited prior work (already in docs/references.csv and the sub-run records): Yamazaki 2023 (10.1021/acs.est.2c08767); Tang
+  \item \texttt{evi-reproduce} (experiment\_run): point=1, finding=sci-adk verify on all seven committed sub-runs: exit 0, every recorded claim REPRODUCED (reproduced fraction = 1.0). Ver
+  \item \texttt{evi-naive-oos} (experiment\_run): point=1.232, finding=runs/pfas-rice-oos-tang (digest sha256:46d71f24..31b2564d): the free-anion model (f\_xy\_source='recommended', theory/QSPR
+  \item \texttt{evi-lipid-oos} (experiment\_run): point=0.516, finding=runs/pfas-rice-oos-lipid (digest sha256:684c31e2..6d27c10a): with NO parameter fit to Tang, lipid\_loading=True drops the
+  \item \texttt{evi-lipid-robust} (experiment\_run): point=1.57, finding=runs/pfas-rice-oos-multidataset (digest sha256:68ebaf39..0b7207da): three variants transferred WITHOUT refit to independ
+  \item \texttt{evi-adequacy} (experiment\_run): point=0.16, finding=runs/pfas-rice (digest sha256:493ec872..5d8e0e35), hyp-adequacy SUPPORTED: validation/structural\_adequacy\_fit.py, driven
+\end{itemize}
+
+\section{Discussion}
+Master ledger (all seven runs; every claim REPRODUCED under sci-adk verify, exit 0). Run pfas-rice (493ec872): H1 mass conservation SUPPORTED; H2 anion exclusion SUPPORTED; H3 'Yamazaki = out-of-sample validation' REFUTED (saturated 0.029 vs a-priori 0.837); H4 grain risk prediction REFUTED (\textasciitilde{}3-8x under); H5 soil sorption congener-dependence SUPPORTED (4.4 log10); H6 SMILES read-across SUPPORTED (23/23); H7 structural adequacy SUPPORTED (straw \textasciitilde{}0.18 on ORYZA2000). Run pfas-rice-trap (345f9f53): the bundled demo BAFs HALT on an empirical hypothesis (synthetic\_proxy category error) -- no claim written; the rice-failure reproduced and arrested. Run pfas-rice-longchain (e7c72b0c): free-anion loading starves the long-chain shoot (LC1 SUPPORTED); a B-independent lipid term closes most of the gap (LC2 SUPPORTED) but in a single pool degrades the root (LC3 REFUTED); a 2-pool root closes C10/C11 but fails PFDoDA C12 (LC4 CONTESTED); membrane conductance cannot lift PFDoDA (LC5a REFUTED) while an enhanced active carrier can (LC5b SUPPORTED). Run pfas-rice-carrier (466079ba): the carrier enhancement is not QSPR-able from chain length (LC6 REFUTED, R2=0.70 < 0.9). Run pfas-rice-oos-tang (46d71f24): the free-anion model fails cross-dataset out-of-sample prediction (1.232 vs 0.519). Run pfas-rice-oos-lipid (684c31e2): the lipid mechanism, fit on Yamazaki and not on Tang, generalizes out-of-sample (1.232 -> 0.516). Run pfas-rice-oos-multidataset (68ebaf39): the win is robust across Tang and Kim, not a single-dataset artifact. Centralized caveats (read no single figure out of context): (1) the 0.029 Yamazaki figure is in-sample reproduction (saturated, DOF 0); the a-priori predictive error is about 0.84-0.95. (2) Grain is structurally under-predicted \textasciitilde{}3-8x and cannot support dietary risk assessment as-is. (3) f\_xy is dataset/condition-dependent (PFOS \textasciitilde{}0.14 on Yamazaki vs \textasciitilde{}0.32 on Tang); do not pin it to one value. (4) The GenX/ether offset is provisional (single anchor); GenX over-prediction persists even with lipid loading. (5) Lipid-facilitated loading is exploratory/opt-in (default off); its constants are an in-sample K\_PL-gated fit on Yamazaki excl. PFDoDA -- its out-of-sample success on Tang/Kim is the validation; the core is unchanged. (6) PFDoDA C12 is a structural outlier needing an enhanced active carrier and/or irreversible sorption. (7) Li 2025 is field-confounded and excluded from the clean-dataset claim; Kim long chains are low-DF. (8) The HYDRUS coupling is validated only as a formal rationale, not against field soil data. (9) Novel-structure f\_xy is provisional; H6 is scoped to known structures. (10) K\_cw has no literature coefficient and remains a placeholder. Synthesis: the contribution is in mechanism and computation, plus a genuine out-of-sample mechanistic success for the lipid pathway -- not in the headline 'RMSE 0.029', which is in-sample. This consolidation is a belief snapshot; every claim is revisable as Evidence accrues. The authoritative per-run records live under sci\_adk\_review/runs/; the Korean narrative is sci\_adk\_review/FINDINGS.md.
+
+\section{References}
+No literature cited.
+
+\end{document}

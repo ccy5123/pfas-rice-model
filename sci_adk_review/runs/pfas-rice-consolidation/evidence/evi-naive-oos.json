@@ -1,0 +1,36 @@
+{
+  "id": "evi-naive-oos",
+  "created_at": "2026-06-18T00:36:18.977975Z",
+  "spec_id": "pfas-rice-consolidation",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "pfas-rice-model@ca7a8e9",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/oos_tang.py",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 1.232,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": 1.232,
+    "finding": "runs/pfas-rice-oos-tang (digest sha256:46d71f24..31b2564d): the free-anion model (f_xy_source='recommended', theory/QSPR monotone, NOT fit to Tang) predicts Tang 2026 per-organ TF (stalk/leaf/endosperm, dw; PFOA/PFOS/GenX, 0.1 ug/g) at OOS log10 RMSE 1.232 vs the in-sample Tang refit 0.519 (~5x worse). Systematic miss: PFSA ~40-200x under, GenX ~10x over. The structure can REPRODUCE Tang by fitting but does NOT PREDICT an independent dataset from another's calibration -- confirming hyp-yamazaki/hyp-grain at the cross-dataset level.",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-naive-oos-fails",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

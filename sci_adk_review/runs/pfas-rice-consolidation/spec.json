@@ -1,0 +1,142 @@
+{
+  "id": "pfas-rice-consolidation",
+  "created_at": "2026-06-18T00:36:18.977975Z",
+  "version": 1,
+  "raw_proposal": {
+    "background": "This repository's four-compartment dynamic uptake model for PFAS in rice\n(Oryza sativa) has been subjected to an adversarial rigor audit with\nsci-adk across seven independent runs: the main audit (pfas-rice), a\nsynthetic-data trap (pfas-rice-trap), a long-chain mechanism\nsub-investigation (pfas-rice-longchain), a carrier-QSPR test\n(pfas-rice-carrier), and three cross-dataset out-of-sample runs\n(pfas-rice-oos-tang, pfas-rice-oos-lipid, pfas-rice-oos-multidataset).\nsci-adk itself was created in response to a failure of this project: a\nrun on an empirical proposal once used synthetic data and the harness\nreported \"4/4 SUPPORTED\" (the rice-failure defect named in\ncore/validity.py). The empirical investigation is now complete, but its\nfindings are scattered across seven run records and a Korean narrative\n(FINDINGS.md). The per-run papers were rendered by sci-adk but their\nnon-ASCII bodies did not typeset, and there is no single citable\nsynthesis. This run consolidates the completed investigation into one\nengine-rendered paper whose every headline claim is resolved by the\nengine from the verified sub-run statistics, so the consolidation is\nitself a reproducible sci-adk artifact rather than a hand-authored\ndocument.",
+    "goal": "Consolidated rigor audit of a four-compartment PFAS rice uptake model: foundations reproduce, naive out-of-sample prediction fails, and a lipid-facilitated loading mechanism generalizes across independent datasets.\n\nThe goal is a single, citable, engine-rendered synthesis of the seven\nsci-adk runs that states and resolves the cross-run findings:\n\n1. Reproducibility: every committed sub-run re-derives from its frozen\n   record under sci-adk verify (exit 0), so the audit record is\n   trustworthy.\n2. Naive out-of-sample prediction fails: the free-anion model driven by\n   theory/QSPR transport parameters not fit to the target predicts an\n   independent dataset (Tang 2026) far worse than an in-sample refit.\n3. The lipid-facilitated loading mechanism generalizes: a mechanism fit\n   on Yamazaki long chains, never fit to the target, restores the\n   independent-dataset prediction to the in-sample level.\n4. The generalization is robust across a second clean independent\n   dataset (Kim 2019 grain), not a single-dataset artifact.\n5. Structural adequacy: under a constrained (degrees-of-freedom > 0) fit\n   on the mechanistic ORYZA2000 biomass, the structure reproduces shoot\n   (straw) translocation across the C4-C12 series.",
+    "method": "Author the consolidation as a frozen Spec of threshold hypotheses whose\nstatistics are the verified outputs of the seven sub-runs (record\ndigests and log10 RMSE values), classified honestly: generated for the\nreproducibility meta-claim, measured for the out-of-sample and\nstructural-adequacy claims. The sci-adk engine compiles the Spec,\npersists the classified Evidence, resolves the numeric threshold claims\nautonomously, and renders the paper draft. An agent-authored,\nLaTeX-safe narrative (abstract, introduction, discussion) is supplied as\nprose input and injected verbatim into the engine-rendered draft (this\nis input, not autonomous generation). sci-adk verify then re-derives\nevery claim from the record with no LLM call. The consolidation\nintroduces no new experiments: every number traces to a per-run record,\nand the per-run runs remain the authoritative source for their own\nclaims.",
+    "expected_output": "An engine-rendered consolidated paper (runs/pfas-rice-consolidation/\npaper/draft.tex) that ties the seven runs into one narrative arc with a\nmaster ledger summarized in the discussion, centralized honest caveats,\nand a verified record-digest table; plus a sci-adk verify reproduction\n(exit 0, all claims reproduced) of the consolidation run. This paper\nsupersedes the hand-authored consolidation and the non-rendering per-run\nskeleton drafts as the single readable, citable synthesis."
+  },
+  "hypotheses": [
+    {
+      "id": "hyp-reproduce",
+      "statement": "Every committed sci-adk sub-run (all seven) re-derives from its frozen record under sci-adk verify with exit 0, so the consolidated audit record is reproducible.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "every committed sci-adk sub-run re-derives from its frozen record under sci-adk verify (reproduced fraction = 1.0) => support; any divergence => refute",
+        "params": {
+          "statistic": "point",
+          "op": ">",
+          "value": 0.999,
+          "combine": "latest"
+        }
+      },
+      "referent": "formal",
+      "non_circularity": "reproduction is an LLM-free record-digest replay (verify_run) over the INDEPENDENTLY-committed sub-runs, not over this consolidation; the fraction is a property of the frozen records, not assumed by the consolidation Spec.",
+      "novelty": false
+    },
+    {
+      "id": "hyp-naive-oos-fails",
+      "statement": "The free-anion model driven by theory/QSPR transport parameters NOT fit to the target fails out-of-sample cross-dataset prediction: the Tang 2026 per-organ TF is predicted at log10 RMSE > 1.0, far worse than the in-sample Tang refit (0.519).",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "the free-anion model (theory/QSPR transport, NOT fit to the target) predicts the independent Tang 2026 dataset at OOS log10 RMSE > 1.0 (~10x; far above the in-sample refit 0.519) => the naive out-of-sample predictive claim fails (support); OOS RMSE <= 1.0 => the naive claim holds (refute)",
+        "params": {
+          "statistic": "point",
+          "op": ">",
+          "value": 1.0,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-lipid-generalizes",
+      "statement": "The lipid-facilitated loading mechanism (fit on Yamazaki long chains, never fit to the target) generalizes out-of-sample: it drops the independent Tang 2026 OOS log10 RMSE to the in-sample level (< 0.6).",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "the lipid-facilitated loading mechanism (fit on Yamazaki, NOT on the target) brings the independent Tang 2026 OOS log10 RMSE down to the in-sample level (< 0.6, matching the in-sample refit 0.519) => the mechanism generalizes out-of-sample (support); no improvement to in-sample level => refute",
+        "params": {
+          "statistic": "point",
+          "op": "<",
+          "value": 0.6,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-lipid-robust",
+      "statement": "The lipid mechanism's out-of-sample win is robust across a SECOND clean independent dataset (Kim 2019 brown-rice grain BAF), beating the free-anion/monotone baseline by > 1.0 log10, so the generalization is not a single-dataset (Tang) artifact.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "on a SECOND clean independent dataset (Kim 2019 brown-rice grain BAF) the lipid mechanism beats the free-anion/monotone baseline by > 1.0 log10 (2.05 -> 0.48) => the generalization is robust, not a single-dataset artifact (support); margin <= 1.0 => not robust (refute)",
+        "params": {
+          "statistic": "point",
+          "op": ">",
+          "value": 1.0,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-structural-adequacy",
+      "statement": "Under a CONSTRAINED (degrees-of-freedom > 0) fit on the mechanistic ORYZA2000 biomass + measured transpiration, the translocation structure reproduces the measured shoot (straw) BAFs across the C4-C12 PFCA/PFSA series at log10 RMSE < 0.3 (NOT the saturated W2 fit).",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "under a CONSTRAINED (degrees-of-freedom > 0) fit on the mechanistic ORYZA2000 biomass + measured transpiration, the structure reproduces shoot (straw) translocation across the C4-C12 PFCA/PFSA series at log10 RMSE < 0.3 => the translocation structure is adequate for shoot (support); RMSE >= 0.3 => refute",
+        "params": {
+          "statistic": "point",
+          "op": "<",
+          "value": 0.3,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    }
+  ],
+  "method": {
+    "approaches": [
+      "freeze a threshold-hypothesis Spec whose statistics are the verified sub-run outputs",
+      "classify evidence honestly (generated for reproducibility; measured for OOS/adequacy)",
+      "engine resolves the numeric claims autonomously and renders the paper",
+      "agent-authored LaTeX-safe prose injected verbatim (input, not LLM generation)",
+      "sci-adk verify re-derives every claim from the record (no LLM)"
+    ],
+    "tools": null
+  },
+  "target_claims": [
+    {
+      "id": "tc-reproduce",
+      "statement": "The seven-run audit record is reproducible.",
+      "answers": "hyp-reproduce"
+    },
+    {
+      "id": "tc-naive",
+      "statement": "Naive out-of-sample prediction fails.",
+      "answers": "hyp-naive-oos-fails"
+    },
+    {
+      "id": "tc-lipid-gen",
+      "statement": "The lipid mechanism generalizes out-of-sample.",
+      "answers": "hyp-lipid-generalizes"
+    },
+    {
+      "id": "tc-lipid-rob",
+      "statement": "The lipid generalization is robust across datasets.",
+      "answers": "hyp-lipid-robust"
+    },
+    {
+      "id": "tc-adequacy",
+      "statement": "The structure is adequate for shoot translocation.",
+      "answers": "hyp-structural-adequacy"
+    }
+  ],
+  "amendment_rationale": null,
+  "prior_version_id": null
+}

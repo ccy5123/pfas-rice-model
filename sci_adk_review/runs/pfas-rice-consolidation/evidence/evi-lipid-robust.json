@@ -1,0 +1,36 @@
+{
+  "id": "evi-lipid-robust",
+  "created_at": "2026-06-18T00:36:18.977975Z",
+  "spec_id": "pfas-rice-consolidation",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "pfas-rice-model@ca7a8e9",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/oos_multidataset.py",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 1.57,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "runs/pfas-rice-oos-multidataset (digest sha256:68ebaf39..0b7207da): three variants transferred WITHOUT refit to independent datasets. Kim 2019 brown-rice grain BAF (excl. PFOA): lipid log10 RMSE 0.48 vs monotone 2.05 vs W2 1.07 -- a 1.57-log lipid-over-monotone margin; reliable subset (DF>=15%) 0.20 vs 1.92 vs 1.44. Lipid uniquely captures the Kim grain long-chain RISE the baselines structurally miss, and wins BOTH clean datasets (Tang 0.52 vs 1.23; Kim 0.48 vs 2.05). Pre-registered honest limits: Li 2025 is field/group-water/surface-confounded and inconclusive (W2 wins straw/root); Kim long chains are low-DF (3-13%).",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-lipid-robust",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

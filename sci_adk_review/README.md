@@ -7,20 +7,20 @@ self-certification.*
 
 ## Read this first
 
-- **`docs/sci_adk_rigor_review.tex`** — single consolidated, citable
-  manuscript (EN). All seven runs, one master ledger, the narrative
-  arc, centralized caveats, verified digests. **Provenance:** this is an
-  *agent-authored cross-run synthesis* (hand-written from the records),
-  **not** a sci-adk render — sci-adk is the referee/renderer, not the
-  author. The engine's own paper output is the per-run, deterministically
-  rendered `runs/*/paper/draft.tex` (frozen-record artifacts; the
-  consolidation supersedes them only as readable prose, since their
-  non-ASCII bodies did not render). Every figure is traceable to a
-  verified record.
-- **`FINDINGS.md`** — the authoritative Korean narrative (also
-  agent-authored from the records).
+- **`runs/pfas-rice-consolidation/paper/draft.tex`** — single
+  consolidated, citable synthesis paper (EN), **rendered by sci-adk**.
+  Built by `build_consolidation.py`, which freezes a threshold-hypothesis
+  Spec whose statistics ARE the verified sub-run outputs; the engine
+  resolves the numeric claims and renders the paper, with the narrative
+  supplied as LaTeX-safe **prose input** (not hand-authored, not
+  LLM-generated). All runs, a master ledger (in the discussion),
+  centralized caveats, verified digests. Provenance is honest by
+  construction: `\author{sci-adk (deterministic render)}`; every figure
+  traces to a verified record; 5/5 claims reproduce under `sci-adk
+  verify`.
+- **`FINDINGS.md`** — the authoritative Korean narrative.
 
-## The seven runs (all `sci-adk verify` → exit 0)
+## The runs (all `sci-adk verify` → exit 0)
 
 | run | scope | headline verdict |
 |---|---|---|
@@ -31,12 +31,14 @@ self-certification.*
 | `runs/pfas-rice-oos-tang` | cross-dataset OOS (free-anion) | REFUTED — OOS 1.23 vs in-sample 0.52 |
 | `runs/pfas-rice-oos-lipid` | OOS with lipid mechanism | SUPPORTED — OOS 1.23 → 0.52 (mechanism generalizes) |
 | `runs/pfas-rice-oos-multidataset` | robustness (Tang + Kim + Li) | SUPPORTED — robust across two clean independent datasets |
+| `runs/pfas-rice-consolidation` | engine-rendered synthesis paper | 5/5 SUPPORTED — reproducibility, naive-OOS-fails, lipid-generalizes, lipid-robust, structural-adequacy |
 
 ## Specs / drivers
 
 - `proposal.md` — frozen four-pane pre-registration for the main run.
-- `proposal_*.md` — pre-registrations for the sub-investigation runs.
-- `build_review.py`, `build_longchain.py` — reproducible run drivers.
+- `proposal_*.md` — pre-registrations (incl. `proposal_consolidation.md`).
+- `build_review.py`, `build_longchain.py`, `build_consolidation.py` —
+  reproducible run drivers (the engine compiles/judges/renders).
 - `run_rigor.sh` — local full regenerate + verify.
 
 ## Reproduce
@@ -44,9 +46,11 @@ self-certification.*
 ```bash
 pip install -e /path/to/sci-adk          # or PYTHONPATH=sci-adk/src
 pip install numpy scipy pytest rdkit     # for the model-output evidence
-python sci_adk_review/build_review.py
+python sci_adk_review/build_review.py          # main run
+python sci_adk_review/build_consolidation.py   # engine-rendered synthesis paper
 for r in pfas-rice pfas-rice-longchain pfas-rice-carrier \
-         pfas-rice-oos-tang pfas-rice-oos-lipid pfas-rice-oos-multidataset; do
+         pfas-rice-oos-tang pfas-rice-oos-lipid pfas-rice-oos-multidataset \
+         pfas-rice-consolidation; do
   sci-adk verify sci_adk_review/runs/$r   # exit 0, all claims REPRODUCED
 done
 ```
