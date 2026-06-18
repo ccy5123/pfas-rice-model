@@ -66,7 +66,7 @@ C_k = B_k · C_w,k          BAF = C_k / C_w^o          TF = C_k / C_root
 > ⚠️ **사전적(a-priori) 예측오차**(이론/QSPR monotone f_xy, 적합 아님)는 **log10 RMSE ≈0.84**
 > (단일-straw, `reproduce_demo.py --rec`) / **≈0.95**(재배분-shoot, `validation/apriori_prediction.py`) —
 > 즉 0.029과 ~29배 차이로 **표본외 예측은 안 됩니다**. sci-adk 엄밀성 심사가 이를 자동 판정(REFUTED):
-> `sci_adk_review/FINDINGS.md`.
+> `sci_adk_review/FINDINGS.md` (영문 통합 manuscript: `docs/sci_adk_rigor_review.tex`).
 
 ![검증 요약 (Yamazaki 보정 / Kim·Li OOS)](../validation/figures/validation_summary.png)
 

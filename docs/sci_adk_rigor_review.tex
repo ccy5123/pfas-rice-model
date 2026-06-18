@@ -1,0 +1,577 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{xcolor}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue, citecolor=blue}
+
+\title{An Adversarial Rigor Audit of a Four-Compartment PFAS Rice
+Uptake Model:\\
+Mechanistic Foundations Hold, Out-of-Sample Prediction Fails,
+and a Lipid-Facilitated Loading Mechanism Generalizes Across
+Independent Datasets}
+
+\author{Consolidated from seven \texttt{sci-adk} runs\\
+\small (Scientific Agentic Discovery Kit, \url{https://github.com/ccy5123/sci-adk})}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+This is a single, citable consolidation of seven independent
+\texttt{sci-adk} rigor-audit runs applied to this repository's
+four-compartment dynamic PFAS uptake model for rice
+(\textit{Oryza sativa}). It supersedes the seven machine-rendered
+per-run skeleton drafts (\texttt{runs/*/paper/draft.tex}), whose
+non-ASCII section bodies did not render. Every number, verdict and
+record digest reported here was re-derived by \texttt{sci-adk verify}
+(LLM-free replay from the frozen records); all seven runs verify with
+exit~0 and every recorded claim is \textsc{reproduced}.
+
+The audit yields a sharply patterned result. The model's
+\emph{formal and computational} foundations pass (mass conservation,
+GHK anion exclusion $e^{N}\!\approx\!107$, congener-resolved soil
+sorption spread, SMILES read-across). Its headline \emph{empirical
+predictive} claims fail under an adversarial reading: the celebrated
+$\log_{10}$ RMSE $0.029$ Yamazaki agreement is a \emph{saturated
+in-sample reproduction} ($\sim$3 transport parameters per 3
+observations), and the genuine a-priori predictive error is
+$\log_{10}$ RMSE $\approx 0.84$; grain is structurally
+under-predicted ($\sim$3--8$\times$) and cannot support dietary risk
+assessment as-is. Reframed as the user's actual question --- can the
+\emph{structure}, under a constrained ($\mathrm{DOF}>0$) fit on the
+mechanistic ORYZA2000 biomass, reproduce the data? --- the answer is
+yes for shoot translocation (straw RMSE $\sim 0.16$--$0.18$; whole
+plant $\sim 0.34$). A cross-dataset out-of-sample test on the
+independent Tang~2026 dataset confirms the predictive failure of the
+free-anion model ($\log_{10}$ RMSE $1.23$ vs.\ $0.52$ in-sample).
+Crucially, a \emph{lipid-facilitated loading} mechanism --- discovered
+and fit on Yamazaki long chains, never fit to Tang --- drops that
+out-of-sample error to $0.52$, matching the in-sample refit, and the
+generalization is robust across two clean independent datasets
+(Tang~2026, Kim~2019). This is the project's first strong
+cross-dataset out-of-sample predictive success: the \emph{mechanism}
+generalizes, not added fitting. We record all honest residuals
+(GenX/ether over-prediction; the PFDoDA C12 floor; Li~2025
+confounding) centrally.
+\end{abstract}
+
+\tableofcontents
+
+\section{Scope and provenance}
+\label{sec:scope}
+
+This document consolidates seven \texttt{sci-adk} runs into one
+narrative and one ledger. It introduces \textbf{no new claims}: it
+restates, cross-checks for numerical consistency, and centralizes the
+honest caveats of the records already committed under
+\texttt{sci\_adk\_review/}. The authoritative Korean narrative remains
+\texttt{sci\_adk\_review/FINDINGS.md}; this is its English,
+paper-form companion.
+
+\texttt{sci-adk} is a referee/scorekeeper, not an experimenter: ``agents
+propose; the engine judges by frozen criteria; no
+self-certification.'' Its core discipline is the separation of
+\emph{Evidence} (monotone, append-only; null and negative results are
+first-class) from \emph{Claims} (non-monotone, revisable as evidence
+accrues). Each run begins from a frozen four-pane pre-registration
+(Background / Goal / Method / Expected Output) compiled into a
+\texttt{spec.json}, which prevents post-hoc HARKing.
+
+\paragraph{The decisive origin fact.} \texttt{sci-adk} was built in
+response to a failure of \emph{this very project} (or its precursor).
+Its source names the defect directly: \texttt{core/validity.py} calls
+the evidence-validity gate ``the load-bearing fix for the
+\emph{rice-failure defect}: a run on an EMPIRICAL proposal used
+SYNTHETIC data and the harness reported `4/4 SUPPORTED'\,'';
+\texttt{core/evidence.py} defines \texttt{synthetic\_proxy} as ``a
+FABRICATED stand-in for an external referent the data does not contain
+(\emph{the rice numbers})''. This audit therefore re-applies the tool
+to the project that motivated it.
+
+\section{Method: the audit protocol}
+\label{sec:method}
+
+For each run, a reproducible driver compiles the frozen spec, persists
+classified evidence, and binds verdicts; \texttt{sci-adk verify} then
+re-derives every belief from the record alone, without any LLM call.
+
+Evidence carries a \emph{referent class} and a \emph{data source}, and
+must pass adequacy gates:
+\begin{itemize}
+  \item \texttt{generated} --- a formal/computational property true
+        \emph{inside} the model (mass balance, $e^{N}$, the Koc QSPR
+        spread, SMILES read-across).
+  \item \texttt{measured} --- comparison against real data
+        (Yamazaki~2023, Tang~2026, Kim~2019, Li~2025).
+  \item \texttt{synthetic\_proxy} --- illustrative/placeholder demo
+        numbers (uncalibrated).
+\end{itemize}
+The gates: an \emph{empirical} hypothesis needs $\geq 1$ measured
+evidence to bind; a \texttt{synthetic\_proxy} touching an empirical
+hypothesis forces an unconditional \textsc{halt} (category error); a
+\emph{formal} hypothesis bound by generated evidence must show
+non-circularity. Qualitative verdicts require a written
+chief-over-$N$ adjudication trail (the engine rejects trail-free
+binding verdicts).
+
+\section{The master ledger}
+\label{sec:ledger}
+
+Table~\ref{tab:ledger} is the complete, verified ledger across all
+seven runs (18 hypotheses). ``Referent'' is formal (F) or empirical
+(E). All claims \textsc{reproduced} under \texttt{sci-adk verify}
+(exit~0).
+
+\begin{longtable}{p{1.6cm} p{3.2cm} c c p{5.2cm}}
+\caption{Verified hypothesis ledger across all seven runs.}
+\label{tab:ledger}\\
+\toprule
+Run & Hypothesis (id) & Ref. & Verdict & Key statistic \\
+\midrule
+\endfirsthead
+\toprule
+Run & Hypothesis (id) & Ref. & Verdict & Key statistic \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\multicolumn{5}{l}{\textbf{pfas-rice} \quad (digest \texttt{493ec872\ldots})}\\
+\midrule
+H1 & mass conservation (\texttt{hyp-mass}) & F & \textsc{supported} & residual $<10^{-5}$ (point $10^{-6}$) \\
+H2 & anion exclusion (\texttt{hyp-anion}) & F & \textsc{supported} & $N=+4.67$, $e^{N}=106.8$ ($E_m=-120$\,mV) \\
+H3 & Yamazaki = OOS validation (\texttt{hyp-yamazaki}) & E & \textsc{refuted} & saturated $0.029$ vs.\ a-priori $0.837$ \\
+H4 & grain risk prediction (\texttt{hyp-grain}) & E & \textsc{refuted} & Tang PFOA endosperm $0.11$ vs.\ $0.95$ (dw); $\sim$3--8$\times$ under \\
+H5 & soil sorption congener-dep. (\texttt{hyp-soil}) & F & \textsc{supported} & Koc spread $4.4$ $\log_{10}$ ($\sim$25000$\times$) \\
+H6 & SMILES read-across (\texttt{hyp-smiles}) & F & \textsc{supported} & \texttt{test\_pfas\_structure} 23/23 \\
+H7 & structural adequacy (\texttt{hyp-adequacy}) & E & \textsc{supported} & straw $\sim0.18$ @ DOF 20 (ORYZA2000) \\
+\midrule
+\multicolumn{5}{l}{\textbf{pfas-rice-trap} \quad (digest \texttt{345f9f53\ldots})}\\
+\midrule
+--- & demo BAF = field prediction (\texttt{hyp-demo}) & E & \textsc{halt} & \texttt{synthetic\_proxy} $\to$ no claim written \\
+\midrule
+\multicolumn{5}{l}{\textbf{pfas-rice-longchain} \quad (digest \texttt{e7c72b0c\ldots})}\\
+\midrule
+LC1 & free-anion throttles long chain (\texttt{hyp-lc-freethrottle}) & E & \textsc{supported} & free-only LC straw+grain RMSE $2.026$ \\
+LC2 & lipid term closes the gap (\texttt{hyp-lc-lipidfix}) & E & \textsc{supported} & LC $2.026\!\to\!0.428$; series $1.035\!\to\!0.386$ \\
+LC3 & lipid fix is cost-free (\texttt{hyp-lc-nocost}) & E & \textsc{refuted} & root degrades: PFDoDA $159\!\to\!4.4$ \\
+LC4 & 2-pool root closes tradeoff (\texttt{hyp-lc-twopool}) & E & \textsc{contested} & C10/C11 OK; PFDoDA root $1.2$ vs.\ $69$ \\
+LC5a & conductance $\kappa_d$ lever (\texttt{hyp-lc-cond}) & E & \textsc{refuted} & $\kappa_d\times5000$: root $\sim1$ vs.\ $69$ \\
+LC5b & active carrier $V_{max}$ lever (\texttt{hyp-lc-carrier}) & E & \textsc{supported} & $V_{max}\times5$: root $62/69$, grain $46/45.5$ \\
+\midrule
+\multicolumn{5}{l}{\textbf{pfas-rice-carrier} \quad (digest \texttt{466079ba\ldots})}\\
+\midrule
+LC6 & carrier enhancement is QSPR-able (\texttt{hyp-001}) & E & \textsc{refuted} & $R^2=0.70$ on $n_C$ ($<0.9$); threshold-like \\
+\midrule
+\multicolumn{5}{l}{\textbf{pfas-rice-oos-tang} \quad (digest \texttt{46d71f24\ldots})}\\
+\midrule
+OOS & theory params predict Tang (\texttt{hyp-001}) & E & \textsc{refuted} & OOS $1.232$ vs.\ in-sample $0.519$ \\
+\midrule
+\multicolumn{5}{l}{\textbf{pfas-rice-oos-lipid} \quad (digest \texttt{684c31e2\ldots})}\\
+\midrule
+OOS+ & lipid mechanism generalizes to Tang (\texttt{hyp-001}) & E & \textsc{supported} & OOS $1.232\!\to\!0.516$ (= in-sample $0.519$) \\
+\midrule
+\multicolumn{5}{l}{\textbf{pfas-rice-oos-multidataset} \quad (digest \texttt{68ebaf39\ldots})}\\
+\midrule
+OOS++ & robust across datasets (\texttt{hyp-001}) & E & \textsc{supported} & Tang $0.52$ vs.\ $1.23$; Kim $0.48$ vs.\ $2.05$ \\
+\end{longtable}
+
+\paragraph{Pattern.} Formal/computational claims (H1, H2, H5, H6) are
+\textsc{supported}. Naive out-of-sample predictive claims (H3, H4, OOS
+free-anion) are \textsc{refuted}. The reframed structural-adequacy
+question (H7) is \textsc{supported} on the mechanistic biomass. And a
+single added \emph{mechanism} (lipid-facilitated loading) converts the
+out-of-sample failure into a robust cross-dataset success.
+
+\section{Results I --- the main rigor audit}
+\label{sec:main}
+
+\subsection{Formal foundations hold (H1, H2, H5, H6)}
+
+\textbf{H1 (mass conservation).} An independent mass-balance audit
+\emph{outside} the integrator finds the total compartment burden
+equals cumulative net root influx minus xylem/phloem exports and
+growth dilution to rel.\ $10^{-6}$/abs.\ $10^{-9}$
+(\texttt{test\_plant\_module.py}); the residual is computed outside the
+solver, so conservation is demonstrated, not assumed
+(non-circularity).
+
+\textbf{H2 (anion exclusion).} With $E_m=-120$\,mV and $z=-1$,
+$N=zE_mF/RT=+4.67\Rightarrow e^{N}=106.8$ --- a closed-form
+consequence of Tier-0 inputs, not a fitted value. The inside-negative
+plasmalemma excludes the anion by $\sim$$10^2$, so passive diffusion
+alone cannot drive net uptake; a carrier must overcome it. This is the
+ionizable-organic-compound (IOC) signature distinguishing PFAS from
+the neutral DPU/Kow core.
+
+\textbf{H5 (congener-resolved soil sorption).} The Higgins--Luthy
+$+0.55/\mathrm{CF_2}$ $K_{oc}$ QSPR spans
+$K_{oc}(\mathrm{PFBA},C4){=}2.15$ to
+$K_{oc}(\mathrm{PFDoDA},C12){=}53985$\,L/kg --- a $4.4$ $\log_{10}$
+($\sim$25000$\times$) spread (threshold $>2$). A single constant
+pore-water $C_w^o$ cannot represent all congeners (short chains leach
+under flooding; long chains buffer), which is the formal rationale for
+congener-resolved soil coupling. \emph{Caveat:} this validates the
+coupling \emph{rationale}; it does not validate the HYDRUS coupling
+against field soil data.
+
+\textbf{H6 (SMILES read-across).} \texttt{test\_pfas\_structure.py}
+passes 23/23: a canonical SMILES matching a curated congener rebuilds
+the identical \texttt{Compound} from \texttt{parameters.json}. The
+structure$\to$parameter mapping is faithful. \emph{Caveat:} for novel
+structures $f_{xy}$ is provisional (QSPR/interpolated); the claim is
+scoped to known structures.
+
+\subsection{Naive predictive claims fail (H3, H4)}
+
+\textbf{H3 (Yamazaki = out-of-sample validation) --- \textsc{refuted}.}
+\texttt{reproduce\_demo.py} reproduces 11-congener tissue BAFs at
+$\log_{10}$ RMSE $0.029$, but the W2 transport fit assigns $\sim$3
+parameters per 3 observations per congener: the fit is
+\emph{saturated} ($\mathrm{DOF}=0$), so $\mathrm{pred}\approx
+\mathrm{obs}$ is the signature of reproduction, not prediction. The
+genuine a-priori test --- theory/QSPR monotone $f_{xy}$, not fit to the
+tissues (\texttt{--rec}) --- gives $\log_{10}$ RMSE $0.837$ ($\sim$29$\times$
+worse; straw off 6--40$\times$). A redistributed-shoot model
+(\texttt{nstem\_leaf}) only marginally improves it
+($0.987\!\to\!0.951$). The model does not a-priori predict the tissue
+BAFs.
+
+\textbf{H4 (grain risk prediction) --- \textsc{refuted}.} Against
+measured data the model under-predicts grain by $\sim$3--8$\times$
+(Tang PFOA endosperm $0.11$ vs.\ $0.95$, dw; not closable by
+$L_{Ph}$/lipid tuning or the fw/dw units fix). The only ``match''
+(Kim) forces a single-point $L_{Ph}$ anchor on a grain-only dataset. A
+structural under-prediction of the risk-relevant compartment cannot
+support dietary risk assessment. Honest negative results are
+first-class.
+
+\subsection{The reframed question: structural adequacy (H7) ---
+\textsc{supported}}
+
+The user reframed the goal: not ``does it predict out-of-sample'' but
+``can the \emph{structure}, by fitting, reproduce the experiment?'' ---
+which is meaningful only under a constrained ($\mathrm{DOF}>0$) fit
+(the saturated W2 at $33/33$ is $\mathrm{DOF}=0$ and vacuous). Driven
+by the user's mechanistic ORYZA2000 biomass (\texttt{oryza\_growth}) +
+measured transpiration (\texttt{forcing\_rice}) --- not the placeholder
+logistic --- \texttt{structural\_adequacy\_fit.py} fits three
+constrained scenarios (11 congeners $\times$ 3 tissues $=$ 33 obs):
+
+\begin{center}
+\begin{tabular}{l c c c c c}
+\toprule
+Scenario & DOF & root & straw & grain & overall \\
+\midrule
+A: $f_{xy}$ + global $L_{Ph}$ + global $\kappa_d$ & 20 & 0.45 & 0.18 & 0.52 & 0.41 \\
+B: + per-congener $L_{Ph}$ (grain)               & 10 & 0.45 & 0.21 & \textbf{0.36} & 0.35 \\
+C: + per-congener $\kappa_d$ (root)              & 10 & \textbf{0.26} & 0.16 & 0.51 & \textbf{0.34} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Shoot (straw) reaches $\sim 0.16$--$0.18$ across the full C4--C12
+PFCA/PFSA series --- a genuine, non-saturated goodness-of-fit
+establishing the adequacy of the translocation structure (GHK
+exclusion $+$ $f_{xy}$ TSCF $+$ binding). Root improves with
+per-congener $\kappa_d$ ($\to 0.26$); grain improves with per-congener
+$L_{Ph}$ ($\to 0.36$) but keeps a long-chain residual floor. The whole
+plant is within $\sim$factor 2.2 (overall $0.34$) at DOF 10. The
+placeholder-biomass grain catastrophe ($0.987$) \emph{disappears}
+under the realistic ORYZA2000 biomass --- the biomass driver is
+decisive.
+
+\subsection{The trap: \textsc{halt} on synthetic data}
+
+Feeding the bundled demo's BAFs to an empirical hypothesis halted the
+gate: ``\texttt{synthetic\_proxy} Evidence bears on an empirical
+hypothesis --- a category error\ldots'' No claim was written
+(\texttt{VALIDITY\_HALT.txt}). The path by which uncalibrated demo
+numbers could self-certify as ``predictive power'' is structurally
+blocked --- the rice-failure, reproduced and arrested.
+
+\section{Results II --- the long-chain mechanism}
+\label{sec:longchain}
+
+A sub-investigation (\texttt{runs/pfas-rice-longchain}) dissected
+\emph{why} long chains (C10--C12) under-predict, on the ORYZA2000
+biomass.
+
+\begin{itemize}
+  \item \textbf{LC1 \textsc{supported}:} free-anion loading
+        structurally starves the long-chain shoot --- free-only
+        long-chain straw+grain RMSE $2.026$ ($\sim$100$\times$), and
+        the refit hits $f_{xy}{=}1$/$L_{Ph}{=}1$ ceilings yet PFDoDA
+        straw stays $14.6$ vs.\ $49.8$. The loaded flux scales with
+        $C_w=C/B$, which collapses as $B$ grows.
+  \item \textbf{LC2 \textsc{supported}:} a B-independent
+        lipid-facilitated bound-loading term ($g_{xy}C$, $g_{ph}C$;
+        $K_{PL}$-gated) cuts the long-chain straw+grain RMSE
+        $2.026\!\to\!0.428$ ($\sim$5$\times$) and the whole series
+        $1.035\!\to\!0.386$ --- the right mechanism direction.
+  \item \textbf{LC3 \textsc{refuted}:} in a single pool the lipid term
+        reproduces shoot at the cost of root (PFUnDA $20.6\!\to\!3.9$,
+        PFDoDA $159\!\to\!4.4$), and PFDoDA shoot is still
+        $\sim$3--4$\times$ under. Not cost-free.
+  \item \textbf{LC4 \textsc{contested}:} a 2-pool root (mobile
+        water$+$protein feeding the xylem; a slow lipid/cell-wall
+        store holding the measured root burden) closes the tradeoff
+        for C10/C11 (PFDA matches root \emph{and} shoot
+        simultaneously) but \emph{fails} for PFDoDA (mobile pool
+        starves, root $1.2$ vs.\ $69$). The PFDoDA residual is an
+        uptake ($j_R$) mass-balance limit, not internal distribution.
+  \item \textbf{LC5a \textsc{refuted}:} enhancing membrane conductance
+        $\kappa_d$ ($\times 5000$) leaves PFDoDA root $\sim 1$ vs.\
+        $69$ --- GHK anion exclusion caps the internal free
+        concentration at $C_w^o/e^{N}$ regardless of $\kappa_d$.
+  \item \textbf{LC5b \textsc{supported}:} the active carrier
+        ($V_{max}\times 5$, $20\!\to\!100$) overcomes the exclusion
+        ceiling, reaching PFDoDA root $62/69$ and grain $46/45.5$
+        (straw $\sim$2$\times$ over). The longest-chain residual is an
+        active-carrier-capacity limit.
+\end{itemize}
+
+\textbf{LC6 (\texttt{runs/pfas-rice-carrier}) \textsc{refuted}.} Is the
+carrier enhancement a smooth function of chain length? The
+per-congener $V_{max}$ multiplier reproducing measured root is PFOA
+$1.2\times$, PFNA $1.3\times$, PFDA $1.2\times$, PFUnDA $2.0\times$,
+PFDoDA $5.5\times$; $\log_{10}(\text{multiplier})$ regresses on $n_C$
+at $R^2=0.70$ ($0.62$ on $\log K_{PL}$) --- below the $0.9$
+QSPR-ability bar. It is threshold-like (no enhancement to C10, steep
+onset at C11--C12), so it stays a longest-chain-specific (ad-hoc)
+lever, not chain-length-predictable.
+
+\paragraph{Synthesis.} The complete long-chain resolution is a 2-pool
+(free + lipid-bound) root $+$ lipid-facilitated loading $+$ enhanced
+long-chain active-carrier uptake --- consistent with the literature's
+carrier-mediated root uptake. All long-chain results are in-sample /
+prototype; the core model is unchanged.
+
+\paragraph{Literature corroboration (verified at source).} A formal
+\texttt{sci-adk prior-work --searched} pass (paperforge $+$ Unpaywall)
+found all 7 candidate DOIs paywalled (recorded honestly as
+\texttt{acquired 0 / failed 7}); 5 were then obtained out-of-band and
+\emph{read} to verify the corroboration (PDFs not committed ---
+copyright). Most directly, Chen~2025 (ES\&T 2025, 59, 82--91,
+\href{https://doi.org/10.1021/acs.est.4c06734}{10.1021/acs.est.4c06734})
+reports membrane--water $K_{MW}$ rising $+0.36/\mathrm{CF_2}$
+\emph{monotone} C4--C16 while protein (HSA) affinity \emph{peaks} at
+C6--C10 --- so the lipid (membrane) pool, not protein, carries the
+longest chains, the exact basis of the B-independent lipid term. This
+corroborates an established mechanism; it is not a novelty claim.
+
+\section{Results III --- cross-dataset out-of-sample prediction}
+\label{sec:oos}
+
+\subsection{The decisive test fails for the free-anion model
+(\textsc{refuted})}
+
+H3 refuted Yamazaki-on-itself (saturated vs.\ a-priori). The decisive
+test is prediction on an \emph{independent} dataset with parameters
+not fit to it. Driven by theory/QSPR monotone $f_{xy}$
+(\texttt{f\_xy\_source="recommended"}, not fit to Tang), the model
+predicts Tang~2026 per-organ TF (stalk/leaf/endosperm, dw;
+PFOA/PFOS/GenX, 0.1\,$\mu$g/g) at \textbf{OOS $\log_{10}$ RMSE
+$1.232$} vs.\ \textbf{in-sample Tang-refit $0.519$} ($\sim$5$\times$
+worse). The miss is systematic (PFSA $\sim$40--200$\times$ under, GenX
+$\sim$10$\times$ over). The structure can \emph{reproduce} Tang by
+fitting (consistent with H7) but does not \emph{predict} an
+independent dataset from another's calibration --- confirming H3/H4 at
+the cross-dataset level.
+
+\subsection{The lipid mechanism generalizes out-of-sample
+(\textsc{supported})}
+
+The above failure was the \emph{free-anion} model. The long-chain
+lipid-facilitated loading (LC2) had its constants fit on Yamazaki
+(excl.\ PFDoDA), \emph{never on Tang} --- so turning it on for Tang is
+a genuine out-of-sample test. With no parameter touched for Tang,
+\texttt{lipid\_loading=True} drops the Tang OOS error
+\textbf{$1.232\!\to\!0.516$}, matching the in-sample refit ($0.519$).
+The dominant free-anion failure (PFOS, the high-$K_{PL}$ sulfonate,
+$\sim$40--200$\times$ under) is fixed at the mechanism level (stalk
+$0.013\!\to\!0.620$ vs.\ Tang $0.571$), exactly as the $K_{PL}$-gated
+term predicts and as Chen~2025 independently corroborates. This is the
+project's first strong cross-dataset out-of-sample predictive success:
+a mechanism fit on one dataset predicts an independent dataset's
+per-organ pattern. Honest residual: GenX (ether) stays over-predicted
+(a separate provisional-offset issue) and PFOS endosperm $\sim$5$\times$
+under.
+
+\subsection{Robust across multiple datasets (\textsc{supported})}
+
+To rule out a Tang artifact, three variants (monotone/free-anion,
+saturated W2, $K_{PL}$-gated lipid) were transferred \emph{without
+refit} to three independent datasets:
+
+\begin{center}
+\begin{tabular}{l c c c}
+\toprule
+Independent dataset (Yamazaki-fit, OOS) & lipid & mono & W2 \\
+\midrule
+Tang 2026 per-organ TF (dw) --- clean        & \textbf{0.52} & 1.23 & --- \\
+Kim 2019 grain BAF (excl.\ PFOA) --- clean   & \textbf{0.48} & 2.05 & 1.07 \\
+Kim 2019 grain, reliable (DF $\geq$ 15\%)    & \textbf{0.20} & 1.92 & 1.44 \\
+Li 2025 straw/root TF --- field-confounded   & 0.57 & 1.03 & \textbf{0.33} \\
+Li 2025 grain/root TF --- field-confounded   & \textbf{0.72} & 1.15 & 1.47 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Lipid wins decisively on both clean datasets (different countries,
+endpoints) and uniquely captures the Kim grain long-chain rise the
+baselines structurally miss. The generalization is not a Tang
+artifact. Pre-registered honest limits: Li~2025 is
+field/group-water/surface-confounded and inconclusive (W2 wins
+straw/root, lipid wins grain/root); Kim long chains are low-DF
+(3--13\%).
+
+\section{Synthesis}
+\label{sec:synthesis}
+
+The arc is coherent and honest:
+\begin{enumerate}
+  \item The model's \textbf{mechanistic and computational
+        foundations are sound} (H1, H2, H5, H6 \textsc{supported}).
+  \item Its \textbf{naive predictive claims do not survive} an
+        adversarial reading (H3, H4 \textsc{refuted}; the 0.029 figure
+        is reproduction, not prediction).
+  \item Reframed as \textbf{structural adequacy under a constrained
+        fit on the mechanistic biomass}, the structure reproduces
+        shoot translocation (H7 \textsc{supported}).
+  \item The \textbf{long-chain residual is mechanistically resolved in
+        direction} (lipid-facilitated loading $+$ 2-pool $+$ carrier),
+        with PFDoDA (C12) the remaining structural outlier and the
+        carrier enhancement not QSPR-able (LC1--LC6).
+  \item The \textbf{lipid mechanism generalizes out-of-sample} across
+        two clean independent datasets --- the project's first strong
+        cross-dataset predictive success (OOS runs).
+\end{enumerate}
+
+The contribution is in mechanism and computation, plus a genuine
+out-of-sample mechanistic success for the lipid pathway --- not in the
+headline ``RMSE 0.029'', which is in-sample.
+
+\section{Centralized caveats (honest residuals)}
+\label{sec:caveats}
+
+Collected in one place so no individual figure is read out of context:
+
+\begin{itemize}
+  \item \textbf{0.029 is in-sample.} The Yamazaki W2 reproduction is
+        saturated ($\mathrm{DOF}=0$); the a-priori predictive error is
+        $\approx 0.84$ (single-straw) / $\approx 0.95$
+        (redistributed). Not predictive validation.
+  \item \textbf{Grain is structurally under-predicted}
+        ($\sim$3--8$\times$); a residual long-chain floor remains even
+        under the constrained fit. Cannot support dietary risk
+        assessment as-is.
+  \item \textbf{$f_{xy}$ is dataset/condition-dependent}, not a single
+        value: PFOS $\approx 0.14$ (Yamazaki, Andosol clean water)
+        vs.\ $\approx 0.32$ (Tang, flooded paddy). Do not pin it to
+        one number.
+  \item \textbf{GenX (ether) offset is provisional} (single anchor;
+        \texttt{KOC\_ETHER\_LOG\_OFFSET}$=0$ is an explicit gap). GenX
+        over-prediction persists even with lipid loading --- a
+        separate condition-dependent issue.
+  \item \textbf{Lipid-facilitated loading is exploratory / opt-in}
+        (default off). Its constants are an in-sample $K_{PL}$-gated
+        fit on Yamazaki (excl.\ PFDoDA). Its out-of-sample success on
+        Tang/Kim is the validation; the core model is unchanged.
+  \item \textbf{PFDoDA (C12) is a structural outlier} requiring an
+        enhanced active carrier and/or irreversible/hysteretic
+        sorption; the carrier enhancement is not QSPR-able from chain
+        length (LC6).
+  \item \textbf{Li~2025 is confounded} (field, group water, surface
+        adsorption) and inconclusive; excluded from the clean-dataset
+        claim.
+  \item \textbf{HYDRUS coupling} is validated only as a formal
+        \emph{rationale} (H5); it is not validated against field soil
+        data. Method A is one-way; HYDRUS is unmodified.
+  \item \textbf{Novel-structure $f_{xy}$} (SMILES front-end) is
+        provisional/interpolated; H6 is scoped to known structures.
+  \item \textbf{$K_{cw}$} has no literature coefficient and remains a
+        placeholder (an acknowledged Tier-3 gap).
+\end{itemize}
+
+\section{Reproducibility}
+\label{sec:repro}
+
+All seven runs re-derive from their records with no LLM call. The
+record digests below are the ground truth for this consolidation
+(captured by \texttt{sci-adk verify}):
+
+\begin{center}
+\begin{tabular}{l l l}
+\toprule
+Run & SHA-256 record digest & Result \\
+\midrule
+\texttt{pfas-rice}                  & \texttt{493ec872\ldots5d8e0e35} & 7/7 reproduced, exit 0 \\
+\texttt{pfas-rice-trap}             & \texttt{345f9f53\ldots9d873741} & no claim (\textsc{halt}) \\
+\texttt{pfas-rice-longchain}        & \texttt{e7c72b0c\ldots67ee0167} & 6/6 reproduced, exit 0 \\
+\texttt{pfas-rice-carrier}          & \texttt{466079ba\ldots8c1f0d4e} & 1/1 reproduced, exit 0 \\
+\texttt{pfas-rice-oos-tang}         & \texttt{46d71f24\ldots31b2564d} & 1/1 reproduced, exit 0 \\
+\texttt{pfas-rice-oos-lipid}        & \texttt{684c31e2\ldots6d27c10a} & 1/1 reproduced, exit 0 \\
+\texttt{pfas-rice-oos-multidataset} & \texttt{68ebaf39\ldots0b7207da} & 1/1 reproduced, exit 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{verbatim}
+pip install -e /path/to/sci-adk          # or PYTHONPATH=sci-adk/src
+pip install numpy scipy pytest rdkit     # for the model-output evidence
+python sci_adk_review/build_review.py    # rebuild the main run
+for r in pfas-rice pfas-rice-longchain pfas-rice-carrier \
+         pfas-rice-oos-tang pfas-rice-oos-lipid pfas-rice-oos-multidataset; do
+  sci-adk verify sci_adk_review/runs/$r  # exit 0, all claims REPRODUCED
+done
+\end{verbatim}
+
+Underlying model evidence is reproduced by: \texttt{reproduce\_demo.py}
+(W2 $0.029$; \texttt{--rec} a-priori $0.837$);
+\texttt{validation/structural\_adequacy\_fit.py} (H7);
+\texttt{validation/longchain\_mechanism.py} and
+\texttt{validation/twopool\_longchain.py} (LC1--LC6);
+\texttt{validation/oos\_tang.py},
+\texttt{validation/oos\_tang\_lipid.py},
+\texttt{validation/oos\_multidataset.py} (cross-dataset OOS). Standing
+guards (\texttt{tests/test\_sci\_adk\_rigor.py}) re-verify the committed
+runs on every push and fail if an empirical predictive claim is ever
+promoted to \textsc{supported} without basis.
+
+\section{References}
+\label{sec:refs}
+
+Datasets and core literature cited by the audited model
+(DOIs as recorded in \texttt{docs/references.csv} and the run records):
+
+\begin{itemize}
+  \item Yamazaki et al.\ 2023 --- Indica/Japonica rice PFAS residues/exposure. \href{https://doi.org/10.1021/acs.est.2c08767}{10.1021/acs.est.2c08767}
+  \item Tang et al.\ 2026 --- paddy rice growth-cycle PFOA/PFOS/GenX. \href{https://doi.org/10.1016/j.jhazmat.2025.141017}{10.1016/j.jhazmat.2025.141017}
+  \item Kim et al.\ 2019 --- Korean paddy, paired pore-water/soil/brown-rice. \href{https://doi.org/10.1016/j.scitotenv.2019.03.240}{10.1016/j.scitotenv.2019.03.240}
+  \item Li (Bowen) et al.\ 2025 --- paddy field growth-cycle partitioning/exposure. \href{https://doi.org/10.1016/j.jhazmat.2025.138256}{10.1016/j.jhazmat.2025.138256}
+  \item Chen et al.\ 2025 --- 60-PFAS membrane--water $K_{MW}$ + protein--water partition. \href{https://doi.org/10.1021/acs.est.4c06734}{10.1021/acs.est.4c06734}
+  \item Droge 2019 --- PFCA/PFSA membrane--water $K_{MW}$ (SSLM). \href{https://doi.org/10.1021/acs.est.8b05052}{10.1021/acs.est.8b05052}
+  \item Higgins \& Luthy 2006 --- PFAS sorption $K_{oc}$ QSPR. \href{https://doi.org/10.1021/es061000n}{10.1021/es061000n}
+  \item Bouman \& van Laar 2006 --- ORYZA2000 growth model. \href{https://doi.org/10.1016/j.agsy.2004.07.011}{10.1016/j.agsy.2004.07.011}
+  \item Briggs et al.\ 1982 --- RCF/TSCF concepts. \href{https://doi.org/10.1002/ps.2780130506}{10.1002/ps.2780130506}
+  \item Brunetti et al.\ 2019 (WRR) --- DPU module / soil--plant dynamics. \href{https://doi.org/10.1029/2019WR025432}{10.1029/2019WR025432}
+  \item Brunetti et al.\ 2021 (ES\&T). \href{https://doi.org/10.1021/acs.est.0c07420}{10.1021/acs.est.0c07420}
+  \item Brunetti et al.\ 2022 (J.\ Hazard.\ Mater.). \href{https://doi.org/10.1016/j.jhazmat.2021.127008}{10.1016/j.jhazmat.2021.127008}
+  \item Adu et al.\ 2024 --- ML for RCF/SCF/TF (MW top predictor). \href{https://doi.org/10.1021/acsestengg.4c00107}{10.1021/acsestengg.4c00107}
+\end{itemize}
+
+\vspace{1em}
+\noindent\textit{This consolidation is a belief snapshot; every claim
+is revisable as Evidence accrues. The authoritative per-run records
+live under \texttt{sci\_adk\_review/runs/}; the Korean narrative is
+\texttt{sci\_adk\_review/FINDINGS.md}.}
+
+\end{document}
