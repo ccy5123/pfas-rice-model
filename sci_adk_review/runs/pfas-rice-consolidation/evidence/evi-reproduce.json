@@ -1,10 +1,10 @@
 {
   "id": "evi-reproduce",
-  "created_at": "2026-06-18T01:35:15.803090Z",
+  "created_at": "2026-06-18T07:04:37.473160Z",
   "spec_id": "pfas-rice-consolidation",
   "kind": "experiment_run",
   "provenance": {
-    "code_ref": "pfas-rice-model@5368e05",
+    "code_ref": "pfas-rice-model@6f6b2b7",
     "data_ref": null,
     "data_source": "generated",
     "seed": null,
@@ -20,7 +20,7 @@
     "posterior": null,
     "residual": null,
     "predictive_error": null,
-    "finding": "sci-adk verify on all nine committed sub-runs: exit 0, every recorded claim REPRODUCED (reproduced fraction = 1.0). Verified record digests -- pfas-rice sha256:493ec872..5d8e0e35; pfas-rice-trap sha256:345f9f53..9d873741; pfas-rice-longchain sha256:e7c72b0c..67ee0167; pfas-rice-carrier sha256:466079ba..8c1f0d4e; pfas-rice-oos-tang sha256:46d71f24..31b2564d; pfas-rice-oos-lipid sha256:684c31e2..6d27c10a; pfas-rice-oos-multidataset sha256:68ebaf39..0b7207da; pfas-rice-longchain-complete sha256:4aafc495..4d20f2ef; pfas-rice-longchain-decouple sha256:6889e341..896fbb80. The pfas-rice-trap run carries NO claim (synthetic_proxy HALT), which is the intended record. LLM-free re-derivation (verify_run).",
+    "finding": "sci-adk verify on all twelve committed sub-runs: exit 0, every recorded claim REPRODUCED (reproduced fraction = 1.0). Verified record digests -- pfas-rice sha256:493ec872..5d8e0e35; pfas-rice-trap sha256:345f9f53..9d873741; pfas-rice-longchain sha256:e7c72b0c..67ee0167; pfas-rice-carrier sha256:466079ba..8c1f0d4e; pfas-rice-oos-tang sha256:46d71f24..31b2564d; pfas-rice-oos-lipid sha256:684c31e2..6d27c10a; pfas-rice-oos-multidataset sha256:68ebaf39..0b7207da; pfas-rice-longchain-complete sha256:4aafc495..4d20f2ef; pfas-rice-longchain-decouple sha256:6889e341..896fbb80; pfas-rice-model-selection sha256:03387809..fa8f2bc8; pfas-rice-risk-readiness sha256:bdcdacab..4be9d9df; pfas-rice-2pool-core sha256:9f890a5d..e0c7d8a3. The pfas-rice-trap run carries NO claim (synthetic_proxy HALT), which is the intended record. LLM-free re-derivation (verify_run).",
     "artifact_ref": null
   },
   "bears_on": [

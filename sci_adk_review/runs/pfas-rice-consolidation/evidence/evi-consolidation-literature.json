@@ -1,10 +1,10 @@
 {
   "id": "evi-consolidation-literature",
-  "created_at": "2026-06-18T01:35:15.803090Z",
+  "created_at": "2026-06-18T07:04:37.473160Z",
   "spec_id": "pfas-rice-consolidation",
   "kind": "literature",
   "provenance": {
-    "code_ref": "pfas-rice-model@5368e05",
+    "code_ref": "pfas-rice-model@6f6b2b7",
     "data_ref": null,
     "data_source": null,
     "seed": null,

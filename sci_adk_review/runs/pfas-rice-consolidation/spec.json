@@ -1,6 +1,6 @@
 {
   "id": "pfas-rice-consolidation",
-  "created_at": "2026-06-18T01:35:15.803090Z",
+  "created_at": "2026-06-18T07:04:37.473160Z",
   "version": 1,
   "raw_proposal": {
     "background": "This repository's four-compartment dynamic uptake model for PFAS in rice\n(Oryza sativa) has been subjected to an adversarial rigor audit with\nsci-adk across seven independent runs: the main audit (pfas-rice), a\nsynthetic-data trap (pfas-rice-trap), a long-chain mechanism\nsub-investigation (pfas-rice-longchain), a carrier-QSPR test\n(pfas-rice-carrier), and three cross-dataset out-of-sample runs\n(pfas-rice-oos-tang, pfas-rice-oos-lipid, pfas-rice-oos-multidataset).\nsci-adk itself was created in response to a failure of this project: a\nrun on an empirical proposal once used synthetic data and the harness\nreported \"4/4 SUPPORTED\" (the rice-failure defect named in\ncore/validity.py). The empirical investigation is now complete, but its\nfindings are scattered across seven run records and a Korean narrative\n(FINDINGS.md). The per-run papers were rendered by sci-adk but their\nnon-ASCII bodies did not typeset, and there is no single citable\nsynthesis. This run consolidates the completed investigation into one\nengine-rendered paper whose every headline claim is resolved by the\nengine from the verified sub-run statistics, so the consolidation is\nitself a reproducible sci-adk artifact rather than a hand-authored\ndocument.",
@@ -11,7 +11,7 @@
   "hypotheses": [
     {
       "id": "hyp-reproduce",
-      "statement": "Every committed sci-adk sub-run (all nine) re-derives from its frozen record under sci-adk verify with exit 0, so the consolidated audit record is reproducible.",
+      "statement": "Every committed sci-adk sub-run (all twelve) re-derives from its frozen record under sci-adk verify with exit 0, so the consolidated audit record is reproducible.",
       "mode": "confirmatory",
       "decision_rule": {
         "kind": "threshold",
@@ -98,6 +98,42 @@
       "referent": "empirical",
       "non_circularity": null,
       "novelty": false
+    },
+    {
+      "id": "hyp-longchain-closed",
+      "statement": "The long-chain structural gap is CLOSED: the 2-pool root (free per-congener f_xy + enhanced active carrier; promoted to src/pfas_rice_two_pool.py) reproduces the C10-C12 root+straw+grain BAFs at log10 RMSE < 0.15, which the single-pool core could not (refit_oryza hit ceilings ~4-6x under).",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "the long-chain structural gap is CLOSED: the 2-pool root (free f_xy + active carrier; promoted to src/pfas_rice_two_pool.py) reproduces C10-C12 root+straw+grain at log10 RMSE < 0.15, where the single-pool core could not (refit_oryza ~4-6x under at ceilings) => support; >= 0.15 => refute",
+        "params": {
+          "statistic": "point",
+          "op": "<",
+          "value": 0.15,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-risk-screening",
+      "statement": "The model is usable as a SCREENING-level dietary risk-assessment tool: brown-rice grain (the dietary compartment) is predicted OUT-OF-SAMPLE on the independent Kim 2019 dataset within a screening factor ~3 (log10 RMSE < 0.5), with the long-chain structural blind spot closed.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "the model is usable as a SCREENING-level dietary risk tool: brown-rice grain (the dietary compartment) is predicted OUT-OF-SAMPLE on the independent Kim 2019 dataset within a screening factor ~3 (log10 RMSE < 0.5) => support; >= 0.5 => refute",
+        "params": {
+          "statistic": "point",
+          "op": "<",
+          "value": 0.5,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
     }
   ],
   "method": {
@@ -113,7 +149,7 @@
   "target_claims": [
     {
       "id": "tc-reproduce",
-      "statement": "The seven-run audit record is reproducible.",
+      "statement": "The full audit record is reproducible.",
       "answers": "hyp-reproduce"
     },
     {
@@ -135,6 +171,16 @@
       "id": "tc-adequacy",
       "statement": "The structure is adequate for shoot translocation.",
       "answers": "hyp-structural-adequacy"
+    },
+    {
+      "id": "tc-longchain",
+      "statement": "The long-chain structural gap is closed.",
+      "answers": "hyp-longchain-closed"
+    },
+    {
+      "id": "tc-risk",
+      "statement": "Usable as a screening-level dietary risk tool.",
+      "answers": "hyp-risk-screening"
     }
   ],
   "amendment_rationale": null,

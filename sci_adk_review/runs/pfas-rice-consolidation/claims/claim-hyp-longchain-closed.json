@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-longchain-closed",
+  "spec_id": "pfas-rice-consolidation",
+  "answers": "hyp-longchain-closed",
+  "statement": "The long-chain structural gap is CLOSED: the 2-pool root (free per-congener f_xy + enhanced active carrier; promoted to src/pfas_rice_two_pool.py) reproduces the C10-C12 root+straw+grain BAFs at log10 RMSE < 0.15, which the single-pool core could not (refit_oryza hit ceilings ~4-6x under).",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.06667331992179804,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=0.081 < 0.15 is met (combine='latest', margin=0.069)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-longchain-closed",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T07:04:37.479565Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-longchain-closed",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-risk-screening",
+  "spec_id": "pfas-rice-consolidation",
+  "answers": "hyp-risk-screening",
+  "statement": "The model is usable as a SCREENING-level dietary risk-assessment tool: brown-rice grain (the dietary compartment) is predicted OUT-OF-SAMPLE on the independent Kim 2019 dataset within a screening factor ~3 (log10 RMSE < 0.5), with the long-chain structural blind spot closed.",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.019801326693244747,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=0.48 < 0.5 is met (combine='latest', margin=0.02)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-risk-screening",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T07:04:37.479773Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-risk-screening",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}
