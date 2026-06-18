@@ -16,8 +16,11 @@ Mechanistic Foundations Hold, Out-of-Sample Prediction Fails,
 and a Lipid-Facilitated Loading Mechanism Generalizes Across
 Independent Datasets}
 
-\author{Consolidated from seven \texttt{sci-adk} runs\\
-\small (Scientific Agentic Discovery Kit, \url{https://github.com/ccy5123/sci-adk})}
+\author{Hand-authored by the in-session agent (Claude) from the
+\texttt{sci-adk} records\\
+\small sci-adk (Scientific Agentic Discovery Kit,
+\url{https://github.com/ccy5123/sci-adk}) is the referee/renderer of the
+per-run records, \emph{not} the author of this cross-run synthesis.}
 \date{\today}
 
 \begin{document}
@@ -25,15 +28,24 @@ Independent Datasets}
 
 \begin{abstract}
 \noindent
+\textbf{Provenance.} This manuscript is \emph{not} a \texttt{sci-adk}
+render. The engine's own paper output is the per-run, deterministically
+rendered \texttt{runs/*/paper/draft.tex} (a frozen-record artifact);
+this document is an \emph{agent-authored cross-run synthesis} (a belief
+narrative) hand-written from those records and from
+\texttt{FINDINGS.md}. It introduces no new claims: every number,
+verdict and record digest is traceable to a per-run record and was
+re-derived by \texttt{sci-adk verify} (LLM-free replay from the frozen
+records; all seven runs verify with exit~0, every recorded claim
+\textsc{reproduced}). It supersedes the seven machine-rendered skeleton
+drafts only as readable prose --- those drafts' non-ASCII section
+bodies did not render --- not as a verifiable artifact in their place.
+
+\medskip\noindent
 This is a single, citable consolidation of seven independent
 \texttt{sci-adk} rigor-audit runs applied to this repository's
 four-compartment dynamic PFAS uptake model for rice
-(\textit{Oryza sativa}). It supersedes the seven machine-rendered
-per-run skeleton drafts (\texttt{runs/*/paper/draft.tex}), whose
-non-ASCII section bodies did not render. Every number, verdict and
-record digest reported here was re-derived by \texttt{sci-adk verify}
-(LLM-free replay from the frozen records); all seven runs verify with
-exit~0 and every recorded claim is \textsc{reproduced}.
+(\textit{Oryza sativa}).
 
 The audit yields a sharply patterned result. The model's
 \emph{formal and computational} foundations pass (mass conservation,

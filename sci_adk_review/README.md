@@ -9,9 +9,16 @@ self-certification.*
 
 - **`docs/sci_adk_rigor_review.tex`** — single consolidated, citable
   manuscript (EN). All seven runs, one master ledger, the narrative
-  arc, centralized caveats, verified digests. Supersedes the
-  machine-rendered per-run `runs/*/paper/draft.tex` skeletons.
-- **`FINDINGS.md`** — the authoritative Korean narrative.
+  arc, centralized caveats, verified digests. **Provenance:** this is an
+  *agent-authored cross-run synthesis* (hand-written from the records),
+  **not** a sci-adk render — sci-adk is the referee/renderer, not the
+  author. The engine's own paper output is the per-run, deterministically
+  rendered `runs/*/paper/draft.tex` (frozen-record artifacts; the
+  consolidation supersedes them only as readable prose, since their
+  non-ASCII bodies did not render). Every figure is traceable to a
+  verified record.
+- **`FINDINGS.md`** — the authoritative Korean narrative (also
+  agent-authored from the records).
 
 ## The seven runs (all `sci-adk verify` → exit 0)
 
