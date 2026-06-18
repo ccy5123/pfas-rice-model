@@ -21,7 +21,7 @@
   "renders_to": null,
   "history": [
     {
-      "at": "2026-06-18T01:10:34.040580Z",
+      "at": "2026-06-18T01:35:15.807869Z",
       "from_status": "proposed",
       "to_status": "supported",
       "triggered_by": "evi-lipid-oos",

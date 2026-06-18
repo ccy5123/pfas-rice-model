@@ -246,7 +246,8 @@ runs/pfas-rice-trap/
 | `pfas-rice-oos-lipid` | `684c31e2…6d27c10a` | 1/1 REPRODUCED |
 | `pfas-rice-oos-multidataset` | `68ebaf39…0b7207da` | 1/1 REPRODUCED |
 | `pfas-rice-longchain-complete` | `4aafc495…4d20f2ef` | 4/4 REPRODUCED (장쇄 완전해법 검정) |
-| `pfas-rice-consolidation` | `9428ea2c…ab500a6f` | 5/5 REPRODUCED (engine-rendered 통합본) |
+| `pfas-rice-longchain-decouple` | `6889e341…896fbb80` | 3/3 REPRODUCED (root→shoot 디커플링 검정) |
+| `pfas-rice-consolidation` | `803d801a…046caa4e` | 5/5 REPRODUCED (engine-rendered 통합본) |
 
 ### 재현
 ```bash
@@ -254,19 +255,20 @@ pip install -e /path/to/sci-adk          # 또는 PYTHONPATH=sci-adk/src
 pip install numpy scipy pytest rdkit     # 모델 실행/근거 수치용
 python sci_adk_review/build_review.py             # 메인 run 재생성
 python sci_adk_review/build_longchain_complete.py # 장쇄 완전해법 검정 run
+python sci_adk_review/build_longchain_decouple.py # root→shoot 디커플링 검정 run
 python sci_adk_review/build_consolidation.py      # 통합본 run 재생성 (sci-adk가 paper 렌더)
 for r in pfas-rice pfas-rice-longchain pfas-rice-carrier \
          pfas-rice-oos-tang pfas-rice-oos-lipid pfas-rice-oos-multidataset \
-         pfas-rice-longchain-complete pfas-rice-consolidation; do
+         pfas-rice-longchain-complete pfas-rice-longchain-decouple pfas-rice-consolidation; do
   sci-adk verify sci_adk_review/runs/$r   # exit 0, 전 claim REPRODUCED
 done
 ```
 
 > **영문 통합본(sci-adk가 렌더)**: `sci_adk_review/runs/pfas-rice-consolidation/paper/draft.tex`.
-> `build_consolidation.py`가 8개 sub-run의 **검증된 통계**를 threshold 가설 Spec으로 동결 →
+> `build_consolidation.py`가 9개 sub-run의 **검증된 통계**를 threshold 가설 Spec으로 동결 →
 > 엔진이 numeric claim을 자동 판정하고 **paper를 렌더**(서사는 LaTeX-safe prose로 *입력*; 손으로
 > 저작한 문서가 아님). master ledger·서사 아크·중앙화 caveat·digest를 담고, 5/5 claim이
-> `sci-adk verify`로 재현된다(digest `9428ea2c…`).
+> `sci-adk verify`로 재현된다(digest `803d801a…`).
 
 > 주의: `runs/`의 증거 수치는 기준 커밋의 모델 출력을 그대로 옮긴 것이고, 각 증거는
 > `provenance.code_ref`(커밋)와 `environment`(실행 경로)를 기록한다. 모델 코드가
@@ -366,6 +368,23 @@ C11–C12에서 문턱형 급상승. **hyp-001 = REFUTED** — 장쇄 운반체 
 → **FINDINGS §7의 "완전해법"은 동시-폐쇄가 아니다**(REFUTED as simultaneous closure). 장쇄에 남은
 정확한 과제는 **root→shoot 디커플링** — root burden을 유지하되 xylem으로 비례 전송하지 *않는* 비가역/초저속
 탈착 root 저장(장쇄 "root 강한 잔류" 문헌 LC1과 합치). 코어 미변경, in-sample/프로토타입.
+
+**root→shoot 디커플링 레버 검정 (별도 run `pfas-rice-longchain-decouple`, `build_longchain_decouple.py`)**:
+위에서 지목한 디커플링의 *가장 단순한 구현* — 결합저장 `rb`를 **비가역**으로 만드는 비대칭 동역학
+`k_on = ratio·k_off·seq`(seq>1 = 비-전류 결합풀로 더 격리) — 을 검정(`validation/longchain_decouple.py`:
+운반체를 root-매칭값에 고정하고 seq 스캔; lipid `g_xy≥0`은 더하기만 하므로 straw는 `g_xy=0` floor가 하한).
+결과(3 claim 전부 SUPPORTED, `sci-adk verify` digest `6889e341…`):
+- **이 레버는 디커플링하지 못한다.** mobile pool을 억제하면 내부 농도가 낮아져 **순흡수 구배가 오히려 커져**,
+  root burden이 seq와 함께 **팽창**(PFDoDA root 1×→**6.94×** @ seq=10)하는데 shoot 완화는 그보다 느리다
+  (straw 2.3×→1.6×). → **hyp-decouple-inflates-root SUPPORTED**(root를 *반대 방향*으로 민다).
+- **깨끗한 동시-폐쇄 불가**(최소 simultaneity gap **0.336** = factor 2.17 @ seq=2; PFUnDA 0.483/3.04) —
+  root·shoot를 동시에 factor 2 이내로 못 넣음. **hyp-decouple-not-clean SUPPORTED**.
+- **완전해법(seq=1) 대비 개선은 0.020 log10로 무시 가능** → **hyp-decouple-marginal SUPPORTED**.
+→ 즉 **비대칭 결합저장 동역학은 잘못된 레버**다(거의 REFUTED). 근본 원인은 **흡수↔mobile농도 결합**:
+GHK/운반체 유입이 내부농도가 낮을수록 커지므로 shoot 보호를 위해 mobile을 억제하면 root가 부풀어 오른다.
+올바른 디커플링은 **그 결합 자체를 끊는 것** — 장쇄 흡수를 mobile 수상농도에 기여하지 *않는* 불활성
+apoplast/cell-wall 저장으로 직접 보내는 것(흡수 구배를 올리지 않음). 이것이 최장쇄 폐쇄의 *더 날카로워진*
+열린 과제다. 코어 미변경, in-sample/프로토타입.
 
 **관련 문헌 검색 (정식 sci-adk literature 취득)** — 발견은 agent web_search, 취득·기록은
 **`sci-adk prior-work --searched`** 가 paperforge + Unpaywall polite-pool(이메일

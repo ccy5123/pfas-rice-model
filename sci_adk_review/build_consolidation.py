@@ -61,6 +61,7 @@ DIGESTS = {
     "pfas-rice-oos-lipid":        "684c31e2d12587b359d2531613afa92e1f6532598e7b1259b1159f336d27c10a",
     "pfas-rice-oos-multidataset": "68ebaf3960873c0e2968c46701ebe2fab65b5d555834f8dbfd60f2cc0b7207da",
     "pfas-rice-longchain-complete": "4aafc4957fdfdab77f50ec90801ae620747b1aca9be7fd8fc1dbbe3d4d20f2ef",
+    "pfas-rice-longchain-decouple": "6889e3419517d5866bd76ca7843613f4b8f0aebd6ecda25211c3557b896fbb80",
 }
 
 # Decision-rule prose (criterion strings).
@@ -97,7 +98,7 @@ def build_spec() -> Spec:
     hypotheses = [
         Hypothesis(
             id="hyp-reproduce",
-            statement="Every committed sci-adk sub-run (all eight) re-derives from its "
+            statement="Every committed sci-adk sub-run (all nine) re-derives from its "
                       "frozen record under sci-adk verify with exit 0, so the consolidated "
                       "audit record is reproducible.",
             mode=HypothesisMode.CONFIRMATORY,
@@ -218,7 +219,7 @@ def evidence(spec, workspace):
     items.append(_ev(
         "evi-reproduce", EvidenceKind.EXPERIMENT_RUN, "generated",
         Result(type="quantitative", point=1.0, finding=(
-            "sci-adk verify on all eight committed sub-runs: exit 0, every recorded claim "
+            "sci-adk verify on all nine committed sub-runs: exit 0, every recorded claim "
             "REPRODUCED (reproduced fraction = 1.0). Verified record digests -- " + digtxt +
             ". The pfas-rice-trap run carries NO claim (synthetic_proxy HALT), which is the "
             "intended record. LLM-free re-derivation (verify_run).")),

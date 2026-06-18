@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-decouple-marginal",
+  "spec_id": "pfas-rice-longchain-decouple",
+  "answers": "hyp-decouple-marginal",
+  "statement": "The lever helps only marginally: the best simultaneity gap improves on the complete-recipe baseline (seq=1) by less than 0.05 log10, so asymmetric bound-store kinetics do not materially resolve the long-chain root<->shoot tension.",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.029554466451491845,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=0.02 < 0.05 is met (combine='latest', margin=0.03)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-decouple-marginal",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T01:34:35.853781Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-decouple-marginal",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

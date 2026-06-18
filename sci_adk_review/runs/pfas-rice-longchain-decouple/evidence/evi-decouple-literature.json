@@ -1,0 +1,30 @@
+{
+  "id": "evi-decouple-literature",
+  "created_at": "2026-06-18T01:34:16.860643Z",
+  "spec_id": "pfas-rice-longchain-decouple",
+  "kind": "literature",
+  "provenance": {
+    "code_ref": "pfas-rice-model@5368e05",
+    "data_ref": null,
+    "data_source": null,
+    "seed": null,
+    "environment": "follow-up to runs/pfas-rice-longchain-complete",
+    "cost": null
+  },
+  "result": {
+    "type": "qualitative",
+    "point": null,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "cited prior work (LC records): long-chain PFAS are strongly retained in roots vs mobile short chains (newcontam 2025; Adu 2024 ML 10.1021/acsestengg.4c00107); Chen 2025 membrane K_MW (10.1021/acs.est.4c06734). Follow-up to runs/pfas-rice-longchain-complete; not a novelty claim.",
+    "artifact_ref": null
+  },
+  "bears_on": [],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

@@ -34,6 +34,7 @@ RUN_OOS = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-tang"
 RUN_OOS_LIPID = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-lipid"
 RUN_OOS_MULTI = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-multidataset"
 RUN_LC_COMPLETE = ROOT / "sci_adk_review" / "runs" / "pfas-rice-longchain-complete"
+RUN_LC_DECOUPLE = ROOT / "sci_adk_review" / "runs" / "pfas-rice-longchain-decouple"
 RUN_CONSOLIDATION = ROOT / "sci_adk_review" / "runs" / "pfas-rice-consolidation"
 TRAP = ROOT / "sci_adk_review" / "runs" / "pfas-rice-trap"
 
@@ -140,6 +141,18 @@ def test_longchain_complete_run_reproduces():
     the long chains need a root->shoot decoupling. This is a true factual finding, not a
     predictive over-claim."""
     report = verify_run(RUN_LC_COMPLETE)
+    assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
+
+
+@pytest.mark.skipif(not RUN_LC_DECOUPLE.exists(), reason="long-chain decouple run absent")
+def test_longchain_decouple_run_reproduces():
+    """The root->shoot DECOUPLING test (build_longchain_decouple.py: an irreversible bound-store
+    sequestration lever seq) re-derives from its record: 3/3 SUPPORTED -- the lever INFLATES the
+    root (PFDoDA 6.94x) instead of relieving the shoot, does NOT achieve clean within-factor-2
+    simultaneous closure (best gap 0.336), and improves on the complete recipe only marginally
+    (0.020 log10). Honest near-negative: asymmetric bound-store kinetics are the wrong lever; the
+    fix must break the uptake<->mobile-conc coupling. A true factual finding, not an over-claim."""
+    report = verify_run(RUN_LC_DECOUPLE)
     assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
 
 

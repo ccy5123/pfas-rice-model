@@ -87,7 +87,7 @@ Planned approaches:
 
 \section{Hypotheses and findings}
 
-\subsection{Every committed sci-adk sub-run (all eight) re-derives from its frozen record under sci-adk verify with exit 0, so the consolidated audit record is reproducible.}
+\subsection{Every committed sci-adk sub-run (all nine) re-derives from its frozen record under sci-adk verify with exit 0, so the consolidated audit record is reproducible.}
 \begin{itemize}
   \item Hypothesis id: \texttt{hyp-reproduce} (confirmatory)
   \item Decision rule (threshold): every committed sci-adk sub-run re-derives from its frozen record under sci-adk verify (reproduced fraction = 1.0) => support; any divergence => refute
@@ -135,7 +135,7 @@ Planned approaches:
 \section{Evidence}
 \begin{itemize}
   \item \texttt{evi-consolidation-literature} (literature): finding=cited prior work (already in docs/references.csv and the sub-run records): Yamazaki 2023 (10.1021/acs.est.2c08767); Tang
-  \item \texttt{evi-reproduce} (experiment\_run): point=1, finding=sci-adk verify on all eight committed sub-runs: exit 0, every recorded claim REPRODUCED (reproduced fraction = 1.0). Ver
+  \item \texttt{evi-reproduce} (experiment\_run): point=1, finding=sci-adk verify on all nine committed sub-runs: exit 0, every recorded claim REPRODUCED (reproduced fraction = 1.0). Veri
   \item \texttt{evi-naive-oos} (experiment\_run): point=1.232, finding=runs/pfas-rice-oos-tang (digest sha256:46d71f24..31b2564d): the free-anion model (f\_xy\_source='recommended', theory/QSPR
   \item \texttt{evi-lipid-oos} (experiment\_run): point=0.516, finding=runs/pfas-rice-oos-lipid (digest sha256:684c31e2..6d27c10a): with NO parameter fit to Tang, lipid\_loading=True drops the
   \item \texttt{evi-lipid-robust} (experiment\_run): point=1.57, finding=runs/pfas-rice-oos-multidataset (digest sha256:68ebaf39..0b7207da): three variants transferred WITHOUT refit to independ

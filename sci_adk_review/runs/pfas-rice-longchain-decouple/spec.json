@@ -1,0 +1,95 @@
+{
+  "id": "pfas-rice-longchain-decouple",
+  "created_at": "2026-06-18T01:34:16.860643Z",
+  "version": 1,
+  "raw_proposal": {
+    "background": "The long-chain \"complete resolution\" test (runs/pfas-rice-longchain-complete)\nshowed that combining the three proposed levers (2-pool root + lipid loading +\nLC6 root-matching active carrier) into one model closes the long-chain root and\ngrain but OVER-feeds the shoot: the active carrier that fixes the root enlarges\nthe mobile root pool, whose free xylem loading f_xy*Cw_m alone exceeds the\nobserved straw (PFUnDA ~3.3x, PFDoDA ~2.3x over), and the lipid term (g_xy>=0)\ncannot subtract. FINDINGS sec.7 named the missing piece a root->shoot DECOUPLING:\nan irreversible root store that holds the measured root burden WITHOUT feeding the\nxylem in proportion. This run tests the simplest such lever.",
+    "goal": "Does an irreversible root sequestration decouple the long-chain root from the shoot? Testing asymmetric bound-store kinetics for simultaneous root and shoot closure.\n\nThe lever: make the 2-pool bound store irreversible by an asymmetric-kinetics\nfactor seq, k_on = ratio*k_off*seq (seq=1 = the equilibrium 2-pool; seq>1 traps\nmore burden in the non-translocating bound pool rb). At a fixed root-matching\ncarrier, scan seq and ask, against the measured Yamazaki BAFs for the long chains\n(C11-C12):\n\n1. Does increasing sequestration relieve the shoot over-feed while keeping the root\n   at the measured level (a clean simultaneous closure within a factor 2)?\n2. Or does it merely trade one tissue for the other?\n3. Diagnose the coupling that governs the trade.",
+    "method": "Reuse the committed LC 2-pool prototype (validation/twopool_longchain.py) without\nchanging it; add only the seq lever in a separate experiment\n(validation/longchain_decouple.py). Per congener, fix the active carrier at its\nseq=1 root-matching value, then scan seq. The fittable straw is bounded below by\nthe g_xy=0 floor (lipid g_xy>=0 can only add), so the straw fit ratio is\nmax(straw_floor/obs, 1) and no lipid fit is needed for the root<->shoot tension.\nReport, per seq, the root ratio, the straw fit ratio, and the simultaneity gap\nmax(|log10 root/obs|, log10 straw_fit_ratio); summarize the baseline (seq=1, which\nIS the complete recipe), the root inflation across the scan, and the best (minimum)\nsimultaneity gap. Freeze these statistics as threshold hypotheses; the engine\nresolves them and renders the paper. All evidence is measured (vs Yamazaki). No\ncore model is changed.",
+    "expected_output": "An engine-rendered run (runs/pfas-rice-longchain-decouple) whose claims state,\nfactually, whether the irreversible-sequestration lever achieves a clean\nsimultaneous root+shoot closure for the long chains, or only trades root for shoot\n-- with the honest verdict recorded and reproducible under sci-adk verify. If it\nfails, the run names the sharper open target (break the uptake<->mobile-conc\ncoupling, not just the bound-store kinetics)."
+  },
+  "hypotheses": [
+    {
+      "id": "hyp-decouple-inflates-root",
+      "statement": "At a fixed root-matching carrier, increasing the irreversible bound-store sequestration (seq) INFLATES the long-chain (PFDoDA) root rather than relieving the shoot: root inflates by more than a factor 2 across the scan.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "at a fixed root-matching carrier, increasing the irreversible sequestration seq INFLATES the long-chain (PFDoDA) root by > 2x (the lever pushes the root the wrong way) => support; root does not inflate => refute",
+        "params": {
+          "statistic": "point",
+          "op": ">",
+          "value": 2.0,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-decouple-not-clean",
+      "statement": "The irreversible-sequestration lever does NOT achieve a clean simultaneous root+shoot closure for the long chains: the best (minimum over seq) simultaneity gap stays above 0.30 log10 (i.e. root and shoot cannot both be brought within a factor 2 at once).",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "the lever does NOT achieve a clean simultaneous root+shoot closure: the best (minimum over seq) simultaneity gap stays above 0.30 log10 (factor 2) => support; gap <= 0.30 (both within a factor 2) => refute",
+        "params": {
+          "statistic": "point",
+          "op": ">",
+          "value": 0.3,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-decouple-marginal",
+      "statement": "The lever helps only marginally: the best simultaneity gap improves on the complete-recipe baseline (seq=1) by less than 0.05 log10, so asymmetric bound-store kinetics do not materially resolve the long-chain root<->shoot tension.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "the best simultaneity gap improves on the complete-recipe baseline (seq=1) by less than 0.05 log10 -- a negligible gain, so the sequestration lever does not materially help => support; improvement >= 0.05 => refute",
+        "params": {
+          "statistic": "point",
+          "op": "<",
+          "value": 0.05,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    }
+  ],
+  "method": {
+    "approaches": [
+      "add a seq lever (k_on = ratio*k_off*seq) to the 2-pool prototype (separate file)",
+      "fix the active carrier at its seq=1 root-matching value; scan seq",
+      "read the g_xy=0 straw floor (lipid can only add) -> straw fit ratio, simultaneity gap",
+      "freeze baseline/inflation/best-gap as thresholds; engine resolves and renders; verify"
+    ],
+    "tools": null
+  },
+  "target_claims": [
+    {
+      "id": "tc-inflate",
+      "statement": "Sequestration inflates the long-chain root.",
+      "answers": "hyp-decouple-inflates-root"
+    },
+    {
+      "id": "tc-notclean",
+      "statement": "No clean simultaneous closure.",
+      "answers": "hyp-decouple-not-clean"
+    },
+    {
+      "id": "tc-marginal",
+      "statement": "The lever helps only marginally.",
+      "answers": "hyp-decouple-marginal"
+    }
+  ],
+  "amendment_rationale": null,
+  "prior_version_id": null
+}
