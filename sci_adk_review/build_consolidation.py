@@ -486,10 +486,71 @@ PROSE = PaperProse(
 )
 
 
+# Works cited by the consolidation (drawn from the project's own docs/references.csv +
+# the run records). The engine wires an EXISTING .bib (it never generates one); we write
+# it from the project's reference DB so the bibliography is the project's, not invented.
+# Each entry carries the authoritative DOI; the title is the references.csv topic note.
+_BIB = [
+    ("yamazaki2023", "Yamazaki et al.", "2023", "Environ. Sci. Technol.", "10.1021/acs.est.2c08767",
+     "Indica/Japonica rice PFAS residues and exposure"),
+    ("tang2026", "Tang et al.", "2026", "J. Hazard. Mater.", "10.1016/j.jhazmat.2025.141017",
+     "Paddy rice growth-cycle behavior of PFOA, PFOS and GenX"),
+    ("kim2019", "Kim et al.", "2019", "Sci. Total Environ.", "10.1016/j.scitotenv.2019.03.240",
+     "Korean paddy: paired pore-water, soil and brown-rice PFAS"),
+    ("li2025", "Li et al.", "2025", "J. Hazard. Mater.", "10.1016/j.jhazmat.2025.138256",
+     "Paddy field growth-cycle PFAS partitioning and exposure"),
+    ("chen2025", "Chen et al.", "2025", "Environ. Sci. Technol.", "10.1021/acs.est.4c06734",
+     "60-PFAS membrane-water K_MW and protein-water partitioning"),
+    ("droge2019", "Droge", "2019", "Environ. Sci. Technol.", "10.1021/acs.est.8b05052",
+     "PFCA/PFSA membrane-water partition coefficients (SSLM)"),
+    ("higgins2006", "Higgins and Luthy", "2006", "Environ. Sci. Technol.", "10.1021/es061000n",
+     "Sorption of perfluorinated surfactants to sediments (Koc QSPR)"),
+    ("bouman2006", "Bouman and van Laar", "2006", "Agric. Syst.", "10.1016/j.agsy.2004.07.011",
+     "ORYZA2000 rice growth model and organ partitioning"),
+    ("briggs1982", "Briggs et al.", "1982", "Pestic. Sci.", "10.1002/ps.2780130506",
+     "Root concentration factor and TSCF (barley)"),
+    ("brunetti2019", "Brunetti et al.", "2019", "Water Resour. Res.", "10.1029/2019WR025432",
+     "Dynamic plant-uptake (DPU) module for soil-plant transport"),
+    ("brunetti2021", "Brunetti et al.", "2021", "Environ. Sci. Technol.", "10.1021/acs.est.0c07420",
+     "Ionizable-organic-compound plant uptake"),
+    ("brunetti2022", "Brunetti et al.", "2022", "J. Hazard. Mater.", "10.1016/j.jhazmat.2021.127008",
+     "PFAS plant-uptake modeling"),
+    ("adu2024", "Adu et al.", "2024", "ACS EST Eng.", "10.1021/acsestengg.4c00107",
+     "Machine learning for RCF/SCF/TF; MW is the top translocation predictor"),
+]
+
+
+def _write_literature_artifacts(run_dir):
+    """Write references.bib + manifest.csv to run_dir/artifacts/literature/ so the engine
+    co-locates a real \\bibliography{references} and lists the cited DOIs. Engine-native:
+    sci-adk wires an EXISTING .bib (it never invents one) -- this is the project's own DB."""
+    lit = run_dir / "artifacts" / "literature"
+    lit.mkdir(parents=True, exist_ok=True)
+    bib_lines = []
+    for key, author, year, journal, doi, title in _BIB:
+        bib_lines += [
+            f"@article{{{key},",
+            f"  author  = {{{author}}},",
+            f"  title   = {{{title}}},",
+            f"  journal = {{{journal}}},",
+            f"  year    = {{{year}}},",
+            f"  doi     = {{{doi}}}",
+            "}",
+            "",
+        ]
+    (lit / "references.bib").write_text("\n".join(bib_lines), encoding="utf-8")
+    rows = ["doi,citation_key,year,title"]
+    rows += [f"{doi},{key},{year},\"{title}\"" for key, _a, year, _j, doi, title in _BIB]
+    (lit / "manifest.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+
 def main():
     spec = build_spec()
     run_dir = HERE / "runs" / spec.id
     run_dir.mkdir(parents=True, exist_ok=True)
+    # Provide the bibliography artifacts BEFORE compile so _colocate_bib wires
+    # \bibliography{references} and _gather_cited_dois lists the DOIs (References section).
+    _write_literature_artifacts(run_dir)
 
     # 1) The loop owns evidence persistence (F5) + claim resolution + fixpoint, so the
     #    record is replayable by sci-adk verify. It renders a (prose-less) skeleton.

@@ -20,6 +20,25 @@ self-certification.*
   verify`.
 - **`FINDINGS.md`** — the authoritative Korean narrative.
 
+## Paper package — what the engine renders (bib / figures / SI)
+
+The deterministic renderer emits, into `runs/<id>/paper/`, the **`draft.tex`**
+(title + sections + tables + agent-authored prose) **plus a wired
+bibliography**: when `build_consolidation.py` writes
+`artifacts/literature/references.bib` + `manifest.csv` (from the project's
+`docs/references.csv`), the engine co-locates `paper/references.bib` and emits
+`\bibliographystyle{plain}` + `\bibliography{references}` + `\nocite{*}` and a
+DOI `References` list — so `paper/` is self-contained for Overleaf.
+
+It does **not** generate figures or a separate SI document — by design the
+render is pure (no LLM, no plotting, offline). **Figures** are agent/experiment
+artifacts: the schema records them via Evidence `artifact_ref`, but the renderer
+never `\includegraphics` them; pre-generated figures live in
+`validation/figures/` (this container has no plotting lib to make new ones).
+The **Supporting Information** is the append-only record itself — the 13 runs'
+`spec.json` / `evidence/*.json` / `claims/*.json`, indexed by this README and
+`FINDINGS.md`.
+
 ## The runs (all `sci-adk verify` → exit 0)
 
 | run | scope | headline verdict |
@@ -33,7 +52,7 @@ self-certification.*
 | `runs/pfas-rice-oos-multidataset` | robustness (Tang + Kim + Li) | SUPPORTED — robust across two clean independent datasets |
 | `runs/pfas-rice-longchain-complete` | the 3-lever "complete resolution" as one model | 4/4 SUPPORTED — root+grain close but shoot does NOT (carrier over-feeds): not a simultaneous closure |
 | `runs/pfas-rice-longchain-decouple` | irreversible root sequestration as the decoupling fix | 3/3 SUPPORTED — the lever inflates root (6.9×), no clean closure, marginal gain: wrong lever (break the uptake↔mobile-conc coupling instead) |
-| `runs/pfas-rice-consolidation` | engine-rendered synthesis paper (all 12 sub-runs) | 7/7 SUPPORTED — reproducibility, naive-OOS-fails, lipid-generalizes, lipid-robust, structural-adequacy, **long-chain-closed (breakthrough)**, **risk-screening** |
+| `runs/pfas-rice-consolidation` | engine-rendered synthesis paper (all 12 sub-runs) + bibliography | 7/7 SUPPORTED — reproducibility, naive-OOS-fails, lipid-generalizes, lipid-robust, structural-adequacy, **long-chain-closed (breakthrough)**, **risk-screening**; self-contained `paper/` (draft.tex + references.bib) |
 | `runs/pfas-rice-model-selection` | transport model-selection / recommendation | 4/4 SUPPORTED — lipid is the consistent winner across all measured data (in-sample + Tang + Kim); recommend lipid (opt-in) |
 | `runs/pfas-rice-risk-readiness` | **breakthrough** + dietary risk-tool readiness | 4/4 SUPPORTED — long chains close (2-pool + free f_xy + carrier, RMSE 0.08); grain predicted OOS within ~factor 3; usable as a SCREENING-level dietary risk tool (bounded ~5× worst case, not regulatory precision) |
 | `runs/pfas-rice-2pool-core` | breakthrough wired into a reusable `src/` component | 3/3 SUPPORTED — `src/pfas_rice_two_pool.py` (+ model_api hook) reproduces the long chains (RMSE 0.08); two independent levers (low f_xy + enhanced carrier) confirmed; canonical core unchanged |

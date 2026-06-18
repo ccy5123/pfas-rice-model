@@ -1,10 +1,10 @@
 {
   "id": "evi-reproduce",
-  "created_at": "2026-06-18T07:04:37.473160Z",
+  "created_at": "2026-06-18T07:12:44.263718Z",
   "spec_id": "pfas-rice-consolidation",
   "kind": "experiment_run",
   "provenance": {
-    "code_ref": "pfas-rice-model@6f6b2b7",
+    "code_ref": "pfas-rice-model@1e9a5dd",
     "data_ref": null,
     "data_source": "generated",
     "seed": null,

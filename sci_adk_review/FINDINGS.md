@@ -247,7 +247,7 @@ runs/pfas-rice-trap/
 | `pfas-rice-oos-multidataset` | `68ebaf39…0b7207da` | 1/1 REPRODUCED |
 | `pfas-rice-longchain-complete` | `4aafc495…4d20f2ef` | 4/4 REPRODUCED (장쇄 완전해법 검정) |
 | `pfas-rice-longchain-decouple` | `6889e341…896fbb80` | 3/3 REPRODUCED (root→shoot 디커플링 검정) |
-| `pfas-rice-consolidation` | `bbb4e6c1…60694aa2` | 7/7 REPRODUCED (engine-rendered 통합본; 12개 sub-run·돌파구·위해성 종합) |
+| `pfas-rice-consolidation` | `0dfb3281…fc03e02c` | 7/7 REPRODUCED (engine-rendered 통합본; 12개 sub-run·돌파구·위해성 + bibliography) |
 | `pfas-rice-model-selection` | `03387809…fa8f2bc8` | 4/4 REPRODUCED (transport 모델 선택·권장 판정) |
 | `pfas-rice-risk-readiness` | `bdcdacab…4be9d9df` | 4/4 REPRODUCED (위해성 평가 준비도 + 장쇄 돌파구) |
 | `pfas-rice-2pool-core` | `9f890a5d…e0c7d8a3` | 3/3 REPRODUCED (돌파구를 src 컴포넌트로 정식 배선·검증) |
@@ -273,7 +273,13 @@ done
 > `build_consolidation.py`가 12개 sub-run의 **검증된 통계**를 threshold 가설 Spec으로 동결 →
 > 엔진이 numeric claim을 자동 판정하고 **paper를 렌더**(서사는 LaTeX-safe prose로 *입력*; 손으로
 > 저작한 문서가 아님). master ledger·서사 아크·중앙화 caveat·digest·**돌파구·위해성 판정**을 담고,
-> 7/7 claim이 `sci-adk verify`로 재현된다(digest `bbb4e6c1…`).
+> 7/7 claim이 `sci-adk verify`로 재현된다(digest `0dfb3281…`). **bibliography**: `build_consolidation.py`가
+> 프로젝트 reference DB(`docs/references.csv`)에서 `artifacts/literature/references.bib`+`manifest.csv`를
+> 써넣으면 엔진이 `\bibliography{references}`+`\nocite{*}`(co-located `paper/references.bib`)와 DOI
+> References를 렌더 → `paper/` 폴더가 Overleaf 자체완결. **figure/SI는 엔진 비생성**(결정론적 렌더 =
+> text+tables+bib only, by design; figure는 evidence `artifact_ref`로 기록 가능하나 .tex에 미임베드, 이
+> 환경엔 plotting lib 미설치). **SI = append-only per-run 기록**(13개 run의 spec/evidence/claims;
+> `validation/figures/`의 기존 그림).
 
 > 주의: `runs/`의 증거 수치는 기준 커밋의 모델 출력을 그대로 옮긴 것이고, 각 증거는
 > `provenance.code_ref`(커밋)와 `environment`(실행 경로)를 기록한다. 모델 코드가

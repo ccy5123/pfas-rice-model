@@ -21,7 +21,7 @@
   "renders_to": null,
   "history": [
     {
-      "at": "2026-06-18T07:04:37.479565Z",
+      "at": "2026-06-18T07:12:44.270283Z",
       "from_status": "proposed",
       "to_status": "supported",
       "triggered_by": "evi-longchain-closed",
