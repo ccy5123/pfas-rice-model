@@ -36,6 +36,7 @@ RUN_OOS_MULTI = ROOT / "sci_adk_review" / "runs" / "pfas-rice-oos-multidataset"
 RUN_LC_COMPLETE = ROOT / "sci_adk_review" / "runs" / "pfas-rice-longchain-complete"
 RUN_LC_DECOUPLE = ROOT / "sci_adk_review" / "runs" / "pfas-rice-longchain-decouple"
 RUN_CONSOLIDATION = ROOT / "sci_adk_review" / "runs" / "pfas-rice-consolidation"
+RUN_SELECTION = ROOT / "sci_adk_review" / "runs" / "pfas-rice-model-selection"
 TRAP = ROOT / "sci_adk_review" / "runs" / "pfas-rice-trap"
 
 # Empirical predictive claims that MUST NOT be SUPPORTED (the over-claim guard).
@@ -165,6 +166,17 @@ def test_consolidation_run_reproduces():
     lipid-generalizes, lipid-robust, structural-adequacy. The synthesis claims are restatements
     of the sub-run records, so they may legitimately be SUPPORTED."""
     report = verify_run(RUN_CONSOLIDATION)
+    assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
+
+
+@pytest.mark.skipif(not RUN_SELECTION.exists(), reason="model-selection run absent")
+def test_model_selection_run_reproduces():
+    """The transport model-selection verdict (build_model_selection.py) re-derives from its
+    record: 4/4 SUPPORTED -- the K_PL-gated lipid mechanism is the CONSISTENT best across every
+    measured dataset (in-sample Yamazaki margin 0.65, Tang OOS 0.72, Kim OOS 1.57; min 0.65),
+    so it is the recommended transport configuration (kept opt-in pending a reliable 2-pool
+    root). A selection over already-adjudicated results; the wins are genuine, so SUPPORTED."""
+    report = verify_run(RUN_SELECTION)
     assert report.all_reproduced, "\n".join(f"  {o.hypothesis_id}: {o.result}" for o in report.outcomes)
 
 

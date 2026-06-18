@@ -33,18 +33,21 @@ self-certification.*
 | `runs/pfas-rice-oos-multidataset` | robustness (Tang + Kim + Li) | SUPPORTED — robust across two clean independent datasets |
 | `runs/pfas-rice-longchain-complete` | the 3-lever "complete resolution" as one model | 4/4 SUPPORTED — root+grain close but shoot does NOT (carrier over-feeds): not a simultaneous closure |
 | `runs/pfas-rice-longchain-decouple` | irreversible root sequestration as the decoupling fix | 3/3 SUPPORTED — the lever inflates root (6.9×), no clean closure, marginal gain: wrong lever (break the uptake↔mobile-conc coupling instead) |
-| `runs/pfas-rice-consolidation` | engine-rendered synthesis paper | 5/5 SUPPORTED — reproducibility, naive-OOS-fails, lipid-generalizes, lipid-robust, structural-adequacy |
+| `runs/pfas-rice-consolidation` | engine-rendered synthesis paper (9 investigative runs) | 5/5 SUPPORTED — reproducibility, naive-OOS-fails, lipid-generalizes, lipid-robust, structural-adequacy |
+| `runs/pfas-rice-model-selection` | transport model-selection / recommendation | 4/4 SUPPORTED — lipid is the consistent winner across all measured data (in-sample + Tang + Kim); recommend lipid (opt-in) |
 
 ## Specs / drivers
 
 - `proposal.md` — frozen four-pane pre-registration for the main run.
 - `proposal_*.md` — pre-registrations (incl. `proposal_consolidation.md`,
-  `proposal_longchain_complete.md`).
+  `proposal_longchain_complete.md`, `proposal_longchain_decouple.md`,
+  `proposal_model_selection.md`).
 - `build_review.py`, `build_longchain.py`, `build_longchain_complete.py`,
-  `build_longchain_decouple.py`, `build_consolidation.py` — reproducible
-  run drivers (the engine compiles/judges/renders);
-  `validation/longchain_complete.py` and `validation/longchain_decouple.py`
-  are the live experiments behind the two long-chain follow-up runs.
+  `build_longchain_decouple.py`, `build_consolidation.py`,
+  `build_model_selection.py` — reproducible run drivers (the engine
+  compiles/judges/renders); `validation/longchain_complete.py` and
+  `validation/longchain_decouple.py` are the live experiments behind the
+  long-chain follow-up runs.
 - `run_rigor.sh` — local full regenerate + verify.
 
 ## Reproduce
@@ -56,9 +59,11 @@ python sci_adk_review/build_review.py             # main run
 python sci_adk_review/build_longchain_complete.py # long-chain "complete resolution" test
 python sci_adk_review/build_longchain_decouple.py # root->shoot decoupling test
 python sci_adk_review/build_consolidation.py      # engine-rendered synthesis paper
+python sci_adk_review/build_model_selection.py    # transport model-selection verdict
 for r in pfas-rice pfas-rice-longchain pfas-rice-carrier \
          pfas-rice-oos-tang pfas-rice-oos-lipid pfas-rice-oos-multidataset \
-         pfas-rice-longchain-complete pfas-rice-longchain-decouple pfas-rice-consolidation; do
+         pfas-rice-longchain-complete pfas-rice-longchain-decouple \
+         pfas-rice-consolidation pfas-rice-model-selection; do
   sci-adk verify sci_adk_review/runs/$r   # exit 0, all claims REPRODUCED
 done
 ```

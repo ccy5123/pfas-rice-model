@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-select-oos-tang",
+  "spec_id": "pfas-rice-model-selection",
+  "answers": "hyp-select-oos-tang",
+  "statement": "Lipid beats the free-anion model on the independent Tang 2026 out-of-sample per-organ TF by a decisive margin (> 0.3 log10).",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.34031972951561096,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=0.716 > 0.3 is met (combine='latest', margin=0.416)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-select-tang",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T01:47:15.026280Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-select-tang",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

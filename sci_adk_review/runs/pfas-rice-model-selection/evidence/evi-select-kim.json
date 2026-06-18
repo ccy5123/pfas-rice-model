@@ -1,0 +1,36 @@
+{
+  "id": "evi-select-kim",
+  "created_at": "2026-06-18T01:47:15.021797Z",
+  "spec_id": "pfas-rice-model-selection",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "pfas-rice-model@54d4d8f",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "runs/pfas-rice-oos-multidataset",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 1.57,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "runs/pfas-rice-oos-multidataset: monotone/free baseline OOS log10 RMSE 2.05 vs lipid 0.48 on the independent Kim 2019 brown-rice grain BAF (excl. PFOA) -- lipid wins OOS by 1.57 log10, uniquely capturing the grain long-chain rise.",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-select-oos-kim",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

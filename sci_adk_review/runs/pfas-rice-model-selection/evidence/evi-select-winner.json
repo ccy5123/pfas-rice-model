@@ -1,0 +1,36 @@
+{
+  "id": "evi-select-winner",
+  "created_at": "2026-06-18T01:47:15.021797Z",
+  "spec_id": "pfas-rice-model-selection",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "pfas-rice-model@54d4d8f",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "synthesis of the in-sample + OOS evidence above",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 0.649,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "consistent-winner check: lipid's win-margins are in-sample 0.649, Tang 0.716, Kim 1.57 log10; the MINIMUM is 0.649 (> 0.3), so lipid wins EVERY measured dataset, not just on average. RECOMMENDATION: prefer lipid loading for shoot/grain/out-of-sample prediction; keep the free-anion as the conservative default in code (lipid opt-in) until a reliable 2-pool root removes the single-pool long-chain root tradeoff (runs/pfas-rice-longchain-complete/-decouple: not yet resolvable).",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-select-consistent-winner",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

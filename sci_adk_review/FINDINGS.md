@@ -247,7 +247,8 @@ runs/pfas-rice-trap/
 | `pfas-rice-oos-multidataset` | `68ebaf39…0b7207da` | 1/1 REPRODUCED |
 | `pfas-rice-longchain-complete` | `4aafc495…4d20f2ef` | 4/4 REPRODUCED (장쇄 완전해법 검정) |
 | `pfas-rice-longchain-decouple` | `6889e341…896fbb80` | 3/3 REPRODUCED (root→shoot 디커플링 검정) |
-| `pfas-rice-consolidation` | `803d801a…046caa4e` | 5/5 REPRODUCED (engine-rendered 통합본) |
+| `pfas-rice-consolidation` | `803d801a…046caa4e` | 5/5 REPRODUCED (engine-rendered 통합본; 9개 investigative run 종합) |
+| `pfas-rice-model-selection` | `03387809…fa8f2bc8` | 4/4 REPRODUCED (transport 모델 선택·권장 판정) |
 
 ### 재현
 ```bash
@@ -478,3 +479,23 @@ REFUTED.** `sci-adk run`(Spec 컴파일) → evi-oos-tang(measured, REFUTES) + v
 데이터셋 주장에 영향 없음; Kim 장쇄는 저-DF(3–13%). `sci-adk run` → evi-oos-multidataset
 (measured, SUPPORTS) → `resolve`/`verify` 재현(exit 0, digest 68ebaf39). 가드
 `test_oos_multidataset_run_reproduces`. 재현: `python validation/oos_multidataset.py`.
+
+## 9. Transport 모델 선택·권장 판정 (`runs/pfas-rice-model-selection`)
+
+앞선 결과를 **하나의 엔진 판정**으로 모았다: 전(全) 측정증거에서 어떤 transport 구성이
+가장 잘 지지되는가, lipid를 권장 구성으로 승격할 것인가. 세 데이터셋 모두에서 K_PL-gated
+**lipid가 우세**(threshold 자동판정, `sci-adk verify` digest `03387809…`, 4/4 SUPPORTED):
+
+| 측정 데이터셋 | free/monotone | lipid | lipid 우세폭(log10) |
+|---|---|---|---|
+| Yamazaki 전계열 (in-sample, `longchain_mechanism.py`) | 1.035 | **0.386** | 0.649 |
+| Tang 2026 조직별 TF (OOS) | 1.232 | **0.516** | 0.716 |
+| Kim 2019 곡립 BAF (OOS, PFOA 제외) | 2.05 | **0.48** | 1.57 |
+
+**최소 우세폭 0.649(factor ~4)** → lipid는 *평균이 아니라 모든 데이터셋에서* 이긴
+**일관된 승자**(hyp-select-consistent-winner SUPPORTED). **권장(정직한 단서 포함)**: shoot·곡립·
+표본외 예측에는 **lipid loading 선호**(`model_api.simulate(lipid_loading=True)`); 단 코어 *하드
+default*는 보수적으로 free-anion 유지(lipid는 opt-in) — 단일-풀 lipid의 장쇄 root 트레이드오프가
+아직 신뢰성 있게 해소되지 않았기 때문(§7 complete/decouple). GenX/ether 잔차는 이 선택과 무관한
+별개 과제. 이는 앞선 run들의 *선택 판정*이지 새 모델이 아니다. 가드
+`test_model_selection_run_reproduces`. 재현: `python sci_adk_review/build_model_selection.py`.
