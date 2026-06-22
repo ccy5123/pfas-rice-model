@@ -97,7 +97,34 @@ the same W2 parameters give RMSE ~0.25–0.31 **regardless of root:shoot** — i
 the unrealistically low HI (almost no grain), not just the root, that the fit leans
 on. The transport fit (`f_xy_W2fit`, `L_Ph_W2fit`, `kappa_d_W2fit`) is therefore
 **entangled with a non-physical biomass** and is not valid on a literature-consistent
-one.
+one *without re-fitting*.
+
+### 4.1 Re-fit on the realistic biomass (`validation/refit_realistic_biomass.py`)
+
+Re-fitting per-congener `f_xy`/`L_Ph`/`kappa_d` to the *same* Yamazaki BAF on the
+literature biomass (root:shoot 0.10, HI 0.53; drivers otherwise identical to
+reproduce_demo) **restores the reproduction**:
+
+| biomass / parameters | overall log10 RMSE |
+|---|---|
+| placeholder, W2 fit (reproduce_demo) | 0.029 |
+| realistic, W2 fit **un-changed** | ~0.31 |
+| realistic, **re-fitted** | **0.103** (≈ **0.017** excl. near-MQL PFDoDA) |
+
+8 of 11 congeners re-fit to RMSE ≈ 0 — realistic biomass is fully fittable; the
+"collapse" was only the un-refit parameters. Findings (`params/refit_realistic_biomass.csv`):
+
+- **`f_xy` is systematically LOWER than the W2 fit (~0.4–0.6×)**: PFOA 0.026→0.015,
+  PFOS 0.142→0.077, PFDA 0.082→0.061. The root-richer, grain-heavier realistic biomass
+  needs less transpiration-stream loading to match straw/grain.
+- **The non-monotone (U-shaped) `f_xy` across chain length PERSISTS** (declines to C7,
+  rises C8→C12) — so the long-chain shoot rise is **not a biomass artifact**; it
+  survives a literature biomass (cf. `docs/fxy_longchain_lipid_exploration.md`).
+- **PFDoDA stays unfittable** (RMSE 0.337; near-MQL outlier with f_xy/L_Ph at bounds) —
+  the same outlier flagged in reproduce_demo.
+
+OVERRIDE-only: written to `params/refit_realistic_biomass.csv`; `params/parameters.json`
+is unchanged pending a decision to promote it.
 
 ## 5. Implications for the burden / "leaf dominates" question
 
@@ -112,8 +139,11 @@ one.
 ## 6. Follow-up (open)
 
 1. **Re-fit the transport parameters** (`f_xy`, `L_Ph`, `kappa_d`) on a literature-
-   consistent biomass (root:shoot ~0.10, HI ~0.5) — the current W2 fit does not
-   transfer (§4). This is the substantive next step (model task #7).
+   consistent biomass — **DONE** (§4.1, `validation/refit_realistic_biomass.py`):
+   reproduction restored (RMSE ~0.017 excl. PFDoDA), `f_xy` ~0.4–0.6× the W2 values,
+   U-shape persists. Open decision: whether to **promote** `refit_realistic_biomass.csv`
+   to the canonical `parameters.json` (would change all downstream BAFs; needs a
+   provenance/versioning step and a re-run of dependent validations).
 2. **Close the root data gap**: a maturity, root-inclusive biomass for the target
    system to pin root:shoot (currently a literature range 0.08–0.15).
 3. Decide whether to make a literature root:shoot the `growth_rice` default (kept
