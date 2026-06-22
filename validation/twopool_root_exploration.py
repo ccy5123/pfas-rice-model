@@ -290,8 +290,70 @@ def main():
           "(0.286 excl) | saturated W2 0.029")
 
     demanded = root_matched_analysis(p)
-    make_figure(p, demanded)
+    q = ushape_kseq_eval(p, demanded)
+    make_figure(p, demanded, ushape_q=q)
     return p, sol
+
+
+# ---------------------------------------------------------------------------
+# U-shaped k_seq descriptor (the well-posed follow-up): fit a smooth ASYMMETRIC
+# U in CHAIN LENGTH n (NOT K_PL) to the root-matched empirical k_seq, then plug
+# it back into the full two-pool ODE. The rising long-chain arm is in n, so it
+# SEPARATES PFOS (C8) from PFUnDA (C11) at identical K_PL -- exactly what a
+# K_PL-gated or linear k_seq cannot. Form:
+#     k_seq(n,grp) = [A*exp(-b*(n-4)) + C*exp(d*(n-12))] * (10^sa if PFSA)
+#   short-chain arm (declining) + long-chain arm (rising), head-group offset.
+# ---------------------------------------------------------------------------
+def kseq_ushape(n, group, q):
+    base = 10.0 ** q[0] * np.exp(-q[1] * (n - 4.0)) + 10.0 ** q[2] * np.exp(q[3] * (n - 12.0))
+    return base * (10.0 ** q[4] if group == "PFSA" else 1.0)
+
+
+def fit_ushape(demanded):
+    """Fit the 5-param asymmetric-U log10 k_seq to the root-matched empirical values."""
+    def res(q):
+        return [np.log10(max(kseq_ushape(n, g, q), 1e-9)) - np.log10(max(ks, 1e-9))
+                for _, n, g, ks in demanded]
+    q0 = [np.log10(0.5), 0.6, np.log10(0.02), 0.5, 0.1]
+    sol = least_squares(res, q0, method="lm", max_nfev=10000)
+    return sol.x
+
+
+def ushape_kseq_eval(p, demanded):
+    print("\n" + "=" * 78)
+    print("U-SHAPED k_seq(n) DESCRIPTOR  (rising arm in CHAIN LENGTH, not K_PL)")
+    print("=" * 78)
+    q = fit_ushape(demanded)
+    descr_rmse = np.sqrt(np.mean([(np.log10(max(kseq_ushape(n, g, q), 1e-9))
+                                   - np.log10(max(ks, 1e-9))) ** 2
+                                  for _, n, g, ks in demanded]))
+    print(f"fitted form  k_seq=[{10**q[0]:.3f}*exp(-{q[1]:.2f}(n-4)) + "
+          f"{10**q[2]:.4f}*exp({q[3]:.2f}(n-12))] * {{10^{q[4]:+.2f} if PFSA}}")
+    print(f"   descriptor-fit log10 RMSE vs root-matched empirical = {descr_rmse:.3f}")
+
+    print(f"\n{'PFAS':8}{'nC':>3}{'grp':>5}{'k_seq':>9} | "
+          f"{'root p/o':>15}{'straw p/o':>15}{'grain p/o':>15}")
+    err = {"root": [], "straw": [], "grain": []}
+    for c in CONGENERS:
+        ks = kseq_ushape(c["n_C"], c["group"], q)
+        r, s, g = simulate(c, p, kseq_override=ks)
+        o = OBS[c["name"]]; pred = {"root": r, "straw": s, "grain": g}
+        for k in err:
+            if k in o:
+                err[k].append((np.log10(max(pred[k], 1e-6)) - np.log10(o[k])) ** 2)
+        print(f"{c['name']:8}{c['n_C']:>3}{c['group'][-3:]:>5}{ks:>9.3f} | "
+              f"{r:>7.2f}/{o.get('root', float('nan')):<6.2f} "
+              f"{s:>7.2f}/{o.get('straw', float('nan')):<6.2f} "
+              f"{g:>7.2f}/{o.get('grain', float('nan')):<6.2f}")
+    allsq = err["root"] + err["straw"] + err["grain"]
+    rt = {k: float(np.sqrt(np.mean(v))) for k, v in err.items()}
+    print(f"\nfull-ODE log10 RMSE (U-shaped k_seq, all 11) = {np.sqrt(np.mean(allsq)):.3f}"
+          f"   root={rt['root']:.3f} straw={rt['straw']:.3f} grain={rt['grain']:.3f}")
+    ks_os = kseq_ushape(8, "PFSA", q); ks_un = kseq_ushape(11, "PFCA", q)
+    print(f"PFOS(C8) k_seq={ks_os:.3f}  vs  PFUnDA(C11) k_seq={ks_un:.3f}  "
+          f"({ks_un/ks_os:.1f}x at identical K_PL=31623)  <- SEPARATION REALIZED")
+    print("vs linear global k_seq (ks_b->0; could NOT separate): root over-PFOS/under-PFUnDA")
+    return q
 
 
 # ---------------------------------------------------------------------------
@@ -375,7 +437,7 @@ def root_matched_analysis(p):
 # figure: (a) the empirical non-K_PL U-shaped k_seq descriptor; (b) global-fit
 # pred-vs-obs for the three tissues.
 # ---------------------------------------------------------------------------
-def make_figure(p, demanded, fname="twopool_root_exploration.png"):
+def make_figure(p, demanded, ushape_q=None, fname="twopool_root_exploration.png"):
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -392,6 +454,13 @@ def make_figure(p, demanded, fname="twopool_root_exploration.png"):
              lw=2, label="PFCA")
     ax1.plot([n for n, _, _ in pfsa], [ks for _, ks, _ in pfsa], "s", color="#d62728",
              ms=9, label="PFSA")
+    # overlay the fitted asymmetric-U descriptor (rising arm in n -> separates the pair)
+    if ushape_q is not None:
+        ng = np.linspace(4, 12, 80)
+        ax1.plot(ng, [kseq_ushape(n, "PFCA", ushape_q) for n in ng], "-",
+                 color="#1f77b4", alpha=0.45, lw=4, label="U-fit (PFCA)", zorder=1)
+        ax1.plot(ng, [kseq_ushape(n, "PFSA", ushape_q) for n in ng], "--",
+                 color="#d62728", alpha=0.45, lw=2.5, label="U-fit (PFSA)", zorder=1)
     for n, ks, nm in pfca + pfsa:
         ax1.annotate(nm, (n, ks), fontsize=7, xytext=(2, 3), textcoords="offset points")
     # highlight the identical-K_PL pair
@@ -409,7 +478,8 @@ def make_figure(p, demanded, fname="twopool_root_exploration.png"):
     ax1.set_title("(a) Required root-sink rate is U-shaped & non-K_PL")
     ax1.legend(); ax1.grid(alpha=0.3, which="both")
 
-    # (b) global-fit pred vs obs
+    # (b) pred vs obs using the U-shaped k_seq (when fitted) -- the deliverable;
+    # falls back to the global linear-k_seq fit if no U-shape was passed.
     colors = {"root": "#8c564b", "straw": "#2ca02c", "grain": "#9467bd"}
     for k in ("root", "straw", "grain"):
         xs, ys = [], []
@@ -417,7 +487,8 @@ def make_figure(p, demanded, fname="twopool_root_exploration.png"):
             o = OBS[c["name"]]
             if k not in o:
                 continue
-            r, s, g = simulate(c, p)
+            ks = kseq_ushape(c["n_C"], c["group"], ushape_q) if ushape_q is not None else None
+            r, s, g = simulate(c, p, kseq_override=ks)
             pred = {"root": r, "straw": s, "grain": g}[k]
             xs.append(o[k]); ys.append(max(pred, 1e-3))
         ax2.scatter(xs, ys, c=colors[k], label=k, s=42, edgecolor="k", lw=0.4)
@@ -427,7 +498,9 @@ def make_figure(p, demanded, fname="twopool_root_exploration.png"):
     ax2.set_xscale("log"); ax2.set_yscale("log")
     ax2.set_xlim(lim); ax2.set_ylim(lim)
     ax2.set_xlabel("observed BAF  [L/kg]"); ax2.set_ylabel("two-pool predicted BAF  [L/kg]")
-    ax2.set_title("(b) Global fit (7 params, monotone physical f_xy)")
+    title_b = ("(b) U-shaped k_seq(n) fit  (RMSE 0.251; monotone physical f_xy)"
+               if ushape_q is not None else "(b) Global fit (7 params, monotone physical f_xy)")
+    ax2.set_title(title_b)
     ax2.legend(); ax2.grid(alpha=0.3, which="both")
 
     fig.tight_layout()

@@ -345,8 +345,13 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   proving the structure is SUFFICIENT, you CAN hold high long-chain root AND deliver shoot. (3) The empirical `k_seq`
   **separates PFOS (0.047) from PFUnDA (0.210), 4.5× at identical K_PL** — the non-K_PL signature is real & quantified —
   and is **U-shaped** in chain length (PFBA 0.29→PFNA 0.014→PFDoDA 0.49), which is exactly why the LINEAR global `k_seq`
-  collapsed (`ks_b→0`). **Open (well-posed) next step**: re-fit `k_seq` with a U-shaped form (same family as the straw
-  U-shape, PFDoDA included) to realize the PFOS/PFUnDA separation a B/K_PL root cannot. Figure
+  collapsed (`ks_b→0`). (4) **U-shaped `k_seq(n)` REALIZED (well-posed follow-up, DONE)**: an asymmetric U with the
+  RISING arm in **chain length n (NOT K_PL)** — `k_seq=[0.268·e^(−0.52(n−4))+0.615·e^(1.35(n−12))]·{10^+0.18 if PFSA}` —
+  fit to the root-matched empirical values then plugged back into the full ODE gives **all-11 (incl PFDoDA) log10 RMSE
+  0.251** (root **0.156**, straw 0.260, grain 0.311) and **realizes the separation**: PFOS(C8) k_seq 0.054 vs PFUnDA(C11)
+  0.166 (3.1×) → model root PFOS 6.6/PFUnDA 15.9 (was backwards 16.1/9.5 under the linear fit). Root is essentially solved
+  incl PFDoDA (82 vs 69); residual is now the **very-long-chain SHOOT** (PFDoDA straw 10.5 vs 49.8 — the C12 carrier-limit
+  floor, a shoot problem `k_seq` cannot fix). `parameters.json` UNCHANGED (exploration-only; OOS check before promoting). Figure
   `validation/figures/twopool_root_exploration.png`; full record `docs/twopool_root_exploration.md`. Still mechanism discovery,
   NOT validation (Yamazaki in-sample; decisive test = per-congener xylem-sap/root-water ratio + desorption-resistant
   root-fraction assay).
