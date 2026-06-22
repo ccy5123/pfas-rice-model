@@ -16,7 +16,11 @@ Source: Bouman & van Laar 2006 (Agric. Syst. 87:249-273) and Li et al. 2017
     FLV (leaf):   0.52   0.45   0.58   0.03   0.02   0.01
     FST (stem):   0.48   0.55   0.34   0.43   0.07   0.00
     FSO (panicle):0      0      0      0.54   0.91   0.99   (storage organ; 0 pre-flowering)
-    FSH (shoot frac of total): 0.45 (DVS0) -> 0.85 (DVS0.5) -> ~1.0 (DVS>=1); FRT = 1-FSH
+    FRT (root):   0.50   --     --     0.00   0.00   0.00   (FSH = 1-FRT; FRT 0.25 at DVS 0.43)
+
+FSH (shoot frac of total) uses the experimental ORYZA2000 IR72 standard FRTTB
+(Bouman & van Laar 2006, IRRI-calibrated): FSH = 0.50 (DVS0) -> 0.75 (DVS0.43) ->
+1.0 (DVS>=1), i.e. FRT = 0.50 -> 0.25 -> 0.00 (matches src/oryza_growth.py).
 
 Convention: daily assimilate is split root vs shoot by FSH, then the shoot share
 is split leaf/stem/panicle by FLV/FST/FSO.  Biomass = time-integral of the splits.
