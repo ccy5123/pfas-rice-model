@@ -5,7 +5,8 @@
 > mobile (shoot-feeding) pool and a sequestered (burden-holding) pool resolves the central
 > mass-balance tension. Script: `validation/twopool_root_exploration.py` (standalone,
 > EXPLORATORY, in-sample Yamazaki 2023; the canonical core and `parameters.json` are
-> UNCHANGED). Figure: `validation/figures/twopool_root_exploration.png`.
+> UNCHANGED). OOS transfer: `validation/twopool_root_oos.py`. Figure:
+> `validation/figures/twopool_root_exploration.png`.
 
 ## The tension this addresses
 
@@ -167,6 +168,43 @@ all global *shoot* params held from Result 1.
 
 Figure panel (b) plots the U-shaped-`k_seq` predictions (RMSE 0.251); panel (a) overlays the
 fitted U-form on the root-matched empirical `k_seq`.
+
+## Result 4 — out-of-sample transfer (`validation/twopool_root_oos.py`)
+
+The Yamazaki-fit two-pool U-shaped-`k_seq` model is transferred **without re-fitting** to two
+independent datasets. All four models (two-pool, single-pool monotone `f_xy`, single-pool W2,
+single-pool lipid) are run on the **same demo forcings** so the comparison is apples-to-apples.
+(The fitted params are cached to `validation/twopool_fitted_params.json`.)
+
+**(1) Kim 2019 brown-rice (grain) BAF, porewater basis — the decisive OOS series** (spans
+PFHpA→PFDoDA and shows the long-chain grain rise):
+
+| log10 RMSE vs Kim grain (same forcings) | two-pool | monotone | W2 | lipid |
+|---|--:|--:|--:|--:|
+| all | 0.62 | 1.40 | 0.66 | 1.02 |
+| **excl PFOA** | **0.47** | 1.49 | 0.57 | 1.12 |
+| reliable (DF ≥ 15 %: PFOA, PFNA) | 0.81 | 1.01 | 0.85 | 0.58 |
+
+- **The two-pool transfers BEST on the clean series (excl PFOA 0.47)** and **captures the
+  long-chain grain RISE** that the monotone model collapses on: 2pool PFUnDA 6.1 / PFDoDA 8.7
+  vs monotone 0.19 / 0.52 (Kim obs ~33 / 35). This is the project's first OOS signal for the
+  *two-pool* model specifically, and on identical forcings it beats the lipid model (which
+  over-shoots the long chains here, 118 / 152).
+- **Honest limits:** the absolute long-chain grain is still **under** (6–9 vs 33–35; these are
+  the lowest-detection-frequency Kim congeners, DF 3–13 %); and Kim PFOA grain (4.43) is ~10×
+  Yamazaki's (0.46) — a genuine between-dataset shift the Yamazaki-fit model cannot bridge
+  (it under-predicts PFOA grain at 0.36). The headline supports the *mechanism/direction*, not
+  the absolute long-chain level.
+
+**(2) Li 2025 grain/root TF (water-independent ratio) — inconclusive, as documented.** Two-pool
+grain/root TF RMSE 1.26 vs monotone 0.86: Li's short-chain grain/root TFs are anomalously high
+(PFBS 19.3, PFHxA 7.9 — grain ≫ root for short chains), a root-surface / husk-confounding the
+clean-root model does not reproduce. Consistent with the companion doc flagging Li as inconclusive.
+
+**OOS conclusion:** the transfer **supports the structure and the long-chain mechanism** (best
+clean-dataset transfer; reproduces the independent long-chain rise), but does **not** warrant
+promoting the fitted `k_seq` into `parameters.json` — it is a single clean OOS set on demo
+forcings, the absolute long-chain grain stays under, and Li is confounded. Keep exploration-only.
 
 ## Honest status
 

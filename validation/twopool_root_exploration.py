@@ -257,6 +257,36 @@ def rmse_by_tissue(x):
     return {k: float(np.sqrt(np.mean(v))) for k, v in acc.items()}
 
 
+# cache the fitted params so the OOS script can transfer the model without re-fitting
+FIT_CACHE = os.path.join(HERE, "twopool_fitted_params.json")
+
+
+def _save_fit(p, q):
+    json.dump({"global": p, "ushape_q": list(map(float, q))},
+              open(FIT_CACHE, "w"), indent=2)
+
+
+def compute_fit_quiet():
+    """Run the global fit + root-match + U-shape fit silently; return (p, q)."""
+    import io, contextlib
+    sol = least_squares(residuals, _x0(), bounds=_bounds(), method="trf",
+                        diff_step=1e-2, max_nfev=4000, args=(True,))
+    p = _unpack(sol.x)
+    with contextlib.redirect_stdout(io.StringIO()):
+        demanded = root_matched_analysis(p)
+    return p, fit_ushape(demanded)
+
+
+def load_fit():
+    """Load the cached (p, q) two-pool fit, computing+caching it if absent."""
+    if os.path.exists(FIT_CACHE):
+        d = json.load(open(FIT_CACHE))
+        return d["global"], np.array(d["ushape_q"])
+    p, q = compute_fit_quiet()
+    _save_fit(p, q)
+    return p, q
+
+
 def main():
     print("=" * 78)
     print("Two-pool root (mobile + chain/head-group-specific seq sink) — Yamazaki")
@@ -292,6 +322,8 @@ def main():
     demanded = root_matched_analysis(p)
     q = ushape_kseq_eval(p, demanded)
     make_figure(p, demanded, ushape_q=q)
+    _save_fit(p, q)
+    print(f"\nsaved fitted params -> {FIT_CACHE}")
     return p, sol
 
 

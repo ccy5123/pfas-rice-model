@@ -351,10 +351,17 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   0.251** (root **0.156**, straw 0.260, grain 0.311) and **realizes the separation**: PFOS(C8) k_seq 0.054 vs PFUnDA(C11)
   0.166 (3.1×) → model root PFOS 6.6/PFUnDA 15.9 (was backwards 16.1/9.5 under the linear fit). Root is essentially solved
   incl PFDoDA (82 vs 69); residual is now the **very-long-chain SHOOT** (PFDoDA straw 10.5 vs 49.8 — the C12 carrier-limit
-  floor, a shoot problem `k_seq` cannot fix). `parameters.json` UNCHANGED (exploration-only; OOS check before promoting). Figure
+  floor, a shoot problem `k_seq` cannot fix). (5) **OOS transfer (`validation/twopool_root_oos.py`)**: the Yamazaki-fit
+  model is transferred WITHOUT re-fitting to independent data, all 4 models on the SAME demo forcings. **Kim 2019 grain
+  (clean, PFHpA→PFDoDA): two-pool excl-PFOA log10 RMSE 0.47 = BEST** (mono 1.49, W2 0.57, lipid 1.12) and CAPTURES the
+  long-chain grain RISE (2pool PFUnDA 6.1/PFDoDA 8.7 vs monotone 0.19/0.52; obs ~33/35). Honest limits: absolute long-chain
+  grain still under (low-DF Kim tail), Kim PFOA grain 4.43 ≫ Yamazaki 0.46 (between-dataset shift), Li 2025 grain/root TF
+  root-surface-confounded (inconclusive, as documented). ⇒ OOS SUPPORTS the structure/mechanism but does NOT warrant
+  promoting the fitted `k_seq` into `parameters.json` (single clean OOS set; demo forcings). `parameters.json` UNCHANGED
+  (exploration-only). Fitted params cached → `validation/twopool_fitted_params.json`. Figure
   `validation/figures/twopool_root_exploration.png`; full record `docs/twopool_root_exploration.md`. Still mechanism discovery,
-  NOT validation (Yamazaki in-sample; decisive test = per-congener xylem-sap/root-water ratio + desorption-resistant
-  root-fraction assay).
+  NOT validation (Yamazaki in-sample fit → OOS transfer; decisive test = per-congener xylem-sap/root-water ratio +
+  desorption-resistant root-fraction assay).
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -372,7 +379,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - Measured-biomass driver: `python src/measured_biomass.py` (template → M(t) drivers demo).
 - Mass drivers: `python validation/mass_drivers_plot.py` (M_k(t), dM/dt, growth-dilution μ figure).
 - Two-pool root: `python validation/twopool_root_exploration.py` (root sink ↔ shoot decoupling; global fit +
-  root-matched sufficiency test + non-K_PL U-shaped k_seq; ~3 min, saves `figures/twopool_root_exploration.png`).
+  root-matched sufficiency test + non-K_PL U-shaped k_seq fit; ~3 min, saves `figures/twopool_root_exploration.png` +
+  `twopool_fitted_params.json`). OOS transfer: `python validation/twopool_root_oos.py` (Yamazaki-fit → Kim 2019 grain +
+  Li 2025 TF, no re-fit; reuses the cached fit, ~5 s).
 - Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
   `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
 - Soil → plant (analytic): `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
