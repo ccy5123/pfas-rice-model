@@ -77,12 +77,6 @@ def _simulate_smiles(smiles, **kw):
 
 
 @st.cache_data(show_spinner=False)
-def _biomass_audit(congener, biomass, f_xy_source):
-    """Cache the read-only biomass partitioning / root:shoot burden audit."""
-    return api.biomass_audit(congener, biomass=biomass, f_xy_source=f_xy_source)
-
-
-@st.cache_data(show_spinner=False)
 def _mol_svg(smiles, w=290, h=170):
     """2-D structure as an SVG string (RDKit, Cairo-free → works on Streamlit Cloud).
     Returns (svg, None) on success or (None, reason) so the UI can show why it failed."""
@@ -392,7 +386,7 @@ if desc is not None:
 
 tabs = st.tabs(["🗺️ Plant & soil map", "📈 Tissue dynamics", "🟫 Soil & drivers",
                 "📊 BAF vs observed", "🔗 Chain-length trends", "⚖️ Compare congeners",
-                "✅ Tang TF (OOS)", "🌱 Biomass audit", "ℹ️ About / coupling"])
+                "✅ Tang TF (OOS)", "ℹ️ About / coupling"])
 
 # ---- Tab 1: the plant + soil accumulation map -------------------------------
 with tabs[0]:
@@ -542,38 +536,8 @@ with tabs[6]:
                "redistributed-shoot `simulate_nstem_leaf`; the f_xy refit is OVERRIDE-only (parameters.json "
                "unchanged). Details: docs/VALIDATION_TANG2026_NSTEM_KR.md · docs/tang2026_grain_units_exploration.md.")
 
-# ---- Tab 8: Biomass partitioning & root:shoot audit -------------------------
+# ---- Tab 8: About -----------------------------------------------------------
 with tabs[7]:
-    st.subheader(f"{congener} — biomass partitioning & root:shoot (calibration coupling)")
-    audit = _biomass_audit(congener, biomass, fxy_source)
-    st.plotly_chart(plots.fig_biomass_partition(audit), width="stretch")
-    pa = audit["partition"]
-    st.markdown(
-        f"**Model root:shoot = {pa['root_shoot']:.3f}, HI = {pa['HI']:.2f}**  ·  literature "
-        "root:shoot 0.08–0.13, HI 0.45–0.55. The **shoot split matches** field data "
-        f"(grain/stem/leaf), but the **root fraction ({pa['root_pct']:.1f}%) is ~3× below** the "
-        "literature ~10% (Japanese flooded-paddy anchor).")
-    st.plotly_chart(plots.fig_burden_shift(audit), width="stretch")
-    st.caption("Correcting the root mass to the literature root:shoot raises the root's share of the "
-               "whole-plant PFAS **burden** — largest for root-dominated long chains / PFSA (e.g. PFOS "
-               "root share ~54→77%). The leaf-heavy share is also tempered by the redistributed-shoot "
-               "(nstem_leaf) model; here the 4-pool core is shown.")
-    rf = audit["refit"]
-    st.markdown(
-        "**Calibration coupling.** The Yamazaki W2 reproduction (log10 RMSE **0.029**) holds *only* on "
-        "the non-physical `reproduce_demo` placeholder biomass (root:shoot 0.30, HI 0.07). On a realistic "
-        "biomass the un-refit parameters give **~0.31**; **re-fitting** `f_xy`/`L_Ph`/`κ_d` restores "
-        "**~0.017** (excl. the near-MQL PFDoDA). So the transport fit was entangled with a non-physical "
-        "biomass — fittable once re-fit."
-        + (f"\n\n**{congener} re-fit on realistic biomass:** f_xy {rf['f_xy_old']:.4g} → "
-           f"**{rf['f_xy_new']:.4g}** (≈{rf['f_xy_new']/rf['f_xy_old']:.2f}×), L_Ph={rf['L_Ph_new']:.4g}, "
-           f"κ_d={rf['kappa_d_new']:.3g}, per-congener RMSE {rf['rmse']:.3f}." if rf else ""))
-    st.info("Read-only audit — defaults and `params/parameters.json` are unchanged (override-only). "
-            "Re-fit values: `params/refit_realistic_biomass.csv`; full write-up: "
-            "`docs/biomass_partitioning_rootshoot.md`.")
-
-# ---- Tab 9: About -----------------------------------------------------------
-with tabs[8]:
     st.markdown(
         """
 ### Five ways to drive the plant model

@@ -121,48 +121,6 @@ def fig_tang_tf(val, val_refit=None):
 _CHAIN_LOG = {"K_PL", "K_prot", "f_xy_recommended", "f_xy_W2fit", "B_root", "B_grain"}
 
 
-def fig_biomass_partition(audit):
-    """Model organ-biomass partitioning (% of total plant dry mass) vs the literature
-    maturity range (`model_api.biomass_audit`). The shoot split matches; the root
-    fraction sits well below the literature band."""
-    keys = [("root_pct", "root"), ("stem_pct", "stem"), ("leaf_pct", "leaf"), ("grain_pct", "grain")]
-    x = [lbl for _, lbl in keys]
-    model = [audit["partition"][k] for k, _ in keys]
-    lit = audit["literature"]
-    mid = [0.5 * (lit[k][0] + lit[k][1]) for k, _ in keys]
-    hi = [lit[k][1] - m for (k, _), m in zip(keys, mid)]
-    lo = [m - lit[k][0] for (k, _), m in zip(keys, mid)]
-    fig = go.Figure()
-    fig.add_bar(x=x, y=model, name=f"model ({audit['biomass']})", marker_color="#1f77b4",
-                hovertemplate="model %{x}: %{y:.1f}%<extra></extra>")
-    fig.add_bar(x=x, y=mid, name="literature (maturity)", marker_color="#ff7f0e",
-                error_y=dict(type="data", symmetric=False, array=hi, arrayminus=lo, thickness=1.5),
-                hovertemplate="literature %{x}: %{y:.1f}%<extra></extra>")
-    fig.update_layout(barmode="group", yaxis_title="% of total plant dry mass",
-                      title=f"{audit['congener']} — organ biomass partitioning: model vs literature",
-                      **_LAYOUT)
-    return fig
-
-
-def fig_burden_shift(audit):
-    """Per-tissue PFAS burden share (%) under the model's default biomass vs the
-    literature-root:shoot-corrected biomass (`model_api.biomass_audit`)."""
-    x = list(api.TISSUES)
-    fig = go.Figure()
-    fig.add_bar(x=x, y=[audit["burden_default"][k] for k in x],
-                name=f"default (root:shoot {audit['partition']['root_shoot']:.3f})",
-                marker_color="#bdbdbd", marker_line=dict(width=0.5, color="#333"),
-                hovertemplate="default %{x}: %{y:.1f}%<extra></extra>")
-    fig.add_bar(x=x, y=[audit["burden_corrected"][k] for k in x],
-                name=f"root corrected ({audit['root_shoot_lit']:.2f})", marker_color="#2ca02c",
-                marker_line=dict(width=0.5, color="#333"),
-                hovertemplate="corrected %{x}: %{y:.1f}%<extra></extra>")
-    fig.update_layout(barmode="group", yaxis_title="% of whole-plant PFAS burden",
-                      title=f"{audit['congener']} — burden share: default vs literature root:shoot",
-                      **_LAYOUT)
-    return fig
-
-
 def fig_chain(rows, congener, key="K_PL"):
     """A chosen per-congener parameter vs chain length; selected congener ringed."""
     fig = go.Figure()
