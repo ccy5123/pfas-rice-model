@@ -42,6 +42,26 @@ def test_root_shoot_override_hits_target_and_preserves_shoot():
     assert base["root"][-1] / shoot_b < 0.06
 
 
+def test_target_root_shoot_partitioning_method_B():
+    """target_root_shoot (method B) hits the literature root:shoot by recalibrating the
+    root ASSIMILATE PARTITIONING and preserves the harvest index better than the
+    post-hoc rescale (method C); default None unchanged."""
+    import pytest
+    t = np.linspace(0, 120.0, 481)
+    base = gr.organ_biomass(t, 120.0)
+    B = gr.organ_biomass(t, 120.0, target_root_shoot=0.10)
+    C = gr.organ_biomass(t, 120.0, root_shoot=0.10)
+    rs = lambda b: b["root"][-1] / (b["stem"][-1] + b["leaf"][-1] + b["grain"][-1])
+    hi = lambda b: b["grain"][-1] / (b["root"][-1] + b["stem"][-1] + b["leaf"][-1] + b["grain"][-1])
+    assert rs(base) < 0.06                      # the documented too-low default
+    assert rs(B) == pytest.approx(0.10, rel=1e-3)
+    # B keeps HI ~ the original (renormalised shoot); C dilutes it via the root add-on
+    assert abs(hi(B) - hi(base)) < abs(hi(C) - hi(base))
+    # method B leaves the shoot SPLIT proportions close (root reallocation only)
+    shoot = lambda b: b["stem"][-1] + b["leaf"][-1] + b["grain"][-1]
+    assert B["grain"][-1] / shoot(B) == pytest.approx(base["grain"][-1] / shoot(base), abs=0.04)
+
+
 def test_M_for_nstem_shape():
     t = np.linspace(0, 120.0, 200)
     M = gr.M_for_nstem(t, N=4, season=120.0)

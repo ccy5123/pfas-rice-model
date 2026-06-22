@@ -73,9 +73,25 @@ fraction is too low** (DVS partitioning drives root growth to ~0 after flowering
 so the final root:shoot collapses to 0.035). The `reproduce_demo` placeholder is the
 opposite extreme — root *too high* (0.30) and HI *non-physical* (0.07).
 
-`growth_rice.organ_biomass(..., root_shoot=<r>)` now rescales the root trajectory to
-a chosen final root:shoot (default `None` = unchanged), so a literature value can be
-plugged in for sensitivity work.
+### 3.1 Three ways to correct the root fraction (A > B > C by "less artificial")
+
+Because a **root-inclusive per-organ biomass *time series* for the target system is a
+data gap** (field rice studies routinely omit roots — searched: the closest is
+`10.3389/fpls.2021.713814`, japonica paddy, which reports root + *total* shoot by stage,
+not a stem/leaf/panicle split), any correction is tuned to the literature *ratio*. The
+options, least-artificial first:
+
+| | method | how | artificiality | status |
+|---|---|---|---|---|
+| **A** | measured biomass | drive `M(t)` from a measured root-inclusive per-organ series (`measured_biomass.py`) | lowest | **blocked — data gap** |
+| **B** | `target_root_shoot=` | scale the root *assimilate-partitioning* fraction `(1−FSH)` (solve for the factor), re-integrate; shoot renormalised, split preserved | medium (a biological allocation parameter) | implemented (opt-in) |
+| **C** | `root_shoot=` | post-hoc constant rescale of the root *output* trajectory | highest (multiplies the output) | implemented (opt-in) |
+
+Both **B and C land root:shoot ≈ 0.10**; **B preserves the harvest index better** (HI
+0.50 vs C's 0.48, because it reallocates rather than bolting mass onto the root) and is
+the recommended of the two. Neither is the default (`None`) — applying a correction is a
+deliberate, documented choice, not silent. **The principled fix is A**, which needs a
+root-inclusive maturity biomass series for a comparable system (still outstanding).
 
 ## 4. Calibration coupling — the key finding
 

@@ -98,11 +98,16 @@ def w2_rmse(M):
 
 
 def main():
+    def growth_rice_M_B(target_rs):
+        b = gr.organ_biomass(T, 120.0, target_root_shoot=target_rs)   # method B (FRT)
+        return np.maximum(np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-6)
+
     rows = [("reproduce placeholder", placeholder_M()),
             ("growth_rice (default ~0.035)", growth_rice_M(None)),
-            ("growth_rice R/S=0.10 (lit)", growth_rice_M(0.10)),
-            ("growth_rice R/S=0.15 (lit)", growth_rice_M(0.15)),
-            ("growth_rice R/S=0.30 (~placeholder)", growth_rice_M(0.30))]
+            ("growth_rice C rescale R/S=0.10", growth_rice_M(0.10)),
+            ("growth_rice B FRT R/S=0.10", growth_rice_M_B(0.10)),
+            ("growth_rice R/S=0.15 (C)", growth_rice_M(0.15)),
+            ("growth_rice R/S=0.30 (~placeholder, C)", growth_rice_M(0.30))]
     print(f"{'biomass driver':36s} {'root%':>6s} {'R/S':>6s} {'HI':>6s} {'W2 RMSE':>8s}")
     print("-" * 66)
     for lab, M in rows:

@@ -52,22 +52,62 @@ def _logistic(t, M0, Mmax, k, t0):
     return Mmax / (1.0 + (Mmax / M0 - 1.0) * np.exp(-k * (t - t0)))
 
 
+def _scale_root_partition(fsh, dW, target_rs, m_hi=80.0):
+    """Solve a multiplier m on the root fraction (1-FSH) so the integrated
+    root:shoot = target_rs, returning the adjusted FSH' = 1 - clip(m*(1-FSH), 0, 1).
+
+    root:shoot(m) = sum(m*frt*dW) / sum((1-m*frt)*dW)  (the renorm scale cancels), a
+    monotone-increasing function of m -> bisection. Method B (partitioning recalibration).
+    """
+    frt = 1.0 - np.asarray(fsh, float)
+    w = np.asarray(dW, float)
+
+    def rs(m):
+        frtm = np.clip(m * frt, 0.0, 1.0)
+        ri = float(np.sum(frtm * w))
+        si = float(np.sum((1.0 - frtm) * w))
+        return ri / si if si > 0 else np.inf
+
+    if rs(1.0) >= target_rs:              # already at/above target -> no upward scaling
+        return fsh
+    lo, hi = 1.0, m_hi
+    for _ in range(60):
+        mid = 0.5 * (lo + hi)
+        if rs(mid) < target_rs:
+            lo = mid
+        else:
+            hi = mid
+    return 1.0 - np.clip(0.5 * (lo + hi) * frt, 0.0, 1.0)
+
+
 def organ_biomass(t: np.ndarray, season: float = 120.0,
                   wshoot_max_g_m2: float = WSHOOT_MAX_G_M2,
-                  root_shoot: float | None = None):
+                  root_shoot: float | None = None,
+                  target_root_shoot: float | None = None):
     """Per-organ dry biomass [kg/hill] over t: returns dict root/stem/leaf/grain.
 
     Total assimilate follows a logistic; daily increments are partitioned by the
     ORYZA IR72 DVS tables and integrated.  Scaled so final shoot ~ wshoot_max.
 
-    root_shoot : if given, rescale the WHOLE root trajectory so the final
-        root:shoot mass ratio equals this value (the root time-shape is preserved).
-        The DVS scheme drives root partitioning to ~0 after flowering, leaving an
-        unrealistically low final root:shoot (~0.035); literature lowland-rice
-        maturity root:shoot is ~0.08-0.13 (root ~7-12% of total plant; declines
-        from ~0.2 at seedling, lower for high-yield cultivars due to grain-fill
-        dilution -- Frontiers Plant Sci. 2021, 10.3389/fpls.2021.713814; Yoshida
-        1981 IRRI). Default None preserves the original behaviour (reproducibility).
+    root_shoot : (method C, post-hoc) if given, rescale the WHOLE root trajectory by a
+        constant so the final root:shoot equals this value (root time-SHAPE preserved).
+        Simple but artificial -- it multiplies the output, not the allocation.
+    target_root_shoot : (method B, partitioning) if given, scale the root ASSIMILATE
+        PARTITIONING fraction (1-FSH) by a factor solved so the final root:shoot equals
+        this value, then re-integrate (shoot renormalised to its target, split preserved).
+        Less artificial than `root_shoot`: it raises *allocation* to roots, so the root
+        accrues more during vegetative growth (front-loaded shape), not a flat output
+        rescale. Use ONE of the two. Both default None (original behaviour preserved).
+
+        Why a correction is needed: the DVS scheme drives root partitioning to ~0 after
+        flowering and the biomass logistic is grain-fill-weighted, leaving an
+        unrealistically low final root:shoot (~0.035); literature lowland-rice maturity
+        root:shoot is ~0.08-0.13 (root ~7-12% of total; declines from ~0.2 at seedling;
+        Japanese flooded-paddy field anchor 0.08-0.12 -- 10.1038/srep29333,
+        10.3389/fpls.2021.713814; Yoshida 1981 IRRI). NOTE: a root-inclusive per-organ
+        biomass time series for the target system is a data gap, so both B and C are
+        tuned to the literature ratio; B just places the assumption on a biologically
+        meaningful partitioning parameter. See docs/biomass_partitioning_rootshoot.md.
     """
     t = np.asarray(t, float)
     dvs = dvs_of_t(t, season)
@@ -78,6 +118,8 @@ def organ_biomass(t: np.ndarray, season: float = 120.0,
     Wtot = (wshoot_max_g_m2 / 0.9) / (1.0 + np.exp(-r * (t - tmid)))
     dW = np.clip(np.gradient(Wtot, t), 0.0, None)
     fsh = np.interp(dvs, _FSH_DVS, _FSH)
+    if target_root_shoot is not None:    # method B: recalibrate the root allocation
+        fsh = _scale_root_partition(fsh, dW, float(target_root_shoot))
     flv = np.interp(dvs, _DVS, _FLV)
     fst = np.interp(dvs, _DVS, _FST)
     fso = np.interp(dvs, _DVS, _FSO)
