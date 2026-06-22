@@ -320,6 +320,74 @@ def apportionment(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommen
     return res
 
 
+# --- Biomass partitioning / root:shoot audit (read-only; defaults unchanged) ----
+# Literature maturity partitioning for lowland rice (docs/biomass_partitioning_rootshoot.md):
+# shoot split is field-validated; the root fraction is anchored to a Japanese-paddy value.
+LIT_PARTITION = {"root_pct": (7.0, 13.0), "stem_pct": (24.0, 33.0), "leaf_pct": (18.0, 24.0),
+                 "grain_pct": (45.0, 55.0), "root_shoot": (0.08, 0.13), "HI": (0.45, 0.55)}
+
+
+def _refit_fxy(congener):
+    """Per-congener realistic-biomass re-fit (params/refit_realistic_biomass.csv) or None."""
+    path = os.path.join(_ROOT, "params", "refit_realistic_biomass.csv")
+    if not os.path.exists(path):
+        return None
+    import csv as _csv
+    with open(path) as f:
+        for r in _csv.DictReader(f):
+            if r["name"] == congener:
+                return dict(f_xy_old=float(r["f_xy_old"]), f_xy_new=float(r["f_xy_new"]),
+                            L_Ph_new=float(r["L_Ph_new"]), kappa_d_new=float(r["kappa_d_new"]),
+                            rmse=float(r["rmse"]))
+    return None
+
+
+def _partition_stats(M):
+    f = np.asarray(M, float)[-1]
+    tot = float(f.sum()) or 1.0
+    shoot = float(f[1:].sum()) or 1.0
+    return dict(root_pct=100 * f[0] / tot, stem_pct=100 * f[1] / tot,
+                leaf_pct=100 * f[2] / tot, grain_pct=100 * f[3] / tot,
+                root_shoot=float(f[0] / shoot), HI=float(f[3] / tot))
+
+
+def biomass_audit(congener="PFOA", biomass="growth_rice", root_shoot_lit=0.10,
+                  Cwo=1.0, season=120.0, n_t=241, f_xy_source="recommended"):
+    """Biomass-partitioning & root:shoot burden audit for one congener (READ-ONLY).
+
+    Surfaces the analysis in docs/biomass_partitioning_rootshoot.md: (a) the model organ
+    partitioning vs the literature maturity range (the shoot split matches; the root
+    fraction is ~3x low), and (b) how the per-tissue PFAS BURDEN share shifts when the
+    root mass is corrected to the literature root:shoot (rescaling only the root column,
+    shoot untouched). Also returns the congener's realistic-biomass re-fit (if present).
+    Defaults and params/parameters.json are unchanged.
+    """
+    t = np.linspace(0.0, float(season), int(n_t))
+    Qtp = fr.Q_TP(t, season)
+    b = _biomass_fn(biomass)(t, season)
+    M = np.maximum(np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-9)
+    leaf_loss = b.get("leaf_death_rate")
+    f = M[-1]
+    shoot = float(f[1:].sum()) or 1.0
+    Mc = M.copy()
+    if f[0] > 0:
+        Mc[:, 0] = M[:, 0] * (float(root_shoot_lit) * shoot / float(f[0]))
+
+    def _burden(Marr):
+        drv = dict(t=t, Cwo=np.full_like(t, float(Cwo)), Qtp=Qtp, M=Marr)
+        if leaf_loss is not None:
+            drv["leaf_loss"] = leaf_loss
+        r = simulate(congener, drivers=drv, f_xy_source=f_xy_source)
+        bd = {k: float(r["conc"][k][-1]) * float(Marr[-1, i]) for i, k in enumerate(TISSUES)}
+        s = sum(bd.values()) or 1.0
+        return {k: 100.0 * bd[k] / s for k in bd}
+
+    return dict(congener=congener, biomass=biomass, root_shoot_lit=float(root_shoot_lit),
+                partition=_partition_stats(M), partition_corrected=_partition_stats(Mc),
+                literature=LIT_PARTITION, burden_default=_burden(M),
+                burden_corrected=_burden(Mc), refit=_refit_fxy(congener))
+
+
 def simulate_from_smiles(smiles, *, name=None, f_xy=None, f_xy_override=None, **kw):
     """Run the 4-compartment model for an arbitrary PFAS given by a SMILES string.
 

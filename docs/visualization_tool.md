@@ -64,6 +64,29 @@ Three things the tab makes explicit (the rigor points from this work):
 
 ---
 
+## Biomass audit tab (root:shoot & calibration coupling)
+
+The **🌱 Biomass audit** tab surfaces the biomass-partitioning analysis
+(`model_api.biomass_audit` → `plots.fig_biomass_partition`, `plots.fig_burden_shift`;
+full write-up `docs/biomass_partitioning_rootshoot.md`). For the selected congener it shows:
+
+- **Organ partitioning: model vs literature** — the model's % of total-plant dry mass
+  (root/stem/leaf/grain) against the maturity literature band. The **shoot split matches**
+  field data, but the **root fraction (~3.4 %) sits ~3× below** the literature ~10 %
+  (Japanese flooded-paddy anchor; `10.1038/srep29333`, `10.3389/fpls.2021.713814`).
+- **Burden share: default vs literature root:shoot** — correcting the root mass to
+  root:shoot ≈ 0.10 raises the root's share of the whole-plant PFAS **burden** (largest for
+  root-dominated long chains / PFSA, e.g. PFOS root ~54 → 77 %).
+- **Calibration coupling** — the W2 reproduction (log10 RMSE 0.029) holds *only* on the
+  non-physical `reproduce_demo` placeholder biomass (root:shoot 0.30, HI 0.07); a realistic
+  biomass gives ~0.31 un-refit and **~0.017 re-fitted** (`validation/refit_realistic_biomass.py`).
+  The per-congener re-fit (`f_xy` ~0.4–0.6× the W2 value) is shown from
+  `params/refit_realistic_biomass.csv`.
+
+**Read-only / override-only:** defaults and `params/parameters.json` are unchanged.
+
+---
+
 ## Biomass driver M(t) & the Tissue-dynamics mass plot
 
 The sidebar **“Biomass driver M(t)”** radio chooses the organ-biomass forcing for the built-in scenarios:

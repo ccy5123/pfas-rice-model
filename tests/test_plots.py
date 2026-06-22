@@ -27,6 +27,14 @@ def test_all_figures_build():
         assert f.layout.title.text
 
 
+def test_biomass_audit_figures_build():
+    audit = api.biomass_audit("PFOA")
+    for f in (plots.fig_biomass_partition(audit), plots.fig_burden_shift(audit)):
+        assert isinstance(f, go.Figure)
+        assert len(f.data) == 2          # model vs literature / default vs corrected
+        assert f.layout.title.text
+
+
 def test_chain_log_axis_for_partition_keys():
     rows = api.chain_table()
     assert plots.fig_chain(rows, "PFOA", "K_PL").layout.yaxis.type == "log"

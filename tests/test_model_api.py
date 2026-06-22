@@ -20,6 +20,27 @@ def test_congener_list_and_chain_table():
     assert all({"name", "n_C", "group", "K_PL", "f_xy_recommended"} <= set(r) for r in rows)
 
 
+def test_biomass_audit_structure_and_root_correction():
+    a = api.biomass_audit("PFOA")
+    # partition vs literature
+    assert set(a["partition"]) >= {"root_pct", "stem_pct", "leaf_pct", "grain_pct", "root_shoot", "HI"}
+    assert sum(a["partition"][k] for k in ("root_pct", "stem_pct", "leaf_pct", "grain_pct")) == pytest.approx(100.0, abs=1e-6)
+    # the documented finding: default root fraction is well below the literature band
+    assert a["partition"]["root_pct"] < api.LIT_PARTITION["root_pct"][0]
+    # burden shares each sum to 100
+    for key in ("burden_default", "burden_corrected"):
+        assert sum(a[key].values()) == pytest.approx(100.0, abs=1e-6)
+    # correcting root:shoot up raises the root's burden share
+    assert a["burden_corrected"]["root"] > a["burden_default"]["root"]
+    # the realistic-biomass re-fit is surfaced for a calibrated congener
+    assert a["refit"] is not None and a["refit"]["f_xy_new"] < a["refit"]["f_xy_old"]
+
+
+def test_biomass_audit_root_dominated_congener():
+    a = api.biomass_audit("PFOS")          # root-dominated -> correction matters most
+    assert a["burden_corrected"]["root"] > a["burden_default"]["root"] > 30.0
+
+
 def test_simulate_all_congeners_run_and_finite():
     for nm in api.CONGENERS:
         r = api.simulate(nm)
