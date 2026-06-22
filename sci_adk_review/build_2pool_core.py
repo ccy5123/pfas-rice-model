@@ -211,7 +211,7 @@ PROSE = PaperProse(
         "as the long-chain-capable configuration a risk screen needs, the two-pool root had to "
         "become a first-class component. It now is: src/pfas_rice_two_pool.py reuses the canonical "
         "Compound / GHK + carrier root_uptake and the measured drivers, exposes simulate and "
-        "close_longchain, and is reachable through model_api (simulate_two_pool / "
+        "close_longchain, and is reachable through model_api (simulate_twopool_carrier / "
         "close_longchain_2pool). The canonical single-pool core is untouched, so nothing regresses. "
         "This run is the engine-adjudicated acceptance test of that wiring; the narrative is "
         "agent-authored prose input."
@@ -219,7 +219,7 @@ PROSE = PaperProse(
     discussion=(
         "The promoted component reproduces the breakthrough numbers exactly, so the long-chain "
         "capability is now reusable: a risk assessor can call close_longchain_2pool to obtain the "
-        "long-chain root/straw/grain reproduction, or simulate_two_pool with chosen levers. The two "
+        "long-chain root/straw/grain reproduction, or simulate_twopool_carrier with chosen levers. The two "
         "mechanistic levers are confirmed independent -- a low f_xy (the long chain is retained in "
         "the root) and an enhanced carrier (the high uptake that builds the measured root) -- which "
         "is the precise correction to the earlier single-pool fits that conflated them by forcing a "

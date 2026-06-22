@@ -79,25 +79,30 @@ def observed_baf(congener):
     return out
 
 
-def simulate_two_pool(congener, *, f_xy, vmax_in, g_xy=0.0, g_ph=0.0, k_off=0.02,
-                      seq=1.0, biomass="oryza", season=120.0):
-    """Opt-in TWO-POOL root model (the long-chain breakthrough; src/pfas_rice_two_pool.py).
+def simulate_twopool_carrier(congener, *, f_xy, vmax_in, g_xy=0.0, g_ph=0.0, k_off=0.02,
+                             seq=1.0, biomass="oryza", season=120.0):
+    """Opt-in CARRIER two-pool root model (the long-chain breakthrough; src/pfas_rice_two_pool.py).
 
     Splits the root into a mobile pool (feeds the xylem / sets the uptake gradient) and a
     slow bound store (holds the measured root burden), so a LOW f_xy (strong root retention)
     and an ENHANCED active carrier (high uptake) are independent levers -- which closes the
     long chains the single-pool core cannot. Returns root/straw/grain BAF (Cwo=1). The
-    canonical ``simulate`` (4pool_surf) is unchanged; this is additive."""
+    canonical ``simulate`` (4pool_surf) is unchanged; this is additive.
+
+    NOTE: distinct from `simulate_twopool_seq` -- that one's second pool is an irreversible
+    SEQUESTRATION sink (non-K_PL U-shaped k_seq, Yamazaki-fit); this one's is a reversible
+    bound STORE tuned by the carrier/f_xy levers (saturated long-chain closure)."""
     import pfas_rice_two_pool as tp
     return tp.simulate(congener, f_xy, vmax_in, g_xy=g_xy, g_ph=g_ph, k_off=k_off,
                        seq=seq, biomass=biomass, season=season)
 
 
 def close_longchain_2pool(congener, *, obs=None, biomass="oryza", season=120.0):
-    """Saturated 3-param structural-adequacy fit of the 2-pool model to the measured
-    BAFs (free f_xy -> straw, active carrier -> root, g_ph -> grain). ``obs`` defaults to
-    the Yamazaki BAF for the congener. Returns the fitted (f_xy, vmax_in, g_ph) + the
-    reproduced root/straw/grain. Reproduction (DOF 0), NOT a-priori prediction."""
+    """Saturated 3-param structural-adequacy fit of the CARRIER two-pool model
+    (`simulate_twopool_carrier`) to the measured BAFs (free f_xy -> straw, active carrier
+    -> root, g_ph -> grain). ``obs`` defaults to the Yamazaki BAF for the congener. Returns
+    the fitted (f_xy, vmax_in, g_ph) + the reproduced root/straw/grain. Reproduction (DOF 0),
+    NOT a-priori prediction."""
     import pfas_rice_two_pool as tp
     obs = obs or observed_baf(congener)
     if not {"root", "straw", "grain"} <= set(obs):
@@ -491,7 +496,7 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
 
 
 # ---------------------------------------------------------------------------
-# Two-pool root model (EXPLORATORY, opt-in) -- mobile + sequestered root pools
+# SEQUESTRATION two-pool root model (EXPLORATORY, opt-in) -- mobile + sequestered
 #   docs/twopool_root_exploration.md ; validation/twopool_root_exploration.py
 # Splits the root into a MOBILE pool (binding B_m; feeds the xylem via the
 # monotone-physical f_xy + a K_PL-gated lipid term) and a SEQUESTERED pool (an
@@ -501,37 +506,40 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
 # monotone physical f_xy. In-sample Yamazaki fit (RMSE 0.251); canonical core and
 # parameters.json are UNCHANGED -- the fitted globals + U-shape come from the
 # cached fit (validation/twopool_fitted_params.json) loaded lazily below.
+# NOTE: distinct from the CARRIER two-pool model (`simulate_twopool_carrier`,
+# src/pfas_rice_two_pool.py) -- that one's second pool is a reversible bound store
+# tuned by carrier/f_xy levers; this one's is an irreversible k_seq sink.
 # ---------------------------------------------------------------------------
 _TP_RM, _TP_RS, _TP_ST, _TP_LF, _TP_GR = 0, 1, 2, 3, 4   # 5-state indices
-_TWOPOOL = None                                          # ((p, q), module) cache
+_TWOPOOL_SEQ = None                                      # ((p, q), module) cache
 
 
-def _twopool():
+def _twopool_seq():
     """Lazily import the two-pool exploration module and load its cached fit.
 
     Returns ((p, q), TP) where `p` are the fitted GLOBAL params, `q` the U-shaped
     k_seq coefficients (validation/twopool_fitted_params.json) and `TP` the module
     (for its pure descriptor functions kseq_ushape/lipid_g). Reusing the cached fit
     keeps this wrapper byte-consistent with the validation script."""
-    global _TWOPOOL
-    if _TWOPOOL is None:
+    global _TWOPOOL_SEQ
+    if _TWOPOOL_SEQ is None:
         import sys
         vdir = os.path.join(_ROOT, "validation")
         if vdir not in sys.path:
             sys.path.insert(0, vdir)
         import twopool_root_exploration as TP
-        _TWOPOOL = (TP.load_fit(), TP)
-    return _TWOPOOL
+        _TWOPOOL_SEQ = (TP.load_fit(), TP)
+    return _TWOPOOL_SEQ
 
 
-def _twopool_rhs(t_grid, Cwo_s, Qtp_s, M_s, dM_s, cmpd, comps, B, env,
-                 gxy, gph, kseq, phi=0.1, T_C_Ph=10.0, k_rel=0.0):
+def _twopool_seq_rhs(t_grid, Cwo_s, Qtp_s, M_s, dM_s, cmpd, comps, B, env,
+                     gxy, gph, kseq, phi=0.1, T_C_Ph=10.0, k_rel=0.0):
     """5-state RHS (mass-conserving; sole source M_root*j_R into the mobile pool).
 
     Faithful re-implementation of validation/twopool_root_exploration.make_rhs,
     generalised to arbitrary driver arrays (Cwo, Qtp, M on `t_grid`) so it returns
     a full time series and supports the standard simulate() driver options. Guarded
-    against drift by tests/test_model_api.py::test_simulate_twopool_matches_validation_and_rmse."""
+    against drift by tests/test_model_api.py::test_simulate_twopool_seq_matches_validation_and_rmse."""
     def rhs(t, C):
         Qtp = float(np.interp(t, t_grid, Qtp_s))
         Cwo = float(np.interp(t, t_grid, Cwo_s))
@@ -572,10 +580,10 @@ def _twopool_rhs(t_grid, Cwo_s, Qtp_s, M_s, dM_s, cmpd, comps, B, env,
     return rhs
 
 
-def simulate_twopool(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, season=120.0,
-                     n_t=481, measured_forcing=False, biomass="growth_rice",
-                     drivers=None, k_rel=0.0, kseq_override=None):
-    """Two-pool root uptake run (mobile + sequestered root pools) -- EXPLORATORY, opt-in.
+def simulate_twopool_seq(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, season=120.0,
+                         n_t=481, measured_forcing=False, biomass="growth_rice",
+                         drivers=None, k_rel=0.0, kseq_override=None):
+    """Sequestration two-pool root run (mobile + sequestered root pools) -- EXPLORATORY, opt-in.
 
     Mirrors `simulate()` / `simulate_nstem_leaf()` for the I/O so the app and other
     validation can treat the two-pool model interchangeably: returns a dict with the
@@ -584,6 +592,10 @@ def simulate_twopool(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, season=120.0,
     L_Ph, the lipid conductances) and the non-K_PL U-shaped `k_seq(n, head_group)`
     come from the cached Yamazaki fit (validation/twopool_fitted_params.json); the
     xylem free-loading uses the monotone physical `f_xy_recommended`.
+
+    NOTE: distinct from `simulate_twopool_carrier` (the long-chain-closure model,
+    src/pfas_rice_two_pool.py) -- that one's second pool is a reversible bound store
+    tuned by carrier/f_xy levers; here it is an irreversible k_seq sink.
 
     NOTE the cached fit is on the DEMO forcings, so the defaults
     (`measured_forcing=False`, `season=120`) reproduce the documented in-sample
@@ -597,7 +609,7 @@ def simulate_twopool(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, season=120.0,
     """
     if congener not in _CONG:
         raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
-    (p, q), TP = _twopool()
+    (p, q), TP = _twopool_seq()
     c = _CONG[congener]
 
     if drivers is not None:
@@ -623,8 +635,8 @@ def simulate_twopool(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, season=120.0,
         float(TP.kseq_ushape(c["n_C"], c["group"], q))
 
     dM = np.gradient(M, t, axis=0)
-    rhs = _twopool_rhs(t, Cwo_series, Qtp, M, dM, cmpd, comps, B, env,
-                       gxy, gph, kseq, k_rel=k_rel)
+    rhs = _twopool_seq_rhs(t, Cwo_series, Qtp, M, dM, cmpd, comps, B, env,
+                           gxy, gph, kseq, k_rel=k_rel)
     from scipy.integrate import solve_ivp
     sol = solve_ivp(rhs, (t[0], t[-1]), np.zeros(5), t_eval=t,
                     method="BDF", rtol=1e-6, atol=1e-9)

@@ -481,7 +481,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   NOT validation (Yamazaki in-sample fit → OOS transfer; decisive test = per-congener xylem-sap/root-water ratio +
   desorption-resistant root-fraction assay). **Next-session handoff: `docs/HANDOFF_BAF_twopool.md`** (status, open items —
   promotion decision / Tang OOS / opt-in model_api wiring — and a resume prompt).
-- **Two-pool wired as a model_api OPT-IN module (this session; handoff item ①)** — `model_api.simulate_twopool(...)`:
+- **Two-pool wired as a model_api OPT-IN module (this session; handoff item ①)** — `model_api.simulate_twopool_seq(...)`:
   the exploratory two-pool root model is now callable through the UI-agnostic API exactly like `simulate_nstem_leaf`,
   so the app/other validation can use it **without changing any default** (`simulate`/`reproduce_demo`/`parameters.json`
   UNCHANGED). It loads the cached Yamazaki fit (`validation/twopool_fitted_params.json` via the validation module's
@@ -491,12 +491,16 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `seq_fraction`) and two-pool levers (`k_rel` seq→mobile desorption, `kseq_override`). The reported `root` BAF = mobile
   + sequestered. Defaults (`measured_forcing=False, season=120`) reproduce the documented headline **overall log10 RMSE
   0.251 (root 0.156)** with the **monotone physical `f_xy_recommended`** and the non-K_PL **PFOS/PFUnDA k_seq 3.1×
-  separation** at identical K_PL. A drift guard (`tests/test_model_api.py::test_simulate_twopool_matches_validation_and_rmse`)
+  separation** at identical K_PL. A drift guard (`tests/test_model_api.py::test_simulate_twopool_seq_matches_validation_and_rmse`)
   pins the wrapper to the standalone validation endpoints (cross-impl RMSE 0.014) so the two implementations cannot
-  silently diverge; `test_simulate_twopool_structure_and_keys` / `..._krel_drains_root_to_shoot` lock the I/O contract and
+  silently diverge; `test_simulate_twopool_seq_structure_and_keys` / `..._krel_drains_root_to_shoot` lock the I/O contract and
   the Result-5 k_rel behaviour. Still EXPLORATORY / in-sample (the cached fit is on the demo forcings; the measured-forcing
   fit `twopool_fitted_params_measured.json` is not auto-loaded). The §4 promotion decision (handoff item ③) is unchanged —
-  **NOT promoted to `parameters.json`** pending the user.
+  **NOT promoted to `parameters.json`** pending the user. **NAMING**: there are now TWO opt-in two-pool root models —
+  this SEQUESTRATION one (`simulate_twopool_seq`; irreversible non-K_PL `k_seq` sink, keeps monotone f_xy) and the
+  CARRIER one (`simulate_twopool_carrier` / `close_longchain_2pool`, `src/pfas_rice_two_pool.py`; reversible bound store
+  tuned by carrier/f_xy levers, the saturated long-chain closure). Different mechanisms; the `_seq`/`_carrier` suffix
+  disambiguates (renamed from the colliding `simulate_twopool`/`simulate_two_pool`).
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -520,7 +524,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `python validation/twopool_root_seqrelease.py` (k_rel seq-release sweep + g_xy xylem-loading diagnostic; ~20 s).
   Measured-forcing robustness re-fit: `python validation/twopool_root_measured.py` (re-fits on forcing_rice + ORYZA
   biomass; in-sample + Kim OOS vs fxy-doc baselines; ~3 min). Opt-in API (no re-fit; reuses the cached fit):
-  `model_api.simulate_twopool("PFUnDA")` → the standard `simulate()` dict + root mobile/seq split.
+  `model_api.simulate_twopool_seq("PFUnDA")` → the standard `simulate()` dict + root mobile/seq split.
 - Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
   `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
 - Soil → plant (analytic): `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
