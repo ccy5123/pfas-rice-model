@@ -65,21 +65,34 @@ turns out to be **entangled** with the biomass assumption.
 | biomass driver | root % of total | root:shoot | HI |
 |---|---|---|---|
 | `reproduce_demo` placeholder logistic | 23 | **0.30** | **0.07** |
-| `growth_rice` (app/`simulate` default) | 3.4 | **0.035** | 0.51 |
+| `growth_rice` (`simulate` default) | 4.7 | **0.049** | 0.51 |
+| `oryza_growth` (**app default**, mechanistic) | 6.2 | **0.066** | 0.44 |
 | literature (maturity) | 7–13 | 0.08–0.15 | 0.45–0.55 |
 
-The **shoot split of `growth_rice` matches the literature**; only its **root
-fraction is too low** (DVS partitioning drives root growth to ~0 after flowering,
-so the final root:shoot collapses to 0.035). The `reproduce_demo` placeholder is the
+The **shoot split matches the literature**; only the **root fraction is a bit low**.
+Both `growth_rice` and `oryza_growth` use the **experimental ORYZA2000 IR72 root
+partitioning table (FRTTB)** — `FRT = 0.50, 0.25, 0.00` at `DVS = 0, 0.43, 1.0`
+(Bouman & van Laar 2006; IRRI field-calibrated). That experimental coefficient already
+lifts root:shoot to **0.049** (`growth_rice`) / **0.066** (`oryza_growth`, the app
+default), i.e. most of the way to the literature 0.08–0.13 with **no tuning**. The
+residual is ORYZA's known under-prediction of post-flowering root (FRTTB → 0 at flowering,
+no root turnover modelled) plus, for `growth_rice`, its grain-fill-weighted biomass
+logistic. The old `growth_rice` value (0.035) was a *crude* FSH guess (0.45/0.85), now
+**aligned to the cited experimental FRTTB**. The `reproduce_demo` placeholder is the
 opposite extreme — root *too high* (0.30) and HI *non-physical* (0.07).
 
-### 3.1 Three ways to correct the root fraction (A > B > C by "less artificial")
+> Aligning `growth_rice`'s FSH to the experimental FRTTB shifts the short-chain shoot BAFs
+> (~+30 % PFBA straw/grain; long chains <5 %) but leaves `reproduce_demo` untouched (it
+> uses the placeholder, RMSE stays 0.029).
 
-Because a **root-inclusive per-organ biomass *time series* for the target system is a
-data gap** (field rice studies routinely omit roots — searched: the closest is
-`10.3389/fpls.2021.713814`, japonica paddy, which reports root + *total* shoot by stage,
-not a stem/leaf/panicle split), any correction is tuned to the literature *ratio*. The
-options, least-artificial first:
+### 3.1 The experimental coefficient, then three ways to *force* the literature ratio
+
+**The data-grounded answer is the experimental FRTTB itself** (now used by both drivers →
+root:shoot 0.05–0.07, no tuning). To go further and *force* exactly the literature ratio
+(~0.10), three options exist — but note a **root-inclusive per-organ biomass *time series*
+for the target system is a data gap** (field rice studies omit roots; the closest,
+`10.3389/fpls.2021.713814`, gives root + *total* shoot by stage, no organ split), so A is
+blocked and B/C are tuned to the *ratio*:
 
 | | method | how | artificiality | status |
 |---|---|---|---|---|
@@ -88,10 +101,10 @@ options, least-artificial first:
 | **C** | `root_shoot=` | post-hoc constant rescale of the root *output* trajectory | highest (multiplies the output) | implemented (opt-in) |
 
 Both **B and C land root:shoot ≈ 0.10**; **B preserves the harvest index better** (HI
-0.50 vs C's 0.48, because it reallocates rather than bolting mass onto the root) and is
-the recommended of the two. Neither is the default (`None`) — applying a correction is a
-deliberate, documented choice, not silent. **The principled fix is A**, which needs a
-root-inclusive maturity biomass series for a comparable system (still outstanding).
+0.50 vs C's 0.48) and is the recommended of the two. Neither is the default (`None`) —
+forcing the exact ratio is a deliberate, documented choice on top of the experimental
+FRTTB. **The principled fix is A**, which needs a root-inclusive maturity biomass series
+for a comparable system (still outstanding).
 
 ## 4. Calibration coupling — the key finding
 

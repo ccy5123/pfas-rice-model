@@ -32,8 +32,14 @@ _DVS = np.array([0.0, 0.5, 0.75, 1.0, 1.2, 2.5])
 _FLV = np.array([0.52, 0.45, 0.58, 0.03, 0.02, 0.01])
 _FST = np.array([0.48, 0.55, 0.34, 0.43, 0.07, 0.00])
 _FSO = np.array([0.00, 0.00, 0.00, 0.54, 0.91, 0.99])
-_FSH_DVS = np.array([0.0, 0.5, 1.0, 2.5])
-_FSH = np.array([0.45, 0.85, 1.00, 1.00])
+# Shoot fraction FSH = 1 - FRT. FRT = root partitioning fraction. Use the EXPERIMENTAL
+# ORYZA2000 IR72 standard FRTTB (Bouman & van Laar 2006; IRRI field-calibrated):
+# FRT = 0.50, 0.25, 0.00 at DVS 0.0, 0.43, 1.0 -> FSH below (matches src/oryza_growth.py).
+# This raises the maturity root:shoot from the old crude guess (0.45/0.85, R/S 0.035) to a
+# data-grounded ~0.05 (the residual to the literature 0.08-0.13 is ORYZA's known under-
+# prediction of post-flowering root + this driver's grain-fill-weighted biomass logistic).
+_FSH_DVS = np.array([0.0, 0.43, 1.0, 2.5])
+_FSH = np.array([0.50, 0.75, 1.00, 1.00])
 
 # IR72 final aboveground biomass ~17.4 t/ha = 1740 g/m^2 (Bouman 2006); add roots.
 WSHOOT_MAX_G_M2 = 1740.0
@@ -99,9 +105,10 @@ def organ_biomass(t: np.ndarray, season: float = 120.0,
         accrues more during vegetative growth (front-loaded shape), not a flat output
         rescale. Use ONE of the two. Both default None (original behaviour preserved).
 
-        Why a correction is needed: the DVS scheme drives root partitioning to ~0 after
-        flowering and the biomass logistic is grain-fill-weighted, leaving an
-        unrealistically low final root:shoot (~0.035); literature lowland-rice maturity
+        Why a (further) correction may be wanted: even with the experimental ORYZA IR72
+        FRTTB above the root partitioning -> 0 at flowering and the biomass logistic is
+        grain-fill-weighted, so the final root:shoot is ~0.049 (was ~0.035 with the old
+        crude FSH guess); literature lowland-rice maturity
         root:shoot is ~0.08-0.13 (root ~7-12% of total; declines from ~0.2 at seedling;
         Japanese flooded-paddy field anchor 0.08-0.12 -- 10.1038/srep29333,
         10.3389/fpls.2021.713814; Yoshida 1981 IRRI). NOTE: a root-inclusive per-organ
