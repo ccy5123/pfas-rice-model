@@ -1,0 +1,34 @@
+{
+  "hypothesis_id": "hyp-lc-lipidfix",
+  "rule_kind": "qualitative",
+  "rubric_expression": "a B-independent lipid-facilitated bound-loading term (g_xy*C, g_ph*C) closes most of the long-chain shoot gap that free loading cannot => support; no improvement => refute",
+  "rubric_params": null,
+  "panel": [
+    {
+      "direction": "supports",
+      "level": "strong",
+      "basis": "long-chain straw+grain RMSE 0.43 vs free 2.03 -- ~5x closer in log space.",
+      "counterexample": false
+    },
+    {
+      "direction": "supports",
+      "level": "moderate",
+      "basis": "mechanism verified at source: membrane K_MW rises +0.36/CF2 to C16 while HSA peaks C6-C10 (Chen2025, read).",
+      "counterexample": false
+    }
+  ],
+  "chief": {
+    "direction": "supports",
+    "level": "strong",
+    "basis": "Decisive: the B-independent lipid term cuts the long-chain straw+grain RMSE 2.026 -> 0.428 (~100x -> ~2.7x) and the whole series 1.035 -> 0.386, recovering PFDA/PFUnDA/PFOS shoot the free model starved. The mechanism is the right direction. SCOPE: in-sample (K_PL-gated fit), and PFDoDA shoot is still ~3-4x under -- a residual floor remains. Literature corroborates the MECHANISM, VERIFIED at source (evi-lc-litread): Chen2025 (ES&T 2025,59,82-91, 10.1021/acs.est.4c06734) -- membrane-water K_MW rises +0.36/CF2 MONOTONE C4-C16 while HSA (protein) affinity PEAKS at C6-C10, so the lipid (membrane) pool, not protein, carries the longest chains; binding shifts to the membrane with conc.",
+    "counterexample": false
+  },
+  "provenance": {
+    "spec_version": 1,
+    "timestamp": "2026-06-17T00:00:00+00:00",
+    "agent_ids": [
+      "claude-in-session"
+    ],
+    "cost_ids": null
+  }
+}

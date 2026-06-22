@@ -1,0 +1,94 @@
+{
+  "id": "pfas-rice-2pool-core",
+  "created_at": "2026-06-18T02:37:11.802198Z",
+  "version": 1,
+  "raw_proposal": {
+    "background": "The breakthrough (validation/longchain_closure.py) showed the long chains ARE\nstructurally closable: a 2-pool root (mobile + bound) with a LOW per-congener f_xy\n(strong root retention) and an ENHANCED active carrier (high uptake) reproduces\nC10-C12 root, straw and grain at log10 RMSE ~0.08, where the single-pool core could\nnot (refit_oryza hit ceilings ~4-6x under). For the model to be usable -- in\nparticular as the long-chain-capable configuration for dietary risk screening -- the\nbreakthrough must be a proper, reusable model component, not a validation script. It\nhas now been PROMOTED to src/pfas_rice_two_pool.py with a clean API and a model_api\nhook (simulate_two_pool / close_longchain_2pool), additive to (and leaving unchanged)\nthe canonical 4pool_surf core. This run verifies that the promoted core component\nreproduces the breakthrough.",
+    "goal": "Does the promoted src/ two-pool component reproduce the long-chain breakthrough? Verifying the wired core component, and confirming the two independent physical levers.\n\nVerify, against the measured Yamazaki long chains, that the wired src module:\n\n1. reproduces the long-chain closure (root+straw+grain log10 RMSE at the breakthrough level);\n2. requires a LOW f_xy for every long chain (the strong-root-retention lever);\n3. requires an ENHANCED active carrier for the longest chain (the high-uptake lever),\n   confirming the two levers are independent and both necessary.",
+    "method": "Import src/pfas_rice_two_pool.py and run its close_longchain (the saturated 3-param\nstructural-adequacy fit: free f_xy -> straw, active carrier -> root, g_ph -> grain)\nfor PFDA, PFUnDA and PFDoDA against the Yamazaki BAFs. Compute the long-chain\nroot+straw+grain log10 RMSE and read the fitted f_xy and carrier multipliers. Freeze\nthese as threshold hypotheses; the sci-adk engine resolves them and renders the paper.\nAll evidence is measured (vs Yamazaki). The canonical core is unchanged; this verifies\nthe additive component, and is structural ADEQUACY (reproduction, DOF 0), not a-priori\nprediction.",
+    "expected_output": "An engine-rendered run (runs/pfas-rice-2pool-core) confirming the promoted src\ncomponent reproduces the breakthrough (long-chain RMSE at the ~0.08 level) and that the\nclosure needs both a low f_xy (root retention) and an enhanced carrier (uptake) --\nmaking the long-chain-capable model a reusable component for risk screening.\nReproducible under sci-adk verify."
+  },
+  "hypotheses": [
+    {
+      "id": "hyp-2pool-reproduces",
+      "statement": "The breakthrough promoted to src/pfas_rice_two_pool.py reproduces the long-chain closure: the C10-C12 root+straw+grain log10 RMSE is at the breakthrough level (< 0.15) -- the wired core component works, not just the validation prototype.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "the PROMOTED src/pfas_rice_two_pool.py component reproduces the long-chain closure (C10-C12 root+straw+grain log10 RMSE < 0.15, at the breakthrough level) => support; >= 0.15 => refute",
+        "params": {
+          "statistic": "point",
+          "op": "<",
+          "value": 0.15,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-2pool-low-fxy",
+      "statement": "The closure requires a LOW xylem-loading f_xy for every long chain (max f_xy across C10-C12 < 0.6) -- the strong-root-retention lever.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "the closure requires a LOW f_xy for EVERY long chain (max f_xy across C10-C12 < 0.6 = strong root retention / low TSCF) => support; >= 0.6 => refute",
+        "params": {
+          "statistic": "point",
+          "op": "<",
+          "value": 0.6,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-2pool-enhanced-carrier",
+      "statement": "The closure requires an ENHANCED active carrier for the longest chain (PFDoDA carrier > 2x base) -- the high-uptake lever, independent of f_xy.",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "the closure requires an ENHANCED active carrier for the longest chain (PFDoDA carrier > 2x base) => support; <= 2x => refute",
+        "params": {
+          "statistic": "point",
+          "op": ">",
+          "value": 2.0,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    }
+  ],
+  "method": {
+    "approaches": [
+      "import src/pfas_rice_two_pool.py and run close_longchain for PFDA/PFUnDA/PFDoDA",
+      "compute the long-chain root+straw+grain log10 RMSE and read fitted f_xy / carrier",
+      "freeze as threshold hypotheses; engine resolves and renders; sci-adk verify"
+    ],
+    "tools": null
+  },
+  "target_claims": [
+    {
+      "id": "tc-repro",
+      "statement": "The src component reproduces the breakthrough.",
+      "answers": "hyp-2pool-reproduces"
+    },
+    {
+      "id": "tc-fxy",
+      "statement": "Low f_xy (root retention) is required.",
+      "answers": "hyp-2pool-low-fxy"
+    },
+    {
+      "id": "tc-carr",
+      "statement": "Enhanced carrier (uptake) is required.",
+      "answers": "hyp-2pool-enhanced-carrier"
+    }
+  ],
+  "amendment_rationale": null,
+  "prior_version_id": null
+}

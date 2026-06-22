@@ -99,6 +99,22 @@ congeners.append({
                    "f_xy=PFCA(nPFC5)·exp(-0.7) (Tang2026 ether offset); NOT calibrated to BAF data.",
 })
 
+# --- merge the ORYZA2000 transport re-fit (validation/refit_oryza.py) if present ---
+# f_xy_oryza/L_Ph_oryza/kappa_d_oryza are the per-congener transport params fit to
+# Yamazaki on the MECHANISTIC ORYZA2000 biomass (the default driver). They are kept in
+# params/refit_oryza.csv so a rebuild here re-attaches them (the W2 fields above were
+# tuned on the placeholder driver and stay for reproduce_demo). Re-run refit_oryza.py
+# to regenerate after a model/biomass change.
+_refit_path = os.path.join(P, "refit_oryza.csv")
+if os.path.exists(_refit_path):
+    _refit = {r["compound"]: r for r in rd("refit_oryza.csv")}
+    for cg in congeners:
+        rr = _refit.get(cg["name"])
+        if rr:
+            cg["f_xy_oryza"] = round(float(rr["f_xy_oryza"]), 6)
+            cg["L_Ph_oryza"] = round(float(rr["L_Ph_oryza"]), 6)
+            cg["kappa_d_oryza"] = round(float(rr["kappa_d_oryza"]), 6)
+
 doc = {
     "_meta": {
         "title": "PFAS–rice 4-compartment uptake model — consolidated parameters",
@@ -110,6 +126,7 @@ doc = {
             "K_cw": "GAP A / Prompt2 v2 (Guo2025 Fig.3f DFT + Mel2024 lignin anchor; rice whole-cw per organ)",
             "f_xy_recommended": "GAP B / S4 + docs/theory_anchor.tex (Trapp+Briggs LFER: MONOTONE logistic)",
             "f_xy_W2fit": "S6 W2 transport fit to Yamazaki (SATURATED 3param/3obs; long-chain values NON-physical, see docs/DELIVERABLE_GAP_B_fxy.md)",
+            "f_xy_oryza": "per-congener (f_xy,L_Ph,kappa_d) re-fit to Yamazaki on the MECHANISTIC ORYZA2000 biomass (the default driver); validation/refit_oryza.py, params/refit_oryza.csv (reproduction log10 RMSE 0.236; PFDoDA long-chain outlier at param ceilings). Use model_api f_xy_source='oryza'.",
             "composition": "rice_tissue package (recommended anchors)",
         },
         "WARNING_f_xy": "Use f_xy_recommended (monotone). f_xy_W2fit rises spuriously for C10+ (single-straw-compartment entanglement, H7 §7.2); theory + cross-field TF both require monotone decline.",

@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-lc-nocost",
+  "spec_id": "pfas-rice-longchain",
+  "answers": "hyp-lc-nocost",
+  "statement": "The lipid mechanism reproduces the long-chain shoot without degrading the root or the short/mid-chain fits (a clean single-mechanism fix).",
+  "status": "refuted",
+  "confidence": {
+    "type": "graded",
+    "value": null,
+    "level": "strong",
+    "basis": "qualitative judge: Decisive: the single-pool lipid term reproduces shoot at the COST of root -- PFUnDA root 20.6->3.9, PFDoDA root 159->4.4 (now under vs obs 69/19.5) -- and PFDoDA shoot is still ~3-4x under. Not a clean cost-free fix; it needs a 2-pool (free + lipid-bound) split so the bound pool feeds the shoot without draining the root, plus a residual long-chain mechanism."
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-lc-cost",
+      "role": "refuting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T15:44:35.577243Z",
+      "from_status": "proposed",
+      "to_status": "refuted",
+      "triggered_by": "evi-lc-cost",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

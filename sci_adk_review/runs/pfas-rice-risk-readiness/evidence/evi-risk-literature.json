@@ -1,0 +1,30 @@
+{
+  "id": "evi-risk-literature",
+  "created_at": "2026-06-18T02:07:53.907057Z",
+  "spec_id": "pfas-rice-risk-readiness",
+  "kind": "literature",
+  "provenance": {
+    "code_ref": "pfas-rice-model@177e753",
+    "data_ref": null,
+    "data_source": null,
+    "seed": null,
+    "environment": "risk-readiness over the breakthrough + cross-dataset runs",
+    "cost": null
+  },
+  "result": {
+    "type": "qualitative",
+    "point": null,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "cited prior work: long-chain root retention / low TSCF (newcontam 2025; Adu 2024 ML 10.1021/acsestengg.4c00107); Chen 2025 membrane K_MW (10.1021/acs.est.4c06734); dietary datasets Kim 2019 (10.1016/j.scitotenv.2019.03.240), Tang 2026 (10.1016/j.jhazmat.2025.141017). Readiness assessment over prior runs + the breakthrough.",
+    "artifact_ref": null
+  },
+  "bears_on": [],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

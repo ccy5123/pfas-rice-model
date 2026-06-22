@@ -1,0 +1,8 @@
+{
+  "checkpoint_type": "judge",
+  "hypothesis_id": "hyp-smiles",
+  "kind": "qualitative",
+  "expression": "the SMILES front-end reproduces the curated measured-parameter model for a KNOWN PFAS via read-across (structure -> same Compound) => support; a mismatch => refute",
+  "finding": "tests/test_pfas_structure.py: 23 passed (RDKit). A canonical SMILES that matches a curated congener rebuilds the SAME Compound from params/parameters.json (measured read-across). CAVEAT: for NOVEL structures f_xy is provisional (QSPR/interpolated), NOT validated — this claim is scoped to known structures only.",
+  "spec_version": 1
+}

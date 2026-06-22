@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-adequacy",
+  "spec_id": "pfas-rice",
+  "answers": "hyp-adequacy",
+  "statement": "Driven by the mechanistic ORYZA2000 biomass (oryza_growth) + measured transpiration, the model's translocation structure reproduces the measured straw (shoot) BAFs across the C4-C12 PFCA/PFSA series under a CONSTRAINED (DOF>0) calibration -- per-congener f_xy + a single shared L_Ph and kappa_d (13 params / 33 obs, DOF 20), NOT the saturated W2 fit.",
+  "status": "supported",
+  "confidence": {
+    "type": "graded",
+    "value": null,
+    "level": "strong",
+    "basis": "qualitative judge: Decisive panel reasoning: driven by the user's MECHANISTIC ORYZA2000 biomass (not the placeholder), the CONSTRAINED DOF-20 fit reaches straw RMSE ~0.18 (0.16 at DOF 10) across the full C4-C12 PFCA/PFSA range with per-congener f_xy + shared L_Ph/kappa_d. So the translocation structure (GHK exclusion + f_xy TSCF + binding) reproduces shoot accumulation under a non-saturated calibration. The whole plant reaches overall ~0.34 (within ~factor 2.2) at DOF 10; grain keeps a residual long-chain floor (separately refuted)."
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-adequacy",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T14:52:46.315231Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-adequacy",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

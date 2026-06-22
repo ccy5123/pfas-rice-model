@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-001",
+  "spec_id": "pfas-rice-carrier",
+  "answers": "hyp-001",
+  "statement": "장쇄 PFAS의 능동-운반체 강화 인자(2-풀에서 측정 root를 재현하는 Vmax 배수)는 사슬길이\nn_C의 매끄러운 로그선형 함수여서 QSPR로 예측 가능하다 (선형 적합 R^2 > 0.9이면 예측적,\n미만이면 ad-hoc).",
+  "status": "refuted",
+  "confidence": {
+    "type": "graded",
+    "value": null,
+    "level": "strong",
+    "basis": "qualitative judge: The carrier-enhancement factor is NOT a smooth log-linear function of chain length (R^2 0.70 on n_C, 0.62 on K_PL; both <0.9): essentially no enhancement is needed to C10, then a steep onset at C11-C12. So the long-chain active-carrier enhancement is NOT cleanly QSPR-able -- it stays a longest-chain-specific (ad-hoc) lever, not a chain-length-predictable one. Hypothesis refuted."
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-carrier-qspr",
+      "role": "refuting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "exploratory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T15:53:24.334041Z",
+      "from_status": "proposed",
+      "to_status": "refuted",
+      "triggered_by": "evi-carrier-qspr",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

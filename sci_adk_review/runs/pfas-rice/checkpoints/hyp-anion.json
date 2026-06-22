@@ -1,0 +1,8 @@
+{
+  "checkpoint_type": "judge",
+  "hypothesis_id": "hyp-anion",
+  "kind": "qualitative",
+  "expression": "GHK electrodiffusion with measured E_m=-120 mV and z=-1 yields an anion-exclusion factor e^N of order 1e2 (the IOC-formulation signature) => support; no exclusion => refute",
+  "finding": "N = z*E_m*F/RT = +4.67 at E_m=-120 mV, z=-1, T=298.15 K => e^N = 106.8 (test_plant_module asserts e^N ~ 107); the GHK term in root_uptake() excludes the anion accordingly.",
+  "spec_version": 1
+}

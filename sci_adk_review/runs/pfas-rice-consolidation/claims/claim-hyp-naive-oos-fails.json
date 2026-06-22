@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-naive-oos-fails",
+  "spec_id": "pfas-rice-consolidation",
+  "answers": "hyp-naive-oos-fails",
+  "statement": "The free-anion model driven by theory/QSPR transport parameters NOT fit to the target fails out-of-sample cross-dataset prediction: the Tang 2026 per-organ TF is predicted at log10 RMSE > 1.0, far worse than the in-sample Tang refit (0.519).",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.20705387669331632,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=1.232 > 1 is met (combine='latest', margin=0.232)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-naive-oos",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T07:12:44.269103Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-naive-oos",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

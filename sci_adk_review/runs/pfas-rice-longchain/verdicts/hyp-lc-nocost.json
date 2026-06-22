@@ -1,0 +1,34 @@
+{
+  "hypothesis_id": "hyp-lc-nocost",
+  "rule_kind": "qualitative",
+  "rubric_expression": "the lipid mechanism reproduces the long-chain shoot WITHOUT degrading the root or the short/mid-chain fits (a clean single-mechanism fix) => support; it trades off root / leaves a residual => refute",
+  "rubric_params": null,
+  "panel": [
+    {
+      "direction": "refutes",
+      "level": "strong",
+      "basis": "long-chain root degrades (single-pool drains root into the bound shoot flux).",
+      "counterexample": false
+    },
+    {
+      "direction": "refutes",
+      "level": "strong",
+      "basis": "PFDoDA shoot residual ~3-4x under even with lipid on.",
+      "counterexample": false
+    }
+  ],
+  "chief": {
+    "direction": "refutes",
+    "level": "strong",
+    "basis": "Decisive: the single-pool lipid term reproduces shoot at the COST of root -- PFUnDA root 20.6->3.9, PFDoDA root 159->4.4 (now under vs obs 69/19.5) -- and PFDoDA shoot is still ~3-4x under. Not a clean cost-free fix; it needs a 2-pool (free + lipid-bound) split so the bound pool feeds the shoot without draining the root, plus a residual long-chain mechanism.",
+    "counterexample": false
+  },
+  "provenance": {
+    "spec_version": 1,
+    "timestamp": "2026-06-17T00:00:00+00:00",
+    "agent_ids": [
+      "claude-in-session"
+    ],
+    "cost_ids": null
+  }
+}

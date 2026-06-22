@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-lc-carrier-overfeeds",
+  "spec_id": "pfas-rice-longchain-complete",
+  "answers": "hyp-lc-carrier-overfeeds",
+  "statement": "The mechanism of the shoot failure is the carrier-root coupling: the active carrier that closes the long-chain ROOT structurally OVER-feeds the SHOOT (the enhanced mobile pool's free loading exceeds the observed straw and the lipid term, g_xy>=0, cannot subtract), so the C12 straw is over-predicted by more than a factor 1.5.",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.5369869316887719,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=2.27 > 1.5 is met (combine='latest', margin=0.77)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-lc-complete-overfeed",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T01:09:24.932380Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-lc-complete-overfeed",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

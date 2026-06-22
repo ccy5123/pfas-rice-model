@@ -1,0 +1,36 @@
+{
+  "id": "evi-decouple-inflate",
+  "created_at": "2026-06-18T01:34:16.860643Z",
+  "spec_id": "pfas-rice-longchain-decouple",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "pfas-rice-model@5368e05",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/longchain_decouple.py",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 6.94,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "validation/longchain_decouple.py vs Yamazaki: at the fixed root-matching carrier (5.5x base), increasing seq 1->10 INFLATES the PFDoDA root 6.94x (root ratio 1.00 -> 6.90) while the shoot over-feed only relaxes (straw 2.27x -> 1.59x). Mechanism: suppressing the mobile pool lowers the internal conc, which RAISES the net uptake gradient, so the bound store grows -- the lever pushes the root the wrong way. PFUnDA corroborates (root inflation 7.41x).",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-decouple-inflates-root",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

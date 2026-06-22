@@ -155,7 +155,11 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `soil_paddy_redox_corrected`). `pfas_rice_plant_module` is now an **alias to the basis-A
   4pool_surf** core. Key honest-status corrections from the review: (a) `reproduce_demo.py`'s
   log10 RMSE 0.029 is a **saturated W2 fit** (3 transport params/3 obs per congener) — reproduction
-  is guaranteed, NOT predictive validation; (b) the empirical ordering is **congener-dependent**
+  is guaranteed, NOT predictive validation. The genuine **a-priori predictive error** (theory/QSPR
+  monotone f_xy, NOT fit) is **log10 RMSE ≈0.84** (single-straw, `reproduce_demo.py --rec`) /
+  **≈0.95** (redistributed-shoot, `validation/apriori_prediction.py`) — straw 6–40× off, long chains
+  collapse; i.e. the model does NOT predict out-of-sample. Adjudicated by the sci-adk rigor review
+  (`sci_adk_review/FINDINGS.md`: hyp-yamazaki **REFUTED**). (b) the empirical ordering is **congener-dependent**
   (Yamazaki: short-chain straw≫root, long-chain root>straw) — `root>straw>grain` is NOT universal
   under basis-A; (c) **GAP B is shape-resolved, not closed** — see task #6.
 - **Multi-height stem (task #6)** — `src/pfas_rice_plant_module_nstem.py`: `NStemModel` (equilibrium)
@@ -297,10 +301,109 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   BAF run on the mechanistic biomass unless switched; the **Tissue-dynamics tab plots the per-tissue PFAS *mass*
   (burden) C_k·M_k** (`plots.fig_burden`, µg/hill, EXTENSIVE) under the concentration plot — where the chemical
   actually ends up (organ *biomass* M_k(t) is already in the Soil & drivers tab). ORYZA biomass is ~0.01 s (no app-speed cost; `_simulate` is
-  cached). **Honest caveat / provenance**: the f_xy/L_Ph calibration was done on `growth_rice`, and switching biomass
-  shifts BAFs (short-chain straw/grain +40–70%), so the **global `simulate(biomass=)` default stays `"growth_rice"`**
-  (keeps `reproduce_demo`/tests/calibration reproducible); only the *app* defaults to ORYZA2000. A full ORYZA2000-default
-  would want an f_xy re-fit. Tests: `test_model_api.py` (biomass selectable; default == growth_rice), `test_plots.py`.
+  cached). **DEFAULT = ORYZA2000 (changed this session, user request "일단 ORYZA2000이 기본")**: `model_api.simulate`,
+  `simulate_nstem_leaf`, `_default_drivers`, `_biomass_fn`, and `tang_tf_validation` now default to **`"oryza"`** (the
+  mechanistic ORYZA2000), matching the app. **Honest caveat / provenance**: the per-congener `f_xy_W2fit`/`L_Ph_W2fit`
+  and the `reproduce_demo.py` RMSE-0.029 reproduction were tuned on a **placeholder/`growth_rice`** driver, so switching
+  the live default shifts BAFs (short-chain straw/grain +40–70%) and the W2 fit no longer reproduces Yamazaki under the
+  default — **pass `biomass="growth_rice"` to match the legacy artifacts**. `reproduce_demo.py` (placeholder `_logistic`)
+  and `calibration.py` (synthetic-recovery demo) use their own drivers and are UNCHANGED. Tests: `test_model_api.py`
+  (biomass selectable; **default == oryza**), `test_plots.py`.
+- **ORYZA2000 transport re-fit (this session) — `f_xy_source="oryza"`**: since the default biomass is now ORYZA2000,
+  the per-congener transport params were RE-FIT on it (`validation/refit_oryza.py`): (f_xy, L_Ph, kappa_d) fit to Yamazaki
+  on the mechanistic ORYZA2000 biomass + measured Q_TP, written to `params/parameters.json` as `f_xy_oryza`/`L_Ph_oryza`/
+  `kappa_d_oryza` (+ `params/refit_oryza.csv`; the legacy `*_W2fit` are PRESERVED for `reproduce_demo`). `build_parameters.py`
+  re-merges `refit_oryza.csv` so a rebuild keeps them. `model_api`'s new **`f_xy_source="oryza"`** (via `_transport_defaults`)
+  applies all three; `simulate(f_xy_source="oryza", biomass="oryza")` reproduces Yamazaki at **log10 RMSE 0.236** (saturated
+  per congener -> reproduction not prediction; PFDoDA(C12) is a structural long-chain outlier, params at ceilings yet ~4-6x
+  under). The default `f_xy_source` stays `"recommended"` (monotone physical TSCF); `"oryza"` is the opt-in reproduction
+  calibration (the ORYZA analog of `"W2fit"`). Test: `test_model_api.py::test_oryza_refit_reproduces`. The constrained
+  DOF>0 structural-adequacy result (straw ~0.18; `validation/structural_adequacy_fit.py`) is the meaningful goodness-of-fit;
+  this saturated re-fit is the operational calibration on the new default driver.
+- **Long-chain (C10-C12) mechanism sci-adk sub-investigation (this session)**: `sci_adk_review/proposal_longchain.md`
+  + `build_longchain.py` (→ `runs/pfas-rice-longchain`) + `validation/longchain_mechanism.py` adjudicate WHY long chains
+  are under-predicted, on the ORYZA2000 biomass. Verdicts: **LC1 SUPPORTED** (free-anion loading structurally starves
+  long-chain shoot — free-only long-chain straw+grain log10 RMSE 2.03 ~100×, and the re-fit hits f_xy=1/L_Ph=1 ceilings
+  yet PFDoDA straw 14.6 vs 49.8 → the Cw=C/B free-conc collapse throttles loading); **LC2 SUPPORTED** (the B-independent
+  lipid bound-loading term `g_xy·C`/`g_ph·C` cuts long-chain straw+grain RMSE 2.03→0.43 ~5×, whole series 1.04→0.39);
+  **LC3 REFUTED** (single-pool cost: long-chain root degrades, PFUnDA 20.6→3.9 / PFDoDA 159→4.4, and PFDoDA shoot still
+  ~3-4× under). **Conclusion**: lipid-facilitated bound loading is the correct long-chain *direction* but needs a **2-pool
+  (free + lipid-bound) split** (so the bound pool feeds the shoot without draining the root) + a PFDoDA residual mechanism
+  (irreversible/hysteretic sorption). In-sample. Guard `test_sci_adk_rigor.py::test_longchain_run_reproduces`.
+  **LC4 (2-pool root prototype) — CONTESTED**: `validation/twopool_longchain.py` splits the root into a mobile pool
+  (water+protein, low binding; feeds the xylem + soil uptake) and a slow-exchanging lipid/cell-wall bound store (holds the
+  measured root burden), so lipid-facilitated loading draws from the mobile pool WITHOUT subtracting the large bound store.
+  Result: it **closes the LC3 root tradeoff for mid-long chains** (PFDA C10 matches root AND shoot simultaneously
+  3.5/4.2·5.0/3.5·4.1/3.4; PFUnDA C11 root within ~2×) — which the single pool could not — **but FAILS for PFDoDA C12**
+  (mobile pool rm=0.02 starves → bound root 1.2 vs 69). The PFDoDA residual is an **uptake (jR) mass-balance limit**, not
+  internal distribution → needs a different long-chain uptake / irreversible-sorption mechanism. Recorded as hyp-lc-twopool
+  (CONTESTED) in `runs/pfas-rice-longchain`. Prototype only (not wired into the core).
+  **LC5 (PFDoDA uptake lever)**: scanning the 2-pool, membrane **conductance kappa_d is REFUTED** (LC5a)
+  — ×5000 leaves PFDoDA root ~1 vs 69 because GHK anion exclusion caps the internal free conc at Cwo/e^N
+  (e^N≈107) regardless of conductance; the **active carrier Vmax is SUPPORTED** (LC5b) — ×5 (20→100)
+  overcomes the exclusion and reaches PFDoDA root 62/69 and grain 46/45.5 (straw 102, ~2× over). So the
+  longest-chain residual is an **active-carrier-capacity limit**; the complete long-chain resolution =
+  2-pool (free+lipid-bound) + lipid-facilitated loading + enhanced long-chain active-carrier uptake
+  (consistent with the literature's active carrier-mediated root uptake). `runs/pfas-rice-longchain` now
+  holds LC1–LC5 (6 hypotheses); in-sample/prototype, core unchanged.
+  **LC6 (carrier-enhancement QSPR) — REFUTED, via the canonical `sci-adk run` CLI**: a separate run
+  `runs/pfas-rice-carrier` compiled from `sci_adk_review/proposal_carrier_qspr.md` with the CLI
+  (`sci-adk run` → author evidence/verdict → `sci-adk resolve`/`verify`/`prior-work`, not a programmatic
+  builder). Tests whether the long-chain carrier enhancement (LC5b's PFDoDA ~5× Vmax) is a smooth
+  function of chain length: per-congener Vmax multiplier reproducing the measured root is PFOA 1.2× ·
+  PFNA 1.3× · PFDA 1.2× · PFUnDA 2.0× · PFDoDA 5.5×, and log10(multiplier) regresses on n_C at R²=0.70
+  (on log K_PL R²=0.62) — NOT log-linear (<0.9): ~no enhancement to C10 then a steep threshold-like
+  onset at C11–C12. So the long-chain carrier enhancement is **NOT cleanly QSPR-able** from chain
+  length; it stays a longest-chain-specific (ad-hoc) lever. Guard `test_carrier_run_reproduces`.
+  **Literature (genuine sci-adk acquisition + source verification)**: `sci-adk prior-work --searched` ran paperforge +
+  Unpaywall (contact email `~/.config/sci-adk/config.toml`) over 7 DOIs that corroborate LC1/LC2; ALL 7 are paywalled
+  (no OA PDF) → recorded `acquired 0/failed 7` in `evi-lit-*` + a `prior_work_decision` item + `literature/manifest.csv`
+  (DOIs still cited in the draft). **5 of 7 were then obtained out-of-band and READ to verify the corroboration at source**
+  (`evi-lc-litread`; paywalled PDFs NOT committed — copyright): Chen2025 ES&T 2025,59,82–91 `10.1021/acs.est.4c06734`
+  confirms membrane–water K_MW rises **+0.36/CF₂ monotone C4→C16** while protein **HSA affinity peaks at C6–C10** → the
+  lipid (membrane) pool, not protein, carries the longest chains (the B-independent lipid-term basis); `newcontam-0025-0007`
+  (long-chain root/soil adsorption vs short-chain shoot mobility) + `acsestengg.4c00107` (MW top predictor of TF) +
+  `s40726-020-00168-y` + `acs.est.7b06128` corroborate LC1. NOT obtained (2025): `10.1021/acs.est.5c11716`,
+  `10.1139/er-2025-0116`. paperforge is the optional `[tools]` extra; the contact email is required for the polite pool (E4).
+- **Out-of-sample cross-dataset prediction test (this session) — REFUTED, via the canonical `sci-adk run` CLI**:
+  the central predictive-validation result on data NOT used to fit. The main run's H3 ("Yamazaki = predictive
+  validation") was REFUTED but that was Yamazaki-on-itself (saturated vs a-priori). The decisive test is out-of-sample
+  prediction on an INDEPENDENT dataset. `sci_adk_review/proposal_oos_tang.md` → `runs/pfas-rice-oos-tang` (compiled via
+  the `sci-adk run` CLI, then author evidence/verdict → `sci-adk resolve`/`verify`): the model driven by theory/QSPR
+  monotone `f_xy` (`f_xy_source="recommended"`, NOT fit to Tang) predicts Tang 2026's per-organ TF (stalk/leaf/endosperm,
+  dw; PFOA/PFOS/GenX, 0.1 µg/g) at **OOS log10 RMSE 1.232** vs **in-sample Tang-refit 0.519** (~5× worse; systematic miss —
+  PFSA ~40–200× under, GenX ~10× over). **hyp-001 REFUTED**: the structure can REPRODUCE Tang by fitting (0.52, consistent
+  with the structural-adequacy result) but does NOT PREDICT an independent dataset with parameters fit elsewhere — confirming
+  H3/H4 at the cross-dataset level. The PFSA/GenX directional miss re-confirms the `f_xy` head-group offset / ether QSPR are
+  dataset/condition-dependent (Yamazaki Andosol clean water vs Tang flooded paddy), not pinnable to a single value.
+  `validation/oos_tang.py`; guard `test_oos_tang_run_reproduces` (`sci-adk verify` exit 0, digest 46d71f24).
+- **Does the lipid mechanism GENERALIZE out-of-sample? (this session) — SUPPORTED, via the `sci-adk run` CLI**:
+  the positive follow-through to the OOS REFUTED baseline. The OOS failure above was the *free-anion* model. The
+  long-chain investigation's **lipid-facilitated loading** (LC2 SUPPORTED; B-independent `g_xy·C`/`g_ph·C`, K_PL-gated)
+  had its `LIPID_LOADING` constants **fit on Yamazaki (excl. PFDoDA), NOT on Tang** (`docs/fxy_longchain_lipid_exploration.md`),
+  so turning it on for Tang is a genuine out-of-sample generalization test. `sci_adk_review/proposal_oos_lipid.md` →
+  `runs/pfas-rice-oos-lipid` (compiled via `sci-adk run` → evi-oos-lipid SUPPORTS → `resolve`/`verify`): with NO parameter
+  touched for Tang, `lipid_loading=True` drops the Tang OOS log10 RMSE from **1.232 (free-anion) → 0.516**, matching the
+  in-sample Tang-refit (0.519). The dominant free-anion failure (PFOS, the high-K_PL sulfonate, ~40–200× under) is fixed at
+  the mechanism level (stalk 0.013→0.620 vs Tang 0.571), exactly as the K_PL-gated lipid term predicts and as Chen2025
+  (membrane K_MW monotone) independently corroborates. **hyp-001 SUPPORTED — the project's first strong cross-dataset
+  out-of-sample predictive success**: a mechanism fit on one dataset predicts an independent dataset's per-organ pattern
+  (the *mechanism* generalizes, not added fitting). Honest residual: GenX (ether) stays over-predicted (provisional ether
+  f_xy offset — a separate condition-dependent issue, not lipid loading) and PFOS endosperm ~5× under. `tang_tf_validation`
+  gained a `lipid_loading` arg; `validation/oos_tang_lipid.py`; guard `test_oos_lipid_run_reproduces` (verify exit 0,
+  digest 684c31e2). This is a genuine OOS success (not in-sample reproduction), so SUPPORTED is justified — distinct from
+  the hyp-yamazaki/grain over-claim guard. EXPLORATORY: lipid loading stays opt-in (default off); the core is unchanged.
+- **Multi-dataset OOS robustness (this session) — SUPPORTED, via the `sci-adk run` CLI**: the §8.1 lipid OOS success was
+  only 3 Tang congeners. `sci_adk_review/proposal_oos_multidataset.md` → `runs/pfas-rice-oos-multidataset` (CLI `sci-adk
+  run` → evi-oos-multidataset SUPPORTS → `resolve`/`verify`) transfers three model variants (monotone/free-anion, saturated
+  W2, K_PL-gated lipid) WITHOUT refit to three independent datasets via `validation/oos_multidataset.py` (= `oos_tang_lipid.py`
+  + `oos_crossdataset.py`). The lipid mechanism wins decisively on BOTH clean datasets: **Tang 2026** per-organ TF 0.52 vs
+  free-anion 1.23, and **Kim 2019** brown-rice grain BAF (excl PFOA) 0.48 vs monotone 2.05 vs W2 1.07 (reliable DF≥15%: 0.20
+  vs 1.92 vs 1.44) — and lipid uniquely captures the Kim grain long-chain RISE the baselines structurally miss. So the OOS
+  generalization is **NOT a Tang artifact** — it holds across two independent datasets (Korean field grain + Chinese pot
+  per-organ). Honest limits (pre-registered): **Li 2025** is field/group-water/surface-confounded and inconclusive (W2 wins
+  straw/root TF 0.33 vs lipid 0.57, but lipid wins grain/root 0.72 vs 1.15/1.47), and Kim long chains are low-DF (3–13%).
+  hyp-001 SUPPORTED (digest 68ebaf39); guard `test_oos_multidataset_run_reproduces`. Core unchanged; lipid stays opt-in.
 - **Leaf senescence-loss flux (this session) — fixes the ORYZA leaf-TF artifact**: with the mechanistic
   ORYZA biomass the leaf shrinks (senescence), so the growth-dilution sink `μ=(dM/dt)/M` goes NEGATIVE and the
   `−μ·C` term spuriously CONCENTRATES the leaf — but `oryza_growth` models that loss as leaf DEATH (carbon removed

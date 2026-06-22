@@ -1,0 +1,122 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{url}
+\title{Does the proposed complete long-chain resolution close the long chains? Testing 2-pool + lipid + carrier as one model for simultaneous root and shoot reproduction.}
+\author{sci-adk (deterministic render)}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\noindent\textit{Draft compiled by sci-adk from Spec \texttt{pfas-rice-longchain-complete} (v1). Belief state is revisable as Evidence accrues.}
+
+\begin{abstract}
+FINDINGS section 7 proposed a complete long-chain resolution -- a 2-pool (free + lipid-bound) root plus lipid-facilitated loading plus an enhanced long-chain active carrier -- but the three levers (LC4, LC5b, LC6) were only ever tested in isolation. This run combines them into one model and tests the property that matters: does the complete recipe reproduce the long-chain (C10-C12) root and shoot simultaneously, against the measured Yamazaki BAFs? Per congener we find the active-carrier multiplier that reproduces the measured root, then, with that carrier, fit the lipid xylem (straw) and phloem (grain) terms on the 2-pool root. Result: the recipe closes the root (long-chain log10 RMSE about 0.002, by construction) and the grain (about 0.23, within a factor 2), but the SHOOT does NOT close (straw log10 RMSE about 0.39): the carrier that fixes the root structurally over-feeds the shoot (PFUnDA straw about 3.3x over, PFDoDA about 2.3x over), and the lipid term cannot subtract. So the proposed complete resolution is NOT a simultaneous closure. The longest chains need a root-to-shoot DECOUPLING -- an irreversible root sequestration that does not translocate -- consistent with the long-chain root-retention literature.
+\end{abstract}
+
+\section{Introduction}
+The long-chain investigation established the mechanism direction (LC1 free-anion shoot starvation; LC2 lipid loading; LC3 single-pool root cost; LC4 2-pool partial; LC5a conductance refuted; LC5b active carrier; LC6 carrier not QSPR-able). FINDINGS section 7 summarized the path forward as a three-lever complete resolution, but a summary of isolated levers is not a tested model. sci-adk's discipline is that a proposal must be frozen and adjudicated, not assumed; this run does that. It reuses the committed LC 2-pool prototype unchanged, runs all three levers together, and lets the engine resolve the numeric claims from the live experiment. The narrative is agent-authored prose input; the engine renders. No core model is changed.
+
+\section{Goal}
+Does the proposed complete long-chain resolution close the long chains? Testing 2-pool + lipid + carrier as one model for simultaneous root and shoot reproduction.
+
+The goal is to combine all three levers into one model and adjudicate, against the
+measured Yamazaki BAFs across C8-C12, whether the complete recipe reproduces the
+long-chain (nC>=10) ROOT and SHOOT (straw) and grain SIMULTANEOUSLY:
+
+1. Root: with the LC6 root-matching active-carrier multiplier, does the long-chain
+   root close?
+2. Grain: with the fitted lipid phloem term, does the long-chain grain close?
+3. Shoot: does the straw close at the same time, or does the carrier that fixes the
+   root over-feed the shoot?
+4. Diagnosis: quantify any straw over-feeding for the longest chains (C11-C12).
+
+\section{Background}
+The long-chain sub-investigation (runs/pfas-rice-longchain, LC1-LC6) found that
+free-anion loading structurally starves the long-chain (C10-C12) shoot (LC1), a
+B-independent lipid-facilitated loading term closes most of the gap (LC2), a
+single pool does so only by draining the root (LC3), a 2-pool root closes C10/C11
+but not PFDoDA (LC4), membrane conductance cannot lift PFDoDA (LC5a) while an
+enhanced active carrier can reach its root and grain (LC5b), and the carrier
+enhancement is not QSPR-able from chain length (LC6). From these, FINDINGS sec.7
+PROPOSED a "complete long-chain resolution = 2-pool (free + lipid-bound) root +
+lipid-facilitated loading + enhanced long-chain active carrier." But each lever
+was only ever tested in isolation; the proposed combination was never run as one
+model and tested for the property that matters -- reproducing the long-chain ROOT
+and SHOOT simultaneously. This run tests that proposal.
+
+\section{Method}
+Reuse the committed LC 2-pool prototype (validation/twopool\_longchain.py) without
+changing it. For each congener, find the active-carrier multiplier (Vmax\_in) that
+reproduces the measured root (the LC6 root-matching multiplier), then, WITH that
+carrier, fit the lipid-facilitated loading g\_xy (to straw) and g\_ph (to grain) on
+the 2-pool root. Run validation/longchain\_complete.py and report root/straw/grain
+pred vs observed (Yamazaki) and the long-chain (nC>=10) log10 RMSE per tissue, plus
+the C11-C12 predicted/observed straw ratio. Freeze the resulting statistics as
+threshold hypotheses; the sci-adk engine resolves them autonomously and renders the
+paper. All evidence is measured (vs Yamazaki). No core model is changed; this is a
+prototype synthesis test of an already-recorded mechanism set.
+
+Planned approaches:
+\begin{itemize}
+  \item find the LC6 root-matching active-carrier multiplier per congener
+  \item with that carrier, fit lipid g\_xy (straw) and g\_ph (grain) on the 2-pool root
+  \item report long-chain (nC>=10) per-tissue log10 RMSE and the C12 straw over-feed ratio
+  \item freeze as threshold hypotheses; engine resolves and renders; sci-adk verify
+\end{itemize}
+
+\section{Hypotheses and findings}
+
+\subsection{With the LC6 root-matching active-carrier multiplier, the complete 2-pool recipe reproduces the measured long-chain (C10-C12) ROOT BAFs.}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-lc-complete-root} (confirmatory)
+  \item Decision rule (threshold): the complete recipe (2-pool + LC6 root-matching active carrier + fitted lipid) reproduces the long-chain (nC>=10) ROOT at log10 RMSE < 0.05 => support; >= 0.05 => refute
+  \item \textbf{Status: supported} --- confidence 0.0469 (credence)
+  \item Basis: threshold rule: statistic 'point'=0.002 < 0.05 is met (combine='latest', margin=0.048)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\subsection{With the fitted lipid phloem term, the complete 2-pool recipe reproduces the measured long-chain (C10-C12) GRAIN BAFs within a factor \textasciitilde{}2.}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-lc-complete-grain} (confirmatory)
+  \item Decision rule (threshold): the complete recipe reproduces the long-chain (nC>=10) GRAIN at log10 RMSE < 0.3 => support; >= 0.3 => refute
+  \item \textbf{Status: supported} --- confidence 0.0676 (credence)
+  \item Basis: threshold rule: statistic 'point'=0.23 < 0.3 is met (combine='latest', margin=0.07)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\subsection{Even when the root is closed by the active carrier, the complete recipe FAILS to close the long-chain (C10-C12) SHOOT (straw): straw log10 RMSE stays above 0.3, so root and shoot are NOT reproduced simultaneously.}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-lc-shoot-fails} (confirmatory)
+  \item Decision rule (threshold): even with the root closed, the complete recipe FAILS to close the long-chain (nC>=10) SHOOT: straw log10 RMSE > 0.3 => support (shoot not closed); <= 0.3 => refute
+  \item \textbf{Status: supported} --- confidence 0.0824 (credence)
+  \item Basis: threshold rule: statistic 'point'=0.386 > 0.3 is met (combine='latest', margin=0.086)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\subsection{The mechanism of the shoot failure is the carrier-root coupling: the active carrier that closes the long-chain ROOT structurally OVER-feeds the SHOOT (the enhanced mobile pool's free loading exceeds the observed straw and the lipid term, g\_xy>=0, cannot subtract), so the C12 straw is over-predicted by more than a factor 1.5.}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-lc-carrier-overfeeds} (confirmatory)
+  \item Decision rule (threshold): the active carrier that closes the long-chain ROOT structurally OVER-feeds the SHOOT: the PFDoDA (C12) predicted/observed straw ratio > 1.5 => support; <= 1.5 => refute
+  \item \textbf{Status: supported} --- confidence 0.537 (credence)
+  \item Basis: threshold rule: statistic 'point'=2.27 > 1.5 is met (combine='latest', margin=0.77)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\section{Evidence}
+\begin{itemize}
+  \item \texttt{evi-lc-complete-literature} (literature): finding=cited prior work (already in the LC records): long-chain PFAS are strongly retained in roots while short chains are mobi
+  \item \texttt{evi-lc-complete-root} (experiment\_run): point=0.002, finding=validation/longchain\_complete.py vs Yamazaki: with the LC6 root-matching carrier the complete recipe reproduces the long
+  \item \texttt{evi-lc-complete-grain} (experiment\_run): point=0.23, finding=validation/longchain\_complete.py vs Yamazaki: the fitted lipid phloem term closes the long-chain GRAIN at log10 RMSE 0.2
+  \item \texttt{evi-lc-complete-shoot} (experiment\_run): point=0.386, finding=validation/longchain\_complete.py vs Yamazaki: even with the root closed, the long-chain SHOOT (straw) does NOT close -- 
+  \item \texttt{evi-lc-complete-overfeed} (experiment\_run): point=2.27, finding=validation/longchain\_complete.py: the active carrier that closes the PFDoDA (C12) ROOT (carrier 5.5x) over-feeds its SHO
+\end{itemize}
+
+\section{Discussion}
+The honest verdict refines FINDINGS section 7. Two pieces of the proposal hold: the active carrier CAN lift the long-chain root (root closes), and the lipid phloem term CAN bring the grain within a factor 2. But the third property -- simultaneous shoot closure -- fails, and the failure is mechanistic, not a tuning accident. The active carrier raises root uptake by enlarging the mobile root pool; the xylem then loads from that pool both by the free path (f\_xy times the mobile aqueous concentration) and the lipid path (g\_xy times concentration). Once the carrier is large enough to reproduce the high measured root, the free path alone over-feeds the straw, and because the lipid term is non-negative it can only add, never subtract. Hence straw is over-predicted for C11-C12 exactly where the carrier is largest. The implication is specific: the long chains are strongly retained in the root (literature LC1), so the correct missing mechanism is a root-to-shoot DECOUPLING -- an irreversible or very slowly desorbing root store that holds the measured root burden WITHOUT feeding the xylem in proportion. That is a different object from the three levers tested here (it reduces, rather than adds, shoot loading), so the complete long-chain resolution remains open with a now-precise target. This is a prototype, in-sample synthesis test; the core model is unchanged, and the four claims reproduce under sci-adk verify. The authoritative per-run records live under sci\_adk\_review/runs/; this consolidates into the Korean narrative FINDINGS.md section 7.
+
+\section{References}
+No literature cited.
+
+\end{document}

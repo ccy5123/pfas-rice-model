@@ -1,0 +1,34 @@
+{
+  "hypothesis_id": "hyp-adequacy",
+  "rule_kind": "qualitative",
+  "rubric_expression": "a CONSTRAINED (degrees-of-freedom > 0) calibration of the structure reproduces the measured STRAW (shoot translocation) BAFs across the C4-C12 PFCA/PFSA series => support; only a saturated (DOF 0) per-congener fit reproduces => refute",
+  "rubric_params": null,
+  "panel": [
+    {
+      "direction": "supports",
+      "level": "strong",
+      "basis": "straw log10 RMSE ~0.16-0.18 at DOF 20/10 on realistic ORYZA2000 biomass is a genuine (non-saturated) goodness-of-fit -- structural adequacy, not expressiveness.",
+      "counterexample": false
+    },
+    {
+      "direction": "supports",
+      "level": "moderate",
+      "basis": "root improves to 0.26 with per-congener kappa_d and the whole plant to overall 0.34 at DOF 10; the shoot translocation claim holds, scoped away from the grain floor.",
+      "counterexample": false
+    }
+  ],
+  "chief": {
+    "direction": "supports",
+    "level": "strong",
+    "basis": "Decisive panel reasoning: driven by the user's MECHANISTIC ORYZA2000 biomass (not the placeholder), the CONSTRAINED DOF-20 fit reaches straw RMSE ~0.18 (0.16 at DOF 10) across the full C4-C12 PFCA/PFSA range with per-congener f_xy + shared L_Ph/kappa_d. So the translocation structure (GHK exclusion + f_xy TSCF + binding) reproduces shoot accumulation under a non-saturated calibration. The whole plant reaches overall ~0.34 (within ~factor 2.2) at DOF 10; grain keeps a residual long-chain floor (separately refuted).",
+    "counterexample": false
+  },
+  "provenance": {
+    "spec_version": 1,
+    "timestamp": "2026-06-17T00:00:00+00:00",
+    "agent_ids": [
+      "claude-in-session"
+    ],
+    "cost_ids": null
+  }
+}

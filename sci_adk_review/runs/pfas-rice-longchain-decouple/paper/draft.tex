@@ -1,0 +1,111 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{url}
+\title{Does an irreversible root sequestration decouple the long-chain root from the shoot? Testing asymmetric bound-store kinetics for simultaneous root and shoot closure.}
+\author{sci-adk (deterministic render)}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\noindent\textit{Draft compiled by sci-adk from Spec \texttt{pfas-rice-longchain-decouple} (v1). Belief state is revisable as Evidence accrues.}
+
+\begin{abstract}
+The complete-resolution run (runs/pfas-rice-longchain-complete) closed the long-chain root and grain but over-fed the shoot, because the active carrier that fixes the root enlarges the mobile root pool whose free xylem loading exceeds the observed straw. FINDINGS section 7 named the missing piece a root-to-shoot decoupling: an irreversible root store that holds the root burden without feeding the xylem. This run tests the simplest such lever on the 2-pool prototype -- an asymmetric bound-store kinetics factor seq (k\_on = ratio times k\_off times seq) that traps more burden in the non-translocating bound pool. At a fixed root-matching carrier we scan seq against the measured Yamazaki long chains. Result, honest: the lever does NOT decouple. Suppressing the mobile pool to protect the shoot lowers the internal concentration, which RAISES the net uptake gradient, so the root burden inflates with seq (PFDoDA root 1x to 6.9x at seq=10) faster than the shoot is relieved (straw 2.3x to 1.6x). The best balanced point (seq about 2) leaves both root and shoot about 2.2x off -- a simultaneity gap of about 0.34 log10, only about 0.02 better than the complete recipe. So asymmetric bound-store kinetics trade root for shoot but do not achieve a clean simultaneous closure. The correct decoupling must break the uptake-to-mobile-concentration coupling itself.
+\end{abstract}
+
+\section{Introduction}
+This is a direct follow-up to the long-chain complete-resolution test. That run reduced FINDINGS section 7's proposed three-lever resolution to a precise open problem -- the carrier that fixes the root structurally over-feeds the shoot -- and named the missing mechanism a root-to-shoot decoupling. sci-adk's discipline is to test a named mechanism, not assume it. Here the mechanism is the simplest concrete form of decoupling available in the 2-pool prototype: make the bound store irreversible so it holds root burden without translocating. The experiment reuses the committed prototype unchanged and adds only the seq lever in a separate file; the engine resolves the numeric claims from the live run. The narrative is agent-authored prose input; the engine renders. No core model is changed.
+
+\section{Goal}
+Does an irreversible root sequestration decouple the long-chain root from the shoot? Testing asymmetric bound-store kinetics for simultaneous root and shoot closure.
+
+The lever: make the 2-pool bound store irreversible by an asymmetric-kinetics
+factor seq, k\_on = ratio*k\_off*seq (seq=1 = the equilibrium 2-pool; seq>1 traps
+more burden in the non-translocating bound pool rb). At a fixed root-matching
+carrier, scan seq and ask, against the measured Yamazaki BAFs for the long chains
+(C11-C12):
+
+1. Does increasing sequestration relieve the shoot over-feed while keeping the root
+   at the measured level (a clean simultaneous closure within a factor 2)?
+2. Or does it merely trade one tissue for the other?
+3. Diagnose the coupling that governs the trade.
+
+\section{Background}
+The long-chain "complete resolution" test (runs/pfas-rice-longchain-complete)
+showed that combining the three proposed levers (2-pool root + lipid loading +
+LC6 root-matching active carrier) into one model closes the long-chain root and
+grain but OVER-feeds the shoot: the active carrier that fixes the root enlarges
+the mobile root pool, whose free xylem loading f\_xy*Cw\_m alone exceeds the
+observed straw (PFUnDA \textasciitilde{}3.3x, PFDoDA \textasciitilde{}2.3x over), and the lipid term (g\_xy>=0)
+cannot subtract. FINDINGS sec.7 named the missing piece a root->shoot DECOUPLING:
+an irreversible root store that holds the measured root burden WITHOUT feeding the
+xylem in proportion. This run tests the simplest such lever.
+
+\section{Method}
+Reuse the committed LC 2-pool prototype (validation/twopool\_longchain.py) without
+changing it; add only the seq lever in a separate experiment
+(validation/longchain\_decouple.py). Per congener, fix the active carrier at its
+seq=1 root-matching value, then scan seq. The fittable straw is bounded below by
+the g\_xy=0 floor (lipid g\_xy>=0 can only add), so the straw fit ratio is
+max(straw\_floor/obs, 1) and no lipid fit is needed for the root<->shoot tension.
+Report, per seq, the root ratio, the straw fit ratio, and the simultaneity gap
+max(|log10 root/obs|, log10 straw\_fit\_ratio); summarize the baseline (seq=1, which
+IS the complete recipe), the root inflation across the scan, and the best (minimum)
+simultaneity gap. Freeze these statistics as threshold hypotheses; the engine
+resolves them and renders the paper. All evidence is measured (vs Yamazaki). No
+core model is changed.
+
+Planned approaches:
+\begin{itemize}
+  \item add a seq lever (k\_on = ratio*k\_off*seq) to the 2-pool prototype (separate file)
+  \item fix the active carrier at its seq=1 root-matching value; scan seq
+  \item read the g\_xy=0 straw floor (lipid can only add) -> straw fit ratio, simultaneity gap
+  \item freeze baseline/inflation/best-gap as thresholds; engine resolves and renders; verify
+\end{itemize}
+
+\section{Hypotheses and findings}
+
+\subsection{At a fixed root-matching carrier, increasing the irreversible bound-store sequestration (seq) INFLATES the long-chain (PFDoDA) root rather than relieving the shoot: root inflates by more than a factor 2 across the scan.}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-decouple-inflates-root} (confirmatory)
+  \item Decision rule (threshold): at a fixed root-matching carrier, increasing the irreversible sequestration seq INFLATES the long-chain (PFDoDA) root by > 2x (the lever pushes the root the wrong way) => support; root does not inflate => refute
+  \item \textbf{Status: supported} --- confidence 0.993 (credence)
+  \item Basis: threshold rule: statistic 'point'=6.94 > 2 is met (combine='latest', margin=4.94)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\subsection{The irreversible-sequestration lever does NOT achieve a clean simultaneous root+shoot closure for the long chains: the best (minimum over seq) simultaneity gap stays above 0.30 log10 (i.e. root and shoot cannot both be brought within a factor 2 at once).}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-decouple-not-clean} (confirmatory)
+  \item Decision rule (threshold): the lever does NOT achieve a clean simultaneous root+shoot closure: the best (minimum over seq) simultaneity gap stays above 0.30 log10 (factor 2) => support; gap <= 0.30 (both within a factor 2) => refute
+  \item \textbf{Status: supported} --- confidence 0.0354 (credence)
+  \item Basis: threshold rule: statistic 'point'=0.336 > 0.3 is met (combine='latest', margin=0.036)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\subsection{The lever helps only marginally: the best simultaneity gap improves on the complete-recipe baseline (seq=1) by less than 0.05 log10, so asymmetric bound-store kinetics do not materially resolve the long-chain root<->shoot tension.}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-decouple-marginal} (confirmatory)
+  \item Decision rule (threshold): the best simultaneity gap improves on the complete-recipe baseline (seq=1) by less than 0.05 log10 -- a negligible gain, so the sequestration lever does not materially help => support; improvement >= 0.05 => refute
+  \item \textbf{Status: supported} --- confidence 0.0296 (credence)
+  \item Basis: threshold rule: statistic 'point'=0.02 < 0.05 is met (combine='latest', margin=0.03)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\section{Evidence}
+\begin{itemize}
+  \item \texttt{evi-decouple-literature} (literature): finding=cited prior work (LC records): long-chain PFAS are strongly retained in roots vs mobile short chains (newcontam 2025; Ad
+  \item \texttt{evi-decouple-inflate} (experiment\_run): point=6.94, finding=validation/longchain\_decouple.py vs Yamazaki: at the fixed root-matching carrier (5.5x base), increasing seq 1->10 INFLA
+  \item \texttt{evi-decouple-notclean} (experiment\_run): point=0.336, finding=validation/longchain\_decouple.py: the best (minimum over seq) simultaneity gap for PFDoDA is 0.336 log10 (factor 2.17) a
+  \item \texttt{evi-decouple-marginal} (experiment\_run): point=0.02, finding=validation/longchain\_decouple.py: seq=1 IS the complete recipe (gap 0.357); the best seq lowers the PFDoDA gap only to 0
+\end{itemize}
+
+\section{Discussion}
+The verdict is an honest near-negative that sharpens the open problem. The asymmetric bound-store lever does provide a knob -- increasing seq traps more burden in the non-translocating pool and does relieve the shoot somewhat -- but it cannot deliver a clean simultaneous closure, because the model couples uptake to the mobile concentration: the Goldman-Hodgkin-Katz and carrier influx grow as the internal (mobile) concentration falls, so any attempt to suppress the mobile pool (to protect the shoot) increases net uptake and therefore inflates the root. The two objectives -- low mobile concentration (for the shoot) and a finite measured root burden -- are in direct tension under this coupling. The best the lever achieves is a balanced compromise around a factor 2.2 on each tissue, a negligible 0.02-log improvement over the complete recipe. The implication is specific and constructive: the correct root-to-shoot decoupling must break the uptake-to-mobile-concentration coupling itself -- for example, route long-chain uptake directly into an inert apoplastic or cell-wall store that holds the measured root burden WITHOUT contributing to the mobile aqueous concentration that both feeds the xylem and sets the influx gradient. That is a different object from asymmetric kinetics on an equilibrating bound pool, and it is the now-sharper target for closing the longest chains. This is a prototype, in-sample synthesis test; the core model is unchanged, and the three claims reproduce under sci-adk verify. It consolidates into FINDINGS.md section 7.
+
+\section{References}
+No literature cited.
+
+\end{document}

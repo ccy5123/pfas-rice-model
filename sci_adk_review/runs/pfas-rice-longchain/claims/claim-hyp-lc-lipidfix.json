@@ -1,0 +1,35 @@
+{
+  "id": "claim-hyp-lc-lipidfix",
+  "spec_id": "pfas-rice-longchain",
+  "answers": "hyp-lc-lipidfix",
+  "statement": "A B-independent lipid-facilitated bound-loading term (g_xy*C_root, g_ph*C_leaf) closes most of the long-chain shoot gap that free loading cannot.",
+  "status": "supported",
+  "confidence": {
+    "type": "graded",
+    "value": null,
+    "level": "strong",
+    "basis": "qualitative judge: Decisive: the B-independent lipid term cuts the long-chain straw+grain RMSE 2.026 -> 0.428 (~100x -> ~2.7x) and the whole series 1.035 -> 0.386, recovering PFDA/PFUnDA/PFOS shoot the free model starved. The mechanism is the right direction. SCOPE: in-sample (K_PL-gated fit), and PFDoDA shoot is still ~3-4x under -- a residual floor remains. Literature corroborates the MECHANISM, VERIFIED at source (evi-lc-litread): Chen2025 (ES&T 2025,59,82-91, 10.1021/acs.est.4c06734) -- membrane-water K_MW rises +0.36/CF2 MONOTONE C4-C16 while HSA (protein) affinity PEAKS at C6-C10, so the lipid (membrane) pool, not protein, carries the longest chains; binding shifts to the membrane with conc."
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-lc-lipid",
+      "role": "supporting"
+    },
+    {
+      "evidence_id": "evi-lit-20260617-154436-dc03d0d5",
+      "role": "refuting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T15:44:35.577039Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-lc-lipid",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

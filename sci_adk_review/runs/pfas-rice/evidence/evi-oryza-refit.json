@@ -1,0 +1,36 @@
+{
+  "id": "evi-oryza-refit",
+  "created_at": "2026-06-17T00:00:00Z",
+  "spec_id": "pfas-rice",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "c4cb2cc6f7ee584e28ed06f999dfabb4f02d0d45",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/refit_oryza.py (real run; ORYZA2000 biomass) + params/refit_oryza.csv",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 0.236,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "validation/refit_oryza.py: per-congener (f_xy,L_Ph,kappa_d) re-fit to Yamazaki on the MECHANISTIC ORYZA2000 biomass (the new default) reproduces in-sample at log10 RMSE 0.236 -- SATURATED (DOF 0), i.e. reproduction not prediction. PFDoDA(C12) hits f_xy=1/L_Ph=1/kappa_d=0.01 ceilings yet stays ~4-6x under (root 19 vs 69, grain 7.4 vs 46) -- a structural long-chain floor. Wired as model_api f_xy_source='oryza' so the default-biomass model reproduces.",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-yamazaki",
+      "direction": "refutes",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

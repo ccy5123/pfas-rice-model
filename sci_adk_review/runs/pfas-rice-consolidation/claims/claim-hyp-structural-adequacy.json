@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-structural-adequacy",
+  "spec_id": "pfas-rice-consolidation",
+  "answers": "hyp-structural-adequacy",
+  "statement": "Under a CONSTRAINED (degrees-of-freedom > 0) fit on the mechanistic ORYZA2000 biomass + measured transpiration, the translocation structure reproduces the measured shoot (straw) BAFs across the C4-C12 PFCA/PFSA series at log10 RMSE < 0.3 (NOT the saturated W2 fit).",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.13064176460119414,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=0.16 < 0.3 is met (combine='latest', margin=0.14)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-adequacy",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T07:12:44.270018Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-adequacy",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

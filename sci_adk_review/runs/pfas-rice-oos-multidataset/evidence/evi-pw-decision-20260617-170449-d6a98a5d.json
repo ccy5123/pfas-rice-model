@@ -1,0 +1,30 @@
+{
+  "id": "evi-pw-decision-20260617-170449-d6a98a5d",
+  "created_at": "2026-06-17T17:04:49.488129Z",
+  "spec_id": "pfas-rice-oos-multidataset",
+  "kind": "prior_work_decision",
+  "provenance": {
+    "code_ref": "prior_work:skip",
+    "data_ref": null,
+    "data_source": null,
+    "seed": null,
+    "environment": "prior-work decision (Spec-time trigger); no search performed",
+    "cost": null
+  },
+  "result": {
+    "type": "qualitative",
+    "point": null,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "skipped: All three datasets (Tang 2026, Kim 2019, Li 2025) are already cited model data; the corroborating mechanism literature (Chen 2025) was source-verified in runs/pfas-rice-longchain. This run is a multi-dataset OOS MODEL robustness test, not a new literature claim.",
+    "artifact_ref": null
+  },
+  "bears_on": [],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

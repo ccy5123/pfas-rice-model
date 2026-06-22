@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-anion",
+  "spec_id": "pfas-rice",
+  "answers": "hyp-anion",
+  "statement": "An inside-negative root plasmalemma electrostatically excludes the PFAS anion (electrochemical factor e^N ~ 1e2), so passive diffusion alone cannot drive net uptake.",
+  "status": "supported",
+  "confidence": {
+    "type": "graded",
+    "value": null,
+    "level": "strong",
+    "basis": "qualitative judge: Both panelists agree the e^N~1e2 exclusion is a closed-form consequence of Tier-0 inputs (E_m, z), independently asserted by test_plant_module; it is a structural/formal property, not a fitted one, so the IOC signature holds."
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-anion",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T14:52:46.313676Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-anion",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

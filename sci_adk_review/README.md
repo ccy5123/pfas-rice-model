@@ -1,0 +1,97 @@
+# sci-adk rigor audit — index
+
+Adversarial rigor audit of this repository's four-compartment PFAS rice
+uptake model, run with **sci-adk** (https://github.com/ccy5123/sci-adk):
+*agents propose; the engine judges by frozen criteria; no
+self-certification.*
+
+## Read this first
+
+- **`runs/pfas-rice-consolidation/paper/draft.tex`** — single
+  consolidated, citable synthesis paper (EN), **rendered by sci-adk**.
+  Built by `build_consolidation.py`, which freezes a threshold-hypothesis
+  Spec whose statistics ARE the verified sub-run outputs; the engine
+  resolves the numeric claims and renders the paper, with the narrative
+  supplied as LaTeX-safe **prose input** (not hand-authored, not
+  LLM-generated). All runs, a master ledger (in the discussion),
+  centralized caveats, verified digests. Provenance is honest by
+  construction: `\author{sci-adk (deterministic render)}`; every figure
+  traces to a verified record; 5/5 claims reproduce under `sci-adk
+  verify`.
+- **`FINDINGS.md`** — the authoritative Korean narrative.
+
+## Paper package — what the engine renders (bib / figures / SI)
+
+The deterministic renderer emits, into `runs/<id>/paper/`, the **`draft.tex`**
+(title + sections + tables + agent-authored prose) **plus a wired
+bibliography**: when `build_consolidation.py` writes
+`artifacts/literature/references.bib` + `manifest.csv` (from the project's
+`docs/references.csv`), the engine co-locates `paper/references.bib` and emits
+`\bibliographystyle{plain}` + `\bibliography{references}` + `\nocite{*}` and a
+DOI `References` list — so `paper/` is self-contained for Overleaf.
+
+It does **not** generate figures or a separate SI document — by design the
+render is pure (no LLM, no plotting, offline). **Figures** are agent/experiment
+artifacts: the schema records them via Evidence `artifact_ref`, but the renderer
+never `\includegraphics` them; pre-generated figures live in
+`validation/figures/` (this container has no plotting lib to make new ones).
+The **Supporting Information** is the append-only record itself — the 13 runs'
+`spec.json` / `evidence/*.json` / `claims/*.json`, indexed by this README and
+`FINDINGS.md`.
+
+## The runs (all `sci-adk verify` → exit 0)
+
+| run | scope | headline verdict |
+|---|---|---|
+| `runs/pfas-rice` | main audit: H1–H7 | formal SUPPORTED; predictive (H3/H4) REFUTED; structural-adequacy (H7) SUPPORTED |
+| `runs/pfas-rice-trap` | synthetic-data trap | **HALT** — `synthetic_proxy` on an empirical hypothesis, no claim written |
+| `runs/pfas-rice-longchain` | LC1–LC5b mechanism | lipid-facilitated loading is the right direction; PFDoDA (C12) needs an active carrier |
+| `runs/pfas-rice-carrier` | LC6 carrier QSPR | REFUTED — carrier enhancement not QSPR-able from chain length |
+| `runs/pfas-rice-oos-tang` | cross-dataset OOS (free-anion) | REFUTED — OOS 1.23 vs in-sample 0.52 |
+| `runs/pfas-rice-oos-lipid` | OOS with lipid mechanism | SUPPORTED — OOS 1.23 → 0.52 (mechanism generalizes) |
+| `runs/pfas-rice-oos-multidataset` | robustness (Tang + Kim + Li) | SUPPORTED — robust across two clean independent datasets |
+| `runs/pfas-rice-longchain-complete` | the 3-lever "complete resolution" as one model | 4/4 SUPPORTED — root+grain close but shoot does NOT (carrier over-feeds): not a simultaneous closure |
+| `runs/pfas-rice-longchain-decouple` | irreversible root sequestration as the decoupling fix | 3/3 SUPPORTED — the lever inflates root (6.9×), no clean closure, marginal gain: wrong lever (break the uptake↔mobile-conc coupling instead) |
+| `runs/pfas-rice-consolidation` | engine-rendered synthesis paper (all 12 sub-runs) + bibliography | 7/7 SUPPORTED — reproducibility, naive-OOS-fails, lipid-generalizes, lipid-robust, structural-adequacy, **long-chain-closed (breakthrough)**, **risk-screening**; self-contained `paper/` (draft.tex + references.bib) |
+| `runs/pfas-rice-model-selection` | transport model-selection / recommendation | 4/4 SUPPORTED — lipid is the consistent winner across all measured data (in-sample + Tang + Kim); recommend lipid (opt-in) |
+| `runs/pfas-rice-risk-readiness` | **breakthrough** + dietary risk-tool readiness | 4/4 SUPPORTED — long chains close (2-pool + free f_xy + carrier, RMSE 0.08); grain predicted OOS within ~factor 3; usable as a SCREENING-level dietary risk tool (bounded ~5× worst case, not regulatory precision) |
+| `runs/pfas-rice-2pool-core` | breakthrough wired into a reusable `src/` component | 3/3 SUPPORTED — `src/pfas_rice_two_pool.py` (+ model_api hook) reproduces the long chains (RMSE 0.08); two independent levers (low f_xy + enhanced carrier) confirmed; canonical core unchanged |
+
+## Specs / drivers
+
+- `proposal.md` — frozen four-pane pre-registration for the main run.
+- `proposal_*.md` — pre-registrations (incl. `proposal_consolidation.md`,
+  `proposal_longchain_complete.md`, `proposal_longchain_decouple.md`,
+  `proposal_model_selection.md`).
+- `build_review.py`, `build_longchain.py`, `build_longchain_complete.py`,
+  `build_longchain_decouple.py`, `build_consolidation.py`,
+  `build_model_selection.py` — reproducible run drivers (the engine
+  compiles/judges/renders); `validation/longchain_complete.py` and
+  `validation/longchain_decouple.py` are the live experiments behind the
+  long-chain follow-up runs.
+- `run_rigor.sh` — local full regenerate + verify.
+
+## Reproduce
+
+```bash
+pip install -e /path/to/sci-adk          # or PYTHONPATH=sci-adk/src
+pip install numpy scipy pytest rdkit     # for the model-output evidence
+python sci_adk_review/build_review.py             # main run
+python sci_adk_review/build_longchain_complete.py # long-chain "complete resolution" test
+python sci_adk_review/build_longchain_decouple.py # root->shoot decoupling test
+python sci_adk_review/build_consolidation.py      # engine-rendered synthesis paper
+python sci_adk_review/build_model_selection.py    # transport model-selection verdict
+python sci_adk_review/build_risk_readiness.py     # breakthrough + dietary risk-tool readiness
+python sci_adk_review/build_2pool_core.py         # breakthrough wired into src + verified
+for r in pfas-rice pfas-rice-longchain pfas-rice-carrier \
+         pfas-rice-oos-tang pfas-rice-oos-lipid pfas-rice-oos-multidataset \
+         pfas-rice-longchain-complete pfas-rice-longchain-decouple \
+         pfas-rice-consolidation pfas-rice-model-selection pfas-rice-risk-readiness \
+         pfas-rice-2pool-core; do
+  sci-adk verify sci_adk_review/runs/$r   # exit 0, all claims REPRODUCED
+done
+```
+
+Standing guards in `tests/test_sci_adk_rigor.py` re-verify the committed
+runs on every push and fail if an empirical predictive claim is ever
+promoted to SUPPORTED without basis.

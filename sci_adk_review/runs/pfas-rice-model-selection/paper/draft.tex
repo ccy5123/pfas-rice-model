@@ -1,0 +1,120 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{url}
+\title{Model selection across all measured evidence: is K\_PL-gated lipid-facilitated loading the best-supported transport configuration, and should it be recommended over the free-anion default?}
+\author{sci-adk (deterministic render)}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\noindent\textit{Draft compiled by sci-adk from Spec \texttt{pfas-rice-model-selection} (v1). Belief state is revisable as Evidence accrues.}
+
+\begin{abstract}
+This run turns the audit's empirical findings into one engine-adjudicated model-selection verdict. Across every measured dataset, the K\_PL-gated lipid-facilitated loading mechanism is the best-supported transport configuration: it beats the free-anion default on the in-sample Yamazaki whole-series (log10 RMSE 1.035 to 0.386, a 0.65-log win), on the independent Tang 2026 out-of-sample per-organ TF (1.232 to 0.516, 0.72-log), and on the independent Kim 2019 out-of-sample grain BAF (2.05 to 0.48, 1.57-log). The minimum win-margin across the three is 0.65 log10 (a factor 4), so lipid wins EVERY dataset, not just on average -- it is the consistent winner. Recommendation, with the honest caveat: prefer lipid loading for shoot, grain and out-of-sample prediction, but keep the free-anion as the conservative default in code (lipid stays opt-in) until a reliable two-pool root removes the single-pool long-chain root tradeoff that the long-chain follow-up runs showed is not yet resolvable.
+\end{abstract}
+
+\section{Introduction}
+The investigation produced a clear empirical signal -- the free-anion model fails out-of-sample while the lipid mechanism generalizes -- but left the mechanism opt-in and the practical question open: which configuration should the model actually use? sci-adk's role here is to adjudicate that selection by frozen criteria over the measured evidence, not to re-litigate it. The win-margins are the verified per-dataset log10 RMSE differences from the committed runs; the engine resolves them and the consistent-winner test. The narrative is agent-authored prose input; the engine renders. No new model is introduced.
+
+\section{Goal}
+Model selection across all measured evidence: is K\_PL-gated lipid-facilitated loading the best-supported transport configuration, and should it be recommended over the free-anion default?
+
+Decide, from the measured datasets (Yamazaki in-sample whole-series; Tang 2026 and
+Kim 2019 out-of-sample), whether the lipid mechanism is the consistent best:
+
+1. In-sample: does lipid beat the free-anion default on the whole-series Yamazaki
+   fit by a decisive margin?
+2. Out-of-sample (Tang): does lipid beat free-anion on the independent Tang dataset?
+3. Out-of-sample (Kim): does lipid beat the monotone/free baseline on the
+   independent Kim grain dataset?
+4. Consistency: is lipid the winner on EVERY measured dataset (not just on average),
+   i.e. is the minimum win-margin across all three still decisive?
+
+\section{Background}
+The audit established that the free-anion transport model fails out-of-sample
+(runs/pfas-rice-oos-tang) while the K\_PL-gated lipid-facilitated loading mechanism
+generalizes out-of-sample across two clean independent datasets
+(runs/pfas-rice-oos-lipid, runs/pfas-rice-oos-multidataset). Separately, on the
+in-sample Yamazaki series, the lipid mechanism cuts the whole-series log10 RMSE
+from 1.035 (free-anion) to 0.386 (runs/pfas-rice-longchain). The lipid mechanism
+is currently OPT-IN (default off). The long-chain follow-ups
+(runs/pfas-rice-longchain-complete, -decouple) showed the remaining long-chain
+root tradeoff is not yet cleanly resolvable in the single-pool prototype. This run
+turns those findings into one engine-adjudicated MODEL-SELECTION verdict: across
+all available measured evidence, which transport configuration is best-supported,
+and should the lipid mechanism be the recommended configuration?
+
+\section{Method}
+Compose a frozen Spec of threshold hypotheses whose statistics are the verified
+log10 RMSE values from the committed runs/experiments (in-sample whole-series from
+validation/longchain\_mechanism.py; OOS from runs/pfas-rice-oos-tang/-lipid and
+runs/pfas-rice-oos-multidataset). Classify the evidence as measured (every number
+is a comparison against real data). The engine resolves the numeric win-margins
+autonomously and renders the paper; an agent-authored LaTeX-safe prose narrative
+states the actionable recommendation. No new model is introduced; this is a
+selection verdict over results already adjudicated in prior runs.
+
+Planned approaches:
+\begin{itemize}
+  \item freeze the verified per-dataset log10 RMSE (free/monotone vs lipid) as threshold hypotheses
+  \item the engine resolves the win-margins (in-sample + 2 OOS) autonomously
+  \item the consistent-winner claim = minimum win-margin across all datasets > 0.3
+  \item prose states the actionable recommendation; sci-adk verify re-derives
+\end{itemize}
+
+\section{Hypotheses and findings}
+
+\subsection{The K\_PL-gated lipid-facilitated loading mechanism beats the free-anion default on the in-sample Yamazaki whole-series fit by a decisive margin (> 0.3 log10).}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-select-insample} (confirmatory)
+  \item Decision rule (threshold): the K\_PL-gated lipid mechanism beats the free-anion default on the in-sample Yamazaki whole-series log10 RMSE by > 0.3 (a factor 2) => support; margin <= 0.3 => refute
+  \item \textbf{Status: supported} --- confidence 0.295 (credence)
+  \item Basis: threshold rule: statistic 'point'=0.649 > 0.3 is met (combine='latest', margin=0.349)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\subsection{Lipid beats the free-anion model on the independent Tang 2026 out-of-sample per-organ TF by a decisive margin (> 0.3 log10).}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-select-oos-tang} (confirmatory)
+  \item Decision rule (threshold): lipid beats free-anion on the independent Tang 2026 out-of-sample log10 RMSE by > 0.3 => support; <= 0.3 => refute
+  \item \textbf{Status: supported} --- confidence 0.34 (credence)
+  \item Basis: threshold rule: statistic 'point'=0.716 > 0.3 is met (combine='latest', margin=0.416)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\subsection{Lipid beats the monotone/free baseline on the independent Kim 2019 brown-rice grain out-of-sample BAF by a decisive margin (> 0.3 log10).}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-select-oos-kim} (confirmatory)
+  \item Decision rule (threshold): lipid beats the monotone/free baseline on the independent Kim 2019 grain out-of-sample log10 RMSE by > 0.3 => support; <= 0.3 => refute
+  \item \textbf{Status: supported} --- confidence 0.719 (credence)
+  \item Basis: threshold rule: statistic 'point'=1.57 > 0.3 is met (combine='latest', margin=1.27)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\subsection{The lipid mechanism is the CONSISTENT best-supported transport model: it wins EVERY measured dataset (in-sample Yamazaki, Tang OOS, Kim OOS), so the minimum win-margin across all three still exceeds 0.3 log10 -- it should be the recommended configuration (kept opt-in pending a reliable 2-pool root).}
+\begin{itemize}
+  \item Hypothesis id: \texttt{hyp-select-consistent-winner} (confirmatory)
+  \item Decision rule (threshold): lipid is the CONSISTENT winner -- the MINIMUM win-margin across all three measured datasets (in-sample + Tang + Kim) exceeds 0.3 log10, i.e. lipid wins EVERY dataset, not just on average => support (recommend lipid); min margin <= 0.3 => refute
+  \item \textbf{Status: supported} --- confidence 0.295 (credence)
+  \item Basis: threshold rule: statistic 'point'=0.649 > 0.3 is met (combine='latest', margin=0.349)
+  \item \textit{Evidence validity:} referent=empirical; data\_source(s)=measured
+\end{itemize}
+
+\section{Evidence}
+\begin{itemize}
+  \item \texttt{evi-select-literature} (literature): finding=cited prior work: Chen 2025 membrane K\_MW (10.1021/acs.est.4c06734) is the mechanistic basis for K\_PL-gated lipid loadin
+  \item \texttt{evi-select-insample} (experiment\_run): point=0.649, finding=validation/longchain\_mechanism.py vs Yamazaki (whole series, all tissues): free-anion log10 RMSE 1.035 vs lipid 0.386 --
+  \item \texttt{evi-select-tang} (experiment\_run): point=0.716, finding=runs/pfas-rice-oos-tang + -oos-lipid: free-anion OOS log10 RMSE 1.232 vs lipid 0.516 on the independent Tang 2026 per-or
+  \item \texttt{evi-select-kim} (experiment\_run): point=1.57, finding=runs/pfas-rice-oos-multidataset: monotone/free baseline OOS log10 RMSE 2.05 vs lipid 0.48 on the independent Kim 2019 br
+  \item \texttt{evi-select-winner} (experiment\_run): point=0.649, finding=consistent-winner check: lipid's win-margins are in-sample 0.649, Tang 0.716, Kim 1.57 log10; the MINIMUM is 0.649 (> 0.
+\end{itemize}
+
+\section{Discussion}
+The verdict is decisive and actionable: lipid loading is the consistent best-supported transport model across in-sample and two independent out-of-sample datasets, so it should be the recommended configuration for the use cases that matter for risk assessment -- shoot and grain accumulation and cross-dataset prediction. The recommendation is deliberately qualified, not maximal. First, the lipid constants are an in-sample K\_PL-gated fit on Yamazaki (excluding PFDoDA), so the out-of-sample wins are the validation, but the mechanism is not parameter-free. Second, in a single pool the lipid term trades off the long-chain root, and the long-chain follow-up runs (complete-resolution and decoupling) showed that tradeoff is not yet cleanly resolvable in the prototype -- the proper fix is a two-pool root that the data and prototype cannot yet pin down reliably. Therefore the engineering recommendation is to keep the free-anion model as the conservative code default and expose lipid loading as the preferred opt-in (model\_api simulate(lipid\_loading=True)), rather than hard-switching the default. GenX/ether remains an open residual orthogonal to this choice. This is a selection over results already adjudicated in prior runs; the four claims reproduce under sci-adk verify, and the decision consolidates into FINDINGS.md.
+
+\section{References}
+No literature cited.
+
+\end{document}

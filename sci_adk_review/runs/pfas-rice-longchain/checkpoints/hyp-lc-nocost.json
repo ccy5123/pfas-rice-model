@@ -1,0 +1,8 @@
+{
+  "checkpoint_type": "judge",
+  "hypothesis_id": "hyp-lc-nocost",
+  "kind": "qualitative",
+  "expression": "the lipid mechanism reproduces the long-chain shoot WITHOUT degrading the root or the short/mid-chain fits (a clean single-mechanism fix) => support; it trades off root / leaves a residual => refute",
+  "finding": "validation/longchain_mechanism.py: the single-pool lipid term TRADES OFF root for long chains -- PFUnDA root 20.6->3.9 (obs 19.5), PFDoDA root 159->4.4 (obs 69); and PFDoDA shoot is STILL ~3-4x under (straw 14.7 vs 49.8). A clean cost-free fix is refuted: it needs a 2-pool (free + bound) split and a residual long-chain mechanism.",
+  "spec_version": 1
+}

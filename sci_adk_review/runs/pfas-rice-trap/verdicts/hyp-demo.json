@@ -1,0 +1,28 @@
+{
+  "hypothesis_id": "hyp-demo",
+  "rule_kind": "qualitative",
+  "rubric_expression": "the bundled demonstration BAFs establish that the model predicts field PFAS bioaccumulation in rice => support",
+  "rubric_params": null,
+  "panel": [
+    {
+      "direction": "supports",
+      "level": "strong",
+      "basis": "the demo runs and prints plausible BAFs.",
+      "counterexample": false
+    }
+  ],
+  "chief": {
+    "direction": "supports",
+    "level": "strong",
+    "basis": "Naive reading: the demo prints root>straw>grain BAFs, so the model 'predicts' bioaccumulation.",
+    "counterexample": false
+  },
+  "provenance": {
+    "spec_version": 1,
+    "timestamp": "2026-06-17T00:00:00+00:00",
+    "agent_ids": [
+      "claude-in-session"
+    ],
+    "cost_ids": null
+  }
+}

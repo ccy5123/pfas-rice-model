@@ -225,6 +225,13 @@ them, so a PFSA-specific transport term is still needed.
   **Full validation write-up (KR) with figure: `docs/VALIDATION_KR.md`** — calibration (Yamazaki,
   reproduction) vs out-of-sample (Kim 2019 grain; Li 2025 TF, inconclusive); run
   `python validation/validation_summary.py` for the figure.
+- **Independent rigor audit (sci-adk)** — seven adversarial runs adjudicate the model by frozen
+  criteria (`sci_adk_review/`): formal foundations SUPPORTED (mass balance, anion exclusion, soil
+  QSPR spread, SMILES read-across), naive predictive claims REFUTED (0.029 is in-sample), structural
+  adequacy SUPPORTED on the ORYZA2000 biomass, and a **lipid-facilitated loading mechanism that
+  generalizes out-of-sample** across two independent datasets (Tang 2026, Kim 2019). Consolidated,
+  **engine-rendered** synthesis paper: **`sci_adk_review/runs/pfas-rice-consolidation/paper/draft.tex`**
+  (rebuild: `python sci_adk_review/build_consolidation.py`; KR narrative: `sci_adk_review/FINDINGS.md`).
 - **Tier-1 fit** — `src/literature_params.py` fits `L_Ph` to the Kim 2019 PFOA grain BAF (matches 4.43 L/kg).
 - **Visualization tool** — `app.py` (+ `src/model_api.py`, `src/plots.py`): plant/soil accumulation
   colormap + five exposure modes (model / HYDRUS CSV / **live HYDRUS-1D** / soil inventory /

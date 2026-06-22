@@ -1,0 +1,36 @@
+{
+  "id": "evi-lc5-carrier",
+  "created_at": "2026-06-17T00:00:00Z",
+  "spec_id": "pfas-rice-longchain",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "74fddb8c62131135d3a2869209348ba63d2f6274",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/twopool_longchain.py lc5b_carrier_scan (real run)",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": null,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "validation/twopool_longchain.py carrier scan (PFDoDA): at Vmax_in ~5x base (20->100) the 2-pool reaches root 62 vs 69 and grain 46 vs 45.5 (straw 102 vs 50, ~2x over). The ACTIVE carrier overcomes the anion-exclusion ceiling the GHK pathway cannot -- the longest-chain residual is a carrier-capacity limit, closable. Consistent with the literature (active carrier-mediated root uptake).",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-lc-carrier",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

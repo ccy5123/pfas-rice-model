@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-reproduce",
+  "spec_id": "pfas-rice-consolidation",
+  "answers": "hyp-reproduce",
+  "statement": "Every committed sci-adk sub-run (all twelve) re-derives from its frozen record under sci-adk verify with exit 0, so the consolidated audit record is reproducible.",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.000999500166624978,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=1 > 0.999 is met (combine='latest', margin=0.001)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-reproduce",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T07:12:44.268894Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-reproduce",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

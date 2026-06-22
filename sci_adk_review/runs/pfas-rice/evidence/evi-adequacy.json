@@ -1,0 +1,41 @@
+{
+  "id": "evi-adequacy",
+  "created_at": "2026-06-17T00:00:00Z",
+  "spec_id": "pfas-rice",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "c4cb2cc6f7ee584e28ed06f999dfabb4f02d0d45",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/structural_adequacy_fit.py (ORYZA2000 biomass; real run; numpy/scipy)",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 0.184,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "validation/structural_adequacy_fit.py, driven by the MECHANISTIC ORYZA2000 biomass (oryza_growth) + measured Q_TP (forcing_rice) -- NOT the logistic placeholder. CONSTRAINED (DOF>0) fits vs Yamazaki: A f_xy+global L_Ph+global kappa_d (DOF 20): root 0.45 straw 0.18 grain 0.52 overall 0.41; B +per-cong L_Ph (DOF 10): grain 0.36 overall 0.35; C +per-cong kappa_d (DOF 10): root 0.26 straw 0.16 grain 0.51 overall 0.34. => structure reproduces SHOOT translocation (straw ~0.16-0.18, i.e. within ~1.5x) under a constrained fit; root needs per-congener kappa_d (->0.26); grain improves with per-congener L_Ph (->0.36) but keeps a long-chain residual floor. Whole plant within ~factor 2.2 (overall 0.34) at DOF 10 -- vs saturated W2 0.029 (DOF 0) and a-priori 0.84.",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-adequacy",
+      "direction": "supports",
+      "weight": null
+    },
+    {
+      "target_id": "hyp-grain",
+      "direction": "refutes",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

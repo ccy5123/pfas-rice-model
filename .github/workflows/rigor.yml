@@ -1,0 +1,33 @@
+name: sci-adk rigor guard
+
+# Institutionalizes the sci-adk rigor loop: on every push/PR, re-derive the
+# committed rigor review and FAIL if the model's empirical predictive claims are
+# ever over-claimed (SUPPORTED) or the record no longer reproduces. The committed
+# run artifacts (sci_adk_review/runs/) are checked in, so the guard needs only
+# sci-adk + pydantic -- no model re-run.
+#
+# See sci_adk_review/FINDINGS.md. Regenerate after a model change with:
+#   python sci_adk_review/build_review.py
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  rigor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pydantic pytest cffi
+      - name: Install sci-adk (best-effort; rigor tests skip if unavailable)
+        continue-on-error: true
+        run: pip install "git+https://github.com/ccy5123/sci-adk.git"
+      - name: Run the over-claim guard
+        run: pytest tests/test_sci_adk_rigor.py -v

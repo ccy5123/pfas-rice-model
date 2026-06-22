@@ -1,0 +1,36 @@
+{
+  "id": "evi-oos-lipid",
+  "created_at": "2026-06-17T00:00:00Z",
+  "spec_id": "pfas-rice-oos-lipid",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "5ed9a50517ac5ba7906a6e302c603b7b280089ba",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/oos_tang_lipid.py (model_api.tang_tf_validation, ORYZA2000, f_xy_source=recommended; lipid_loading off vs on; vs Tang2026 dw TF, 0.1 ug/g)",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 0.516,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "Out-of-sample GENERALIZATION on the INDEPENDENT Tang 2026 dataset. The K_PL-gated lipid-facilitated loading mechanism (LIPID_LOADING constants fit on YAMAZAKI excl. PFDoDA, NOT on Tang -- see docs/fxy_longchain_lipid_exploration.md) drops the OOS log10 RMSE from 1.232 (free-anion baseline) to 0.516 -- matching the in-sample Tang-refit level (0.519) WITHOUT touching any parameter for Tang. The dominant baseline error (PFOS, the high-K_PL sulfonate) is largely fixed: stalk 0.013->0.620 vs Tang 0.571, endosperm 0.004->0.194 vs 0.944, leaf 0.039->1.536 vs 0.684 (the ~40-200x under collapses). PFOA also improves (stalk 0.485->1.378 vs 2.222; endosperm 0.136->0.444 vs 1.371). Residual (honestly recorded): GenX (ether) stays OVER-predicted (stalk 8.3->5.6, leaf 17.7->11.6 vs ~1) -- the ether f_xy offset is provisional/condition-dependent, NOT a lipid-loading failure; and PFOS endosperm is still ~5x under. The mechanism is corroborated by Chen 2025 (membrane K_MW monotone with chain length; the lipid pool carries the most-sorptive species). This is the project's first strong cross-dataset out-of-sample predictive success: a mechanism fit on one dataset predicts an independent dataset's per-organ pattern.",
+    "artifact_ref": "validation/figures/oos_tang_lipid.txt"
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-001",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

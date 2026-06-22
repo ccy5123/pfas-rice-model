@@ -1,0 +1,34 @@
+{
+  "hypothesis_id": "hyp-lc-freethrottle",
+  "rule_kind": "qualitative",
+  "rubric_expression": "free-anion xylem/phloem loading structurally under-predicts long-chain (C10-C12) shoot accumulation -- even at the f_xy=1 ceiling the flux is throttled by Cw=C/B collapse => support; long chains are reachable by free loading => refute",
+  "rubric_params": null,
+  "panel": [
+    {
+      "direction": "supports",
+      "level": "strong",
+      "basis": "f_xy=1 ceiling still under -> not an f_xy value issue but the Cw=C/B throttle.",
+      "counterexample": false
+    },
+    {
+      "direction": "supports",
+      "level": "strong",
+      "basis": "free-only long-chain RMSE 2.03 (~100x) vs measured Yamazaki; corroborated by the long-chain root-retention literature.",
+      "counterexample": false
+    }
+  ],
+  "chief": {
+    "direction": "supports",
+    "level": "strong",
+    "basis": "Decisive: free-only long-chain straw+grain RMSE 2.026 (~100x under), and the ORYZA re-fit hits f_xy=1/L_Ph=1 ceilings yet PFDoDA straw stays 14.6 vs 49.8 -- the loaded flux scales with Cw=C/B, which collapses as B grows, so the free-anion shoot cannot reach the long chains. Cause confirmed. Literature corroborates (VERIFIED at source, evi-lc-litread): long-chain PFAS strongly adsorb in roots/soil while short chains are mobile to leaves/grains (newcontam2025); MW is the top predictor of translocation (ML2024).",
+    "counterexample": false
+  },
+  "provenance": {
+    "spec_version": 1,
+    "timestamp": "2026-06-17T00:00:00+00:00",
+    "agent_ids": [
+      "claude-in-session"
+    ],
+    "cost_ids": null
+  }
+}

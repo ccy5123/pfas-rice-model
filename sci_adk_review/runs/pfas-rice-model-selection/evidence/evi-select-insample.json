@@ -1,0 +1,36 @@
+{
+  "id": "evi-select-insample",
+  "created_at": "2026-06-18T01:47:15.021797Z",
+  "spec_id": "pfas-rice-model-selection",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "pfas-rice-model@54d4d8f",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/longchain_mechanism.py",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 0.649,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "validation/longchain_mechanism.py vs Yamazaki (whole series, all tissues): free-anion log10 RMSE 1.035 vs lipid 0.386 -- lipid wins in-sample by 0.649 log10 (~4.5x). Long-chain all-tissue: 1.659 -> 0.584.",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-select-insample",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

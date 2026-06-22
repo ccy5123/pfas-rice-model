@@ -79,6 +79,32 @@ def observed_baf(congener):
     return out
 
 
+def simulate_two_pool(congener, *, f_xy, vmax_in, g_xy=0.0, g_ph=0.0, k_off=0.02,
+                      seq=1.0, biomass="oryza", season=120.0):
+    """Opt-in TWO-POOL root model (the long-chain breakthrough; src/pfas_rice_two_pool.py).
+
+    Splits the root into a mobile pool (feeds the xylem / sets the uptake gradient) and a
+    slow bound store (holds the measured root burden), so a LOW f_xy (strong root retention)
+    and an ENHANCED active carrier (high uptake) are independent levers -- which closes the
+    long chains the single-pool core cannot. Returns root/straw/grain BAF (Cwo=1). The
+    canonical ``simulate`` (4pool_surf) is unchanged; this is additive."""
+    import pfas_rice_two_pool as tp
+    return tp.simulate(congener, f_xy, vmax_in, g_xy=g_xy, g_ph=g_ph, k_off=k_off,
+                       seq=seq, biomass=biomass, season=season)
+
+
+def close_longchain_2pool(congener, *, obs=None, biomass="oryza", season=120.0):
+    """Saturated 3-param structural-adequacy fit of the 2-pool model to the measured
+    BAFs (free f_xy -> straw, active carrier -> root, g_ph -> grain). ``obs`` defaults to
+    the Yamazaki BAF for the congener. Returns the fitted (f_xy, vmax_in, g_ph) + the
+    reproduced root/straw/grain. Reproduction (DOF 0), NOT a-priori prediction."""
+    import pfas_rice_two_pool as tp
+    obs = obs or observed_baf(congener)
+    if not {"root", "straw", "grain"} <= set(obs):
+        raise KeyError(f"need root/straw/grain BAF for {congener!r}; got {sorted(obs)}")
+    return tp.close_longchain(congener, obs, biomass=biomass, season=season)
+
+
 # --- Tang 2026 per-organ TF validation (dry-weight basis) -----------------------
 TANG_CONGENERS = ("PFOA", "PFOS", "GenX")
 # f_xy re-fit to Tang TF at the 0.1 ug/g dose (OVERRIDE-only; validation/tang2026_fxy_refit.py).
@@ -111,7 +137,7 @@ def tang_observed_tf(congener, dose="mean"):
 
 
 def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
-                       dose="mean", biomass="growth_rice", season=150.0):
+                       dose="mean", biomass="oryza", season=150.0, lipid_loading=False):
     """Model per-organ transfer factor (DRY-weight) vs Tang 2026, for a Tang congener.
 
     The model conc is fresh-weight (C=B_k*Cw, basis A); Tang TF is dry/dry, and the
@@ -119,14 +145,16 @@ def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
     in C_tissue/C_root: TF_dw = TF_fw*(1-theta_root)/(1-theta_tissue). Uses the
     redistributed-shoot model (`simulate_nstem_leaf`) for a sensible stem~leaf split;
     biomass='oryza' drives it with the mechanistic ORYZA2000 biomass. use_refit applies
-    the Tang-calibrated f_xy override. Returns None for non-Tang congeners.
+    the Tang-calibrated f_xy override. ``lipid_loading`` turns on the K_PL-gated
+    lipid-facilitated loading mechanism (constants fit on Yamazaki, NOT Tang -> applying it
+    here is out-of-sample; see validation/oos_tang_lipid.py). Returns None for non-Tang congeners.
     NOTE: grain/endosperm is structurally under-predicted ~3-8x (docs/tang2026_grain_units_exploration.md).
     """
     if congener not in TANG_CONGENERS:
         return None
     fxy = TANG_REFIT_FXY[congener] if use_refit else None
     r = simulate_nstem_leaf(congener, Cwo=1.0, season=season, biomass_fn=_biomass_fn(biomass),
-                            f_xy_source=f_xy_source, f_xy_override=fxy)
+                            f_xy_source=f_xy_source, f_xy_override=fxy, lipid_loading=lipid_loading)
     froot = 1.0 - _COMP["root"]["theta_fw"]
     model = {org: r["tf_final"][mk] * froot / (1.0 - _COMP[tk]["theta_fw"])
              for mk, org, tk in _TANG_ORGANS}
@@ -150,13 +178,16 @@ def chain_table():
     return rows
 
 
-def _biomass_fn(biomass="growth_rice"):
+def _biomass_fn(biomass="oryza"):
     """Organ-biomass callable (t, season) -> dict{root,stem,leaf,grain} [kg/hill].
 
     'oryza'       -> the mechanistic ORYZA2000 Level-1 carbon balance (`oryza_growth`;
-                     radiation/temperature-driven), the more first-principles driver;
+                     radiation/temperature-driven). THE DEFAULT (first-principles).
     'growth_rice' -> ORYZA IR72 DVS-partitioning on a logistic total-biomass curve
-                     (`growth_rice`; the lightweight reconstruction, calibration default).
+                     (`growth_rice`; the lightweight reconstruction). NOTE: the per-congener
+                     f_xy_W2fit/L_Ph_W2fit and `reproduce_demo.py` reproduction were tuned on
+                     a placeholder/growth_rice driver, so use 'growth_rice' to match those
+                     legacy artifacts; the live default is the mechanistic ORYZA2000.
     """
     if biomass == "oryza":
         import oryza_growth as og
@@ -164,7 +195,7 @@ def _biomass_fn(biomass="growth_rice"):
     return gr.organ_biomass
 
 
-def _default_drivers(t, season, Cwo, measured_forcing, biomass="growth_rice"):
+def _default_drivers(t, season, Cwo, measured_forcing, biomass="oryza"):
     """Build the (Cwo, Qtp, M) driver arrays for the built-in scenarios."""
     if measured_forcing:
         Qtp = fr.Q_TP(t, season)
@@ -185,7 +216,7 @@ def _default_drivers(t, season, Cwo, measured_forcing, biomass="growth_rice"):
 def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
              f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
              lipid_loading=False, g_xy_override=None, g_ph_override=None,
-             season=120.0, n_t=241, measured_forcing=True, biomass="growth_rice",
+             season=120.0, n_t=241, measured_forcing=True, biomass="oryza",
              drivers=None, K_surf=0.0, record=None):
     """Run the 4-compartment ODE for one congener and scenario.
 
@@ -200,9 +231,10 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         membrane-conductance values instead of the per-congener W2 fits.
     measured_forcing : True -> Q_TP from forcing_rice, organ biomass M from the
         `biomass` driver; False -> the illustrative logistic placeholders.
-    biomass : 'growth_rice' (ORYZA IR72 partitioning on a logistic; default, the
-        calibration basis) or 'oryza' (the mechanistic ORYZA2000 Level-1 carbon
-        balance, `oryza_growth`). Ignored when `drivers` supply M.
+    biomass : 'oryza' (the mechanistic ORYZA2000 Level-1 carbon balance,
+        `oryza_growth`; THE DEFAULT, first-principles) or 'growth_rice' (ORYZA IR72
+        partitioning on a logistic; the lightweight reconstruction that matches the
+        legacy f_xy_W2fit/`reproduce_demo` calibration). Ignored when `drivers` supply M.
     drivers : optional dict with arrays {'t','Cwo','Qtp','M'} (M shape (n,4)) that
         OVERRIDE the built-in forcings -- the entry point for a HYDRUS-1D / Phydrus
         run or a soil-inventory inversion (see `drivers_from_arrays`,
@@ -233,16 +265,12 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         Cwo_series, Qtp, M, leaf_loss = _default_drivers(t, season, Cwo, measured_forcing, biomass)
     inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
 
-    if lipid_loading:
-        f_xy_def, g_xy_def, g_ph_def = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"])
-    else:
-        f_xy_def = c["f_xy_recommended"] if f_xy_source == "recommended" else (c.get("f_xy_W2fit") or c["f_xy_recommended"])
-        g_xy_def = g_ph_def = 0.0
+    f_xy_def, L_Ph_def, kappa_d_def, g_xy_def, g_ph_def = _transport_defaults(c, f_xy_source, lipid_loading)
     f_xy = float(f_xy_override) if f_xy_override is not None else float(f_xy_def)
     g_xy = float(g_xy_override) if g_xy_override is not None else float(g_xy_def)
     g_ph = float(g_ph_override) if g_ph_override is not None else float(g_ph_def)
-    kappa_d = float(kappa_d_override) if kappa_d_override is not None else (c.get("kappa_d_W2fit") or 2.0)
-    L_Ph = float(L_Ph_override) if L_Ph_override is not None else (c.get("L_Ph_W2fit") or 0.01)
+    kappa_d = float(kappa_d_override) if kappa_d_override is not None else float(kappa_d_def)
+    L_Ph = float(L_Ph_override) if L_Ph_override is not None else float(L_Ph_def)
     cmpd = Compound(name=congener, K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
                     K_cw=c["K_cw_wholecw_Lkg"]["root"], kappa_d=kappa_d,
                     Vmax_in=_CARR["Vmax_in"], Km_in=_CARR["Km_in"],
@@ -351,6 +379,25 @@ def simulate_from_smiles(smiles, *, name=None, f_xy=None, f_xy_override=None, **
     return res
 
 
+def _transport_defaults(c, f_xy_source, lipid_loading):
+    """Resolve the (f_xy, L_Ph, kappa_d, g_xy, g_ph) defaults for a congener record.
+
+    f_xy_source: 'recommended' (monotone physical TSCF), 'W2fit' (per-congener fit on
+    the placeholder/growth_rice driver -- reproduces Yamazaki there; reproduce_demo),
+    or 'oryza' (per-congener fit on the mechanistic ORYZA2000 biomass -- the
+    reproduction calibration for the new default driver; validation/refit_oryza.py).
+    """
+    if lipid_loading:
+        f_xy, g_xy, g_ph = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"])
+        return f_xy, (c.get("L_Ph_W2fit") or 0.01), (c.get("kappa_d_W2fit") or 2.0), g_xy, g_ph
+    if f_xy_source == "oryza":
+        return (c.get("f_xy_oryza") or c["f_xy_recommended"],
+                c.get("L_Ph_oryza") or (c.get("L_Ph_W2fit") or 0.01),
+                c.get("kappa_d_oryza") or (c.get("kappa_d_W2fit") or 2.0), 0.0, 0.0)
+    f_xy = c["f_xy_recommended"] if f_xy_source == "recommended" else (c.get("f_xy_W2fit") or c["f_xy_recommended"])
+    return f_xy, (c.get("L_Ph_W2fit") or 0.01), (c.get("kappa_d_W2fit") or 2.0), 0.0, 0.0
+
+
 def _compound_for(congener, f_xy_source="recommended", f_xy_override=None,
                   L_Ph_override=None, kappa_d_override=None, lipid_loading=False,
                   g_xy_override=None, g_ph_override=None, K_cw_organ="stem"):
@@ -358,16 +405,12 @@ def _compound_for(congener, f_xy_source="recommended", f_xy_override=None,
     simulate() (f_xy source / lipid loading / overrides). `K_cw_organ` picks the
     cell-wall K used (the nstem stem segments use the stem cell wall)."""
     c = _CONG[congener]
-    if lipid_loading:
-        f_xy_def, g_xy_def, g_ph_def = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"])
-    else:
-        f_xy_def = c["f_xy_recommended"] if f_xy_source == "recommended" else (c.get("f_xy_W2fit") or c["f_xy_recommended"])
-        g_xy_def = g_ph_def = 0.0
+    f_xy_def, L_Ph_def, kappa_d_def, g_xy_def, g_ph_def = _transport_defaults(c, f_xy_source, lipid_loading)
     f_xy = float(f_xy_override) if f_xy_override is not None else float(f_xy_def)
     g_xy = float(g_xy_override) if g_xy_override is not None else float(g_xy_def)
     g_ph = float(g_ph_override) if g_ph_override is not None else float(g_ph_def)
-    kappa_d = float(kappa_d_override) if kappa_d_override is not None else (c.get("kappa_d_W2fit") or 2.0)
-    L_Ph = float(L_Ph_override) if L_Ph_override is not None else (c.get("L_Ph_W2fit") or 0.01)
+    kappa_d = float(kappa_d_override) if kappa_d_override is not None else float(kappa_d_def)
+    L_Ph = float(L_Ph_override) if L_Ph_override is not None else float(L_Ph_def)
     return Compound(name=congener, K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
                     K_cw=c["K_cw_wholecw_Lkg"][K_cw_organ], kappa_d=kappa_d,
                     Vmax_in=_CARR["Vmax_in"], Km_in=_CARR["Km_in"],
@@ -396,9 +439,8 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
     retention : fraction of each organ's transpiration deposit that is retained
         (terminal); 1-retention flows on to the grain as residual xylem.
     biomass_fn : callable (t, season) -> dict{root,stem,leaf,grain} [kg/hill] for the
-        organ biomass driver. Default None -> growth_rice (logistic). Pass e.g.
-        `lambda t, s: oryza_growth.organ_biomass_oryza(t, p=oryza_growth.OryzaParams(season=s))`
-        to drive the redistributed-shoot model with the mechanistic ORYZA biomass.
+        organ biomass driver. Default None -> the mechanistic ORYZA2000 (`oryza_growth`).
+        Pass `gr.organ_biomass` for the lightweight growth_rice reconstruction.
     """
     from pfas_rice_plant_module_nstem_leaf import (
         NStemLeafModel, PlantInputsNL, make_stem_leaf_compartments, split_from_stem_frac)
@@ -407,7 +449,7 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
 
     t = np.linspace(0.0, float(season), int(n_t))
     Qtp = fr.Q_TP(t, season)
-    b = (biomass_fn or gr.organ_biomass)(t, season)
+    b = (biomass_fn or _biomass_fn("oryza"))(t, season)   # default: mechanistic ORYZA2000
     M = np.column_stack(
         [np.maximum(b["root"], 1e-9)]
         + [np.maximum(b["stem"] / N, 1e-9)] * N

@@ -1,0 +1,7 @@
+# Agent judgment checkpoints
+
+proof/qualitative hypotheses awaiting an in-session agent verdict (no autonomous LLM call). For each, author verdicts/<hyp-id>.json with the chief-over-N trail, then re-enter the loop (sci-adk resolve <run-dir>).
+
+## hyp-001 (qualitative)
+- Criterion: Expert judgment based on evidence
+- Finding: LC6: Vmax multiplier reproducing measured ROOT (g_xy=g_ph=0) per congener -- PFOA 1.2x, PFNA 1.3x, PFDA 1.2x, PFUnDA 2.0x, PFDoDA 5.5x. Regression of log10(multiplier): on n_C slope 0.15/CF2 R^2 0.701; on log10 K_PL slope 0.37 R^2 0.620. NOT log-linear (R^2<0.9): ~no enhancement to C10, then a steep threshold-like rise at C11-C12. => the long-chain carrier enhancement is NOT cleanly QSPR-able from chain length; it is a steep onset at the longest chains.

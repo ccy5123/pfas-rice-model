@@ -1,0 +1,118 @@
+{
+  "id": "pfas-rice-model-selection",
+  "created_at": "2026-06-18T01:47:15.021797Z",
+  "version": 1,
+  "raw_proposal": {
+    "background": "The audit established that the free-anion transport model fails out-of-sample\n(runs/pfas-rice-oos-tang) while the K_PL-gated lipid-facilitated loading mechanism\ngeneralizes out-of-sample across two clean independent datasets\n(runs/pfas-rice-oos-lipid, runs/pfas-rice-oos-multidataset). Separately, on the\nin-sample Yamazaki series, the lipid mechanism cuts the whole-series log10 RMSE\nfrom 1.035 (free-anion) to 0.386 (runs/pfas-rice-longchain). The lipid mechanism\nis currently OPT-IN (default off). The long-chain follow-ups\n(runs/pfas-rice-longchain-complete, -decouple) showed the remaining long-chain\nroot tradeoff is not yet cleanly resolvable in the single-pool prototype. This run\nturns those findings into one engine-adjudicated MODEL-SELECTION verdict: across\nall available measured evidence, which transport configuration is best-supported,\nand should the lipid mechanism be the recommended configuration?",
+    "goal": "Model selection across all measured evidence: is K_PL-gated lipid-facilitated loading the best-supported transport configuration, and should it be recommended over the free-anion default?\n\nDecide, from the measured datasets (Yamazaki in-sample whole-series; Tang 2026 and\nKim 2019 out-of-sample), whether the lipid mechanism is the consistent best:\n\n1. In-sample: does lipid beat the free-anion default on the whole-series Yamazaki\n   fit by a decisive margin?\n2. Out-of-sample (Tang): does lipid beat free-anion on the independent Tang dataset?\n3. Out-of-sample (Kim): does lipid beat the monotone/free baseline on the\n   independent Kim grain dataset?\n4. Consistency: is lipid the winner on EVERY measured dataset (not just on average),\n   i.e. is the minimum win-margin across all three still decisive?",
+    "method": "Compose a frozen Spec of threshold hypotheses whose statistics are the verified\nlog10 RMSE values from the committed runs/experiments (in-sample whole-series from\nvalidation/longchain_mechanism.py; OOS from runs/pfas-rice-oos-tang/-lipid and\nruns/pfas-rice-oos-multidataset). Classify the evidence as measured (every number\nis a comparison against real data). The engine resolves the numeric win-margins\nautonomously and renders the paper; an agent-authored LaTeX-safe prose narrative\nstates the actionable recommendation. No new model is introduced; this is a\nselection verdict over results already adjudicated in prior runs.",
+    "expected_output": "An engine-rendered run (runs/pfas-rice-model-selection) whose claims state, factually,\nwhether the lipid mechanism is the consistent best-supported transport model across\nall measured evidence, plus an explicit, honest recommendation: prefer lipid loading\nfor shoot/grain/out-of-sample prediction; keep the free-anion as the conservative\ndefault in code (lipid stays opt-in) until a reliable 2-pool root removes the\nsingle-pool long-chain root tradeoff. Reproducible under sci-adk verify."
+  },
+  "hypotheses": [
+    {
+      "id": "hyp-select-insample",
+      "statement": "The K_PL-gated lipid-facilitated loading mechanism beats the free-anion default on the in-sample Yamazaki whole-series fit by a decisive margin (> 0.3 log10).",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "the K_PL-gated lipid mechanism beats the free-anion default on the in-sample Yamazaki whole-series log10 RMSE by > 0.3 (a factor 2) => support; margin <= 0.3 => refute",
+        "params": {
+          "statistic": "point",
+          "op": ">",
+          "value": 0.3,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-select-oos-tang",
+      "statement": "Lipid beats the free-anion model on the independent Tang 2026 out-of-sample per-organ TF by a decisive margin (> 0.3 log10).",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "lipid beats free-anion on the independent Tang 2026 out-of-sample log10 RMSE by > 0.3 => support; <= 0.3 => refute",
+        "params": {
+          "statistic": "point",
+          "op": ">",
+          "value": 0.3,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-select-oos-kim",
+      "statement": "Lipid beats the monotone/free baseline on the independent Kim 2019 brown-rice grain out-of-sample BAF by a decisive margin (> 0.3 log10).",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "lipid beats the monotone/free baseline on the independent Kim 2019 grain out-of-sample log10 RMSE by > 0.3 => support; <= 0.3 => refute",
+        "params": {
+          "statistic": "point",
+          "op": ">",
+          "value": 0.3,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    },
+    {
+      "id": "hyp-select-consistent-winner",
+      "statement": "The lipid mechanism is the CONSISTENT best-supported transport model: it wins EVERY measured dataset (in-sample Yamazaki, Tang OOS, Kim OOS), so the minimum win-margin across all three still exceeds 0.3 log10 -- it should be the recommended configuration (kept opt-in pending a reliable 2-pool root).",
+      "mode": "confirmatory",
+      "decision_rule": {
+        "kind": "threshold",
+        "expression": "lipid is the CONSISTENT winner -- the MINIMUM win-margin across all three measured datasets (in-sample + Tang + Kim) exceeds 0.3 log10, i.e. lipid wins EVERY dataset, not just on average => support (recommend lipid); min margin <= 0.3 => refute",
+        "params": {
+          "statistic": "point",
+          "op": ">",
+          "value": 0.3,
+          "combine": "latest"
+        }
+      },
+      "referent": "empirical",
+      "non_circularity": null,
+      "novelty": false
+    }
+  ],
+  "method": {
+    "approaches": [
+      "freeze the verified per-dataset log10 RMSE (free/monotone vs lipid) as threshold hypotheses",
+      "the engine resolves the win-margins (in-sample + 2 OOS) autonomously",
+      "the consistent-winner claim = minimum win-margin across all datasets > 0.3",
+      "prose states the actionable recommendation; sci-adk verify re-derives"
+    ],
+    "tools": null
+  },
+  "target_claims": [
+    {
+      "id": "tc-in",
+      "statement": "Lipid wins in-sample whole-series.",
+      "answers": "hyp-select-insample"
+    },
+    {
+      "id": "tc-tang",
+      "statement": "Lipid wins Tang OOS.",
+      "answers": "hyp-select-oos-tang"
+    },
+    {
+      "id": "tc-kim",
+      "statement": "Lipid wins Kim OOS.",
+      "answers": "hyp-select-oos-kim"
+    },
+    {
+      "id": "tc-win",
+      "statement": "Lipid is the consistent best-supported transport model.",
+      "answers": "hyp-select-consistent-winner"
+    }
+  ],
+  "amendment_rationale": null,
+  "prior_version_id": null
+}

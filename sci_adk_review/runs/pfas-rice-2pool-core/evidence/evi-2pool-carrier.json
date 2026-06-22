@@ -1,0 +1,36 @@
+{
+  "id": "evi-2pool-carrier",
+  "created_at": "2026-06-18T02:37:11.802198Z",
+  "spec_id": "pfas-rice-2pool-core",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "pfas-rice-model@ee891d9",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "src/pfas_rice_two_pool.py",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 2.79,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "the closure needs an ENHANCED active carrier for PFDoDA (2.79x base) -- the high-uptake lever, independent of the (low) f_xy. The two levers were conflated in the earlier single-pool fits (forcing a high f_xy), which is why they failed.",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-2pool-enhanced-carrier",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

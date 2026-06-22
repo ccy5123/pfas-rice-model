@@ -63,13 +63,18 @@ C_k = B_k · C_w,k          BAF = C_k / C_w^o          TF = C_k / C_root
 
 > **핵심 구분**: "Yamazaki에 fit해서 RMSE 0.029로 재현"은 **검증이 아니라 재현**(포화 fit, congener마다
 > 3파라미터=3관측). 진짜 검증은 **보정에 안 쓴** 데이터로의 예측입니다.
+> ⚠️ **사전적(a-priori) 예측오차**(이론/QSPR monotone f_xy, 적합 아님)는 **log10 RMSE ≈0.84**
+> (단일-straw, `reproduce_demo.py --rec`) / **≈0.95**(재배분-shoot, `validation/apriori_prediction.py`) —
+> 즉 0.029과 ~29배 차이로 **표본외 예측은 안 됩니다**. sci-adk 엄밀성 심사가 이를 자동 판정(REFUTED):
+> `sci_adk_review/FINDINGS.md` (sci-adk가 렌더한 영문 통합본:
+> `sci_adk_review/runs/pfas-rice-consolidation/paper/draft.tex`).
 
 ![검증 요약 (Yamazaki 보정 / Kim·Li OOS)](../validation/figures/validation_summary.png)
 
 | 데이터 | 성격 | 결과 | 해석 |
 |---|---|---|---|
 | **Yamazaki 2023** (일본 Andosol, congener별 청정수) | **보정(fit)** | log10 RMSE **0.029** | 재현 보장(포화 fit) — 예측 증거 아님 |
-| **Kim 2019** (한국 논, 공극수↔현미 grain) | **OOS** | lipid RMSE **0.23** vs 기본모델 1.9 | **장쇄 grain 상승을 lipid 메커니즘만 예측** — 가장 강한 신호(단 grain-only·신뢰점 2개) |
+| **Kim 2019** (한국 논, 공극수↔현미 grain) | **OOS** | lipid RMSE **0.20**(신뢰점) / 0.48(전체) vs 기본모델 1.9–2.1 | **장쇄 grain 상승을 lipid 메커니즘만 예측** — 가장 강한 신호(단 grain-only·신뢰점 2개); §3.4 |
 | **Li 2025** (톈진 현장) | OOS | inconclusive | group-water·표면흡착 교란으로 판별 불가 |
 | **Tang 2026** (통제 5용량, 150일, root/stalk/leaf/chaff/endosperm) | **OOS(본격)** | 아래 표 | 지상부 구획·머리기·BCF 검증 |
 
@@ -104,9 +109,31 @@ C_k = B_k · C_w,k          BAF = C_k / C_w^o          TF = C_k / C_root
 
 → **변경은 Tang에 과적합이 아니며, "monotone f_xy 과소" 진단은 교차 데이터셋으로 확증**됩니다.
 
-### 3.4 정직한 결론
-이 모델은 **(a) 결합을 독립 측정으로 받치고 (b) 이행을 Yamazaki로 보정한 뒤 (c) 제한된 OOS로 방향성을
-확인한 단계**입니다. *완전한 예측 검증이 아님* — 가장 큰 공백은 깨끗한 **조직·시간 분해 독립 데이터**입니다(§4–5).
+### 3.4 표본외 일반화 — 자유음이온 모델은 실패하나 *메커니즘*은 일반화한다 (이 세션)
+> `sci_adk_review/FINDINGS.md` §8 / runs `pfas-rice-oos-tang` · `pfas-rice-oos-lipid` · `pfas-rice-oos-multidataset` (모두 `sci-adk run` CLI).
+
+기본(자유음이온) 모델은 **표본외에서 실패**(이론/QSPR f_xy로 Tang 2026 조직별 TF를 예측 → log10 RMSE
+**1.23** vs in-sample 0.52 → **REFUTED**). **그러나** 장쇄 조사에서 찾은 **지질-촉진 로딩**(K_PL-gated;
+Yamazaki에만 적합, 타깃 미적합)을 켜면 — *추가 적합이 아니라 올바른 메커니즘 추가* — 그 표본외 오차가
+회복되며, 이는 **Tang 한정 우연이 아니라 여러 독립 데이터셋에 걸쳐 견고**합니다:
+
+| 독립 데이터셋 (Yamazaki-적합, **재적합 없이** 전이) | lipid | mono(자유음이온) | W2 |
+|---|---:|---:|---:|
+| **Tang 2026** 조직별 TF (dw) — 깨끗 | **0.52** | 1.23 | — |
+| **Kim 2019** 곡립 BAF (PFOA 제외) — 깨끗 | **0.48** | 2.05 | 1.07 |
+| **Kim 2019** 곡립, 신뢰(DF≥15%) | **0.20** | 1.92 | 1.44 |
+| Li 2025 TF — 현장 교란(사전등록 inconclusive) | 혼합 | 혼합 | 혼합 |
+
+→ 지질이 **두 깨끗한 데이터셋(Tang·Kim) 모두에서 명확히 우세**(서로 다른 국가·엔드포인트), mono/W2가
+구조적으로 놓치는 Kim 곡립 **장쇄 RISE**를 지질만 포착 — **프로젝트의 첫 강한 교차데이터셋 표본외 예측
+성공**(Chen2025 막분배 단조증가가 독립 corroborate). 정직한 잔여: GenX(ether) 과대(별개 조건의존),
+Li 현장 교란, Kim 장쇄 저-DF. 지질 로딩은 **opt-in 유지(기본 off)** — core 불변.
+
+### 3.5 정직한 결론
+이 모델은 **(a) 결합을 독립 측정으로 받치고 (b) 이행을 Yamazaki로 보정한 뒤 (c) 표본외 검증으로
+*자유음이온 core는 예측 실패, 지질 메커니즘은 다중 데이터셋에 걸쳐 일반화*함을 확인한 단계**입니다.
+*기본 모델은 완전한 예측 검증이 아니며* 가장 큰 공백은 깨끗한 **조직·시간 분해 독립 데이터**입니다(§4–5);
+다음 구조적 단계는 검증된 지질 메커니즘(+2-pool root)을 core에 승격할지의 결정입니다.
 
 ---
 

@@ -1,0 +1,16 @@
+Tang 2026 OUT-OF-SAMPLE: model with theory f_xy (NOT fit to Tang) vs Tang TF (dw)
+
+cong        organ    model     Tang  refit(IS)
+PFOA        stalk    0.485    2.222      1.167
+PFOA         leaf    1.432    2.476      3.446
+PFOA    endosperm    0.136    1.371      0.327
+PFOS        stalk    0.013    0.571      0.311
+PFOS         leaf    0.039    0.684      0.915
+PFOS    endosperm    0.004    0.944      0.088
+GenX        stalk    8.278    0.915      0.645
+GenX         leaf   17.728    1.327      1.367
+GenX    endosperm    2.748    1.619      0.214
+
+OOS log10 RMSE (theory params, NOT fit to Tang) = 1.232
+in-sample (Tang-refit f_xy)                     = 0.519
+=> the model does NOT predict the independent Tang dataset out-of-sample

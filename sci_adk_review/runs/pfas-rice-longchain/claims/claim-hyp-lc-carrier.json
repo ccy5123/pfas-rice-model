@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-lc-carrier",
+  "spec_id": "pfas-rice-longchain",
+  "answers": "hyp-lc-carrier",
+  "statement": "PFDoDA's residual closes by enhancing the long-chain active carrier capacity (Vmax), which overcomes the GHK anion-exclusion ceiling.",
+  "status": "supported",
+  "confidence": {
+    "type": "graded",
+    "value": null,
+    "level": "strong",
+    "basis": "qualitative judge: Decisive: the active carrier (Vmax) overcomes the anion-exclusion ceiling the GHK route cannot. At ~5x base Vmax (20->100) the 2-pool reaches PFDoDA root 62 vs 69 and grain 46 vs 45.5 (straw 102 vs 50, ~2x over) -- so the longest-chain residual is an active-carrier-capacity limit, closable. SCOPE: in-sample, straw ~2x over, and the ~5x enhancement is a long-chain-specific lever (not yet QSPR-derived)."
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-lc5-carrier",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T15:44:35.577681Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-lc5-carrier",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

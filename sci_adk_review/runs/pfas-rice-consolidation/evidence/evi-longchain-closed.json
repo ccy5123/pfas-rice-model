@@ -1,0 +1,36 @@
+{
+  "id": "evi-longchain-closed",
+  "created_at": "2026-06-18T07:12:44.263718Z",
+  "spec_id": "pfas-rice-consolidation",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "pfas-rice-model@1e9a5dd",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "runs/pfas-rice-2pool-core, src/pfas_rice_two_pool.py",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 0.081,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "runs/pfas-rice-2pool-core (digest sha256:9f890a5d..e0c7d8a3) + validation/longchain_closure.py: the long-chain root<->shoot was NOT structurally unresolvable -- that was an artifact of holding f_xy fixed and only adding the non-subtractable lipid term. A long chain has TWO INDEPENDENT levers: a LOW f_xy (strong root retention) and an ENHANCED active carrier (high uptake). With f_xy free, the 2-pool (mobile + bound root; promoted to src/pfas_rice_two_pool.py + model_api hooks) reproduces C10-C12 root+straw+grain at log10 RMSE 0.081 (saturated/DOF 0 = structural adequacy, NOT a-priori prediction), where the single-pool core could not (refit_oryza ~4-6x under at ceilings). The long-chain structural blind spot is closed; canonical 4pool_surf core unchanged (additive).",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-longchain-closed",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

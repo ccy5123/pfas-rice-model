@@ -1,0 +1,36 @@
+{
+  "id": "evi-adequacy",
+  "created_at": "2026-06-18T07:12:44.263718Z",
+  "spec_id": "pfas-rice-consolidation",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "pfas-rice-model@1e9a5dd",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/structural_adequacy_fit.py",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 0.16,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "runs/pfas-rice (digest sha256:493ec872..5d8e0e35), hyp-adequacy SUPPORTED: validation/structural_adequacy_fit.py, driven by the MECHANISTIC ORYZA2000 biomass (oryza_growth) + measured Q_TP (forcing_rice) -- NOT the logistic placeholder. Constrained (DOF>0) fits vs Yamazaki (11 congeners x 3 tissues = 33 obs): straw log10 RMSE 0.16-0.18 across the full C4-C12 PFCA/PFSA range (scenario C, DOF 10: root 0.26, straw 0.16, grain 0.51, overall 0.34). The shoot fit is non-saturated goodness-of-fit. Grain keeps a long-chain residual floor (separately refuted: hyp-grain). The placeholder-biomass grain catastrophe (0.987) disappears under the realistic ORYZA2000 biomass -- the biomass driver is decisive.",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-structural-adequacy",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

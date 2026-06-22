@@ -1,0 +1,36 @@
+{
+  "id": "evi-oos-tang",
+  "created_at": "2026-06-17T00:00:00Z",
+  "spec_id": "pfas-rice-oos-tang",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "fb9411e4aa0bf2ac247a8c2ad4bce40213548988",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/oos_tang.py (model_api.tang_tf_validation, ORYZA2000; vs Tang2026 dw TF)",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 1.232,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "Out-of-sample vs the INDEPENDENT Tang 2026 dataset (theory/QSPR monotone f_xy, NOT fit to Tang): log10 RMSE 1.232 (~17x). Systematic miss -- PFSA way UNDER (PFOS stalk 0.013 vs 0.571, endosperm 0.004 vs 0.944; ~40-200x) and ether OVER (GenX stalk 8.3 vs 0.92, leaf 17.7 vs 1.33; ~10-13x). Only an IN-SAMPLE Tang-refit f_xy reaches 0.519. The model does NOT predict an independent dataset from another dataset's parameters: f_xy is dataset/condition-dependent (PFSA head-group offset, GenX ether offset).",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-001",
+      "direction": "refutes",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

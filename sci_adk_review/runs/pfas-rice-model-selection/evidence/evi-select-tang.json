@@ -1,0 +1,36 @@
+{
+  "id": "evi-select-tang",
+  "created_at": "2026-06-18T01:47:15.021797Z",
+  "spec_id": "pfas-rice-model-selection",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "pfas-rice-model@54d4d8f",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "runs/pfas-rice-oos-tang, runs/pfas-rice-oos-lipid",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 0.716,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "runs/pfas-rice-oos-tang + -oos-lipid: free-anion OOS log10 RMSE 1.232 vs lipid 0.516 on the independent Tang 2026 per-organ TF -- lipid wins OOS by 0.716 log10. The lipid constants were fit on Yamazaki (excl. PFDoDA), NOT on Tang.",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-select-oos-tang",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

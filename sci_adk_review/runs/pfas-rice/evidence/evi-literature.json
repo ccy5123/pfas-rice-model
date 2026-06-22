@@ -1,0 +1,30 @@
+{
+  "id": "evi-literature",
+  "created_at": "2026-06-17T00:00:00Z",
+  "spec_id": "pfas-rice",
+  "kind": "literature",
+  "provenance": {
+    "code_ref": "c4cb2cc6f7ee584e28ed06f999dfabb4f02d0d45",
+    "data_ref": null,
+    "data_source": null,
+    "seed": null,
+    "environment": "literature review (Yamazaki2023, Tang2026, Kim2019, Brunetti2019/2021, Higgins-Luthy Koc, Chen2025 K_PL, Zhou2025 K_prot)",
+    "cost": null
+  },
+  "result": {
+    "type": "qualitative",
+    "point": null,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "{\"acquired\": [{\"doi\": \"10.1016/j.jhazmat.2025.141017\"}, {\"doi\": \"10.1016/j.scitotenv.2019.03.240\"}, {\"doi\": \"10.1029/2019WR025432\"}, {\"doi\": \"10.1021/acs.est.0c07420\"}], \"failed\": []}",
+    "artifact_ref": null
+  },
+  "bears_on": [],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

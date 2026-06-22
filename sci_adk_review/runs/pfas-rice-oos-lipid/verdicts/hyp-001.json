@@ -1,0 +1,40 @@
+{
+  "hypothesis_id": "hyp-001",
+  "rule_kind": "qualitative",
+  "rubric_expression": "Expert judgment based on evidence",
+  "rubric_params": null,
+  "panel": [
+    {
+      "direction": "supports",
+      "level": "strong",
+      "basis": "OOS RMSE 1.232 (free-anion) -> 0.516 (lipid), matching in-sample Tang-refit 0.519, with NO parameter touched for Tang (constants fit on Yamazaki). ~5x error reduction.",
+      "counterexample": false
+    },
+    {
+      "direction": "supports",
+      "level": "strong",
+      "basis": "The dominant baseline miss is fixed at the mechanism level: PFOS (high-K_PL sulfonate) stalk 0.013->0.620 vs Tang 0.571 -- the ~40-200x under collapses, exactly as the K_PL-gated lipid term predicts; corroborated by Chen 2025 membrane K_MW.",
+      "counterexample": false
+    },
+    {
+      "direction": "supports",
+      "level": "moderate",
+      "basis": "Residual is honest and non-fatal: GenX (ether) stays over-predicted (provisional ether f_xy offset, a separate condition-dependent issue, not lipid loading) and PFOS endosperm still ~5x under -- but the overall and per-organ pattern transfers.",
+      "counterexample": false
+    }
+  ],
+  "chief": {
+    "direction": "supports",
+    "level": "strong",
+    "basis": "Out-of-sample generalization SUCCEEDS: the lipid-facilitated loading mechanism (K_PL-gated; constants fit on Yamazaki excl. PFDoDA, NOT on Tang) drops the independent-dataset Tang OOS log10 RMSE from 1.232 to 0.516 -- matching the in-sample Tang-refit (0.519) without fitting anything to Tang. It fixes the dominant free-anion failure (PFOS ~40-200x under -> spot-on stalk), consistent with the membrane-partition mechanism Chen 2025 independently confirms. This is the project's first strong cross-dataset out-of-sample predictive success and resolves the hyp-oos-tang REFUTED baseline at the mechanism level. Residual GenX ether over-prediction (provisional offset, separate from lipid loading) and a PFOS-endosperm under-prediction remain, so 'supports' (mechanism generalizes), not a perfect fit. Hypothesis supported.",
+    "counterexample": false
+  },
+  "provenance": {
+    "spec_version": 1,
+    "timestamp": "2026-06-17T00:00:00+00:00",
+    "agent_ids": [
+      "claude-in-session"
+    ],
+    "cost_ids": null
+  }
+}

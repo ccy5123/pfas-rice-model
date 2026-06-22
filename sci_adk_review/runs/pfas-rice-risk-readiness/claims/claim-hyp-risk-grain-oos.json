@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-risk-grain-oos",
+  "spec_id": "pfas-rice-risk-readiness",
+  "answers": "hyp-risk-grain-oos",
+  "statement": "Brown-rice grain (the dietary compartment) is predicted OUT-OF-SAMPLE on the independent Kim 2019 dataset within a screening-adequate factor ~3 (log10 RMSE < 0.5), using the lipid mechanism transferred without grain refit.",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.019801326693244747,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=0.48 < 0.5 is met (combine='latest', margin=0.02)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-risk-grain-oos",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T02:09:39.870685Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-risk-grain-oos",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": "evi-lc-litread",
+  "created_at": "2026-06-17T00:00:00Z",
+  "spec_id": "pfas-rice-longchain",
+  "kind": "literature",
+  "provenance": {
+    "code_ref": "74fddb8c62131135d3a2869209348ba63d2f6274",
+    "data_ref": null,
+    "data_source": null,
+    "seed": null,
+    "environment": "user-provided PDFs, read via pypdf (paywalled; not committed)",
+    "cost": null
+  },
+  "result": {
+    "type": "qualitative",
+    "point": null,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "5 of 7 corroborating papers obtained out-of-band (paperforge found NO OA PDF for any; 5 supplied manually) and READ to verify the corroboration at source; PDFs NOT committed (paywalled/copyright). VERIFIED:\n- Chen2025 ES&T 2025,59,82-91 (10.1021/acs.est.4c06734): membrane-water K_MW rises +0.36+/-0.01 log/CF2 (PFCA) and +0.37+/-0.02 (PFSA) MONOTONE C4->C16, while HSA (protein) affinity is HIGHEST at C6-C10; conc-dependent -- low conc favours HSA, higher conc shifts to the membrane. => LC2 confirmed at source: membrane partition keeps rising while protein peaks at C6-C10, so the lipid pool (not protein) carries the longest chains.\n- newcontam2025 (10.48130/newcontam-0025-0007): long-chain PFAS strongly adsorb in roots/soil; short-chain are mobile -> leaves/grains via transpiration. => LC1.\n- ML2024 (10.1021/acsestengg.4c00107): molecular weight is the MOST important predictor of RCF/SCF/TF; shorter chains more taken up. => LC1.\n- CurrPollRep2020 (10.1007/s40726-020-00168-y): shorter chains readily taken up; root->shoot via active+passive transport. => LC1.\n- Shi2018 ES&T (10.1021/acs.est.7b06128): chain-length/functional-group differential tissue distribution. => chain-length partitioning context.\nNOT obtained (no OA PDF, 2025): 10.1021/acs.est.5c11716, 10.1139/er-2025-0116.",
+    "artifact_ref": null
+  },
+  "bears_on": [],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

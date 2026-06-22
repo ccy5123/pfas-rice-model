@@ -1,0 +1,8 @@
+{
+  "checkpoint_type": "judge",
+  "hypothesis_id": "hyp-001",
+  "kind": "qualitative",
+  "expression": "Expert judgment based on evidence",
+  "finding": "Multi-dataset OUT-OF-SAMPLE robustness of the lipid-facilitated loading mechanism (all transport params fit on Yamazaki, transferred WITHOUT refit). On the two CLEAN independent datasets the lipid mechanism wins decisively over both the free-anion/monotone f_xy and the saturated W2 fit: (1) Tang 2026 per-organ TF (dw) log10 RMSE lipid 0.52 vs free-anion/monotone 1.23; (2) Kim 2019 brown-rice grain BAF (porewater, excl PFOA used in the L_Ph fit) lipid 0.48 vs monotone 2.05 vs W2 1.07, and on the reliable (DF>=15%) congeners lipid 0.20 vs monotone 1.92 vs W2 1.44 -- lipid is the only variant that captures the grain chain-length pattern incl. the long-chain RISE that monotone/W2 structurally miss (mono gives O(0.05) for PFUnDA/PFDoDA obs ~33-35). The generalization is therefore NOT a Tang artifact -- it holds across two independent datasets (Korean field grain + Chinese pot per-organ). Honest limits (pre-registered): (a) Li 2025 is field/group-water/surface-confounded and inconclusive as expected -- lipid wins grain/root TF (0.72 vs mono 1.15, W2 1.47) but W2 wins straw/root TF (0.33 vs lipid 0.57, mono 1.03); (b) Kim long chains are low detection-frequency (DF 3-13%) so the headline excl-PFOA score leans on them. Primary verdict rests on the clean datasets (Tang, Kim).",
+  "spec_version": 1
+}

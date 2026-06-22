@@ -1,0 +1,36 @@
+{
+  "id": "evi-lc-2pool-pfdoda",
+  "created_at": "2026-06-17T00:00:00Z",
+  "spec_id": "pfas-rice-longchain",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "74fddb8c62131135d3a2869209348ba63d2f6274",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/twopool_longchain.py (real run; ORYZA2000)",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": null,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "validation/twopool_longchain.py: PFDoDA(C12) FAILS -- root collapses to 1.2 vs 69.3 (mobile pool rm=0.02 starves -> bound store rb only 1.2; straw 8.6 vs 49.7, grain 26 vs 45.5). The mobile-pool soil uptake (jR) is too small to sustain a high bound root AND feed the shoot: a mass-balance/UPTAKE limit, not internal distribution. The 2-pool does not close the longest chain.",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-lc-twopool",
+      "direction": "refutes",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

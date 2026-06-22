@@ -1,0 +1,36 @@
+{
+  "id": "evi-mass",
+  "created_at": "2026-06-17T00:00:00Z",
+  "spec_id": "pfas-rice",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "c4cb2cc6f7ee584e28ed06f999dfabb4f02d0d45",
+    "data_ref": null,
+    "data_source": "generated",
+    "seed": null,
+    "environment": "pytest tests/test_plant_module.py -k mass (numpy/scipy)",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 1e-06,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "mass-balance residual bounded by rel 1e-6 / abs 1e-9; tests/test_plant_module.py::test_mass_conservation_source_is_root_uptake PASSES (2 passed)",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-mass",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

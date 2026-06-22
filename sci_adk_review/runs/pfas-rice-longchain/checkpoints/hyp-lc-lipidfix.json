@@ -1,0 +1,8 @@
+{
+  "checkpoint_type": "judge",
+  "hypothesis_id": "hyp-lc-lipidfix",
+  "kind": "qualitative",
+  "expression": "a B-independent lipid-facilitated bound-loading term (g_xy*C, g_ph*C) closes most of the long-chain shoot gap that free loading cannot => support; no improvement => refute",
+  "finding": "validation/longchain_mechanism.py: the B-independent lipid term (g_xy*C, g_ph*C; K_PL-gated) cuts long-chain straw+grain log10 RMSE 2.026 -> 0.428 (~100x -> ~2.7x; whole series 1.035 -> 0.386). PFDA straw 0.08->5.95 (obs 3.46), PFUnDA straw 0.16->11.15 (obs 8.16), PFOS straw 0.17->5.17 (obs 4.35).\n{\"acquired\": [], \"failed\": [{\"doi\": \"10.1021/acs.est.4c06734\", \"error\": \"no OA PDF\"}, {\"doi\": \"10.1021/acs.est.5c11716\", \"error\": \"no OA PDF\"}, {\"doi\": \"10.1021/acs.est.7b06128\", \"error\": \"no OA PDF\"}, {\"doi\": \"10.1021/acsestengg.4c00107\", \"error\": \"no OA PDF\"}, {\"doi\": \"10.48130/newcontam-0025-0007\", \"error\": \"no OA PDF\"}, {\"doi\": \"10.1007/s40726-020-00168-y\", \"error\": \"no OA PDF\"}, {\"doi\": \"10.1139/er-2025-0116\", \"error\": \"no OA PDF\"}], \"counts\": {\"succeeded\": 0, \"failed\": 7}, \"normalization\": {\"pdfs\": [], \"counts\": {\"normalized\": 0, \"already_extractable\": 0, \"locked\": 0, \"error\": 0}}, \"citation_keys\": {}, \"citation_key_collisions\": []}",
+  "spec_version": 1
+}

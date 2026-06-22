@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-lipid-robust",
+  "spec_id": "pfas-rice-consolidation",
+  "answers": "hyp-lipid-robust",
+  "statement": "The lipid mechanism's out-of-sample win is robust across a SECOND clean independent dataset (Kim 2019 brown-rice grain BAF), beating the free-anion/monotone baseline by > 1.0 log10, so the generalization is not a single-dataset (Tang) artifact.",
+  "status": "supported",
+  "confidence": {
+    "type": "credence",
+    "value": 0.4344745613004629,
+    "level": null,
+    "basis": "threshold rule: statistic 'point'=1.57 > 1 is met (combine='latest', margin=0.57)"
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-lipid-robust",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-18T07:12:44.269475Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-lipid-robust",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

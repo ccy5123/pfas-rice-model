@@ -1,0 +1,36 @@
+{
+  "id": "evi-smiles",
+  "created_at": "2026-06-17T00:00:00Z",
+  "spec_id": "pfas-rice",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "c4cb2cc6f7ee584e28ed06f999dfabb4f02d0d45",
+    "data_ref": null,
+    "data_source": "generated",
+    "seed": null,
+    "environment": "pytest tests/test_pfas_structure.py (RDKit); src/pfas_structure.py",
+    "cost": null
+  },
+  "result": {
+    "type": "qualitative",
+    "point": null,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "tests/test_pfas_structure.py: 23 passed (RDKit). A canonical SMILES that matches a curated congener rebuilds the SAME Compound from params/parameters.json (measured read-across). CAVEAT: for NOVEL structures f_xy is provisional (QSPR/interpolated), NOT validated — this claim is scoped to known structures only.",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-smiles",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

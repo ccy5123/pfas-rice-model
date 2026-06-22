@@ -1,0 +1,36 @@
+{
+  "id": "evi-grain-tang",
+  "created_at": "2026-06-17T00:00:00Z",
+  "spec_id": "pfas-rice",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "c4cb2cc6f7ee584e28ed06f999dfabb4f02d0d45",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/tang2026_nstem_validation.py; raw_si/tang2026_doseresponse.csv",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 0.11,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "Tang 2026 OOS: PFOA endosperm TF model 0.11 vs measured 0.95 (dw); grain structurally ~3-8x under across congeners; not closable by L_Ph / lipid tuning (docs/tang2026_grain_units_exploration.md).",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-grain",
+      "direction": "refutes",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

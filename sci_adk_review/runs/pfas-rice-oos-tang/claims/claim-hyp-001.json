@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-001",
+  "spec_id": "pfas-rice-oos-tang",
+  "answers": "hyp-001",
+  "statement": "이론/QSPR 기반 transport 파라미터(Tang에 적합하지 않음)로 구동한 모델은 독립 데이터셋 Tang\n2026의 조직별 전이계수를 표본외로 예측한다 (예측이면 표본외 log10 RMSE가 in-sample Tang-재적합\n수준에 근접하고, 아니면 크게 초과한다).",
+  "status": "refuted",
+  "confidence": {
+    "type": "graded",
+    "value": null,
+    "level": "strong",
+    "basis": "qualitative judge: Out-of-sample prediction of the independent Tang 2026 dataset FAILS: log10 RMSE 1.23 (~17x) with theory params vs 0.52 only after an in-sample Tang refit. The miss is systematic (PFSA under, ether over), so f_xy is dataset/condition-dependent and the model does not predict one dataset from another's calibration. Hypothesis refuted -- consistent with hyp-yamazaki (in-sample reproduction != out-of-sample prediction)."
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-oos-tang",
+      "role": "refuting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "exploratory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T16:15:55.047522Z",
+      "from_status": "proposed",
+      "to_status": "refuted",
+      "triggered_by": "evi-oos-tang",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

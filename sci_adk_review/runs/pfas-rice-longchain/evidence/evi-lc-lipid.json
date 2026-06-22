@@ -1,0 +1,36 @@
+{
+  "id": "evi-lc-lipid",
+  "created_at": "2026-06-17T00:00:00Z",
+  "spec_id": "pfas-rice-longchain",
+  "kind": "experiment_run",
+  "provenance": {
+    "code_ref": "74fddb8c62131135d3a2869209348ba63d2f6274",
+    "data_ref": null,
+    "data_source": "measured",
+    "seed": null,
+    "environment": "validation/longchain_mechanism.py (real run; ORYZA2000)",
+    "cost": null
+  },
+  "result": {
+    "type": "quantitative",
+    "point": 0.428,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "validation/longchain_mechanism.py: the B-independent lipid term (g_xy*C, g_ph*C; K_PL-gated) cuts long-chain straw+grain log10 RMSE 2.026 -> 0.428 (~100x -> ~2.7x; whole series 1.035 -> 0.386). PFDA straw 0.08->5.95 (obs 3.46), PFUnDA straw 0.16->11.15 (obs 8.16), PFOS straw 0.17->5.17 (obs 4.35).",
+    "artifact_ref": null
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-lc-lipidfix",
+      "direction": "supports",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

@@ -1,0 +1,31 @@
+{
+  "id": "claim-hyp-lc-freethrottle",
+  "spec_id": "pfas-rice-longchain",
+  "answers": "hyp-lc-freethrottle",
+  "statement": "Free-anion loading structurally under-predicts long-chain (C10-C12) shoot accumulation; even at the f_xy=1 ceiling the loaded flux is throttled by the Cw=C/B collapse, so straw/grain cannot reach the observed values.",
+  "status": "supported",
+  "confidence": {
+    "type": "graded",
+    "value": null,
+    "level": "strong",
+    "basis": "qualitative judge: Decisive: free-only long-chain straw+grain RMSE 2.026 (~100x under), and the ORYZA re-fit hits f_xy=1/L_Ph=1 ceilings yet PFDoDA straw stays 14.6 vs 49.8 -- the loaded flux scales with Cw=C/B, which collapses as B grows, so the free-anion shoot cannot reach the long chains. Cause confirmed. Literature corroborates (VERIFIED at source, evi-lc-litread): long-chain PFAS strongly adsorb in roots/soil while short chains are mobile to leaves/grains (newcontam2025); MW is the top predictor of translocation (ML2024)."
+  },
+  "evidence_set": [
+    {
+      "evidence_id": "evi-lc-free",
+      "role": "supporting"
+    }
+  ],
+  "scope_limitations": "",
+  "mode": "confirmatory",
+  "renders_to": null,
+  "history": [
+    {
+      "at": "2026-06-17T15:44:35.576506Z",
+      "from_status": "proposed",
+      "to_status": "supported",
+      "triggered_by": "evi-lc-free",
+      "note": "Initial evaluation via DecisionEngine"
+    }
+  ]
+}

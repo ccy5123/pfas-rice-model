@@ -1,0 +1,36 @@
+{
+  "id": "evi-lit-20260617-154436-dc03d0d5",
+  "created_at": "2026-06-17T15:44:36.327219Z",
+  "spec_id": "pfas-rice-longchain",
+  "kind": "literature",
+  "provenance": {
+    "code_ref": null,
+    "data_ref": "sci_adk_review/runs/pfas-rice-longchain/literature/manifest.csv",
+    "data_source": null,
+    "seed": null,
+    "environment": "paperforge@60fefed version=0.1.0 returncode=1",
+    "cost": null
+  },
+  "result": {
+    "type": "qualitative",
+    "point": null,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "{\"acquired\": [], \"failed\": [{\"doi\": \"10.1021/acs.est.4c06734\", \"error\": \"no OA PDF\"}, {\"doi\": \"10.1021/acs.est.5c11716\", \"error\": \"no OA PDF\"}, {\"doi\": \"10.1021/acs.est.7b06128\", \"error\": \"no OA PDF\"}, {\"doi\": \"10.1021/acsestengg.4c00107\", \"error\": \"no OA PDF\"}, {\"doi\": \"10.48130/newcontam-0025-0007\", \"error\": \"no OA PDF\"}, {\"doi\": \"10.1007/s40726-020-00168-y\", \"error\": \"no OA PDF\"}, {\"doi\": \"10.1139/er-2025-0116\", \"error\": \"no OA PDF\"}], \"counts\": {\"succeeded\": 0, \"failed\": 7}, \"normalization\": {\"pdfs\": [], \"counts\": {\"normalized\": 0, \"already_extractable\": 0, \"locked\": 0, \"error\": 0}}, \"citation_keys\": {}, \"citation_key_collisions\": []}",
+    "artifact_ref": "sci_adk_review/runs/pfas-rice-longchain/literature"
+  },
+  "bears_on": [
+    {
+      "target_id": "hyp-lc-lipidfix",
+      "direction": "neutral",
+      "weight": null
+    }
+  ],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

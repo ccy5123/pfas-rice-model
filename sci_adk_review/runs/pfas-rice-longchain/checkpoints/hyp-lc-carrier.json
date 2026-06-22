@@ -1,0 +1,8 @@
+{
+  "checkpoint_type": "judge",
+  "hypothesis_id": "hyp-lc-carrier",
+  "kind": "qualitative",
+  "expression": "enhancing the long-chain ACTIVE CARRIER capacity (Vmax) closes the PFDoDA root and grain (the carrier overcomes the anion-exclusion ceiling) => support; the carrier cannot reach it => refute",
+  "finding": "validation/twopool_longchain.py carrier scan (PFDoDA): at Vmax_in ~5x base (20->100) the 2-pool reaches root 62 vs 69 and grain 46 vs 45.5 (straw 102 vs 50, ~2x over). The ACTIVE carrier overcomes the anion-exclusion ceiling the GHK pathway cannot -- the longest-chain residual is a carrier-capacity limit, closable. Consistent with the literature (active carrier-mediated root uptake).",
+  "spec_version": 1
+}

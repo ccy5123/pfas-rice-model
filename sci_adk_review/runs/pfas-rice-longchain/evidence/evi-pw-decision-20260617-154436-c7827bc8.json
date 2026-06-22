@@ -1,0 +1,30 @@
+{
+  "id": "evi-pw-decision-20260617-154436-c7827bc8",
+  "created_at": "2026-06-17T15:44:36.327541Z",
+  "spec_id": "pfas-rice-longchain",
+  "kind": "prior_work_decision",
+  "provenance": {
+    "code_ref": "prior_work:searched",
+    "data_ref": "literature_evidence=evi-lit-20260617-154436-dc03d0d5; manifest=sci_adk_review/runs/pfas-rice-longchain/literature",
+    "data_source": null,
+    "seed": null,
+    "environment": "prior-work decision (Spec-time trigger); see referenced LITERATURE item for the acquired corpus",
+    "cost": null
+  },
+  "result": {
+    "type": "qualitative",
+    "point": null,
+    "effect_size": null,
+    "ci": null,
+    "p_value": null,
+    "posterior": null,
+    "residual": null,
+    "predictive_error": null,
+    "finding": "searched: DOIs=['10.1021/acs.est.4c06734', '10.1021/acs.est.5c11716', '10.1021/acs.est.7b06128', '10.1021/acsestengg.4c00107', '10.48130/newcontam-0025-0007', '10.1007/s40726-020-00168-y', '10.1139/er-2025-0116']",
+    "artifact_ref": null
+  },
+  "bears_on": [],
+  "supersedes": null,
+  "digitized": null,
+  "literature_decision": null
+}

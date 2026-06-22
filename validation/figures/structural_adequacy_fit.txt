@@ -1,0 +1,13 @@
+biomass driver: MECHANISTIC ORYZA2000 (oryza_growth) + measured Q_TP (forcing_rice)
+
+[A shoot   (f_xy; global L_Ph, global kappa_d)]  params=13/33  DOF=20  global: kappa_d=2.05, L_Ph=0.0001
+        per-tissue RMSE: root 0.451  straw 0.184  grain 0.523   overall 0.413
+[B +grain  (f_xy, per-cong L_Ph; global kappa_d)]  params=23/33  DOF=10  global: kappa_d=2.05
+        per-tissue RMSE: root 0.449  straw 0.206  grain 0.358   overall 0.352
+[C +root   (f_xy, per-cong kappa_d; global L_Ph)]  params=23/33  DOF=10  global: L_Ph=0.0001
+        per-tissue RMSE: root 0.258  straw 0.158  grain 0.511   overall 0.343
+
+SUMMARY (vs saturated W2 0.029 at DOF 0; a-priori monotone ~0.84):
+  DOF 20  overall 0.413  | root 0.451 straw 0.184 grain 0.523  | A shoot   (f_xy; global L_Ph, global kappa_d)
+  DOF 10  overall 0.352  | root 0.449 straw 0.206 grain 0.358  | B +grain  (f_xy, per-cong L_Ph; global kappa_d)
+  DOF 10  overall 0.343  | root 0.258 straw 0.158 grain 0.511  | C +root   (f_xy, per-cong kappa_d; global L_Ph)

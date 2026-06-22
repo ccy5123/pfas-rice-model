@@ -1,0 +1,40 @@
+{
+  "hypothesis_id": "hyp-001",
+  "rule_kind": "qualitative",
+  "rubric_expression": "Expert judgment based on evidence",
+  "rubric_params": null,
+  "panel": [
+    {
+      "direction": "supports",
+      "level": "strong",
+      "basis": "Lipid wins both CLEAN independent datasets out-of-sample: Tang per-organ TF 0.52 vs 1.23, Kim grain 0.48 vs monotone 2.05 / W2 1.07 (reliable DF>=15%: 0.20 vs 1.92/1.44). Two datasets, two countries, two endpoint types -> not a Tang artifact.",
+      "counterexample": false
+    },
+    {
+      "direction": "supports",
+      "level": "moderate",
+      "basis": "Lipid is the only variant capturing the Kim grain long-chain RISE that monotone/W2 structurally miss (mono O(0.05) vs obs PFUnDA/PFDoDA ~33-35) -- mechanism-level, consistent with the membrane-partition K_PL gating.",
+      "counterexample": false
+    },
+    {
+      "direction": "refutes",
+      "level": "weak",
+      "basis": "On the CONFOUNDED Li 2025 field data, W2 beats lipid on straw/root TF (0.33 vs 0.57) -- but Li is group-water/surface-confounded and pre-registered as inconclusive (lipid still wins Li grain/root 0.72 vs 1.15/1.47), so this does not bear on the clean-dataset claim.",
+      "counterexample": false
+    }
+  ],
+  "chief": {
+    "direction": "supports",
+    "level": "strong",
+    "basis": "The lipid-facilitated loading mechanism's out-of-sample generalization is ROBUST across multiple independent datasets, not a Tang artifact: with all params fit on Yamazaki and transferred without refit, lipid wins decisively on BOTH clean datasets (Tang per-organ TF 0.52 vs 1.23; Kim grain 0.48 vs 2.05, reliable 0.20 vs 1.92) and uniquely captures the Kim grain long-chain rise the baselines miss. The only counter-signal is on the pre-registered-as-confounded Li 2025 field data (W2 wins straw/root TF), which does not bear on the clean-dataset claim and where lipid still wins grain/root. Hypothesis supported, with the honest caveats recorded (Li confound; Kim long-chain low-DF). This strengthens hyp-oos-lipid from n=3 (Tang only) to a robust multi-dataset cross-validation.",
+    "counterexample": false
+  },
+  "provenance": {
+    "spec_version": 1,
+    "timestamp": "2026-06-17T00:00:00+00:00",
+    "agent_ids": [
+      "claude-in-session"
+    ],
+    "cost_ids": null
+  }
+}
