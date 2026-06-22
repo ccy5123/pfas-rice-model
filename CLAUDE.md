@@ -328,6 +328,28 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   M, no floor → grain always present). `tests/test_model_api.py::test_grain_formation_gate`. The earlier
   display-mask (PR #20) is now backed by the physics gate. NOTE the wrong first cut used a 2%-of-max threshold that
   gated *filling* too (RMSE 0.029→0.34); keying on "mass left the floor" is the correct criterion.
+- **Two-pool root — decoupling the root sink from shoot delivery (BAF "고찰" session)**: addresses the central
+  mass-balance wall (`docs/fxy_longchain_lipid_exploration.md`): a single root pool cannot reproduce a HIGH long-chain
+  root BAF *and* a non-trivial long-chain SHOOT BAF, because the pool whose burden IS the root BAF is the pool that
+  feeds the xylem (lipid loading `g·C` fixes long-chain grain but DRAINS the long-chain root). `validation/
+  twopool_root_exploration.py` (standalone 5-state ODE `[root_mobile, root_seq, stem, leaf, grain]`; EXPLORATORY,
+  in-sample Yamazaki; canonical core + `parameters.json` UNCHANGED) splits the root into a **mobile** pool (binding
+  `B_m`; GHK+carrier uptake; loads xylem with the **monotone physical** `f_xy_recommended` + K_PL-gated lipid term) and
+  a **sequestered** pool (irreversible apoplast/cell-wall/plaque sink; a TERMINAL accumulator) whose rate `k_seq(n,
+  head_group)` is a **NON-K_PL** chain·head-group descriptor. Motivation: PFOS(C8 PFSA) & PFUnDA(C11 PFCA) have
+  IDENTICAL K_PL=31623 and near-identical B_k_root (49.4 vs 49.1) yet root BAF 5.93 vs 19.53 (3.3×) — no K_PL-gated sink
+  can separate them. **Results**: (1) the structure ties the best prior global model (7 globals, log10 RMSE **0.257**
+  excl PFDoDA vs U-shaped-K_PL-f_xy 0.286) **while keeping the monotone physical f_xy** (the straw U-shape emerges from
+  lipid loading + root decoupling, NOT a non-physical fitted f_xy). (2) **Root-matched sufficiency test** (back out
+  per-congener `k_seq` so model root == obs root): the shoot stays essentially unchanged (straw 0.255, grain 0.307) —
+  proving the structure is SUFFICIENT, you CAN hold high long-chain root AND deliver shoot. (3) The empirical `k_seq`
+  **separates PFOS (0.047) from PFUnDA (0.210), 4.5× at identical K_PL** — the non-K_PL signature is real & quantified —
+  and is **U-shaped** in chain length (PFBA 0.29→PFNA 0.014→PFDoDA 0.49), which is exactly why the LINEAR global `k_seq`
+  collapsed (`ks_b→0`). **Open (well-posed) next step**: re-fit `k_seq` with a U-shaped form (same family as the straw
+  U-shape, PFDoDA included) to realize the PFOS/PFUnDA separation a B/K_PL root cannot. Figure
+  `validation/figures/twopool_root_exploration.png`; full record `docs/twopool_root_exploration.md`. Still mechanism discovery,
+  NOT validation (Yamazaki in-sample; decisive test = per-congener xylem-sap/root-water ratio + desorption-resistant
+  root-fraction assay).
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -344,6 +366,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `python validation/oryza_growth_validation.py` (vs `growth_rice` + BAF driver-sensitivity + figure).
 - Measured-biomass driver: `python src/measured_biomass.py` (template → M(t) drivers demo).
 - Mass drivers: `python validation/mass_drivers_plot.py` (M_k(t), dM/dt, growth-dilution μ figure).
+- Two-pool root: `python validation/twopool_root_exploration.py` (root sink ↔ shoot decoupling; global fit +
+  root-matched sufficiency test + non-K_PL U-shaped k_seq; ~3 min, saves `figures/twopool_root_exploration.png`).
 - Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
   `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
 - Soil → plant (analytic): `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
