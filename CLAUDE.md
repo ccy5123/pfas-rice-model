@@ -501,6 +501,13 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   CARRIER one (`simulate_twopool_carrier` / `close_longchain_2pool`, `src/pfas_rice_two_pool.py`; reversible bound store
   tuned by carrier/f_xy levers, the saturated long-chain closure). Different mechanisms; the `_seq`/`_carrier` suffix
   disambiguates (renamed from the colliding `simulate_twopool`/`simulate_two_pool`).
+- **App surfacing — two-pool (seq) overlay on the BAF tab (this session)**: the Streamlit **📊 BAF vs observed** tab
+  now optionally overlays `simulate_twopool_seq` next to the 4-pool core and the Yamazaki bars (curated congeners
+  only; checkbox, EXPLORATORY caveat in-UI) via `plots.fig_baf(res, obs, extra=…)` + the cached `_simulate_twopool_seq`
+  in `app.py`. Run at the two-pool's calibrated point (Cwᵒ=1, season≈120) so it is comparable to the fixed observed
+  bars and does NOT track the sidebar (the core bar does). The carrier two-pool stays API-only (saturated DOF-0
+  closure, ~1 min/congener — too slow to render live). `tests/test_plots.py::test_fig_baf_extra_overlay`. Defaults /
+  canonical core / `parameters.json` unchanged.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`

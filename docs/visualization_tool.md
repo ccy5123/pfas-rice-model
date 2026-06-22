@@ -64,6 +64,26 @@ Three things the tab makes explicit (the rigor points from this work):
 
 ---
 
+## BAF vs observed — two-pool (seq) overlay
+
+The **📊 BAF vs observed** tab compares the model's root/straw/grain BAF to the fixed Yamazaki
+2023 bars. For a **curated congener** it can additionally overlay the EXPLORATORY **sequestration
+two-pool** model (checkbox, on by default) — `model_api.simulate_twopool_seq` → `plots.fig_baf(res, obs, extra=…)`.
+The two-pool seq model adds an irreversible non-K_PL `k_seq` root sink (mobile + sequestered pools)
+that captures the long-chain **root** BAF and the **PFOS/PFUnDA** split the single-pool 4-pool core
+misses, while keeping the monotone physical `f_xy` (overall log10 RMSE 0.251; `docs/twopool_root_exploration.md`).
+
+Caveats made explicit in the tab:
+- **EXPLORATORY / in-sample** (Yamazaki fit); opt-in. `parameters.json` and the canonical 4-pool core
+  are unchanged — the overlay does not alter the model bar.
+- The overlay runs at the two-pool's **calibrated operating point** (Cwᵒ=1, season≈120, demo forcings),
+  so it is comparable to the fixed Yamazaki bars but does **not** track the sidebar `f_xy`/Cwᵒ/biomass
+  (the 4-pool core bar does). Curated congeners only (the cached fit has no record for a novel SMILES).
+- The **carrier** two-pool (`close_longchain_2pool`, a saturated DOF-0 long-chain closure) is API-only —
+  it reproduces the observed bars by construction and is too slow (~1 min/congener) to render live.
+
+---
+
 ## Biomass driver M(t) & the Tissue-dynamics mass plot
 
 The sidebar **“Biomass driver M(t)”** radio chooses the organ-biomass forcing for the built-in scenarios:
