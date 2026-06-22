@@ -120,7 +120,7 @@ def k_seq(n_C, group, ks0, ks_b, ks_sa):
 # ---------------------------------------------------------------------------
 # 5-state ODE (mass-conserving; sole source = M_root * j_R into the mobile pool)
 # ---------------------------------------------------------------------------
-def make_rhs(cmpd: Compound, comps, B, gxy, gph, kseq, phi=0.1, T_C_Ph=10.0):
+def make_rhs(cmpd: Compound, comps, B, gxy, gph, kseq, phi=0.1, T_C_Ph=10.0, k_rel=0.0):
     def rhs(t, C):
         Qtp = float(_interp_row(t, QTP))
         M = np.array([_interp_row(t, MMAT[:, k]) for k in range(4)])
@@ -147,12 +147,13 @@ def make_rhs(cmpd: Compound, comps, B, gxy, gph, kseq, phi=0.1, T_C_Ph=10.0):
         Cw_xyl = cmpd.f_xy * Cw[RM] + gxy * C[RM]
 
         jR = root_uptake(1.0, Cw[RM], cmpd, ENV)      # Cwo=1
-        seq = kseq * C[RM]                            # mobile -> seq (irreversible)
+        seq = kseq * C[RM]                            # mobile -> seq
+        rel = k_rel * C[RS]                           # seq -> mobile (slow desorption; 0 = irreversible)
 
         dC = np.zeros(5)
         dC[RM] = (jR - (Qtp / Mr) * Cw_xyl + phi * (Q_Phl / Mr) * C_Phl
-                  - seq - mu[ROOT] * C[RM])
-        dC[RS] = seq - mu[ROOT] * C[RS]               # terminal accumulator
+                  - seq + rel - mu[ROOT] * C[RM])
+        dC[RS] = seq - rel - mu[ROOT] * C[RS]         # near-terminal accumulator (k_rel slow)
         dC[ST] = (Qtp / M[STEM]) * (Cw_xyl - Cw[ST]) - mu[STEM] * C[ST]
         dC[LF] = (f3 * (Qtp / M[LEAF]) * Cw[ST]
                   - (1.0 + phi) * (Q_Phl / M[LEAF]) * C_Phl - mu[LEAF] * C[LF])
@@ -162,11 +163,13 @@ def make_rhs(cmpd: Compound, comps, B, gxy, gph, kseq, phi=0.1, T_C_Ph=10.0):
     return rhs
 
 
-def simulate(c, p, kseq_override=None):
+def simulate(c, p, kseq_override=None, k_rel=0.0):
     """Return (root, straw, grain) BAF for congener dict c and global params p.
 
     ``kseq_override`` (1/day) bypasses the global k_seq descriptor -- used by the
     root-matched analysis to back out the seq rate each congener requires.
+    ``k_rel`` (1/day) is the slow seq->mobile desorption rate (0 = irreversible
+    seq sink; >0 lets the long-chain seq burden slowly feed the shoot).
     """
     comps = compartments()
     cmpd = Compound(name=c["name"], K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
@@ -178,7 +181,7 @@ def simulate(c, p, kseq_override=None):
     gxy, gph = lipid_g(c["K_PL_Lkg"], c["group"], p["gxy"], p["gph"], p["K_half"], p["pfsa_ln"])
     kseq = kseq_override if kseq_override is not None else \
         k_seq(c["n_C"], c["group"], p["ks0"], p["ks_b"], p["ks_sa"])
-    rhs = make_rhs(cmpd, comps, B, gxy, gph, kseq)
+    rhs = make_rhs(cmpd, comps, B, gxy, gph, kseq, k_rel=k_rel)
     sol = solve_ivp(rhs, (T[0], T[-1]), np.zeros(5), t_eval=T[-1:],
                     method="BDF", rtol=1e-6, atol=1e-9)
     Cend = sol.y[:, -1]

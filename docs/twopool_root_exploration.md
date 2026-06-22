@@ -5,7 +5,8 @@
 > mobile (shoot-feeding) pool and a sequestered (burden-holding) pool resolves the central
 > mass-balance tension. Script: `validation/twopool_root_exploration.py` (standalone,
 > EXPLORATORY, in-sample Yamazaki 2023; the canonical core and `parameters.json` are
-> UNCHANGED). OOS transfer: `validation/twopool_root_oos.py`. Figure:
+> UNCHANGED). OOS transfer: `validation/twopool_root_oos.py`; long-chain shoot-floor
+> diagnostic: `validation/twopool_root_seqrelease.py`. Figure:
 > `validation/figures/twopool_root_exploration.png`.
 
 ## The tension this addresses
@@ -206,6 +207,47 @@ clean-dataset transfer; reproduces the independent long-chain rise), but does **
 promoting the fitted `k_seq` into `parameters.json` — it is a single clean OOS set on demo
 forcings, the absolute long-chain grain stays under, and Li is confounded. Keep exploration-only.
 
+## Result 5 — the long-chain shoot floor is a SHOOT-loading ceiling, not a root problem (`twopool_root_seqrelease.py`)
+
+The one residual after Result 3 is the very-long-chain **shoot** (PFDoDA straw 10.5 vs obs 49.8,
+grain 8.7 vs 45.5). Since 97 % of the PFDoDA root burden sits in the *irreversible* seq pool, the
+natural hypothesis was that the seq pool is a **slow buffer** — a desorption rate `k_rel` would
+trickle the huge long-chain burden back to the mobile pool and feed the shoot. Tested by sweeping
+`k_rel` (mass-conserving seq→mobile release added to the ODE; `k_rel = 0` recovers Result 3):
+
+| `k_rel` (1/day) | all-11 RMSE | root | straw | grain | PFDoDA root/straw/grain |
+|---|--:|--:|--:|--:|--:|
+| 0.000 | 0.251 | 0.156 | 0.260 | 0.311 | 82.3 / 10.5 / 8.7 |
+| 0.010 | 0.258 | 0.199 | 0.254 | 0.309 | 65.5 / 11.1 / 8.9 |
+| 0.050 | 0.336 | 0.434 | 0.242 | 0.303 | 33.2 / 12.4 / 9.5 |
+| 0.200 | 0.472 | 0.724 | 0.235 | 0.297 | 11.7 / 13.4 / 10.3 |
+
+**`k_rel` cannot lift the shoot.** As it rises the PFDoDA straw barely moves (10.5 → 13.4) while
+the **root collapses** (82 → 12) — the seq pool just equilibrates with the mobile pool and stops
+retaining. The shoot is not starved for *mobile-pool burden*; it is limited by the **xylem-loading
+capacity** itself. The `g_xy` diagnostic confirms it:
+
+| `g_xy` × | PFDA straw | PFUnDA straw | PFDoDA straw | all-11 RMSE |
+|---|--:|--:|--:|--:|
+| obs | 3.5 | 8.2 | 49.7 | — |
+| ×1 | 3.4 | 6.8 | 10.5 | 0.251 |
+| ×4 | 10.1 | 18.6 | 26.5 | 0.469 |
+| ×8 | 15.1 | 25.6 | 34.7 | 0.665 |
+
+Reaching PFDoDA straw ≈ 50 needs `g_xy` ≳ ×8 (and even ×8 only gets to 35), which **over-feeds
+PFDA/PFUnDA 3–4×** and balloons the RMSE to 0.665. **No smooth, K_PL-gated (QSPR-able) loading term
+can selectively lift PFDoDA without wrecking PFDA/PFUnDA** — the long-chain straw needs a
+per-congener boost for C12 alone. This independently quantifies PR #21's LC5/LC6 conclusion (an
+active-carrier / xylem-loading **capacity limit**, not QSPR-able). Note too that the observed
+PFDoDA straw is a **6× jump over PFUnDA for one CF₂** (vs only 3.5× in the root) — physically odd
+and consistent with PFDoDA being a near-MQL outlier.
+
+**Conclusion:** the long-chain shoot floor is a **shoot-side xylem-loading ceiling + a near-MQL
+outlier**, structurally outside what any *root* term (`k_seq`, `k_rel`) can reach. The two-pool
+root model at RMSE 0.251 is therefore at the achievable floor for this structure; the residual is
+not a missing root mechanism. `k_rel`/`g_xy` are diagnostics only — the default model keeps
+`k_rel = 0` and the Result-3 `g_xy`.
+
 ## Honest status
 
 - **What works:** the two-pool *structure* decouples root burden from shoot delivery, lets the
@@ -214,11 +256,15 @@ forcings, the absolute long-chain grain stays under, and Li is confounded. Keep 
   reproducing the non-K_PL **PFOS/PFUnDA separation** (3.1×) that B/K_PL cannot. The root-matched
   test proves the structure is **sufficient**; the U-form realizes it with a parsimonious smooth
   descriptor. Mass-conserving; the canonical core and `parameters.json` are untouched.
-- **The remaining residual is the very-long-chain SHOOT, not the root.** PFDoDA straw/grain stay
-  ~3–5× under (near-MQL outlier + the active-carrier capacity limit on C12 shoot delivery). This
-  is a *shoot*-delivery problem `k_seq` (a root term) cannot address, and is consistent with every
-  other long-chain finding in the repo. Promoting the U-shaped `k_seq` into `parameters.json` (it
-  is currently exploration-only) would need an out-of-sample check first.
+- **The remaining residual is the very-long-chain SHOOT, not the root — and it is structural
+  (Result 5).** PFDoDA straw/grain stay ~3–5× under. A slow seq-pool release (`k_rel`) cannot lift
+  it (the root collapses before the shoot moves), and the `g_xy` diagnostic shows the bottleneck is
+  the **xylem-loading capacity**: reaching PFDoDA straw needs `g_xy` ×8, which over-feeds
+  PFDA/PFUnDA 3–4× — no smooth/QSPR-able term selectively fixes C12. This is a *shoot*-loading
+  ceiling (corroborating PR #21 LC5/LC6) plus a near-MQL outlier, outside what any root term reaches.
+- **OOS-checked (Result 4):** the U-shaped `k_seq` transfers best on the clean Kim 2019 grain
+  series (excl-PFOA RMSE 0.47) and reproduces the independent long-chain rise, but stays
+  exploration-only (single clean OOS set, demo forcings; `parameters.json` untouched).
 - **Mechanistic reading:** the model now says two *distinct* processes set the root BAF — a
   reversible membrane/lipid partition (`B_m`, ~K_PL, feeds the shoot) and an irreversible
   chain·head-group-specific sink (`k_seq`, non-K_PL, holds the burden). Long-chain PFCAs load the

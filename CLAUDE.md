@@ -358,7 +358,15 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   grain still under (low-DF Kim tail), Kim PFOA grain 4.43 ≫ Yamazaki 0.46 (between-dataset shift), Li 2025 grain/root TF
   root-surface-confounded (inconclusive, as documented). ⇒ OOS SUPPORTS the structure/mechanism but does NOT warrant
   promoting the fitted `k_seq` into `parameters.json` (single clean OOS set; demo forcings). `parameters.json` UNCHANGED
-  (exploration-only). Fitted params cached → `validation/twopool_fitted_params.json`. Figure
+  (exploration-only). Fitted params cached → `validation/twopool_fitted_params.json`. (6) **Long-chain shoot floor diagnosed
+  (`validation/twopool_root_seqrelease.py`)**: the residual after the U-shaped k_seq is the very-long-chain SHOOT (PFDoDA
+  straw 10.5 vs 49.8). A slow seq→mobile release `k_rel` (added to the ODE, default 0) **cannot** lift it — sweeping k_rel
+  the straw barely moves (10.5→13.4) while PFDoDA root COLLAPSES (82→12). The `g_xy` diagnostic localizes the bottleneck to
+  the **xylem-LOADING capacity**: reaching PFDoDA straw~50 needs g_xy ×8 (still only 35) and over-feeds PFDA/PFUnDA 3–4×
+  (RMSE 0.251→0.665) — **no smooth/QSPR-able loading term selectively lifts C12**. ⇒ the long-chain shoot floor is a
+  STRUCTURAL shoot-loading ceiling + near-MQL outlier (obs PFDoDA straw is a 6× jump over PFUnDA for one CF2 vs 3.5× in
+  root), outside any ROOT term (k_seq/k_rel) — independently quantifies PR #21 LC5/LC6. The two-pool root (RMSE 0.251) is at
+  the achievable floor; residual is NOT a missing root mechanism. Figure
   `validation/figures/twopool_root_exploration.png`; full record `docs/twopool_root_exploration.md`. Still mechanism discovery,
   NOT validation (Yamazaki in-sample fit → OOS transfer; decisive test = per-congener xylem-sap/root-water ratio +
   desorption-resistant root-fraction assay).
@@ -381,7 +389,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - Two-pool root: `python validation/twopool_root_exploration.py` (root sink ↔ shoot decoupling; global fit +
   root-matched sufficiency test + non-K_PL U-shaped k_seq fit; ~3 min, saves `figures/twopool_root_exploration.png` +
   `twopool_fitted_params.json`). OOS transfer: `python validation/twopool_root_oos.py` (Yamazaki-fit → Kim 2019 grain +
-  Li 2025 TF, no re-fit; reuses the cached fit, ~5 s).
+  Li 2025 TF, no re-fit; reuses the cached fit, ~5 s). Long-chain shoot-floor diagnostic:
+  `python validation/twopool_root_seqrelease.py` (k_rel seq-release sweep + g_xy xylem-loading diagnostic; ~20 s).
 - Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
   `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
 - Soil → plant (analytic): `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
