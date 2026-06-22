@@ -376,7 +376,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   NOT a placeholder-forcing artifact. Cached → `validation/twopool_fitted_params_measured.json`. Figure
   `validation/figures/twopool_root_exploration.png`; full record `docs/twopool_root_exploration.md`. Still mechanism discovery,
   NOT validation (Yamazaki in-sample fit → OOS transfer; decisive test = per-congener xylem-sap/root-water ratio +
-  desorption-resistant root-fraction assay).
+  desorption-resistant root-fraction assay). **Next-session handoff: `docs/HANDOFF_BAF_twopool.md`** (status, open items —
+  promotion decision / Tang OOS / opt-in model_api wiring — and a resume prompt).
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
