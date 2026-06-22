@@ -314,7 +314,7 @@ to `validation/twopool_fitted_params_measured.json`; still in-sample, `parameter
 ## API access (opt-in, handoff item ①)
 
 The two-pool model is now callable through the UI-agnostic API as
-`model_api.simulate_twopool(congener, …)`, mirroring `simulate_nstem_leaf` — so the app and
+`model_api.simulate_twopool_seq(congener, …)`, mirroring `simulate_nstem_leaf` — so the app and
 other validation can use it **without changing any default** (the canonical `simulate`,
 `reproduce_demo`, and `parameters.json` are untouched). It loads the cached fit from
 `validation/twopool_fitted_params.json` (via this module's `load_fit()`/`kseq_ushape()`/`lipid_g()`)
@@ -327,15 +327,21 @@ sequestered pools.
 
 ```python
 import model_api as api
-r = api.simulate_twopool("PFUnDA")           # defaults reproduce the demo-forcing headline
+r = api.simulate_twopool_seq("PFUnDA")           # defaults reproduce the demo-forcing headline
 r["baf_final"]["root"], r["seq_fraction"]    # 15.8, 0.91  (root = mobile + seq)
 r["params"]["k_seq"], r["params"]["f_xy"]    # 0.166, monotone physical f_xy_recommended
-api.simulate_twopool("PFUnDA", k_rel=0.2)    # Result-5 desorption sweep (root collapses)
+api.simulate_twopool_seq("PFUnDA", k_rel=0.2)    # Result-5 desorption sweep (root collapses)
 ```
 
 With the defaults (`measured_forcing=False, season=120`) the wrapper reproduces this record's
 headline — overall log10 RMSE **0.251** (root 0.156) and the non-K_PL PFOS/PFUnDA **3.1×**
 `k_seq` separation — to within the ~1 % driver-grid difference (cross-impl RMSE 0.014). A drift
-guard (`tests/test_model_api.py::test_simulate_twopool_matches_validation_and_rmse`) pins the two
+guard (`tests/test_model_api.py::test_simulate_twopool_seq_matches_validation_and_rmse`) pins the two
 implementations together. Still EXPLORATORY / in-sample: the cached fit is on the demo forcings,
 and `twopool_fitted_params_measured.json` (Result 6) is **not** auto-loaded.
+
+> **Not to be confused with** the *carrier* two-pool model (`model_api.simulate_twopool_carrier` /
+> `close_longchain_2pool`, `src/pfas_rice_two_pool.py`): that is a separate opt-in two-pool root model
+> whose second pool is a reversible **bound store** tuned by carrier/f_xy levers (the saturated
+> long-chain closure), whereas THIS model's second pool is an irreversible **sequestration sink**
+> (`k_seq`). The `_seq`/`_carrier` suffixes disambiguate the two `model_api` entry points.

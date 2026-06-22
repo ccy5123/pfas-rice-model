@@ -94,13 +94,13 @@ Root BAF = `C_mobile + C_seq`.
 
 1. **Promotion decision (the live one).** Should the two-pool + U-shaped `k_seq` move
    from exploration-only into the canonical path? Options:
-   - (a) Wire it as an **opt-in module** (`model_api.simulate_twopool(...)`, like
+   - (a) Wire it as an **opt-in module** (`model_api.simulate_twopool_seq(...)`, like
      `simulate_nstem_leaf`) — low-risk, makes it usable by the app/other validation
      without changing defaults. **Recommended first concrete step. ✅ DONE** (this
-     session): `model_api.simulate_twopool(...)` returns the standard `simulate()` dict
+     session): `model_api.simulate_twopool_seq(...)` returns the standard `simulate()` dict
      + the root mobile/seq split; loads the cached fit; reproduces the headline
      (RMSE 0.251, PFOS/PFUnDA 3.1×) with the monotone physical f_xy; drift-guarded by
-     `tests/test_model_api.py::test_simulate_twopool_matches_validation_and_rmse`.
+     `tests/test_model_api.py::test_simulate_twopool_seq_matches_validation_and_rmse`.
      Defaults / `reproduce_demo` / `parameters.json` unchanged. See
      `docs/twopool_root_exploration.md` §"API access".
    - (b) Promote the U-shaped `k_seq` coefficients into `parameters.json` (new fields,
@@ -155,7 +155,7 @@ for any `c in TP.CONGENERS`.
 > 이어서 진행. 컨텍스트는 `docs/HANDOFF_BAF_twopool.md`와 `docs/twopool_root_exploration.md`를
 > 먼저 읽어줘. 브랜치 `claude/peaceful-babbage-rei1a1`, PR #24(draft)에서 작업한 two-pool root +
 > 비-K_PL U자형 k_seq 작업의 후속이다. 이번엔 **[① two-pool을 model_api opt-in 모듈로 배선
-> (simulate_twopool) / ② Tang 2026 per-organ TF로 OOS 확장 / ③ U자형 k_seq를 parameters.json에
+> (simulate_twopool_seq) / ② Tang 2026 per-organ TF로 OOS 확장 / ③ U자형 k_seq를 parameters.json에
 > 승격 결정 / ④ 다른 주제]** 중 하나를 진행하고 싶다. (기본값은 ①을 추천 — 저위험, 기존 디폴트
 > 불변, 앱/검증에서 바로 사용 가능.) 모든 작업은 EXPLORATORY 유지, `parameters.json` 디폴트는
 > 사용자 승인 전까지 건드리지 말 것. 커밋·푸시는 같은 브랜치, PR #24에 누적.

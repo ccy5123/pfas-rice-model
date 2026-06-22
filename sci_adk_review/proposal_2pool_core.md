@@ -8,7 +8,7 @@ not (refit_oryza hit ceilings ~4-6x under). For the model to be usable -- in
 particular as the long-chain-capable configuration for dietary risk screening -- the
 breakthrough must be a proper, reusable model component, not a validation script. It
 has now been PROMOTED to src/pfas_rice_two_pool.py with a clean API and a model_api
-hook (simulate_two_pool / close_longchain_2pool), additive to (and leaving unchanged)
+hook (simulate_twopool_carrier / close_longchain_2pool), additive to (and leaving unchanged)
 the canonical 4pool_surf core. This run verifies that the promoted core component
 reproduces the breakthrough.
 
