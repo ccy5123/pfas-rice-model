@@ -281,6 +281,45 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     )
 
 
+def apportionment(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
+                  f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
+                  lipid_loading=False, g_xy_override=None, g_ph_override=None,
+                  season=120.0, n_t=241, measured_forcing=True, biomass="growth_rice"):
+    """Source apportionment for one congener -- the PFAS analog of dynamiCROP's Fig. 2.
+
+    Builds the SAME model as ``simulate()`` (identical compound / composition / driver
+    resolution) and integrates the inter-compartment MASS fluxes over the season, so the
+    cumulative PFAS mass delivered to each compartment is decomposed by transport pathway:
+    grain by xylem vs phloem, root by soil-uptake vs phloem recirculation. The headline
+    audit number is ``fraction['grain']['phloem_from_leaf']`` -- the model asserts the
+    grain is phloem-fed (loading ``L_Ph``), and this quantifies it.
+
+    Unlike dynamiCROP (linear -> split by initial source pool), this model is nonlinear
+    (GHK + Michaelis-Menten) and continuously sourced, so the decomposition is flux-based
+    and by pathway. Returns the ``apportionment.apportion`` dict plus congener/params.
+    Scoped to the canonical 4-compartment core (`simulate`); the redistributed-shoot model
+    (`simulate_nstem_leaf`) would need its own flux map.
+    """
+    import apportionment as ap
+    if congener not in _CONG:
+        raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
+    t = np.linspace(0.0, float(season), int(n_t))
+    Cwo_series, Qtp, M, leaf_loss = _default_drivers(t, season, Cwo, measured_forcing, biomass)
+    inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
+    cmpd = _compound_for(congener, f_xy_source, f_xy_override, L_Ph_override,
+                         kappa_d_override, lipid_loading, g_xy_override, g_ph_override,
+                         K_cw_organ="root")
+    comps = _compartments()
+    env = Environment(E=E_m_mV / 1000.0)
+    model = RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs)
+    sol = model.solve(t)
+    res = ap.apportion(model, sol)
+    res.update(congener=congener, success=bool(sol.success),
+               params=dict(f_xy=float(cmpd.f_xy), L_Ph=float(cmpd.L_Ph),
+                           n_C=_CONG[congener]["n_C"], group=_CONG[congener]["group"]))
+    return res
+
+
 def simulate_from_smiles(smiles, *, name=None, f_xy=None, f_xy_override=None, **kw):
     """Run the 4-compartment model for an arbitrary PFAS given by a SMILES string.
 
