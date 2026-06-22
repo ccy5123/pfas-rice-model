@@ -53,11 +53,21 @@ def _logistic(t, M0, Mmax, k, t0):
 
 
 def organ_biomass(t: np.ndarray, season: float = 120.0,
-                  wshoot_max_g_m2: float = WSHOOT_MAX_G_M2):
+                  wshoot_max_g_m2: float = WSHOOT_MAX_G_M2,
+                  root_shoot: float | None = None):
     """Per-organ dry biomass [kg/hill] over t: returns dict root/stem/leaf/grain.
 
     Total assimilate follows a logistic; daily increments are partitioned by the
     ORYZA IR72 DVS tables and integrated.  Scaled so final shoot ~ wshoot_max.
+
+    root_shoot : if given, rescale the WHOLE root trajectory so the final
+        root:shoot mass ratio equals this value (the root time-shape is preserved).
+        The DVS scheme drives root partitioning to ~0 after flowering, leaving an
+        unrealistically low final root:shoot (~0.035); literature lowland-rice
+        maturity root:shoot is ~0.08-0.13 (root ~7-12% of total plant; declines
+        from ~0.2 at seedling, lower for high-yield cultivars due to grain-fill
+        dilution -- Frontiers Plant Sci. 2021, 10.3389/fpls.2021.713814; Yoshida
+        1981 IRRI). Default None preserves the original behaviour (reproducibility).
     """
     t = np.asarray(t, float)
     dvs = dvs_of_t(t, season)
@@ -83,7 +93,13 @@ def organ_biomass(t: np.ndarray, season: float = 120.0,
     # renormalize to the target final shoot biomass, then -> kg/hill
     shoot_final = out["leaf"][-1] + out["stem"][-1] + out["grain"][-1]
     scale = (wshoot_max_g_m2 / shoot_final) * G_M2_TO_KG_HILL
-    return {k: v * scale for k, v in out.items()}
+    res = {k: v * scale for k, v in out.items()}
+    if root_shoot is not None:
+        sh_f = res["stem"][-1] + res["leaf"][-1] + res["grain"][-1]
+        rf = res["root"][-1]
+        if rf > 0:
+            res["root"] = res["root"] * (float(root_shoot) * sh_f / rf)
+    return res
 
 
 def M_for_nstem(t: np.ndarray, N: int = 4, season: float = 120.0):
