@@ -366,7 +366,14 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (RMSE 0.251→0.665) — **no smooth/QSPR-able loading term selectively lifts C12**. ⇒ the long-chain shoot floor is a
   STRUCTURAL shoot-loading ceiling + near-MQL outlier (obs PFDoDA straw is a 6× jump over PFUnDA for one CF2 vs 3.5× in
   root), outside any ROOT term (k_seq/k_rel) — independently quantifies PR #21 LC5/LC6. The two-pool root (RMSE 0.251) is at
-  the achievable floor; residual is NOT a missing root mechanism. Figure
+  the achievable floor; residual is NOT a missing root mechanism. (7) **Robust to MEASURED forcings
+  (`validation/twopool_root_measured.py`)**: re-fitting the whole model on `forcing_rice.Q_TP` (peak 0.098, ~4× below the
+  demo) + `growth_rice` ORYZA-IR72 biomass (HI 0.53) — the forcings the fxy-doc baselines use — gives in-sample RMSE
+  **0.278** (root **0.154**), TIES the fxy-doc U-shaped-K_PL-f_xy (0.286) **while keeping monotone physical f_xy**, and the
+  **PFOS/PFUnDA separation HOLDS/sharpens to 4.5×** (k_seq 0.031 vs 0.141). Kim grain OOS now apples-to-apples: two-pool
+  excl-PFOA **0.56 = ties lipid (0.55)**, crushes mono (2.04)/W2 (1.11) — but keeps the high long-chain root lipid drains.
+  ⇒ the structure / monotone f_xy / non-K_PL U-shaped k_seq / separation / OOS all survive realistic biomass+transpiration;
+  NOT a placeholder-forcing artifact. Cached → `validation/twopool_fitted_params_measured.json`. Figure
   `validation/figures/twopool_root_exploration.png`; full record `docs/twopool_root_exploration.md`. Still mechanism discovery,
   NOT validation (Yamazaki in-sample fit → OOS transfer; decisive test = per-congener xylem-sap/root-water ratio +
   desorption-resistant root-fraction assay).
@@ -391,6 +398,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `twopool_fitted_params.json`). OOS transfer: `python validation/twopool_root_oos.py` (Yamazaki-fit → Kim 2019 grain +
   Li 2025 TF, no re-fit; reuses the cached fit, ~5 s). Long-chain shoot-floor diagnostic:
   `python validation/twopool_root_seqrelease.py` (k_rel seq-release sweep + g_xy xylem-loading diagnostic; ~20 s).
+  Measured-forcing robustness re-fit: `python validation/twopool_root_measured.py` (re-fits on forcing_rice + ORYZA
+  biomass; in-sample + Kim OOS vs fxy-doc baselines; ~3 min).
 - Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
   `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
 - Soil → plant (analytic): `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.

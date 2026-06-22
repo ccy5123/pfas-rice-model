@@ -6,8 +6,8 @@
 > mass-balance tension. Script: `validation/twopool_root_exploration.py` (standalone,
 > EXPLORATORY, in-sample Yamazaki 2023; the canonical core and `parameters.json` are
 > UNCHANGED). OOS transfer: `validation/twopool_root_oos.py`; long-chain shoot-floor
-> diagnostic: `validation/twopool_root_seqrelease.py`. Figure:
-> `validation/figures/twopool_root_exploration.png`.
+> diagnostic: `validation/twopool_root_seqrelease.py`; measured-forcing robustness re-fit:
+> `validation/twopool_root_measured.py`. Figure: `validation/figures/twopool_root_exploration.png`.
 
 ## The tension this addresses
 
@@ -247,6 +247,42 @@ outlier**, structurally outside what any *root* term (`k_seq`, `k_rel`) can reac
 root model at RMSE 0.251 is therefore at the achievable floor for this structure; the residual is
 not a missing root mechanism. `k_rel`/`g_xy` are diagnostics only — the default model keeps
 `k_rel = 0` and the Result-3 `g_xy`.
+
+## Result 6 — robustness to MEASURED forcings (`twopool_root_measured.py`)
+
+Everything above used the demo logistic forcings (identical to `reproduce_demo`), whose
+transpiration peaks ~5× too high (CLAUDE.md). The decisive robustness check re-fits the whole
+model on the **measured forcings** — `forcing_rice.Q_TP` (peak 0.098 L/d/hill, T/ET 0.42) +
+`growth_rice` ORYZA-IR72 organ biomass (HI 0.53) — the same forcings the fxy-doc baselines use, so
+the Kim-grain OOS becomes directly comparable.
+
+| | in-sample RMSE | root | straw | grain | PFOS/PFUnDA k_seq sep. |
+|---|--:|--:|--:|--:|--:|
+| two-pool, demo forcings (Result 3) | 0.251 | 0.156 | 0.260 | 0.311 | 3.1× |
+| **two-pool, MEASURED forcings** | **0.278** | **0.154** | 0.295 | 0.348 | **4.5×** |
+| fxy-doc U-shaped-K_PL-f_xy, measured (single pool) | 0.286 | — | — | — | — |
+
+- **The qualitative result is robust.** On realistic biomass/transpiration the two-pool still
+  **solves the root (0.154)**, ties the fxy-doc U-shaped-K_PL-f_xy in-sample (0.278 vs 0.286)
+  **while keeping the monotone physical `f_xy_recommended`**, and the **non-K_PL PFOS/PFUnDA
+  separation HOLDS and even sharpens to 4.5×** (k_seq 0.031 vs 0.141). The fitted U-shape is the
+  same family (rising arm slightly steeper); `g_xy` roughly doubles (0.021 → 0.040) to offset the
+  ~4× lower transpiration.
+- **Kim 2019 grain OOS, now apples-to-apples** (measured forcings, vs the fxy-doc baselines):
+
+| Kim grain log10 RMSE (measured forcings) | two-pool | lipid | monotone | W2 |
+|---|--:|--:|--:|--:|
+| excl PFOA | **0.56** | 0.55 | 2.04 | 1.11 |
+
+  The two-pool **ties the best prior model (lipid, 0.55)** on the clean Kim series and crushes
+  monotone/W2 — but does so while *also keeping the high long-chain root* that the lipid model
+  drains. The long-chain shoot stays under (PFDoDA straw 7.5; sharper than the demo's 10.5 because
+  the measured transpiration is lower) — the same Result-5 xylem-loading ceiling.
+
+**Robustness conclusion:** the two-pool structure, the monotone physical `f_xy`, the non-K_PL
+U-shaped `k_seq`, the PFOS/PFUnDA separation, and the OOS transfer all survive the switch from demo
+to measured forcings. The result is not an artifact of the placeholder transpiration. (Fit cached
+to `validation/twopool_fitted_params_measured.json`; still in-sample, `parameters.json` untouched.)
 
 ## Honest status
 
