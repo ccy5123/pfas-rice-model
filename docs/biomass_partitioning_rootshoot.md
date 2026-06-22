@@ -1,7 +1,8 @@
 # Rice biomass partitioning & the root:shoot anchor
 
-> Status: literature-grounded for the **shoot split**; the **root fraction** is a
-> documented data gap (anchored to a literature *range*, not a site-specific value).
+> Status: literature-grounded for the **shoot split**; the **root fraction** is now
+> anchored to a site-relevant field value (Japanese flooded paddy, root:shoot ~0.08–0.12,
+> §2) but remains condition-dependent (water table, cultivar) so it is given as a range.
 > Scope: explains the organ-biomass `M_k(t)` that feeds the burden = `C_k·M_k`
 > question and the calibration coupling it creates. No default behaviour changed.
 
@@ -22,12 +23,23 @@ turns out to be **entangled** with the biomass assumption.
 | stem / culm + sheath | ~24–33% | Amanullah & Inamullah 2016 |
 | leaf blade | ~18–24% | Amanullah & Inamullah 2016 |
 
-**Root fraction — the weak link:**
+**Root fraction — the weak link (but now anchored to a site-relevant field value):**
 
 - Root mass fraction declines from ~0.2 (seedling) to ~0.1 (heading) of total plant;
   at **maturity it is ~0.07–0.13** (root:shoot ~0.08–0.15), pushed lower in high-yield
   cultivars by grain-fill dilution (root:shoot negatively correlates with yield).
-- A concrete anchor: heading shoot 3 Mg/ha ↔ root ~0.33 Mg/ha → root:shoot ≈ 0.11.
+- A concrete heading anchor: shoot 3 Mg/ha ↔ root ~0.33 Mg/ha → root:shoot ≈ 0.11.
+- **Site-relevant anchor (Japanese flooded paddy — same system class as the Yamazaki
+  calibration data):** measured root biomass ~70–112 g/m² against an aboveground
+  biomass ~910 g/m² at harvest → **root:shoot ≈ 0.08–0.12** (root ~7–11% of total).
+  This independently lands on the same ~0.10 and is the closest field analog to the
+  model's target system. Sources: Wang et al. 2016 *Sci. Rep.* (10.1038/srep29333,
+  paddy root biomass g/m²); Frontiers Plant Sci. 2021 (10.3389/fpls.2021.713814,
+  japonica paddy — RDW peaks at filling then *declines* to maturity while SDW keeps
+  rising, so root:shoot falls toward harvest).
+- Caveat: BGB:AGB is **water-management dependent** (lower under saturated/flooded vs
+  drained/peat soils — *Sci. Rep.* 2024, 10.1038/s41598-024-64616-1), and field root
+  recovery under-counts deep/broken roots, so measured values are if anything a *floor*.
 - **Combine, don't co-locate**: the full per-organ distribution is built from the
   shoot split (above) × an *independent* root:shoot ratio — the two need not come from
   the same paper. Combining gives (total-plant %): root 9–13, grain 46–48, stem 25–26,
@@ -37,7 +49,9 @@ turns out to be **entangled** with the biomass assumption.
 - Ntanos & Koutroubas 2002, *Field Crops Res.* 74:93–101 — **10.1016/S0378-4290(01)00203-9** (maturity HI 0.47–0.61; aboveground only).
 - Amanullah & Inamullah 2016, *Rice Science* 23(2):78–87 — maturity panicle/culm/leaf % (aboveground only).
 - Nada & Abogadallah 2018, *Acta Physiol. Plant.* 40:123 — **10.1007/s11738-018-2697-5** (root:shoot is genotype/condition dependent; pot/greenhouse).
-- "Response of Grain Yield and Root … to Nitrogen Levels in Paddy Rice", *Front. Plant Sci.* 2021 — **10.3389/fpls.2021.713814** (japonica paddy, tillering→maturity SDW/RDW/root:shoot).
+- "Response of Grain Yield and Root … to Nitrogen Levels in Paddy Rice", *Front. Plant Sci.* 2021 — **10.3389/fpls.2021.713814** (japonica paddy, tillering→maturity SDW/RDW/root:shoot; RDW peaks at filling then declines to maturity).
+- Wang et al. 2016, "Optimizing rice plant photosynthate allocation reduces N₂O emissions from paddy fields", *Sci. Rep.* 6:29333 — **10.1038/srep29333** (paddy root biomass ~70–112 g/m²; HI–N₂O link).
+- *Sci. Rep.* 2024 — **10.1038/s41598-024-64616-1** (rice BGB:AGB is water-table/soil dependent).
 - Yoshida 1981, *Fundamentals of Rice Crop Science*, IRRI (classic reference for root fraction ~5–10%).
 - Model partitioning source: Bouman & van Laar 2006, *Agric. Syst.* 87:249–273 (**10.1016/j.agsy.2004.09.011**); Li et al. 2017, *Agric. For. Meteorol.* 237–238:246–256 (ORYZA v3).
 
