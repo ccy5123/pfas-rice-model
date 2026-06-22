@@ -310,3 +310,32 @@ to `validation/twopool_fitted_params_measured.json`; still in-sample, `parameter
   **and** a desorption-resistant root-fraction assay (isolating the irreversible `k_seq` pool)
   across chain length and head group. Still in-sample (Yamazaki only); this is mechanism
   discovery and a well-posed next fit, **not** validation.
+
+## API access (opt-in, handoff item ①)
+
+The two-pool model is now callable through the UI-agnostic API as
+`model_api.simulate_twopool(congener, …)`, mirroring `simulate_nstem_leaf` — so the app and
+other validation can use it **without changing any default** (the canonical `simulate`,
+`reproduce_demo`, and `parameters.json` are untouched). It loads the cached fit from
+`validation/twopool_fitted_params.json` (via this module's `load_fit()`/`kseq_ushape()`/`lipid_g()`)
+and re-implements the 5-state ODE inside `model_api`, driven by the standard
+forcing/`drivers=` machinery, so it returns the **same dict shape** as `simulate()`
+(root/stem/leaf/grain conc & BAF series, finals, `straw_baf`, `tf_final`) plus the root
+**mobile/seq split** (`conc["root_mobile"|"root_seq"]`, `seq_fraction`) and the two-pool
+levers (`k_rel`, `kseq_override`). The reported `root` BAF is the **sum** of the mobile and
+sequestered pools.
+
+```python
+import model_api as api
+r = api.simulate_twopool("PFUnDA")           # defaults reproduce the demo-forcing headline
+r["baf_final"]["root"], r["seq_fraction"]    # 15.8, 0.91  (root = mobile + seq)
+r["params"]["k_seq"], r["params"]["f_xy"]    # 0.166, monotone physical f_xy_recommended
+api.simulate_twopool("PFUnDA", k_rel=0.2)    # Result-5 desorption sweep (root collapses)
+```
+
+With the defaults (`measured_forcing=False, season=120`) the wrapper reproduces this record's
+headline — overall log10 RMSE **0.251** (root 0.156) and the non-K_PL PFOS/PFUnDA **3.1×**
+`k_seq` separation — to within the ~1 % driver-grid difference (cross-impl RMSE 0.014). A drift
+guard (`tests/test_model_api.py::test_simulate_twopool_matches_validation_and_rmse`) pins the two
+implementations together. Still EXPLORATORY / in-sample: the cached fit is on the demo forcings,
+and `twopool_fitted_params_measured.json` (Result 6) is **not** auto-loaded.

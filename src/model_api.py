@@ -18,7 +18,7 @@ _ROOT = os.path.dirname(_HERE)
 
 from pfas_rice_plant_module_4pool_surf import (
     Environment, Compound, Compartment, RiceUptakeModel, PlantInputs,
-    binding_factors, _logistic, ROOT, STEM, LEAF, FRUIT)
+    binding_factors, root_uptake, _logistic, ROOT, STEM, LEAF, FRUIT)
 import forcing_rice as fr
 import growth_rice as gr
 from soil_paddy import FreundlichSoil
@@ -445,6 +445,171 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
                     stem_transp_frac=float(stem_transp_frac), lam_leaf=float(lam_leaf),
                     lam_grain=float(lam_grain), n_C=_CONG[congener]["n_C"],
                     group=_CONG[congener]["group"]),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Two-pool root model (EXPLORATORY, opt-in) -- mobile + sequestered root pools
+#   docs/twopool_root_exploration.md ; validation/twopool_root_exploration.py
+# Splits the root into a MOBILE pool (binding B_m; feeds the xylem via the
+# monotone-physical f_xy + a K_PL-gated lipid term) and a SEQUESTERED pool (an
+# irreversible apoplast/cell-wall/Fe-Mn-plaque terminal sink at rate k_seq, a
+# non-K_PL U-shaped chain/head-group descriptor). The decoupling lets the model
+# hold a HIGH long-chain root BAF *and* deliver to the shoot while KEEPING the
+# monotone physical f_xy. In-sample Yamazaki fit (RMSE 0.251); canonical core and
+# parameters.json are UNCHANGED -- the fitted globals + U-shape come from the
+# cached fit (validation/twopool_fitted_params.json) loaded lazily below.
+# ---------------------------------------------------------------------------
+_TP_RM, _TP_RS, _TP_ST, _TP_LF, _TP_GR = 0, 1, 2, 3, 4   # 5-state indices
+_TWOPOOL = None                                          # ((p, q), module) cache
+
+
+def _twopool():
+    """Lazily import the two-pool exploration module and load its cached fit.
+
+    Returns ((p, q), TP) where `p` are the fitted GLOBAL params, `q` the U-shaped
+    k_seq coefficients (validation/twopool_fitted_params.json) and `TP` the module
+    (for its pure descriptor functions kseq_ushape/lipid_g). Reusing the cached fit
+    keeps this wrapper byte-consistent with the validation script."""
+    global _TWOPOOL
+    if _TWOPOOL is None:
+        import sys
+        vdir = os.path.join(_ROOT, "validation")
+        if vdir not in sys.path:
+            sys.path.insert(0, vdir)
+        import twopool_root_exploration as TP
+        _TWOPOOL = (TP.load_fit(), TP)
+    return _TWOPOOL
+
+
+def _twopool_rhs(t_grid, Cwo_s, Qtp_s, M_s, dM_s, cmpd, comps, B, env,
+                 gxy, gph, kseq, phi=0.1, T_C_Ph=10.0, k_rel=0.0):
+    """5-state RHS (mass-conserving; sole source M_root*j_R into the mobile pool).
+
+    Faithful re-implementation of validation/twopool_root_exploration.make_rhs,
+    generalised to arbitrary driver arrays (Cwo, Qtp, M on `t_grid`) so it returns
+    a full time series and supports the standard simulate() driver options. Guarded
+    against drift by tests/test_model_api.py::test_simulate_twopool_matches_validation_and_rmse."""
+    def rhs(t, C):
+        Qtp = float(np.interp(t, t_grid, Qtp_s))
+        Cwo = float(np.interp(t, t_grid, Cwo_s))
+        M = np.array([np.interp(t, t_grid, M_s[:, k]) for k in range(4)])
+        dM = np.array([np.interp(t, t_grid, dM_s[:, k]) for k in range(4)])
+        M = np.maximum(M, 1e-12)
+        mu = dM / M                                       # growth dilution [1/day]
+        Mr = M[ROOT]
+
+        Cw = np.empty(5)
+        Cw[_TP_RM] = C[_TP_RM] / B[ROOT]                  # mobile-root free conc
+        Cw[_TP_ST] = C[_TP_ST] / B[STEM]
+        Cw[_TP_LF] = C[_TP_LF] / B[LEAF]
+        Cw[_TP_GR] = C[_TP_GR] / B[FRUIT]
+
+        A3 = comps[LEAF].S * M[LEAF]; A4 = comps[FRUIT].S * M[FRUIT]
+        split = A3 / (A3 + A4) if (A3 + A4) > 0 else 0.5
+        f3, f4 = split, 1.0 - split
+
+        Q_Phl = max(dM[FRUIT] * T_C_Ph + phi * Qtp, 0.0)
+        C_Phl = cmpd.L_Ph * Cw[_TP_LF] + gph * C[_TP_LF]
+        Cw_xyl = cmpd.f_xy * Cw[_TP_RM] + gxy * C[_TP_RM]
+
+        jR = root_uptake(Cwo, Cw[_TP_RM], cmpd, env)
+        seq = kseq * C[_TP_RM]                            # mobile -> seq
+        rel = k_rel * C[_TP_RS]                           # seq -> mobile (slow desorption)
+
+        dC = np.zeros(5)
+        dC[_TP_RM] = (jR - (Qtp / Mr) * Cw_xyl + phi * (Q_Phl / Mr) * C_Phl
+                      - seq + rel - mu[ROOT] * C[_TP_RM])
+        dC[_TP_RS] = seq - rel - mu[ROOT] * C[_TP_RS]     # near-terminal accumulator
+        dC[_TP_ST] = (Qtp / M[STEM]) * (Cw_xyl - Cw[_TP_ST]) - mu[STEM] * C[_TP_ST]
+        dC[_TP_LF] = (f3 * (Qtp / M[LEAF]) * Cw[_TP_ST]
+                      - (1.0 + phi) * (Q_Phl / M[LEAF]) * C_Phl - mu[LEAF] * C[_TP_LF])
+        dC[_TP_GR] = (f4 * (Qtp / M[FRUIT]) * Cw[_TP_ST]
+                      + (Q_Phl / M[FRUIT]) * C_Phl - mu[FRUIT] * C[_TP_GR])
+        return dC
+    return rhs
+
+
+def simulate_twopool(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, season=120.0,
+                     n_t=481, measured_forcing=False, biomass="growth_rice",
+                     drivers=None, k_rel=0.0, kseq_override=None):
+    """Two-pool root uptake run (mobile + sequestered root pools) -- EXPLORATORY, opt-in.
+
+    Mirrors `simulate()` / `simulate_nstem_leaf()` for the I/O so the app and other
+    validation can treat the two-pool model interchangeably: returns a dict with the
+    SAME tissue keys (root/stem/leaf/grain), where the reported `root` BAF is the
+    SUM of the mobile and sequestered root pools. The transport globals (kappa_d,
+    L_Ph, the lipid conductances) and the non-K_PL U-shaped `k_seq(n, head_group)`
+    come from the cached Yamazaki fit (validation/twopool_fitted_params.json); the
+    xylem free-loading uses the monotone physical `f_xy_recommended`.
+
+    NOTE the cached fit is on the DEMO forcings, so the defaults
+    (`measured_forcing=False`, `season=120`) reproduce the documented in-sample
+    result (overall log10 RMSE 0.251; PFOS/PFUnDA root separation at identical K_PL).
+    `measured_forcing=True` / `drivers=` / `biomass=` are supported for exploration
+    but pair the demo fit with non-demo forcings (Result 6 has a separate measured
+    re-fit, not auto-loaded). parameters.json is UNCHANGED.
+
+    k_rel : slow seq->mobile desorption rate [1/day]; 0 (default) = irreversible seq
+        sink. kseq_override : bypass the U-shaped descriptor with a fixed k_seq [1/day].
+    """
+    if congener not in _CONG:
+        raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
+    (p, q), TP = _twopool()
+    c = _CONG[congener]
+
+    if drivers is not None:
+        t = np.asarray(drivers["t"], dtype=float)
+        Cwo_series = np.asarray(drivers["Cwo"], dtype=float)
+        Qtp = np.asarray(drivers["Qtp"], dtype=float)
+        M = np.asarray(drivers["M"], dtype=float)
+        season = float(t[-1])
+    else:
+        t = np.linspace(0.0, float(season), int(n_t))
+        Cwo_series, Qtp, M, _ = _default_drivers(t, season, Cwo, measured_forcing, biomass)
+
+    comps = _compartments()
+    env = Environment(E=E_m_mV / 1000.0)
+    cmpd = Compound(name=congener, K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
+                    K_cw=c["K_cw_wholecw_Lkg"]["root"], kappa_d=p["kappa_d"],
+                    Vmax_in=_CARR["Vmax_in"], Km_in=_CARR["Km_in"],
+                    Vmax_out=_CARR["Vmax_out"], Km_out=_CARR["Km_out"],
+                    L_Ph=p["L_Ph"], f_xy=c["f_xy_recommended"])
+    B = binding_factors(comps, cmpd)
+    gxy, gph = TP.lipid_g(c["K_PL_Lkg"], c["group"], p["gxy"], p["gph"], p["K_half"], p["pfsa_ln"])
+    kseq = float(kseq_override) if kseq_override is not None else \
+        float(TP.kseq_ushape(c["n_C"], c["group"], q))
+
+    dM = np.gradient(M, t, axis=0)
+    rhs = _twopool_rhs(t, Cwo_series, Qtp, M, dM, cmpd, comps, B, env,
+                       gxy, gph, kseq, k_rel=k_rel)
+    from scipy.integrate import solve_ivp
+    sol = solve_ivp(rhs, (t[0], t[-1]), np.zeros(5), t_eval=t,
+                    method="BDF", rtol=1e-6, atol=1e-9)
+    Y = sol.y                                            # (5, n_t)
+    root_total = Y[_TP_RM] + Y[_TP_RS]
+    conc = {"root": root_total, "stem": Y[_TP_ST], "leaf": Y[_TP_LF], "grain": Y[_TP_GR],
+            "root_mobile": Y[_TP_RM], "root_seq": Y[_TP_RS]}
+    Mf = M[-1]
+    straw = (Y[_TP_ST] * Mf[STEM] + Y[_TP_LF] * Mf[LEAF]) / (Mf[STEM] + Mf[LEAF])
+    cwo_ref = float(Cwo_series[-1]) if Cwo_series[-1] > 0 else (
+        float(np.nanmax(Cwo_series)) if np.nanmax(Cwo_series) > 0 else 1.0)
+    baf_final = {k: float(v[-1] / cwo_ref) for k, v in conc.items()}
+    return dict(
+        t=t, congener=congener, success=bool(sol.success), season=float(season),
+        conc=conc, straw=straw,
+        Cwo=Cwo_series, Qtp=Qtp, M=M,
+        baf={k: v / cwo_ref for k, v in conc.items()},
+        baf_final=baf_final,
+        straw_baf=float(straw[-1] / cwo_ref),
+        tf_final={k: baf_final[k] / baf_final["root"] for k in ("root", "stem", "leaf", "grain")},
+        seq_fraction=float(Y[_TP_RS, -1] / max(root_total[-1], 1e-12)),
+        cwo_ref=cwo_ref,
+        B_k={k: float(B[i]) for i, k in enumerate(TISSUES)},
+        N=float(env.N), eN=float(np.exp(env.N)),
+        params=dict(f_xy=float(cmpd.f_xy), L_Ph=float(p["L_Ph"]), kappa_d=float(p["kappa_d"]),
+                    g_xy=float(gxy), g_ph=float(gph), k_seq=kseq, k_rel=float(k_rel),
+                    K_PL=c["K_PL_Lkg"], n_C=c["n_C"], group=c["group"]),
     )
 
 

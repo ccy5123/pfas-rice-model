@@ -66,7 +66,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
 ├── external/hydrus_source/           # git submodule → github.com/phydrus/source_code
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (142 collected → 138 pass, 4 HYDRUS-engine skip): plant, soil, hydrus, calibration, lit params, API, plots, structure(SMILES), oryza, measured-biomass
+└── tests/                            # pytest (155 collected → 151 pass, 4 HYDRUS-engine skip): plant, soil, hydrus, calibration, lit params, API (+two-pool opt-in), plots, structure(SMILES), oryza, measured-biomass
 
 ```
 
@@ -378,6 +378,22 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   NOT validation (Yamazaki in-sample fit → OOS transfer; decisive test = per-congener xylem-sap/root-water ratio +
   desorption-resistant root-fraction assay). **Next-session handoff: `docs/HANDOFF_BAF_twopool.md`** (status, open items —
   promotion decision / Tang OOS / opt-in model_api wiring — and a resume prompt).
+- **Two-pool wired as a model_api OPT-IN module (this session; handoff item ①)** — `model_api.simulate_twopool(...)`:
+  the exploratory two-pool root model is now callable through the UI-agnostic API exactly like `simulate_nstem_leaf`,
+  so the app/other validation can use it **without changing any default** (`simulate`/`reproduce_demo`/`parameters.json`
+  UNCHANGED). It loads the cached Yamazaki fit (`validation/twopool_fitted_params.json` via the validation module's
+  `load_fit()`/`kseq_ushape`/`lipid_g`) and re-implements the 5-state ODE inside `model_api` (driven by the standard
+  forcing/`drivers=` machinery) so it returns the **same dict shape** as `simulate()` (root/stem/leaf/grain conc & BAF
+  series + finals/`straw_baf`/`tf_final`), plus the root **mobile/seq split** (`conc["root_mobile"|"root_seq"]`,
+  `seq_fraction`) and two-pool levers (`k_rel` seq→mobile desorption, `kseq_override`). The reported `root` BAF = mobile
+  + sequestered. Defaults (`measured_forcing=False, season=120`) reproduce the documented headline **overall log10 RMSE
+  0.251 (root 0.156)** with the **monotone physical `f_xy_recommended`** and the non-K_PL **PFOS/PFUnDA k_seq 3.1×
+  separation** at identical K_PL. A drift guard (`tests/test_model_api.py::test_simulate_twopool_matches_validation_and_rmse`)
+  pins the wrapper to the standalone validation endpoints (cross-impl RMSE 0.014) so the two implementations cannot
+  silently diverge; `test_simulate_twopool_structure_and_keys` / `..._krel_drains_root_to_shoot` lock the I/O contract and
+  the Result-5 k_rel behaviour. Still EXPLORATORY / in-sample (the cached fit is on the demo forcings; the measured-forcing
+  fit `twopool_fitted_params_measured.json` is not auto-loaded). The §4 promotion decision (handoff item ③) is unchanged —
+  **NOT promoted to `parameters.json`** pending the user.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -400,7 +416,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   Li 2025 TF, no re-fit; reuses the cached fit, ~5 s). Long-chain shoot-floor diagnostic:
   `python validation/twopool_root_seqrelease.py` (k_rel seq-release sweep + g_xy xylem-loading diagnostic; ~20 s).
   Measured-forcing robustness re-fit: `python validation/twopool_root_measured.py` (re-fits on forcing_rice + ORYZA
-  biomass; in-sample + Kim OOS vs fxy-doc baselines; ~3 min).
+  biomass; in-sample + Kim OOS vs fxy-doc baselines; ~3 min). Opt-in API (no re-fit; reuses the cached fit):
+  `model_api.simulate_twopool("PFUnDA")` → the standard `simulate()` dict + root mobile/seq split.
 - Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
   `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
 - Soil → plant (analytic): `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
@@ -417,7 +434,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (142 collected → 138 passing, 4 skip; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
+- Tests: `pip install pytest && pytest` (155 collected → 151 passing, 4 skip; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
   additionally run when the engine is built, else auto-skip).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html

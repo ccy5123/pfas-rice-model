@@ -96,11 +96,17 @@ Root BAF = `C_mobile + C_seq`.
    from exploration-only into the canonical path? Options:
    - (a) Wire it as an **opt-in module** (`model_api.simulate_twopool(...)`, like
      `simulate_nstem_leaf`) — low-risk, makes it usable by the app/other validation
-     without changing defaults. **Recommended first concrete step.**
+     without changing defaults. **Recommended first concrete step. ✅ DONE** (this
+     session): `model_api.simulate_twopool(...)` returns the standard `simulate()` dict
+     + the root mobile/seq split; loads the cached fit; reproduces the headline
+     (RMSE 0.251, PFOS/PFUnDA 3.1×) with the monotone physical f_xy; drift-guarded by
+     `tests/test_model_api.py::test_simulate_twopool_matches_validation_and_rmse`.
+     Defaults / `reproduce_demo` / `parameters.json` unchanged. See
+     `docs/twopool_root_exploration.md` §"API access".
    - (b) Promote the U-shaped `k_seq` coefficients into `parameters.json` (new fields,
      provenance-tagged). The measured-forcing OOS strengthens the case, but the honest
      caveats (single clean OOS, in-sample) argue to keep defaults unchanged.
-   - **Decide with the user** — this changes the model's "official" story.
+     **STILL OPEN — decide with the user** (this changes the model's "official" story).
 2. **More OOS datasets.** Only Kim + Li done. **Tang 2026 per-organ TF** (root-relative,
    dose-dependent; `docs/literature_db/raw_si/tang2026_doseresponse.csv`) was NOT
    transferred to the two-pool — a natural next OOS (note Tang is ether/GenX + PFOA/PFOS,
