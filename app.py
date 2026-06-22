@@ -479,7 +479,15 @@ with tabs[3]:
                 tp = _simulate_twopool_seq(congener)
                 if tp is not None:
                     extra = {"two-pool (seq, exploratory)": tp}
-        st.plotly_chart(plots.fig_baf(res, obs, extra=extra), width="stretch")
+        # The overlay is an optional EXPLORATORY nicety -- never let it crash the BAF
+        # tab (e.g. a stale/old plots.py without the `extra` param right after a deploy,
+        # before the module cache refreshes). Fall back to the plain core-vs-observed plot.
+        try:
+            fig = plots.fig_baf(res, obs, extra=extra)
+        except Exception:                                       # noqa: BLE001
+            fig = plots.fig_baf(res, obs)
+            extra = None
+        st.plotly_chart(fig, width="stretch")
         if extra is not None:
             st.caption("🧪 **two-pool (seq)** is EXPLORATORY / in-sample (Yamazaki fit): it captures the "
                        "long-chain **root** BAF and the PFOS/PFUnDA split the single-pool core misses, while "
