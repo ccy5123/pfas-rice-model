@@ -77,13 +77,27 @@ def fig_burden(res):
     return fig
 
 
-def fig_baf(res, obs):
-    """Predicted vs observed (Yamazaki) root/straw/grain BAF, grouped bars."""
+_BAF_EXTRA_COLORS = ["#2ca02c", "#9467bd", "#8c564b", "#17becf"]
+
+
+def fig_baf(res, obs, extra=None):
+    """Predicted vs observed (Yamazaki) root/straw/grain BAF, grouped bars.
+
+    `extra` optionally overlays additional model series (e.g. the EXPLORATORY
+    two-pool model): a dict {label: {"root","straw","grain"}} (values may be None);
+    each is added as its own grouped bar so the canonical core, the overlay model(s)
+    and the observed data are compared side by side.
+    """
     tis = ["root", "straw", "grain"]
     pred = [res["baf_final"]["root"], res["straw_baf"], res["baf_final"]["grain"]]
     fig = go.Figure()
-    fig.add_bar(x=tis, y=pred, name="model", marker_color="#1f77b4",
-                hovertemplate="model %{x}: %{y:.3g}<extra></extra>")
+    fig.add_bar(x=tis, y=pred, name="model (4-pool core)", marker_color="#1f77b4",
+                hovertemplate="core %{x}: %{y:.3g}<extra></extra>")
+    for i, (label, vals) in enumerate(dict(extra or {}).items()):
+        fig.add_bar(x=tis, y=[vals.get(t_) for t_ in tis], name=label,
+                    marker_color=_BAF_EXTRA_COLORS[i % len(_BAF_EXTRA_COLORS)],
+                    marker_line=dict(width=0.5, color="#333"),
+                    hovertemplate=label + " %{x}: %{y:.3g}<extra></extra>")
     if obs:
         fig.add_bar(x=tis, y=[obs.get(t_, None) for t_ in tis], name="Yamazaki 2023",
                     marker_color="#ff7f0e", hovertemplate="obs %{x}: %{y:.3g}<extra></extra>")

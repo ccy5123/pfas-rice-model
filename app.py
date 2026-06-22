@@ -65,6 +65,22 @@ def _drivers_tuple(d):
             tuple(np.asarray(d["M"]).ravel()), int(np.asarray(d["M"]).shape[1]))
 
 
+@st.cache_data(show_spinner=False)
+def _simulate_twopool_seq(congener):
+    """Cache the EXPLORATORY sequestration two-pool run (curated congener only).
+
+    Run at the model's calibrated operating point (defaults: Cwo=1, season=120,
+    demo forcings) so it reproduces the documented Yamazaki headline -- an
+    apples-to-apples reference against the fixed observed bars. Returns the
+    root/straw/grain BAF, or None if the run fails."""
+    try:
+        r = api.simulate_twopool_seq(congener)
+        return {"root": r["baf_final"]["root"], "straw": r["straw_baf"],
+                "grain": r["baf_final"]["grain"]}
+    except Exception:                                        # noqa: BLE001
+        return None
+
+
 @st.cache_data(show_spinner="Parameterising structure (RDKit)…")
 def _simulate_smiles(smiles, **kw):
     """Cache a SMILES (structure) run: RDKit → descriptors → Compound → full ODE."""
@@ -450,7 +466,28 @@ with tabs[3]:
         st.plotly_chart(plots.fig_biomon_compare(bio_baf, model_b), width="stretch")
         st.caption("Measured biomonitoring BAF (tissue conc ÷ pore water) vs the model prediction.")
     else:
-        st.plotly_chart(plots.fig_baf(res, obs), width="stretch")
+        extra = None
+        if spec == "Curated congener" and congener is not None:
+            show_tp = st.checkbox(
+                "Overlay the two-pool (seq) model — EXPLORATORY", value=True,
+                help="The sequestration two-pool root model (model_api.simulate_twopool_seq; "
+                     "docs/twopool_root_exploration.md): a mobile pool + an irreversible non-K_PL "
+                     "k_seq sink. Shown at its calibrated operating point (Cwo=1, season≈120, demo "
+                     "forcings) so it is comparable to the fixed Yamazaki bars. In-sample / opt-in; "
+                     "parameters.json and the canonical core are unchanged.")
+            if show_tp:
+                tp = _simulate_twopool_seq(congener)
+                if tp is not None:
+                    extra = {"two-pool (seq, exploratory)": tp}
+        st.plotly_chart(plots.fig_baf(res, obs, extra=extra), width="stretch")
+        if extra is not None:
+            st.caption("🧪 **two-pool (seq)** is EXPLORATORY / in-sample (Yamazaki fit): it captures the "
+                       "long-chain **root** BAF and the PFOS/PFUnDA split the single-pool core misses, while "
+                       "keeping the monotone physical f_xy — overall log10 RMSE 0.251. Run at its calibrated "
+                       "point, so it does **not** track the sidebar f_xy/Cwᵒ/biomass (unlike the 4-pool core "
+                       "bar). The *carrier* two-pool (`close_longchain_2pool`, saturated DOF-0 closure) is "
+                       "API-only — it reproduces the observed bars by construction and is too slow (~1 min) to "
+                       "render live.")
         if not obs:
             st.info("No Yamazaki BAF for this congener (model prediction only).")
         else:

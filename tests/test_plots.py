@@ -27,6 +27,18 @@ def test_all_figures_build():
         assert f.layout.title.text
 
 
+def test_fig_baf_extra_overlay():
+    """The optional `extra` overlay (e.g. the two-pool seq model) adds one bar per
+    series alongside the core model and observed; absent -> backward-compatible."""
+    res = api.simulate("PFUnDA")
+    obs = api.observed_baf("PFUnDA")
+    base = plots.fig_baf(res, obs)
+    over = plots.fig_baf(res, obs, extra={"two-pool (seq)": {"root": 15.8, "straw": 6.8, "grain": 6.5}})
+    names = [tr.name for tr in over.data]
+    assert "two-pool (seq)" in names and "model (4-pool core)" in names and "Yamazaki 2023" in names
+    assert len(over.data) == len(base.data) + 1               # exactly one extra series
+
+
 def test_chain_log_axis_for_partition_keys():
     rows = api.chain_table()
     assert plots.fig_chain(rows, "PFOA", "K_PL").layout.yaxis.type == "log"
