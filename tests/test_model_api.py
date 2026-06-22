@@ -229,3 +229,58 @@ def test_grain_formation_gate():
     Mc = np.tile([0.003, 0.02, 0.013, 0.03], (121, 1))
     rc = api.simulate("PFOA", drivers=api.drivers_from_arrays(t2, np.ones(121), M=Mc))
     assert rc["baf_final"]["grain"] > 0.0
+
+
+# --- two-pool root model (EXPLORATORY, opt-in) ----------------------------------
+def test_simulate_twopool_structure_and_keys():
+    """Opt-in two-pool run returns the SAME tissue keys as simulate(), plus the
+    root mobile/seq split; root BAF == mobile + seq; finite and non-negative."""
+    r = api.simulate_twopool("PFOA")
+    assert r["success"]
+    assert set(api.TISSUES) <= set(r["baf_final"])
+    assert all(np.isfinite(v) and v >= 0 for v in r["baf_final"].values())
+    # reported root = mobile + sequestered pool
+    assert r["baf_final"]["root"] == pytest.approx(
+        r["baf_final"]["root_mobile"] + r["baf_final"]["root_seq"], rel=1e-6)
+    assert 0.0 <= r["seq_fraction"] <= 1.0
+    assert r["params"]["k_seq"] > 0 and r["params"]["k_rel"] == 0.0
+    with pytest.raises(KeyError):
+        api.simulate_twopool("not-a-pfas")
+
+
+def test_simulate_twopool_matches_validation_and_rmse():
+    """Drift guard: the model_api wrapper reproduces the standalone validation
+    endpoints (within the ~1% driver-grid difference) AND the documented in-sample
+    headline (overall log10 RMSE ~0.251, root ~0.156, PFOS/PFUnDA k_seq ~3x at
+    identical K_PL) -- all with the MONOTONE physical f_xy_recommended."""
+    (p, q), TP = api._twopool()
+    sq, err = [], {"root": [], "straw": [], "grain": []}
+    for c in TP.CONGENERS:
+        ks = TP.kseq_ushape(c["n_C"], c["group"], q)
+        vr, vs, vg = TP.simulate(c, p, kseq_override=ks)         # standalone (endpoint)
+        r = api.simulate_twopool(c["name"])                      # wrapper (full series)
+        ap = {"root": r["baf_final"]["root"], "straw": r["straw_baf"],
+              "grain": r["baf_final"]["grain"]}
+        for a, b in ((vr, ap["root"]), (vs, ap["straw"]), (vg, ap["grain"])):
+            sq.append((np.log10(max(a, 1e-6)) - np.log10(max(b, 1e-6))) ** 2)
+        o = api.observed_baf(c["name"])
+        for k in err:
+            if k in o:
+                err[k].append((np.log10(max(ap[k], 1e-6)) - np.log10(o[k])) ** 2)
+    assert np.sqrt(np.mean(sq)) < 0.05                            # cross-impl consistency
+    overall = np.sqrt(np.mean(err["root"] + err["straw"] + err["grain"]))
+    assert overall == pytest.approx(0.251, abs=0.02)              # documented headline
+    assert np.sqrt(np.mean(err["root"])) == pytest.approx(0.156, abs=0.02)
+    # monotone PHYSICAL f_xy (not a fitted U-shape) + non-K_PL PFOS/PFUnDA separation
+    pfos, pfunda = api.simulate_twopool("PFOS"), api.simulate_twopool("PFUnDA")
+    assert pfos["params"]["f_xy"] == api._CONG["PFOS"]["f_xy_recommended"]
+    assert pfunda["params"]["k_seq"] / pfos["params"]["k_seq"] == pytest.approx(3.1, abs=0.4)
+
+
+def test_simulate_twopool_krel_drains_root_to_shoot():
+    """A slow seq->mobile desorption (k_rel>0) releases the long-chain root burden:
+    the root BAF falls (the irreversible sink stops retaining). Documented Result 5."""
+    base = api.simulate_twopool("PFUnDA", k_rel=0.0)
+    rel = api.simulate_twopool("PFUnDA", k_rel=0.2)
+    assert rel["baf_final"]["root"] < base["baf_final"]["root"]
+    assert rel["seq_fraction"] < base["seq_fraction"]

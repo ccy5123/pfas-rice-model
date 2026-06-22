@@ -66,7 +66,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
 ├── external/hydrus_source/           # git submodule → github.com/phydrus/source_code
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (142 collected → 138 pass, 4 HYDRUS-engine skip): plant, soil, hydrus, calibration, lit params, API, plots, structure(SMILES), oryza, measured-biomass
+└── tests/                            # pytest (155 collected → 151 pass, 4 HYDRUS-engine skip): plant, soil, hydrus, calibration, lit params, API (+two-pool opt-in), plots, structure(SMILES), oryza, measured-biomass
 
 ```
 
@@ -328,6 +328,72 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   M, no floor → grain always present). `tests/test_model_api.py::test_grain_formation_gate`. The earlier
   display-mask (PR #20) is now backed by the physics gate. NOTE the wrong first cut used a 2%-of-max threshold that
   gated *filling* too (RMSE 0.029→0.34); keying on "mass left the floor" is the correct criterion.
+- **Two-pool root — decoupling the root sink from shoot delivery (BAF "고찰" session)**: addresses the central
+  mass-balance wall (`docs/fxy_longchain_lipid_exploration.md`): a single root pool cannot reproduce a HIGH long-chain
+  root BAF *and* a non-trivial long-chain SHOOT BAF, because the pool whose burden IS the root BAF is the pool that
+  feeds the xylem (lipid loading `g·C` fixes long-chain grain but DRAINS the long-chain root). `validation/
+  twopool_root_exploration.py` (standalone 5-state ODE `[root_mobile, root_seq, stem, leaf, grain]`; EXPLORATORY,
+  in-sample Yamazaki; canonical core + `parameters.json` UNCHANGED) splits the root into a **mobile** pool (binding
+  `B_m`; GHK+carrier uptake; loads xylem with the **monotone physical** `f_xy_recommended` + K_PL-gated lipid term) and
+  a **sequestered** pool (irreversible apoplast/cell-wall/plaque sink; a TERMINAL accumulator) whose rate `k_seq(n,
+  head_group)` is a **NON-K_PL** chain·head-group descriptor. Motivation: PFOS(C8 PFSA) & PFUnDA(C11 PFCA) have
+  IDENTICAL K_PL=31623 and near-identical B_k_root (49.4 vs 49.1) yet root BAF 5.93 vs 19.53 (3.3×) — no K_PL-gated sink
+  can separate them. **Results**: (1) the structure ties the best prior global model (7 globals, log10 RMSE **0.257**
+  excl PFDoDA vs U-shaped-K_PL-f_xy 0.286) **while keeping the monotone physical f_xy** (the straw U-shape emerges from
+  lipid loading + root decoupling, NOT a non-physical fitted f_xy). (2) **Root-matched sufficiency test** (back out
+  per-congener `k_seq` so model root == obs root): the shoot stays essentially unchanged (straw 0.255, grain 0.307) —
+  proving the structure is SUFFICIENT, you CAN hold high long-chain root AND deliver shoot. (3) The empirical `k_seq`
+  **separates PFOS (0.047) from PFUnDA (0.210), 4.5× at identical K_PL** — the non-K_PL signature is real & quantified —
+  and is **U-shaped** in chain length (PFBA 0.29→PFNA 0.014→PFDoDA 0.49), which is exactly why the LINEAR global `k_seq`
+  collapsed (`ks_b→0`). (4) **U-shaped `k_seq(n)` REALIZED (well-posed follow-up, DONE)**: an asymmetric U with the
+  RISING arm in **chain length n (NOT K_PL)** — `k_seq=[0.268·e^(−0.52(n−4))+0.615·e^(1.35(n−12))]·{10^+0.18 if PFSA}` —
+  fit to the root-matched empirical values then plugged back into the full ODE gives **all-11 (incl PFDoDA) log10 RMSE
+  0.251** (root **0.156**, straw 0.260, grain 0.311) and **realizes the separation**: PFOS(C8) k_seq 0.054 vs PFUnDA(C11)
+  0.166 (3.1×) → model root PFOS 6.6/PFUnDA 15.9 (was backwards 16.1/9.5 under the linear fit). Root is essentially solved
+  incl PFDoDA (82 vs 69); residual is now the **very-long-chain SHOOT** (PFDoDA straw 10.5 vs 49.8 — the C12 carrier-limit
+  floor, a shoot problem `k_seq` cannot fix). (5) **OOS transfer (`validation/twopool_root_oos.py`)**: the Yamazaki-fit
+  model is transferred WITHOUT re-fitting to independent data, all 4 models on the SAME demo forcings. **Kim 2019 grain
+  (clean, PFHpA→PFDoDA): two-pool excl-PFOA log10 RMSE 0.47 = BEST** (mono 1.49, W2 0.57, lipid 1.12) and CAPTURES the
+  long-chain grain RISE (2pool PFUnDA 6.1/PFDoDA 8.7 vs monotone 0.19/0.52; obs ~33/35). Honest limits: absolute long-chain
+  grain still under (low-DF Kim tail), Kim PFOA grain 4.43 ≫ Yamazaki 0.46 (between-dataset shift), Li 2025 grain/root TF
+  root-surface-confounded (inconclusive, as documented). ⇒ OOS SUPPORTS the structure/mechanism but does NOT warrant
+  promoting the fitted `k_seq` into `parameters.json` (single clean OOS set; demo forcings). `parameters.json` UNCHANGED
+  (exploration-only). Fitted params cached → `validation/twopool_fitted_params.json`. (6) **Long-chain shoot floor diagnosed
+  (`validation/twopool_root_seqrelease.py`)**: the residual after the U-shaped k_seq is the very-long-chain SHOOT (PFDoDA
+  straw 10.5 vs 49.8). A slow seq→mobile release `k_rel` (added to the ODE, default 0) **cannot** lift it — sweeping k_rel
+  the straw barely moves (10.5→13.4) while PFDoDA root COLLAPSES (82→12). The `g_xy` diagnostic localizes the bottleneck to
+  the **xylem-LOADING capacity**: reaching PFDoDA straw~50 needs g_xy ×8 (still only 35) and over-feeds PFDA/PFUnDA 3–4×
+  (RMSE 0.251→0.665) — **no smooth/QSPR-able loading term selectively lifts C12**. ⇒ the long-chain shoot floor is a
+  STRUCTURAL shoot-loading ceiling + near-MQL outlier (obs PFDoDA straw is a 6× jump over PFUnDA for one CF2 vs 3.5× in
+  root), outside any ROOT term (k_seq/k_rel) — independently quantifies PR #21 LC5/LC6. The two-pool root (RMSE 0.251) is at
+  the achievable floor; residual is NOT a missing root mechanism. (7) **Robust to MEASURED forcings
+  (`validation/twopool_root_measured.py`)**: re-fitting the whole model on `forcing_rice.Q_TP` (peak 0.098, ~4× below the
+  demo) + `growth_rice` ORYZA-IR72 biomass (HI 0.53) — the forcings the fxy-doc baselines use — gives in-sample RMSE
+  **0.278** (root **0.154**), TIES the fxy-doc U-shaped-K_PL-f_xy (0.286) **while keeping monotone physical f_xy**, and the
+  **PFOS/PFUnDA separation HOLDS/sharpens to 4.5×** (k_seq 0.031 vs 0.141). Kim grain OOS now apples-to-apples: two-pool
+  excl-PFOA **0.56 = ties lipid (0.55)**, crushes mono (2.04)/W2 (1.11) — but keeps the high long-chain root lipid drains.
+  ⇒ the structure / monotone f_xy / non-K_PL U-shaped k_seq / separation / OOS all survive realistic biomass+transpiration;
+  NOT a placeholder-forcing artifact. Cached → `validation/twopool_fitted_params_measured.json`. Figure
+  `validation/figures/twopool_root_exploration.png`; full record `docs/twopool_root_exploration.md`. Still mechanism discovery,
+  NOT validation (Yamazaki in-sample fit → OOS transfer; decisive test = per-congener xylem-sap/root-water ratio +
+  desorption-resistant root-fraction assay). **Next-session handoff: `docs/HANDOFF_BAF_twopool.md`** (status, open items —
+  promotion decision / Tang OOS / opt-in model_api wiring — and a resume prompt).
+- **Two-pool wired as a model_api OPT-IN module (this session; handoff item ①)** — `model_api.simulate_twopool(...)`:
+  the exploratory two-pool root model is now callable through the UI-agnostic API exactly like `simulate_nstem_leaf`,
+  so the app/other validation can use it **without changing any default** (`simulate`/`reproduce_demo`/`parameters.json`
+  UNCHANGED). It loads the cached Yamazaki fit (`validation/twopool_fitted_params.json` via the validation module's
+  `load_fit()`/`kseq_ushape`/`lipid_g`) and re-implements the 5-state ODE inside `model_api` (driven by the standard
+  forcing/`drivers=` machinery) so it returns the **same dict shape** as `simulate()` (root/stem/leaf/grain conc & BAF
+  series + finals/`straw_baf`/`tf_final`), plus the root **mobile/seq split** (`conc["root_mobile"|"root_seq"]`,
+  `seq_fraction`) and two-pool levers (`k_rel` seq→mobile desorption, `kseq_override`). The reported `root` BAF = mobile
+  + sequestered. Defaults (`measured_forcing=False, season=120`) reproduce the documented headline **overall log10 RMSE
+  0.251 (root 0.156)** with the **monotone physical `f_xy_recommended`** and the non-K_PL **PFOS/PFUnDA k_seq 3.1×
+  separation** at identical K_PL. A drift guard (`tests/test_model_api.py::test_simulate_twopool_matches_validation_and_rmse`)
+  pins the wrapper to the standalone validation endpoints (cross-impl RMSE 0.014) so the two implementations cannot
+  silently diverge; `test_simulate_twopool_structure_and_keys` / `..._krel_drains_root_to_shoot` lock the I/O contract and
+  the Result-5 k_rel behaviour. Still EXPLORATORY / in-sample (the cached fit is on the demo forcings; the measured-forcing
+  fit `twopool_fitted_params_measured.json` is not auto-loaded). The §4 promotion decision (handoff item ③) is unchanged —
+  **NOT promoted to `parameters.json`** pending the user.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -344,6 +410,14 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `python validation/oryza_growth_validation.py` (vs `growth_rice` + BAF driver-sensitivity + figure).
 - Measured-biomass driver: `python src/measured_biomass.py` (template → M(t) drivers demo).
 - Mass drivers: `python validation/mass_drivers_plot.py` (M_k(t), dM/dt, growth-dilution μ figure).
+- Two-pool root: `python validation/twopool_root_exploration.py` (root sink ↔ shoot decoupling; global fit +
+  root-matched sufficiency test + non-K_PL U-shaped k_seq fit; ~3 min, saves `figures/twopool_root_exploration.png` +
+  `twopool_fitted_params.json`). OOS transfer: `python validation/twopool_root_oos.py` (Yamazaki-fit → Kim 2019 grain +
+  Li 2025 TF, no re-fit; reuses the cached fit, ~5 s). Long-chain shoot-floor diagnostic:
+  `python validation/twopool_root_seqrelease.py` (k_rel seq-release sweep + g_xy xylem-loading diagnostic; ~20 s).
+  Measured-forcing robustness re-fit: `python validation/twopool_root_measured.py` (re-fits on forcing_rice + ORYZA
+  biomass; in-sample + Kim OOS vs fxy-doc baselines; ~3 min). Opt-in API (no re-fit; reuses the cached fit):
+  `model_api.simulate_twopool("PFUnDA")` → the standard `simulate()` dict + root mobile/seq split.
 - Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
   `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
 - Soil → plant (analytic): `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
@@ -360,7 +434,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (142 collected → 138 passing, 4 skip; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
+- Tests: `pip install pytest && pytest` (155 collected → 151 passing, 4 skip; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
   additionally run when the engine is built, else auto-skip).
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
