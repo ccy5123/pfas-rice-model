@@ -281,9 +281,10 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, depth: float = 100.0,
 def inputs_from_hydrus(congener_n_C: int, group: str = "PFCA", *, season: float = 120.0,
                        Cwo_ref: float = 1.0, f_oc: float = 0.02,
                        qtp_from_hydrus: bool = True, area_per_hill_m2: float | None = None,
-                       n_t: int = 241, **run_kw):
+                       n_t: int = 241, biomass: str = "oryza", **run_kw):
     """Build a :class:`PlantInputs` whose ``Cwo`` AND ``Q_TP`` come from a real
-    HYDRUS-1D paddy run for the congener, with growth ``M`` from ORYZA.
+    HYDRUS-1D paddy run for the congener, with growth ``M`` from the selected
+    ``biomass`` driver (ORYZA2000 by default; ``"growth_rice"`` for the logistic).
 
     The HYDRUS pore-water series is normalised to season-mean ``Cwo_ref`` so the
     average exposure matches a constant-Cwo run -- the difference is purely the
@@ -299,7 +300,6 @@ def inputs_from_hydrus(congener_n_C: int, group: str = "PFCA", *, season: float 
     Returns (PlantInputs, PaddyResult).
     """
     from pfas_rice_plant_module_4pool_surf import PlantInputs
-    import growth_rice as gr
     import forcing_rice as fr
 
     if area_per_hill_m2 is None:
@@ -314,8 +314,14 @@ def inputs_from_hydrus(congener_n_C: int, group: str = "PFCA", *, season: float 
     Cw_h = np.interp(t, res.t, res.Cw)
     Cw_h = Cw_h * (Cwo_ref / np.mean(Cw_h))          # normalise to mean = Cwo_ref
 
-    b = gr.organ_biomass(t, season)
+    if biomass == "oryza":
+        import oryza_growth as og
+        b = og.organ_biomass_oryza(t, p=og.OryzaParams(season=season))
+    else:
+        import growth_rice as gr
+        b = gr.organ_biomass(t, season)
     M = np.maximum(np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-4)
+    leaf_loss = b.get("leaf_death_rate")              # only the senescing ORYZA driver supplies it
 
     if qtp_from_hydrus:
         # vRoot [cm/day] over the surface -> volumetric uptake per hill [L/day]:
@@ -324,7 +330,7 @@ def inputs_from_hydrus(congener_n_C: int, group: str = "PFCA", *, season: float 
     else:
         Qtp = fr.Q_TP(t, season)
 
-    return PlantInputs(t=t, Cwo=Cw_h, Qtp=Qtp, M=M), res
+    return PlantInputs(t=t, Cwo=Cw_h, Qtp=Qtp, M=M, leaf_loss=leaf_loss), res
 
 
 # ---------------------------------------------------------------------------
