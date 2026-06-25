@@ -32,3 +32,19 @@ def test_qtp_fxy_is_a_product_ridge():
     assert abs(r["corr"]) > 0.9                          # near-±1 ridge
     assert r["cond"] > 100                               # ill-conditioned
     assert r["product"] == pytest.approx(1.0, abs=0.15)  # only the PRODUCT is recovered
+
+
+def test_emcee_posterior_recovers_well_posed():
+    """The full-MCMC cross-check (affine-invariant sampler) recovers the well-posed
+    exposure, agreeing with the Laplace verdict. Tiny chain for speed; skips when
+    emcee is absent (the forward ODE is ~0.7 s/sample, so this is opt-in)."""
+    pytest.importorskip("emcee")
+    out = bid.emcee_posterior(["qtp_scale", "cwo_level"], nstep=30, nwalk=6, discard=10)
+    assert out is not None and out["n"] > 0
+    assert set(out["median"]) == {"qtp_scale", "cwo_level"}
+    # recovers the well-posed exposure (a short chain → loose bound); the product is
+    # also pinned. The exact sample correlation is chain-noisy, so we don't assert it
+    # here — the structural identifiability is locked by the Laplace tests above.
+    assert out["median"]["qtp_scale"] == pytest.approx(1.0, rel=0.6)   # within ~1.6x
+    assert out["median"]["cwo_level"] == pytest.approx(1.0, rel=0.6)
+    assert 0.4 < out["product"] < 2.5

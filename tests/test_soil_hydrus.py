@@ -54,6 +54,23 @@ def test_inputs_from_hydrus_normalised_and_shaped():
 
 
 @hydrus
+def test_inputs_from_hydrus_honours_biomass_selection():
+    """The HYDRUS coupling must build M from the selected biomass driver (ORYZA2000
+    by default, not silently growth_rice): the ORYZA leaf senesces (peaks mid-season
+    then declines) and the leaf-death rate is carried as PlantInputs.leaf_loss so the
+    leaf-senescence correction applies; growth_rice's leaf is monotonic and carries
+    none. (Regression for the driver-builder biomass bug.)"""
+    t = np.linspace(0.0, 120.0, 121)
+    li = 2                                                   # root,stem,leaf,grain
+    io_, _ = sh.inputs_from_hydrus(8, "PFCA", season=120.0, n_t=121, biomass="oryza")
+    ig, _ = sh.inputs_from_hydrus(8, "PFCA", season=120.0, n_t=121, biomass="growth_rice")
+    Lo, Lg = io_.M[:, li], ig.M[:, li]
+    assert io_.leaf_loss is not None and Lo[-1] < 0.7 * Lo.max()      # ORYZA senesces
+    assert ig.leaf_loss is None and Lg[-1] >= 0.95 * Lg.max()         # growth_rice monotonic
+    assert not np.allclose(io_.M, ig.M)
+
+
+@hydrus
 def test_hydrus_qtp_matches_measured_forcing_when_unstressed():
     """qtp_from_hydrus (default) must reproduce the measured forcing_rice Q_TP in
     a well-watered flooded paddy (no soil-water stress) -- it is consistent with,

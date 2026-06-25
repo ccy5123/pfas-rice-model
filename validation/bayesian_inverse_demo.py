@@ -143,19 +143,22 @@ def run_scenario(name, free, truth=None, noise=True):
                 corr=off, cond=cond, sd=sd.tolist(), product=prod)
 
 
-def maybe_emcee(free=("qtp_scale", "cwo_level"), truth=None):
-    """Optional MCMC cross-check of the well-posed case (skipped if emcee absent)."""
+def emcee_posterior(free, truth=None, nstep=600, nwalk=16, discard=200):
+    """Full MCMC posterior for the `free` params (affine-invariant ensemble sampler).
+    Returns a dict with the flat chain, per-param medians/16-84% bands, the product
+    posterior and the sample correlation -- a sampling cross-check of the Laplace
+    result. None if emcee is not installed."""
     try:
         import emcee
     except Exception:
         print("\n(emcee not installed — Laplace posterior only; "
-              "`pip install emcee` for the full MCMC cross-check)")
+              "`pip install emcee` for the full-MCMC cross-check)")
         return None
     truth = {**DEFAULTS, **(truth or {})}
     obs = predict({k: truth[k] for k in DEFAULTS}) * np.exp(_RNG.normal(0, SIGMA, 3))
 
     def logpost(logp):
-        if np.any(np.abs(logp) > 1.5):                    # broad flat prior in log10
+        if np.any(np.abs(logp) > 1.5):                    # broad flat prior, ±1.5 dex
             return -np.inf
         knobs = {k: truth[k] for k in DEFAULTS}
         for k, lp in zip(free, logp):
@@ -163,20 +166,42 @@ def maybe_emcee(free=("qtp_scale", "cwo_level"), truth=None):
         pred = np.maximum(predict(knobs), 1e-12)
         return -0.5 * float(np.sum(((np.log10(pred) - np.log10(obs)) / SIGMA) ** 2))
 
-    nd, nw = len(free), 16
-    p0 = _RNG.normal(0, 0.05, size=(nw, nd))
-    s = emcee.EnsembleSampler(nw, nd, logpost)
-    s.run_mcmc(p0, 400, progress=False)
-    chain = s.get_chain(discard=150, flat=True)
-    print(f"\n[emcee cross-check]  {free}  ({chain.shape[0]} samples)")
-    for i, k in enumerate(free):
-        print(f"    {k:12s} median {10**np.median(chain[:, i]):.3f}  "
-              f"(truth {truth[k]:.3f})")
-    print(f"    sample corr = {np.corrcoef(chain.T)[0, 1]:+.3f}")
-    return chain
+    nd = len(free)
+    p0 = _RNG.normal(0, 0.05, size=(nwalk, nd))
+    s = emcee.EnsembleSampler(nwalk, nd, logpost)
+    s.run_mcmc(p0, nstep, progress=False)
+    chain = s.get_chain(discard=discard, flat=True)        # log10 space
+    lin = 10.0 ** chain
+    med = {k: float(np.median(lin[:, i])) for i, k in enumerate(free)}
+    lo = {k: float(np.percentile(lin[:, i], 16)) for i, k in enumerate(free)}
+    hi = {k: float(np.percentile(lin[:, i], 84)) for i, k in enumerate(free)}
+    corr = float(np.corrcoef(chain.T)[0, 1]) if nd == 2 else float("nan")
+    prod = float(np.median(np.prod(lin, axis=1)))
+    out = dict(free=free, n=int(chain.shape[0]), median=med, lo=lo, hi=hi,
+               corr=corr, product=prod, truth=truth)
+
+    print(f"\n[emcee MCMC]  free={free}  ({out['n']} samples)")
+    for k in free:
+        print(f"    {k:12s} median {med[k]:6.3f}  [{lo[k]:.3f}, {hi[k]:.3f}] (16-84%)"
+              f"   truth {truth[k]:.3f}")
+    print(f"    sample corr = {corr:+.3f}   product (med) = {prod:.3f}"
+          f"   -> {'RIDGE (only the product is pinned)' if abs(corr) > 0.95 else 'identifiable'}")
+    return out
 
 
-def run():
+def maybe_emcee(nstep=120, nwalk=8):
+    """Run the MCMC cross-check on BOTH the well-posed case (A) and the product
+    ridge (B), confirming the Laplace verdicts with a real sampled posterior.
+    OPT-IN (the forward ODE is ~0.7 s/eval, so a chain is minutes): only invoked by
+    the `--emcee` flag."""
+    a = emcee_posterior(["qtp_scale", "cwo_level"], nstep=nstep, nwalk=nwalk)  # recovers
+    if a is None:
+        return None
+    emcee_posterior(["qtp_scale", "f_xy_mult"], nstep=nstep, nwalk=nwalk)      # ridge
+    return a
+
+
+def run(do_emcee=False):
     print("Bayesian inverse demo — infer exposure from tissue C(t)\n"
           f"  congener={CONGENER}, obs = final root/straw/grain BAF, "
           f"σ={SIGMA} log10")
@@ -188,7 +213,11 @@ def run():
         run_scenario("C  RIDGE: pore water vs root-uptake conductance",
                      ["cwo_level", "kappa_d_mult"]),
     ]
-    maybe_emcee()
+    if do_emcee:
+        maybe_emcee()
+    else:
+        print("\n(Laplace posterior above; pass --emcee for the full-MCMC cross-check "
+              "— a few minutes, the ODE is ~0.7 s/sample.)")
     print("\nTakeaway: (A) with transport fixed, Q_TP-scale & Cwo-level are the BEST-"
           "conditioned (cond ~90) and recover from tissue C(t) -- they act on different "
           "directions (Cwo sets the root level, Q_TP the shoot/root ratio). (B) Q_TP & "
@@ -203,4 +232,4 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    run(do_emcee="--emcee" in sys.argv)

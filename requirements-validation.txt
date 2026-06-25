@@ -1,0 +1,9 @@
+# Optional dependencies for the validation/ scripts. The core model, the app, and
+# the test suite do NOT need these -- install only to run the opt-in extras.
+# Install with:  pip install -r requirements-validation.txt
+#
+#   emcee -- the full-MCMC cross-check in validation/bayesian_inverse_demo.py
+#            (`python validation/bayesian_inverse_demo.py --emcee`). The default
+#            run uses a Laplace posterior that needs only scipy (already a core dep),
+#            so emcee is purely the sampled cross-check.
+emcee>=3.1

@@ -80,7 +80,7 @@ def run():
                          corr_def=_corr(hyd, flo_def), corr_best=_corr(hyd, flo_best)))
 
     # ---- report ----
-    print(f"{'cong':8}{'nC':>3} {'grp':>5} | {'HYDRUS':>8}{'flo(0.02)':>10}{'flo(best)':>10}"
+    print(f"{'cong':8}{'nC':>3} {'grp':>5} | {'HYDRUS':>8}{'flo(deflt)':>10}{'flo(best)':>10}"
           f"{'k_best':>8}{'corr_def':>9}{'corr_best':>10}")
     print(f"{'':8}{'':>3} {'':>5} | {'end/start ratio (mean-normalised)':>28}")
     for r in rows:
