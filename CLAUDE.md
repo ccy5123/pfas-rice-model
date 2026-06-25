@@ -578,6 +578,38 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `model_api` gained only pure string export helpers. Tests: `test_model_api.py::test_export_csv_helpers`,
   `test_plots.py::test_plain_language_figures_build`; full suite **174 passed, 2 skipped**. Verified with headless
   Streamlit + Playwright screenshots of both the Simple landing and the Expert UI.
+- **Bayesian inverse exposure estimate wired into the app (this session)**: a user-facing **Bayesian
+  parameter estimation** added to BOTH the Simple ("🔎 Work backwards") and Expert ("🔎 Inverse (Bayesian)")
+  tabs. `model_api.estimate_exposure_bayesian(congener, measured_conc, sigma_log10=…)` infers the pore-water
+  contamination level **Cwᵒ from measured tissue concentrations** (root/straw/grain, any subset) WITH a
+  credible interval — the inverse of the forward question. Because root uptake is **saturable** (GHK +
+  carrier), tissue conc is a NONLINEAR monotone function of Cwᵒ, so this is a real inverse (not a division):
+  it finds the MAP exposure by a **quadratic-fit Laplace** in log10(Cwᵒ) (a coarse then local parabola → MAP +
+  curvature = posterior width; ~8 ODE solves, deterministic) and returns median + 68/95% CI + a plotting grid
+  + the model's tissue fit at the MAP. Same Laplace idea as `validation/bayesian_inverse_demo.py`, which
+  established this is the **well-posed** direction (the EXPOSURE level is identifiable with transport fixed;
+  Q_TP·f_xy and Cwᵒ-vs-conductance are ridges — surfaced as the Expert tab's caveat). Plot builder
+  `plots.fig_exposure_posterior` (log-x posterior + 95% band + median). App: a cached `_estimate_exposure`
+  + a shared `_render_inverse_estimator` (gated behind an Estimate button so the ~8 solves don't run on every
+  rerun). Synthetic recovery verified (median recovers the known Cwᵒ within a few %, truth inside the 95% CI).
+  Tests: `test_model_api.py::test_estimate_exposure_bayesian_recovers_and_brackets`,
+  `test_plots.py::test_fig_exposure_posterior_builds`. UI/inverse only — `parameters.json` and the model math
+  are UNCHANGED.
+- **Editable data tables (growth curve + Cwᵒ(t)) in the app (this session)**: users can now type/paste their
+  own **growth table** (organ FRESH-weight mass over time) and **time-varying pore-water Cwᵒ(t)** (absolute
+  µg/L) as editable grids (`st.data_editor`) + CSV upload, in BOTH the Simple ("📋 Use my own data tables"
+  checkbox) and Expert ("Custom tables (Cwᵒ + growth)" data-source mode). `model_api.drivers_from_tables(growth,
+  cwo, growth_units=…, Cwo_const=…)` sorts+interpolates the rows onto the model grid and builds the standard
+  `simulate(drivers=…)` dict (it reuses `measured_biomass.to_kg_per_hill` for the growth units g/hill·kg/hill·
+  g/m2·kg/ha·t/ha and `drivers_from_arrays` for the partial-input fallback — a Cwᵒ table alone still runs on the
+  biomass driver's M, a growth table alone on a flat `Cwo_const`). **Per-compartment density** `ρ_k` [kg/L fresh]
+  is exposed (default `DEFAULT_TISSUE_DENSITY` root1.0/stem0.30/leaf0.30/grain1.20, editable): the growth table
+  is FRESH-WEIGHT MASS (the model's M unit), and ρ_k is the **mass↔volume bridge** — used to report the implied
+  organ volume (M/ρ) for consistency. The transport ODE is **mass-based** (there is NO density prefactor — the
+  early-draft ρ term was dimensionally wrong, see §8/the module headers), so ρ_k does not alter the integration;
+  it is a stated per-compartment property + per-volume reporting, exactly as requested. Test:
+  `test_model_api.py::test_drivers_from_tables_growth_and_cwo`. UI/driver only — `parameters.json` and the model
+  math are UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`

@@ -121,6 +121,15 @@ def _simulate_twopool_seq(congener):
         return None
 
 
+@st.cache_data(show_spinner="Estimating the contamination level…")
+def _estimate_exposure(congener, root, straw, grain, sigma, E_m_mV, f_xy_source, biomass):
+    """Cache the Bayesian inverse estimate (a handful of ODE solves, a few seconds)."""
+    meas = {k: v for k, v in (("root", root), ("straw", straw), ("grain", grain))
+            if v is not None and v > 0}
+    return api.estimate_exposure_bayesian(congener, meas, sigma_log10=sigma, E_m_mV=E_m_mV,
+                                          f_xy_source=f_xy_source, biomass=biomass)
+
+
 @st.cache_data(show_spinner="Parameterising structure (RDKit)…")
 def _simulate_smiles(smiles, **kw):
     """Cache a SMILES (structure) run: RDKit → descriptors → Compound → full ODE."""
@@ -205,7 +214,159 @@ def _glossary_md():
         "| **Roots / Straw / Grain** | The plant parts. *Straw* = the stems + leaves together. *Grain* = the edible brown rice. |\n"
         "| **Concentration** *(µg/kg)* | Micrograms of PFAS per kilogram of plant tissue. |\n"
         "| **Congener** | One specific PFAS chemical (e.g. PFOA, PFOS). Longer carbon chains generally stick to the plant more. |\n"
-        "| **Uptake / translocation** | How the chemical gets into the roots and then moves up into the shoot and grain. |\n")
+        "| **Uptake / translocation** | How the chemical gets into the roots and then moves up into the shoot and grain. |\n"
+        "| **Bayesian estimate** | Working backwards from a measurement to the most likely cause, **with an uncertainty range** instead of a single number. |\n")
+
+
+# uncertainty presets for the inverse estimator (measurement + model noise, log10 units)
+_UNC = {"Typical (±~40%)": 0.15, "High precision (±~20%)": 0.10, "Rough (±~2×)": 0.30}
+
+
+def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, simple=True):
+    """Shared 'work backwards' panel: Bayesian estimate of the soil-water contamination
+    level Cwᵒ from measured tissue concentrations, with a credible interval. Used by
+    both the Simple and Expert tabs. `key` namespaces the widgets/session state."""
+    if congener not in api.CONGENERS:
+        st.info("This works with the curated chemicals — pick one of them in the sidebar "
+                "(it needs the calibrated model, which a custom SMILES structure doesn't have).")
+        return
+    st.markdown(
+        "Already have a **lab result** for rice grown on contaminated land? Enter what was "
+        "measured in the plant and this estimates **how contaminated the soil water likely "
+        "was** — working the model backwards, with an **uncertainty range** (a Bayesian "
+        "estimate), not just a single number.")
+    c1, c2, c3 = st.columns(3)
+    root = c1.number_input("Measured in roots [µg/kg]", 0.0, 1e6, 0.0, 0.1, key=f"{key}_root")
+    straw = c2.number_input("Measured in straw (stems+leaves) [µg/kg]", 0.0, 1e6, 0.0, 0.1,
+                            key=f"{key}_straw")
+    grain = c3.number_input("Measured in grain [µg/kg]", 0.0, 1e6, 0.0, 0.1, key=f"{key}_grain")
+    unc_label = st.radio("How precise are the measurements?", list(_UNC), horizontal=True,
+                         key=f"{key}_unc",
+                         help="Sets the measurement+model uncertainty used in the estimate.")
+    sigma = _UNC[unc_label]
+    have = any(v > 0 for v in (root, straw, grain))
+    run = st.button("📐 Estimate the contamination level", key=f"{key}_btn", disabled=not have,
+                    type="primary")
+    sig = (congener, root, straw, grain, sigma, E_m_mV, f_xy_source, biomass)
+    if run:
+        st.session_state[f"{key}_sig"] = sig
+    if not have:
+        st.caption("Enter at least one measured tissue concentration above, then press the button.")
+        return
+    if st.session_state.get(f"{key}_sig") != sig:
+        st.caption("Press **Estimate** to run (or re-run after changing a value).")
+        return
+    try:
+        est = _estimate_exposure(congener, root, straw, grain, sigma, E_m_mV, f_xy_source, biomass)
+    except Exception as e:                                   # noqa: BLE001
+        st.error(f"Could not run the estimate: {e}")
+        return
+    med = est["median"]
+    lo, hi = est["ci95"]
+    mc1, mc2 = st.columns([1, 2])
+    mc1.metric("Most likely soil-water level", f"{med:.3g} µg/L",
+               f"95% range {lo:.2g}–{hi:.2g}" if np.isfinite(lo) else "range unconstrained",
+               delta_color="off")
+    mc2.markdown(
+        f"Given your measurements of **{congener}**, the model estimates the PFAS dissolved "
+        f"in the soil water was most likely **{med:.3g} µg/L**"
+        + (f", and we're 95% confident it was between **{lo:.2g}** and **{hi:.2g} µg/L**."
+           if np.isfinite(lo) else " (the measurements didn't pin down a clear range).")
+        + " The spread of the curve below is the uncertainty.")
+    st.plotly_chart(plots.fig_exposure_posterior(est), width="stretch")
+    # how well the model reproduces the entered measurements at the best estimate
+    fit_rows = " · ".join(f"{t_}: you {est['measured'][t_]:.3g} vs model {est['model_fit'][t_]:.3g}"
+                          for t_ in est["used_tissues"])
+    st.caption(f"At the best estimate the model reproduces your inputs — {fit_rows} (µg/kg). "
+               + ("This estimates only the **contamination level**; it assumes the model's "
+                  "plant-uptake is right and can't separately tell apart water uptake vs how "
+                  "the chemical moves inside the plant (that needs a sap/soil-water measurement)."
+                  if not simple else
+                  "It estimates the contamination level the rice 'saw', assuming the model's "
+                  "uptake behaviour — an illustration, not a measurement of your specific field."))
+
+
+_ORGANS4 = ("root", "stem", "leaf", "grain")
+
+
+def _default_growth_df(season, biomass, n_rows=7):
+    """Editable growth table seeded from the selected biomass driver (FRESH g/hill)."""
+    import pandas as pd
+    t = np.linspace(0.0, float(season), n_rows)
+    b = api._biomass_fn(biomass)(t, float(season))
+    return pd.DataFrame({"day": np.round(t, 0),
+                         **{o: np.round(np.asarray(b[o], float) * 1e3, 2) for o in _ORGANS4}})
+
+
+def _default_cwo_df(season, level, n_rows=4):
+    import pandas as pd
+    return pd.DataFrame({"day": np.round(np.linspace(0.0, float(season), n_rows), 0),
+                         "Cwo": np.full(n_rows, float(level))})
+
+
+def _clean_table(df, value_cols):
+    """data_editor DataFrame -> {col: array}, dropping incomplete rows, day required."""
+    import pandas as pd
+    if df is None or "day" not in getattr(df, "columns", []):
+        raise ValueError("the table needs a 'day' column")
+    d = df.dropna(subset=["day"])
+    out = {"day": d["day"].to_numpy(float)}
+    mask = np.isfinite(out["day"])
+    for c in value_cols:
+        if c in d.columns:
+            out[c] = pd.to_numeric(d[c], errors="coerce").to_numpy(float)
+            mask &= np.isfinite(out[c])
+    out = {k: v[mask] for k, v in out.items()}
+    if len(out["day"]) < 2:
+        raise ValueError("need at least 2 complete rows (day + values)")
+    return out
+
+
+def _render_custom_tables(*, biomass, Cwo_const, season0, key):
+    """Editable growth + pore-water tables (+ per-compartment density). Returns
+    (drivers_dict_or_None, density_dict). Used by both Simple and Expert modes."""
+    import pandas as pd
+    st.markdown(
+        "Enter your **own season** as two tables — **growth = organ FRESH weight** and "
+        "**pore water = the absolute PFAS dissolved in the soil water (µg/L)** over time. "
+        "Edit cells, add/remove rows, or paste from a spreadsheet; the days are interpolated "
+        "onto the model timeline. Leave either table at its default to use the built-in value.")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.caption("🌱 Growth — organ FRESH weight per hill")
+        up_g = st.file_uploader("…or upload a growth CSV (day,root,stem,leaf,grain)",
+                                type=["csv"], key=f"{key}_gup")
+        g_seed = pd.read_csv(up_g) if up_g is not None else _default_growth_df(season0, biomass)
+        gdf = st.data_editor(g_seed, num_rows="dynamic", width="stretch",
+                             key=f"{key}_growth_{up_g.name if up_g else 'def'}")
+        gunit = st.selectbox("Growth weight units", ["g/hill", "kg/hill", "g/m2", "kg/ha", "t/ha"],
+                             index=0, key=f"{key}_gunit")
+    with c2:
+        st.caption("💧 Pore-water contamination Cwᵒ(t) — absolute µg/L")
+        up_c = st.file_uploader("…or upload a Cwᵒ CSV (day,Cwo)", type=["csv"], key=f"{key}_cup")
+        c_seed = pd.read_csv(up_c) if up_c is not None else _default_cwo_df(season0, Cwo_const)
+        cdf = st.data_editor(c_seed, num_rows="dynamic", width="stretch",
+                             key=f"{key}_cwo_{up_c.name if up_c else 'def'}")
+    st.markdown("**Compartment density** ρ [kg/L, fresh] — links the entered weight to tissue "
+                "volume (rice leaf/culm hold air spaces ⇒ < 1; grain is denser ⇒ > 1).")
+    dc = st.columns(4)
+    density = {o: dc[i].number_input(f"ρ {o}", 0.05, 2.0,
+                                     float(api.DEFAULT_TISSUE_DENSITY[o]), 0.05, key=f"{key}_rho_{o}")
+               for i, o in enumerate(_ORGANS4)}
+    try:
+        growth = _clean_table(gdf, list(_ORGANS4))
+        cwo = _clean_table(cdf, ["Cwo"])
+        drivers = api.drivers_from_tables(growth, cwo, growth_units=gunit,
+                                          Cwo_const=Cwo_const, biomass=biomass)
+    except Exception as e:                                   # noqa: BLE001
+        st.warning(f"Using the default scenario — couldn't read the tables: {e}")
+        return None, density
+    Mf = np.asarray(drivers["M"], float)[-1]
+    vols = {o: Mf[i] / max(density[o], 1e-6) for i, o in enumerate(_ORGANS4)}
+    st.caption("Implied end-of-season organ **volume** (fresh mass ÷ density): "
+               + " · ".join(f"{o} {vols[o] * 1e3:.0f} mL" for o in _ORGANS4)
+               + ". The transport model integrates on fresh mass; density sets the mass↔volume scale.")
+    return drivers, density
 
 
 # ---------------------------------------------------------------- sidebar
@@ -233,6 +394,7 @@ with st.sidebar:
     biomass = "oryza"
     compare = []
     preset_label = None
+    use_custom_tables = False
 
     if not expert:
         # ----------------------------- SIMPLE sidebar -----------------------------
@@ -250,16 +412,23 @@ with st.sidebar:
                                 help="How much PFAS is dissolved in the soil water. "
                                      "Higher = more goes into the plant.")
         Cwo_const = _PRESETS[preset_label]
+        use_custom_tables = st.checkbox(
+            "📋 Use my own data tables", value=False,
+            help="Enter your own growth curve and a time-varying soil-water contamination "
+                 "level as editable tables (appears in the main panel).")
         st.caption("Want the full research interface? Turn on **Expert / advanced** above.")
     else:
         # ----------------------------- EXPERT sidebar -----------------------------
         st.header("1 · Data source")
         mode = st.radio(
             "How is the soil exposure supplied?",
-            ["Model (parametric)", "HYDRUS / CSV drivers", "Run HYDRUS-1D (live)",
-             "Soil inventory → pore water", "Biomonitoring (measured tissue)"],
-            help="Five ways to feed the plant model. 'Run HYDRUS-1D (live)' executes the "
-                 "real engine (if built); biomonitoring needs no soil model.")
+            ["Model (parametric)", "Custom tables (Cwᵒ + growth)", "HYDRUS / CSV drivers",
+             "Run HYDRUS-1D (live)", "Soil inventory → pore water",
+             "Biomonitoring (measured tissue)"],
+            help="Ways to feed the plant model. 'Custom tables' lets you type/paste your own "
+                 "growth curve + time-varying Cwᵒ; 'Run HYDRUS-1D (live)' executes the real "
+                 "engine (if built); biomonitoring needs no soil model.")
+        use_custom_tables = (mode == "Custom tables (Cwᵒ + growth)")
 
         st.header("2 · PFAS compound")
         spec = st.radio("Specify by", ["Curated congener", "SMILES (structure)"], horizontal=True,
@@ -336,6 +505,11 @@ with st.sidebar:
             measured = st.checkbox("Measured forcings (Q_TP, M_s)", value=True,
                                    help="On: transpiration from Kumari/NayHtoon, biomass M(t) from the "
                                         "sidebar biomass driver (ORYZA2000 mechanistic, or growth_rice).")
+
+        elif mode == "Custom tables (Cwᵒ + growth)":
+            st.caption("Enter the **growth** and **pore-water Cwᵒ(t)** tables in the main panel → "
+                       "(editable grids + per-compartment density). Q_TP defaults to the measured "
+                       "transpiration; omit either table to fall back to the built-in value.")
 
         elif mode == "HYDRUS / CSV drivers":
             st.caption("CSV columns: `t, Cwo, Qtp, M_root, M_stem, M_leaf, M_grain` "
@@ -476,6 +650,15 @@ else:
                "(docs/literature_db). Charts are interactive — hover, zoom, toggle. Outputs illustrative.")
 
 
+# ---------------------------------------------------------------- custom tables (both modes)
+custom_density = None
+if use_custom_tables:
+    with st.expander("📋 Your data tables — growth curve + pore-water contamination", expanded=True):
+        _drv, custom_density = _render_custom_tables(biomass=biomass, Cwo_const=Cwo_const,
+                                                     season0=season, key="ctbl")
+        if _drv is not None:
+            drivers = _drv
+
 # ---------------------------------------------------------------- run the model
 sim_kw = dict(E_m_mV=E_m, f_xy_source=fxy_source, biomass=biomass)
 desc = None
@@ -530,15 +713,17 @@ if not expert:
     m2.metric("In the straw (stems + leaves)", f"{straw_c:.2g} µg/kg")
     m3.metric("In the grain (edible rice)", f"{grain_c:.2g} µg/kg")
 
+    _lead = ("From the **growth + contamination tables** you entered, " if use_custom_tables
+             else f"At the **{preset_label.split('—')[0].strip().lower()}** contamination level you picked, ")
     st.info(
-        f"At the **{preset_label.split('—')[0].strip().lower()}** contamination level you picked, "
+        _lead +
         f"this model estimates roughly **{grain_c:.2g} µg/kg** of {congener} in the rice **grain** "
         f"(about **{grain_baf:.1f}×** the level dissolved in the soil water). "
         f"Most of the chemical stays in the **{where_most}**.")
     st.caption("These are model estimates for illustration — not a food-safety or health judgement.")
 
     s_tabs = st.tabs(["🗺️ Where it goes", "📈 Build-up over time",
-                      "📊 How much builds up", "ℹ️ About & glossary"])
+                      "📊 How much builds up", "🔎 Work backwards", "ℹ️ About & glossary"])
 
     # ---- Simple tab 1: the plant + soil map --------------------------------
     with s_tabs[0]:
@@ -576,8 +761,13 @@ if not expert:
                            "published greenhouse rice study (Yamazaki et al. 2023). Close bars mean "
                            "the model lines up with real data for this chemical.")
 
-    # ---- Simple tab 4: about & glossary ------------------------------------
+    # ---- Simple tab 4: work backwards (Bayesian inverse estimate) -----------
     with s_tabs[3]:
+        _render_inverse_estimator(congener, E_m_mV=E_m, f_xy_source=fxy_source,
+                                  biomass=biomass, key="inv_simple", simple=True)
+
+    # ---- Simple tab 5: about & glossary ------------------------------------
+    with s_tabs[4]:
         st.markdown(
             "### What this tool does\n"
             "It uses a **mechanistic model** of how a rice plant pulls water and dissolved "
@@ -587,7 +777,9 @@ if not expert:
             "### How to read it\n"
             "- **🗺️ Where it goes** — a picture of the plant; hotter colour = more PFAS.\n"
             "- **📈 Build-up over time** — how the levels change from planting to harvest.\n"
-            "- **📊 How much builds up** — the final levels, and a check against real measurements.\n\n"
+            "- **📊 How much builds up** — the final levels, and a check against real measurements.\n"
+            "- **🔎 Work backwards** — already have a lab result? Estimate how contaminated the "
+            "soil water was (with an uncertainty range — a Bayesian estimate).\n\n"
             "### Plain-language glossary")
         st.markdown(_glossary_md())
         st.warning(_DISCLAIMER)
@@ -656,7 +848,7 @@ else:
 
     tabs = st.tabs(["🗺️ Plant & soil map", "📈 Tissue dynamics", "🟫 Soil & drivers",
                     "📊 BAF vs observed", "🔗 Chain-length trends", "⚖️ Compare congeners",
-                    "✅ Tang TF (OOS)", "ℹ️ About / coupling"])
+                    "✅ Tang TF (OOS)", "🔎 Inverse (Bayesian)", "ℹ️ About / coupling"])
 
     # ---- Tab 1: the plant + soil accumulation map ---------------------------
     with tabs[0]:
@@ -839,8 +1031,21 @@ else:
                    "redistributed-shoot `simulate_nstem_leaf`; the f_xy refit is OVERRIDE-only (parameters.json "
                    "unchanged). Details: docs/VALIDATION_TANG2026_NSTEM_KR.md · docs/tang2026_grain_units_exploration.md.")
 
-    # ---- Tab 8: About / coupling --------------------------------------------
+    # ---- Tab 8: Inverse (Bayesian exposure estimate) ------------------------
     with tabs[7]:
+        st.markdown("**Bayesian inverse** — estimate the pore-water exposure Cwᵒ from measured "
+                    "tissue concentrations (Laplace posterior in log Cwᵒ; the well-posed "
+                    "direction of `validation/bayesian_inverse_demo.py`). Transport is held at "
+                    "the sidebar defaults.")
+        _render_inverse_estimator(congener, E_m_mV=E_m, f_xy_source=fxy_source,
+                                  biomass=biomass, key="inv_expert", simple=False)
+        st.caption("Identifiability: only the EXPOSURE level is estimated here. From tissue data "
+                   "alone Q_TP·f_xy is a product ridge and Cwᵒ vs root-uptake conductance is "
+                   "degenerate, so pinning transport absolutely needs an independent measurement "
+                   "(xylem sap / pore-water probe). See docs + validation/bayesian_inverse_demo.py.")
+
+    # ---- Tab 9: About / coupling --------------------------------------------
+    with tabs[8]:
         st.markdown(
             """
 ### Five ways to drive the plant model

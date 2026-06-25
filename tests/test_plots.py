@@ -134,6 +134,19 @@ def test_plain_language_figures_build():
     assert list(whr.data[0].x) == ["Roots", "Straw", "Grain"]
 
 
+def test_fig_exposure_posterior_builds():
+    """The Bayesian inverse posterior plot builds with a log-x density + 95% band."""
+    import model_api as api, plots
+    r = api.simulate("PFOA", Cwo=1.5)
+    est = api.estimate_exposure_bayesian("PFOA", {"root": r["conc"]["root"][-1],
+                                                  "grain": r["conc"]["grain"][-1]})
+    fig = plots.fig_exposure_posterior(est)
+    assert isinstance(fig, go.Figure) and len(fig.data) >= 1
+    assert fig.layout.xaxis.type == "log"
+    assert "soil water" in fig.layout.xaxis.title.text
+    assert fig.layout.title.text
+
+
 def test_fig_cwo_profile_builds():
     import numpy as np, plots
     fig = plots.fig_cwo_profile("PFBA", level=1.0, profile="flooded")

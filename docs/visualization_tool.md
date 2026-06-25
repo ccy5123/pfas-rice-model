@@ -15,11 +15,30 @@ streamlit run app.py
 
 The app opens in a **Simple mode** for a general audience (policy makers, students, the
 public): a plain-language intro, a friendly chemical dropdown + a low/medium/high
-**contamination preset**, three plain metric cards + a one-sentence summary, and four
+**contamination preset**, three plain metric cards + a one-sentence summary, and five
 jargon-free tabs (🗺️ *Where it goes* · 📈 *Build-up over time* · 📊 *How much builds up* ·
-ℹ️ *About & glossary*) — no `BAF`/`Cwᵒ`/`f_xy`/`eᴺ` symbols in the default view. A
-prominent **research/educational disclaimer** sits on every screen (top + footer), and a
-**Download** expander exports the results (CSV; PNG when `kaleido` is present).
+🔎 *Work backwards* · ℹ️ *About & glossary*) — no `BAF`/`Cwᵒ`/`f_xy`/`eᴺ` symbols in the
+default view. A prominent **research/educational disclaimer** sits on every screen (top +
+footer), and a **Download** expander exports the results (CSV; PNG when `kaleido` is present).
+
+**🔎 Work backwards (Bayesian inverse).** Already have a lab result for the rice? Enter the
+measured tissue concentrations (root/straw/grain) and the app estimates **how contaminated
+the soil water most likely was, with a 95% credible interval** — a Bayesian parameter
+estimation (`model_api.estimate_exposure_bayesian`; a Laplace posterior in log Cwᵒ that
+inverts the model's *saturable* uptake, so it is a real nonlinear inverse, not a division).
+The Expert tab adds the identifiability caveat (only the exposure level is well-posed from
+tissue data; pinning transport needs an independent sap/pore-water measurement).
+
+**📋 Your own data tables (growth + Cwᵒ).** Both modes can take a user-entered **growth
+table** (organ FRESH-weight mass over time) and a **time-varying pore-water Cwᵒ(t)** (absolute
+µg/L) as editable grids (`st.data_editor`) or a CSV upload — Simple via the "Use my own data
+tables" checkbox, Expert via the "Custom tables (Cwᵒ + growth)" data source
+(`model_api.drivers_from_tables`). Each compartment has an editable **density** ρ_k [kg/L
+fresh] (default root 1.0 / stem 0.30 / leaf 0.30 / grain 1.20) that links the entered weight
+to tissue volume (rice leaf/culm hold aerenchyma ⇒ < 1; grain is denser ⇒ > 1). The growth
+table is fresh-weight **mass** (the model's M unit) and the transport ODE is mass-based, so
+ρ_k is the explicit mass↔volume bridge (and per-volume reporting), not a transport prefactor.
+Either table can be left at its default to fall back to the built-in value.
 
 Flip the sidebar **🔬 Expert / advanced controls** toggle to restore the full research
 interface documented below — the five exposure modes, SMILES structure input, every model
