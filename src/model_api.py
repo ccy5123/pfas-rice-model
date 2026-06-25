@@ -809,6 +809,64 @@ def drivers_from_arrays(t, Cwo, Qtp=None, M=None, season=None, biomass="oryza"):
     return drv
 
 
+# Per-compartment FRESH-weight density [kg/L] (for the growth-table mass<->volume
+# bridge / per-volume reporting). The transport ODE itself is mass-based, so these
+# default to ~water for the watery organs; rice leaf/culm hold aerenchyma (air spaces)
+# so are < 1, and the dense grain is > 1. Editable in the app.
+DEFAULT_TISSUE_DENSITY = {"root": 1.0, "stem": 0.30, "leaf": 0.30, "grain": 1.20}
+
+
+def drivers_from_tables(growth=None, cwo=None, *, growth_units="g/hill", Cwo_const=1.0,
+                        n_t=241, season=None, Qtp=None, biomass="oryza",
+                        plants_per_hill=None, hills_per_m2=25.0):
+    """Build a `simulate(drivers=...)` dict from user-entered TABLES.
+
+    growth : dict with 'day' + any of root/stem/leaf/grain -- organ **fresh-weight**
+        mass in `growth_units` (g/hill, kg/hill, g/m2, kg/ha, t/ha, ... per
+        `measured_biomass.to_kg_per_hill`). None/empty -> M falls back to the selected
+        `biomass` driver (so a Cwᵒ table alone still runs).
+    cwo : dict with 'day' + 'Cwo' -- the **absolute** pore-water concentration [µg/L].
+        None/empty -> a flat `Cwo_const` series.
+
+    Rows are sorted by day and interpolated onto the model grid. Returns the same dict
+    shape as `drivers_from_arrays` (t, Cwo, Qtp, M[, leaf_loss]). The per-compartment
+    DENSITY is a display/consistency property handled by the caller (the transport ODE
+    is fresh-mass based, so it is not needed to integrate).
+    """
+    import measured_biomass as mb
+
+    def _sorted(table, keys):
+        day = np.asarray(table["day"], float)
+        order = np.argsort(day)
+        return day[order], {k: np.asarray(table[k], float)[order]
+                            for k in keys if table.get(k) is not None}
+
+    g_day = g_cols = None
+    if growth and growth.get("day") is not None and len(growth["day"]):
+        g_day, g_cols = _sorted(growth, mb.ORGANS)
+    c_day = c_vals = None
+    if cwo and cwo.get("day") is not None and len(cwo["day"]) and cwo.get("Cwo") is not None:
+        c_day, _c = _sorted(cwo, ("Cwo",))
+        c_vals = _c["Cwo"]
+
+    days = list(g_day) if g_day is not None else []
+    days += list(c_day) if c_day is not None else []
+    if not days:
+        raise ValueError("at least one of the growth / pore-water tables must have rows")
+    season = float(np.max(days)) if season is None else float(season)
+    t = np.linspace(0.0, season, int(n_t))
+
+    M = None
+    if g_cols:
+        organs_kg = {o: (mb.to_kg_per_hill(g_cols[o], growth_units, plants_per_hill=plants_per_hill,
+                                           hills_per_m2=hills_per_m2) if o in g_cols else None)
+                     for o in mb.ORGANS}
+        M = mb.biomass_matrix(t, g_day, organs_kg)
+    Cwo_arr = (np.interp(t, c_day, c_vals) if c_day is not None
+               else np.full_like(t, float(Cwo_const)))
+    return drivers_from_arrays(t, Cwo_arr, Qtp=Qtp, M=M, season=season, biomass=biomass)
+
+
 _DRIVER_COLS = ("t", "Cwo", "Qtp", "M_root", "M_stem", "M_leaf", "M_grain")
 
 

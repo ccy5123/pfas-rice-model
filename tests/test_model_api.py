@@ -179,6 +179,35 @@ def test_export_csv_helpers():
     assert len(ts.strip().splitlines()) == len(res["t"]) + 1     # header + one row per time
 
 
+def test_drivers_from_tables_growth_and_cwo():
+    """User tables -> drivers: growth (fresh g/hill) sets M, Cwᵒ table is absolute and
+    interpolated, and either table alone falls back to the built-in value."""
+    growth = dict(day=[0, 40, 80, 120], root=[1, 80, 150, 160], stem=[1, 120, 300, 320],
+                  leaf=[2, 140, 400, 300], grain=[0, 0, 200, 900])      # fresh g/hill
+    cwo = dict(day=[0, 60, 120], Cwo=[2.0, 1.5, 0.5])
+    drv = api.drivers_from_tables(growth, cwo, growth_units="g/hill")
+    assert set(("t", "Cwo", "Qtp", "M")) <= set(drv)
+    assert drv["t"][0] == 0.0 and drv["t"][-1] == pytest.approx(120.0)
+    assert drv["Cwo"][0] == pytest.approx(2.0) and drv["Cwo"][-1] == pytest.approx(0.5)
+    # g/hill -> kg/hill: final grain 900 g -> 0.9 kg
+    assert drv["M"][-1, 3] == pytest.approx(0.9, rel=1e-6)
+    # unsorted rows are handled (sorted by day internally)
+    shuf = dict(day=[120, 0, 60], Cwo=[0.5, 2.0, 1.5])
+    d2 = api.drivers_from_tables(growth, shuf, growth_units="g/hill")
+    assert d2["Cwo"][0] == pytest.approx(2.0) and d2["Cwo"][-1] == pytest.approx(0.5)
+    # Cwᵒ table only -> M falls back to the biomass driver (4 organ columns, leaf_loss attached)
+    only_cwo = api.drivers_from_tables(None, cwo, Cwo_const=1.0, biomass="oryza")
+    assert only_cwo["M"].shape[1] == 4 and "leaf_loss" in only_cwo
+    # growth table only -> flat Cwo_const series
+    only_g = api.drivers_from_tables(growth, None, growth_units="g/hill", Cwo_const=3.0)
+    assert np.allclose(only_g["Cwo"], 3.0)
+    # the drivers run through the ODE
+    r = api.simulate("PFOA", drivers=drv)
+    assert r["success"] and np.isfinite(r["straw_baf"])
+    with pytest.raises(ValueError):
+        api.drivers_from_tables(None, None)
+
+
 def test_estimate_exposure_bayesian_recovers_and_brackets():
     """Synthetic recovery: generate tissue conc at a known Cwᵒ, then the Bayesian
     inverse should recover that level (within a few %) with the truth inside the

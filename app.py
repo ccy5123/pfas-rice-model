@@ -286,6 +286,89 @@ def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, si
                   "uptake behaviour — an illustration, not a measurement of your specific field."))
 
 
+_ORGANS4 = ("root", "stem", "leaf", "grain")
+
+
+def _default_growth_df(season, biomass, n_rows=7):
+    """Editable growth table seeded from the selected biomass driver (FRESH g/hill)."""
+    import pandas as pd
+    t = np.linspace(0.0, float(season), n_rows)
+    b = api._biomass_fn(biomass)(t, float(season))
+    return pd.DataFrame({"day": np.round(t, 0),
+                         **{o: np.round(np.asarray(b[o], float) * 1e3, 2) for o in _ORGANS4}})
+
+
+def _default_cwo_df(season, level, n_rows=4):
+    import pandas as pd
+    return pd.DataFrame({"day": np.round(np.linspace(0.0, float(season), n_rows), 0),
+                         "Cwo": np.full(n_rows, float(level))})
+
+
+def _clean_table(df, value_cols):
+    """data_editor DataFrame -> {col: array}, dropping incomplete rows, day required."""
+    import pandas as pd
+    if df is None or "day" not in getattr(df, "columns", []):
+        raise ValueError("the table needs a 'day' column")
+    d = df.dropna(subset=["day"])
+    out = {"day": d["day"].to_numpy(float)}
+    mask = np.isfinite(out["day"])
+    for c in value_cols:
+        if c in d.columns:
+            out[c] = pd.to_numeric(d[c], errors="coerce").to_numpy(float)
+            mask &= np.isfinite(out[c])
+    out = {k: v[mask] for k, v in out.items()}
+    if len(out["day"]) < 2:
+        raise ValueError("need at least 2 complete rows (day + values)")
+    return out
+
+
+def _render_custom_tables(*, biomass, Cwo_const, season0, key):
+    """Editable growth + pore-water tables (+ per-compartment density). Returns
+    (drivers_dict_or_None, density_dict). Used by both Simple and Expert modes."""
+    import pandas as pd
+    st.markdown(
+        "Enter your **own season** as two tables — **growth = organ FRESH weight** and "
+        "**pore water = the absolute PFAS dissolved in the soil water (µg/L)** over time. "
+        "Edit cells, add/remove rows, or paste from a spreadsheet; the days are interpolated "
+        "onto the model timeline. Leave either table at its default to use the built-in value.")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.caption("🌱 Growth — organ FRESH weight per hill")
+        up_g = st.file_uploader("…or upload a growth CSV (day,root,stem,leaf,grain)",
+                                type=["csv"], key=f"{key}_gup")
+        g_seed = pd.read_csv(up_g) if up_g is not None else _default_growth_df(season0, biomass)
+        gdf = st.data_editor(g_seed, num_rows="dynamic", width="stretch",
+                             key=f"{key}_growth_{up_g.name if up_g else 'def'}")
+        gunit = st.selectbox("Growth weight units", ["g/hill", "kg/hill", "g/m2", "kg/ha", "t/ha"],
+                             index=0, key=f"{key}_gunit")
+    with c2:
+        st.caption("💧 Pore-water contamination Cwᵒ(t) — absolute µg/L")
+        up_c = st.file_uploader("…or upload a Cwᵒ CSV (day,Cwo)", type=["csv"], key=f"{key}_cup")
+        c_seed = pd.read_csv(up_c) if up_c is not None else _default_cwo_df(season0, Cwo_const)
+        cdf = st.data_editor(c_seed, num_rows="dynamic", width="stretch",
+                             key=f"{key}_cwo_{up_c.name if up_c else 'def'}")
+    st.markdown("**Compartment density** ρ [kg/L, fresh] — links the entered weight to tissue "
+                "volume (rice leaf/culm hold air spaces ⇒ < 1; grain is denser ⇒ > 1).")
+    dc = st.columns(4)
+    density = {o: dc[i].number_input(f"ρ {o}", 0.05, 2.0,
+                                     float(api.DEFAULT_TISSUE_DENSITY[o]), 0.05, key=f"{key}_rho_{o}")
+               for i, o in enumerate(_ORGANS4)}
+    try:
+        growth = _clean_table(gdf, list(_ORGANS4))
+        cwo = _clean_table(cdf, ["Cwo"])
+        drivers = api.drivers_from_tables(growth, cwo, growth_units=gunit,
+                                          Cwo_const=Cwo_const, biomass=biomass)
+    except Exception as e:                                   # noqa: BLE001
+        st.warning(f"Using the default scenario — couldn't read the tables: {e}")
+        return None, density
+    Mf = np.asarray(drivers["M"], float)[-1]
+    vols = {o: Mf[i] / max(density[o], 1e-6) for i, o in enumerate(_ORGANS4)}
+    st.caption("Implied end-of-season organ **volume** (fresh mass ÷ density): "
+               + " · ".join(f"{o} {vols[o] * 1e3:.0f} mL" for o in _ORGANS4)
+               + ". The transport model integrates on fresh mass; density sets the mass↔volume scale.")
+    return drivers, density
+
+
 # ---------------------------------------------------------------- sidebar
 with st.sidebar:
     expert = st.toggle(
@@ -311,6 +394,7 @@ with st.sidebar:
     biomass = "oryza"
     compare = []
     preset_label = None
+    use_custom_tables = False
 
     if not expert:
         # ----------------------------- SIMPLE sidebar -----------------------------
@@ -328,16 +412,23 @@ with st.sidebar:
                                 help="How much PFAS is dissolved in the soil water. "
                                      "Higher = more goes into the plant.")
         Cwo_const = _PRESETS[preset_label]
+        use_custom_tables = st.checkbox(
+            "📋 Use my own data tables", value=False,
+            help="Enter your own growth curve and a time-varying soil-water contamination "
+                 "level as editable tables (appears in the main panel).")
         st.caption("Want the full research interface? Turn on **Expert / advanced** above.")
     else:
         # ----------------------------- EXPERT sidebar -----------------------------
         st.header("1 · Data source")
         mode = st.radio(
             "How is the soil exposure supplied?",
-            ["Model (parametric)", "HYDRUS / CSV drivers", "Run HYDRUS-1D (live)",
-             "Soil inventory → pore water", "Biomonitoring (measured tissue)"],
-            help="Five ways to feed the plant model. 'Run HYDRUS-1D (live)' executes the "
-                 "real engine (if built); biomonitoring needs no soil model.")
+            ["Model (parametric)", "Custom tables (Cwᵒ + growth)", "HYDRUS / CSV drivers",
+             "Run HYDRUS-1D (live)", "Soil inventory → pore water",
+             "Biomonitoring (measured tissue)"],
+            help="Ways to feed the plant model. 'Custom tables' lets you type/paste your own "
+                 "growth curve + time-varying Cwᵒ; 'Run HYDRUS-1D (live)' executes the real "
+                 "engine (if built); biomonitoring needs no soil model.")
+        use_custom_tables = (mode == "Custom tables (Cwᵒ + growth)")
 
         st.header("2 · PFAS compound")
         spec = st.radio("Specify by", ["Curated congener", "SMILES (structure)"], horizontal=True,
@@ -414,6 +505,11 @@ with st.sidebar:
             measured = st.checkbox("Measured forcings (Q_TP, M_s)", value=True,
                                    help="On: transpiration from Kumari/NayHtoon, biomass M(t) from the "
                                         "sidebar biomass driver (ORYZA2000 mechanistic, or growth_rice).")
+
+        elif mode == "Custom tables (Cwᵒ + growth)":
+            st.caption("Enter the **growth** and **pore-water Cwᵒ(t)** tables in the main panel → "
+                       "(editable grids + per-compartment density). Q_TP defaults to the measured "
+                       "transpiration; omit either table to fall back to the built-in value.")
 
         elif mode == "HYDRUS / CSV drivers":
             st.caption("CSV columns: `t, Cwo, Qtp, M_root, M_stem, M_leaf, M_grain` "
@@ -554,6 +650,15 @@ else:
                "(docs/literature_db). Charts are interactive — hover, zoom, toggle. Outputs illustrative.")
 
 
+# ---------------------------------------------------------------- custom tables (both modes)
+custom_density = None
+if use_custom_tables:
+    with st.expander("📋 Your data tables — growth curve + pore-water contamination", expanded=True):
+        _drv, custom_density = _render_custom_tables(biomass=biomass, Cwo_const=Cwo_const,
+                                                     season0=season, key="ctbl")
+        if _drv is not None:
+            drivers = _drv
+
 # ---------------------------------------------------------------- run the model
 sim_kw = dict(E_m_mV=E_m, f_xy_source=fxy_source, biomass=biomass)
 desc = None
@@ -608,8 +713,10 @@ if not expert:
     m2.metric("In the straw (stems + leaves)", f"{straw_c:.2g} µg/kg")
     m3.metric("In the grain (edible rice)", f"{grain_c:.2g} µg/kg")
 
+    _lead = ("From the **growth + contamination tables** you entered, " if use_custom_tables
+             else f"At the **{preset_label.split('—')[0].strip().lower()}** contamination level you picked, ")
     st.info(
-        f"At the **{preset_label.split('—')[0].strip().lower()}** contamination level you picked, "
+        _lead +
         f"this model estimates roughly **{grain_c:.2g} µg/kg** of {congener} in the rice **grain** "
         f"(about **{grain_baf:.1f}×** the level dissolved in the soil water). "
         f"Most of the chemical stays in the **{where_most}**.")
