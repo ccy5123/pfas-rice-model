@@ -590,10 +590,11 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (168 collected; all pass with the full stack — RDKit + the built
-  HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web. On a bare clone the
-  structure/SMILES tests skip without RDKit and the HYDRUS-engine tests in `test_soil_hydrus.py` /
-  the `cwo_profile='hydrus'` guards skip when the engine is unbuilt).
+- Tests: `pip install pytest && pytest` (168 collected, all pass with the full stack — RDKit + the built
+  HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
+  module additionally skips unless `sci-adk` is installed, which CI's `rigor.yml` provides). On a bare
+  clone the structure/SMILES tests skip without RDKit and the HYDRUS-engine tests in `test_soil_hydrus.py`
+  / the `cwo_profile='hydrus'` guards skip when the engine is unbuilt.
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
   (gfortran + `makefile` / `make.bat`). NOTE: the top-level `makefile` lists the `.FOR` files
