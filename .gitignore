@@ -16,3 +16,7 @@ external/hydrus_source/source/*.mod
 # the 2.7 MB HYDRUS-1D manual PDF (kept out of the repo; not needed to build)
 external/hydrus_source/HYDRUS1D-4.08.pdf
 
+# Claude Code scheduled-task runtime state (session-only; not source)
+.claude/scheduled_tasks.lock
+.claude/scheduled_tasks.json
+
