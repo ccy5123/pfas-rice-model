@@ -356,3 +356,22 @@ def test_cwo_profile_hydrus_shape():
     assert np.mean(r["Cwo"]) == pytest.approx(1.0, rel=0.05)
     assert r["Cwo"].std() > 0.1                               # genuinely time-varying
     assert np.all(np.isfinite(r["conc"]["grain"]))
+
+
+@pytest.mark.skipif(not api.hydrus_available(),
+                    reason="HYDRUS-1D engine/phydrus not available")
+def test_cwo_profile_flooded_matches_hydrus_direction():
+    """The engine-free analytic 'flooded' shape reproduces the HYDRUS-1D DIRECTION:
+    a short chain leaches (declines) under BOTH, a long chain stays buffered (~flat)
+    under BOTH. (Quantitative k_leach calibration: validation/cwo_profile_check.py.)"""
+    t = np.linspace(0.0, 120.0, 121)
+    for cong, declines in (("PFBA", True), ("PFDoDA", False)):
+        c = api._CONG[cong]
+        hyd = api.cwo_profile_series(t, 1.0, "hydrus", n_C=c["n_C"], group=c["group"],
+                                     congener=cong)
+        flo = api.cwo_profile_series(t, 1.0, "flooded", n_C=c["n_C"], group=c["group"],
+                                     congener=cong)
+        if declines:                                         # short chain: both fall
+            assert hyd[-1] < 0.5 * hyd[0] and flo[-1] < 0.7 * flo[0]
+        else:                                                # long chain: both ~flat
+            assert hyd[-1] > 0.9 * hyd[0] and flo[-1] > 0.95 * flo[0]
