@@ -57,6 +57,9 @@ def _simulate(congener, **kw):
         t, Cwo, Qtp, Mflat, ncol = drv
         kw["drivers"] = dict(t=np.array(t), Cwo=np.array(Cwo), Qtp=np.array(Qtp),
                              M=np.array(Mflat).reshape(-1, ncol))
+    kl = kw.pop("cwo_k_leach", None)                       # scalar (hashable) -> cwo_kw dict
+    if kl is not None and kw.get("cwo_profile", "constant") != "constant":
+        kw["cwo_kw"] = {"k_leach": float(kl)}
     return api.simulate(congener, **kw)
 
 
@@ -89,6 +92,9 @@ def _simulate_smiles(smiles, **kw):
         t, Cwo, Qtp, Mflat, ncol = drv
         kw["drivers"] = dict(t=np.array(t), Cwo=np.array(Cwo), Qtp=np.array(Qtp),
                              M=np.array(Mflat).reshape(-1, ncol))
+    kl = kw.pop("cwo_k_leach", None)                       # scalar (hashable) -> cwo_kw dict
+    if kl is not None and kw.get("cwo_profile", "constant") != "constant":
+        kw["cwo_kw"] = {"k_leach": float(kl)}
     return api.simulate_from_smiles(smiles, **kw)
 
 
@@ -206,10 +212,23 @@ with st.sidebar:
     soil_obj = None
     profile = None
     measured_bio = None
+    cwo_profile = "constant"
+    cwo_kleach = 0.02
 
     if mode == "Model (parametric)":
         Cwo_const = st.number_input("Pore-water Cwᵒ  [µg/L]", min_value=0.0, value=1.0, step=0.1,
                                     help="Free anion conc. driving root uptake. 1.0 → tissue conc equals BAF.")
+        cwo_label = st.radio("Pore-water Cwᵒ(t) shape",
+                             ["constant (flat)", "flooded (dilution + leaching)"],
+                             help="constant → Cwᵒ held flat (tissue conc == BAF). flooded → analytic "
+                                  "Freundlich paddy shape: short chains LEACH (decline), long chains stay "
+                                  "buffered (~flat); the season-MEAN is held at Cwᵒ, so only the time shape "
+                                  "changes. No HYDRUS engine needed (for the real engine use the 'Run "
+                                  "HYDRUS-1D (live)' data source).")
+        cwo_profile = "constant" if cwo_label.startswith("constant") else "flooded"
+        if cwo_profile == "flooded":
+            cwo_kleach = st.slider("Leaching rate k_leach  [1/day]", 0.0, 0.1, 0.02, 0.005,
+                                   help="Higher → the short-chain pore water declines faster through flooding.")
         measured = st.checkbox("Measured forcings (Q_TP, M_s)", value=True,
                                help="On: transpiration from Kumari/NayHtoon, biomass M(t) from the "
                                     "sidebar biomass driver (ORYZA2000 mechanistic, or growth_rice).")
@@ -343,7 +362,8 @@ if smiles:                                              # compound specified by 
             res = _simulate_smiles(smiles, drivers_tuple=_drivers_tuple(drivers), **sim_kw)
         else:
             res = _simulate_smiles(smiles, Cwo=Cwo_const, season=season,
-                                   measured_forcing=measured, **sim_kw)
+                                   measured_forcing=measured, cwo_profile=cwo_profile,
+                                   cwo_k_leach=cwo_kleach, **sim_kw)
     except Exception as e:                              # noqa: BLE001
         st.error(f"Could not build a compound from that SMILES — check the structure.\n\n`{e}`")
         st.stop()
@@ -353,7 +373,8 @@ if smiles:                                              # compound specified by 
 elif drivers is not None:
     res = _simulate(congener, drivers_tuple=_drivers_tuple(drivers), **sim_kw)
 else:
-    res = _simulate(congener, Cwo=Cwo_const, season=season, measured_forcing=measured, **sim_kw)
+    res = _simulate(congener, Cwo=Cwo_const, season=season, measured_forcing=measured,
+                    cwo_profile=cwo_profile, cwo_k_leach=cwo_kleach, **sim_kw)
 obs = api.observed_baf(congener)
 p = res["params"]
 
