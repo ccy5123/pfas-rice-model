@@ -154,6 +154,31 @@ def test_biomonitoring_baf_and_csv():
     assert {"root", "straw", "grain"} <= set(bio["conc"]) and bio["Cwo"] == pytest.approx(1.0)
 
 
+def test_export_csv_helpers():
+    """The UI download helpers produce well-formed CSV strings (pure, head-less)."""
+    res = api.simulate("PFOA")
+    obs = api.observed_baf("PFOA")
+
+    summ = api.summary_csv(res, obs)
+    lines = summ.strip().splitlines()
+    assert lines[0] == "tissue,model_BAF_L_per_kg,final_conc_ug_per_kg,observed_BAF,measured_BAF"
+    assert [ln.split(",")[0] for ln in lines[1:]] == ["root", "straw", "grain"]
+    # each data row has exactly 5 fields and the model BAF parses back to the result
+    root_row = lines[1].split(",")
+    assert len(root_row) == 5
+    assert float(root_row[1]) == pytest.approx(res["baf_final"]["root"], rel=1e-6)
+    # measured column is blank without a biomonitoring dict; populated with one
+    assert root_row[4] == ""
+    summ_m = api.summary_csv(res, obs, {"root": 0.47}).splitlines()
+    assert summ_m[1].split(",")[4] == "0.47"
+
+    ts = api.timeseries_csv(res)
+    head = ts.splitlines()[0].split(",")
+    assert head[:3] == ["t", "Cwo", "Qtp"]
+    assert "conc_grain" in head and "M_root" in head
+    assert len(ts.strip().splitlines()) == len(res["t"]) + 1     # header + one row per time
+
+
 def test_lipid_loading_off_matches_baseline():
     """lipid_loading=False must recover the free-only model exactly (g=0)."""
     for nm in ("PFBA", "PFOA", "PFDA"):

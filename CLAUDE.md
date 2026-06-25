@@ -560,6 +560,24 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     is ~0.7 s/sample (a chain is minutes); the default run stays Laplace-only. `emcee` is in the new
     `requirements-validation.txt` (optional); `tests/test_bayesian_inverse.py::test_emcee_posterior_recovers_well_posed`
     skips when emcee is absent.
+- **General-audience app rework — Simple/Expert split (this session; `docs/HANDOFF_app_general_audience.md` DONE)**:
+  `app.py` is re-pitched for a non-expert audience (policy/undergrad/public) via **progressive disclosure** — a sidebar
+  **`st.toggle("Expert / advanced controls")`** (default OFF = Simple). **Simple mode** exposes only a friendly congener
+  dropdown (`_FRIENDLY_CONG` names) + a low/medium/high **contamination preset** (→ Cwᵒ), a plain-language headline (3
+  metric cards + one summary sentence, NO BAF/Cwᵒ/f_xy/eᴺ symbols), and 4 jargon-free tabs (🗺️ Where it goes / 📈 Build-up
+  over time / 📊 How much builds up / ℹ️ About & glossary). **Expert mode** restores 100% of the prior UI (5 data-source
+  modes, SMILES, E_m/f_xy/biomass, 8 tabs). Added across the page: an **intro card**, a prominent **research/educational
+  disclaimer** banner (top + footer, every screen), and a **footer** (version/repo/docs/cite). Plain-language **glossary**
+  (`_glossary_md`) in the About tab + Simple. **Biomonitoring fix**: the Tissue-dynamics / Soil & drivers tabs now carry a
+  "model reference, not your measured data" warning. **CSV/PNG export** (download buttons): pure helpers
+  `model_api.summary_csv()` / `timeseries_csv()` (BAF table + driver/tissue series) + a graceful kaleido PNG of the plant
+  map (`_png_bytes`; degrades to a caption when kaleido absent). Two plain-language plot builders
+  `plots.fig_buildup_plain` / `fig_where_plain` (friendly tissue names, no symbols). Consistency: the soil-inventory
+  `k_leach` slider now uses the per-congener `api.default_k_leach` default (0–0.15), matching the parametric flooded mode.
+  **UI-only — `parameters.json`, the model math, `reproduce_demo` (RMSE 0.029), and `simulate()` are UNCHANGED**;
+  `model_api` gained only pure string export helpers. Tests: `test_model_api.py::test_export_csv_helpers`,
+  `test_plots.py::test_plain_language_figures_build`; full suite **174 passed, 2 skipped**. Verified with headless
+  Streamlit + Playwright screenshots of both the Simple landing and the Expert UI.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
