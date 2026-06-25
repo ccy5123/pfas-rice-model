@@ -218,6 +218,7 @@ with st.sidebar:
     if mode == "Model (parametric)":
         Cwo_const = st.number_input("Pore-water Cwᵒ  [µg/L]", min_value=0.0, value=1.0, step=0.1,
                                     help="Free anion conc. driving root uptake. 1.0 → tissue conc equals BAF.")
+        season = float(st.slider("Season length  [days]", 90, 160, 120, 5))
         cwo_label = st.radio("Pore-water Cwᵒ(t) shape",
                              ["constant (flat)", "flooded (dilution + leaching)"],
                              help="constant → Cwᵒ held flat (tissue conc == BAF). flooded → analytic "
@@ -229,10 +230,16 @@ with st.sidebar:
         if cwo_profile == "flooded":
             cwo_kleach = st.slider("Leaching rate k_leach  [1/day]", 0.0, 0.1, 0.02, 0.005,
                                    help="Higher → the short-chain pore water declines faster through flooding.")
+            try:                                            # immediate shape feedback
+                st.plotly_chart(plots.fig_cwo_profile(congener, level=Cwo_const,
+                                                      profile="flooded", season=season,
+                                                      k_leach=cwo_kleach),
+                                width="stretch", theme=None)
+            except Exception:                               # noqa: BLE001 (preview is non-essential)
+                pass
         measured = st.checkbox("Measured forcings (Q_TP, M_s)", value=True,
                                help="On: transpiration from Kumari/NayHtoon, biomass M(t) from the "
                                     "sidebar biomass driver (ORYZA2000 mechanistic, or growth_rice).")
-        season = float(st.slider("Season length  [days]", 90, 160, 120, 5))
 
     elif mode == "HYDRUS / CSV drivers":
         st.caption("CSV columns: `t, Cwo, Qtp, M_root, M_stem, M_leaf, M_grain` "

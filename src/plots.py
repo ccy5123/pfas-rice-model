@@ -508,6 +508,34 @@ def fig_drivers(res):
     return fig
 
 
+def fig_cwo_profile(congener, level=1.0, profile="flooded", season=120.0,
+                    n_t=121, k_leach=0.02, height=230):
+    """Compact preview of the pore-water exposure shape C_w^o(t) for the chosen
+    `cwo_profile`, overlaid on the flat constant baseline (both season-mean ==
+    `level`, so only the temporal shape differs). Short chains leach to a decline,
+    long chains stay buffered. `congener` may be None (falls back to a generic PFCA
+    descriptor) for SMILES-specified compounds."""
+    c = api._CONG.get(congener) if congener else None
+    n_C = c["n_C"] if c else 8
+    group = c["group"] if c else "PFCA"
+    t = np.linspace(0.0, float(season), int(n_t))
+    flat = api.cwo_profile_series(t, level, "constant")
+    shaped = api.cwo_profile_series(t, level, profile, n_C=n_C, group=group,
+                                    congener=congener, k_leach=k_leach)
+    fig = go.Figure()
+    fig.add_scatter(x=t, y=flat, name="constant", line=dict(color="#bbb", width=1.5, dash="dash"),
+                    hovertemplate="constant: %{y:.3g}<extra></extra>")
+    fig.add_scatter(x=t, y=shaped, name=profile, line=dict(color="#1f77b4", width=2.5),
+                    fill="tonexty", fillcolor="rgba(31,119,180,0.10)",
+                    hovertemplate=f"{profile}: %{{y:.3g}}<extra></extra>")
+    fig.update_layout(title=f"Cwᵒ(t) preview — {profile} (mean={level:g})",
+                      hovermode="x unified", height=height, showlegend=True,
+                      legend=dict(orientation="h", y=1.12, x=0), **_LAYOUT)
+    fig.update_yaxes(title_text="Cwᵒ [µg/L]", rangemode="tozero")
+    fig.update_xaxes(title_text="days after transplant")
+    return fig
+
+
 def fig_isotherm(soil, Cwo_now=None):
     """Freundlich sorption isotherm S(C_w)=K_F·C_wⁿ for the paddy soil sub-model.
 
