@@ -578,6 +578,23 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `model_api` gained only pure string export helpers. Tests: `test_model_api.py::test_export_csv_helpers`,
   `test_plots.py::test_plain_language_figures_build`; full suite **174 passed, 2 skipped**. Verified with headless
   Streamlit + Playwright screenshots of both the Simple landing and the Expert UI.
+- **Bayesian inverse exposure estimate wired into the app (this session)**: a user-facing **Bayesian
+  parameter estimation** added to BOTH the Simple ("🔎 Work backwards") and Expert ("🔎 Inverse (Bayesian)")
+  tabs. `model_api.estimate_exposure_bayesian(congener, measured_conc, sigma_log10=…)` infers the pore-water
+  contamination level **Cwᵒ from measured tissue concentrations** (root/straw/grain, any subset) WITH a
+  credible interval — the inverse of the forward question. Because root uptake is **saturable** (GHK +
+  carrier), tissue conc is a NONLINEAR monotone function of Cwᵒ, so this is a real inverse (not a division):
+  it finds the MAP exposure by a **quadratic-fit Laplace** in log10(Cwᵒ) (a coarse then local parabola → MAP +
+  curvature = posterior width; ~8 ODE solves, deterministic) and returns median + 68/95% CI + a plotting grid
+  + the model's tissue fit at the MAP. Same Laplace idea as `validation/bayesian_inverse_demo.py`, which
+  established this is the **well-posed** direction (the EXPOSURE level is identifiable with transport fixed;
+  Q_TP·f_xy and Cwᵒ-vs-conductance are ridges — surfaced as the Expert tab's caveat). Plot builder
+  `plots.fig_exposure_posterior` (log-x posterior + 95% band + median). App: a cached `_estimate_exposure`
+  + a shared `_render_inverse_estimator` (gated behind an Estimate button so the ~8 solves don't run on every
+  rerun). Synthetic recovery verified (median recovers the known Cwᵒ within a few %, truth inside the 95% CI).
+  Tests: `test_model_api.py::test_estimate_exposure_bayesian_recovers_and_brackets`,
+  `test_plots.py::test_fig_exposure_posterior_builds`. UI/inverse only — `parameters.json` and the model math
+  are UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`

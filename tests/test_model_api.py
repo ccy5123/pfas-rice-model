@@ -179,6 +179,33 @@ def test_export_csv_helpers():
     assert len(ts.strip().splitlines()) == len(res["t"]) + 1     # header + one row per time
 
 
+def test_estimate_exposure_bayesian_recovers_and_brackets():
+    """Synthetic recovery: generate tissue conc at a known Cwᵒ, then the Bayesian
+    inverse should recover that level (within a few %) with the truth inside the
+    95% credible interval, and reproduce the inputs at the MAP."""
+    truth = 2.5
+    r = api.simulate("PFOA", Cwo=truth)
+    meas = {"root": r["conc"]["root"][-1], "straw": r["straw"][-1],
+            "grain": r["conc"]["grain"][-1]}
+    est = api.estimate_exposure_bayesian("PFOA", meas)
+    assert est["median"] == pytest.approx(truth, rel=0.10)        # MAP recovers the level
+    lo, hi = est["ci95"]
+    assert lo < truth < hi                                        # truth inside 95% CI
+    assert lo < est["median"] < hi
+    assert set(est["used_tissues"]) == {"root", "straw", "grain"}
+    # the model reproduces the entered measurements at the best estimate
+    for t_ in est["used_tissues"]:
+        assert est["model_fit"][t_] == pytest.approx(meas[t_], rel=0.20)
+    # grid is monotone-increasing Cwᵒ with a normalised density peaking at 1
+    g = np.asarray(est["grid"]["Cwo"])
+    assert np.all(np.diff(g) > 0) and max(est["grid"]["density"]) == pytest.approx(1.0)
+    # a single tissue still yields an estimate; empty input is rejected
+    one = api.estimate_exposure_bayesian("PFOA", {"grain": meas["grain"]})
+    assert one["median"] > 0 and one["used_tissues"] == ["grain"]
+    with pytest.raises(ValueError):
+        api.estimate_exposure_bayesian("PFOA", {"root": 0.0})
+
+
 def test_lipid_loading_off_matches_baseline():
     """lipid_loading=False must recover the free-only model exactly (g=0)."""
     for nm in ("PFBA", "PFOA", "PFDA"):

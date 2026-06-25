@@ -145,6 +145,35 @@ def fig_where_plain(res):
     return fig
 
 
+def fig_exposure_posterior(est):
+    """Posterior over the estimated soil-water contamination level Cwᵒ [µg/L].
+
+    From `model_api.estimate_exposure_bayesian`: a shaded probability curve vs Cwᵒ
+    (log x), with the 95% credible interval darker and the median (most likely
+    value) marked. Plain labels for a general audience."""
+    Cwo = np.asarray(est["grid"]["Cwo"], float)
+    dens = np.asarray(est["grid"]["density"], float)
+    med = est["median"]
+    lo, hi = est["ci95"]
+    fig = go.Figure()
+    fig.add_scatter(x=Cwo, y=dens, mode="lines", line=dict(color="#1f77b4", width=2.5),
+                    fill="tozeroy", fillcolor="rgba(31,119,180,0.12)", name="probability",
+                    hovertemplate="%{x:.3g} µg/L<extra></extra>")
+    if np.isfinite(lo) and np.isfinite(hi):
+        m = (Cwo >= lo) & (Cwo <= hi)
+        fig.add_scatter(x=Cwo[m], y=dens[m], mode="lines", line=dict(width=0),
+                        fill="tozeroy", fillcolor="rgba(31,119,180,0.30)",
+                        name="95% range", hoverinfo="skip")
+    fig.add_vline(x=med, line=dict(color="#d62728", width=2, dash="dash"),
+                  annotation_text=f"most likely {med:.3g} µg/L", annotation_position="top")
+    fig.update_layout(title="Estimated contamination level in the soil water (with uncertainty)",
+                      xaxis_title="PFAS dissolved in the soil water [µg/L]",
+                      yaxis_title="relative probability", xaxis_type="log",
+                      showlegend=False, **_LAYOUT)
+    fig.update_yaxes(rangemode="tozero", showticklabels=False)
+    return fig
+
+
 def fig_tang_tf(val, val_refit=None):
     """Tang 2026 per-organ TF (DRY weight): measured vs model, optional refit-f_xy bar.
 

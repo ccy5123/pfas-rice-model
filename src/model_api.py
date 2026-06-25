@@ -1009,6 +1009,104 @@ def baf_from_measurement(conc_by_tissue, Cwo):
             if v is not None and np.isfinite(v)}
 
 
+# ---------------------------------------------------------------------------
+# Bayesian inverse -- estimate the exposure (pore-water Cwᵒ) from measured tissue
+# concentrations, WITH uncertainty (Laplace posterior in log space).
+# ---------------------------------------------------------------------------
+def estimate_exposure_bayesian(congener, measured_conc, *, sigma_log10=0.15,
+                               season=120.0, E_m_mV=-120.0, f_xy_source="recommended",
+                               biomass="oryza", measured_forcing=True, n_plot=121):
+    """Bayesian estimate of the soil-water contamination level Cwᵒ [µg/L] that best
+    explains measured rice tissue concentrations.
+
+    The inverse of the forward question (contamination -> tissue): given measured
+    `measured_conc` (a dict with any of root/straw/grain in µg/kg), infer the
+    pore-water Cwᵒ. Because root uptake is saturable (GHK + carrier), tissue conc is
+    a NONLINEAR, monotone function of Cwᵒ, so this is a real inverse, not a division.
+
+    Method (matching validation/bayesian_inverse_demo.py): a Laplace posterior in
+    log10(Cwᵒ) -- find the MAP exposure (1-D bounded MAP fit) under a lognormal
+    measurement model (σ = `sigma_log10` in log10 units, a flat prior in log Cwᵒ),
+    then a Gaussian posterior whose width comes from the curvature of the
+    log-likelihood at the MAP. Only the EXPOSURE level is estimated; transport is
+    held at the model defaults (this is the well-posed direction -- separating
+    water-uptake vs root->shoot loading needs an independent measurement).
+
+    Returns a dict: median (Cwᵒ), ci68/ci95 (low, high), sd_log10, used_tissues,
+    measured, model_fit (predicted tissue conc at the median), grid (Cwᵒ, density
+    for plotting), sigma_log10, n_eval, note. Raises ValueError if no usable tissue.
+    """
+    used = {k: float(v) for k, v in (measured_conc or {}).items()
+            if k in ("root", "straw", "grain") and v is not None
+            and np.isfinite(v) and float(v) > 0}
+    if not used:
+        raise ValueError("Provide at least one positive measured tissue "
+                         "concentration (root, straw and/or grain) in µg/kg.")
+
+    n_eval = [0]
+
+    def conc_at(Cwo):
+        n_eval[0] += 1
+        r = simulate(congener, Cwo=float(Cwo), season=season, E_m_mV=E_m_mV,
+                     f_xy_source=f_xy_source, biomass=biomass,
+                     measured_forcing=measured_forcing)
+        return {"root": float(r["conc"]["root"][-1]), "straw": float(r["straw"][-1]),
+                "grain": float(r["conc"]["grain"][-1])}
+
+    def neg_loglike(L):
+        c = conc_at(10.0 ** L)
+        return 0.5 * sum(((np.log10(used[k]) - np.log10(max(c[k], 1e-12))) / sigma_log10) ** 2
+                         for k in used)
+
+    # rough first guess: tissue conc ~ BAF·Cwᵒ near Cwᵒ=1 -> geomean(meas/BAF)
+    ref = conc_at(1.0)
+    L0 = float(np.mean([np.log10(used[k]) - np.log10(max(ref[k], 1e-12)) for k in used]))
+
+    # Quadratic-fit Laplace: the log-likelihood is smooth & unimodal in L=log10(Cwᵒ),
+    # so a parabola through 3 points gives BOTH the MAP (vertex) and the curvature
+    # (=> posterior width). The likelihood is mildly asymmetric (saturable uptake), so
+    # iterate -- recentre on the vertex and shrink the span until it settles and the
+    # span is local enough for an accurate curvature. Same Laplace idea as
+    # bayesian_inverse_demo.py at a fraction of the ODE solves.
+    # Two passes: a coarse parabola to locate, then a LOCAL one (small span) centred on
+    # it for an accurate MAP + curvature. Deterministic (6 ODE solves), which bounds the
+    # interactive cost.
+    Lc, curv = L0, 0.0
+    for d in (0.35, 0.18):
+        xs = np.array([Lc - d, Lc, Lc + d])
+        ys = np.array([neg_loglike(x) for x in xs])
+        A, B, _C = np.polyfit(xs, ys, 2)
+        if A <= 1e-9:                              # not convex -> data uninformative
+            curv = 0.0
+            Lc = float(xs[int(np.argmin(ys))])
+            break
+        curv = 2.0 * A
+        Lc = float(np.clip(-B / (2.0 * A), Lc - d, Lc + d))      # no extrapolation
+    Lmap = float(Lc)
+    sdL = float(np.sqrt(1.0 / curv)) if curv > 1e-6 else float("inf")
+
+    median = float(10.0 ** Lmap)
+    if np.isfinite(sdL):
+        ci68 = (float(10.0 ** (Lmap - sdL)), float(10.0 ** (Lmap + sdL)))
+        ci95 = (float(10.0 ** (Lmap - 1.96 * sdL)), float(10.0 ** (Lmap + 1.96 * sdL)))
+        span = max(sdL, 1e-3)
+        Lg = np.linspace(Lmap - 4 * span, Lmap + 4 * span, int(n_plot))
+        dens = np.exp(-0.5 * ((Lg - Lmap) / span) ** 2)
+    else:                                          # data did not constrain Cwᵒ
+        ci68 = ci95 = (float("nan"), float("nan"))
+        Lg = np.linspace(Lmap - 2.0, Lmap + 2.0, int(n_plot))
+        dens = np.ones_like(Lg)
+
+    return dict(
+        congener=congener, median=median, ci68=ci68, ci95=ci95, sd_log10=sdL,
+        used_tissues=list(used), measured=used, model_fit=conc_at(median),
+        grid=dict(Cwo=(10.0 ** Lg).tolist(), density=(dens / dens.max()).tolist()),
+        sigma_log10=float(sigma_log10), n_eval=int(n_eval[0]),
+        note=("Estimates the soil-water PFAS level that best explains your "
+              "measurements, assuming the model's plant-uptake behaviour. Transport "
+              "is held fixed (the exposure level is the well-posed quantity)."))
+
+
 def load_biomonitoring_csv(path_or_buffer):
     """Load measured tissue concentrations: columns `tissue,conc` (+ optional `Cwo`).
 

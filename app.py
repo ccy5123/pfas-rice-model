@@ -121,6 +121,15 @@ def _simulate_twopool_seq(congener):
         return None
 
 
+@st.cache_data(show_spinner="Estimating the contamination level…")
+def _estimate_exposure(congener, root, straw, grain, sigma, E_m_mV, f_xy_source, biomass):
+    """Cache the Bayesian inverse estimate (a handful of ODE solves, a few seconds)."""
+    meas = {k: v for k, v in (("root", root), ("straw", straw), ("grain", grain))
+            if v is not None and v > 0}
+    return api.estimate_exposure_bayesian(congener, meas, sigma_log10=sigma, E_m_mV=E_m_mV,
+                                          f_xy_source=f_xy_source, biomass=biomass)
+
+
 @st.cache_data(show_spinner="Parameterising structure (RDKit)…")
 def _simulate_smiles(smiles, **kw):
     """Cache a SMILES (structure) run: RDKit → descriptors → Compound → full ODE."""
@@ -205,7 +214,76 @@ def _glossary_md():
         "| **Roots / Straw / Grain** | The plant parts. *Straw* = the stems + leaves together. *Grain* = the edible brown rice. |\n"
         "| **Concentration** *(µg/kg)* | Micrograms of PFAS per kilogram of plant tissue. |\n"
         "| **Congener** | One specific PFAS chemical (e.g. PFOA, PFOS). Longer carbon chains generally stick to the plant more. |\n"
-        "| **Uptake / translocation** | How the chemical gets into the roots and then moves up into the shoot and grain. |\n")
+        "| **Uptake / translocation** | How the chemical gets into the roots and then moves up into the shoot and grain. |\n"
+        "| **Bayesian estimate** | Working backwards from a measurement to the most likely cause, **with an uncertainty range** instead of a single number. |\n")
+
+
+# uncertainty presets for the inverse estimator (measurement + model noise, log10 units)
+_UNC = {"Typical (±~40%)": 0.15, "High precision (±~20%)": 0.10, "Rough (±~2×)": 0.30}
+
+
+def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, simple=True):
+    """Shared 'work backwards' panel: Bayesian estimate of the soil-water contamination
+    level Cwᵒ from measured tissue concentrations, with a credible interval. Used by
+    both the Simple and Expert tabs. `key` namespaces the widgets/session state."""
+    if congener not in api.CONGENERS:
+        st.info("This works with the curated chemicals — pick one of them in the sidebar "
+                "(it needs the calibrated model, which a custom SMILES structure doesn't have).")
+        return
+    st.markdown(
+        "Already have a **lab result** for rice grown on contaminated land? Enter what was "
+        "measured in the plant and this estimates **how contaminated the soil water likely "
+        "was** — working the model backwards, with an **uncertainty range** (a Bayesian "
+        "estimate), not just a single number.")
+    c1, c2, c3 = st.columns(3)
+    root = c1.number_input("Measured in roots [µg/kg]", 0.0, 1e6, 0.0, 0.1, key=f"{key}_root")
+    straw = c2.number_input("Measured in straw (stems+leaves) [µg/kg]", 0.0, 1e6, 0.0, 0.1,
+                            key=f"{key}_straw")
+    grain = c3.number_input("Measured in grain [µg/kg]", 0.0, 1e6, 0.0, 0.1, key=f"{key}_grain")
+    unc_label = st.radio("How precise are the measurements?", list(_UNC), horizontal=True,
+                         key=f"{key}_unc",
+                         help="Sets the measurement+model uncertainty used in the estimate.")
+    sigma = _UNC[unc_label]
+    have = any(v > 0 for v in (root, straw, grain))
+    run = st.button("📐 Estimate the contamination level", key=f"{key}_btn", disabled=not have,
+                    type="primary")
+    sig = (congener, root, straw, grain, sigma, E_m_mV, f_xy_source, biomass)
+    if run:
+        st.session_state[f"{key}_sig"] = sig
+    if not have:
+        st.caption("Enter at least one measured tissue concentration above, then press the button.")
+        return
+    if st.session_state.get(f"{key}_sig") != sig:
+        st.caption("Press **Estimate** to run (or re-run after changing a value).")
+        return
+    try:
+        est = _estimate_exposure(congener, root, straw, grain, sigma, E_m_mV, f_xy_source, biomass)
+    except Exception as e:                                   # noqa: BLE001
+        st.error(f"Could not run the estimate: {e}")
+        return
+    med = est["median"]
+    lo, hi = est["ci95"]
+    mc1, mc2 = st.columns([1, 2])
+    mc1.metric("Most likely soil-water level", f"{med:.3g} µg/L",
+               f"95% range {lo:.2g}–{hi:.2g}" if np.isfinite(lo) else "range unconstrained",
+               delta_color="off")
+    mc2.markdown(
+        f"Given your measurements of **{congener}**, the model estimates the PFAS dissolved "
+        f"in the soil water was most likely **{med:.3g} µg/L**"
+        + (f", and we're 95% confident it was between **{lo:.2g}** and **{hi:.2g} µg/L**."
+           if np.isfinite(lo) else " (the measurements didn't pin down a clear range).")
+        + " The spread of the curve below is the uncertainty.")
+    st.plotly_chart(plots.fig_exposure_posterior(est), width="stretch")
+    # how well the model reproduces the entered measurements at the best estimate
+    fit_rows = " · ".join(f"{t_}: you {est['measured'][t_]:.3g} vs model {est['model_fit'][t_]:.3g}"
+                          for t_ in est["used_tissues"])
+    st.caption(f"At the best estimate the model reproduces your inputs — {fit_rows} (µg/kg). "
+               + ("This estimates only the **contamination level**; it assumes the model's "
+                  "plant-uptake is right and can't separately tell apart water uptake vs how "
+                  "the chemical moves inside the plant (that needs a sap/soil-water measurement)."
+                  if not simple else
+                  "It estimates the contamination level the rice 'saw', assuming the model's "
+                  "uptake behaviour — an illustration, not a measurement of your specific field."))
 
 
 # ---------------------------------------------------------------- sidebar
@@ -538,7 +616,7 @@ if not expert:
     st.caption("These are model estimates for illustration — not a food-safety or health judgement.")
 
     s_tabs = st.tabs(["🗺️ Where it goes", "📈 Build-up over time",
-                      "📊 How much builds up", "ℹ️ About & glossary"])
+                      "📊 How much builds up", "🔎 Work backwards", "ℹ️ About & glossary"])
 
     # ---- Simple tab 1: the plant + soil map --------------------------------
     with s_tabs[0]:
@@ -576,8 +654,13 @@ if not expert:
                            "published greenhouse rice study (Yamazaki et al. 2023). Close bars mean "
                            "the model lines up with real data for this chemical.")
 
-    # ---- Simple tab 4: about & glossary ------------------------------------
+    # ---- Simple tab 4: work backwards (Bayesian inverse estimate) -----------
     with s_tabs[3]:
+        _render_inverse_estimator(congener, E_m_mV=E_m, f_xy_source=fxy_source,
+                                  biomass=biomass, key="inv_simple", simple=True)
+
+    # ---- Simple tab 5: about & glossary ------------------------------------
+    with s_tabs[4]:
         st.markdown(
             "### What this tool does\n"
             "It uses a **mechanistic model** of how a rice plant pulls water and dissolved "
@@ -587,7 +670,9 @@ if not expert:
             "### How to read it\n"
             "- **🗺️ Where it goes** — a picture of the plant; hotter colour = more PFAS.\n"
             "- **📈 Build-up over time** — how the levels change from planting to harvest.\n"
-            "- **📊 How much builds up** — the final levels, and a check against real measurements.\n\n"
+            "- **📊 How much builds up** — the final levels, and a check against real measurements.\n"
+            "- **🔎 Work backwards** — already have a lab result? Estimate how contaminated the "
+            "soil water was (with an uncertainty range — a Bayesian estimate).\n\n"
             "### Plain-language glossary")
         st.markdown(_glossary_md())
         st.warning(_DISCLAIMER)
@@ -656,7 +741,7 @@ else:
 
     tabs = st.tabs(["🗺️ Plant & soil map", "📈 Tissue dynamics", "🟫 Soil & drivers",
                     "📊 BAF vs observed", "🔗 Chain-length trends", "⚖️ Compare congeners",
-                    "✅ Tang TF (OOS)", "ℹ️ About / coupling"])
+                    "✅ Tang TF (OOS)", "🔎 Inverse (Bayesian)", "ℹ️ About / coupling"])
 
     # ---- Tab 1: the plant + soil accumulation map ---------------------------
     with tabs[0]:
@@ -839,8 +924,21 @@ else:
                    "redistributed-shoot `simulate_nstem_leaf`; the f_xy refit is OVERRIDE-only (parameters.json "
                    "unchanged). Details: docs/VALIDATION_TANG2026_NSTEM_KR.md · docs/tang2026_grain_units_exploration.md.")
 
-    # ---- Tab 8: About / coupling --------------------------------------------
+    # ---- Tab 8: Inverse (Bayesian exposure estimate) ------------------------
     with tabs[7]:
+        st.markdown("**Bayesian inverse** — estimate the pore-water exposure Cwᵒ from measured "
+                    "tissue concentrations (Laplace posterior in log Cwᵒ; the well-posed "
+                    "direction of `validation/bayesian_inverse_demo.py`). Transport is held at "
+                    "the sidebar defaults.")
+        _render_inverse_estimator(congener, E_m_mV=E_m, f_xy_source=fxy_source,
+                                  biomass=biomass, key="inv_expert", simple=False)
+        st.caption("Identifiability: only the EXPOSURE level is estimated here. From tissue data "
+                   "alone Q_TP·f_xy is a product ridge and Cwᵒ vs root-uptake conductance is "
+                   "degenerate, so pinning transport absolutely needs an independent measurement "
+                   "(xylem sap / pore-water probe). See docs + validation/bayesian_inverse_demo.py.")
+
+    # ---- Tab 9: About / coupling --------------------------------------------
+    with tabs[8]:
         st.markdown(
             """
 ### Five ways to drive the plant model
