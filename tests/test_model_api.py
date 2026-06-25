@@ -96,6 +96,23 @@ def test_drivers_override_runs_and_sets_season():
     assert r["Cwo"][0] == pytest.approx(2.0)
 
 
+def test_drivers_from_arrays_respects_biomass_selection():
+    """drivers_from_arrays must honour the `biomass` driver (default ORYZA2000) when
+    it fills M, so the soil-inventory / CSV modes are not silently stuck on growth_rice.
+    The ORYZA leaf senesces (peaks mid-season then declines) and carries a leaf-death
+    rate; growth_rice's leaf is monotonic and carries none."""
+    t = np.linspace(0.0, 120.0, 121)
+    li = api.TISSUES.index("leaf")
+    do = api.drivers_from_arrays(t, np.ones_like(t), season=120.0, biomass="oryza")
+    dg = api.drivers_from_arrays(t, np.ones_like(t), season=120.0, biomass="growth_rice")
+    Mo, Mg = do["M"][:, li], dg["M"][:, li]
+    assert "leaf_loss" in do and Mo[-1] < 0.7 * Mo.max()    # ORYZA leaf senesces
+    assert "leaf_loss" not in dg and Mg[-1] >= 0.95 * Mg.max()  # growth_rice monotonic
+    assert not np.allclose(do["M"], dg["M"])                # the two drivers differ
+    # default (no biomass arg) is ORYZA, matching simulate's default
+    assert "leaf_loss" in api.drivers_from_arrays(t, np.ones_like(t), season=120.0)
+
+
 def test_pore_water_from_inventory_drained_and_flooded():
     t = np.linspace(0.0, 120.0, 121)
     Cwo_d, soil = api.pore_water_from_inventory(t, 5.0, K_F=2.0, n=0.85, theta_g=0.35)

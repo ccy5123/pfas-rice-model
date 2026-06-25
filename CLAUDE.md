@@ -532,6 +532,17 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     advection rates `f_xy` does not) and `Cwo` vs root-uptake conductance is even more degenerate (cond ~1e5, no clean product
     invariant — nonlinear GHK+carrier uptake). **Conclusion: pinning `Q_TP`/`Cwo` absolutely needs an independent measurement
     (xylem sap / pore-water probe)**, exactly as §8 notes. `tests/test_bayesian_inverse.py`. Default/`parameters.json` UNCHANGED.
+- **Driver-builder biomass bug fix (this session)**: when ORYZA2000 became the `simulate` default, the **driver helpers
+  were not updated** — `measured_forcing`, `drivers_from_arrays`, `load_driver_csv`, and `soil_hydrus.inputs_from_hydrus`
+  all **hardcoded `growth_rice`** for `M(t)` (their docstrings even claimed "ORYZA"). So the app's **Soil-inventory, CSV-
+  driver, and live-HYDRUS** modes (which build `drivers=` and omit `M`) silently ran on growth_rice regardless of the
+  sidebar biomass radio — visible as a non-senescing leaf in the Soil & drivers `M(t)` panel. FIX: those helpers now take a
+  `biomass="oryza"` arg and build `M` via `_biomass_fn` (and attach the ORYZA `leaf_death_rate` as `drivers["leaf_loss"]` so
+  the leaf-senescence correction still applies); `app.py` threads the selected `biomass` into every driver builder
+  (`drivers_from_arrays`/`load_driver_csv`/`hydrus_drivers` calls + the cached `_hydrus_drivers_cached`). Now all five
+  exposure modes honour the biomass radio (ORYZA2000 by default). The main `simulate`/`_default_drivers` path was already
+  correct; `reproduce_demo`/`calibration` use their own drivers and are UNCHANGED.
+  `tests/test_model_api.py::test_drivers_from_arrays_respects_biomass_selection`.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`

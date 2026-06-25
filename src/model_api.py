@@ -727,43 +727,56 @@ def schematic_values(res, metric="conc", t_index=-1):
 #   (2) HYDRUS / CSV   : drivers_from_arrays / load_driver_csv  (one-way coupling)
 #   (3) SOIL INVENTORY : pore_water_from_inventory (Freundlich) + measured Q/M
 # ---------------------------------------------------------------------------
-def measured_forcing(t, season=None):
-    """The measured transpiration Q_TP(t) [L/d/hill] and ORYZA organ biomass M(t)
-    [kg/hill, (n,4)] on grid `t`. Reused by the HYDRUS/soil modes when the user
-    supplies only a concentration series (Q_TP and M are crop physiology, not PFAS)."""
+def measured_forcing(t, season=None, biomass="oryza"):
+    """The measured transpiration Q_TP(t) [L/d/hill] and the selected biomass driver's
+    organ mass M(t) [kg/hill, (n,4)] on grid `t`. Reused by the HYDRUS/soil modes when
+    the user supplies only a concentration series (Q_TP and M are crop physiology, not
+    PFAS). `biomass` selects the organ-mass driver (ORYZA2000 by default, matching
+    `simulate`); pass "growth_rice" for the lightweight logistic reconstruction."""
     t = np.asarray(t, float)
     season = float(t[-1]) if season is None else float(season)
     Qtp = fr.Q_TP(t, season)
-    b = gr.organ_biomass(t, season)
+    b = _biomass_fn(biomass)(t, season)
     M = np.maximum(np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-4)
     return Qtp, M
 
 
-def drivers_from_arrays(t, Cwo, Qtp=None, M=None, season=None):
+def drivers_from_arrays(t, Cwo, Qtp=None, M=None, season=None, biomass="oryza"):
     """Assemble a `drivers` dict for `simulate(drivers=...)`.
 
     Only `Cwo(t)` is PFAS-specific (from HYDRUS / soil inversion / a probe). If
-    `Qtp`/`M` are omitted they default to the measured crop-physiology forcings on
-    the same grid, so a bare concentration series is enough to run the plant model.
+    `Qtp`/`M` are omitted they default to the measured crop-physiology forcings
+    (transpiration + the selected `biomass` driver's organ mass, ORYZA2000 by
+    default — matching `simulate`), so a bare concentration series is enough to run
+    the plant model. When M is built from the senescing ORYZA driver its leaf-death
+    rate is attached as `leaf_loss`, so the leaf senescence correction still applies.
     """
     t = np.asarray(t, float)
     Cwo = np.asarray(Cwo, float)
-    if Qtp is None or M is None:
-        Q_def, M_def = measured_forcing(t, season)
-        Qtp = Q_def if Qtp is None else np.asarray(Qtp, float)
-        M = M_def if M is None else np.asarray(M, float)
-    return dict(t=t, Cwo=Cwo, Qtp=np.asarray(Qtp, float), M=np.asarray(M, float))
+    season = float(t[-1]) if season is None else float(season)
+    leaf_loss = None
+    if Qtp is None:
+        Qtp = fr.Q_TP(t, season)
+    if M is None:
+        b = _biomass_fn(biomass)(t, season)
+        M = np.maximum(np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-4)
+        leaf_loss = b.get("leaf_death_rate")          # only the senescing ORYZA driver supplies it
+    drv = dict(t=t, Cwo=Cwo, Qtp=np.asarray(Qtp, float), M=np.asarray(M, float))
+    if leaf_loss is not None:
+        drv["leaf_loss"] = np.asarray(leaf_loss, float)
+    return drv
 
 
 _DRIVER_COLS = ("t", "Cwo", "Qtp", "M_root", "M_stem", "M_leaf", "M_grain")
 
 
-def load_driver_csv(path_or_buffer):
+def load_driver_csv(path_or_buffer, biomass="oryza"):
     """Load a HYDRUS/external driver table into a `drivers` dict.
 
     Required columns: t, Cwo, Qtp, M_root, M_stem, M_leaf, M_grain (see
     `docs/visualization_tool.md` for the HYDRUS-1D output mapping). Accepts a path
-    or any file-like object. Missing Qtp/M columns fall back to measured forcings.
+    or any file-like object. Missing Qtp/M columns fall back to the measured forcings
+    (the `biomass` driver's organ mass, ORYZA2000 by default).
     """
     data = np.genfromtxt(path_or_buffer, delimiter=",", names=True)
     cols = data.dtype.names or ()
@@ -775,7 +788,7 @@ def load_driver_csv(path_or_buffer):
     M = (np.column_stack([data["M_root"], data["M_stem"], data["M_leaf"], data["M_grain"]]).astype(float)
          if have_M else None)
     Qtp = np.atleast_1d(data["Qtp"]).astype(float) if "Qtp" in cols else None
-    return drivers_from_arrays(t, Cwo, Qtp=Qtp, M=M)
+    return drivers_from_arrays(t, Cwo, Qtp=Qtp, M=M, biomass=biomass)
 
 
 def pore_water_from_inventory(t, C_total, K_F=2.0, n=0.85, theta_g=0.35,
@@ -848,24 +861,27 @@ def build_hydrus_engine():
 
 
 def hydrus_drivers(congener, season=120.0, Cwo_ref=1.0, f_oc=0.02, n_t=241,
-                   qtp_from_hydrus=True, **run_kw):
+                   qtp_from_hydrus=True, biomass="oryza", **run_kw):
     """Run a real HYDRUS-1D paddy soil model for `congener` and return a `drivers`
     dict (+ the raw PaddyResult) for `simulate(drivers=…)`.
 
     HYDRUS supplies the congener-dependent pore-water `Cwᵒ(t)` (short chains leach
     under flooding, long chains stay buffered) and the actual root water uptake
-    `Q_TP(t)`; `M(t)` is ORYZA biomass. `Cwᵒ(t)` is normalised to season-mean
-    `Cwo_ref` so the average exposure matches a constant-Cwo run. Extra `run_kw`
-    (flood_until, percolation, …) pass through to `soil_hydrus.run_paddy_hydrus`."""
+    `Q_TP(t)`; `M(t)` is the selected `biomass` driver (ORYZA2000 by default).
+    `Cwᵒ(t)` is normalised to season-mean `Cwo_ref` so the average exposure matches a
+    constant-Cwo run. Extra `run_kw` (flood_until, percolation, …) pass through to
+    `soil_hydrus.run_paddy_hydrus`."""
     import soil_hydrus as sh
     if congener not in _CONG:
         raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
     c = _CONG[congener]
     pin, res = sh.inputs_from_hydrus(c["n_C"], c["group"], season=season,
                                      Cwo_ref=Cwo_ref, f_oc=f_oc, n_t=n_t,
-                                     qtp_from_hydrus=qtp_from_hydrus, **run_kw)
+                                     qtp_from_hydrus=qtp_from_hydrus, biomass=biomass, **run_kw)
     drivers = dict(t=np.asarray(pin.t, float), Cwo=np.asarray(pin.Cwo, float),
                    Qtp=np.asarray(pin.Qtp, float), M=np.asarray(pin.M, float))
+    if getattr(pin, "leaf_loss", None) is not None:
+        drivers["leaf_loss"] = np.asarray(pin.leaf_loss, float)
     return drivers, res
 
 

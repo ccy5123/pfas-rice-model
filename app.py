@@ -121,9 +121,9 @@ def _mol_svg(smiles, w=290, h=170):
 
 
 @st.cache_data(show_spinner="Running HYDRUS-1D…")
-def _hydrus_drivers_cached(congener, season, f_oc, flood_until, percolation):
+def _hydrus_drivers_cached(congener, season, f_oc, flood_until, percolation, biomass="oryza"):
     """Cache a real HYDRUS-1D paddy run (a few seconds) per parameter set."""
-    drv, _ = api.hydrus_drivers(congener, season=season, f_oc=f_oc,
+    drv, _ = api.hydrus_drivers(congener, season=season, f_oc=f_oc, biomass=biomass,
                                 flood_until=float(flood_until), percolation=float(percolation))
     return drv
 
@@ -256,10 +256,11 @@ with st.sidebar:
                 Q = df[cols["qtp"]].to_numpy(float) if "qtp" in cols else None
                 M = (df[[cols["m_root"], cols["m_stem"], cols["m_leaf"], cols["m_grain"]]].to_numpy(float)
                      if all(k in cols for k in ("m_root", "m_stem", "m_leaf", "m_grain")) else None)
-                drivers = api.drivers_from_arrays(t, Cwo, Qtp=Q, M=M)
+                drivers = api.drivers_from_arrays(t, Cwo, Qtp=Q, M=M, biomass=biomass)
                 st.success(f"Loaded {len(t)} rows from {up.name}.")
             elif use_ex:
-                drivers = api.load_driver_csv(os.path.join(_EX, "hydrus_drivers_example.csv"))
+                drivers = api.load_driver_csv(os.path.join(_EX, "hydrus_drivers_example.csv"),
+                                              biomass=biomass)
                 st.info("Using examples/hydrus_drivers_example.csv (synthetic HYDRUS-style run).")
         except Exception as e:                                  # noqa: BLE001
             st.error(f"Could not read drivers: {e}")
@@ -305,7 +306,8 @@ with st.sidebar:
                                     help="Clean-water through-flow that leaches the dissolved pool.")
             season = 120.0
             try:
-                drivers = _hydrus_drivers_cached(soil_cong, season, f_oc, flood_until, percolation)
+                drivers = _hydrus_drivers_cached(soil_cong, season, f_oc, flood_until, percolation,
+                                                 biomass=biomass)
                 st.success(f"HYDRUS-1D run complete — Cwᵒ(t) for {soil_cong} "
                            f"(Kd-retarded; mean-normalised).")
             except Exception as e:                                  # noqa: BLE001
@@ -325,7 +327,7 @@ with st.sidebar:
         k_leach = st.slider("Leaching rate k_leach  [1/day]", 0.0, 0.1, 0.02, 0.005) if flood else 0.0
         Cwo, soil_obj = api.pore_water_from_inventory(
             t, C_total, K_F=K_F, n=n_F, theta_g=theta_g, flooded=flooded, k_leach=k_leach)
-        drivers = api.drivers_from_arrays(t, Cwo, season=season)
+        drivers = api.drivers_from_arrays(t, Cwo, season=season, biomass=biomass)
 
     else:  # Biomonitoring
         st.caption("Enter MEASURED tissue concentrations + the pore-water/soil-solution Cwᵒ. "
