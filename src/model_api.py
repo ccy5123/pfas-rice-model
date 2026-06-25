@@ -222,7 +222,8 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
              f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
              lipid_loading=False, g_xy_override=None, g_ph_override=None,
              season=120.0, n_t=241, measured_forcing=True, biomass="oryza",
-             drivers=None, K_surf=0.0, record=None):
+             drivers=None, K_surf=0.0, record=None,
+             cwo_profile="constant", cwo_kw=None):
     """Run the 4-compartment ODE for one congener and scenario.
 
     Parameters
@@ -247,6 +248,14 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         measured_forcing and the scalar Cwo are ignored for the driver series.
     K_surf : root surface/plaque sorption [L/kg] added to the *measured* root BAF
         only (dead-end pool; leaves the ODE untouched). 0 for low-carbon soils.
+    cwo_profile : pore-water exposure SHAPE when `drivers` is not supplied --
+        'constant' (default; flat at Cwo, so conc == BAF), 'flooded' (analytic
+        Freundlich dilution+leaching; short chains leach, long chains buffered;
+        no HYDRUS engine needed) or 'hydrus' (the shape from a real HYDRUS-1D run;
+        needs the built engine). The shape is normalised to season-mean == Cwo, so
+        Cwo stays the AVERAGE exposure. `cwo_kw` passes extra options to
+        `cwo_profile_series` (flood_fraction, k_leach, C_total, ...). Ignored when
+        `drivers` are given (those carry their own Cwo).
 
     Returns a dict with t, per-compartment conc & BAF time series, finals, straw,
     the driver series actually used (Cwo, Qtp, M), B_k, and the effective params.
@@ -268,6 +277,10 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     else:
         t = np.linspace(0.0, season, n_t)
         Cwo_series, Qtp, M, leaf_loss = _default_drivers(t, season, Cwo, measured_forcing, biomass)
+        if cwo_profile != "constant":
+            Cwo_series = cwo_profile_series(
+                t, level=Cwo, profile=cwo_profile, n_C=c["n_C"], group=c["group"],
+                congener=congener, **(cwo_kw or {}))
     inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
 
     f_xy_def, L_Ph_def, kappa_d_def, g_xy_def, g_ph_def = _transport_defaults(c, f_xy_source, lipid_loading)
@@ -854,6 +867,69 @@ def hydrus_drivers(congener, season=120.0, Cwo_ref=1.0, f_oc=0.02, n_t=241,
     drivers = dict(t=np.asarray(pin.t, float), Cwo=np.asarray(pin.Cwo, float),
                    Qtp=np.asarray(pin.Qtp, float), M=np.asarray(pin.M, float))
     return drivers, res
+
+
+# ---------------------------------------------------------------------------
+# Time-varying pore-water exposure shape C_w^o(t) -- the `cwo_profile` switch
+# ---------------------------------------------------------------------------
+# By default `simulate(Cwo=...)` holds the pore water CONSTANT (so conc == BAF,
+# the BAF-reproduction convention). But a real paddy pore water is time-varying:
+# short chains LEACH under flooding while long chains stay buffered (the HYDRUS
+# coupling quantifies this -- constant-Cwo over-predicts short-chain grain/straw
+# ~2-4x). `cwo_profile` makes that time-shape a first-class, congener-resolved
+# option WITHOUT changing the default. All shapes are normalised to season-mean
+# == `level` (same convention as `inputs_from_hydrus`'s Cwo_ref) so `Cwo` keeps
+# its meaning as the AVERAGE exposure and only the temporal shape changes.
+_HEADGROUP = {"PFCA": "carboxylate", "PFSA": "sulfonate", "ether": "ether"}
+
+
+def cwo_profile_series(t, level=1.0, profile="constant", *, n_C=8, group="PFCA",
+                       congener=None, flood_fraction=1.0, k_leach=0.02, f_oc=0.02,
+                       C_total=5.0, theta_g_drained=0.35, theta_g_flooded=0.60,
+                       **hydrus_kw):
+    """Time-resolved pore-water C_w^o(t) on grid `t`, normalised to mean == `level`.
+
+    profile:
+      'constant' -> flat at `level` (the default; conc == BAF).
+      'flooded'  -> analytic Freundlich paddy shape (dilution + first-order
+                    leaching of the dissolved pool; `soil_paddy_redox_corrected`).
+                    The per-congener capacity K_F = Koc(n_C, head_group)*f_oc comes
+                    from the C3 Koc QSPR, so SHORT chains (low K_F -> large dissolved
+                    fraction) LEACH to a steep decline while LONG chains stay buffered
+                    (~flat). Needs NO HYDRUS engine -- pure Python, works everywhere.
+      'hydrus'   -> the Cwᵒ(t) shape from a real HYDRUS-1D run (needs the built
+                    engine; raises if absent). Only the Cwᵒ shape is taken (Qtp/M
+                    stay the caller's), so the three profiles are directly comparable.
+
+    `flood_fraction` of the season is flooded (remainder drained -> terminal
+    concentration). Defaults give continuous flooding (=1.0): a monotone leaching
+    decline for short chains, ~flat for long chains.
+    """
+    t = np.asarray(t, float)
+    if profile == "constant":
+        return np.full_like(t, float(level))
+    season = float(t[-1]) if t[-1] > 0 else 1.0
+
+    if profile == "hydrus":
+        if congener is None:
+            raise ValueError("cwo_profile='hydrus' needs the congener name")
+        hd, _ = hydrus_drivers(congener, season=season, Cwo_ref=float(level),
+                               f_oc=f_oc, n_t=len(t), **hydrus_kw)
+        return np.interp(t, hd["t"], hd["Cwo"])
+
+    if profile == "flooded":
+        import literature_params as lp
+        Koc = lp.koc(n_C, _HEADGROUP.get(group, "carboxylate"))
+        K_F = lp.koc_to_KF(Koc, f_oc, n=1.0)             # linear Kd (stable; n=1)
+        flooded = t < (flood_fraction * season)
+        Cwo, _ = pore_water_from_inventory(
+            t, C_total, K_F=K_F, n=1.0, theta_g=theta_g_drained,
+            theta_g_flooded=theta_g_flooded, flooded=flooded, k_leach=k_leach)
+        m = float(np.mean(Cwo))
+        return Cwo * (float(level) / m) if m > 0 else np.full_like(t, float(level))
+
+    raise ValueError(f"unknown cwo_profile {profile!r}; "
+                     "use 'constant', 'flooded', or 'hydrus'")
 
 
 # ---------------------------------------------------------------------------

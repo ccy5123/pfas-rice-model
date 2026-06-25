@@ -306,3 +306,72 @@ def test_simulate_twopool_seq_krel_drains_root_to_shoot():
     rel = api.simulate_twopool_seq("PFUnDA", k_rel=0.2)
     assert rel["baf_final"]["root"] < base["baf_final"]["root"]
     assert rel["seq_fraction"] < base["seq_fraction"]
+
+
+# ---------------------------------------------------------------------------
+# time-varying pore-water exposure shape (cwo_profile)
+# ---------------------------------------------------------------------------
+def test_cwo_profile_constant_is_default():
+    """The default (cwo_profile='constant') holds Cwo flat == the BAF-reproduction
+    convention; passing it explicitly must reproduce the default run exactly."""
+    a = api.simulate("PFOA", Cwo=1.0)
+    b = api.simulate("PFOA", Cwo=1.0, cwo_profile="constant")
+    assert np.allclose(a["Cwo"], 1.0)                         # flat
+    assert a["Cwo"].std() == 0.0
+    assert b["baf_final"]["grain"] == pytest.approx(a["baf_final"]["grain"], rel=1e-9)
+
+
+def test_cwo_profile_flooded_shape_no_engine():
+    """The analytic 'flooded' shape (Freundlich dilution+leaching) needs NO HYDRUS
+    engine and is congener-resolved: a SHORT chain (low K_F -> large dissolved
+    fraction) leaches to a steep decline, a LONG chain stays buffered (~flat). The
+    season-mean is preserved (== level), so Cwo stays the average exposure."""
+    short = api.simulate("PFBA", Cwo=2.0, cwo_profile="flooded")["Cwo"]
+    long = api.simulate("PFDoDA", Cwo=2.0, cwo_profile="flooded")["Cwo"]
+    # mean preserved == level for both
+    assert np.mean(short) == pytest.approx(2.0, rel=1e-6)
+    assert np.mean(long) == pytest.approx(2.0, rel=1e-6)
+    # short chain declines (leaches), long chain is essentially flat (buffered)
+    assert short[-1] < 0.5 * short[0]                         # steep decline
+    assert long[-1] > 0.95 * long[0]                          # buffered
+    assert short.std() > long.std()                          # short more time-variable
+
+
+def test_cwo_profile_flooded_leach_rate_steepens_decline():
+    """A larger leaching rate makes the short-chain pore water decline faster
+    (end/start ratio smaller); a knob exposed via cwo_kw."""
+    gentle = api.simulate("PFBA", Cwo=1.0, cwo_profile="flooded",
+                          cwo_kw=dict(k_leach=0.01))["Cwo"]
+    harsh = api.simulate("PFBA", Cwo=1.0, cwo_profile="flooded",
+                         cwo_kw=dict(k_leach=0.08))["Cwo"]
+    assert harsh[-1] / harsh[0] < gentle[-1] / gentle[0]
+
+
+@pytest.mark.skipif(not api.hydrus_available(),
+                    reason="HYDRUS-1D engine/phydrus not available")
+def test_cwo_profile_hydrus_shape():
+    """cwo_profile='hydrus' uses a real HYDRUS-1D run's Cwᵒ(t) shape (engine needed),
+    normalised to season-mean == level; short chains leach (time-variable)."""
+    r = api.simulate("PFBA", Cwo=1.0, cwo_profile="hydrus")
+    assert np.mean(r["Cwo"]) == pytest.approx(1.0, rel=0.05)
+    assert r["Cwo"].std() > 0.1                               # genuinely time-varying
+    assert np.all(np.isfinite(r["conc"]["grain"]))
+
+
+@pytest.mark.skipif(not api.hydrus_available(),
+                    reason="HYDRUS-1D engine/phydrus not available")
+def test_cwo_profile_flooded_matches_hydrus_direction():
+    """The engine-free analytic 'flooded' shape reproduces the HYDRUS-1D DIRECTION:
+    a short chain leaches (declines) under BOTH, a long chain stays buffered (~flat)
+    under BOTH. (Quantitative k_leach calibration: validation/cwo_profile_check.py.)"""
+    t = np.linspace(0.0, 120.0, 121)
+    for cong, declines in (("PFBA", True), ("PFDoDA", False)):
+        c = api._CONG[cong]
+        hyd = api.cwo_profile_series(t, 1.0, "hydrus", n_C=c["n_C"], group=c["group"],
+                                     congener=cong)
+        flo = api.cwo_profile_series(t, 1.0, "flooded", n_C=c["n_C"], group=c["group"],
+                                     congener=cong)
+        if declines:                                         # short chain: both fall
+            assert hyd[-1] < 0.5 * hyd[0] and flo[-1] < 0.7 * flo[0]
+        else:                                                # long chain: both ~flat
+            assert hyd[-1] > 0.9 * hyd[0] and flo[-1] > 0.95 * flo[0]

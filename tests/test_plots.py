@@ -114,3 +114,16 @@ def test_fig_burden_builds():
     fig = plots.fig_burden(api.simulate("PFOA", biomass="oryza"))
     assert len(fig.data) == 5                                    # 4 organs + whole plant
     assert "µg" in fig.layout.yaxis.title.text                  # PFAS mass (burden), not biomass
+
+
+def test_fig_cwo_profile_builds():
+    import numpy as np, plots
+    fig = plots.fig_cwo_profile("PFBA", level=1.0, profile="flooded")
+    assert [d.name for d in fig.data] == ["constant", "flooded"]
+    flat, shaped = np.array(fig.data[0].y), np.array(fig.data[1].y)
+    assert np.allclose(flat, 1.0)                                # constant baseline is flat
+    assert shaped[-1] < shaped[0]                                # short chain leaches (declines)
+    # long chain stays buffered (~flat); SMILES fallback (congener=None) still builds
+    long = np.array(plots.fig_cwo_profile("PFDoDA", profile="flooded").data[1].y)
+    assert long[-1] > 0.95 * long[0]
+    assert len(plots.fig_cwo_profile(None, profile="flooded").data) == 2

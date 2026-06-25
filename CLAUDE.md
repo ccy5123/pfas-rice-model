@@ -64,9 +64,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── DELIVERABLE_GAP_A_Kcw.md / DELIVERABLE_GAP_B_fxy.md / theory_anchor.tex / H8_handoff_S6_final.md / sources.csv
 │   ├── visualization_tool.md         # app.py guide: plant/soil map, 4 modes, HYDRUS I/O, biomonitoring
 │   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
-├── external/hydrus_source/           # git submodule → github.com/phydrus/source_code
+├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
+├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (155 collected → 151 pass, 4 HYDRUS-engine skip): plant, soil, hydrus, calibration, lit params, API (+two-pool opt-in), plots, structure(SMILES), oryza, measured-biomass
+└── tests/                            # pytest (168 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse
 
 ```
 
@@ -508,6 +509,29 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   bars and does NOT track the sidebar (the core bar does). The carrier two-pool stays API-only (saturated DOF-0
   closure, ~1 min/congener — too slow to render live). `tests/test_plots.py::test_fig_baf_extra_overlay`. Defaults /
   canonical core / `parameters.json` unchanged.
+- **Time-varying pore-water exposure `cwo_profile` + HYDRUS provisioning + Bayesian identifiability (this session)**:
+  the default `simulate(Cwo=…)` holds the pore water CONSTANT (conc==BAF, the BAF-reproduction convention), but a real
+  paddy `C_w^o(t)` is time-varying. **`simulate(cwo_profile=…)`** (default `"constant"`, UNCHANGED) makes the time-shape a
+  first-class, congener-resolved option: **`"flooded"`** = an analytic Freundlich dilution+leaching shape
+  (`pore_water_from_inventory` / `soil_paddy_redox_corrected`; per-congener `K_F = Koc·f_oc`, so short chains LEACH to a
+  steep decline and long chains stay BUFFERED — **no HYDRUS engine needed**), **`"hydrus"`** = the real-engine shape. All
+  shapes are season-mean-normalised to `Cwo` (the `inputs_from_hydrus` convention) so `Cwo` stays the AVERAGE exposure;
+  `cwo_kw` tunes `k_leach` etc. `model_api.cwo_profile_series` is the UI-agnostic builder. **Validated vs the engine**
+  (`validation/cwo_profile_check.py`): the analytic `"flooded"` reproduces the HYDRUS DIRECTION (PFBA decline ratio 0.10
+  vs HYDRUS 0.08, PFOA 0.64 vs 0.63, corr 0.91–0.95; PFOS/PFDoDA flat in both) with a single `k_leach` knob. **App**: the
+  parametric data source has a "Pore-water Cwᵒ(t) shape" toggle + live preview (`plots.fig_cwo_profile`). Tests:
+  `test_model_api.py` (constant==default, flooded shape/leach, hydrus-direction guard), `test_plots.py` (`fig_cwo_profile`).
+  - **HYDRUS now buildable offline**: the FORTRAN source was **vendored** under `external/hydrus_source/` (de-submoduled —
+    the upstream submodule is blocked behind restrictive network policies, binary not in git), and a **SessionStart hook**
+    (`.claude/hooks/session-start.sh` + `.claude/settings.json`) auto-installs the Python stack + builds the engine
+    (best-effort/non-blocking) on Claude Code on the web. `packages.txt` (gfortran/make) already covers Streamlit Cloud.
+  - **Bayesian inverse / identifiability** (`validation/bayesian_inverse_demo.py`): answers "can we infer `Q_TP(t)` &
+    `C_w^o(t)` from tissue `C(t)`+`M(t)`?" — YES for the EXPOSURE (`qtp_scale`, `cwo_level`) with transport fixed (Laplace
+    posterior from the Fisher Jacobian at truth, cond ~90, recovers), but `Q_TP·f_xy` is a **product ridge** (corr ~−1, cond
+    ~500: only the product is constrained — multi-compartment data only PARTIALLY break it, since `Q_TP` also sets intra-shoot
+    advection rates `f_xy` does not) and `Cwo` vs root-uptake conductance is even more degenerate (cond ~1e5, no clean product
+    invariant — nonlinear GHK+carrier uptake). **Conclusion: pinning `Q_TP`/`Cwo` absolutely needs an independent measurement
+    (xylem sap / pore-water probe)**, exactly as §8 notes. `tests/test_bayesian_inverse.py`. Default/`parameters.json` UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -515,9 +539,14 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `--rec` uses the monotone f_xy. Rebuild params: `python build_parameters.py`.
 - **Visualization tool**: `pip install -r requirements-app.txt && streamlit run app.py`
   (plant/soil accumulation colormap + HYDRUS/soil/biomonitoring modes; see `docs/visualization_tool.md`).
-- **Live HYDRUS-1D** (optional, for the "Run HYDRUS-1D (live)" mode): `git submodule update --init
-  external/hydrus_source`; `cp external/hydrus_source/makefile external/hydrus_source/source/ &&
+- **Live HYDRUS-1D** (optional, for the "Run HYDRUS-1D (live)" mode): the FORTRAN source is now
+  **VENDORED** under `external/hydrus_source/` (de-submoduled — the upstream `phydrus/source_code`
+  submodule is unreachable behind restrictive network policies, and the compiled binary is not in
+  git), so no submodule init is needed — just build + install phydrus:
+  `cp external/hydrus_source/makefile external/hydrus_source/source/ &&
   (cd external/hydrus_source/source && make)` (gfortran); `pip install phydrus`. Demo: `python src/soil_hydrus.py`.
+  On **Claude Code on the web** the **SessionStart hook** (`.claude/hooks/session-start.sh`) does all
+  of this automatically (installs the Python stack + builds the engine, best-effort/non-blocking).
 - Plant demo: `python src/pfas_rice_plant_module_4pool_surf.py` (N, B_k, BAFs; saves `pfas_rice_demo.png`).
 - Multi-height stem: `python validation/nstem_gradient_check.py` (stem-gradient direction vs Yamazaki).
 - Mechanistic ORYZA biomass: `python src/oryza_growth.py` (IR72 potential sanity);
@@ -534,22 +563,38 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `model_api.simulate_twopool_seq("PFUnDA")` → the standard `simulate()` dict + root mobile/seq split.
 - Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
   `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
+- **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
+  Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered; engine-free),
+  `"hydrus"` the real-engine shape, `"constant"` the flat default (conc==BAF). Both shapes are
+  season-mean-normalised to `Cwo`. Validate vs the engine: `python validation/cwo_profile_check.py`
+  (analytic vs HYDRUS direction + per-congener `k_leach` calibration; saves `figures/cwo_profile_check.png`).
+  In the app: the "Model (parametric)" data source has a "Pore-water Cwᵒ(t) shape" toggle + live preview
+  (`plots.fig_cwo_profile`).
+- **Bayesian inverse / identifiability**: `python validation/bayesian_inverse_demo.py` — infers the
+  EXPOSURE (`qtp_scale`, `cwo_level`) from tissue `C(t)`+`M(t)`, and a Laplace posterior from the
+  Fisher Jacobian at truth shows the ridges: `(qtp_scale, cwo_level)` is identifiable with transport
+  fixed (cond ~90), but `Q_TP·f_xy` is a product ridge (corr ~−1, cond ~500) and `Cwo` vs root-uptake
+  conductance is even more degenerate (cond ~1e5, no clean product invariant — nonlinear uptake). So
+  pinning `Q_TP`/`Cwo` absolutely needs an independent measurement (xylem sap / pore-water probe).
 - Soil → plant (analytic): `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
-- **Soil → plant (REAL HYDRUS-1D)**: build the engine once, then run the coupling:
+- **Soil → plant (REAL HYDRUS-1D)**: the source is vendored, so build the engine once, then run:
   ```
-  git submodule update --init external/hydrus_source
   cp external/hydrus_source/makefile external/hydrus_source/source/
   (cd external/hydrus_source/source && make)          # needs gfortran
   pip install phydrus
   python src/soil_hydrus.py                            # per-congener pore-water summary
   python validation/hydrus_coupled_run.py             # full soil→plant + figure/CSV
   ```
+  (On Claude Code on the web the SessionStart hook builds this automatically.)
 - Calibration: `python src/calibration.py`; Literature params: `python src/literature_params.py`.
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (155 collected → 151 passing, 4 skip; structure/SMILES tests skip without RDKit; HYDRUS engine tests in `test_soil_hydrus.py`
-  additionally run when the engine is built, else auto-skip).
+- Tests: `pip install pytest && pytest` (168 collected, all pass with the full stack — RDKit + the built
+  HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
+  module additionally skips unless `sci-adk` is installed, which CI's `rigor.yml` provides). On a bare
+  clone the structure/SMILES tests skip without RDKit and the HYDRUS-engine tests in `test_soil_hydrus.py`
+  / the `cwo_profile='hydrus'` guards skip when the engine is unbuilt.
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
   (gfortran + `makefile` / `make.bat`). NOTE: the top-level `makefile` lists the `.FOR` files
@@ -558,6 +603,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ## 8. Conventions
 - Units: time **day**; aqueous conc **µg/L**; tissue conc **µg/kg**; mass **kg**;
   flow **L/day**; `B_k` in **L/kg fw** (`C_k = B_k · C_w,k`).
+- **Exposure `C_w^o(t)`**: the default scenario holds it CONSTANT (`Cwo`, so conc==BAF). `Q_TP(t)` is
+  ALWAYS time-varying (FAO-56 `forcing_rice`). For a time-varying exposure use `simulate(cwo_profile=
+  "flooded"|"hydrus")` (mean-normalised to `Cwo`) or supply a `drivers=` series. Architecturally both
+  `Cwo` and `Qtp` are time functions (`PlantInputs` interpolants); only the scenario default fills `Cwo` flat.
 - **Binding = basis A (fresh weight)**: `B_k = θ_fw + (1−θ_fw)·(f_prot·K_prot + f_PL·K_PL + f_cw·K_cw)`.
   `θ_fw` = fresh-weight water fraction; `f_*` = **dry-weight** mass fractions; `K_*` in L/kg pool-dw.
   The `(1−θ_fw)` factor is a **dry→fresh conversion** (mandatory; the legacy naive `θ+Σf·K` over-states
@@ -619,6 +668,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - DPU module source is **not public** (author request only). The ionizable extension
   (Brunetti 2022) is **not in the HYDRUS distribution** → reimplement from the papers.
 - `phydrus/source_code` is HYDRUS-1D **4.08** (older than official 4.17), **LGPL-3.0**, and
-  is the **base soil engine only** (no DPU/PFAS/ionizable modules).
+  is the **base soil engine only** (no DPU/PFAS/ionizable modules). It is now **VENDORED** under
+  `external/hydrus_source/` (de-submoduled: the upstream submodule clone is blocked behind restrictive
+  network policies, e.g. Claude Code on the web, and the compiled binary is a build artifact, not in
+  git). LGPL-3.0 `LICENSE` retained; the 2.7 MB manual PDF and build artifacts (`hydrus`, `*.o/*.mod`)
+  are gitignored. Build it with `make` (gfortran); the SessionStart hook does this on the web.
 - Key references: Brunetti 2019 *WRR* `10.1029/2019WR025432`; 2021 *ES&T*
   `10.1021/acs.est.0c07420`; 2022 *J. Hazard. Mater.* `10.1016/j.jhazmat.2021.127008`.

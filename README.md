@@ -42,12 +42,13 @@ See `docs/structure_input.md` (binding/speciation come from structure; `f_xy` or
 
 ### Real soil side — HYDRUS-1D (Method A, now wired)
 
-The soil half of Method A runs the genuine HYDRUS-1D engine (compiled from the
-`external/hydrus_source` submodule, driven via `phydrus`) to produce a real
-per-congener pore-water trajectory `C_w^o(t)` that drives the plant ODE:
+The soil half of Method A runs the genuine HYDRUS-1D engine (built from the
+**vendored** `external/hydrus_source` FORTRAN, driven via `phydrus`) to produce a real
+per-congener pore-water trajectory `C_w^o(t)` that drives the plant ODE. The source is
+vendored (de-submoduled, since the upstream submodule is unreachable behind restrictive
+network policies), so no submodule init is needed — just build + install `phydrus`:
 
 ```bash
-git submodule update --init external/hydrus_source
 cp external/hydrus_source/makefile external/hydrus_source/source/
 (cd external/hydrus_source/source && make)     # needs gfortran
 pip install phydrus
@@ -58,7 +59,18 @@ python validation/hydrus_coupled_run.py         # full soil→plant run + figure
 Weakly-sorbed short chains (Kd≈0.01–0.15 from `Koc·f_oc`) leach to near-zero during
 flooding, so the constant-`Cwo` placeholder **over-predicts grain/straw BAF ~2–4×**
 (PFBA grain 2.07→0.43); strongly-sorbed long chains (Kd≳7) stay buffered. The HYDRUS
-tests auto-skip where the executable/`phydrus` is unavailable.
+tests auto-skip where the executable/`phydrus` is unavailable. On Claude Code on the
+web the **SessionStart hook** (`.claude/hooks/session-start.sh`) builds the engine and
+installs deps automatically.
+
+**Time-varying exposure without the engine.** `simulate(cwo_profile="flooded")` gives an
+analytic Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered;
+season-mean-normalised to `Cwo`) that reproduces the HYDRUS direction with one `k_leach`
+knob (`python validation/cwo_profile_check.py`). The Bayesian inverse demo
+(`python validation/bayesian_inverse_demo.py`) shows what tissue `C(t)` can and cannot
+identify: the exposure (`Q_TP`-scale, `Cwo`-level) recovers with transport fixed, but
+`Q_TP·f_xy` is a product ridge — pinning `Q_TP`/`Cwo` absolutely needs an independent
+measurement (xylem sap / a pore-water probe).
 
 `reproduce_demo.py` loads `params/parameters.json` + `src/` and runs the 4-compartment ODE
 for all 12 congeners, printing predicted vs observed root/straw/grain BAF.
