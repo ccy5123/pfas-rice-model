@@ -116,6 +116,24 @@ def test_fig_burden_builds():
     assert "µg" in fig.layout.yaxis.title.text                  # PFAS mass (burden), not biomass
 
 
+def test_plain_language_figures_build():
+    """Simple-mode plain-language builders use friendly tissue names + jargon-free
+    titles (no 'BAF'/'Cwᵒ'/'f_xy' symbols leaking into the general-audience view)."""
+    import model_api as api, plots
+    res = api.simulate("PFOA")
+    bld = plots.fig_buildup_plain(res)
+    whr = plots.fig_where_plain(res)
+    for f in (bld, whr):
+        assert isinstance(f, go.Figure) and len(f.data) >= 1 and f.layout.title.text
+        for sym in ("BAF", "Cwᵒ", "f_xy", "eᴺ", "µg/kg"):     # no expert jargon in titles
+            assert sym not in f.layout.title.text
+    # build-up uses friendly tissue names, not the raw symbols
+    names = {tr.name for tr in bld.data}
+    assert {"Roots", "Stems", "Leaves", "Grain"} <= names
+    # the "where it ends up" bar has the three plant parts (friendly labels)
+    assert list(whr.data[0].x) == ["Roots", "Straw", "Grain"]
+
+
 def test_fig_cwo_profile_builds():
     import numpy as np, plots
     fig = plots.fig_cwo_profile("PFBA", level=1.0, profile="flooded")

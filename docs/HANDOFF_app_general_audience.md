@@ -1,8 +1,14 @@
 # HANDOFF — App interface rework for a GENERAL audience
 
-> Next-session work order. Read this first, then execute. The model/science is done;
-> this is **UI/UX only** (`app.py`, `src/plots.py`, captions). No `parameters.json`,
-> no `src/model_api.py` math changes unless a label needs a passthrough.
+> **STATUS: DONE** (this session). Implemented the Simple/Expert split, intro card +
+> disclaimer banner + footer, plain-language relabels + glossary, the Biomonitoring-mode
+> tab fix, CSV/PNG export, and the `k_leach` slider unification. `parameters.json` and the
+> model math are UNCHANGED; `src/model_api.py` gained only pure export helpers
+> (`summary_csv`, `timeseries_csv`) and `src/plots.py` two plain-language builders
+> (`fig_buildup_plain`, `fig_where_plain`). Full suite: 174 passed, 2 skipped.
+>
+> Original work order below (kept for provenance). The model/science is done;
+> this was **UI/UX only** (`app.py`, `src/plots.py`, captions).
 
 ## Decision (from the user, this session)
 - **Target audience = GENERAL / broad**: policy makers, undergraduates, the public —

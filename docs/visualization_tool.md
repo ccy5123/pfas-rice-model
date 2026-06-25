@@ -11,6 +11,20 @@ pip install -r requirements.txt -r requirements-app.txt
 streamlit run app.py
 ```
 
+## Two audiences: Simple (default) vs Expert
+
+The app opens in a **Simple mode** for a general audience (policy makers, students, the
+public): a plain-language intro, a friendly chemical dropdown + a low/medium/high
+**contamination preset**, three plain metric cards + a one-sentence summary, and four
+jargon-free tabs (🗺️ *Where it goes* · 📈 *Build-up over time* · 📊 *How much builds up* ·
+ℹ️ *About & glossary*) — no `BAF`/`Cwᵒ`/`f_xy`/`eᴺ` symbols in the default view. A
+prominent **research/educational disclaimer** sits on every screen (top + footer), and a
+**Download** expander exports the results (CSV; PNG when `kaleido` is present).
+
+Flip the sidebar **🔬 Expert / advanced controls** toggle to restore the full research
+interface documented below — the five exposure modes, SMILES structure input, every model
+parameter, and all eight tabs. Nothing is removed; it is layered behind the toggle.
+
 The compute is UI-agnostic and unit-tested head-less:
 
 | Layer | File | Role |

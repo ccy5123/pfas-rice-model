@@ -17,6 +17,8 @@ import forcing_rice as fr
 import growth_rice as gr
 
 _COL = {"root": "#8c564b", "stem": "#2ca02c", "leaf": "#1f77b4", "grain": "#ff7f0e"}
+# plain-language tissue names for the general-audience (Simple) views
+_PLAIN = {"root": "Roots", "stem": "Stems", "leaf": "Leaves", "grain": "Grain", "straw": "Straw"}
 _LAYOUT = dict(template="plotly_white", hoverlabel=dict(namelength=-1),
                margin=dict(l=60, r=20, t=50, b=50))
 # default "accumulation heat" colour scale for the plant map (more = hotter)
@@ -103,6 +105,43 @@ def fig_baf(res, obs, extra=None):
                     marker_color="#ff7f0e", hovertemplate="obs %{x}: %{y:.3g}<extra></extra>")
     fig.update_layout(barmode="group", title=f"{res['congener']} — predicted vs observed BAF",
                       yaxis_title="BAF [L/kg]", **_LAYOUT)
+    return fig
+
+
+def fig_buildup_plain(res):
+    """Plain-language tissue concentration over the season (Simple-mode view).
+
+    Same data as `fig_tissue` but with friendly tissue names (Roots/Stems/Leaves/
+    Grain) and jargon-free axis/title text, for a general audience. Reuses the
+    grain pre-formation mask so the empty pre-flowering period is not drawn."""
+    fig = go.Figure()
+    for j, tis in enumerate(api.TISSUES):
+        fig.add_scatter(x=res["t"], y=_formed(res, j, res["conc"][tis]), name=_PLAIN[tis],
+                        mode="lines", line=dict(width=2.8, color=_COL[tis]),
+                        hovertemplate=f"{_PLAIN[tis]}: %{{y:.3g}} µg/kg<extra></extra>")
+    fig.update_layout(title="How PFAS builds up in the plant over the season",
+                      xaxis_title="days after the rice is transplanted",
+                      yaxis_title="PFAS in the plant tissue [µg per kg]",
+                      hovermode="x unified", **_LAYOUT)
+    return fig
+
+
+def fig_where_plain(res):
+    """Plain-language bar of the final PFAS level in roots / straw / grain.
+
+    A jargon-free read of where the chemical ends up at harvest (the same numbers
+    as the BAF bars, but labelled as a concentration build-up, no 'BAF' symbol)."""
+    order = ["root", "straw", "grain"]
+    vals = {"root": res["conc"]["root"][-1], "straw": res["straw"][-1],
+            "grain": res["conc"]["grain"][-1]}
+    fig = go.Figure(go.Bar(
+        x=[_PLAIN[t_] for t_ in order], y=[vals[t_] for t_ in order],
+        marker_color=[_COL.get(t_, "#1f77b4") for t_ in order],
+        text=[f"{vals[t_]:.2g}" for t_ in order], textposition="outside",
+        hovertemplate="%{x}: %{y:.3g} µg/kg<extra></extra>"))
+    fig.update_layout(title=f"Where {res['congener']} ends up in the plant (at harvest)",
+                      yaxis_title="PFAS in the tissue [µg per kg]",
+                      xaxis_title="part of the rice plant", **_LAYOUT)
     return fig
 
 

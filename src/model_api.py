@@ -1040,6 +1040,50 @@ def load_biomonitoring_csv(path_or_buffer):
     return dict(conc=conc, Cwo=Cwo)
 
 
+# ---------------------------------------------------------------------------
+# Export helpers (UI-agnostic; pure string builders -- NOT model math)
+# ---------------------------------------------------------------------------
+def summary_csv(res, obs=None, measured=None):
+    """One-row-per-tissue BAF summary as a CSV string (for a download button).
+
+    Columns: tissue, model_BAF_L_per_kg, final_conc_ug_per_kg, observed_BAF,
+    measured_BAF. `obs` is the Yamazaki dict from `observed_baf`; `measured` an
+    optional biomonitoring BAF dict. Pure -- no Streamlit, head-less testable."""
+    obs = obs or {}
+    measured = measured or {}
+    baf = {"root": res["baf_final"]["root"], "straw": res["straw_baf"],
+           "grain": res["baf_final"]["grain"]}
+    conc = {"root": float(res["conc"]["root"][-1]), "straw": float(res["straw"][-1]),
+            "grain": float(res["conc"]["grain"][-1])}
+
+    def _f(x):
+        return "" if x is None or not np.isfinite(float(x)) else f"{float(x):.6g}"
+    lines = ["tissue,model_BAF_L_per_kg,final_conc_ug_per_kg,observed_BAF,measured_BAF"]
+    for tis in ("root", "straw", "grain"):
+        lines.append(",".join([tis, _f(baf[tis]), _f(conc[tis]),
+                               _f(obs.get(tis)), _f(measured.get(tis))]))
+    return "\n".join(lines) + "\n"
+
+
+def timeseries_csv(res):
+    """Full driver + tissue time series as a CSV string (for a download button).
+
+    Columns: t, Cwo, Qtp, conc_<tissue>, M_<tissue> for each of the 4 tissues.
+    Pure string builder (no pandas/Streamlit) so it is head-less testable."""
+    t = np.asarray(res["t"], float)
+    Cwo = np.asarray(res["Cwo"], float)
+    Qtp = np.asarray(res["Qtp"], float)
+    M = np.asarray(res["M"], float)
+    cols = ["t", "Cwo", "Qtp"] + [f"conc_{k}" for k in TISSUES] + [f"M_{k}" for k in TISSUES]
+    lines = [",".join(cols)]
+    for i in range(len(t)):
+        row = [f"{t[i]:.6g}", f"{Cwo[i]:.6g}", f"{Qtp[i]:.6g}"]
+        row += [f"{float(res['conc'][k][i]):.6g}" for k in TISSUES]
+        row += [f"{M[i, j]:.6g}" for j in range(len(TISSUES))]
+        lines.append(",".join(row))
+    return "\n".join(lines) + "\n"
+
+
 if __name__ == "__main__":
     r = simulate("PFOA")
     print("PFOA:", {k: round(v, 3) for k, v in r["baf_final"].items()},
