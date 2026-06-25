@@ -228,8 +228,11 @@ with st.sidebar:
                                   "HYDRUS-1D (live)' data source).")
         cwo_profile = "constant" if cwo_label.startswith("constant") else "flooded"
         if cwo_profile == "flooded":
-            cwo_kleach = st.slider("Leaching rate k_leach  [1/day]", 0.0, 0.1, 0.02, 0.005,
-                                   help="Higher → the short-chain pore water declines faster through flooding.")
+            cwo_kleach = st.slider("Leaching rate k_leach  [1/day]", 0.0, 0.15,
+                                   float(api.default_k_leach(congener)), 0.0025,
+                                   help="Default is CALIBRATED per congener to a HYDRUS-1D run "
+                                        "(short chains leach fast, long chains stay buffered ≈0). "
+                                        "Higher → faster short-chain pore-water decline.")
             try:                                            # immediate shape feedback
                 st.plotly_chart(plots.fig_cwo_profile(congener, level=Cwo_const,
                                                       profile="flooded", season=season,

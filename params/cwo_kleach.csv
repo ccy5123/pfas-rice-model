@@ -1,0 +1,18 @@
+# Per-congener flooded-profile k_leach, calibrated to a real HYDRUS-1D run
+# (validation/cwo_kleach_calibration.py). model_api.cwo_profile_series uses
+# these as the per-congener default k_leach for cwo_profile='flooded'.
+# Novel/SMILES fallback: k_leach = clip(0.03865 + (-0.00785)*log10(Koc), 0, 0.150)  [RMSE 0.0134]
+congener,n_C,group,Koc,k_leach
+PFBA,4,PFCA,2.149,0.0275
+PFPeA,5,PFCA,7.626,0.0300
+PFHxA,6,PFCA,27.06,0.0375
+PFHpA,7,PFCA,96,0.0475
+PFOA,8,PFCA,340.6,0.0500
+PFNA,9,PFCA,1209,0.0125
+PFDA,10,PFCA,4288,0.0000
+PFUnDA,11,PFCA,1.521e+04,0.0000
+PFDoDA,12,PFCA,5.398e+04,0.0000
+PFBS,4,PFSA,3.65,0.0250
+PFHxS,6,PFSA,45.95,0.0225
+PFOS,8,PFSA,578.5,0.0000
+GenX,5,ether,7.626,0.0250

@@ -32,6 +32,48 @@ _CONG = {c["name"]: c for c in PARAMS["congeners"]}
 
 CONGENERS = [c["name"] for c in PARAMS["congeners"]]            # 12, ordered
 TISSUES = ("root", "stem", "leaf", "grain")
+
+# Per-congener flooded-profile leaching rate k_leach, calibrated to a real HYDRUS-1D
+# run (validation/cwo_kleach_calibration.py -> params/cwo_kleach.csv). Short chains
+# leach faster (larger k_leach); long chains stay buffered (k_leach -> 0). Loaded once.
+_KLEACH_MAX = 0.15
+
+
+def _load_cwo_kleach():
+    path = os.path.join(_ROOT, "params", "cwo_kleach.csv")
+    table, xs, ys = {}, [], []
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or line.startswith("congener"):
+                    continue
+                p = line.split(",")
+                table[p[0]] = float(p[4])
+                xs.append(np.log10(float(p[3])))
+                ys.append(float(p[4]))
+        b, a = np.polyfit(xs, ys, 1) if len(xs) >= 2 else (0.0, 0.02)
+        return table, (float(a), float(b))
+    except (OSError, ValueError, IndexError):
+        return {}, (0.02, 0.0)                                 # flat fallback if missing
+
+
+_CWO_KLEACH, _CWO_KLEACH_FALLBACK = _load_cwo_kleach()
+
+
+def default_k_leach(congener=None, n_C=None, group=None):
+    """Per-congener default leaching rate for `cwo_profile='flooded'`, calibrated to
+    HYDRUS-1D. Known congeners use the calibrated table; a novel/SMILES compound falls
+    back to k_leach(log10 Koc) (short chains leach faster, long chains -> ~0)."""
+    if congener and congener in _CWO_KLEACH:
+        return _CWO_KLEACH[congener]
+    if n_C is not None:
+        import literature_params as lp
+        Koc = lp.koc(n_C, {"PFCA": "carboxylate", "PFSA": "sulfonate",
+                           "ether": "ether"}.get(group, "carboxylate"))
+        a, b = _CWO_KLEACH_FALLBACK
+        return float(np.clip(a + b * np.log10(Koc), 0.0, _KLEACH_MAX))
+    return 0.02
 # tissue keys that compose "straw" (the bulk shoot reported in agronomy)
 STRAW_PARTS = ("stem", "leaf")
 
@@ -900,7 +942,7 @@ _HEADGROUP = {"PFCA": "carboxylate", "PFSA": "sulfonate", "ether": "ether"}
 
 
 def cwo_profile_series(t, level=1.0, profile="constant", *, n_C=8, group="PFCA",
-                       congener=None, flood_fraction=1.0, k_leach=0.02, f_oc=0.02,
+                       congener=None, flood_fraction=1.0, k_leach=None, f_oc=0.02,
                        C_total=5.0, theta_g_drained=0.35, theta_g_flooded=0.60,
                        **hydrus_kw):
     """Time-resolved pore-water C_w^o(t) on grid `t`, normalised to mean == `level`.
@@ -913,6 +955,8 @@ def cwo_profile_series(t, level=1.0, profile="constant", *, n_C=8, group="PFCA",
                     from the C3 Koc QSPR, so SHORT chains (low K_F -> large dissolved
                     fraction) LEACH to a steep decline while LONG chains stay buffered
                     (~flat). Needs NO HYDRUS engine -- pure Python, works everywhere.
+                    `k_leach` defaults (None) to the per-congener value CALIBRATED to a
+                    real HYDRUS-1D run (`default_k_leach`); pass a float to override.
       'hydrus'   -> the Cwᵒ(t) shape from a real HYDRUS-1D run (needs the built
                     engine; raises if absent). Only the Cwᵒ shape is taken (Qtp/M
                     stay the caller's), so the three profiles are directly comparable.
@@ -935,6 +979,8 @@ def cwo_profile_series(t, level=1.0, profile="constant", *, n_C=8, group="PFCA",
 
     if profile == "flooded":
         import literature_params as lp
+        if k_leach is None:                              # per-congener HYDRUS-calibrated default
+            k_leach = default_k_leach(congener, n_C, group)
         Koc = lp.koc(n_C, _HEADGROUP.get(group, "carboxylate"))
         K_F = lp.koc_to_KF(Koc, f_oc, n=1.0)             # linear Kd (stable; n=1)
         flooded = t < (flood_fraction * season)

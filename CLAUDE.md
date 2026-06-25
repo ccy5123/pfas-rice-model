@@ -543,6 +543,23 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   exposure modes honour the biomass radio (ORYZA2000 by default). The main `simulate`/`_default_drivers` path was already
   correct; `reproduce_demo`/`calibration` use their own drivers and are UNCHANGED.
   `tests/test_model_api.py::test_drivers_from_arrays_respects_biomass_selection`.
+- **flooded `k_leach` calibrated to HYDRUS per congener + emcee MCMC cross-check (this session)**:
+  - **Per-congener `k_leach` default**: the analytic `cwo_profile="flooded"` shape had a single flat knob (`k_leach=0.02`)
+    that under-leached the short chains. `validation/cwo_kleach_calibration.py` now runs the **real HYDRUS-1D engine** for
+    all 13 curated congeners, reads each pore-water decline ratio, and fits the `k_leach` that makes the analytic shape
+    match → `params/cwo_kleach.csv`. The pattern is **non-monotone** (peaks at PFOA `k_leach`≈0.05, short chains ≈0.025–0.05,
+    long chains → 0 since they are buffered), so a per-congener TABLE (not a clean QSPR) is the default; novels/SMILES fall
+    back to a `k_leach(log10 Koc)` linear fit (RMSE 0.013). `model_api.default_k_leach(congener|n_C,group)` resolves it;
+    `cwo_profile_series(k_leach=None)` (the new default) auto-applies it (explicit `k_leach` still overrides), so PFBA's
+    flooded decline now matches HYDRUS (0.072 vs 0.08; was 0.17 at flat 0.02). The app's `k_leach` slider pre-fills the
+    calibrated value per congener. `tests/test_model_api.py::test_default_k_leach_is_hydrus_calibrated`. `parameters.json`
+    UNCHANGED (the table is a separate artifact loaded directly).
+  - **emcee full-MCMC cross-check**: `validation/bayesian_inverse_demo.py` gained `emcee_posterior()` — an affine-invariant
+    ensemble sampler that confirms the Laplace verdicts with a sampled posterior (well-posed `(qtp_scale,cwo_level)` recovers;
+    `Q_TP·f_xy` is a ridge). It is **OPT-IN** (`python validation/bayesian_inverse_demo.py --emcee`) because the forward ODE
+    is ~0.7 s/sample (a chain is minutes); the default run stays Laplace-only. `emcee` is in the new
+    `requirements-validation.txt` (optional); `tests/test_bayesian_inverse.py::test_emcee_posterior_recovers_well_posed`
+    skips when emcee is absent.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -577,16 +594,21 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
   Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered; engine-free),
   `"hydrus"` the real-engine shape, `"constant"` the flat default (conc==BAF). Both shapes are
-  season-mean-normalised to `Cwo`. Validate vs the engine: `python validation/cwo_profile_check.py`
-  (analytic vs HYDRUS direction + per-congener `k_leach` calibration; saves `figures/cwo_profile_check.png`).
-  In the app: the "Model (parametric)" data source has a "Pore-water Cwᵒ(t) shape" toggle + live preview
-  (`plots.fig_cwo_profile`).
+  season-mean-normalised to `Cwo`. The flooded `k_leach` defaults PER CONGENER (calibrated to HYDRUS,
+  `params/cwo_kleach.csv`; `model_api.default_k_leach`). Validate the shape vs the engine:
+  `python validation/cwo_profile_check.py` (analytic vs HYDRUS direction; saves `figures/cwo_profile_check.png`).
+  (Re)calibrate the per-congener `k_leach` table: `python validation/cwo_kleach_calibration.py` (runs the
+  engine for all 13 congeners → `params/cwo_kleach.csv`). In the app: the "Model (parametric)" data source
+  has a "Pore-water Cwᵒ(t) shape" toggle + live preview (`plots.fig_cwo_profile`), `k_leach` slider pre-filled
+  with the calibrated value.
 - **Bayesian inverse / identifiability**: `python validation/bayesian_inverse_demo.py` — infers the
   EXPOSURE (`qtp_scale`, `cwo_level`) from tissue `C(t)`+`M(t)`, and a Laplace posterior from the
   Fisher Jacobian at truth shows the ridges: `(qtp_scale, cwo_level)` is identifiable with transport
   fixed (cond ~90), but `Q_TP·f_xy` is a product ridge (corr ~−1, cond ~500) and `Cwo` vs root-uptake
   conductance is even more degenerate (cond ~1e5, no clean product invariant — nonlinear uptake). So
-  pinning `Q_TP`/`Cwo` absolutely needs an independent measurement (xylem sap / pore-water probe).
+  pinning `Q_TP`/`Cwo` absolutely needs an independent measurement (xylem sap / pore-water probe). Add
+  `--emcee` for a full-MCMC cross-check (opt-in; needs `pip install -r requirements-validation.txt`, a
+  few minutes — the ODE is ~0.7 s/sample).
 - Soil → plant (analytic): `python src/soil_paddy.py` (legacy) / use `soil_paddy_redox_corrected` for redox.
 - **Soil → plant (REAL HYDRUS-1D)**: the source is vendored, so build the engine once, then run:
   ```

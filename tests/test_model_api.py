@@ -113,6 +113,20 @@ def test_drivers_from_arrays_respects_biomass_selection():
     assert "leaf_loss" in api.drivers_from_arrays(t, np.ones_like(t), season=120.0)
 
 
+def test_load_driver_csv_without_M_uses_biomass():
+    """A driver CSV that omits the M_* columns must fall back to the selected biomass
+    driver (ORYZA2000 default), NOT a hardcoded growth_rice -- the CSV-driver mode
+    honours the sidebar biomass radio just like the soil-inventory mode."""
+    import io
+    rows = "\n".join(f"{d},1.0,0.05" for d in range(0, 121, 5))
+    csv = "t,Cwo,Qtp\n" + rows
+    li = api.TISSUES.index("leaf")
+    do = api.load_driver_csv(io.StringIO(csv), biomass="oryza")
+    dg = api.load_driver_csv(io.StringIO(csv), biomass="growth_rice")
+    assert "leaf_loss" in do and do["M"][:, li][-1] < 0.7 * do["M"][:, li].max()
+    assert "leaf_loss" not in dg and dg["M"][:, li][-1] >= 0.95 * dg["M"][:, li].max()
+
+
 def test_pore_water_from_inventory_drained_and_flooded():
     t = np.linspace(0.0, 120.0, 121)
     Cwo_d, soil = api.pore_water_from_inventory(t, 5.0, K_F=2.0, n=0.85, theta_g=0.35)
@@ -362,6 +376,20 @@ def test_cwo_profile_flooded_leach_rate_steepens_decline():
     harsh = api.simulate("PFBA", Cwo=1.0, cwo_profile="flooded",
                          cwo_kw=dict(k_leach=0.08))["Cwo"]
     assert harsh[-1] / harsh[0] < gentle[-1] / gentle[0]
+
+
+def test_default_k_leach_is_hydrus_calibrated():
+    """flooded defaults k_leach to a per-congener value CALIBRATED to HYDRUS-1D:
+    short chains leach (larger k_leach), long chains are buffered (~0). A novel/SMILES
+    compound (no table entry) falls back to k_leach(log10 Koc), clipped to [0, max]."""
+    short, long = api.default_k_leach("PFBA"), api.default_k_leach("PFDoDA")
+    assert short > 0.02 and long == pytest.approx(0.0, abs=1e-9) and short > long
+    # PFBA's flooded decline with the auto (calibrated) default leaches harder than the old flat 0.02
+    auto = api.simulate("PFBA", Cwo=1.0, cwo_profile="flooded")["Cwo"]
+    flat = api.simulate("PFBA", Cwo=1.0, cwo_profile="flooded", cwo_kw=dict(k_leach=0.02))["Cwo"]
+    assert auto[-1] / auto[0] < flat[-1] / flat[0]
+    nov = api.default_k_leach(None, n_C=8, group="PFCA")          # novel -> Koc fallback
+    assert 0.0 <= nov <= api._KLEACH_MAX
 
 
 @pytest.mark.skipif(not api.hydrus_available(),
