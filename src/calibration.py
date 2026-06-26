@@ -32,13 +32,13 @@ Usage
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 from scipy.optimize import least_squares, differential_evolution
 
 from pfas_rice_plant_module import (
-    RiceUptakeModel, binding_factors, ROOT, STEM, LEAF, FRUIT,
+    RiceUptakeModel, ROOT, STEM, LEAF, FRUIT,
 )
 
 # parameter name -> object it lives on ("cmpd" attribute or "model" attribute)
@@ -278,5 +278,5 @@ if __name__ == "__main__":
 
     print("\n=== with 10% log-normal observation noise ===")
     truth, result = synthetic_recovery(noise=0.10, seed=3, global_search=False)
-    print(f"  recovered: " + ", ".join(f"{k}={result.values[k]:.4g}" for k in truth)
-          + f"  (truth: " + ", ".join(f"{k}={v:.4g}" for k, v in truth.items()) + ")")
+    print("  recovered: " + ", ".join(f"{k}={result.values[k]:.4g}" for k in truth)
+          + "  (truth: " + ", ".join(f"{k}={v:.4g}" for k, v in truth.items()) + ")")

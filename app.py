@@ -155,15 +155,6 @@ def _simulate_twopool_seq(congener):
         return None
 
 
-@st.cache_data(show_spinner="Estimating the contamination level…")
-def _estimate_exposure(congener, root, straw, grain, sigma, E_m_mV, f_xy_source, biomass):
-    """Cache the Bayesian inverse estimate (a handful of ODE solves, a few seconds)."""
-    meas = {k: v for k, v in (("root", root), ("straw", straw), ("grain", grain))
-            if v is not None and v > 0}
-    return api.estimate_exposure_bayesian(congener, meas, sigma_log10=sigma, E_m_mV=E_m_mV,
-                                          f_xy_source=f_xy_source, biomass=biomass)
-
-
 @st.cache_data(show_spinner="Parameterising structure (RDKit)…")
 def _simulate_smiles(smiles, **kw):
     """Cache a SMILES (structure) run: RDKit → descriptors → Compound → full ODE."""
@@ -233,6 +224,16 @@ def _png_bytes(fig, scale=2):
     so the UI degrades gracefully when kaleido (and its Chrome) are not installed."""
     try:
         return fig.to_image(format="png", scale=scale), None
+    except Exception as e:                                   # noqa: BLE001
+        return None, f"{type(e).__name__}: {e}"
+
+
+def _html_bytes(fig):
+    """Self-contained interactive HTML of a Plotly figure. Needs NO kaleido/Chrome,
+    so it is the always-available export fallback (keeps hover/zoom; loads plotly.js
+    from the CDN)."""
+    try:
+        return fig.to_html(full_html=True, include_plotlyjs="cdn").encode("utf-8"), None
     except Exception as e:                                   # noqa: BLE001
         return None, f"{type(e).__name__}: {e}"
 
@@ -313,11 +314,32 @@ def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, si
         st.caption("**추정** 버튼을 누르세요 (값을 바꾼 뒤에는 다시 누르세요)." if ko else
                    "Press **Estimate** to run (or re-run after changing a value).")
         return
-    try:
-        est = _estimate_exposure(congener, root, straw, grain, sigma, E_m_mV, f_xy_source, biomass)
-    except Exception as e:                                   # noqa: BLE001
-        st.error((f"추정을 실행할 수 없습니다: {e}") if ko else f"Could not run the estimate: {e}")
-        return
+    # Result cache in session_state (keyed by sig) so reruns are instant; the slow
+    # first compute (~8 ODE solves) shows a live step-by-step progress bar so it
+    # never looks frozen (HANDOFF P2-1).
+    res_key = f"{key}_result"
+    stored = st.session_state.get(res_key)
+    if stored is not None and stored[0] == sig:
+        est = stored[1]
+    else:
+        meas = {k: v for k, v in (("root", root), ("straw", straw), ("grain", grain))
+                if v is not None and v > 0}
+        prog = st.progress(0.0, text="오염 수준 추정 준비 중…" if ko else "Preparing the estimate…")
+
+        def _cb(done, total):
+            prog.progress(min(done / total, 1.0),
+                          text=(f"모델을 거꾸로 계산하는 중… ({done}/{total} 단계)" if ko
+                                else f"Running the model backwards… (step {done}/{total})"))
+        try:
+            est = api.estimate_exposure_bayesian(
+                congener, meas, sigma_log10=sigma, E_m_mV=E_m_mV,
+                f_xy_source=f_xy_source, biomass=biomass, progress=_cb)
+        except Exception as e:                               # noqa: BLE001
+            prog.empty()
+            st.error((f"추정을 실행할 수 없습니다: {e}") if ko else f"Could not run the estimate: {e}")
+            return
+        prog.empty()
+        st.session_state[res_key] = (sig, est)
     med = est["median"]
     lo, hi = est["ci95"]
     mc1, mc2 = st.columns([1, 2])
@@ -901,12 +923,19 @@ if not expert:
                             file_name=f"{congener}_summary.csv", mime="text/csv")
         cdb.download_button("전체 시계열 (CSV)", api.timeseries_csv(res),
                             file_name=f"{congener}_timeseries.csv", mime="text/csv")
-        png, why = _png_bytes(plots.fig_schematic_from_res(res, "conc", -1, lang="ko"))
+        _map_fig = plots.fig_schematic_from_res(res, "conc", -1, lang="ko")
+        png, why = _png_bytes(_map_fig)
         if png is not None:
             st.download_button("식물 지도 (PNG)", png, file_name=f"{congener}_map.png", mime="image/png")
         else:
-            st.caption(f"PNG 이미지 내보내기는 선택 패키지 `kaleido`(+Chrome)가 필요합니다. "
-                       f"CSV 내려받기는 그것 없이도 됩니다. ({why})")
+            # No kaleido/Chrome -> offer an interactive HTML instead (always works).
+            html, _ = _html_bytes(_map_fig)
+            if html is not None:
+                st.download_button("식물 지도 (대화형 HTML)", html,
+                                   file_name=f"{congener}_map.html", mime="text/html")
+            st.caption("정적 **PNG** 내보내기는 선택 패키지 `kaleido`가 필요합니다 — "
+                       "`pip install kaleido && plotly_get_chrome` 후 다시 실행하세요. "
+                       "그동안 위 **대화형 HTML**(브라우저에서 확대·툴팁 가능)과 CSV는 그대로 받을 수 있습니다.")
 
 # ============================================================================
 #  EXPERT MODE  (the full research interface)
@@ -994,7 +1023,7 @@ else:
             st.warning(_biomon_note)
         st.plotly_chart(plots.fig_tissue(res), width="stretch")
         st.plotly_chart(plots.fig_burden(res), width="stretch")
-        st.markdown(f"**B_k [L/kg fw]** — " + ", ".join(f"{k}: {v:.2f}" for k, v in res["B_k"].items())
+        st.markdown("**B_k [L/kg fw]** — " + ", ".join(f"{k}: {v:.2f}" for k, v in res["B_k"].items())
                     + f"  ·  f_xy={p['f_xy']:.4g}, L_Ph={p['L_Ph']:.4g}, κ_d={p['kappa_d']:.3g}")
         st.caption("Top: tissue **concentration** C_k(t) [µg/kg] (intensive). Bottom: **PFAS mass** "
                    "(burden) = C_k(t)·M_k(t) [µg/hill] (extensive) — where the chemical actually ends up. "
@@ -1211,12 +1240,19 @@ BAFs straight off field data and to overlay them on the model for a sanity check
                             file_name=f"{congener}_summary.csv", mime="text/csv")
         cdb.download_button("Driver + tissue time series (CSV)", api.timeseries_csv(res),
                             file_name=f"{congener}_timeseries.csv", mime="text/csv")
-        png, why = _png_bytes(plots.fig_schematic_from_res(res, "conc", -1))
+        _map_fig = plots.fig_schematic_from_res(res, "conc", -1)
+        png, why = _png_bytes(_map_fig)
         if png is not None:
             st.download_button("Plant map (PNG)", png, file_name=f"{congener}_map.png", mime="image/png")
         else:
-            st.caption(f"PNG figure export needs the optional `kaleido` package (+ Chrome). CSV works "
-                       f"without it. ({why})")
+            # No kaleido/Chrome -> offer an interactive HTML instead (always works).
+            html, _ = _html_bytes(_map_fig)
+            if html is not None:
+                st.download_button("Plant map (interactive HTML)", html,
+                                   file_name=f"{congener}_map.html", mime="text/html")
+            st.caption("Static **PNG** export needs the optional `kaleido` package — "
+                       "`pip install kaleido && plotly_get_chrome`, then re-run. Meanwhile the "
+                       "**interactive HTML** above (zoom/tooltips in a browser) and the CSVs work without it.")
 
 
 # ---------------------------------------------------------------- footer (every screen)

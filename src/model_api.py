@@ -1071,9 +1071,16 @@ def baf_from_measurement(conc_by_tissue, Cwo):
 # Bayesian inverse -- estimate the exposure (pore-water Cwᵒ) from measured tissue
 # concentrations, WITH uncertainty (Laplace posterior in log space).
 # ---------------------------------------------------------------------------
+# upper-bound ODE-solve count of estimate_exposure_bayesian: ref(1) + two
+# 3-point parabola passes(6) + the final model_fit solve(1). A non-convex first
+# pass early-exits with fewer; used only to drive the progress bar.
+_ESTIMATE_MAX_SOLVES = 8
+
+
 def estimate_exposure_bayesian(congener, measured_conc, *, sigma_log10=0.15,
                                season=120.0, E_m_mV=-120.0, f_xy_source="recommended",
-                               biomass="oryza", measured_forcing=True, n_plot=121):
+                               biomass="oryza", measured_forcing=True, n_plot=121,
+                               progress=None):
     """Bayesian estimate of the soil-water contamination level Cwᵒ [µg/L] that best
     explains measured rice tissue concentrations.
 
@@ -1089,6 +1096,11 @@ def estimate_exposure_bayesian(congener, measured_conc, *, sigma_log10=0.15,
     log-likelihood at the MAP. Only the EXPOSURE level is estimated; transport is
     held at the model defaults (this is the well-posed direction -- separating
     water-uptake vs root->shoot loading needs an independent measurement).
+
+    `progress`, if given, is called as progress(done, total) after each ODE solve
+    (done = solves so far, total = `_ESTIMATE_MAX_SOLVES`) so a UI can show a live
+    bar -- the run is ~8 forward solves (~1-2.5 s each) and otherwise looks frozen.
+    Progress-callback exceptions are swallowed (never break the estimate).
 
     Returns a dict: median (Cwᵒ), ci68/ci95 (low, high), sd_log10, used_tissues,
     measured, model_fit (predicted tissue conc at the median), grid (Cwᵒ, density
@@ -1108,6 +1120,11 @@ def estimate_exposure_bayesian(congener, measured_conc, *, sigma_log10=0.15,
         r = simulate(congener, Cwo=float(Cwo), season=season, E_m_mV=E_m_mV,
                      f_xy_source=f_xy_source, biomass=biomass,
                      measured_forcing=measured_forcing)
+        if progress is not None:
+            try:
+                progress(min(n_eval[0], _ESTIMATE_MAX_SOLVES), _ESTIMATE_MAX_SOLVES)
+            except Exception:                              # noqa: BLE001 (UI cb never breaks the fit)
+                pass
         return {"root": float(r["conc"]["root"][-1]), "straw": float(r["straw"][-1]),
                 "grain": float(r["conc"]["grain"][-1])}
 

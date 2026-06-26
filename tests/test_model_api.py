@@ -235,6 +235,27 @@ def test_estimate_exposure_bayesian_recovers_and_brackets():
         api.estimate_exposure_bayesian("PFOA", {"root": 0.0})
 
 
+def test_estimate_exposure_progress_callback():
+    """The optional progress callback (for the app's live bar) fires once per ODE
+    solve with monotone done<=total, and a throwing callback never breaks the fit."""
+    calls = []
+    r = api.simulate("PFOA", Cwo=1.0)
+    meas = {"grain": r["conc"]["grain"][-1]}
+    est = api.estimate_exposure_bayesian("PFOA", meas, progress=lambda d, t: calls.append((d, t)))
+    assert calls, "progress callback was never called"
+    dones = [d for d, _ in calls]
+    totals = {t for _, t in calls}
+    assert totals == {api._ESTIMATE_MAX_SOLVES}            # total is the documented bound
+    assert dones == sorted(dones)                          # monotone non-decreasing
+    assert max(dones) <= api._ESTIMATE_MAX_SOLVES          # never exceeds the bound
+    assert len(calls) == est["n_eval"]                     # one tick per ODE solve
+    # a callback that raises must be swallowed (the estimate still succeeds)
+    def _boom(d, t):
+        raise RuntimeError("ui blew up")
+    est2 = api.estimate_exposure_bayesian("PFOA", meas, progress=_boom)
+    assert est2["median"] == pytest.approx(est["median"], rel=1e-9)
+
+
 def test_predictive_band_and_uncertainty_factor():
     """The general-audience honesty band: a ×/÷ factor from the documented a-priori
     predictive log10 RMSE (~7×), symmetric in log space, with graceful NaN edges."""

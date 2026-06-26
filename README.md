@@ -12,6 +12,12 @@ This package consolidates the two closed open-parameter workstreams — **GAP A 
 partition `K_cw`)** and **GAP B (root→shoot loading `f_xy`)** — plus the model code, the
 basis-A binding factors, and the S6 validation, into one reproducible bundle.
 
+> **What's canonical vs. historical** — the authoritative sources are **`CLAUDE.md`** (project
+> context), **`params/parameters.json`** (parameters), **`docs/MANUAL_EN.md`** / **`docs/MANUAL_KR.md`**
+> (how to use the app), and **`docs/OVERVIEW_KR.md`** (the science). Everything under
+> `docs/HANDOFF_*.md` and `docs/*_exploration.md` is a **history / exploration log** (kept for
+> provenance), not the spec.
+
 ---
 
 ## Quickstart
