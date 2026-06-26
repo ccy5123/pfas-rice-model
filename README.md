@@ -1,5 +1,7 @@
 # PFAS–Rice 4-Compartment Uptake Model — Reproduction Package
 
+**English** | [한국어](README_KR.md) &nbsp;·&nbsp; App manual: [English](docs/MANUAL_EN.md) | [한국어](docs/MANUAL_KR.md)
+
 Mechanistic uptake model for **permanently-anionic PFAS in paddy rice** (*Oryza sativa*):
 an IOC (ionizable organic compound) extension of the DPU / Trapp framework over four
 compartments (root → stem → leaf → grain). Covers **12 calibrated congeners**: PFCA C4–C12
@@ -77,7 +79,7 @@ for all 12 congeners, printing predicted vs observed root/straw/grain BAF.
 
 ## Interactive app — the visualization tool
 
-> 📖 **사용 매뉴얼 (한국어, 일반인~전문가): [`docs/MANUAL_KR.md`](docs/MANUAL_KR.md)** — 두 모드, 모든 탭, 데이터 표/CSV 형식, 베이지안 역추정, 결과 해석, FAQ.
+> 📖 **App user manual (general → expert): [English](docs/MANUAL_EN.md) · [한국어](docs/MANUAL_KR.md)** — both modes, every tab, the data tables / CSV formats, the Bayesian inverse estimate, reading the results, FAQ.
 
 A Streamlit dashboard that **draws the soil + rice plant to scale and colours each
 compartment by its PFAS accumulation** (a heat colormap you can scrub through the season),
