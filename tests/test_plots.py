@@ -147,6 +147,23 @@ def test_fig_exposure_posterior_builds():
     assert fig.layout.title.text
 
 
+def test_plain_figures_korean_variant():
+    """lang='ko' renders Korean labels in the Simple-mode builders; English stays default."""
+    import model_api as api, plots
+    res = api.simulate("PFOA")
+    bld = plots.fig_buildup_plain(res, lang="ko")
+    assert {tr.name for tr in bld.data} >= {"뿌리", "줄기", "잎", "낟알"}
+    assert "축적" in bld.layout.title.text
+    whr = plots.fig_where_plain(res, lang="ko")
+    assert list(whr.data[0].x) == ["뿌리", "짚", "낟알"]
+    mp = plots.fig_schematic_from_res(res, "conc", -1, lang="ko")
+    assert "지도" in mp.layout.title.text
+    est = api.estimate_exposure_bayesian("PFOA", {"grain": res["conc"]["grain"][-1]})
+    assert "토양수" in plots.fig_exposure_posterior(est, lang="ko").layout.xaxis.title.text
+    # English default unchanged
+    assert "Roots" in {tr.name for tr in plots.fig_buildup_plain(res).data}
+
+
 def test_fig_cwo_profile_builds():
     import numpy as np, plots
     fig = plots.fig_cwo_profile("PFBA", level=1.0, profile="flooded")
