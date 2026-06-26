@@ -610,6 +610,17 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   it is a stated per-compartment property + per-volume reporting, exactly as requested. Test:
   `test_model_api.py::test_drivers_from_tables_growth_and_cwo`. UI/driver only — `parameters.json` and the model
   math are UNCHANGED.
+- **Korean for the general-audience (Simple) mode (this session)**: the non-expert view now renders in **Korean**,
+  while Expert stays English (the sidebar toggle is bilingual `🔬 전문가/고급 모드 (Expert / advanced)`). All Simple-gated
+  `app.py` text is Korean (sidebar, intro, disclaimer `_DISCLAIMER_KO`, headline metrics + summary, the 5 tab names +
+  captions, glossary `_glossary_md(ko=True)`, friendly congener names `_FRIENDLY_CONG_KO`/`_cong_label_ko`, contamination
+  presets `_PRESETS_KO`, the inverse estimator `_render_inverse_estimator(simple=True)`, the custom-tables panel
+  `_render_custom_tables(ko=…)`, downloads, footer). The Plotly builders gained a `lang` arg (default `"en"` so Expert +
+  tests are unaffected): `fig_buildup_plain`/`fig_where_plain`/`fig_exposure_posterior` and the plant map
+  `fig_plant_schematic`/`fig_schematic_from_res`/`fig_schematic_animated` render Korean titles/axes/organ labels
+  (뿌리/줄기/잎/낟알/짚) when `lang="ko"`. UI/i18n only — `parameters.json` and the model math are UNCHANGED. Tests:
+  `test_plots.py::test_plain_figures_korean_variant` (English defaults still asserted); verified with headless Streamlit
+  + Playwright screenshots of the Korean Simple landing and the English Expert UI.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`

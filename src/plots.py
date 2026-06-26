@@ -19,6 +19,11 @@ import growth_rice as gr
 _COL = {"root": "#8c564b", "stem": "#2ca02c", "leaf": "#1f77b4", "grain": "#ff7f0e"}
 # plain-language tissue names for the general-audience (Simple) views
 _PLAIN = {"root": "Roots", "stem": "Stems", "leaf": "Leaves", "grain": "Grain", "straw": "Straw"}
+_PLAIN_KO = {"root": "뿌리", "stem": "줄기", "leaf": "잎", "grain": "낟알", "straw": "짚"}
+
+
+def _plain(lang):
+    return _PLAIN_KO if lang == "ko" else _PLAIN
 _LAYOUT = dict(template="plotly_white", hoverlabel=dict(namelength=-1),
                margin=dict(l=60, r=20, t=50, b=50))
 # default "accumulation heat" colour scale for the plant map (more = hotter)
@@ -108,49 +113,59 @@ def fig_baf(res, obs, extra=None):
     return fig
 
 
-def fig_buildup_plain(res):
+def fig_buildup_plain(res, lang="en"):
     """Plain-language tissue concentration over the season (Simple-mode view).
 
     Same data as `fig_tissue` but with friendly tissue names (Roots/Stems/Leaves/
-    Grain) and jargon-free axis/title text, for a general audience. Reuses the
-    grain pre-formation mask so the empty pre-flowering period is not drawn."""
+    Grain) and jargon-free axis/title text, for a general audience. `lang="ko"`
+    renders Korean. Reuses the grain pre-formation mask so the empty pre-flowering
+    period is not drawn."""
+    nm = _plain(lang)
+    ko = lang == "ko"
     fig = go.Figure()
     for j, tis in enumerate(api.TISSUES):
-        fig.add_scatter(x=res["t"], y=_formed(res, j, res["conc"][tis]), name=_PLAIN[tis],
+        fig.add_scatter(x=res["t"], y=_formed(res, j, res["conc"][tis]), name=nm[tis],
                         mode="lines", line=dict(width=2.8, color=_COL[tis]),
-                        hovertemplate=f"{_PLAIN[tis]}: %{{y:.3g}} µg/kg<extra></extra>")
-    fig.update_layout(title="How PFAS builds up in the plant over the season",
-                      xaxis_title="days after the rice is transplanted",
-                      yaxis_title="PFAS in the plant tissue [µg per kg]",
-                      hovermode="x unified", **_LAYOUT)
+                        hovertemplate=f"{nm[tis]}: %{{y:.3g}} µg/kg<extra></extra>")
+    fig.update_layout(
+        title="한 철 동안 식물 속 PFAS 축적" if ko else "How PFAS builds up in the plant over the season",
+        xaxis_title="모내기 후 일수" if ko else "days after the rice is transplanted",
+        yaxis_title="조직 속 PFAS [µg/kg]" if ko else "PFAS in the plant tissue [µg per kg]",
+        hovermode="x unified", **_LAYOUT)
     return fig
 
 
-def fig_where_plain(res):
+def fig_where_plain(res, lang="en"):
     """Plain-language bar of the final PFAS level in roots / straw / grain.
 
     A jargon-free read of where the chemical ends up at harvest (the same numbers
-    as the BAF bars, but labelled as a concentration build-up, no 'BAF' symbol)."""
+    as the BAF bars, but labelled as a concentration build-up, no 'BAF' symbol).
+    `lang="ko"` renders Korean."""
+    nm = _plain(lang)
+    ko = lang == "ko"
     order = ["root", "straw", "grain"]
     vals = {"root": res["conc"]["root"][-1], "straw": res["straw"][-1],
             "grain": res["conc"]["grain"][-1]}
     fig = go.Figure(go.Bar(
-        x=[_PLAIN[t_] for t_ in order], y=[vals[t_] for t_ in order],
+        x=[nm[t_] for t_ in order], y=[vals[t_] for t_ in order],
         marker_color=[_COL.get(t_, "#1f77b4") for t_ in order],
         text=[f"{vals[t_]:.2g}" for t_ in order], textposition="outside",
         hovertemplate="%{x}: %{y:.3g} µg/kg<extra></extra>"))
-    fig.update_layout(title=f"Where {res['congener']} ends up in the plant (at harvest)",
-                      yaxis_title="PFAS in the tissue [µg per kg]",
-                      xaxis_title="part of the rice plant", **_LAYOUT)
+    fig.update_layout(
+        title=(f"{res['congener']}가 식물에서 모이는 곳 (수확 시)" if ko
+               else f"Where {res['congener']} ends up in the plant (at harvest)"),
+        yaxis_title="조직 속 PFAS [µg/kg]" if ko else "PFAS in the tissue [µg per kg]",
+        xaxis_title="벼 부위" if ko else "part of the rice plant", **_LAYOUT)
     return fig
 
 
-def fig_exposure_posterior(est):
+def fig_exposure_posterior(est, lang="en"):
     """Posterior over the estimated soil-water contamination level Cwᵒ [µg/L].
 
     From `model_api.estimate_exposure_bayesian`: a shaded probability curve vs Cwᵒ
     (log x), with the 95% credible interval darker and the median (most likely
-    value) marked. Plain labels for a general audience."""
+    value) marked. Plain labels for a general audience; `lang="ko"` renders Korean."""
+    ko = lang == "ko"
     Cwo = np.asarray(est["grid"]["Cwo"], float)
     dens = np.asarray(est["grid"]["density"], float)
     med = est["median"]
@@ -165,11 +180,15 @@ def fig_exposure_posterior(est):
                         fill="tozeroy", fillcolor="rgba(31,119,180,0.30)",
                         name="95% range", hoverinfo="skip")
     fig.add_vline(x=med, line=dict(color="#d62728", width=2, dash="dash"),
-                  annotation_text=f"most likely {med:.3g} µg/L", annotation_position="top")
-    fig.update_layout(title="Estimated contamination level in the soil water (with uncertainty)",
-                      xaxis_title="PFAS dissolved in the soil water [µg/L]",
-                      yaxis_title="relative probability", xaxis_type="log",
-                      showlegend=False, **_LAYOUT)
+                  annotation_text=(f"가장 가능성 높음 {med:.3g} µg/L" if ko
+                                   else f"most likely {med:.3g} µg/L"),
+                  annotation_position="top")
+    fig.update_layout(
+        title=("토양수 오염 수준 추정 (불확실성 포함)" if ko
+               else "Estimated contamination level in the soil water (with uncertainty)"),
+        xaxis_title="토양수에 녹아 있는 PFAS [µg/L]" if ko else "PFAS dissolved in the soil water [µg/L]",
+        yaxis_title="상대 확률" if ko else "relative probability", xaxis_type="log",
+        showlegend=False, **_LAYOUT)
     fig.update_yaxes(rangemode="tozero", showticklabels=False)
     return fig
 
@@ -408,7 +427,7 @@ def _marker_points(values, straw_only):
 
 def fig_plant_schematic(values, *, cmin, cmax, label="tissue conc [µg/kg]",
                         Cwo=None, colorscale=_HEAT, title=None, t=None,
-                        obs=None):
+                        obs=None, lang="en"):
     """Draw the rice plant + paddy soil with each compartment coloured by `values`.
 
     values : dict with root/stem/leaf/grain (and optional 'straw'). If stem/leaf are
@@ -443,26 +462,31 @@ def fig_plant_schematic(values, *, cmin, cmax, label="tissue conc [µg/kg]",
         text=[p[0] for p in pts], customdata=[p[1] for p in pts],
         hovertemplate="%{text}: %{customdata:.3g}<extra></extra>", showlegend=False)
 
+    ko = lang == "ko"
+    nmf = _PLAIN_KO if ko else None
     ann = []
     for name, v, mx, my in pts:
         lx, ly, xa, ya = _LABEL.get(name, (mx, my, "center", "middle"))
-        txt = f"<b>{name}</b><br>{v:.3g}"
+        disp = nmf.get(name, name) if nmf else name
+        txt = f"<b>{disp}</b><br>{v:.3g}"
         if obs and name in obs and obs[name] is not None:
-            txt += f"<br><span style='color:#8a8270'>obs {obs[name]:.3g}</span>"
+            _ob = ("관측" if ko else "obs")
+            txt += f"<br><span style='color:#8a8270'>{_ob} {obs[name]:.3g}</span>"
         ann.append(dict(x=mx, y=my, ax=lx, ay=ly, axref="x", ayref="y",
                         xanchor=xa, yanchor=ya,
                         text=txt, showarrow=True, arrowhead=0, arrowcolor="#9a9384", arrowwidth=1,
                         font=dict(size=12, color=_ink), align="center",
                         bgcolor="rgba(255,253,247,0.92)", bordercolor="#b9b2a2", borderwidth=1))
     if Cwo is not None:
-        ann.append(dict(x=476, y=_fy(610), text=f"pore water<br>Cwᵒ={Cwo:.3g} µg/L", showarrow=False,
+        _pw = (f"토양수<br>PFAS={Cwo:.3g} µg/L" if ko else f"pore water<br>Cwᵒ={Cwo:.3g} µg/L")
+        ann.append(dict(x=476, y=_fy(610), text=_pw, showarrow=False,
                         xanchor="center", yanchor="middle",
                         font=dict(size=11, color="#f3ead4"), align="center",
                         bgcolor="rgba(85,58,31,0.85)", bordercolor="#835C36", borderwidth=1))
     if title is None:
-        title = "Plant + soil accumulation map"
+        title = "식물·토양 축적 지도" if ko else "Plant + soil accumulation map"
         if t is not None:
-            title += f"  (day {t:.0f})"
+            title += (f"  ({t:.0f}일째)" if ko else f"  (day {t:.0f})")
     # Self-contained light styling (explicit cream paper + dark ink) so the figure
     # stays readable under Streamlit dark mode too (render it with theme=None).
     fig.update_layout(
@@ -476,24 +500,33 @@ def fig_plant_schematic(values, *, cmin, cmax, label="tissue conc [µg/kg]",
     return fig
 
 
-def fig_schematic_from_res(res, metric="conc", t_index=-1, colorscale=_HEAT, obs=None):
+def fig_schematic_from_res(res, metric="conc", t_index=-1, colorscale=_HEAT, obs=None, lang="en"):
     """Convenience: build the plant map from a `model_api` result at one time index."""
     sv = api.schematic_values(res, metric, t_index)
-    title = f"{res['congener']} — {'BAF' if metric=='baf' else 'concentration'} map  (day {sv['t']:.0f})"
+    ko = lang == "ko"
+    if ko:
+        kind = "농축계수" if metric == "baf" else "농도"
+        title = f"{res['congener']} — {kind} 지도  ({sv['t']:.0f}일째)"
+        label = "농축계수 [L/kg]" if metric == "baf" else "농도 [µg/kg]"
+    else:
+        title = f"{res['congener']} — {'BAF' if metric=='baf' else 'concentration'} map  (day {sv['t']:.0f})"
+        label = sv["label"]
     return fig_plant_schematic(sv["values"], cmin=sv["cmin"], cmax=sv["cmax"],
-                               label=sv["label"], Cwo=sv["Cwo"], colorscale=colorscale,
-                               title=title, t=sv["t"], obs=obs)
+                               label=label, Cwo=sv["Cwo"], colorscale=colorscale,
+                               title=title, t=sv["t"], obs=obs, lang=lang)
 
 
-def fig_schematic_animated(res, metric="conc", n_frames=24, colorscale=_HEAT):
+def fig_schematic_animated(res, metric="conc", n_frames=24, colorscale=_HEAT, lang="en"):
     """Autoplay version of the plant map: a play button + slider scrub the season,
     each compartment's colour tracking its accumulation through time."""
+    ko = lang == "ko"
     ms = api.metric_series(res, metric)
     cmin, cmax = ms["cmin"], ms["cmax"]
     n_t = len(res["t"])
     idx = np.unique(np.linspace(0, n_t - 1, min(n_frames, n_t)).astype(int))
 
-    base = fig_schematic_from_res(res, metric, int(idx[0]), colorscale)
+    base = fig_schematic_from_res(res, metric, int(idx[0]), colorscale, lang=lang)
+    _kind = ("농축계수" if metric == "baf" else "농도") if ko else metric.upper()
     frames = []
     for ti in idx:
         sv = api.schematic_values(res, metric, int(ti))
@@ -502,13 +535,14 @@ def fig_schematic_animated(res, metric="conc", n_frames=24, colorscale=_HEAT):
         colors = {k: _color(v.get(k, v.get("straw")), cmin, cmax, colorscale)
                   for k in ("root", "stem", "leaf", "grain")}
         pts = _marker_points(v, straw_only)
+        _ttl = (f"{res['congener']} — {_kind} 지도 ({res['t'][ti]:.0f}일째)" if ko
+                else f"{res['congener']} — {_kind} map (day {res['t'][ti]:.0f})")
         frames.append(go.Frame(
             name=f"{res['t'][ti]:.0f}",
             data=[go.Scatter(x=[p[2] for p in pts], y=[p[3] for p in pts],
                              marker=dict(color=[p[1] for p in pts], colorscale=colorscale,
                                          cmin=cmin, cmax=cmax))],
-            layout=go.Layout(shapes=_shapes_for(colors),
-                             title=f"{res['congener']} — {metric.upper()} map (day {res['t'][ti]:.0f})")))
+            layout=go.Layout(shapes=_shapes_for(colors), title=_ttl)))
     base.frames = frames
     base.update_layout(
         updatemenus=[dict(type="buttons", showactive=False, x=0.02, y=1.06, xanchor="left",
