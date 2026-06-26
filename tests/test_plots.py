@@ -116,6 +116,38 @@ def test_fig_burden_builds():
     assert "µg" in fig.layout.yaxis.title.text                  # PFAS mass (burden), not biomass
 
 
+def test_fig_where_plain_band_error_bars():
+    """band=True overlays the a-priori predictive uncertainty as asymmetric error
+    bars (×/÷ ~7); default off keeps the bar bare (backward-compatible)."""
+    res = api.simulate("PFOA")
+    bare = plots.fig_where_plain(res)
+    assert bare.data[0].error_y.array is None       # no band by default
+    banded = plots.fig_where_plain(res, lang="ko", band=True)
+    ey = banded.data[0].error_y
+    assert ey.array is not None and ey.symmetric is False
+    # the band matches model_api.predictive_band for each bar (root/straw/grain)
+    vals = [res["conc"]["root"][-1], res["straw"][-1], res["conc"]["grain"][-1]]
+    for i, v in enumerate(vals):
+        b = api.predictive_band(float(v))
+        assert ey.array[i] == pytest.approx(b["hi"] - float(v))
+        assert ey.arrayminus[i] == pytest.approx(float(v) - b["lo"])
+
+
+def test_fig_baf_korean_variant():
+    """lang='ko' localises the BAF axis/title/legend; English stays the default."""
+    res = api.simulate("PFOA")
+    obs = api.observed_baf("PFOA")
+    ko = plots.fig_baf(res, obs, lang="ko")
+    assert "축적 배수" in ko.layout.yaxis.title.text and "BAF" not in ko.layout.yaxis.title.text
+    assert list(ko.data[0].x) == ["뿌리", "짚", "낟알"]
+    names = {tr.name for tr in ko.data}
+    assert "모델" in names and "Yamazaki 2023 (실측)" in names
+    # English default unchanged
+    en = plots.fig_baf(res, obs)
+    assert en.layout.yaxis.title.text == "BAF [L/kg]"
+    assert "model (4-pool core)" in {tr.name for tr in en.data}
+
+
 def test_plain_language_figures_build():
     """Simple-mode plain-language builders use friendly tissue names + jargon-free
     titles (no 'BAF'/'Cwᵒ'/'f_xy' symbols leaking into the general-audience view)."""

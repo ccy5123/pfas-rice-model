@@ -792,19 +792,41 @@ if not expert:
     tops = {"roots": root_c, "straw (stems + leaves)": straw_c, "grain": grain_c}
     where_most = max(tops, key=tops.get)
 
+    # Honest a-priori predictive band (×/÷ ~7): the model's out-of-sample error is
+    # large, so every absolute number is shown with a range + a several-fold caveat
+    # rather than a precise-looking single figure (HANDOFF P1).
+    bands = {k: api.predictive_band(v) for k, v in
+             (("root", root_c), ("straw", straw_c), ("grain", grain_c))}
+    _fold = api.uncertainty_factor()
+
+    def _rng_ko(b):
+        return f"대략 {b['lo']:.2g}–{b['hi']:.2g} µg/kg"
+
     st.subheader(f"{_cong_label_ko(congener)}")
     m1, m2, m3 = st.columns(3)
-    m1.metric("뿌리 속", f"{root_c:.2g} µg/kg")
-    m2.metric("짚(줄기+잎) 속", f"{straw_c:.2g} µg/kg")
-    m3.metric("낟알(먹는 쌀) 속", f"{grain_c:.2g} µg/kg")
+    m1.metric("뿌리 속", f"{root_c:.2g} µg/kg", _rng_ko(bands["root"]), delta_color="off")
+    m2.metric("짚(줄기+잎) 속", f"{straw_c:.2g} µg/kg", _rng_ko(bands["straw"]), delta_color="off")
+    m3.metric("낟알(먹는 쌀) 속", f"{grain_c:.2g} µg/kg", _rng_ko(bands["grain"]), delta_color="off")
+    st.caption(f"각 수치 아래 범위는 모델의 **대략적 예측 불확실성**입니다 — 실제 측정값과 약 "
+               f"**{_fold:.0f}배**까지 차이날 수 있습니다 (예측값이며 실측이 아닙니다).")
 
     _where_ko = {"roots": "뿌리", "straw (stems + leaves)": "짚(줄기+잎)", "grain": "낟알"}[where_most]
     _lead = ("입력하신 **성장 + 오염 표**를 바탕으로, " if use_custom_tables
              else f"선택하신 **{preset_word}** 오염 수준에서, ")
+    gb = bands["grain"]
+    # BAF<1 reads awkwardly as "약 0.2배"; phrase it as "lower than the soil water" (P2-4).
+    if grain_baf >= 1.0:
+        _baf_phrase = f"토양수 농도의 약 **{grain_baf:.1f}배**"
+    elif grain_baf > 0:
+        _baf_phrase = f"토양수 농도보다 **낮음**(약 1/{1.0 / grain_baf:.0f} 수준)"
+    else:
+        _baf_phrase = "토양수 농도보다 **매우 낮음**"
     st.info(
         _lead +
-        f"이 모델은 벼 **낟알**에 {congener}가 약 **{grain_c:.2g} µg/kg** 들어 있을 것으로 추정합니다 "
-        f"(토양수 농도의 약 **{grain_baf:.1f}배**). 대부분의 화학물질은 **{_where_ko}**에 남습니다.")
+        f"이 모델은 벼 **낟알**에 {congener}가 약 **{grain_c:.2g} µg/kg** "
+        f"(대략 {gb['lo']:.2g}–{gb['hi']:.2g}) 들어 있을 것으로 추정합니다 "
+        f"({_baf_phrase}). 대부분의 화학물질은 **{_where_ko}**에 남습니다. "
+        f"이 값은 **대략적 모델 예측**이라 실측과 수배 차이날 수 있습니다.")
     st.caption("예시용 모델 추정치이며 — 식품안전·건강 판단이 아닙니다.")
 
     s_tabs = st.tabs(["🗺️ 어디로 가나", "📈 시간에 따른 축적",
@@ -824,23 +846,27 @@ if not expert:
             ti = _nearest_index(res["t"], day)
             st.plotly_chart(plots.fig_schematic_from_res(res, "conc", ti, obs=None, lang="ko"),
                             width="stretch", theme=None)
-        st.caption("벼와 논 흙을 실제 비율로 그렸습니다. **색이 진할수록(뜨거울수록) 그 부위에 PFAS가 더 많습니다.** "
-                   "날짜 슬라이더를 끌거나 ▶를 눌러, 이앙부터 수확까지 화학물질이 어디에 쌓이는지 보세요.")
+        st.caption("벼와 논 흙을 실제 비율로 그렸습니다. **색이 진할수록(뜨거울수록) 그 부위에 PFAS 농도가 높습니다.** "
+                   "날짜 슬라이더를 끌거나 ▶를 눌러, 이앙부터 수확까지 화학물질이 어디에 쌓이는지 보세요. "
+                   "색은 **부위별 농도**라서 잎 농도가 높으면 잎이 가장 뜨겁게 보일 수 있습니다 — "
+                   "위 요약의 '대부분 ○○'은 뿌리·짚·낟알 기준이고, **짚 = 줄기와 잎의 평균**입니다.")
 
     # ---- Simple tab 2: build-up over time ----------------------------------
     with s_tabs[1]:
         st.plotly_chart(plots.fig_buildup_plain(res, lang="ko"), width="stretch")
         st.caption("한 철 동안 각 식물 부위의 PFAS 농도가 어떻게 변하는지. **낟알**은 형성된 뒤(개화 무렵)부터 "
-                   "PFAS를 흡수하기 시작해 수확까지 계속 쌓입니다.")
+                   "PFAS를 흡수하기 시작해 수확까지 계속 쌓입니다. 곡선은 **대략적 모델 예측**으로, "
+                   "실측과 수배 차이날 수 있습니다.")
 
     # ---- Simple tab 3: how much builds up ----------------------------------
     with s_tabs[2]:
-        st.plotly_chart(plots.fig_where_plain(res, lang="ko"), width="stretch")
-        st.caption("수확 시 각 부위의 PFAS 농도. 보통 뿌리에 가장 많이 남고, 먹는 낟알까지 "
-                   "얼마나 도달하는지는 화학물질에 따라 다릅니다.")
+        st.plotly_chart(plots.fig_where_plain(res, lang="ko", band=True), width="stretch")
+        st.caption(f"수확 시 각 부위의 PFAS 농도. 보통 뿌리에 가장 많이 남고, 먹는 낟알까지 "
+                   f"얼마나 도달하는지는 화학물질에 따라 다릅니다. 막대의 **회색 오차선**은 모델의 "
+                   f"대략적 예측 불확실성(실측과 약 {_fold:.0f}배까지 차이날 수 있음)입니다.")
         if obs:
             with st.expander("🔬 실제 측정값과 비교 (Yamazaki 2023)"):
-                st.plotly_chart(plots.fig_baf(res, obs), width="stretch")
+                st.plotly_chart(plots.fig_baf(res, obs, lang="ko"), width="stretch")
                 st.caption("막대는 모델의 축적 배수를 출판된 온실 벼 연구(Yamazaki et al. 2023)의 측정값과 "
                            "비교한 것입니다. 막대가 비슷할수록 이 화학물질에 대해 모델이 실제 데이터와 잘 맞습니다.")
 

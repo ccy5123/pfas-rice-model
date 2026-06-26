@@ -87,29 +87,37 @@ def fig_burden(res):
 _BAF_EXTRA_COLORS = ["#2ca02c", "#9467bd", "#8c564b", "#17becf"]
 
 
-def fig_baf(res, obs, extra=None):
+def fig_baf(res, obs, extra=None, lang="en"):
     """Predicted vs observed (Yamazaki) root/straw/grain BAF, grouped bars.
 
     `extra` optionally overlays additional model series (e.g. the EXPLORATORY
     two-pool model): a dict {label: {"root","straw","grain"}} (values may be None);
     each is added as its own grouped bar so the canonical core, the overlay model(s)
-    and the observed data are compared side by side.
+    and the observed data are compared side by side. `lang="ko"` localises the axis,
+    title and the core/observed legend names for the Simple (general-audience) view.
     """
+    ko = lang == "ko"
+    nm = _plain(lang)
     tis = ["root", "straw", "grain"]
+    x = [nm[t_] for t_ in tis]
     pred = [res["baf_final"]["root"], res["straw_baf"], res["baf_final"]["grain"]]
     fig = go.Figure()
-    fig.add_bar(x=tis, y=pred, name="model (4-pool core)", marker_color="#1f77b4",
+    fig.add_bar(x=x, y=pred, name="모델" if ko else "model (4-pool core)", marker_color="#1f77b4",
                 hovertemplate="core %{x}: %{y:.3g}<extra></extra>")
     for i, (label, vals) in enumerate(dict(extra or {}).items()):
-        fig.add_bar(x=tis, y=[vals.get(t_) for t_ in tis], name=label,
+        fig.add_bar(x=x, y=[vals.get(t_) for t_ in tis], name=label,
                     marker_color=_BAF_EXTRA_COLORS[i % len(_BAF_EXTRA_COLORS)],
                     marker_line=dict(width=0.5, color="#333"),
                     hovertemplate=label + " %{x}: %{y:.3g}<extra></extra>")
     if obs:
-        fig.add_bar(x=tis, y=[obs.get(t_, None) for t_ in tis], name="Yamazaki 2023",
+        fig.add_bar(x=x, y=[obs.get(t_, None) for t_ in tis],
+                    name="Yamazaki 2023 (실측)" if ko else "Yamazaki 2023",
                     marker_color="#ff7f0e", hovertemplate="obs %{x}: %{y:.3g}<extra></extra>")
-    fig.update_layout(barmode="group", title=f"{res['congener']} — predicted vs observed BAF",
-                      yaxis_title="BAF [L/kg]", **_LAYOUT)
+    fig.update_layout(
+        barmode="group",
+        title=(f"{res['congener']} — 모델 예측 vs 실측 (Yamazaki)" if ko
+               else f"{res['congener']} — predicted vs observed BAF"),
+        yaxis_title="축적 배수 [L/kg]" if ko else "BAF [L/kg]", **_LAYOUT)
     return fig
 
 
@@ -135,20 +143,29 @@ def fig_buildup_plain(res, lang="en"):
     return fig
 
 
-def fig_where_plain(res, lang="en"):
+def fig_where_plain(res, lang="en", band=False):
     """Plain-language bar of the final PFAS level in roots / straw / grain.
 
     A jargon-free read of where the chemical ends up at harvest (the same numbers
     as the BAF bars, but labelled as a concentration build-up, no 'BAF' symbol).
-    `lang="ko"` renders Korean."""
+    `lang="ko"` renders Korean. `band=True` overlays the coarse a-priori predictive
+    uncertainty (`model_api.predictive_band`, a ×/÷ ~7 honesty band) as error bars,
+    so the general-audience view never shows an absolute number without a spread."""
     nm = _plain(lang)
     ko = lang == "ko"
     order = ["root", "straw", "grain"]
     vals = {"root": res["conc"]["root"][-1], "straw": res["straw"][-1],
             "grain": res["conc"]["grain"][-1]}
+    err_y = None
+    if band:
+        bands = {t_: api.predictive_band(float(vals[t_])) for t_ in order}
+        err_y = dict(type="data", symmetric=False,
+                     array=[bands[t_]["hi"] - float(vals[t_]) for t_ in order],
+                     arrayminus=[float(vals[t_]) - bands[t_]["lo"] for t_ in order],
+                     color="#888", thickness=1.4, width=7)
     fig = go.Figure(go.Bar(
         x=[nm[t_] for t_ in order], y=[vals[t_] for t_ in order],
-        marker_color=[_COL.get(t_, "#1f77b4") for t_ in order],
+        marker_color=[_COL.get(t_, "#1f77b4") for t_ in order], error_y=err_y,
         text=[f"{vals[t_]:.2g}" for t_ in order], textposition="outside",
         hovertemplate="%{x}: %{y:.3g} µg/kg<extra></extra>"))
     fig.update_layout(

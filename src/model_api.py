@@ -1165,6 +1165,49 @@ def estimate_exposure_bayesian(congener, measured_conc, *, sigma_log10=0.15,
               "is held fixed (the exposure level is the well-posed quantity)."))
 
 
+# ---------------------------------------------------------------------------
+# Predictive uncertainty -- the "honesty band" for the general-audience view
+# ---------------------------------------------------------------------------
+# Documented a-priori predictive error of the model: with the monotone, physical
+# (NOT fitted) f_xy the out-of-sample BAF error is log10 RMSE ~0.84-0.95 (single-
+# straw / redistributed-shoot; docs §6, reproduce_demo.py --rec, validation/
+# apriori_prediction.py). We take ~0.85 as a representative value -> a ×/÷ ~7 band.
+# This exists so the Simple (general-audience) view never shows a precise-looking
+# absolute number without a reminder that the model's out-of-sample predictions
+# routinely differ from measurements by several fold. It is an HONESTY reminder,
+# NOT a calibrated confidence interval (the headline 0.029 RMSE is an in-sample,
+# SATURATED fit -- reproduction, not prediction).
+APRIORI_LOG10_RMSE = 0.85
+
+
+def uncertainty_factor(log10_rmse=None):
+    """Multiplicative (×/÷) uncertainty factor from the documented a-priori
+    predictive log10 RMSE (~7× at the 0.85 default = 10**0.85). A coarse honesty
+    reminder for the general-audience view, NOT a calibrated CI. Pure."""
+    r = APRIORI_LOG10_RMSE if log10_rmse is None else float(log10_rmse)
+    return float(10.0 ** max(r, 0.0))
+
+
+def predictive_band(value, log10_rmse=None):
+    """A coarse ×/÷ uncertainty band around a forward model estimate.
+
+    From the documented a-priori predictive error (log10 RMSE ~0.85 ⇒ a factor of
+    ~7×; see `APRIORI_LOG10_RMSE`). The model's out-of-sample predictions routinely
+    differ from measurements by several fold, so a single decimal figure overstates
+    the precision -- this returns a band to show alongside the number for a general
+    audience. It is an HONESTY band, NOT a calibrated confidence interval. Pure;
+    head-less testable.
+
+    Returns dict(value, lo, hi, factor, log10_rmse); a non-finite/negative value
+    gives a NaN lo/hi (factor still reported)."""
+    f = uncertainty_factor(log10_rmse)
+    r = APRIORI_LOG10_RMSE if log10_rmse is None else float(log10_rmse)
+    v = float(value)
+    if not np.isfinite(v) or v < 0:
+        return dict(value=v, lo=float("nan"), hi=float("nan"), factor=f, log10_rmse=r)
+    return dict(value=v, lo=v / f, hi=v * f, factor=f, log10_rmse=r)
+
+
 def load_biomonitoring_csv(path_or_buffer):
     """Load measured tissue concentrations: columns `tissue,conc` (+ optional `Cwo`).
 

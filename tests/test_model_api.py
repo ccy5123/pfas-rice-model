@@ -235,6 +235,31 @@ def test_estimate_exposure_bayesian_recovers_and_brackets():
         api.estimate_exposure_bayesian("PFOA", {"root": 0.0})
 
 
+def test_predictive_band_and_uncertainty_factor():
+    """The general-audience honesty band: a ×/÷ factor from the documented a-priori
+    predictive log10 RMSE (~7×), symmetric in log space, with graceful NaN edges."""
+    f = api.uncertainty_factor()
+    assert f == pytest.approx(10.0 ** api.APRIORI_LOG10_RMSE)
+    assert 5.0 < f < 10.0                                  # ~7x at the 0.85 default
+    b = api.predictive_band(2.0)
+    assert b["factor"] == pytest.approx(f)
+    assert b["lo"] == pytest.approx(2.0 / f) and b["hi"] == pytest.approx(2.0 * f)
+    assert b["lo"] < b["value"] < b["hi"]
+    # geometric symmetry: value is the geomean of lo/hi
+    assert np.sqrt(b["lo"] * b["hi"]) == pytest.approx(b["value"])
+    # a custom (smaller) RMSE narrows the band; zero -> no band (factor 1)
+    assert api.uncertainty_factor(0.30) < f
+    assert api.uncertainty_factor(0.0) == pytest.approx(1.0)
+    # non-finite / negative -> NaN lo/hi but a finite factor (no crash on edge values)
+    for bad in (float("nan"), -1.0):
+        e = api.predictive_band(bad)
+        assert not np.isfinite(e["lo"]) and not np.isfinite(e["hi"])
+        assert np.isfinite(e["factor"])
+    # value 0 is a valid (degenerate) band, not an error
+    z = api.predictive_band(0.0)
+    assert z["lo"] == 0.0 and z["hi"] == 0.0
+
+
 def test_lipid_loading_off_matches_baseline():
     """lipid_loading=False must recover the free-only model exactly (g=0)."""
     for nm in ("PFBA", "PFOA", "PFDA"):
