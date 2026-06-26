@@ -76,6 +76,9 @@ measurement (xylem sap / a pore-water probe).
 for all 12 congeners, printing predicted vs observed root/straw/grain BAF.
 
 ## Interactive app — the visualization tool
+
+> 📖 **사용 매뉴얼 (한국어, 일반인~전문가): [`docs/MANUAL_KR.md`](docs/MANUAL_KR.md)** — 두 모드, 모든 탭, 데이터 표/CSV 형식, 베이지안 역추정, 결과 해석, FAQ.
+
 A Streamlit dashboard that **draws the soil + rice plant to scale and colours each
 compartment by its PFAS accumulation** (a heat colormap you can scrub through the season),
 alongside interactive Plotly time series (hover, zoom, legend-toggle):

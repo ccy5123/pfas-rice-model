@@ -3,6 +3,8 @@
 > 이 레포 전체를 한 눈에 보는 문서입니다 — **무엇을 하는가(기능)**, **얼마나 믿을 수 있는가(검증)**,
 > **무엇이 부족한가(데이터 공백)**, **따라서 무슨 실험이 필요한가**, 그리고 **기호 정리(notation)**.
 > 깊은 유도는 `docs/pfas_rice_compartmental_model.tex`, 세부 검증은 `docs/VALIDATION_*_KR.md`에 있습니다.
+>
+> 🖥️ **앱 사용법**(일반인~전문가, 한국어)은 별도 매뉴얼 **[`docs/MANUAL_KR.md`](MANUAL_KR.md)** 참조.
 
 ![모델 구조 모식도](figures/model_schematic.png)
 
