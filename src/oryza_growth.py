@@ -36,7 +36,7 @@ Use:
     drivers = oryza_drivers("PFOA")        # -> model_api.simulate(drivers=...)
 """
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import numpy as np
 
 # planting density convention shared with forcing_rice / growth_rice

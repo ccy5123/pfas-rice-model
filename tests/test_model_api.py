@@ -235,6 +235,52 @@ def test_estimate_exposure_bayesian_recovers_and_brackets():
         api.estimate_exposure_bayesian("PFOA", {"root": 0.0})
 
 
+def test_estimate_exposure_progress_callback():
+    """The optional progress callback (for the app's live bar) fires once per ODE
+    solve with monotone done<=total, and a throwing callback never breaks the fit."""
+    calls = []
+    r = api.simulate("PFOA", Cwo=1.0)
+    meas = {"grain": r["conc"]["grain"][-1]}
+    est = api.estimate_exposure_bayesian("PFOA", meas, progress=lambda d, t: calls.append((d, t)))
+    assert calls, "progress callback was never called"
+    dones = [d for d, _ in calls]
+    totals = {t for _, t in calls}
+    assert totals == {api._ESTIMATE_MAX_SOLVES}            # total is the documented bound
+    assert dones == sorted(dones)                          # monotone non-decreasing
+    assert max(dones) <= api._ESTIMATE_MAX_SOLVES          # never exceeds the bound
+    assert len(calls) == est["n_eval"]                     # one tick per ODE solve
+    # a callback that raises must be swallowed (the estimate still succeeds)
+    def _boom(d, t):
+        raise RuntimeError("ui blew up")
+    est2 = api.estimate_exposure_bayesian("PFOA", meas, progress=_boom)
+    assert est2["median"] == pytest.approx(est["median"], rel=1e-9)
+
+
+def test_predictive_band_and_uncertainty_factor():
+    """The general-audience honesty band: a ×/÷ factor from the documented a-priori
+    predictive log10 RMSE (~7×), symmetric in log space, with graceful NaN edges."""
+    f = api.uncertainty_factor()
+    assert f == pytest.approx(10.0 ** api.APRIORI_LOG10_RMSE)
+    assert 5.0 < f < 10.0                                  # ~7x at the 0.85 default
+    b = api.predictive_band(2.0)
+    assert b["factor"] == pytest.approx(f)
+    assert b["lo"] == pytest.approx(2.0 / f) and b["hi"] == pytest.approx(2.0 * f)
+    assert b["lo"] < b["value"] < b["hi"]
+    # geometric symmetry: value is the geomean of lo/hi
+    assert np.sqrt(b["lo"] * b["hi"]) == pytest.approx(b["value"])
+    # a custom (smaller) RMSE narrows the band; zero -> no band (factor 1)
+    assert api.uncertainty_factor(0.30) < f
+    assert api.uncertainty_factor(0.0) == pytest.approx(1.0)
+    # non-finite / negative -> NaN lo/hi but a finite factor (no crash on edge values)
+    for bad in (float("nan"), -1.0):
+        e = api.predictive_band(bad)
+        assert not np.isfinite(e["lo"]) and not np.isfinite(e["hi"])
+        assert np.isfinite(e["factor"])
+    # value 0 is a valid (degenerate) band, not an error
+    z = api.predictive_band(0.0)
+    assert z["lo"] == 0.0 and z["hi"] == 0.0
+
+
 def test_lipid_loading_off_matches_baseline():
     """lipid_loading=False must recover the free-only model exactly (g=0)."""
     for nm in ("PFBA", "PFOA", "PFDA"):

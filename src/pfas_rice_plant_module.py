@@ -6,3 +6,11 @@ from pfas_rice_plant_module_4pool_surf import (
     binding_factors, root_uptake, _ghk_factor, _logistic,
     ROOT, STEM, LEAF, FRUIT,
 )
+
+# Pure re-export alias: declare the surface so `from pfas_rice_plant_module import *`
+# works and linters see these names as intentionally re-exported (not dead imports).
+__all__ = [
+    "PlantInputs", "Environment", "Compound", "Compartment", "RiceUptakeModel",
+    "binding_factors", "root_uptake", "_ghk_factor", "_logistic",
+    "ROOT", "STEM", "LEAF", "FRUIT",
+]
