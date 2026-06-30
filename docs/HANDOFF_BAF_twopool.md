@@ -107,10 +107,17 @@ Root BAF = `C_mobile + C_seq`.
      provenance-tagged). The measured-forcing OOS strengthens the case, but the honest
      caveats (single clean OOS, in-sample) argue to keep defaults unchanged.
      **STILL OPEN — decide with the user** (this changes the model's "official" story).
-2. **More OOS datasets.** Only Kim + Li done. **Tang 2026 per-organ TF** (root-relative,
-   dose-dependent; `docs/literature_db/raw_si/tang2026_doseresponse.csv`) was NOT
-   transferred to the two-pool — a natural next OOS (note Tang is ether/GenX + PFOA/PFOS,
-   dose-dependent; use the 0.1 µg/g lowest dose, cf. `validation/tang2026_fxy_refit.py`).
+2. **More OOS datasets.** Kim + Li done (Result 4). **Tang 2026 per-organ TF** now also
+   transferred (`validation/twopool_root_oos_tang.py`, **Result 7**) — but it is a
+   **NEGATIVE/diagnostic** result: the two-pool OOS RMSE **1.40** is WORSE than the
+   single-pool monotone (1.23) / lipid (0.52), because Tang per-organ is a **SHOOT**
+   test and the two-pool's innovation is in the **ROOT** (its shoot is the basic 4pool
+   with a **pass-through stem** → the stalk TF collapses; the two-pool's **leaf** RMSE
+   0.38 is actually the best of all models). Tang's congeners are C5–C8, so the
+   long-chain root decoupling is not even exercised. **Conclusion: Tang is not a fair
+   OOS of the two-pool root** — a per-organ Tang test needs the two-pool root merged
+   with the `nstem_leaf` redistributed shoot (a future structural merge). Kim grain
+   stays the informative two-pool OOS. ✅ DONE (this session).
 3. **The decisive experiment (cannot be done in-silico).** Per-congener
    **xylem-sap / root-water ratio** (direct f_xy, root-pressure exudate) **+** a
    **desorption-resistant root-fraction assay** (isolates the irreversible `k_seq` pool)

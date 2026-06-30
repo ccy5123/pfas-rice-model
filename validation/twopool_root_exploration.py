@@ -163,13 +163,12 @@ def make_rhs(cmpd: Compound, comps, B, gxy, gph, kseq, phi=0.1, T_C_Ph=10.0, k_r
     return rhs
 
 
-def simulate(c, p, kseq_override=None, k_rel=0.0):
-    """Return (root, straw, grain) BAF for congener dict c and global params p.
+def _solve_end(c, p, kseq_override=None, k_rel=0.0):
+    """Integrate the 5-state ODE and return (Cend[5], Mf[4]) at maturity.
 
-    ``kseq_override`` (1/day) bypasses the global k_seq descriptor -- used by the
-    root-matched analysis to back out the seq rate each congener requires.
-    ``k_rel`` (1/day) is the slow seq->mobile desorption rate (0 = irreversible
-    seq sink; >0 lets the long-chain seq burden slowly feed the shoot).
+    Shared core of `simulate` (root/straw/grain) and `simulate_organs`
+    (per-organ stem/leaf split). Keeping a single solve path means both views
+    are numerically identical, so the drift guards stay valid.
     """
     comps = compartments()
     cmpd = Compound(name=c["name"], K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
@@ -184,12 +183,37 @@ def simulate(c, p, kseq_override=None, k_rel=0.0):
     rhs = make_rhs(cmpd, comps, B, gxy, gph, kseq, k_rel=k_rel)
     sol = solve_ivp(rhs, (T[0], T[-1]), np.zeros(5), t_eval=T[-1:],
                     method="BDF", rtol=1e-6, atol=1e-9)
-    Cend = sol.y[:, -1]
-    Mf = MMAT[-1]
+    return sol.y[:, -1], MMAT[-1]
+
+
+def simulate(c, p, kseq_override=None, k_rel=0.0):
+    """Return (root, straw, grain) BAF for congener dict c and global params p.
+
+    ``kseq_override`` (1/day) bypasses the global k_seq descriptor -- used by the
+    root-matched analysis to back out the seq rate each congener requires.
+    ``k_rel`` (1/day) is the slow seq->mobile desorption rate (0 = irreversible
+    seq sink; >0 lets the long-chain seq burden slowly feed the shoot).
+    """
+    Cend, Mf = _solve_end(c, p, kseq_override, k_rel)
     root = Cend[RM] + Cend[RS]
     straw = (Cend[ST] * Mf[STEM] + Cend[LF] * Mf[LEAF]) / (Mf[STEM] + Mf[LEAF])
     grain = Cend[GR]
     return root, straw, grain
+
+
+def simulate_organs(c, p, kseq_override=None, k_rel=0.0):
+    """Per-organ fresh-weight BAF (conc at Cwo=1) for congener c.
+
+    Same ODE solve as `simulate`, but exposes the stem and leaf compartments
+    separately (the 5-state ODE keeps them distinct; `simulate` only returns the
+    mass-weighted straw average). Used by the Tang 2026 per-organ OOS test, which
+    needs stalk (=stem) / leaf / endosperm (=grain) individually.
+
+    Returns dict with keys root, root_mobile, root_seq, stem, leaf, grain.
+    """
+    Cend, _ = _solve_end(c, p, kseq_override, k_rel)
+    return dict(root=Cend[RM] + Cend[RS], root_mobile=Cend[RM], root_seq=Cend[RS],
+                stem=Cend[ST], leaf=Cend[LF], grain=Cend[GR])
 
 
 # ---------------------------------------------------------------------------

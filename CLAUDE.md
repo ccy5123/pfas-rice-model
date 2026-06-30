@@ -509,6 +509,22 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   bars and does NOT track the sidebar (the core bar does). The carrier two-pool stays API-only (saturated DOF-0
   closure, ~1 min/congener — too slow to render live). `tests/test_plots.py::test_fig_baf_extra_overlay`. Defaults /
   canonical core / `parameters.json` unchanged.
+- **Two-pool seq → Tang 2026 per-organ OOS (this session; handoff item ②) — NEGATIVE/diagnostic**:
+  `validation/twopool_root_oos_tang.py` transfers the Yamazaki-fit two-pool (no re-fit) to Tang per-organ TF
+  (stalk/leaf/endosperm, dw, 0.1 µg/g). **Result: two-pool OOS log10 RMSE 1.40 — WORSE** than single-pool monotone
+  (1.23) and far worse than lipid (0.52, the documented Tang winner). **Why it's informative, not a root-mechanism
+  failure**: Tang per-organ is a **SHOOT** test, but the two-pool innovates in the **ROOT** (mobile/seq split); its
+  shoot is the unmodified basic 4pool with a **pass-through stem** (PFOA stem 0.008 vs leaf 1.14) → the **stalk TF
+  collapses** (the empty-stem defect `nstem_leaf` fixes). The per-organ breakdown isolates it: the two-pool **leaf**
+  RMSE 0.38 is the **best of all three models**; only the stalk drags the overall up (the single-pool baselines use
+  `nstem_leaf`, so their stalk is populated — an apples-to-oranges SHOOT difference). Tang's congeners are C5–C8, so
+  the long-chain root decoupling — the two-pool's whole point — is not even exercised. **Conclusion: Tang is NOT a
+  fair OOS of the two-pool root**; a per-organ Tang test needs the two-pool root merged with the `nstem_leaf`
+  redistributed shoot (future structural merge). Kim 2019 grain (`twopool_root_oos.py`) stays the informative
+  two-pool OOS. Added `simulate_organs(c,p,…)` to `twopool_root_exploration.py` (per-organ stem/leaf split on the
+  SAME solve path as `simulate` — root/grain byte-identical). Guard
+  `tests/test_model_api.py::test_twopool_simulate_organs_and_tang_passthrough_diagnosis`. Full record:
+  `docs/twopool_root_exploration.md` §Result 7. EXPLORATORY; `parameters.json` UNCHANGED (no support for promotion).
 - **Time-varying pore-water exposure `cwo_profile` + HYDRUS provisioning + Bayesian identifiability (this session)**:
   the default `simulate(Cwo=…)` holds the pore water CONSTANT (conc==BAF, the BAF-reproduction convention), but a real
   paddy `C_w^o(t)` is time-varying. **`simulate(cwo_profile=…)`** (default `"constant"`, UNCHANGED) makes the time-shape a
@@ -645,7 +661,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - Two-pool root: `python validation/twopool_root_exploration.py` (root sink ↔ shoot decoupling; global fit +
   root-matched sufficiency test + non-K_PL U-shaped k_seq fit; ~3 min, saves `figures/twopool_root_exploration.png` +
   `twopool_fitted_params.json`). OOS transfer: `python validation/twopool_root_oos.py` (Yamazaki-fit → Kim 2019 grain +
-  Li 2025 TF, no re-fit; reuses the cached fit, ~5 s). Long-chain shoot-floor diagnostic:
+  Li 2025 TF, no re-fit; reuses the cached fit, ~5 s). Tang per-organ OOS (NEGATIVE/diagnostic):
+  `python validation/twopool_root_oos_tang.py` (Yamazaki-fit → Tang stalk/leaf/endosperm dw TF, no re-fit; ~25 s;
+  two-pool 1.40 worse than lipid 0.52 — pass-through stem collapses the stalk; Tang tests the shoot, two-pool fixes
+  the root). Long-chain shoot-floor diagnostic:
   `python validation/twopool_root_seqrelease.py` (k_rel seq-release sweep + g_xy xylem-loading diagnostic; ~20 s).
   Measured-forcing robustness re-fit: `python validation/twopool_root_measured.py` (re-fits on forcing_rice + ORYZA
   biomass; in-sample + Kim OOS vs fxy-doc baselines; ~3 min). Opt-in API (no re-fit; reuses the cached fit):
