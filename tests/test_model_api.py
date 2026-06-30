@@ -466,6 +466,30 @@ def test_simulate_twopool_seq_krel_drains_root_to_shoot():
     assert rel["seq_fraction"] < base["seq_fraction"]
 
 
+def test_twopool_simulate_organs_and_tang_passthrough_diagnosis():
+    """Guard the two-pool Tang per-organ OOS diagnosis
+    (validation/twopool_root_oos_tang.py): `simulate_organs` exposes the stem/leaf
+    split on the SAME solve path as `simulate` (root/grain match exactly), and the
+    two-pool's basic-4pool shoot has a PASS-THROUGH stem -- stem conc << leaf conc --
+    so the stalk TF collapses while the leaf TF is reasonable. This is the documented
+    empty-stem defect (`nstem_leaf` fixes it) and is why Tang -- a SHOOT-resolution
+    test -- is NOT a fair OOS of the two-pool ROOT mechanism (overall OOS RMSE ~1.40,
+    leaf-best/stalk-worst per-organ)."""
+    (p, q), TP = api._twopool_seq()
+    c = api._CONG["PFOA"]
+    ks = TP.kseq_ushape(c["n_C"], c["group"], q)
+    org = TP.simulate_organs(c, p, kseq_override=ks)
+    root, _straw, grain = TP.simulate(c, p, kseq_override=ks)
+    # simulate_organs shares simulate's solve path -> root/grain identical
+    assert org["root"] == pytest.approx(root, rel=1e-9)
+    assert org["grain"] == pytest.approx(grain, rel=1e-9)
+    assert org["root"] == pytest.approx(org["root_mobile"] + org["root_seq"], rel=1e-9)
+    # pass-through stem: stalk collapses, leaf carries the shoot burden
+    assert org["stem"] < 0.1 * org["leaf"]
+    assert org["leaf"] / org["root"] > 1.0          # leaf TF order-1
+    assert org["stem"] / org["root"] < 0.1          # stalk TF collapsed
+
+
 # ---------------------------------------------------------------------------
 # time-varying pore-water exposure shape (cwo_profile)
 # ---------------------------------------------------------------------------

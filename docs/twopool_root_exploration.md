@@ -345,3 +345,84 @@ and `twopool_fitted_params_measured.json` (Result 6) is **not** auto-loaded.
 > whose second pool is a reversible **bound store** tuned by carrier/f_xy levers (the saturated
 > long-chain closure), whereas THIS model's second pool is an irreversible **sequestration sink**
 > (`k_seq`). The `_seq`/`_carrier` suffixes disambiguate the two `model_api` entry points.
+
+---
+
+## Result 7 — Tang 2026 per-organ OOS (`validation/twopool_root_oos_tang.py`): a NEGATIVE/diagnostic result
+
+The handoff (`docs/HANDOFF_BAF_twopool.md` §4.2) flagged Tang 2026 per-organ TF
+(stalk/leaf/endosperm, dw) as a natural next OOS for the two-pool. Transferring the
+Yamazaki-fit two-pool to Tang **without re-fitting** gives:
+
+| model (OOS, Tang 0.1 µg/g) | overall log10 RMSE | stalk | leaf | endosperm |
+|---|---|---|---|---|
+| two-pool U-shaped k_seq | **1.40** | 1.89 | **0.38** | 1.46 |
+| single-pool monotone f_xy | 1.23 | 1.15 | 0.98 | 1.50 |
+| single-pool lipid loading | **0.52** | 0.47 | 0.58 | 0.49 |
+| single-pool Tang-refit f_xy (in-sample) | 0.52 | — | — | — |
+
+The two-pool is **WORSE** than even the single-pool monotone, and far worse than the
+lipid model (which remains the Tang winner, consistent with `oos_tang_lipid.py`).
+
+**Why — and why it is informative, not a failure of the root mechanism.** Tang
+per-organ TF is a **SHOOT-resolution** test (stalk vs leaf vs endosperm), but the
+two-pool's entire innovation is in the **ROOT** (mobile/seq split). Its shoot is the
+**unmodified basic 4pool** with a **pass-through stem** (PFOA stem conc 0.008 vs leaf
+1.14), so the **stalk TF collapses** — the documented over-translocation / empty-stem
+defect that `nstem_leaf` (redistributed shoot + transpiration retention) was built to
+fix. The per-organ breakdown isolates this cleanly: the two-pool's **leaf RMSE (0.38)
+is the BEST of all three models**, and only the stalk drags the overall up. The
+single-pool baselines here use `nstem_leaf`, so their stalk is populated — the stalk
+comparison is **apples-to-oranges** (different SHOOT model), not a root-mechanism
+difference.
+
+Compounding it: Tang's congeners are **C5–C8** (GenX, PFOA, PFOS), so the **long-chain
+root decoupling — the two-pool's whole point — is not even exercised**. (GenX further
+over-predicts via the provisional ether `f_xy_recommended`, a separate condition-
+dependent QSPR issue.)
+
+**Conclusion.** The two-pool ROOT mechanism and the Tang per-organ SHOOT pattern are
+largely **orthogonal**; **Tang is not a suitable OOS test of the two-pool root**. The
+actionable, structural finding is that a fair per-organ Tang comparison needs the
+two-pool **root** merged with the `nstem_leaf` **redistributed shoot** (a future
+structural merge). **Kim 2019 grain** (`twopool_root_oos.py`, Result 4 — grain/root,
+not shoot-resolved) remains the informative two-pool OOS. This does **not** add support
+for promoting the fitted `k_seq` into `parameters.json`.
+
+Guarded by `tests/test_model_api.py::test_twopool_simulate_organs_and_tang_passthrough_diagnosis`
+(pins the `simulate`/`simulate_organs` solve-path consistency + the pass-through-stem
+diagnosis). `simulate_organs(c, p, kseq_override=, k_rel=)` was added to
+`twopool_root_exploration.py` to expose the per-organ (stem/leaf) split on the same
+solve path as `simulate`.
+
+---
+
+## Mechanistic provenance of `k_seq` (literature) — `docs/twopool_kseq_mechanism.md`
+
+The U-shaped, non-K_PL, head-group-dependent `k_seq` was, until now, purely
+phenomenological (fit to the root-matched values, Result 2–3). A fan-out,
+adversarially-verified literature synthesis (`docs/twopool_kseq_mechanism.md`;
+17 sources → 25 verified claims) gives it a **PARTIALLY SUPPORTED** mechanistic
+anchor:
+
+- The **U-shape is a superposition of two distinct mechanisms** — a short-chain
+  **electrostatic/anion-exchange** arm (biphasic soil Koc; short chains over-sorb the
+  hydrophobic QSPR) and a long-chain **hydrophobic, desorption-resistant** arm
+  (hysteresis/irreversibility index TII rising with chain length, ≈0.98 at C10 PFDA).
+  This is exactly why the fitted `k_seq` is a **sum of two exponential arms**, and why
+  the single **linear** `k_seq` collapsed.
+- The **irreversibility** of the sink (a terminal accumulator, not a reversible K) is
+  justified by the measured desorption hysteresis.
+- The **PFSA offset** `10^(+0.18)` ≈ the measured **+0.23 log** sulfonate-vs-carboxylate
+  offset on lignin/soil (non-lipid, electrostatic) — a quantitative, non-circular
+  corroboration of the model's head-group multiplier.
+- **Fe-Mn root plaque is demoted** as the irreversible-sink candidate (PFAS-ferrihydrite
+  binding is outer-sphere / pH-reversible / acidic-only / monotonic); **cell-wall
+  entrapment** is the better attribution (a minor PFCA-specific inner-sphere plaque term
+  stays open).
+- **Central data gap = the decisive experiment**: no rice-root cell-wall or Fe-Mn-plaque
+  PFAS sorption coefficient resolved by **both** chain length **and** head group exists;
+  every anchor is an analog matrix (lignin, ferrihydrite, sediment, soil OC). The
+  `twopool_kseq_mechanism.md` §5 cell-wall / plaque batch-sorption + desorption assay is
+  the experiment that would convert `k_seq` from descriptor-with-analogy to directly
+  anchored — and gate the promotion question.

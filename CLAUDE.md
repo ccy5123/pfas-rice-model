@@ -496,8 +496,12 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   pins the wrapper to the standalone validation endpoints (cross-impl RMSE 0.014) so the two implementations cannot
   silently diverge; `test_simulate_twopool_seq_structure_and_keys` / `..._krel_drains_root_to_shoot` lock the I/O contract and
   the Result-5 k_rel behaviour. Still EXPLORATORY / in-sample (the cached fit is on the demo forcings; the measured-forcing
-  fit `twopool_fitted_params_measured.json` is not auto-loaded). The §4 promotion decision (handoff item ③) is unchanged —
-  **NOT promoted to `parameters.json`** pending the user. **NAMING**: there are now TWO opt-in two-pool root models —
+  fit `twopool_fitted_params_measured.json` is not auto-loaded). The §4 promotion decision (handoff item ③) is now
+  **DECIDED with the user — DO NOT promote; keep opt-in** (`parameters.json`/defaults/`reproduce_demo` RMSE 0.029 UNCHANGED):
+  the Tang per-organ OOS added no support (negative/diagnostic) and the `k_seq` mechanism review
+  (`docs/twopool_kseq_mechanism.md`, PARTIALLY SUPPORTED) strengthens the story but provides no direct measured
+  root-sorbent dataset; the promotion gate is the §5 rice-root cell-wall/Fe-Mn-plaque batch-sorption + desorption assay
+  (chain-length × head-group). **NAMING**: there are now TWO opt-in two-pool root models —
   this SEQUESTRATION one (`simulate_twopool_seq`; irreversible non-K_PL `k_seq` sink, keeps monotone f_xy) and the
   CARRIER one (`simulate_twopool_carrier` / `close_longchain_2pool`, `src/pfas_rice_two_pool.py`; reversible bound store
   tuned by carrier/f_xy levers, the saturated long-chain closure). Different mechanisms; the `_seq`/`_carrier` suffix
@@ -509,6 +513,41 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   bars and does NOT track the sidebar (the core bar does). The carrier two-pool stays API-only (saturated DOF-0
   closure, ~1 min/congener — too slow to render live). `tests/test_plots.py::test_fig_baf_extra_overlay`. Defaults /
   canonical core / `parameters.json` unchanged.
+- **Two-pool seq → Tang 2026 per-organ OOS (this session; handoff item ②) — NEGATIVE/diagnostic**:
+  `validation/twopool_root_oos_tang.py` transfers the Yamazaki-fit two-pool (no re-fit) to Tang per-organ TF
+  (stalk/leaf/endosperm, dw, 0.1 µg/g). **Result: two-pool OOS log10 RMSE 1.40 — WORSE** than single-pool monotone
+  (1.23) and far worse than lipid (0.52, the documented Tang winner). **Why it's informative, not a root-mechanism
+  failure**: Tang per-organ is a **SHOOT** test, but the two-pool innovates in the **ROOT** (mobile/seq split); its
+  shoot is the unmodified basic 4pool with a **pass-through stem** (PFOA stem 0.008 vs leaf 1.14) → the **stalk TF
+  collapses** (the empty-stem defect `nstem_leaf` fixes). The per-organ breakdown isolates it: the two-pool **leaf**
+  RMSE 0.38 is the **best of all three models**; only the stalk drags the overall up (the single-pool baselines use
+  `nstem_leaf`, so their stalk is populated — an apples-to-oranges SHOOT difference). Tang's congeners are C5–C8, so
+  the long-chain root decoupling — the two-pool's whole point — is not even exercised. **Conclusion: Tang is NOT a
+  fair OOS of the two-pool root**; a per-organ Tang test needs the two-pool root merged with the `nstem_leaf`
+  redistributed shoot (future structural merge). Kim 2019 grain (`twopool_root_oos.py`) stays the informative
+  two-pool OOS. Added `simulate_organs(c,p,…)` to `twopool_root_exploration.py` (per-organ stem/leaf split on the
+  SAME solve path as `simulate` — root/grain byte-identical). Guard
+  `tests/test_model_api.py::test_twopool_simulate_organs_and_tang_passthrough_diagnosis`. Full record:
+  `docs/twopool_root_exploration.md` §Result 7. EXPLORATORY; `parameters.json` UNCHANGED (no support for promotion).
+- **`k_seq` mechanistic provenance — literature synthesis (this session; handoff item ②/§4.5) — PARTIALLY SUPPORTED**:
+  `docs/twopool_kseq_mechanism.md` — a fan-out, adversarially-verified deep-research synthesis (17 sources → 66
+  candidate claims → 25 verified by 3-vote panels) answering whether the phenomenological U-shaped, non-K_PL,
+  head-group-dependent `k_seq` has a physical basis. **Verdict: PARTIALLY SUPPORTED — and it explains the model's
+  two-arm form.** Key results: (1) the **U-shape is a SUPERPOSITION of two distinct mechanisms** — a short-chain
+  **electrostatic/anion-exchange** arm (biphasic soil Koc; short chains over-sorb the hydrophobic QSPR) + a long-chain
+  **hydrophobic, desorption-resistant** arm (irreversibility index TII rising with chain length, ≈0.98 at C10 PFDA) —
+  which is exactly why the fitted `k_seq` is a **sum of two exponential arms** and why a single linear `k_seq` collapsed;
+  (2) the **irreversible sink** (terminal accumulator, not a reversible K) is justified by the measured desorption
+  hysteresis; (3) the model's **PFSA offset `10^+0.18`** ≈ the independently **measured +0.23 log** sulfonate-vs-
+  carboxylate offset on lignin/soil (non-lipid, electrostatic) — a quantitative, non-circular corroboration; (4) **Fe-Mn
+  root plaque is DEMOTED** as the irreversible-sink candidate (PFAS-ferrihydrite binding is outer-sphere/pH-reversible/
+  acidic-only/monotonic; flooded paddies are circumneutral) in favour of **cell-wall entrapment** — though a minor
+  PFCA-specific inner-sphere plaque term and the arsenate "molecular-sieve" precedent stay open; (5) **central data gap =
+  the decisive experiment**: NO rice-root cell-wall or Fe-Mn-plaque PFAS coefficient resolved by BOTH chain length AND
+  head group exists (every anchor is an analog matrix — lignin/ferrihydrite/sediment/soil OC), so `k_seq` is anchored by
+  **analogy + superposition**, not a direct root-sorbent dataset. ⇒ strengthens the mechanistic *story* but does NOT by
+  itself warrant promoting `k_seq` into `parameters.json` (the §5 cell-wall/plaque batch-sorption + desorption assay is
+  the gate). Literature/theory only; `parameters.json`, the model math and `reproduce_demo` (RMSE 0.029) UNCHANGED.
 - **Time-varying pore-water exposure `cwo_profile` + HYDRUS provisioning + Bayesian identifiability (this session)**:
   the default `simulate(Cwo=…)` holds the pore water CONSTANT (conc==BAF, the BAF-reproduction convention), but a real
   paddy `C_w^o(t)` is time-varying. **`simulate(cwo_profile=…)`** (default `"constant"`, UNCHANGED) makes the time-shape a
@@ -645,7 +684,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - Two-pool root: `python validation/twopool_root_exploration.py` (root sink ↔ shoot decoupling; global fit +
   root-matched sufficiency test + non-K_PL U-shaped k_seq fit; ~3 min, saves `figures/twopool_root_exploration.png` +
   `twopool_fitted_params.json`). OOS transfer: `python validation/twopool_root_oos.py` (Yamazaki-fit → Kim 2019 grain +
-  Li 2025 TF, no re-fit; reuses the cached fit, ~5 s). Long-chain shoot-floor diagnostic:
+  Li 2025 TF, no re-fit; reuses the cached fit, ~5 s). Tang per-organ OOS (NEGATIVE/diagnostic):
+  `python validation/twopool_root_oos_tang.py` (Yamazaki-fit → Tang stalk/leaf/endosperm dw TF, no re-fit; ~25 s;
+  two-pool 1.40 worse than lipid 0.52 — pass-through stem collapses the stalk; Tang tests the shoot, two-pool fixes
+  the root). Long-chain shoot-floor diagnostic:
   `python validation/twopool_root_seqrelease.py` (k_rel seq-release sweep + g_xy xylem-loading diagnostic; ~20 s).
   Measured-forcing robustness re-fit: `python validation/twopool_root_measured.py` (re-fits on forcing_rice + ORYZA
   biomass; in-sample + Kim OOS vs fxy-doc baselines; ~3 min). Opt-in API (no re-fit; reuses the cached fit):
