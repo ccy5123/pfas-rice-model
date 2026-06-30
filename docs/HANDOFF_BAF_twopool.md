@@ -127,9 +127,20 @@ Root BAF = `C_mobile + C_seq`.
    chain-superlinear `g_xy`** term to model the C12 shoot directly — but Result 5 argues
    it is NOT QSPR-able (over-fits one near-MQL outlier). **Low priority / likely a
    negative result**; only pursue if the user wants the shoot side modeled explicitly.
-5. **U-shaped `k_seq` provenance.** The form is phenomenological (fit to root-matched
-   values). A mechanistic anchor — cell-wall/Fe-Mn-plaque sorption kinetics vs chain
-   length & head group — would upgrade it from descriptor to theory (literature search).
+5. **U-shaped `k_seq` provenance.** ✅ **DONE (literature search)** —
+   `docs/twopool_kseq_mechanism.md` (deep-research, 17 sources → 25 verified claims).
+   **Verdict: PARTIALLY SUPPORTED.** The U-shape is a **superposition of two distinct
+   mechanisms** (short-chain electrostatic/anion-exchange arm + long-chain hydrophobic/
+   **desorption-resistant** arm; TII→0.98 at C10), which explains the model's two-
+   exponential-arm form; the **irreversible sink** and the **PFSA offset** (`10^+0.18`
+   fitted ≈ measured **+0.23 log** sulfonate, lignin/soil) are now anchored. **Fe-Mn
+   plaque demoted** (outer-sphere/pH-reversible/acidic-only) in favour of cell-wall
+   entrapment. **Central data gap**: no rice-root cell-wall / Fe-Mn-plaque PFAS
+   coefficient resolved by BOTH chain length AND head group exists — anchored by analogy,
+   not a direct dataset. So this strengthens the mechanistic *story* but does NOT by
+   itself warrant promoting `k_seq` (the §5 cell-wall/plaque batch-sorption experiment
+   is the gate). Remaining open item is now only #1 (promotion decision) + #3 (the
+   decisive wet-lab experiment, now scoped in `twopool_kseq_mechanism.md` §5).
 
 ---
 

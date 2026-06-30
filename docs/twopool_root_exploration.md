@@ -394,3 +394,35 @@ Guarded by `tests/test_model_api.py::test_twopool_simulate_organs_and_tang_passt
 diagnosis). `simulate_organs(c, p, kseq_override=, k_rel=)` was added to
 `twopool_root_exploration.py` to expose the per-organ (stem/leaf) split on the same
 solve path as `simulate`.
+
+---
+
+## Mechanistic provenance of `k_seq` (literature) — `docs/twopool_kseq_mechanism.md`
+
+The U-shaped, non-K_PL, head-group-dependent `k_seq` was, until now, purely
+phenomenological (fit to the root-matched values, Result 2–3). A fan-out,
+adversarially-verified literature synthesis (`docs/twopool_kseq_mechanism.md`;
+17 sources → 25 verified claims) gives it a **PARTIALLY SUPPORTED** mechanistic
+anchor:
+
+- The **U-shape is a superposition of two distinct mechanisms** — a short-chain
+  **electrostatic/anion-exchange** arm (biphasic soil Koc; short chains over-sorb the
+  hydrophobic QSPR) and a long-chain **hydrophobic, desorption-resistant** arm
+  (hysteresis/irreversibility index TII rising with chain length, ≈0.98 at C10 PFDA).
+  This is exactly why the fitted `k_seq` is a **sum of two exponential arms**, and why
+  the single **linear** `k_seq` collapsed.
+- The **irreversibility** of the sink (a terminal accumulator, not a reversible K) is
+  justified by the measured desorption hysteresis.
+- The **PFSA offset** `10^(+0.18)` ≈ the measured **+0.23 log** sulfonate-vs-carboxylate
+  offset on lignin/soil (non-lipid, electrostatic) — a quantitative, non-circular
+  corroboration of the model's head-group multiplier.
+- **Fe-Mn root plaque is demoted** as the irreversible-sink candidate (PFAS-ferrihydrite
+  binding is outer-sphere / pH-reversible / acidic-only / monotonic); **cell-wall
+  entrapment** is the better attribution (a minor PFCA-specific inner-sphere plaque term
+  stays open).
+- **Central data gap = the decisive experiment**: no rice-root cell-wall or Fe-Mn-plaque
+  PFAS sorption coefficient resolved by **both** chain length **and** head group exists;
+  every anchor is an analog matrix (lignin, ferrihydrite, sediment, soil OC). The
+  `twopool_kseq_mechanism.md` §5 cell-wall / plaque batch-sorption + desorption assay is
+  the experiment that would convert `k_seq` from descriptor-with-analogy to directly
+  anchored — and gate the promotion question.

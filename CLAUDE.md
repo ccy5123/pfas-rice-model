@@ -525,6 +525,25 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   SAME solve path as `simulate` — root/grain byte-identical). Guard
   `tests/test_model_api.py::test_twopool_simulate_organs_and_tang_passthrough_diagnosis`. Full record:
   `docs/twopool_root_exploration.md` §Result 7. EXPLORATORY; `parameters.json` UNCHANGED (no support for promotion).
+- **`k_seq` mechanistic provenance — literature synthesis (this session; handoff item ②/§4.5) — PARTIALLY SUPPORTED**:
+  `docs/twopool_kseq_mechanism.md` — a fan-out, adversarially-verified deep-research synthesis (17 sources → 66
+  candidate claims → 25 verified by 3-vote panels) answering whether the phenomenological U-shaped, non-K_PL,
+  head-group-dependent `k_seq` has a physical basis. **Verdict: PARTIALLY SUPPORTED — and it explains the model's
+  two-arm form.** Key results: (1) the **U-shape is a SUPERPOSITION of two distinct mechanisms** — a short-chain
+  **electrostatic/anion-exchange** arm (biphasic soil Koc; short chains over-sorb the hydrophobic QSPR) + a long-chain
+  **hydrophobic, desorption-resistant** arm (irreversibility index TII rising with chain length, ≈0.98 at C10 PFDA) —
+  which is exactly why the fitted `k_seq` is a **sum of two exponential arms** and why a single linear `k_seq` collapsed;
+  (2) the **irreversible sink** (terminal accumulator, not a reversible K) is justified by the measured desorption
+  hysteresis; (3) the model's **PFSA offset `10^+0.18`** ≈ the independently **measured +0.23 log** sulfonate-vs-
+  carboxylate offset on lignin/soil (non-lipid, electrostatic) — a quantitative, non-circular corroboration; (4) **Fe-Mn
+  root plaque is DEMOTED** as the irreversible-sink candidate (PFAS-ferrihydrite binding is outer-sphere/pH-reversible/
+  acidic-only/monotonic; flooded paddies are circumneutral) in favour of **cell-wall entrapment** — though a minor
+  PFCA-specific inner-sphere plaque term and the arsenate "molecular-sieve" precedent stay open; (5) **central data gap =
+  the decisive experiment**: NO rice-root cell-wall or Fe-Mn-plaque PFAS coefficient resolved by BOTH chain length AND
+  head group exists (every anchor is an analog matrix — lignin/ferrihydrite/sediment/soil OC), so `k_seq` is anchored by
+  **analogy + superposition**, not a direct root-sorbent dataset. ⇒ strengthens the mechanistic *story* but does NOT by
+  itself warrant promoting `k_seq` into `parameters.json` (the §5 cell-wall/plaque batch-sorption + desorption assay is
+  the gate). Literature/theory only; `parameters.json`, the model math and `reproduce_demo` (RMSE 0.029) UNCHANGED.
 - **Time-varying pore-water exposure `cwo_profile` + HYDRUS provisioning + Bayesian identifiability (this session)**:
   the default `simulate(Cwo=…)` holds the pore water CONSTANT (conc==BAF, the BAF-reproduction convention), but a real
   paddy `C_w^o(t)` is time-varying. **`simulate(cwo_profile=…)`** (default `"constant"`, UNCHANGED) makes the time-shape a
