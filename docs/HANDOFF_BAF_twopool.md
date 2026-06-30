@@ -104,9 +104,21 @@ Root BAF = `C_mobile + C_seq`.
      Defaults / `reproduce_demo` / `parameters.json` unchanged. See
      `docs/twopool_root_exploration.md` §"API access".
    - (b) Promote the U-shaped `k_seq` coefficients into `parameters.json` (new fields,
-     provenance-tagged). The measured-forcing OOS strengthens the case, but the honest
-     caveats (single clean OOS, in-sample) argue to keep defaults unchanged.
-     **STILL OPEN — decide with the user** (this changes the model's "official" story).
+     provenance-tagged). **✅ DECIDED (with the user) — DO NOT promote; keep opt-in.**
+     The decision was made after assembling all the evidence item ② produced:
+     - the **Tang per-organ OOS adds no support** (#2 below — NEGATIVE/diagnostic);
+     - the `k_seq` **mechanism review** (`docs/twopool_kseq_mechanism.md`, #5 below)
+       strengthens the *story* (PARTIALLY SUPPORTED) but provides **no direct measured
+       root-sorbent dataset** — `k_seq` stays anchored by analogy + superposition;
+     - the standing honest caveats remain: **Yamazaki in-sample fit**, a **single clean
+       OOS** (Kim grain), **PFDoDA near-MQL**.
+     → The two-pool stays an **opt-in** module (`model_api.simulate_twopool_seq`, option
+     (a)); defaults / `reproduce_demo` (RMSE 0.029) / `parameters.json` **unchanged**.
+     **Promotion gate**: the `twopool_kseq_mechanism.md` §5 rice-root **cell-wall /
+     Fe-Mn-plaque batch-sorption + desorption assay** (chain-length × head-group). Until
+     that direct measurement exists, promotion is not warranted. (Re-open only with that
+     data, or a second independent clean per-organ OOS once the two-pool root is merged
+     with the `nstem_leaf` redistributed shoot — see #2.)
 2. **More OOS datasets.** Kim + Li done (Result 4). **Tang 2026 per-organ TF** now also
    transferred (`validation/twopool_root_oos_tang.py`, **Result 7**) — but it is a
    **NEGATIVE/diagnostic** result: the two-pool OOS RMSE **1.40** is WORSE than the
@@ -153,6 +165,7 @@ pip install -r requirements.txt           # numpy, scipy (matplotlib for the fig
 # reproduce the whole arc
 python validation/twopool_root_exploration.py     # fit + root-match + U-shape + figure (~3 min)
 python validation/twopool_root_oos.py             # Kim/Li OOS transfer (reuses cache, ~5 s)
+python validation/twopool_root_oos_tang.py        # Tang per-organ OOS (NEGATIVE/diagnostic, ~25 s)
 python validation/twopool_root_seqrelease.py      # shoot-floor diagnostic (~20 s)
 python validation/twopool_root_measured.py        # measured-forcing robustness re-fit (~3 min)
 
@@ -168,15 +181,24 @@ for any `c in TP.CONGENERS`.
 
 ---
 
-## 6. Ready-to-paste prompt for the next session
+## 6. Status of the arc — all in-silico items CLOSED
 
-> 이어서 진행. 컨텍스트는 `docs/HANDOFF_BAF_twopool.md`와 `docs/twopool_root_exploration.md`를
-> 먼저 읽어줘. 브랜치 `claude/peaceful-babbage-rei1a1`, PR #24(draft)에서 작업한 two-pool root +
-> 비-K_PL U자형 k_seq 작업의 후속이다. 이번엔 **[① two-pool을 model_api opt-in 모듈로 배선
-> (simulate_twopool_seq) / ② Tang 2026 per-organ TF로 OOS 확장 / ③ U자형 k_seq를 parameters.json에
-> 승격 결정 / ④ 다른 주제]** 중 하나를 진행하고 싶다. (기본값은 ①을 추천 — 저위험, 기존 디폴트
-> 불변, 앱/검증에서 바로 사용 가능.) 모든 작업은 EXPLORATORY 유지, `parameters.json` 디폴트는
-> 사용자 승인 전까지 건드리지 말 것. 커밋·푸시는 같은 브랜치, PR #24에 누적.
+The two-pool BAF arc's in-silico work is **complete**. Items ①–③ are resolved:
 
-(다음 세션에서 ①~④ 중 무엇을 할지 사용자에게 먼저 확인할 것. 정직한 caveat — Yamazaki in-sample,
-단일 clean OOS, PFDoDA near-MQL — 를 모든 주장에 계속 부착.)
+- **① opt-in module** (`model_api.simulate_twopool_seq`) — ✅ DONE (§4.1a).
+- **② OOS extension** — ✅ DONE. Kim/Li (Result 4) + **Tang per-organ**
+  (`validation/twopool_root_oos_tang.py`, Result 7; NEGATIVE/diagnostic) + the
+  **`k_seq` mechanism literature review** (`docs/twopool_kseq_mechanism.md`;
+  PARTIALLY SUPPORTED).
+- **③ promotion decision** — ✅ DECIDED with the user (§4.1b): **DO NOT promote;
+  keep opt-in.** `parameters.json` / defaults / `reproduce_demo` (RMSE 0.029) UNCHANGED.
+
+**What remains is NOT in-silico** — it is the **promotion gate / decisive experiment**:
+the `twopool_kseq_mechanism.md` §5 rice-root **cell-wall / Fe-Mn-plaque batch-sorption +
+desorption assay** (chain-length × head-group), and/or a second independent clean
+per-organ OOS once the two-pool **root** is merged with the `nstem_leaf` **redistributed
+shoot** (the structural merge that would make a per-organ Tang test fair; Result 7).
+
+Carry the standing honest caveats forward on every claim: **Yamazaki in-sample fit,
+single clean OOS, PFDoDA near-MQL**. Do not promote `k_seq` into `parameters.json`
+without the §5 direct measurement.

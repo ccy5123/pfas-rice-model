@@ -496,8 +496,12 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   pins the wrapper to the standalone validation endpoints (cross-impl RMSE 0.014) so the two implementations cannot
   silently diverge; `test_simulate_twopool_seq_structure_and_keys` / `..._krel_drains_root_to_shoot` lock the I/O contract and
   the Result-5 k_rel behaviour. Still EXPLORATORY / in-sample (the cached fit is on the demo forcings; the measured-forcing
-  fit `twopool_fitted_params_measured.json` is not auto-loaded). The §4 promotion decision (handoff item ③) is unchanged —
-  **NOT promoted to `parameters.json`** pending the user. **NAMING**: there are now TWO opt-in two-pool root models —
+  fit `twopool_fitted_params_measured.json` is not auto-loaded). The §4 promotion decision (handoff item ③) is now
+  **DECIDED with the user — DO NOT promote; keep opt-in** (`parameters.json`/defaults/`reproduce_demo` RMSE 0.029 UNCHANGED):
+  the Tang per-organ OOS added no support (negative/diagnostic) and the `k_seq` mechanism review
+  (`docs/twopool_kseq_mechanism.md`, PARTIALLY SUPPORTED) strengthens the story but provides no direct measured
+  root-sorbent dataset; the promotion gate is the §5 rice-root cell-wall/Fe-Mn-plaque batch-sorption + desorption assay
+  (chain-length × head-group). **NAMING**: there are now TWO opt-in two-pool root models —
   this SEQUESTRATION one (`simulate_twopool_seq`; irreversible non-K_PL `k_seq` sink, keeps monotone f_xy) and the
   CARRIER one (`simulate_twopool_carrier` / `close_longchain_2pool`, `src/pfas_rice_two_pool.py`; reversible bound store
   tuned by carrier/f_xy levers, the saturated long-chain closure). Different mechanisms; the `_seq`/`_carrier` suffix
