@@ -10,6 +10,10 @@ DPU / Trapp 프레임워크의 **이온성유기화합물(IOC) 확장**으로, 4
 이 패키지는 종료된 두 개방 파라미터 작업 — **GAP A(세포벽 분배 `K_cw`)**, **GAP B(뿌리→지상부 적재 `f_xy`)** —
 와 모델 코드, basis-A 결합인자, S6 검증을 하나의 재현 가능한 묶음으로 통합합니다.
 
+> **정본 vs. 이력** — 권위 있는 출처는 **`CLAUDE.md`**(프로젝트 컨텍스트), **`params/parameters.json`**(파라미터),
+> **`docs/MANUAL_KR.md`** / **`docs/MANUAL_EN.md`**(앱 사용법), **`docs/OVERVIEW_KR.md`**(과학)입니다.
+> `docs/HANDOFF_*.md`와 `docs/*_exploration.md`는 **이력·탐색 기록**(provenance용)이며 사양이 아닙니다.
+
 > 🖥️ **앱 사용법**(일반인~전문가)은 별도 매뉴얼 **[`docs/MANUAL_KR.md`](docs/MANUAL_KR.md)** (영어: [`docs/MANUAL_EN.md`](docs/MANUAL_EN.md)) 참조.
 
 ---
