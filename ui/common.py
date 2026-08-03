@@ -45,6 +45,9 @@ def _cong_label_ko(name):
 _PRESETS = i18n.PRESETS["en"]
 _PRESETS_KO = i18n.PRESETS["ko"]
 
+# One-click policy story scenarios (Simple mode) -> (congener, Cwᵒ, word, desc).
+_SCENARIOS_KO = i18n.SCENARIOS_KO
+
 
 # ---------------------------------------------------------------- helpers
 def _nearest_index(t, day):
@@ -333,6 +336,8 @@ def render_header(cfg):
     """Title + disclaimer + intro (both modes)."""
     expert = cfg.expert
     st.title("🌾 PFAS in Rice — Uptake Explorer")
+    if not expert:
+        st.markdown("#### 논의 PFAS가 벼의 어디에 얼마나 쌓이는지 예측하는 도구")
     st.warning(_DISCLAIMER if expert else _DISCLAIMER_KO)
 
     if not expert:
