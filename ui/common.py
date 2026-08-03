@@ -414,8 +414,7 @@ def render_header(cfg):
     st.warning(_DISCLAIMER if expert else _DISCLAIMER_KO)
 
     if not expert:
-        st.markdown(_t("header.intro1", "ko"))
-        st.markdown(_t("header.intro2", "ko"))
+        st.caption(_t("header.intro2", "ko"))
     else:
         st.caption(_t("header.expert_caption", "en"))
 

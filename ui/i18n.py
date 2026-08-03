@@ -255,10 +255,8 @@ STRINGS = {
                "PFAS를 얼마나 흡수하고 **어디에 쌓이는지** — 뿌리, 짚(줄기+잎), 먹는 **낟알** — 를 추정합니다."),
     },
     "header.intro2": {
-        "en": ("👉 **Start here:** pick a **chemical** and a **contamination level** on the left, then "
-               "look at the **🗺️ Where it goes** map below. No chemistry background needed."),
-        "ko": ("👉 **여기서 시작:** 왼쪽에서 **화학물질**과 **오염 수준**을 고른 뒤, 아래 "
-               "**🗺️ 어디로 가나** 지도를 보세요. 화학 배경지식은 필요 없습니다."),
+        "en": ("👉 Pick a scenario on the left, then read the 🗺️ map below. No chemistry needed."),
+        "ko": ("👉 왼쪽에서 시나리오를 고르고 아래 🗺️ 지도를 보세요. 화학 지식은 필요 없습니다."),
     },
     "header.expert_caption": {
         "en": ("Mechanistic 4-compartment dynamic model for permanently-anionic PFAS in paddy rice "

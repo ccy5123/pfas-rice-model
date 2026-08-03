@@ -16,7 +16,6 @@ def render(cfg):
     obs = cfg.obs
     bio_baf = cfg.bio_baf
     preset_word = cfg.preset_word
-    use_custom_tables = cfg.use_custom_tables
     E_m = cfg.E_m
     fxy_source = cfg.fxy_source
     biomass = cfg.biomass
@@ -31,7 +30,6 @@ def render(cfg):
     grain_c = float(res["conc"]["grain"][-1])
     root_c = float(res["conc"]["root"][-1])
     straw_c = float(res["straw"][-1])
-    grain_baf = res["baf_final"]["grain"]
     tops = {"roots": root_c, "straw (stems + leaves)": straw_c, "grain": grain_c}
     where_most = max(tops, key=tops.get)
 
@@ -50,43 +48,18 @@ def render(cfg):
     m1.metric("뿌리 속", f"{root_c:.2g} µg/kg", _rng_ko(bands["root"]), delta_color="off")
     m2.metric("짚(줄기+잎) 속", f"{straw_c:.2g} µg/kg", _rng_ko(bands["straw"]), delta_color="off")
     m3.metric("낟알(먹는 쌀) 속", f"{grain_c:.2g} µg/kg", _rng_ko(bands["grain"]), delta_color="off")
-    st.caption(f"각 수치 아래 범위는 모델의 **대략적 예측 불확실성**입니다 — 실제 측정값과 약 "
-               f"**{_fold:.0f}배**까지 차이날 수 있습니다 (예측값이며 실측이 아닙니다).")
 
+    # One-line summary: where it goes + grain + the EFSA signal light, then one
+    # compact caveat. (Details live in the 🍚 / ⚖️ / 🔬 tabs — keep the landing lean.)
     _where_ko = {"roots": "뿌리", "straw (stems + leaves)": "짚(줄기+잎)", "grain": "낟알"}[where_most]
-    _lead = ("입력하신 **성장 + 오염 표**를 바탕으로, " if use_custom_tables
-             else f"선택하신 **{preset_word}** 오염 수준에서, ")
-    gb = bands["grain"]
-    # BAF<1 reads awkwardly as "약 0.2배"; phrase it as "lower than the soil water" (P2-4).
-    if grain_baf >= 1.0:
-        _baf_phrase = f"토양수 농도의 약 **{grain_baf:.1f}배**"
-    elif grain_baf > 0:
-        _baf_phrase = f"토양수 농도보다 **낮음**(약 1/{1.0 / grain_baf:.0f} 수준)"
-    else:
-        _baf_phrase = "토양수 농도보다 **매우 낮음**"
-    st.info(
-        _lead +
-        f"이 모델은 벼 **낟알**에 {congener}가 약 **{grain_c:.2g} µg/kg** "
-        f"(대략 {gb['lo']:.2g}–{gb['hi']:.2g}) 들어 있을 것으로 추정합니다 "
-        f"({_baf_phrase}). 대부분의 화학물질은 **{_where_ko}**에 남습니다. "
-        f"이 값은 **대략적 모델 예측**이라 실측과 수배 차이날 수 있습니다.")
-    st.caption("예시용 모델 추정치이며 — 식품안전·건강 판단이 아닙니다.")
-
-    # ---- policy signal light: grain vs the EFSA health-based intake guidance ----
     _intake = api.intake_fraction(grain_c, congener=congener)
     _sig_emoji = {"green": "🟢", "amber": "🟡", "red": "🔴"}.get(_intake["signal"], "⚪")
-    if _intake["in_group"]:
-        st.markdown(
-            f"{_sig_emoji} **밥상 참고** — 이 쌀을 하루 "
-            f"{api.DEFAULT_RICE_INTAKE_G_PER_DAY:.0f} g 드신다고 가정하면, PFAS 주간 섭취량이 "
-            f"**EFSA 건강기반 안전기준(TWI)의 약 {_intake['percent']:.0f}%** 수준입니다. "
-            f"아래 **🍚 밥으로 먹으면** 탭에서 섭취량·체중을 조정할 수 있습니다.")
-    else:
-        st.markdown(
-            f"⚪ **밥상 참고** — {congener}는 EFSA 안전기준(4종 합)에 **포함되지 않는** 물질이라 "
-            f"직접 비교 기준이 없습니다. 참고용 환산은 아래 **🍚 밥으로 먹으면** 탭에 있습니다.")
-    st.caption("법적 식품기준(MRL)이 아니라 **건강기반 섭취기준 환산 참고치**입니다 — 쌀만 섭취원으로 "
-               "가정한 단순 계산이며, 예측 농도 자체도 수배 불확실합니다.")
+    _efsa = (f" · 이 쌀을 매일 먹으면 **EFSA 안전기준의 약 {_intake['percent']:.0f}%**"
+             if _intake["in_group"] else "")
+    st.info(f"{_sig_emoji} 대부분의 PFAS는 **{_where_ko}**에 남고, 먹는 **낟알**엔 약 "
+            f"**{grain_c:.2g} µg/kg**{_efsa} 들어 있을 것으로 추정합니다.")
+    st.caption(f"숫자는 **대략적 예측**(실측과 ~{_fold:.0f}배 차이 가능)이며 법적 식품기준이 아닙니다. "
+               f"자세한 비교는 🍚·⚖️·🔬 탭에서.")
 
     s_tabs = st.tabs(["🗺️ 어디로 가나", "📈 시간에 따른 축적", "📊 얼마나 쌓이나",
                       "⚖️ 물질 비교", "🍚 밥으로 먹으면", "🔎 거꾸로 추정", "🔬 신뢰도 & 안내"])
@@ -105,10 +78,8 @@ def render(cfg):
             ti = _nearest_index(res["t"], day)
             st.plotly_chart(plots.fig_schematic_from_res(res, "conc", ti, obs=None, lang="ko"),
                             width="stretch", theme=None)
-        st.caption("벼와 논 흙을 실제 비율로 그렸습니다. **색이 진할수록(뜨거울수록) 그 부위에 PFAS 농도가 높습니다.** "
-                   "날짜 슬라이더를 끌거나 ▶를 눌러, 이앙부터 수확까지 화학물질이 어디에 쌓이는지 보세요. "
-                   "색은 **부위별 농도**라서 잎 농도가 높으면 잎이 가장 뜨겁게 보일 수 있습니다 — "
-                   "위 요약의 '대부분 ○○'은 뿌리·짚·낟알 기준이고, **짚 = 줄기와 잎의 평균**입니다.")
+        st.caption("**색이 진할수록 그 부위에 PFAS가 많습니다.** 날짜 슬라이더나 ▶로 한 철 축적을 "
+                   "보세요. (짚 = 줄기+잎 평균)")
 
     # ---- Simple tab 2: build-up over time ----------------------------------
     with s_tabs[1]:
@@ -170,22 +141,19 @@ def render(cfg):
         mA.metric("주간 섭취량 / 안전기준", f"{info['percent']:.0f}%",
                   f"대략 {_lo['percent']:.0f}–{_hi['percent']:.0f}%", delta_color="off")
         mB.markdown(
-            f"낟알 예측 농도 **{grain_c:.2g} µg/kg**인 쌀을 하루 **{rice_g} g** 드시면, "
-            f"PFAS 주간 섭취량은 약 **{info['weekly_intake_ng_per_kg_bw']:.2g} ng/kg 체중/주**로 "
-            f"EFSA 건강기반 안전기준(**{info['twi']} ng/kg 체중/주**, 4종 합)의 "
-            f"약 **{info['percent']:.0f}%** 수준입니다. 위 범위는 예측 불확실성(≈×{api.uncertainty_factor():.0f})입니다.")
+            f"낟알 **{grain_c:.2g} µg/kg**인 쌀을 하루 **{rice_g} g** 드시면 PFAS 주간 섭취량은 "
+            f"EFSA 안전기준(**{info['twi']} ng/kg 체중/주**, 4종 합)의 약 **{info['percent']:.0f}%** "
+            f"수준입니다.")
         if info["in_group"] is False:
-            st.warning(f"⚠ **{congener}**는 EFSA 안전기준이 정한 **4종(PFOA·PFOS·PFNA·PFHxS)에 포함되지 "
-                       f"않습니다.** 위 % 는 같은 기준을 빌려 계산한 **참고치일 뿐**, 이 물질의 공식 "
-                       f"허용섭취량이 아닙니다.")
-        st.info(
-            "**이 비교를 읽는 법 (중요)**\n\n"
-            "- 쌀에 대한 **법적 PFAS 기준(MRL)은 EU·한국 모두 아직 없습니다.** 그래서 이 화면은 식품기준 "
-            "초과 여부가 아니라, **건강기반 섭취기준(EFSA TWI)에 쌀 섭취를 환산한 참고치**입니다.\n"
-            "- EFSA 기준은 **4종 PFAS의 합**에 대한 것입니다. 여기서는 한 물질만 비교하므로 "
-            "**‘이 물질 하나만으로도’ 라는 보수적 가정**입니다.\n"
-            "- **쌀만을 유일한 섭취원으로 가정**한 단순 계산입니다 (실제로는 물·다른 식품에서도 섭취).\n"
-            "- 바탕이 되는 낟알 농도 예측 자체가 실측과 **수배 차이날 수 있습니다.**")
+            st.warning(f"⚠ **{congener}**는 EFSA 4종(PFOA·PFOS·PFNA·PFHxS)에 **미포함** — 위 %는 "
+                       f"같은 기준을 빌린 **참고치**입니다.")
+        with st.expander("ℹ️ 이 비교를 읽는 법 (중요)"):
+            st.markdown(
+                "- 쌀에 대한 **법적 PFAS 기준(MRL)은 EU·한국 모두 없습니다.** 이 화면은 식품기준 초과가 "
+                "아니라 **건강기반 섭취기준(EFSA TWI) 환산 참고치**입니다.\n"
+                "- EFSA 기준은 **4종 합**인데 여기선 한 물질만 비교 → **‘이 물질 하나만으로도’ 보수적 가정**.\n"
+                "- **쌀만 섭취원으로 가정**한 단순 계산 (실제론 물·타 식품에서도 섭취).\n"
+                "- 낟알 농도 예측 자체가 실측과 **수배 차이날 수 있습니다.**")
         st.caption("출처: EFSA 2020 그룹 TWI 4.4 ng/kg 체중/주 (PFOA·PFOS·PFNA·PFHxS, "
                    "doi:10.2903/j.efsa.2020.6223) · 쌀 섭취량 KOSIS/국민건강영양조사. "
                    "🔴빨강 = 기준의 100% 이상, 🟡노랑 = 10–100%, 🟢초록 = 10% 미만.")
