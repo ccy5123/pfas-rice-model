@@ -410,13 +410,28 @@ def _render_custom_tables(*, biomass, Cwo_const, season0, key, ko=False):
 _APP_CSS = """
 <style>
 :root{
+  --pfas-safe:#0E6B4F; --pfas-safe-bg:#DCEFE6; --pfas-safe-bd:#A9D6C3;
+  --pfas-warn:#9A5A00; --pfas-warn-bg:#FAEBD1; --pfas-warn-bd:#E7C27F;
+  --pfas-dang:#B23A2E; --pfas-dang-bg:#FADEDA; --pfas-dang-bd:#EBA99F;
   --pfas-accent:#0E7A63; --pfas-border:#E4DCCE; --pfas-surface:#FFFFFF;
 }
 @media (prefers-color-scheme: dark){
   :root{
+    --pfas-safe:#3BCB9C; --pfas-safe-bg:#16302A; --pfas-safe-bd:#2E6152;
+    --pfas-warn:#E8B24C; --pfas-warn-bg:#322813; --pfas-warn-bd:#6B5726;
+    --pfas-dang:#F0796E; --pfas-dang-bg:#351F1C; --pfas-dang-bd:#7A413A;
     --pfas-accent:#35C79E; --pfas-border:#332F26; --pfas-surface:#201D16;
   }
 }
+/* safety-signal badge: colour + SHAPE/ICON + label (colour-blind 4-way encoding) */
+.pfas-badge{ display:inline-flex; gap:6px; align-items:center; font-size:13px;
+  font-weight:700; padding:4px 12px; border-radius:999px; border:1px solid; }
+.pfas-badge.safe{ color:var(--pfas-safe); background:var(--pfas-safe-bg); border-color:var(--pfas-safe-bd); }
+.pfas-badge.warn{ color:var(--pfas-warn); background:var(--pfas-warn-bg); border-color:var(--pfas-warn-bd); }
+.pfas-badge.dang{ color:var(--pfas-dang); background:var(--pfas-dang-bg); border-color:var(--pfas-dang-bd); }
+/* caveat pill (uncertainty reminder) */
+.pfas-caveat{ display:inline-flex; gap:6px; align-items:center; font-size:12px;
+  padding:5px 11px; border-radius:999px; border:1px solid var(--pfas-border); opacity:.85; }
 /* roomier canvas */
 .block-container{ padding-top:2.2rem; padding-bottom:3rem; max-width:1180px; }
 /* metric cards: floating surface + strong value */
@@ -449,6 +464,27 @@ section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked)
 def inject_css():
     """Inject the small CSS polish once per render (idempotent)."""
     st.markdown(_APP_CSS, unsafe_allow_html=True)
+
+
+# Safety signal: colour-blind-safe 4-way encoding (colour + shape + KO + EN label
+# + fixed order safe->caution->exceed). `signal` is the model_api intake signal.
+_SIGNAL = {
+    "green": ("safe", "●", "안전", "Safe"),
+    "amber": ("warn", "▲", "주의", "Caution"),
+    "red":   ("dang", "⬢", "초과", "Exceeds"),
+}
+
+
+def signal_badge_html(signal, *, ko=True, extra=""):
+    """An HTML pill badge for a safety signal: colour + shape + label (not colour
+    alone), so it reads under colour-blindness. `extra` appends a short suffix
+    inside the badge (e.g. a percentage). Returns '' for an unknown signal."""
+    if signal not in _SIGNAL:
+        return ""
+    cls, shape, ko_l, en_l = _SIGNAL[signal]
+    label = f"{ko_l} · {en_l}" if ko else en_l
+    tail = f" {extra}" if extra else ""
+    return f"<span class='pfas-badge {cls}'>{shape} {label}{tail}</span>"
 
 
 # ---------------------------------------------------------------- render building blocks

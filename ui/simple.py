@@ -6,7 +6,7 @@ import plots
 
 from ui.common import (_DISCLAIMER_KO, _cong_label_ko, _nearest_index, _simulate,
                        _render_inverse_estimator, _glossary_md, _png_bytes, _html_bytes,
-                       _summary_html)
+                       _summary_html, signal_badge_html)
 
 
 def render(cfg):
@@ -49,16 +49,18 @@ def render(cfg):
     m2.metric("짚(줄기+잎) 속", f"{straw_c:.2g} µg/kg", _rng_ko(bands["straw"]), delta_color="off")
     m3.metric("낟알(먹는 쌀) 속", f"{grain_c:.2g} µg/kg", _rng_ko(bands["grain"]), delta_color="off")
 
-    # One-line summary: where it goes + grain + the EFSA signal light, then one
-    # compact caveat. (Details live in the 🍚 / ⚖️ / 🔬 tabs — keep the landing lean.)
+    # One-line summary: a colour-blind-safe safety badge (colour + shape + label) +
+    # where it goes + grain, then one compact caveat. (Details live in the 🍚/⚖️/🔬
+    # tabs — keep the landing lean.)
     _where_ko = {"roots": "뿌리", "straw (stems + leaves)": "짚(줄기+잎)", "grain": "낟알"}[where_most]
     _intake = api.intake_fraction(grain_c, congener=congener)
-    _sig_emoji = {"green": "🟢", "amber": "🟡", "red": "🔴"}.get(_intake["signal"], "⚪")
-    _efsa = (f" · 이 쌀을 매일 먹으면 **EFSA 안전기준의 약 {_intake['percent']:.0f}%**"
-             if _intake["in_group"] else "")
-    st.info(f"{_sig_emoji} 대부분의 PFAS는 **{_where_ko}**에 남고, 먹는 **낟알**엔 약 "
-            f"**{grain_c:.2g} µg/kg**{_efsa} 들어 있을 것으로 추정합니다.")
-    st.caption(f"숫자는 **대략적 예측**(실측과 ~{_fold:.0f}배 차이 가능)이며 법적 식품기준이 아닙니다. "
+    _pct_txt = f"기준의 {_intake['percent']:.0f}%" if _intake["in_group"] else "참고"
+    _badge = signal_badge_html(_intake["signal"], ko=True, extra=_pct_txt)
+    st.markdown(
+        _badge + f" &nbsp;대부분의 PFAS는 <b>{_where_ko}</b>에 남고, 먹는 <b>낟알</b>엔 약 "
+        f"<b>{grain_c:.2g} µg/kg</b> 들어 있을 것으로 추정합니다.", unsafe_allow_html=True)
+    st.caption(f"신호등은 EFSA 건강기반 안전기준 대비 수준입니다(색·모양·라벨로 표시). 숫자는 "
+               f"**대략적 예측**(실측과 ~{_fold:.0f}배 차이 가능)이며 법적 식품기준이 아닙니다. "
                f"자세한 비교는 🍚·⚖️·🔬 탭에서.")
 
     s_tabs = st.tabs(["🗺️ 어디로 가나", "📈 시간에 따른 축적", "📊 얼마나 쌓이나",
@@ -78,6 +80,9 @@ def render(cfg):
             ti = _nearest_index(res["t"], day)
             st.plotly_chart(plots.fig_schematic_from_res(res, "conc", ti, obs=None, lang="ko"),
                             width="stretch", theme=None)
+        st.markdown(
+            f"<span class='pfas-caveat'>ⓘ 대략적 예측 · 실측과 ~{api.uncertainty_factor():.0f}배 "
+            f"차이 가능</span>", unsafe_allow_html=True)
         st.caption("**색이 진할수록 그 부위에 PFAS가 많습니다.** 날짜 슬라이더나 ▶로 한 철 축적을 "
                    "보세요. (짚 = 줄기+잎 평균)")
 
@@ -131,6 +136,9 @@ def render(cfg):
                        help="1인 기준 체중. 어린이 등 체중이 작을수록 체중당 섭취 비율이 높아집니다.")
         info = api.intake_fraction(grain_c, congener=congener,
                                    rice_intake_g_day=float(rice_g), body_weight_kg=float(bw))
+        _gb = signal_badge_html(info["signal"], ko=True,
+                                extra=(f"기준의 {info['percent']:.0f}%" if info["in_group"] else "참고"))
+        st.markdown(_gb, unsafe_allow_html=True)
         st.plotly_chart(plots.fig_intake_gauge(info, lang="ko"), width="stretch", theme=None)
         _band = api.predictive_band(grain_c)
         _lo = api.intake_fraction(_band["lo"], congener=congener,
