@@ -1359,6 +1359,79 @@ def timeseries_csv(res):
     return "\n".join(lines) + "\n"
 
 
+def summary_report_md(res, *, congener=None, obs=None, intake=None,
+                      scenario=None, lang="ko"):
+    """One-page plain-language run summary as a Markdown string (for a handout).
+
+    Pure string builder (no Streamlit/plotly) so it is head-less testable. `intake`
+    is an `intake_fraction` dict (optional, adds the EFSA-TWI line); `obs` an
+    `observed_baf` dict (optional); `scenario` a short label. `lang="ko"` (default)
+    renders Korean, "en" English. The numbers carry the coarse a-priori band."""
+    ko = lang != "en"
+    cong = congener or res.get("congener", "")
+    root_c = float(res["conc"]["root"][-1])
+    straw_c = float(res["straw"][-1])
+    grain_c = float(res["conc"]["grain"][-1])
+    fold = uncertainty_factor()
+    rows = [("뿌리" if ko else "roots", root_c), ("짚(줄기+잎)" if ko else "straw", straw_c),
+            ("낟알(먹는 쌀)" if ko else "grain", grain_c)]
+    tops = {"뿌리" if ko else "roots": root_c, "짚" if ko else "straw": straw_c,
+            "낟알" if ko else "grain": grain_c}
+    where = max(tops, key=tops.get)
+    L = []
+    if ko:
+        L.append(f"# PFAS–벼 흡수 모델 요약 — {cong}")
+        if scenario:
+            L.append(f"**시나리오:** {scenario}")
+        L.append("")
+        L.append("| 부위 | 예측 농도 (µg/kg) | 대략 범위 |")
+        L.append("|---|---|---|")
+        for name, v in rows:
+            b = predictive_band(v)
+            L.append(f"| {name} | {v:.2g} | {b['lo']:.2g}–{b['hi']:.2g} |")
+        L.append("")
+        L.append(f"- 대부분의 PFAS는 **{where}**에 남습니다.")
+        if intake is not None and np.isfinite(intake.get("percent", float("nan"))):
+            grp = "" if intake.get("in_group") else " (참고 — EFSA 4종 합에 미포함 물질)"
+            L.append(f"- 이 쌀을 하루 {intake['rice_intake_g_day']:.0f} g 섭취 시, PFAS 주간 섭취량은 "
+                     f"**EFSA 안전기준(TWI)의 약 {intake['percent']:.0f}%**{grp}.")
+        L.append("")
+        L.append("**한계 (반드시 함께 읽어주세요)**")
+        L.append(f"- 절대 수치는 **대략적 예측**으로 실측과 약 ×{fold:.0f}까지 차이날 수 있습니다.")
+        L.append("- 쌀에 대한 법적 PFAS 기준(MRL)은 EU·한국 모두 없으며, EFSA 비교는 건강기반 "
+                 "섭취기준 환산 **참고치**입니다.")
+        L.append("- 정책 스크리닝·교육용 예시이며, 개별 지점의 규제 판단 근거로 단독 사용은 부적절합니다.")
+        L.append("")
+        L.append("출처: EFSA 2020 그룹 TWI 4.4 ng/kg 체중/주 (doi:10.2903/j.efsa.2020.6223) · "
+                 "쌀 섭취량 KOSIS/국민건강영양조사 · 실측 비교 Yamazaki et al. 2023.")
+    else:
+        L.append(f"# PFAS–Rice uptake summary — {cong}")
+        if scenario:
+            L.append(f"**Scenario:** {scenario}")
+        L.append("")
+        L.append("| Tissue | Predicted conc (µg/kg) | Rough range |")
+        L.append("|---|---|---|")
+        for name, v in rows:
+            b = predictive_band(v)
+            L.append(f"| {name} | {v:.2g} | {b['lo']:.2g}–{b['hi']:.2g} |")
+        L.append("")
+        L.append(f"- Most of the PFAS stays in the **{where}**.")
+        if intake is not None and np.isfinite(intake.get("percent", float("nan"))):
+            grp = "" if intake.get("in_group") else " (reference — not in the EFSA group of four)"
+            L.append(f"- Eating {intake['rice_intake_g_day']:.0f} g rice/day, the weekly intake is "
+                     f"**~{intake['percent']:.0f}% of the EFSA TWI**{grp}.")
+        L.append("")
+        L.append("**Limits (read alongside)**")
+        L.append(f"- Absolute figures are coarse predictions — up to ~{fold:.0f}× from measurements.")
+        L.append("- No legal PFAS limit (MRL) exists for rice (EU/Korea); the EFSA comparison is an "
+                 "intake reference to a health-based value.")
+        L.append("- Screening/education only; not a single-site regulatory basis.")
+        L.append("")
+        L.append("Sources: EFSA 2020 group TWI 4.4 ng/kg bw/week (doi:10.2903/j.efsa.2020.6223); "
+                 "rice intake KOSIS/KNHANES; observed comparison Yamazaki et al. 2023.")
+    return "\n".join(L) + "\n"
+
+
 if __name__ == "__main__":
     r = simulate("PFOA")
     print("PFOA:", {k: round(v, 3) for k, v in r["baf_final"].items()},

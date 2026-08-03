@@ -66,6 +66,7 @@ def build():
                 Cwo_const, preset_word = _PRESETS_KO[preset_label]
             else:
                 congener, Cwo_const, preset_word, _scen_desc = _SCENARIOS_KO[scen_label]
+                preset_label = scen_label            # carried into the summary handout
                 st.success(f"**{scen_label}**\n\n{_scen_desc}")
                 st.caption(f"→ 물질 **{_cong_label_ko(congener)}** · 오염 **{preset_word}** "
                            f"({Cwo_const:g} µg/L). '✏️ 직접 설정'에서 바꿀 수 있습니다.")

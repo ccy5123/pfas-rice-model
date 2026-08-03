@@ -333,11 +333,14 @@ def fig_congener_compare(results, lang="en", order=None):
         fig.add_bar(name=nm[tis], x=names, y=[_final(results[c], tis) for c in names],
                     marker_color=col,
                     hovertemplate="%{x} " + nm[tis] + ": %{y:.3g} µg/kg<extra></extra>")
+    # log y: the values span ~3 orders of magnitude (long-chain root ≫ short-chain
+    # grain), so a linear axis lets one giant bar hide the grain pattern that is the
+    # policy message. Log keeps every bar readable.
     fig.update_layout(
-        barmode="group",
+        barmode="group", yaxis_type="log",
         title=("물질에 따라 쌓이는 곳이 다릅니다 (수확 시)" if ko
                else "Where each chemical ends up (at harvest)"),
-        yaxis_title="조직 속 PFAS [µg/kg]" if ko else "PFAS in the tissue [µg/kg]",
+        yaxis_title="조직 속 PFAS [µg/kg, 로그]" if ko else "PFAS in the tissue [µg/kg, log]",
         xaxis_title="PFAS 물질 (사슬이 길어지는 순)" if ko else "PFAS chemical (increasing chain length)",
         **_LAYOUT)
     return fig

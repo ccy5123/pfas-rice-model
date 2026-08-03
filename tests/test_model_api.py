@@ -313,6 +313,25 @@ def test_intake_fraction_efsa_twi():
     assert api.intake_fraction(1.0, congener="PFOA", body_weight_kg=0.0)["signal"] is None
 
 
+def test_summary_report_md():
+    """The one-page handout summary is a pure Markdown string carrying the tissue
+    numbers (+band), the EFSA-TWI line, the caveats and the sources, in both langs."""
+    res = api.simulate("PFOA", Cwo=1.0)
+    info = api.intake_fraction(float(res["conc"]["grain"][-1]), congener="PFOA")
+    md = api.summary_report_md(res, congener="PFOA", obs=api.observed_baf("PFOA"),
+                               intake=info, scenario="중간", lang="ko")
+    assert isinstance(md, str) and md.startswith("# ")
+    assert "PFOA" in md and "EFSA" in md and "출처" in md
+    assert "MRL" in md                                        # no-legal-limit caveat present
+    assert f"{info['percent']:.0f}%" in md                    # the EFSA % line
+    # English variant renders too, and flags an out-of-group congener as reference
+    info_pfba = api.intake_fraction(1.0, congener="PFBA")
+    en = api.summary_report_md(res, congener="PFBA", intake=info_pfba, lang="en")
+    assert "Sources:" in en and "reference" in en             # PFBA not in the EFSA four
+    # tolerates a missing intake (no EFSA line, still builds)
+    assert api.summary_report_md(res, congener="PFOA").startswith("# ")
+
+
 def test_lipid_loading_off_matches_baseline():
     """lipid_loading=False must recover the free-only model exactly (g=0)."""
     for nm in ("PFBA", "PFOA", "PFDA"):

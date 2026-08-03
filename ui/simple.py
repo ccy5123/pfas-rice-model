@@ -5,7 +5,8 @@ import model_api as api
 import plots
 
 from ui.common import (_DISCLAIMER_KO, _cong_label_ko, _nearest_index, _simulate,
-                       _render_inverse_estimator, _glossary_md, _png_bytes, _html_bytes)
+                       _render_inverse_estimator, _glossary_md, _png_bytes, _html_bytes,
+                       _summary_html)
 
 
 def render(cfg):
@@ -19,6 +20,13 @@ def render(cfg):
     E_m = cfg.E_m
     fxy_source = cfg.fxy_source
     biomass = cfg.biomass
+    # ---- hands-on guidance (for the try-it-yourself audience) ---------------
+    with st.expander("💡 처음이신가요? 3단계로 해보세요", expanded=False):
+        st.markdown(
+            "1. 왼쪽에서 **빠른 시나리오**를 하나 고르세요 (또는 '✏️ 직접 설정'에서 물질·오염도 선택).\n"
+            "2. 아래 **🗺️ 어디로 가나** 지도에서 색이 진한 부위 = PFAS가 많이 쌓이는 곳을 보세요.\n"
+            "3. **🍚 밥으로 먹으면** 탭에서 안전기준 대비 수준을, **⚖️ 물질 비교**에서 물질별 차이를 확인하세요.\n\n"
+            "모든 수치는 **대략적 예측**입니다 — 부위·물질 간 **상대 비교**로 읽어 주세요.")
     # ---- plain-language headline -------------------------------------------
     grain_c = float(res["conc"]["grain"][-1])
     root_c = float(res["conc"]["root"][-1])
@@ -136,7 +144,8 @@ def render(cfg):
                 f"같은 오염 수준(토양수 {cfg.Cwo_const:g} µg/L)에서 물질별 수확기 농도. "
                 "**짧은사슬(PFBA·PFHxA)**은 짚·낟알까지 잘 이동해 먹는 부위에 도달하기 쉽고, "
                 "**긴사슬(PFDA·PFDoDA)**은 뿌리에 강하게 잔류해 낟알로는 덜 갑니다. "
-                "PFOS는 대표적 술폰산 계열입니다. 막대 높이는 **대략적 모델 예측**입니다.")
+                "PFOS는 대표적 술폰산 계열입니다. 값 차이가 매우 커서 세로축은 **로그(배수) 눈금**이며, "
+                "막대 높이는 **대략적 모델 예측**입니다.")
         except Exception as e:                                  # noqa: BLE001
             st.warning(f"물질 비교를 계산할 수 없습니다: {e}")
 
@@ -164,7 +173,7 @@ def render(cfg):
             f"낟알 예측 농도 **{grain_c:.2g} µg/kg**인 쌀을 하루 **{rice_g} g** 드시면, "
             f"PFAS 주간 섭취량은 약 **{info['weekly_intake_ng_per_kg_bw']:.2g} ng/kg 체중/주**로 "
             f"EFSA 건강기반 안전기준(**{info['twi']} ng/kg 체중/주**, 4종 합)의 "
-            f"약 **{info['percent']:.0f}%**입니다. 위 범위는 예측 불확실성(≈×{api.uncertainty_factor():.0f})입니다.")
+            f"약 **{info['percent']:.0f}%** 수준입니다. 위 범위는 예측 불확실성(≈×{api.uncertainty_factor():.0f})입니다.")
         if info["in_group"] is False:
             st.warning(f"⚠ **{congener}**는 EFSA 안전기준이 정한 **4종(PFOA·PFOS·PFNA·PFHxS)에 포함되지 "
                        f"않습니다.** 위 % 는 같은 기준을 빌려 계산한 **참고치일 뿐**, 이 물질의 공식 "
@@ -238,7 +247,20 @@ def render(cfg):
                    "**전문가/고급 모드**를 켜세요.")
 
     # ---- downloads (Simple) ------------------------------------------------
-    with st.expander("⬇️ 결과 내려받기"):
+    with st.expander("⬇️ 결과 내려받기 · 발표용 요약", expanded=False):
+        # Presentation one-pager: plant map + EFSA gauge + numbers + caveats,
+        # a single offline HTML file (open in a browser, print to PDF for a slide).
+        one_pager, why = _summary_html(cfg, lang="ko")
+        if one_pager is not None:
+            st.download_button("🖼️ 발표용 요약 1장 (HTML)", one_pager,
+                               file_name=f"{congener}_요약.html", mime="text/html",
+                               help="식물 지도 + 안전기준 게이지 + 핵심 수치 + 한계를 한 파일로. "
+                                    "브라우저에서 열어 PDF로 인쇄하면 슬라이드 한 장이 됩니다.")
+        _intake_md = api.intake_fraction(grain_c, congener=congener)
+        st.download_button("📄 요약 텍스트 (Markdown)",
+                           api.summary_report_md(res, congener=congener, obs=obs,
+                                                 intake=_intake_md, scenario=preset_word, lang="ko"),
+                           file_name=f"{congener}_요약.md", mime="text/markdown")
         cda, cdb = st.columns(2)
         cda.download_button("요약 표 (CSV)", api.summary_csv(res, obs, bio_baf),
                             file_name=f"{congener}_summary.csv", mime="text/csv")
