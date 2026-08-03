@@ -4,7 +4,7 @@ import streamlit as st
 import model_api as api
 import plots
 
-from ui.common import (_DISCLAIMER_KO, _cong_label_ko, _nearest_index,
+from ui.common import (_DISCLAIMER_KO, _cong_label_ko, _nearest_index, _simulate,
                        _render_inverse_estimator, _glossary_md, _png_bytes, _html_bytes)
 
 
@@ -81,7 +81,7 @@ def render(cfg):
                "가정한 단순 계산이며, 예측 농도 자체도 수배 불확실합니다.")
 
     s_tabs = st.tabs(["🗺️ 어디로 가나", "📈 시간에 따른 축적", "📊 얼마나 쌓이나",
-                      "🍚 밥으로 먹으면", "🔎 거꾸로 추정", "🔬 신뢰도 & 안내"])
+                      "⚖️ 물질 비교", "🍚 밥으로 먹으면", "🔎 거꾸로 추정", "🔬 신뢰도 & 안내"])
 
     # ---- Simple tab 1: the plant + soil map --------------------------------
     with s_tabs[0]:
@@ -121,8 +121,27 @@ def render(cfg):
                 st.caption("막대는 모델의 축적 배수를 출판된 온실 벼 연구(Yamazaki et al. 2023)의 측정값과 "
                            "비교한 것입니다. 막대가 비슷할수록 이 화학물질에 대해 모델이 실제 데이터와 잘 맞습니다.")
 
-    # ---- Simple tab 4: on the dinner table (EFSA TWI intake reference) -------
+    # ---- Simple tab 4: cross-chemical comparison (policy hook C) -------------
     with s_tabs[3]:
+        st.markdown("#### 물질에 따라 쌓이는 곳이 다릅니다")
+        _rep = [c for c in ["PFBA", "PFHxA", "PFOA", "PFDA", "PFDoDA", "PFOS"]
+                if c in api.CONGENERS]
+        try:
+            _cmp = {c: _simulate(c, Cwo=cfg.Cwo_const, season=cfg.season,
+                                 measured_forcing=cfg.measured, E_m_mV=E_m,
+                                 f_xy_source=fxy_source, biomass=biomass) for c in _rep}
+            st.plotly_chart(plots.fig_congener_compare(_cmp, lang="ko", order=_rep),
+                            width="stretch")
+            st.caption(
+                f"같은 오염 수준(토양수 {cfg.Cwo_const:g} µg/L)에서 물질별 수확기 농도. "
+                "**짧은사슬(PFBA·PFHxA)**은 짚·낟알까지 잘 이동해 먹는 부위에 도달하기 쉽고, "
+                "**긴사슬(PFDA·PFDoDA)**은 뿌리에 강하게 잔류해 낟알로는 덜 갑니다. "
+                "PFOS는 대표적 술폰산 계열입니다. 막대 높이는 **대략적 모델 예측**입니다.")
+        except Exception as e:                                  # noqa: BLE001
+            st.warning(f"물질 비교를 계산할 수 없습니다: {e}")
+
+    # ---- Simple tab 5: on the dinner table (EFSA TWI intake reference) -------
+    with s_tabs[4]:
         st.markdown("#### 이 쌀을 먹으면 안전기준 대비 어느 정도일까요? (참고)")
         cA, cB = st.columns(2)
         rice_g = cA.slider("하루 쌀 섭취량 [g/일]", 30, 400,
@@ -162,13 +181,13 @@ def render(cfg):
                    "doi:10.2903/j.efsa.2020.6223) · 쌀 섭취량 KOSIS/국민건강영양조사. "
                    "🔴빨강 = 기준의 100% 이상, 🟡노랑 = 10–100%, 🟢초록 = 10% 미만.")
 
-    # ---- Simple tab 5: work backwards (Bayesian inverse estimate) -----------
-    with s_tabs[4]:
+    # ---- Simple tab 6: work backwards (Bayesian inverse estimate) -----------
+    with s_tabs[5]:
         _render_inverse_estimator(congener, E_m_mV=E_m, f_xy_source=fxy_source,
                                   biomass=biomass, key="inv_simple", simple=True)
 
-    # ---- Simple tab 6: model trust (validation status) + about & glossary ---
-    with s_tabs[5]:
+    # ---- Simple tab 7: model trust (validation status) + about & glossary ---
+    with s_tabs[6]:
         st.markdown("### 🔬 이 모델을 얼마나 믿을 수 있나요?")
         st.markdown(
             "이 모델은 **정성적 경향(어디에 더 쌓이는가)** 은 잘 맞지만 **절대 수치는 대략치**입니다. "
@@ -207,6 +226,7 @@ def render(cfg):
             "- **🗺️ 어디로 가나** — 식물 그림; 색이 뜨거울수록 PFAS가 많음.\n"
             "- **📈 시간에 따른 축적** — 이앙부터 수확까지 농도 변화.\n"
             "- **📊 얼마나 쌓이나** — 최종 농도와 실제 측정값과의 비교.\n"
+            "- **⚖️ 물질 비교** — 여러 PFAS 물질이 뿌리·짚·낟알에 쌓이는 정도를 한눈에.\n"
             "- **🍚 밥으로 먹으면** — 예측된 낟알 농도를 EFSA 건강기반 섭취기준에 환산한 **참고** 비교.\n"
             "- **🔎 거꾸로 추정** — 실험실 측정값이 있으면 토양수 오염도를 (불확실성 범위와 함께 — "
             "베이지안 추정) 역추정.\n"

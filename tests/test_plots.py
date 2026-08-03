@@ -166,6 +166,24 @@ def test_plain_language_figures_build():
     assert list(whr.data[0].x) == ["Roots", "Straw", "Grain"]
 
 
+def test_fig_congener_compare_builds():
+    """The cross-chemical policy comparison: grouped root/straw/grain bars across
+    congeners, ordered by chain length, with the short-vs-long-chain grain pattern."""
+    import model_api as api, plots
+    order = ["PFBA", "PFOA", "PFDA", "PFDoDA"]
+    results = {c: api.simulate(c, Cwo=1.0) for c in order}
+    fig = plots.fig_congener_compare(results, lang="ko", order=order)
+    assert isinstance(fig, go.Figure) and len(fig.data) == 3      # root / straw / grain
+    assert list(fig.data[0].x) == order                          # respects the order
+    assert {tr.name for tr in fig.data} == {"뿌리", "짚", "낟알"}
+    # short-chain PFBA reaches the grain far more than long-chain PFDoDA
+    grain = dict(zip(order, fig.data[2].y))
+    assert grain["PFBA"] > grain["PFDoDA"]
+    # English variant uses friendly English names and no Korean in the title
+    en = plots.fig_congener_compare(results, lang="en", order=order)
+    assert {tr.name for tr in en.data} == {"Roots", "Straw", "Grain"}
+
+
 def test_fig_intake_gauge_builds():
     """The EFSA-TWI intake gauge (policy hook): a traffic-light Indicator gauge
     whose value is the % of the TWI, in both languages, with a 100 % threshold."""

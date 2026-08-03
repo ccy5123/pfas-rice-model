@@ -313,6 +313,36 @@ def fig_forcings(t, season):
     return fig
 
 
+def fig_congener_compare(results, lang="en", order=None):
+    """Grouped bars of the final root / straw / grain concentration across congeners.
+
+    A policy 'at a glance' view of how the accumulation pattern shifts across PFAS
+    chemicals: `results` = {congener: simulate() dict}. Ordered by `order` (a
+    chain-length list) for the short- vs long-chain message. Friendly tissue names;
+    `lang="ko"` renders Korean. Reads the same final concentrations as the where-it-
+    ends-up bar, just across several chemicals side by side."""
+    ko = lang == "ko"
+    nm = _plain(lang)
+    names = [c for c in order if c in results] if order else list(results)
+
+    def _final(res, tis):
+        return float(res["straw"][-1]) if tis == "straw" else float(res["conc"][tis][-1])
+    fig = go.Figure()
+    for tis in ("root", "straw", "grain"):
+        col = _COL["stem"] if tis == "straw" else _COL[tis]
+        fig.add_bar(name=nm[tis], x=names, y=[_final(results[c], tis) for c in names],
+                    marker_color=col,
+                    hovertemplate="%{x} " + nm[tis] + ": %{y:.3g} µg/kg<extra></extra>")
+    fig.update_layout(
+        barmode="group",
+        title=("물질에 따라 쌓이는 곳이 다릅니다 (수확 시)" if ko
+               else "Where each chemical ends up (at harvest)"),
+        yaxis_title="조직 속 PFAS [µg/kg]" if ko else "PFAS in the tissue [µg/kg]",
+        xaxis_title="PFAS 물질 (사슬이 길어지는 순)" if ko else "PFAS chemical (increasing chain length)",
+        **_LAYOUT)
+    return fig
+
+
 def fig_compare(results, tissue="straw"):
     """Bar of a chosen tissue's BAF across several congeners (comparison view)."""
     names = list(results)
