@@ -409,25 +409,39 @@ def _render_custom_tables(*, biomass, Cwo_const, season0, key, ko=False):
 # BOTH the light and dark themes; config.toml carries the palette/font/radius.
 _APP_CSS = """
 <style>
-/* roomier canvas, less default chrome */
-.block-container { padding-top: 2.2rem; padding-bottom: 3rem; max-width: 1180px; }
-/* metric cards: soft, floating (neutral overlays -> dark-safe) */
-[data-testid="stMetric"] {
-  background: rgba(130,130,130,0.07);
-  border: 1px solid rgba(130,130,130,0.16);
-  border-radius: 0.9rem;
-  padding: 0.75rem 1rem 0.85rem;
+:root{
+  --pfas-accent:#0E7A63; --pfas-border:#E4DCCE; --pfas-surface:#FFFFFF;
 }
-[data-testid="stMetric"] [data-testid="stMetricLabel"] { opacity: .78; }
-/* alerts + expanders: rounder to match the card language */
-[data-testid="stAlert"] { border-radius: 0.9rem; }
-[data-testid="stExpander"] { border-radius: 0.9rem; }
-/* tabs: friendlier spacing, wrap instead of scroll */
-.stTabs [data-baseweb="tab-list"] { gap: 0.15rem; flex-wrap: wrap; }
-.stTabs [data-baseweb="tab"] { border-radius: 0.6rem 0.6rem 0 0; padding: 0.35rem 0.7rem; }
-/* headings: tighter tracking for a modern feel */
-h1, h2, h3 { letter-spacing: -0.015em; }
-h1 { font-weight: 700; }
+@media (prefers-color-scheme: dark){
+  :root{
+    --pfas-accent:#35C79E; --pfas-border:#332F26; --pfas-surface:#201D16;
+  }
+}
+/* roomier canvas */
+.block-container{ padding-top:2.2rem; padding-bottom:3rem; max-width:1180px; }
+/* metric cards: floating surface + strong value */
+[data-testid="stMetric"]{ background:var(--pfas-surface);
+  border:1px solid var(--pfas-border); border-radius:14px; padding:16px 18px; }
+[data-testid="stMetricValue"]{ font-weight:800; letter-spacing:-.02em; }
+[data-testid="stMetric"] [data-testid="stMetricLabel"]{ opacity:.78; }
+/* tabs: friendly, active tab in the accent colour */
+.stTabs [data-baseweb="tab-list"]{ gap:4px; flex-wrap:wrap;
+  border-bottom:2px solid var(--pfas-border); }
+.stTabs [data-baseweb="tab"]{ font-weight:600; padding:9px 13px;
+  border-radius:8px 8px 0 0; }
+.stTabs [aria-selected="true"]{ color:var(--pfas-accent); font-weight:700; }
+/* banners + expanders: rounded to match the card language */
+[data-testid="stAlert"]{ border-radius:10px; border:1px solid var(--pfas-border); }
+[data-testid="stExpander"]{ border:1px solid var(--pfas-border); border-radius:12px; }
+/* headings: tighter tracking */
+h1,h2,h3{ letter-spacing:-.015em; }
+/* sidebar scenario radio -> tappable cards, selected one accented */
+section[data-testid="stSidebar"] div[role="radiogroup"] label{
+  border:1px solid var(--pfas-border); border-radius:12px;
+  padding:11px 13px; margin-bottom:7px; width:100%; }
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked){
+  border:2px solid var(--pfas-accent);
+  background:color-mix(in oklab, var(--pfas-accent) 7%, transparent); }
 </style>
 """
 

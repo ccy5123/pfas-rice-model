@@ -1,68 +1,71 @@
-# Streamlit theme — friendly, public-service look, light + dark (cosmetic; safe to
-# delete). Streamlit 1.60 native theming: design tokens + per-mode (light/dark)
-# colour variants + an embedded Korean web font (Pretendard). No `base` is set, so
-# the app follows the viewer's system / in-app light-or-dark choice.
+# Streamlit theme — friendly public-service design system (light + dark).
+# Colours/typography from the design brief, translated into the Streamlit 1.60
+# schema: NO `base` (so the app follows the viewer's light/dark), semantic colours
+# use the *Color suffix keys (theme.greenColor, not theme.green), and per-mode
+# values live under [theme.light] / [theme.dark].
 [server]
 headless = true
 
 [theme]
-# --- type: Pretendard (modern Korean web font) + friendly rounded, roomy ---
 font = "Pretendard"
 headingFont = "Pretendard"
-headingFontWeights = [700, 700, 700, 600, 600, 600]
+headingFontWeights = [800, 700, 700, 700, 600, 600]
 baseFontSize = 16
-baseRadius = "0.85rem"
-buttonRadius = "0.7rem"
-metricValueFontSize = "2.1rem"
-metricValueFontWeight = 700
+metricValueFontSize = "40px"
+metricValueFontWeight = 800
+baseRadius = "0.875rem"        # cards ~14px
+buttonRadius = "0.5rem"        # buttons / inputs ~8px
 showWidgetBorder = true
-# a calm, friendly categorical palette for any auto-coloured charts
-chartCategoricalColors = ["#2f9e44", "#e8862b", "#3b7dd8", "#c0392b", "#8e6fc9", "#12a594"]
+# colour-blind-safe categorical + a green sequential (Okabe–Ito derived)
+chartCategoricalColors = ["#0E7A63", "#E69F00", "#56B4E9", "#8E5AA8",
+                          "#D55E00", "#7A5230", "#0072B2", "#C7A93B"]
+chartSequentialColors = ["#F1F7F2", "#CFE9DC", "#9FD5BE", "#63BC9C",
+                         "#2C9A79", "#0F7A63", "#0A5A49"]
 
 [[theme.fontFaces]]
 family = "Pretendard"
-url = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/woff2/Pretendard-Regular.woff2"
+url = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-Regular.woff2"
 weight = 400
 style = "normal"
 
 [[theme.fontFaces]]
 family = "Pretendard"
-url = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/woff2/Pretendard-Medium.woff2"
-weight = 500
-style = "normal"
-
-[[theme.fontFaces]]
-family = "Pretendard"
-url = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/woff2/Pretendard-SemiBold.woff2"
+url = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-SemiBold.woff2"
 weight = 600
 style = "normal"
 
 [[theme.fontFaces]]
 family = "Pretendard"
-url = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/woff2/Pretendard-Bold.woff2"
+url = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-Bold.woff2"
 weight = 700
 style = "normal"
 
-# --- light: warm paper white + fresh friendly green ---
-[theme.light]
-primaryColor = "#2f9e44"
-backgroundColor = "#fdfcf9"
-secondaryBackgroundColor = "#eef2e9"
-textColor = "#1e2a22"
-borderColor = "#e4e6dd"
-linkColor = "#2f7d3a"
-greenColor = "#2f9e44"
-yellowBackgroundColor = "#faf3da"
-orangeBackgroundColor = "#fdeede"
+[[theme.fontFaces]]
+family = "Pretendard"
+url = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-ExtraBold.woff2"
+weight = 800
+style = "normal"
 
-# --- dark: soft near-black + brighter green for contrast ---
+# --- light: warm paper + teal-green accent ---
+[theme.light]
+primaryColor = "#0E7A63"
+backgroundColor = "#F7F3EC"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#211E18"
+borderColor = "#E4DCCE"
+linkColor = "#12658F"
+greenColor = "#0E6B4F"
+yellowColor = "#9A5A00"
+orangeColor = "#C0622A"
+
+# --- dark: warm near-black + brighter teal-green ---
 [theme.dark]
-primaryColor = "#5cc26e"
-backgroundColor = "#12161a"
-secondaryBackgroundColor = "#1b2127"
-textColor = "#e7ece8"
-borderColor = "#2a3138"
-linkColor = "#7fd68f"
-greenColor = "#5cc26e"
-yellowBackgroundColor = "#302b16"
-orangeBackgroundColor = "#33261a"
+primaryColor = "#35C79E"
+backgroundColor = "#15130E"
+secondaryBackgroundColor = "#201D16"
+textColor = "#ECE6D9"
+borderColor = "#332F26"
+linkColor = "#6BB8E6"
+greenColor = "#3BCB9C"
+yellowColor = "#E8B24C"
+orangeColor = "#E0864A"
