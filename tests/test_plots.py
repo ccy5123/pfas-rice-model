@@ -166,6 +166,26 @@ def test_plain_language_figures_build():
     assert list(whr.data[0].x) == ["Roots", "Straw", "Grain"]
 
 
+def test_fig_intake_gauge_builds():
+    """The EFSA-TWI intake gauge (policy hook): a traffic-light Indicator gauge
+    whose value is the % of the TWI, in both languages, with a 100 % threshold."""
+    import model_api as api, plots
+    for lang, sig, color in (("en", None, None), ("ko", None, None)):
+        info = api.intake_fraction(5.0, congener="PFOA")
+        fig = plots.fig_intake_gauge(info, lang=lang)
+        assert isinstance(fig, go.Figure) and len(fig.data) == 1
+        ind = fig.data[0]
+        assert ind.mode == "gauge+number"
+        assert ind.value == pytest.approx(info["percent"])
+        assert ind.gauge.threshold.value == pytest.approx(min(100.0, ind.gauge.axis.range[1]))
+    # Korean title carries the Korean label; English does not
+    assert "참고" in plots.fig_intake_gauge(api.intake_fraction(5.0, congener="PFOA"), lang="ko").layout.title.text
+    assert "EFSA" in plots.fig_intake_gauge(api.intake_fraction(5.0, congener="PFOA"), lang="en").layout.title.text
+    # a NaN percent must not crash the gauge (value coerced to 0)
+    bad = plots.fig_intake_gauge(api.intake_fraction(float("nan"), congener="PFOA"))
+    assert isinstance(bad, go.Figure)
+
+
 def test_fig_exposure_posterior_builds():
     """The Bayesian inverse posterior plot builds with a log-x density + 95% band."""
     import model_api as api, plots

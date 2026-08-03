@@ -210,6 +210,45 @@ def fig_exposure_posterior(est, lang="en"):
     return fig
 
 
+_SIGNAL_COLOR = {"green": "#2ca02c", "amber": "#e6a817", "red": "#d62728"}
+
+
+def fig_intake_gauge(info, lang="en"):
+    """Half-circle gauge: predicted grain PFAS as a % of the EFSA group TWI.
+
+    `info` is a `model_api.intake_fraction` dict. A traffic-light gauge (green
+    <10 %, amber 10-100 %, red >=100 %) with a threshold marker at 100 % of the
+    tolerable weekly intake. Plain labels; `lang="ko"` renders Korean. This is an
+    intake reference to a HEALTH-BASED guidance value, not a food-standard (MRL)
+    check -- the surrounding UI copy carries that caveat."""
+    ko = lang == "ko"
+    pct = float(info["percent"])
+    if not np.isfinite(pct):
+        pct = 0.0
+    axis_max = max(150.0, pct * 1.15)
+    color = _SIGNAL_COLOR.get(info.get("signal"), "#888")
+    title = ("주간 안전섭취량(EFSA) 대비 — 참고" if ko
+             else "Share of the weekly safe intake (EFSA) — reference")
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number", value=pct,
+        number={"suffix": "%", "font": {"size": 42, "color": color}},
+        gauge={
+            "axis": {"range": [0, axis_max], "ticksuffix": "%", "tickwidth": 1},
+            "bar": {"color": color, "thickness": 0.72},
+            "borderwidth": 0,
+            "steps": [
+                {"range": [0, 10], "color": "rgba(44,160,44,0.16)"},
+                {"range": [10, min(100, axis_max)], "color": "rgba(230,168,23,0.16)"},
+                {"range": [min(100, axis_max), axis_max], "color": "rgba(214,39,40,0.16)"},
+            ],
+            "threshold": {"line": {"color": "#d62728", "width": 4},
+                          "thickness": 0.85, "value": min(100.0, axis_max)},
+        }))
+    fig.update_layout(title=dict(text=title, x=0.5, xanchor="center"),
+                      margin=dict(l=30, r=30, t=60, b=10), height=280)
+    return fig
+
+
 def fig_tang_tf(val, val_refit=None):
     """Tang 2026 per-organ TF (DRY weight): measured vs model, optional refit-f_xy bar.
 
