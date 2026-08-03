@@ -404,10 +404,44 @@ def _render_custom_tables(*, biomass, Cwo_const, season0, key, ko=False):
     return drivers, density
 
 
+# A small, theme-agnostic CSS polish on top of the config.toml design tokens. Uses
+# NEUTRAL rgba overlays (not hardcoded light/dark colours) so it reads correctly in
+# BOTH the light and dark themes; config.toml carries the palette/font/radius.
+_APP_CSS = """
+<style>
+/* roomier canvas, less default chrome */
+.block-container { padding-top: 2.2rem; padding-bottom: 3rem; max-width: 1180px; }
+/* metric cards: soft, floating (neutral overlays -> dark-safe) */
+[data-testid="stMetric"] {
+  background: rgba(130,130,130,0.07);
+  border: 1px solid rgba(130,130,130,0.16);
+  border-radius: 0.9rem;
+  padding: 0.75rem 1rem 0.85rem;
+}
+[data-testid="stMetric"] [data-testid="stMetricLabel"] { opacity: .78; }
+/* alerts + expanders: rounder to match the card language */
+[data-testid="stAlert"] { border-radius: 0.9rem; }
+[data-testid="stExpander"] { border-radius: 0.9rem; }
+/* tabs: friendlier spacing, wrap instead of scroll */
+.stTabs [data-baseweb="tab-list"] { gap: 0.15rem; flex-wrap: wrap; }
+.stTabs [data-baseweb="tab"] { border-radius: 0.6rem 0.6rem 0 0; padding: 0.35rem 0.7rem; }
+/* headings: tighter tracking for a modern feel */
+h1, h2, h3 { letter-spacing: -0.015em; }
+h1 { font-weight: 700; }
+</style>
+"""
+
+
+def inject_css():
+    """Inject the small CSS polish once per render (idempotent)."""
+    st.markdown(_APP_CSS, unsafe_allow_html=True)
+
+
 # ---------------------------------------------------------------- render building blocks
 def render_header(cfg):
     """Title + disclaimer + intro (both modes)."""
     expert = cfg.expert
+    inject_css()
     st.title("🌾 PFAS in Rice — Uptake Explorer")
     if not expert:
         st.markdown("#### 논의 PFAS가 벼의 어디에 얼마나 쌓이는지 예측하는 도구")

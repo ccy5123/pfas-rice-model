@@ -244,8 +244,11 @@ def fig_intake_gauge(info, lang="en"):
             "threshold": {"line": {"color": "#d62728", "width": 4},
                           "thickness": 0.85, "value": min(100.0, axis_max)},
         }))
-    fig.update_layout(title=dict(text=title, x=0.5, xanchor="center"),
-                      margin=dict(l=30, r=30, t=60, b=10), height=280)
+    # transparent bg + neutral tick/title ink so the gauge blends into the page in
+    # BOTH light and dark (it is rendered with theme=None to keep the signal colours)
+    fig.update_layout(title=dict(text=title, x=0.5, xanchor="center", font=dict(color="#8a8a8a")),
+                      margin=dict(l=30, r=30, t=60, b=10), height=280,
+                      paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#8a8a8a"))
     return fig
 
 

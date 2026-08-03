@@ -1,11 +1,68 @@
-# Streamlit dashboard theme (cosmetic; safe to delete). Used by `streamlit run app.py`
-# and by Streamlit Community Cloud.
-[theme]
-base = "light"
-primaryColor = "#2e7d32"          # rice green (accent: sliders, buttons)
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f3f6f0"
-font = "sans serif"
-
+# Streamlit theme — friendly, public-service look, light + dark (cosmetic; safe to
+# delete). Streamlit 1.60 native theming: design tokens + per-mode (light/dark)
+# colour variants + an embedded Korean web font (Pretendard). No `base` is set, so
+# the app follows the viewer's system / in-app light-or-dark choice.
 [server]
 headless = true
+
+[theme]
+# --- type: Pretendard (modern Korean web font) + friendly rounded, roomy ---
+font = "Pretendard"
+headingFont = "Pretendard"
+headingFontWeights = [700, 700, 700, 600, 600, 600]
+baseFontSize = 16
+baseRadius = "0.85rem"
+buttonRadius = "0.7rem"
+metricValueFontSize = "2.1rem"
+metricValueFontWeight = 700
+showWidgetBorder = true
+# a calm, friendly categorical palette for any auto-coloured charts
+chartCategoricalColors = ["#2f9e44", "#e8862b", "#3b7dd8", "#c0392b", "#8e6fc9", "#12a594"]
+
+[[theme.fontFaces]]
+family = "Pretendard"
+url = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/woff2/Pretendard-Regular.woff2"
+weight = 400
+style = "normal"
+
+[[theme.fontFaces]]
+family = "Pretendard"
+url = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/woff2/Pretendard-Medium.woff2"
+weight = 500
+style = "normal"
+
+[[theme.fontFaces]]
+family = "Pretendard"
+url = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/woff2/Pretendard-SemiBold.woff2"
+weight = 600
+style = "normal"
+
+[[theme.fontFaces]]
+family = "Pretendard"
+url = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/woff2/Pretendard-Bold.woff2"
+weight = 700
+style = "normal"
+
+# --- light: warm paper white + fresh friendly green ---
+[theme.light]
+primaryColor = "#2f9e44"
+backgroundColor = "#fdfcf9"
+secondaryBackgroundColor = "#eef2e9"
+textColor = "#1e2a22"
+borderColor = "#e4e6dd"
+linkColor = "#2f7d3a"
+greenColor = "#2f9e44"
+yellowBackgroundColor = "#faf3da"
+orangeBackgroundColor = "#fdeede"
+
+# --- dark: soft near-black + brighter green for contrast ---
+[theme.dark]
+primaryColor = "#5cc26e"
+backgroundColor = "#12161a"
+secondaryBackgroundColor = "#1b2127"
+textColor = "#e7ece8"
+borderColor = "#2a3138"
+linkColor = "#7fd68f"
+greenColor = "#5cc26e"
+yellowBackgroundColor = "#302b16"
+orangeBackgroundColor = "#33261a"
