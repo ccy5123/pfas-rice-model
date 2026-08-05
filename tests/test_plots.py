@@ -255,7 +255,7 @@ def test_plant_svg_builds():
     for organ in ("뿌리", "줄기", "잎", "낟알"):
         assert organ in svg
     assert "stroke-linecap=\"round\"" in svg                     # true round caps (not Plotly)
-    assert "토양수" in svg                                        # pore-water annotation
+    assert "공극수" in svg                                        # pore-water annotation
     # English variant + no-outline invariant (no stroke on grains/soil/seed)
     en = plot_svg.plant_svg_from_res(res, -1, lang="en")
     assert "Grain" in en and "pore water" in en

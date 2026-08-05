@@ -316,7 +316,7 @@ def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, si
                   else _t("inv.summary_no_ci", lang))
                + _t("inv.summary_tail", lang))
     mc2.markdown(summary)
-    st.plotly_chart(plots.fig_exposure_posterior(est, lang=lang), width="stretch", theme=None)
+    st.plotly_chart(plots.fig_exposure_posterior(est, lang=lang), width="stretch")
     # how well the model reproduces the entered measurements at the best estimate
     names = plots._PLAIN_KO if lang == "ko" else {}
     fit_rows = " · ".join(
@@ -455,7 +455,7 @@ h1,h2,h3{ letter-spacing:-.02em; }
 [data-testid="stMetric"] [data-testid="stMetricLabel"]{ color:var(--pfas-sub); font-weight:600; }
 /* tabs: pill-style, active tab filled with the blue accent */
 .stTabs [data-baseweb="tab-list"]{ gap:6px; flex-wrap:wrap; border-bottom:none; }
-.stTabs [data-baseweb="tab"]{ font-weight:600; padding:8px 15px; border-radius:999px;
+.stTabs [data-baseweb="tab"]{ font-weight:600; padding:9px 24px; border-radius:999px;
   color:var(--pfas-sub); background:color-mix(in oklab, var(--pfas-ink) 4%, transparent); }
 .stTabs [aria-selected="true"]{ color:#fff; font-weight:700;
   background:var(--pfas-accent); }

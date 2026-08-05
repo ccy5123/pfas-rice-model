@@ -92,20 +92,20 @@ def render(cfg):
 
     # ---- Simple tab 2: build-up over time ----------------------------------
     with s_tabs[1]:
-        st.plotly_chart(plots.fig_buildup_plain(res, lang="ko"), width="stretch", theme=None)
+        st.plotly_chart(plots.fig_buildup_plain(res, lang="ko"), width="stretch")
         st.caption("한 철 동안 각 식물 부위의 PFAS 농도가 어떻게 변하는지. **낟알**은 형성된 뒤(개화 무렵)부터 "
                    "PFAS를 흡수하기 시작해 수확까지 계속 쌓입니다. 곡선은 **대략적 모델 예측**으로, "
                    "실측과 수배 차이날 수 있습니다.")
 
     # ---- Simple tab 3: how much builds up ----------------------------------
     with s_tabs[2]:
-        st.plotly_chart(plots.fig_where_plain(res, lang="ko", band=True), width="stretch", theme=None)
+        st.plotly_chart(plots.fig_where_plain(res, lang="ko", band=True), width="stretch")
         st.caption(f"수확 시 각 부위의 PFAS 농도. 보통 뿌리에 가장 많이 남고, 먹는 낟알까지 "
                    f"얼마나 도달하는지는 화학물질에 따라 다릅니다. 막대의 **회색 오차선**은 모델의 "
                    f"대략적 예측 불확실성(실측과 약 {_fold:.0f}배까지 차이날 수 있음)입니다.")
         if obs:
             with st.expander("🔬 실제 측정값과 비교 (Yamazaki 2023)"):
-                st.plotly_chart(plots.fig_baf(res, obs, lang="ko"), width="stretch", theme=None)
+                st.plotly_chart(plots.fig_baf(res, obs, lang="ko"), width="stretch")
                 st.caption("막대는 모델의 축적 배수를 출판된 온실 벼 연구(Yamazaki et al. 2023)의 측정값과 "
                            "비교한 것입니다. 막대가 비슷할수록 이 화학물질에 대해 모델이 실제 데이터와 잘 맞습니다.")
 
@@ -119,7 +119,7 @@ def render(cfg):
                                  measured_forcing=cfg.measured, E_m_mV=E_m,
                                  f_xy_source=fxy_source, biomass=biomass) for c in _rep}
             st.plotly_chart(plots.fig_congener_compare(_cmp, lang="ko", order=_rep),
-                            width="stretch", theme=None)
+                            width="stretch")
             st.caption(
                 f"같은 오염 수준(토양수 {cfg.Cwo_const:g} µg/L)에서 물질별 수확기 농도. "
                 "**짧은사슬(PFBA·PFHxA)**은 짚·낟알까지 잘 이동해 먹는 부위에 도달하기 쉽고, "
@@ -197,7 +197,7 @@ def render(cfg):
         if obs:
             st.markdown("**실제 측정값과의 비교 (Yamazaki 2023 온실 벼)** — 막대가 비슷할수록 이 물질에 "
                         "대해 모델이 데이터와 잘 맞습니다.")
-            st.plotly_chart(plots.fig_baf(res, obs, lang="ko"), width="stretch", key="baf_trust", theme=None)
+            st.plotly_chart(plots.fig_baf(res, obs, lang="ko"), width="stretch", key="baf_trust")
         else:
             st.caption(f"{congener}에 대한 공개 실측 BAF가 없어 이 물질은 모델 예측만 표시됩니다.")
         st.info(
