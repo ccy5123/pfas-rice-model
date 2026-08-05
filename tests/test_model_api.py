@@ -281,6 +281,57 @@ def test_predictive_band_and_uncertainty_factor():
     assert z["lo"] == 0.0 and z["hi"] == 0.0
 
 
+def test_intake_fraction_efsa_twi():
+    """The EFSA-TWI intake reference (policy hook): a pure conversion of a grain
+    concentration to a % of the group tolerable weekly intake, with the group
+    membership flag and traffic-light signal, and graceful NaN handling."""
+    # unit check: 0.4 µg/kg == 0.4 ng/g; 150 g/day, 60 kg -> 7 ng/kg bw/week
+    # = 7/4.4 = ~159 % of the 4.4 ng/kg bw/week TWI.
+    info = api.intake_fraction(0.4, congener="PFOA",
+                               rice_intake_g_day=150.0, body_weight_kg=60.0)
+    assert info["weekly_intake_ng_per_kg_bw"] == pytest.approx(0.4 * 150 * 7 / 60)
+    assert info["twi"] == pytest.approx(api.EFSA_TWI_NG_PER_KG_BW_WEEK)
+    assert info["percent"] == pytest.approx(100.0 * (0.4 * 150 * 7 / 60) / 4.4, rel=1e-9)
+    assert info["in_group"] is True and info["signal"] == "red"
+    # linearity in grain conc and rice intake; inverse in body weight
+    a = api.intake_fraction(1.0, congener="PFOA")
+    b = api.intake_fraction(2.0, congener="PFOA")
+    assert b["percent"] == pytest.approx(2 * a["percent"])
+    heavier = api.intake_fraction(1.0, congener="PFOA", body_weight_kg=120.0)
+    assert heavier["percent"] == pytest.approx(a["percent"] * 60.0 / 120.0)
+    # traffic-light thresholds (10 % / 100 %)
+    assert api.intake_fraction(1e-4, congener="PFOA")["signal"] == "green"
+    # the four group members flagged in, everything else out; None if unspecified
+    for g in api.EFSA_TWI_CONGENERS:
+        assert api.intake_fraction(1.0, congener=g)["in_group"] is True
+    assert api.intake_fraction(1.0, congener="PFBA")["in_group"] is False
+    assert api.intake_fraction(1.0)["in_group"] is None
+    # NaN / negative / zero-bw -> NaN percent, signal None, no crash
+    for bad in (float("nan"), -1.0):
+        e = api.intake_fraction(bad, congener="PFOA")
+        assert not np.isfinite(e["percent"]) and e["signal"] is None
+    assert api.intake_fraction(1.0, congener="PFOA", body_weight_kg=0.0)["signal"] is None
+
+
+def test_summary_report_md():
+    """The one-page handout summary is a pure Markdown string carrying the tissue
+    numbers (+band), the EFSA-TWI line, the caveats and the sources, in both langs."""
+    res = api.simulate("PFOA", Cwo=1.0)
+    info = api.intake_fraction(float(res["conc"]["grain"][-1]), congener="PFOA")
+    md = api.summary_report_md(res, congener="PFOA", obs=api.observed_baf("PFOA"),
+                               intake=info, scenario="중간", lang="ko")
+    assert isinstance(md, str) and md.startswith("# ")
+    assert "PFOA" in md and "EFSA" in md and "출처" in md
+    assert "MRL" in md                                        # no-legal-limit caveat present
+    assert f"{info['percent']:.0f}%" in md                    # the EFSA % line
+    # English variant renders too, and flags an out-of-group congener as reference
+    info_pfba = api.intake_fraction(1.0, congener="PFBA")
+    en = api.summary_report_md(res, congener="PFBA", intake=info_pfba, lang="en")
+    assert "Sources:" in en and "reference" in en             # PFBA not in the EFSA four
+    # tolerates a missing intake (no EFSA line, still builds)
+    assert api.summary_report_md(res, congener="PFOA").startswith("# ")
+
+
 def test_lipid_loading_off_matches_baseline():
     """lipid_loading=False must recover the free-only model exactly (g=0)."""
     for nm in ("PFBA", "PFOA", "PFDA"):

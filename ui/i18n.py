@@ -72,6 +72,26 @@ PRESETS = {
     },
 }
 
+# One-click policy story scenarios (Simple mode). Each sets BOTH a representative
+# congener AND a contamination level, so a presenter can switch the whole picture
+# with one click. Shape: {label: (congener, Cwᵒ µg/L, short word, description)}.
+# The four tell distinct policy stories: background, hotspot, mobile short-chain,
+# root-retained long-chain.
+SCENARIOS_KO = {
+    "🏞️ 청정 논 (배경 수준)": (
+        "PFOA", 0.1, "낮은",
+        "오염원이 없는 일반 농경지의 배경 수준. 대표 물질 PFOA로 봅니다."),
+    "🏭 산업단지 인근 (오염 우려)": (
+        "PFOS", 10.0, "높은",
+        "PFAS 배출원 인근의 오염된 논. 잘 이동하지 않는 대표 술폰산 PFOS."),
+    "💧 단쇄 PFAS 유입 (이동성 높음)": (
+        "PFBA", 1.0, "중간",
+        "짧은사슬 PFAS는 식물로 잘 이동해 낟알까지 도달하기 쉽습니다 (PFBA)."),
+    "🌾 장쇄 PFAS 축적 (뿌리 잔류)": (
+        "PFDA", 1.0, "중간",
+        "긴사슬 PFAS는 뿌리에 강하게 붙어 짚·낟알로는 덜 이동합니다 (PFDA)."),
+}
+
 
 # --- string templates (use t(key, lang, **fmt)) ------------------------------
 STRINGS = {
@@ -235,10 +255,8 @@ STRINGS = {
                "PFAS를 얼마나 흡수하고 **어디에 쌓이는지** — 뿌리, 짚(줄기+잎), 먹는 **낟알** — 를 추정합니다."),
     },
     "header.intro2": {
-        "en": ("👉 **Start here:** pick a **chemical** and a **contamination level** on the left, then "
-               "look at the **🗺️ Where it goes** map below. No chemistry background needed."),
-        "ko": ("👉 **여기서 시작:** 왼쪽에서 **화학물질**과 **오염 수준**을 고른 뒤, 아래 "
-               "**🗺️ 어디로 가나** 지도를 보세요. 화학 배경지식은 필요 없습니다."),
+        "en": ("👉 Pick a scenario on the left, then read the 🗺️ map below. No chemistry needed."),
+        "ko": ("👉 왼쪽에서 시나리오를 고르고 아래 🗺️ 지도를 보세요. 화학 지식은 필요 없습니다."),
     },
     "header.expert_caption": {
         "en": ("Mechanistic 4-compartment dynamic model for permanently-anionic PFAS in paddy rice "

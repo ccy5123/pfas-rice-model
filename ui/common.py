@@ -45,6 +45,9 @@ def _cong_label_ko(name):
 _PRESETS = i18n.PRESETS["en"]
 _PRESETS_KO = i18n.PRESETS["ko"]
 
+# One-click policy story scenarios (Simple mode) -> (congener, Cwᵒ, word, desc).
+_SCENARIOS_KO = i18n.SCENARIOS_KO
+
 
 # ---------------------------------------------------------------- helpers
 def _nearest_index(t, day):
@@ -165,6 +168,79 @@ def _html_bytes(fig):
     from the CDN)."""
     try:
         return fig.to_html(full_html=True, include_plotlyjs="cdn").encode("utf-8"), None
+    except Exception as e:                                   # noqa: BLE001
+        return None, f"{type(e).__name__}: {e}"
+
+
+def _summary_html(cfg, lang="ko"):
+    """A self-contained one-page HTML summary for a slide / handout (download).
+
+    Combines the plant accumulation map, the EFSA-TWI intake gauge, the key tissue
+    numbers (with the coarse a-priori band) and the caveats/sources into a single
+    offline HTML file (Plotly embedded, so it works without a network). Returns
+    (bytes, None) or (None, reason) so the UI can degrade gracefully."""
+    ko = lang != "en"
+    try:
+        res = cfg.res
+        cong = cfg.congener
+        scenario = getattr(cfg, "preset_label", None) or getattr(cfg, "scen_label", None)
+        grain_c = float(res["conc"]["grain"][-1])
+        info = api.intake_fraction(grain_c, congener=cong)
+        map_fig = plots.fig_schematic_from_res(res, "conc", -1, lang=lang)
+        gauge = plots.fig_intake_gauge(info, lang=lang)
+        # embed plotly.js once (offline-safe), then the gauge without re-embedding
+        map_div = map_fig.to_html(full_html=False, include_plotlyjs=True,
+                                  default_height="480px")
+        gauge_div = gauge.to_html(full_html=False, include_plotlyjs=False,
+                                  default_height="300px")
+        rows = [("뿌리" if ko else "Roots", float(res["conc"]["root"][-1])),
+                ("짚(줄기+잎)" if ko else "Straw", float(res["straw"][-1])),
+                ("낟알(먹는 쌀)" if ko else "Grain", grain_c)]
+        trs = ""
+        for name, v in rows:
+            b = api.predictive_band(v)
+            trs += (f"<tr><td>{name}</td><td>{v:.2g}</td>"
+                    f"<td>{b['lo']:.2g}–{b['hi']:.2g}</td></tr>")
+        efsa = ""
+        if np.isfinite(info.get("percent", float("nan"))):
+            grp = ("" if info.get("in_group")
+                   else ("(참고 — EFSA 4종 합 미포함)" if ko else "(reference — not in the EFSA four)"))
+            efsa = (f"<p><b>EFSA 안전기준(TWI) 대비 약 {info['percent']:.0f}%</b> {grp} "
+                    f"— 하루 {info['rice_intake_g_day']:.0f} g 쌀 섭취 가정.</p>" if ko else
+                    f"<p><b>~{info['percent']:.0f}% of the EFSA TWI</b> {grp} "
+                    f"— assuming {info['rice_intake_g_day']:.0f} g rice/day.</p>")
+        disc = _DISCLAIMER_KO if ko else _DISCLAIMER
+        disc = disc.replace("**", "")
+        title = (f"PFAS–벼 흡수 요약 — {cong}" if ko else f"PFAS–Rice uptake summary — {cong}")
+        scen_line = (f"<p style='color:#555'>시나리오: {scenario}</p>" if (ko and scenario)
+                     else (f"<p style='color:#555'>Scenario: {scenario}</p>" if scenario else ""))
+        th = ("부위,예측 농도 (µg/kg),대략 범위" if ko else "Tissue,Predicted (µg/kg),Rough range").split(",")
+        src = ("출처: EFSA 2020 그룹 TWI 4.4 ng/kg 체중/주 (doi:10.2903/j.efsa.2020.6223) · "
+               "쌀 섭취량 KOSIS/국민건강영양조사 · 실측 Yamazaki et al. 2023." if ko else
+               "Sources: EFSA 2020 TWI 4.4 ng/kg bw/week (doi:10.2903/j.efsa.2020.6223); "
+               "rice intake KOSIS/KNHANES; observed Yamazaki et al. 2023.")
+        html = (
+            f"<!doctype html><html lang='{'ko' if ko else 'en'}'><head><meta charset='utf-8'>"
+            f"<meta name='viewport' content='width=device-width,initial-scale=1'>"
+            f"<title>{title}</title><style>"
+            "body{font-family:'Malgun Gothic',-apple-system,Segoe UI,Arial,sans-serif;"
+            "max-width:960px;margin:24px auto;padding:0 16px;color:#222}"
+            "h1{font-size:1.5rem;margin:.2rem 0}"
+            "table{border-collapse:collapse;margin:8px 0}"
+            "td,th{border:1px solid #ccc;padding:5px 12px;text-align:left}"
+            "th{background:#f5f5f5}"
+            ".row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}"
+            ".caveat{background:#fff8e1;border-left:4px solid #f0ad4e;padding:10px 14px;"
+            "border-radius:4px;margin:12px 0;font-size:.92rem}"
+            ".src{color:#666;font-size:.82rem;margin-top:10px}</style></head><body>"
+            f"<h1>🌾 {title}</h1>{scen_line}"
+            f"<div class='row'><div style='flex:2;min-width:340px'>{map_div}</div>"
+            f"<div style='flex:1;min-width:280px'>{gauge_div}"
+            f"<table><tr><th>{th[0]}</th><th>{th[1]}</th><th>{th[2]}</th></tr>{trs}</table>"
+            f"{efsa}</div></div>"
+            f"<div class='caveat'>⚠ {disc}</div>"
+            f"<p class='src'>{src}</p></body></html>")
+        return html.encode("utf-8"), None
     except Exception as e:                                   # noqa: BLE001
         return None, f"{type(e).__name__}: {e}"
 
@@ -328,18 +404,152 @@ def _render_custom_tables(*, biomass, Cwo_const, season0, key, ko=False):
     return drivers, density
 
 
+# A small, theme-agnostic CSS polish on top of the config.toml design tokens. Uses
+# NEUTRAL rgba overlays (not hardcoded light/dark colours) so it reads correctly in
+# BOTH the light and dark themes; config.toml carries the palette/font/radius.
+_APP_CSS = """
+<style>
+:root{
+  --pfas-safe:#0E6B4F; --pfas-safe-bg:#DCEFE6; --pfas-safe-bd:#A9D6C3;
+  --pfas-warn:#9A5A00; --pfas-warn-bg:#FAEBD1; --pfas-warn-bd:#E7C27F;
+  --pfas-dang:#B23A2E; --pfas-dang-bg:#FADEDA; --pfas-dang-bd:#EBA99F;
+  --pfas-accent:#0E7A63; --pfas-border:#E4DCCE; --pfas-surface:#FFFFFF;
+  --pfas-ink:#211E18; --pfas-sub:#6B6456;
+  --pfas-shadow:0 1px 2px rgba(40,34,24,.05), 0 6px 20px rgba(40,34,24,.07);
+  --pfas-shadow-sm:0 1px 2px rgba(40,34,24,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --pfas-safe:#3BCB9C; --pfas-safe-bg:#16302A; --pfas-safe-bd:#2E6152;
+    --pfas-warn:#E8B24C; --pfas-warn-bg:#322813; --pfas-warn-bd:#6B5726;
+    --pfas-dang:#F0796E; --pfas-dang-bg:#351F1C; --pfas-dang-bd:#7A413A;
+    --pfas-accent:#35C79E; --pfas-border:#332F26; --pfas-surface:#201D16;
+    --pfas-ink:#ECE6D9; --pfas-sub:#B7AE9C;
+    --pfas-shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    --pfas-shadow-sm:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+/* Toss-style: soft-shadow rounded cards, minimal borders, generous spacing. */
+.block-container{ padding-top:2.4rem; padding-bottom:3.2rem; max-width:1120px; }
+h1,h2,h3{ letter-spacing:-.02em; }
+/* safety-signal badge: colour + SHAPE/ICON + label (colour-blind 4-way encoding) */
+.pfas-badge{ display:inline-flex; gap:6px; align-items:center; font-size:13px;
+  font-weight:700; padding:5px 13px; border-radius:999px; }
+.pfas-badge.safe{ color:var(--pfas-safe); background:var(--pfas-safe-bg); }
+.pfas-badge.warn{ color:var(--pfas-warn); background:var(--pfas-warn-bg); }
+.pfas-badge.dang{ color:var(--pfas-dang); background:var(--pfas-dang-bg); }
+/* caveat pill (uncertainty reminder) */
+.pfas-caveat{ display:inline-flex; gap:6px; align-items:center; font-size:12px;
+  padding:5px 12px; border-radius:999px; background:color-mix(in oklab, var(--pfas-ink) 5%, transparent);
+  color:var(--pfas-sub); }
+/* metric cards: floating white surface, soft shadow, strong value */
+[data-testid="stMetric"]{ background:var(--pfas-surface); border:1px solid var(--pfas-border);
+  border-radius:18px; padding:18px 20px; box-shadow:var(--pfas-shadow);
+  transition:transform .12s ease, box-shadow .12s ease; }
+[data-testid="stMetric"]:hover{ transform:translateY(-2px);
+  box-shadow:0 2px 4px rgba(17,24,39,.05), 0 12px 30px rgba(17,24,39,.09); }
+[data-testid="stMetricValue"]{ font-weight:800; letter-spacing:-.03em; }
+[data-testid="stMetric"] [data-testid="stMetricLabel"]{ color:var(--pfas-sub); font-weight:600; }
+/* tabs: pill-style, active tab filled with the blue accent */
+.stTabs [data-baseweb="tab-list"]{ gap:6px; flex-wrap:wrap; border-bottom:none; }
+.stTabs [data-baseweb="tab"]{ font-weight:600; padding:8px 15px; border-radius:999px;
+  color:var(--pfas-sub); background:color-mix(in oklab, var(--pfas-ink) 4%, transparent); }
+.stTabs [aria-selected="true"]{ color:#fff; font-weight:700;
+  background:var(--pfas-accent); }
+/* primary buttons: rounded, bold, blue */
+.stButton>button, .stDownloadButton>button{ border-radius:12px; font-weight:700;
+  border:1px solid var(--pfas-border); box-shadow:var(--pfas-shadow-sm); }
+.stButton>button[kind="primary"]{ border:none;
+  box-shadow:0 4px 14px color-mix(in oklab, var(--pfas-accent) 36%, transparent); }
+/* banners + expanders: rounded, shadowed, borderless */
+[data-testid="stAlert"]{ border-radius:14px; border:none; box-shadow:var(--pfas-shadow-sm); }
+[data-testid="stExpander"]{ border:1px solid var(--pfas-border); border-radius:16px;
+  box-shadow:var(--pfas-shadow-sm); overflow:hidden; }
+/* inputs / sliders a touch rounder */
+[data-baseweb="select"]>div, .stNumberInput input, .stTextInput input{ border-radius:12px; }
+/* sidebar scenario radio -> tappable cards, selected one accented */
+section[data-testid="stSidebar"] div[role="radiogroup"] label{
+  border:1px solid var(--pfas-border); border-radius:14px; background:var(--pfas-surface);
+  padding:12px 14px; margin-bottom:8px; width:100%; box-shadow:var(--pfas-shadow-sm);
+  transition:border-color .12s ease; }
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked){
+  border:2px solid var(--pfas-accent);
+  background:color-mix(in oklab, var(--pfas-accent) 8%, var(--pfas-surface)); }
+/* ---- Simple-mode hero + slim disclaimer + result strip ---- */
+.pfas-hero{ border:1px solid var(--pfas-border); border-radius:22px;
+  padding:26px 28px 22px; margin:2px 0 14px; background:var(--pfas-surface);
+  box-shadow:var(--pfas-shadow); }
+.pfas-hero-kicker{ display:inline-block; font-size:12.5px; font-weight:700;
+  color:var(--pfas-accent); background:color-mix(in oklab, var(--pfas-accent) 10%, transparent);
+  padding:4px 11px; border-radius:999px; }
+.pfas-hero-title{ font-size:32px; font-weight:800; letter-spacing:-.03em;
+  margin:.42em 0 .3em; line-height:1.18; color:var(--pfas-ink); }
+.pfas-hero-sub{ font-size:15.5px; line-height:1.6; color:var(--pfas-sub); max-width:62ch; }
+.pfas-disc{ display:flex; gap:8px; align-items:flex-start; font-size:12.5px;
+  line-height:1.5; color:var(--pfas-warn); background:var(--pfas-warn-bg);
+  border-radius:12px; padding:9px 14px; margin:0 0 8px; }
+/* the headline result strip: big signal + one-line takeaway on a soft card */
+.pfas-result{ display:flex; gap:14px; align-items:center; flex-wrap:wrap;
+  border-radius:18px; padding:16px 20px; margin:4px 0 8px; background:var(--pfas-surface);
+  box-shadow:var(--pfas-shadow); }
+.pfas-result.safe{ background:color-mix(in oklab, var(--pfas-safe-bg) 60%, var(--pfas-surface)); }
+.pfas-result.warn{ background:color-mix(in oklab, var(--pfas-warn-bg) 60%, var(--pfas-surface)); }
+.pfas-result.dang{ background:color-mix(in oklab, var(--pfas-dang-bg) 60%, var(--pfas-surface)); }
+.pfas-result .pfas-badge{ font-size:15px; padding:8px 16px; }
+.pfas-result-text{ font-size:16px; line-height:1.5; flex:1; min-width:240px; color:var(--pfas-ink); }
+.pfas-result-text b{ font-weight:800; }
+</style>
+"""
+
+
+def inject_css():
+    """Inject the small CSS polish once per render (idempotent)."""
+    st.markdown(_APP_CSS, unsafe_allow_html=True)
+
+
+# Safety signal: colour-blind-safe 4-way encoding (colour + shape + KO + EN label
+# + fixed order safe->caution->exceed). `signal` is the model_api intake signal.
+_SIGNAL = {
+    "green": ("safe", "●", "안전", "Safe"),
+    "amber": ("warn", "▲", "주의", "Caution"),
+    "red":   ("dang", "⬢", "초과", "Exceeds"),
+}
+
+
+def signal_badge_html(signal, *, ko=True, extra=""):
+    """An HTML pill badge for a safety signal: colour + shape + label (not colour
+    alone), so it reads under colour-blindness. `extra` appends a short suffix
+    inside the badge (e.g. a percentage). Returns '' for an unknown signal."""
+    if signal not in _SIGNAL:
+        return ""
+    cls, shape, ko_l, en_l = _SIGNAL[signal]
+    label = f"{ko_l} · {en_l}" if ko else en_l
+    tail = f" {extra}" if extra else ""
+    return f"<span class='pfas-badge {cls}'>{shape} {label}{tail}</span>"
+
+
 # ---------------------------------------------------------------- render building blocks
 def render_header(cfg):
     """Title + disclaimer + intro (both modes)."""
     expert = cfg.expert
-    st.title("🌾 PFAS in Rice — Uptake Explorer")
-    st.warning(_DISCLAIMER if expert else _DISCLAIMER_KO)
-
-    if not expert:
-        st.markdown(_t("header.intro1", "ko"))
-        st.markdown(_t("header.intro2", "ko"))
-    else:
+    inject_css()
+    if expert:
+        st.title("🌾 PFAS in Rice — Uptake Explorer")
+        st.warning(_DISCLAIMER)
         st.caption(_t("header.expert_caption", "en"))
+        return
+    # --- Simple (Korean): a compact hero, then a slim (not heavy) disclaimer ---
+    st.markdown(
+        "<div class='pfas-hero'>"
+        "<div class='pfas-hero-kicker'>논 PFAS 벼 축적 시뮬레이터</div>"
+        "<h1 class='pfas-hero-title'>🌾 벼의 어디에, 얼마나 쌓일까?</h1>"
+        "<div class='pfas-hero-sub'>논의 물·흙에 녹은 <b>'영원한 화학물질' PFAS</b>가 "
+        "벼의 <b>뿌리·짚·먹는 낟알</b>에 얼마나 쌓이는지 한눈에 보여줍니다.</div>"
+        "</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='pfas-disc'>⚠️ 연구·교육용 예시 추정치입니다. 규제·식품안전·건강 판단이 "
+        "<b>아니며</b>, 실제 노출·안전 결정에 사용하지 마세요.</div>", unsafe_allow_html=True)
+    st.caption(_t("header.intro2", "ko"))
 
 
 def render_custom_tables_panel(cfg):
@@ -398,10 +608,12 @@ def run_model(cfg):
         desc = res.get("descriptors")
         provisional = bool(res.get("provisional", False))
     elif drivers is not None:
-        res = _simulate(congener, drivers_tuple=_drivers_tuple(drivers), **sim_kw)
+        with st.spinner("🌾 벼 한 철 축적을 계산하는 중…" if not cfg.expert else "Running the model…"):
+            res = _simulate(congener, drivers_tuple=_drivers_tuple(drivers), **sim_kw)
     else:
-        res = _simulate(congener, Cwo=Cwo_const, season=season, measured_forcing=measured,
-                        cwo_profile=cwo_profile, cwo_k_leach=cwo_kleach, **sim_kw)
+        with st.spinner("🌾 벼 한 철 축적을 계산하는 중…" if not cfg.expert else "Running the model…"):
+            res = _simulate(congener, Cwo=Cwo_const, season=season, measured_forcing=measured,
+                            cwo_profile=cwo_profile, cwo_k_leach=cwo_kleach, **sim_kw)
     obs = api.observed_baf(congener)
     p = res["params"]
 

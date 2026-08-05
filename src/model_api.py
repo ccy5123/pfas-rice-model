@@ -1225,6 +1225,65 @@ def predictive_band(value, log10_rmse=None):
     return dict(value=v, lo=v / f, hi=v * f, factor=f, log10_rmse=r)
 
 
+# ---------------------------------------------------------------------------
+# Dietary-intake reference (policy hook) -- EFSA 2020 group TWI
+# ---------------------------------------------------------------------------
+# EFSA CONTAM Panel 2020 (doi:10.2903/j.efsa.2020.6223) set a GROUP tolerable
+# weekly intake of 4.4 ng/kg body weight per week for the SUM of four PFAS:
+# PFOA + PFOS + PFNA + PFHxS (immune effect the critical endpoint). Only these
+# four are covered by the TWI; every other congener is compared for REFERENCE
+# only (flagged by `in_group=False`). There is NO legal maximum level (MRL) for
+# PFAS in rice in either the EU (Reg. 2023/915 covers eggs/fish/meat only) or
+# Korea, so an intake-based comparison to the health-based TWI is the defensible
+# policy anchor -- NOT a food-standard exceedance.
+EFSA_TWI_NG_PER_KG_BW_WEEK = 4.4
+EFSA_TWI_CONGENERS = ("PFOA", "PFOS", "PFNA", "PFHxS")
+# Korean rice intake: KOSIS per-capita rice supply 2023 ~56.4 kg/yr (~154 g/day);
+# KNHANES 2016 ~169.6 g/day. A round 150 g/day default, adjustable in the UI.
+DEFAULT_RICE_INTAKE_G_PER_DAY = 150.0
+# Korean adult reference body weight (adjustable); EFSA uses 70 kg for adults.
+DEFAULT_BODY_WEIGHT_KG = 60.0
+
+
+def intake_fraction(grain_conc_ug_per_kg, *, congener=None,
+                    rice_intake_g_day=DEFAULT_RICE_INTAKE_G_PER_DAY,
+                    body_weight_kg=DEFAULT_BODY_WEIGHT_KG):
+    """Estimated share of the EFSA group TWI from eating rice at `grain_conc`.
+
+    Converts a predicted grain concentration (µg/kg == ng/g) into an estimated
+    weekly PFAS intake -- via a daily rice intake and a body weight -- and
+    expresses it as a percentage of the EFSA 2020 group tolerable weekly intake
+    (4.4 ng/kg bw/week for PFOA+PFOS+PFNA+PFHxS). Pure; head-less testable.
+
+    HONESTY (carry into the UI): the TWI is for the SUM of the four group PFAS,
+    so (a) comparing a SINGLE congener is a conservative "this one chemical
+    alone" framing, and (b) it is only defined for the four group members --
+    `in_group` flags whether `congener` is one of them (None if unspecified).
+    This is an intake reference to a health-based guidance value, NOT a
+    food-standard (MRL) exceedance -- no PFAS MRL exists for rice.
+
+    Returns dict(grain_conc, rice_intake_g_day, body_weight_kg,
+    weekly_intake_ng_per_kg_bw, twi, fraction, percent, in_group, signal).
+    `signal` is a coarse traffic light: "green" <10 %, "amber" 10-100 %,
+    "red" >=100 % of the TWI (a NaN/negative conc gives signal=None)."""
+    c = float(grain_conc_ug_per_kg)                       # µg/kg == ng/g
+    intake = float(rice_intake_g_day)
+    bw = float(body_weight_kg)
+    in_group = (congener in EFSA_TWI_CONGENERS) if congener else None
+    if not np.isfinite(c) or c < 0 or bw <= 0:
+        return dict(grain_conc=c, rice_intake_g_day=intake, body_weight_kg=bw,
+                    weekly_intake_ng_per_kg_bw=float("nan"),
+                    twi=EFSA_TWI_NG_PER_KG_BW_WEEK, fraction=float("nan"),
+                    percent=float("nan"), in_group=in_group, signal=None)
+    weekly = c * intake * 7.0 / bw                        # ng/kg bw / week
+    frac = weekly / EFSA_TWI_NG_PER_KG_BW_WEEK
+    pct = frac * 100.0
+    signal = "green" if pct < 10.0 else ("amber" if pct < 100.0 else "red")
+    return dict(grain_conc=c, rice_intake_g_day=intake, body_weight_kg=bw,
+                weekly_intake_ng_per_kg_bw=weekly, twi=EFSA_TWI_NG_PER_KG_BW_WEEK,
+                fraction=frac, percent=pct, in_group=in_group, signal=signal)
+
+
 def load_biomonitoring_csv(path_or_buffer):
     """Load measured tissue concentrations: columns `tissue,conc` (+ optional `Cwo`).
 
@@ -1298,6 +1357,79 @@ def timeseries_csv(res):
         row += [f"{M[i, j]:.6g}" for j in range(len(TISSUES))]
         lines.append(",".join(row))
     return "\n".join(lines) + "\n"
+
+
+def summary_report_md(res, *, congener=None, obs=None, intake=None,
+                      scenario=None, lang="ko"):
+    """One-page plain-language run summary as a Markdown string (for a handout).
+
+    Pure string builder (no Streamlit/plotly) so it is head-less testable. `intake`
+    is an `intake_fraction` dict (optional, adds the EFSA-TWI line); `obs` an
+    `observed_baf` dict (optional); `scenario` a short label. `lang="ko"` (default)
+    renders Korean, "en" English. The numbers carry the coarse a-priori band."""
+    ko = lang != "en"
+    cong = congener or res.get("congener", "")
+    root_c = float(res["conc"]["root"][-1])
+    straw_c = float(res["straw"][-1])
+    grain_c = float(res["conc"]["grain"][-1])
+    fold = uncertainty_factor()
+    rows = [("뿌리" if ko else "roots", root_c), ("짚(줄기+잎)" if ko else "straw", straw_c),
+            ("낟알(먹는 쌀)" if ko else "grain", grain_c)]
+    tops = {"뿌리" if ko else "roots": root_c, "짚" if ko else "straw": straw_c,
+            "낟알" if ko else "grain": grain_c}
+    where = max(tops, key=tops.get)
+    L = []
+    if ko:
+        L.append(f"# PFAS–벼 흡수 모델 요약 — {cong}")
+        if scenario:
+            L.append(f"**시나리오:** {scenario}")
+        L.append("")
+        L.append("| 부위 | 예측 농도 (µg/kg) | 대략 범위 |")
+        L.append("|---|---|---|")
+        for name, v in rows:
+            b = predictive_band(v)
+            L.append(f"| {name} | {v:.2g} | {b['lo']:.2g}–{b['hi']:.2g} |")
+        L.append("")
+        L.append(f"- 대부분의 PFAS는 **{where}**에 남습니다.")
+        if intake is not None and np.isfinite(intake.get("percent", float("nan"))):
+            grp = "" if intake.get("in_group") else " (참고 — EFSA 4종 합에 미포함 물질)"
+            L.append(f"- 이 쌀을 하루 {intake['rice_intake_g_day']:.0f} g 섭취 시, PFAS 주간 섭취량은 "
+                     f"**EFSA 안전기준(TWI)의 약 {intake['percent']:.0f}%**{grp}.")
+        L.append("")
+        L.append("**한계 (반드시 함께 읽어주세요)**")
+        L.append(f"- 절대 수치는 **대략적 예측**으로 실측과 약 ×{fold:.0f}까지 차이날 수 있습니다.")
+        L.append("- 쌀에 대한 법적 PFAS 기준(MRL)은 EU·한국 모두 없으며, EFSA 비교는 건강기반 "
+                 "섭취기준 환산 **참고치**입니다.")
+        L.append("- 정책 스크리닝·교육용 예시이며, 개별 지점의 규제 판단 근거로 단독 사용은 부적절합니다.")
+        L.append("")
+        L.append("출처: EFSA 2020 그룹 TWI 4.4 ng/kg 체중/주 (doi:10.2903/j.efsa.2020.6223) · "
+                 "쌀 섭취량 KOSIS/국민건강영양조사 · 실측 비교 Yamazaki et al. 2023.")
+    else:
+        L.append(f"# PFAS–Rice uptake summary — {cong}")
+        if scenario:
+            L.append(f"**Scenario:** {scenario}")
+        L.append("")
+        L.append("| Tissue | Predicted conc (µg/kg) | Rough range |")
+        L.append("|---|---|---|")
+        for name, v in rows:
+            b = predictive_band(v)
+            L.append(f"| {name} | {v:.2g} | {b['lo']:.2g}–{b['hi']:.2g} |")
+        L.append("")
+        L.append(f"- Most of the PFAS stays in the **{where}**.")
+        if intake is not None and np.isfinite(intake.get("percent", float("nan"))):
+            grp = "" if intake.get("in_group") else " (reference — not in the EFSA group of four)"
+            L.append(f"- Eating {intake['rice_intake_g_day']:.0f} g rice/day, the weekly intake is "
+                     f"**~{intake['percent']:.0f}% of the EFSA TWI**{grp}.")
+        L.append("")
+        L.append("**Limits (read alongside)**")
+        L.append(f"- Absolute figures are coarse predictions — up to ~{fold:.0f}× from measurements.")
+        L.append("- No legal PFAS limit (MRL) exists for rice (EU/Korea); the EFSA comparison is an "
+                 "intake reference to a health-based value.")
+        L.append("- Screening/education only; not a single-site regulatory basis.")
+        L.append("")
+        L.append("Sources: EFSA 2020 group TWI 4.4 ng/kg bw/week (doi:10.2903/j.efsa.2020.6223); "
+                 "rice intake KOSIS/KNHANES; observed comparison Yamazaki et al. 2023.")
+    return "\n".join(L) + "\n"
 
 
 if __name__ == "__main__":

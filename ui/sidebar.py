@@ -9,7 +9,7 @@ import streamlit as st
 import model_api as api
 import plots
 
-from ui.common import (_EX, _cong_label, _cong_label_ko, _PRESETS_KO, _mol_svg,
+from ui.common import (_EX, _cong_label, _cong_label_ko, _PRESETS_KO, _SCENARIOS_KO, _mol_svg,
                        _hydrus_drivers_cached, _hydrus_soil_congener)
 
 
@@ -45,17 +45,31 @@ def build():
         if not expert:
             # ----------------------------- SIMPLE sidebar (한국어) -----------------------------
             mode = "Model (parametric)"
-            st.header("① 화학물질 선택")
-            congener = st.selectbox("PFAS 화학물질", api.CONGENERS,
-                                    index=api.CONGENERS.index("PFOA"),
-                                    format_func=_cong_label_ko,
-                                    help="특정 '영원한 화학물질' 하나. PFOA·PFOS가 가장 잘 알려져 있고, "
-                                         "사슬이 길수록 대체로 식물에 더 잘 달라붙습니다.")
-
-            st.header("② 오염 정도")
-            preset_label = st.radio("논의 오염 수준", list(_PRESETS_KO), index=1,
-                                    help="토양수에 녹아 있는 PFAS의 양. 높을수록 식물로 더 많이 들어갑니다.")
-            Cwo_const, preset_word = _PRESETS_KO[preset_label]
+            # A one-click policy scenario sets BOTH the chemical and the level, so a
+            # presenter can flip the whole story instantly; "직접 설정" reveals the
+            # manual chemical + level controls for hands-on exploration.
+            st.header("① 시나리오")
+            scen_label = st.radio(
+                "빠른 시나리오", ["✏️ 직접 설정"] + list(_SCENARIOS_KO), index=1,
+                help="정책 상황별로 화학물질과 오염 수준을 한 번에 설정합니다. "
+                     "'직접 설정'을 고르면 물질·오염도를 각각 지정할 수 있습니다.")
+            if scen_label == "✏️ 직접 설정":
+                st.header("② 화학물질 선택")
+                congener = st.selectbox("PFAS 화학물질", api.CONGENERS,
+                                        index=api.CONGENERS.index("PFOA"),
+                                        format_func=_cong_label_ko,
+                                        help="특정 '영원한 화학물질' 하나. PFOA·PFOS가 가장 잘 알려져 있고, "
+                                             "사슬이 길수록 대체로 식물에 더 잘 달라붙습니다.")
+                st.header("③ 오염 정도")
+                preset_label = st.radio("논의 오염 수준", list(_PRESETS_KO), index=1,
+                                        help="토양수에 녹아 있는 PFAS의 양. 높을수록 식물로 더 많이 들어갑니다.")
+                Cwo_const, preset_word = _PRESETS_KO[preset_label]
+            else:
+                congener, Cwo_const, preset_word, _scen_desc = _SCENARIOS_KO[scen_label]
+                preset_label = scen_label            # carried into the summary handout
+                st.success(f"**{scen_label}**\n\n{_scen_desc}")
+                st.caption(f"→ 물질 **{_cong_label_ko(congener)}** · 오염 **{preset_word}** "
+                           f"({Cwo_const:g} µg/L). '✏️ 직접 설정'에서 바꿀 수 있습니다.")
             use_custom_tables = st.checkbox(
                 "📋 내 데이터 표 사용", value=False,
                 help="성장 곡선과 시간에 따른 토양수 오염 수준을 편집 가능한 표로 직접 입력합니다 "
