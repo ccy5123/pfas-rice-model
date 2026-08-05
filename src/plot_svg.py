@@ -26,10 +26,11 @@ _STOPS = [(0.0, (244, 247, 238)), (0.22, (234, 223, 155)), (0.5, (231, 178, 76))
           (0.75, (217, 138, 68)), (1.0, (180, 86, 46))]
 
 # design palette
-_PAPER = "#F7F3EC"       # canvas background (was a vivid sky — calm paper now)
-_SOIL = "#E3D6BC"        # shallow soil band (light tan)
-_SOIL_DK = "#D6C6A6"
-_SPECK = "#C7A574"
+_SKY = "#8FCFEE"         # canvas background (sky)
+_PAPER = "#F7F3EC"       # (kept for reference / paper variant)
+_SOIL = "#B98A4E"        # soil band (deeper earth brown)
+_SOIL_DK = "#95672F"
+_SPECK = "#6F4A24"
 _INK = "#211E18"
 _MUTED = "#5C554A"
 _BORDER = "#E4DCCE"
@@ -107,7 +108,7 @@ def _card(x, y, name, val, swatch, chip=None):
 
 
 def plant_svg(values, *, cmin, cmax, cwo=None, lang="ko", labels=True,
-              grain_signal=None, bg=_PAPER, W=760, H=560):
+              grain_signal=None, bg=_SKY, W=760, H=560):
     """Return a self-contained SVG string of the rice-plant map (design style)."""
     L = _LAB.get(lang, _LAB["ko"])
     root = values.get("root")
@@ -203,7 +204,7 @@ def plant_svg(values, *, cmin, cmax, cwo=None, lang="ko", labels=True,
             + "".join(P) + '</svg>')
 
 
-def plant_svg_from_res(res, t_index=-1, *, lang="ko", labels=True, bg=_PAPER, grain_signal=None):
+def plant_svg_from_res(res, t_index=-1, *, lang="ko", labels=True, bg=_SKY, grain_signal=None):
     """Build the SVG plant map from a `model_api` result at one time index."""
     sv = api.schematic_values(res, "conc", t_index)
     return plant_svg(sv["values"], cmin=sv["cmin"], cmax=sv["cmax"], cwo=sv.get("Cwo"),
