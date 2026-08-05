@@ -1,8 +1,10 @@
 """General-audience (Korean) Simple-mode view. Split out of app.py (HANDOFF P3-1)."""
 import streamlit as st
+import streamlit.components.v1 as components
 
 import model_api as api
 import plots
+import plot_svg
 
 from ui.common import (_DISCLAIMER_KO, _cong_label_ko, _nearest_index, _simulate,
                        _render_inverse_estimator, _glossary_md, _png_bytes, _html_bytes,
@@ -73,22 +75,15 @@ def render(cfg):
 
     # ---- Simple tab 1: the plant + soil map --------------------------------
     with s_tabs[0]:
-        cc1, cc2 = st.columns([1, 1])
-        animate = cc1.checkbox("▶ 한 철 재생", value=False,
-                               help="벼가 자라는 동안 PFAS가 하루하루 쌓이는 모습을 봅니다.")
-        day = cc2.slider("이앙 후 일수", float(res["t"][0]), float(res["t"][-1]),
-                         float(res["t"][-1]), 1.0, disabled=animate)
-        if animate:
-            st.plotly_chart(plots.fig_schematic_animated(res, "conc", lang="ko"),
-                            width="stretch", theme=None)
-        else:
-            ti = _nearest_index(res["t"], day)
-            st.plotly_chart(plots.fig_schematic_from_res(res, "conc", ti, obs=None, lang="ko"),
-                            width="stretch", theme=None)
+        day = st.slider("이앙 후 일수", float(res["t"][0]), float(res["t"][-1]),
+                        float(res["t"][-1]), 1.0,
+                        help="슬라이더를 옮기면 그 날짜의 축적 상태로 색이 바뀝니다.")
+        ti = _nearest_index(res["t"], day)
+        components.html(plot_svg.plant_svg_from_res(res, ti, lang="ko"), height=580)
         st.markdown(
             f"<span class='pfas-caveat'>ⓘ 대략적 예측 · 실측과 ~{api.uncertainty_factor():.0f}배 "
             f"차이 가능</span>", unsafe_allow_html=True)
-        st.caption("**색이 진할수록 그 부위에 PFAS가 많습니다.** 날짜 슬라이더나 ▶로 한 철 축적을 "
+        st.caption("**색이 진할수록 그 부위에 PFAS가 많습니다.** 날짜 슬라이더로 한 철 축적을 "
                    "보세요. (짚 = 줄기+잎 평균)")
 
     # ---- Simple tab 2: build-up over time ----------------------------------

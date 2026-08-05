@@ -245,3 +245,17 @@ def test_fig_cwo_profile_builds():
     long = np.array(plots.fig_cwo_profile("PFDoDA", profile="flooded").data[1].y)
     assert long[-1] > 0.95 * long[0]
     assert len(plots.fig_cwo_profile(None, profile="flooded").data) == 2
+
+
+def test_plant_svg_builds():
+    import model_api as api, plot_svg
+    res = api.simulate("PFOA", Cwo=1.0, measured_forcing=True, biomass="oryza")
+    svg = plot_svg.plant_svg_from_res(res, -1, lang="ko")
+    assert svg.strip().startswith("<svg") and svg.strip().endswith("</svg>")
+    for organ in ("뿌리", "줄기", "잎", "낟알"):
+        assert organ in svg
+    assert "stroke-linecap=\"round\"" in svg                     # true round caps (not Plotly)
+    assert "토양수" in svg                                        # pore-water annotation
+    # English variant + no-outline invariant (no stroke on grains/soil/seed)
+    en = plot_svg.plant_svg_from_res(res, -1, lang="en")
+    assert "Grain" in en and "pore water" in en
