@@ -453,14 +453,16 @@ h1,h2,h3{ letter-spacing:-.02em; }
   box-shadow:0 2px 4px rgba(17,24,39,.05), 0 12px 30px rgba(17,24,39,.09); }
 [data-testid="stMetricValue"]{ font-weight:800; letter-spacing:-.03em; }
 [data-testid="stMetric"] [data-testid="stMetricLabel"]{ color:var(--pfas-sub); font-weight:600; }
-/* tabs: pill-style, active tab filled with the blue accent */
-.stTabs [data-baseweb="tab-list"]{ gap:6px; flex-wrap:wrap; border-bottom:none; }
-.stTabs [data-baseweb="tab"]{ font-weight:600; padding:9px 34px !important; border-radius:999px;
-  color:var(--pfas-sub); background:color-mix(in oklab, var(--pfas-ink) 4%, transparent); }
-/* baseweb sometimes pads an inner wrapper — widen it too so the pill isn't tight */
-.stTabs [data-baseweb="tab"] > div{ padding-left:10px; padding-right:10px; }
-.stTabs [aria-selected="true"]{ color:#fff; font-weight:700;
-  background:var(--pfas-accent); }
+/* tabs: pill-style, active tab filled with the accent.
+   Streamlit ≥1.4x renders each tab as [data-testid="stTab"] (role=tab) — the old
+   [data-baseweb="tab"] selector matched NOTHING here, so the padding never applied
+   (the pill stayed cramped). Target the real element and give it generous room. */
+.stTabs [role="tablist"], .stTabs [data-testid="stTabList"]{ gap:8px; flex-wrap:wrap; border-bottom:none; }
+.stTabs [data-testid="stTab"]{ font-weight:600; border-radius:999px;
+  padding-left:22px !important; padding-right:22px !important;
+  padding-top:8px !important; padding-bottom:8px !important; }
+.stTabs [data-testid="stTab"][aria-selected="true"]{ color:#fff; font-weight:700;
+  background:var(--pfas-accent) !important; }
 /* primary buttons: rounded, bold, blue */
 .stButton>button, .stDownloadButton>button{ border-radius:12px; font-weight:700;
   border:1px solid var(--pfas-border); box-shadow:var(--pfas-shadow-sm); }
@@ -510,23 +512,40 @@ section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked)
 # A 0-height helper iframe whose JS reads the REAL app background (Streamlit does
 # not expose its theme as a CSS var or attribute) and stamps data-pfas-theme on the
 # parent <html>, so the CSS above follows the app theme, not the OS. Same-origin
-# srcdoc iframe → window.parent access is allowed. Re-runs each rerun.
+# srcdoc iframe → window.parent access is allowed.
+#
+# CRUCIAL: this must keep watching. Switching the theme in the ⋮ menu re-themes the
+# frontend WITHOUT re-running the Python script, so a one-shot probe leaves stale
+# colours ("some stay light after switching to dark"). We therefore observe the
+# app for changes AND poll a few times a second so the attribute tracks the live
+# theme both ways (light→dark and dark→light).
 _THEME_PROBE = """
 <script>
 (function(){
+  var doc = window.parent.document;
   function apply(){
     try{
-      var doc = window.parent.document;
       var app = doc.querySelector('.stApp');
       if(!app) return;
       var m = getComputedStyle(app).backgroundColor.match(/\\d+/g);
       if(!m || m.length < 3) return;
       var lum = 0.2126*(+m[0]) + 0.7152*(+m[1]) + 0.0722*(+m[2]);
-      doc.documentElement.setAttribute('data-pfas-theme', lum < 128 ? 'dark' : 'light');
+      var th = lum < 128 ? 'dark' : 'light';
+      if(doc.documentElement.getAttribute('data-pfas-theme') !== th)
+        doc.documentElement.setAttribute('data-pfas-theme', th);
     }catch(e){}
   }
   apply();
-  var n = 0, id = setInterval(function(){ apply(); if(++n > 12) clearInterval(id); }, 200);
+  try{
+    var app = doc.querySelector('.stApp');
+    var obs = new MutationObserver(apply);
+    if(app) obs.observe(app, {attributes:true, attributeFilter:['style','class']});
+    obs.observe(doc.documentElement, {attributes:true});
+    if(doc.body) obs.observe(doc.body, {attributes:true, attributeFilter:['style','class']});
+    var mm = window.matchMedia('(prefers-color-scheme: dark)');
+    (mm.addEventListener ? mm.addEventListener('change', apply) : mm.addListener(apply));
+  }catch(e){}
+  setInterval(apply, 400);           // safety net: track theme toggles within 0.4s
 })();
 </script>
 """
