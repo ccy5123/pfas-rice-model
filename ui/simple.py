@@ -79,7 +79,7 @@ def render(cfg):
                         float(res["t"][-1]), 1.0,
                         help="슬라이더를 옮기면 그 날짜의 축적 상태로 색이 바뀝니다.")
         ti = _nearest_index(res["t"], day)
-        components.html(plot_svg.plant_svg_from_res(res, ti, lang="ko"), height=580)
+        components.html(plot_svg.plant_svg_from_res(res, ti, lang="ko"), height=560)
         st.markdown(
             f"<span class='pfas-caveat'>ⓘ 대략적 예측 · 실측과 ~{api.uncertainty_factor():.0f}배 "
             f"차이 가능</span>", unsafe_allow_html=True)
