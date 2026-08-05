@@ -46,26 +46,26 @@ url = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static
 weight = 800
 style = "normal"
 
-# --- light: Toss-style — near-white cool canvas + bright blue accent ---
+# --- light: warm paper + teal-green accent (Toss-style layout, own colours) ---
 [theme.light]
-primaryColor = "#3182F6"
-backgroundColor = "#F2F4F6"
+primaryColor = "#0E7A63"
+backgroundColor = "#F7F3EC"
 secondaryBackgroundColor = "#FFFFFF"
-textColor = "#191F28"
-borderColor = "#E5E8EB"
-linkColor = "#3182F6"
-greenColor = "#15803D"
-yellowColor = "#B45309"
-orangeColor = "#C2410C"
+textColor = "#211E18"
+borderColor = "#E4DCCE"
+linkColor = "#12658F"
+greenColor = "#0E6B4F"
+yellowColor = "#9A5A00"
+orangeColor = "#C0622A"
 
-# --- dark: cool near-black + brighter blue ---
+# --- dark: warm near-black + brighter teal-green ---
 [theme.dark]
-primaryColor = "#4B93F7"
-backgroundColor = "#17171C"
-secondaryBackgroundColor = "#202027"
-textColor = "#E7EAED"
-borderColor = "#2A2E35"
-linkColor = "#6BA8F7"
-greenColor = "#4ADE80"
+primaryColor = "#35C79E"
+backgroundColor = "#15130E"
+secondaryBackgroundColor = "#201D16"
+textColor = "#ECE6D9"
+borderColor = "#332F26"
+linkColor = "#6BB8E6"
+greenColor = "#3BCB9C"
 yellowColor = "#E8B24C"
 orangeColor = "#E0864A"

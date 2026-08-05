@@ -410,21 +410,21 @@ def _render_custom_tables(*, biomass, Cwo_const, season0, key, ko=False):
 _APP_CSS = """
 <style>
 :root{
-  --pfas-safe:#15803D; --pfas-safe-bg:#E7F7EE; --pfas-safe-bd:#BCE7CD;
-  --pfas-warn:#B45309; --pfas-warn-bg:#FEF3C7; --pfas-warn-bd:#F3D89B;
-  --pfas-dang:#E11D48; --pfas-dang-bg:#FFE9EC; --pfas-dang-bd:#F6C2CC;
-  --pfas-accent:#3182F6; --pfas-border:#E5E8EB; --pfas-surface:#FFFFFF;
-  --pfas-ink:#191F28; --pfas-sub:#4E5968;
-  --pfas-shadow:0 1px 2px rgba(17,24,39,.04), 0 6px 20px rgba(17,24,39,.06);
-  --pfas-shadow-sm:0 1px 2px rgba(17,24,39,.05);
+  --pfas-safe:#0E6B4F; --pfas-safe-bg:#DCEFE6; --pfas-safe-bd:#A9D6C3;
+  --pfas-warn:#9A5A00; --pfas-warn-bg:#FAEBD1; --pfas-warn-bd:#E7C27F;
+  --pfas-dang:#B23A2E; --pfas-dang-bg:#FADEDA; --pfas-dang-bd:#EBA99F;
+  --pfas-accent:#0E7A63; --pfas-border:#E4DCCE; --pfas-surface:#FFFFFF;
+  --pfas-ink:#211E18; --pfas-sub:#6B6456;
+  --pfas-shadow:0 1px 2px rgba(40,34,24,.05), 0 6px 20px rgba(40,34,24,.07);
+  --pfas-shadow-sm:0 1px 2px rgba(40,34,24,.06);
 }
 @media (prefers-color-scheme: dark){
   :root{
-    --pfas-safe:#4ADE80; --pfas-safe-bg:#12291C; --pfas-safe-bd:#2C5138;
-    --pfas-warn:#E8B24C; --pfas-warn-bg:#2C2412; --pfas-warn-bd:#5E4E22;
-    --pfas-dang:#FB7185; --pfas-dang-bg:#2E1518; --pfas-dang-bd:#6B2C39;
-    --pfas-accent:#4B93F7; --pfas-border:#2A2E35; --pfas-surface:#202027;
-    --pfas-ink:#E7EAED; --pfas-sub:#A6ADB6;
+    --pfas-safe:#3BCB9C; --pfas-safe-bg:#16302A; --pfas-safe-bd:#2E6152;
+    --pfas-warn:#E8B24C; --pfas-warn-bg:#322813; --pfas-warn-bd:#6B5726;
+    --pfas-dang:#F0796E; --pfas-dang-bg:#351F1C; --pfas-dang-bd:#7A413A;
+    --pfas-accent:#35C79E; --pfas-border:#332F26; --pfas-surface:#201D16;
+    --pfas-ink:#ECE6D9; --pfas-sub:#B7AE9C;
     --pfas-shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
     --pfas-shadow-sm:0 1px 2px rgba(0,0,0,.4);
   }
@@ -459,7 +459,8 @@ h1,h2,h3{ letter-spacing:-.02em; }
 /* primary buttons: rounded, bold, blue */
 .stButton>button, .stDownloadButton>button{ border-radius:12px; font-weight:700;
   border:1px solid var(--pfas-border); box-shadow:var(--pfas-shadow-sm); }
-.stButton>button[kind="primary"]{ border:none; box-shadow:0 4px 14px rgba(49,130,246,.35); }
+.stButton>button[kind="primary"]{ border:none;
+  box-shadow:0 4px 14px color-mix(in oklab, var(--pfas-accent) 36%, transparent); }
 /* banners + expanders: rounded, shadowed, borderless */
 [data-testid="stAlert"]{ border-radius:14px; border:none; box-shadow:var(--pfas-shadow-sm); }
 [data-testid="stExpander"]{ border:1px solid var(--pfas-border); border-radius:16px;
