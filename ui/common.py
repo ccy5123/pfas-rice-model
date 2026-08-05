@@ -455,8 +455,10 @@ h1,h2,h3{ letter-spacing:-.02em; }
 [data-testid="stMetric"] [data-testid="stMetricLabel"]{ color:var(--pfas-sub); font-weight:600; }
 /* tabs: pill-style, active tab filled with the blue accent */
 .stTabs [data-baseweb="tab-list"]{ gap:6px; flex-wrap:wrap; border-bottom:none; }
-.stTabs [data-baseweb="tab"]{ font-weight:600; padding:9px 24px; border-radius:999px;
+.stTabs [data-baseweb="tab"]{ font-weight:600; padding:9px 34px !important; border-radius:999px;
   color:var(--pfas-sub); background:color-mix(in oklab, var(--pfas-ink) 4%, transparent); }
+/* baseweb sometimes pads an inner wrapper — widen it too so the pill isn't tight */
+.stTabs [data-baseweb="tab"] > div{ padding-left:10px; padding-right:10px; }
 .stTabs [aria-selected="true"]{ color:#fff; font-weight:700;
   background:var(--pfas-accent); }
 /* primary buttons: rounded, bold, blue */
