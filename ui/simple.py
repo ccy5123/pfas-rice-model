@@ -44,21 +44,26 @@ def render(cfg):
         return f"대략 {b['lo']:.2g}–{b['hi']:.2g} µg/kg"
 
     st.subheader(f"{_cong_label_ko(congener)}")
-    m1, m2, m3 = st.columns(3)
-    m1.metric("뿌리 속", f"{root_c:.2g} µg/kg", _rng_ko(bands["root"]), delta_color="off")
-    m2.metric("짚(줄기+잎) 속", f"{straw_c:.2g} µg/kg", _rng_ko(bands["straw"]), delta_color="off")
-    m3.metric("낟알(먹는 쌀) 속", f"{grain_c:.2g} µg/kg", _rng_ko(bands["grain"]), delta_color="off")
 
-    # One-line summary: a colour-blind-safe safety badge (colour + shape + label) +
-    # where it goes + grain, then one compact caveat. (Details live in the 🍚/⚖️/🔬
-    # tabs — keep the landing lean.)
+    # Headline RESULT STRIP first (big signal + one-line takeaway), so the answer
+    # lands before the numbers. Colour-blind-safe badge (colour + shape + label).
     _where_ko = {"roots": "뿌리", "straw (stems + leaves)": "짚(줄기+잎)", "grain": "낟알"}[where_most]
     _intake = api.intake_fraction(grain_c, congener=congener)
     _pct_txt = f"기준의 {_intake['percent']:.0f}%" if _intake["in_group"] else "참고"
     _badge = signal_badge_html(_intake["signal"], ko=True, extra=_pct_txt)
+    _cls = {"green": "safe", "amber": "warn", "red": "dang"}.get(_intake["signal"], "")
     st.markdown(
-        _badge + f" &nbsp;대부분의 PFAS는 <b>{_where_ko}</b>에 남고, 먹는 <b>낟알</b>엔 약 "
-        f"<b>{grain_c:.2g} µg/kg</b> 들어 있을 것으로 추정합니다.", unsafe_allow_html=True)
+        f"<div class='pfas-result {_cls}'>{_badge}"
+        f"<div class='pfas-result-text'>대부분의 PFAS는 <b>{_where_ko}</b>에 남고, 먹는 "
+        f"<b>낟알</b>엔 약 <b>{grain_c:.2g} µg/kg</b> 들어 있을 것으로 추정합니다.</div></div>",
+        unsafe_allow_html=True)
+
+    # then the three tissue numbers as cards
+    m1, m2, m3 = st.columns(3)
+    m1.metric("🥕 뿌리 속", f"{root_c:.2g} µg/kg", _rng_ko(bands["root"]), delta_color="off")
+    m2.metric("🌿 짚(줄기+잎) 속", f"{straw_c:.2g} µg/kg", _rng_ko(bands["straw"]), delta_color="off")
+    m3.metric("🌾 낟알(먹는 쌀) 속", f"{grain_c:.2g} µg/kg", _rng_ko(bands["grain"]), delta_color="off")
+
     st.caption(f"신호등은 EFSA 건강기반 안전기준 대비 수준입니다(색·모양·라벨로 표시). 숫자는 "
                f"**대략적 예측**(실측과 ~{_fold:.0f}배 차이 가능)이며 법적 식품기준이 아닙니다. "
                f"자세한 비교는 🍚·⚖️·🔬 탭에서.")

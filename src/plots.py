@@ -26,8 +26,13 @@ def _plain(lang):
     return _PLAIN_KO if lang == "ko" else _PLAIN
 _LAYOUT = dict(template="plotly_white", hoverlabel=dict(namelength=-1),
                margin=dict(l=60, r=20, t=50, b=50))
-# default "accumulation heat" colour scale for the plant map (more = hotter)
-_HEAT = "YlOrRd"
+# Default "accumulation heat" colour scale for the plant map (more = hotter). A warm
+# agricultural ramp cream→wheat→gold→ochre→terracotta: still reads "more = more
+# intense", but the top is a soft terracotta rather than an alarm pure-red, so a
+# high *relative* organ isn't misread as a danger flag (the colorbar carries the
+# real, usually-small µg/kg number). Test suite checks only that figures build.
+_HEAT = [[0.0, "#F4F7EE"], [0.22, "#EADF9B"], [0.5, "#E7B24C"],
+         [0.75, "#D98A44"], [1.0, "#B4562E"]]
 
 
 def _formed(res, j, y):

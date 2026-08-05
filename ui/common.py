@@ -457,6 +457,34 @@ section[data-testid="stSidebar"] div[role="radiogroup"] label{
 section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked){
   border:2px solid var(--pfas-accent);
   background:color-mix(in oklab, var(--pfas-accent) 7%, transparent); }
+/* ---- Simple-mode hero + slim disclaimer + result strip ---- */
+.pfas-hero{ border:1px solid var(--pfas-border); border-radius:18px;
+  padding:22px 26px 20px; margin:2px 0 12px;
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in oklab, var(--pfas-accent) 12%, transparent) 0%, transparent 55%),
+    var(--pfas-surface); }
+.pfas-hero-kicker{ font-size:12.5px; font-weight:700; letter-spacing:.02em;
+  color:var(--pfas-accent); text-transform:none; opacity:.9; }
+.pfas-hero-title{ font-size:30px; font-weight:800; letter-spacing:-.02em;
+  margin:.18em 0 .28em; line-height:1.15; }
+.pfas-hero-sub{ font-size:15px; line-height:1.55; opacity:.9; max-width:60ch; }
+.pfas-disc{ display:flex; gap:8px; align-items:flex-start; font-size:12.5px;
+  line-height:1.5; color:var(--pfas-warn); background:var(--pfas-warn-bg);
+  border:1px solid var(--pfas-warn-bd); border-radius:10px;
+  padding:8px 13px; margin:0 0 6px; }
+/* the headline result strip: big signal + one-line takeaway on a tinted card */
+.pfas-result{ display:flex; gap:14px; align-items:center; flex-wrap:wrap;
+  border:1px solid var(--pfas-border); border-radius:16px;
+  padding:15px 18px; margin:4px 0 6px; background:var(--pfas-surface); }
+.pfas-result.safe{ border-color:var(--pfas-safe-bd); background:color-mix(in oklab, var(--pfas-safe-bg) 55%, var(--pfas-surface)); }
+.pfas-result.warn{ border-color:var(--pfas-warn-bd); background:color-mix(in oklab, var(--pfas-warn-bg) 55%, var(--pfas-surface)); }
+.pfas-result.dang{ border-color:var(--pfas-dang-bd); background:color-mix(in oklab, var(--pfas-dang-bg) 55%, var(--pfas-surface)); }
+.pfas-result .pfas-badge{ font-size:15px; padding:7px 15px; }
+.pfas-result-text{ font-size:15.5px; line-height:1.5; flex:1; min-width:240px; }
+.pfas-result-text b{ font-weight:800; }
+/* metric card value a touch tighter/bigger already via theme; add a hover lift */
+[data-testid="stMetric"]{ transition:border-color .15s ease; }
+[data-testid="stMetric"]:hover{ border-color:var(--pfas-accent); }
 </style>
 """
 
@@ -492,15 +520,23 @@ def render_header(cfg):
     """Title + disclaimer + intro (both modes)."""
     expert = cfg.expert
     inject_css()
-    st.title("🌾 PFAS in Rice — Uptake Explorer")
-    if not expert:
-        st.markdown("#### 논의 PFAS가 벼의 어디에 얼마나 쌓이는지 예측하는 도구")
-    st.warning(_DISCLAIMER if expert else _DISCLAIMER_KO)
-
-    if not expert:
-        st.caption(_t("header.intro2", "ko"))
-    else:
+    if expert:
+        st.title("🌾 PFAS in Rice — Uptake Explorer")
+        st.warning(_DISCLAIMER)
         st.caption(_t("header.expert_caption", "en"))
+        return
+    # --- Simple (Korean): a compact hero, then a slim (not heavy) disclaimer ---
+    st.markdown(
+        "<div class='pfas-hero'>"
+        "<div class='pfas-hero-kicker'>논 PFAS 벼 축적 시뮬레이터</div>"
+        "<h1 class='pfas-hero-title'>🌾 벼의 어디에, 얼마나 쌓일까?</h1>"
+        "<div class='pfas-hero-sub'>논의 물·흙에 녹은 <b>'영원한 화학물질' PFAS</b>가 "
+        "벼의 <b>뿌리·짚·먹는 낟알</b>에 얼마나 쌓이는지 한눈에 보여줍니다.</div>"
+        "</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='pfas-disc'>⚠️ 연구·교육용 예시 추정치입니다. 규제·식품안전·건강 판단이 "
+        "<b>아니며</b>, 실제 노출·안전 결정에 사용하지 마세요.</div>", unsafe_allow_html=True)
+    st.caption(_t("header.intro2", "ko"))
 
 
 def render_custom_tables_panel(cfg):
@@ -559,10 +595,12 @@ def run_model(cfg):
         desc = res.get("descriptors")
         provisional = bool(res.get("provisional", False))
     elif drivers is not None:
-        res = _simulate(congener, drivers_tuple=_drivers_tuple(drivers), **sim_kw)
+        with st.spinner("🌾 벼 한 철 축적을 계산하는 중…" if not cfg.expert else "Running the model…"):
+            res = _simulate(congener, drivers_tuple=_drivers_tuple(drivers), **sim_kw)
     else:
-        res = _simulate(congener, Cwo=Cwo_const, season=season, measured_forcing=measured,
-                        cwo_profile=cwo_profile, cwo_k_leach=cwo_kleach, **sim_kw)
+        with st.spinner("🌾 벼 한 철 축적을 계산하는 중…" if not cfg.expert else "Running the model…"):
+            res = _simulate(congener, Cwo=Cwo_const, season=season, measured_forcing=measured,
+                            cwo_profile=cwo_profile, cwo_k_leach=cwo_kleach, **sim_kw)
     obs = api.observed_baf(congener)
     p = res["params"]
 
