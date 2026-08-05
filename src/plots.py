@@ -31,18 +31,20 @@ _SEQUENTIAL = [[0.0, "#F1F7F2"], [0.5, "#63BC9C"], [1.0, "#0A5A49"]]
 
 
 def pfas_template():
-    """Self-contained brand template (warm paper look, teal accent, Pretendard).
-    Uses an explicit light chart surface so charts render identically under
-    Streamlit dark mode when drawn with `theme=None` (mirrors the plant map)."""
-    ink, muted, grid = "#211E18", "#5C554A", "#E9E1D2"
+    """Brand template — colours/typography only, THEME-NEUTRAL surface. Transparent
+    paper/plot backgrounds and no hard-coded font colour, so when a chart is drawn
+    with Streamlit's own theme (the default, NOT theme=None) it follows light/dark:
+    the app paints the surface + text colour, while our brand colorway + neutral
+    grid + margins carry through. (config.toml chartCategoricalColors match, so the
+    palette is identical either way.)"""
+    grid = "rgba(140,132,116,0.22)"
     return go.layout.Template(layout=dict(
-        font=dict(family="Pretendard, 'Malgun Gothic', sans-serif", size=14, color=ink),
-        paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF", colorway=_CATEGORICAL,
-        colorscale=dict(sequential=_SEQUENTIAL),
-        title=dict(font=dict(size=17, color=ink)),
-        xaxis=dict(gridcolor=grid, zerolinecolor=grid, linecolor=grid, tickfont=dict(color=muted)),
-        yaxis=dict(gridcolor=grid, zerolinecolor=grid, linecolor=grid, tickfont=dict(color=muted)),
-        legend=dict(font=dict(color=muted)), margin=dict(l=56, r=24, t=48, b=48)))
+        font=dict(family="Pretendard, 'Malgun Gothic', sans-serif", size=14),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", colorway=_CATEGORICAL,
+        colorscale=dict(sequential=_SEQUENTIAL), title=dict(font=dict(size=17)),
+        xaxis=dict(gridcolor=grid, zerolinecolor=grid, linecolor=grid),
+        yaxis=dict(gridcolor=grid, zerolinecolor=grid, linecolor=grid),
+        margin=dict(l=56, r=24, t=48, b=48)))
 
 
 pio.templates["pfas"] = pfas_template()

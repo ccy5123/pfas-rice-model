@@ -45,7 +45,7 @@ _FONT = "'Malgun Gothic','맑은 고딕',sans-serif"
 _MONO = "'DM Mono','SFMono-Regular',Consolas,'Malgun Gothic',monospace"
 
 _LAB = {"ko": {"root": "뿌리", "stem": "줄기", "leaf": "잎", "grain": "낟알",
-               "conc": "농도", "high": "높음", "low": "낮음", "pw": "토양수", "top": "최고",
+               "conc": "농도", "high": "높음", "low": "낮음", "pw": "공극수", "top": "최고",
                "safe": "안전", "warn": "주의", "dang": "초과"},
         "en": {"root": "Roots", "stem": "Stem", "leaf": "Leaf", "grain": "Grain",
                "conc": "level", "high": "high", "low": "low", "pw": "pore water", "top": "top",
@@ -180,28 +180,33 @@ def plant_svg(values, *, cmin, cmax, cwo=None, lang="ko", labels=True,
 
     # ---- pore-water tag (dark chip) ----
     if cwo is not None and np.isfinite(cwo):
-        P.append(f'<g><rect x="{W-232}" y="{H-70}" width="196" height="42" rx="12" fill="{_PWBG}"/>'
+        P.append(f'<g><rect x="{W-232}" y="{H-70}" width="196" height="42" rx="14" fill="{_PWBG}"/>'
                  f'<text x="{W-134}" y="{H-52}" text-anchor="middle" font-size="12.5" '
-                 f'font-weight="700" fill="{_PWTX}" font-family="{_FONT}">{L["pw"]} (pore water)</text>'
+                 f'font-weight="700" fill="{_PWTX}" font-family="{_FONT}">{L["pw"]}</text>'
                  f'<text x="{W-134}" y="{H-36}" text-anchor="middle" font-size="12" '
                  f'fill="{_PWTX}" font-family="{_MONO}">PFAS = {cwo:.3g} µg/L</text></g>')
 
-    # ---- rounded concentration legend (right) ----
+    # ---- concentration legend inside a rounded white card (right) ----
     lg = "".join(f'<stop offset="{p*100:.0f}%" stop-color="rgb{c}"/>' for p, c in _STOPS)
-    lx = W - 44
+    gx = W - 48                                        # gradient x inside the card
     P.append(f'<defs><linearGradient id="pfaslg" x1="0" y1="1" x2="0" y2="0">{lg}</linearGradient></defs>')
-    P.append(f'<text x="{lx+7}" y="176" font-size="12" fill="{_MUTED}" text-anchor="middle" '
+    P.append(f'<rect x="{W-98}" y="160" width="82" height="282" rx="16" fill="#FFFFFF" '
+             f'stroke="{_BORDER}" stroke-width="1"/>')
+    P.append(f'<text x="{gx+7}" y="186" font-size="12" fill="{_MUTED}" text-anchor="middle" '
              f'font-family="{_FONT}">{L["conc"]}</text>')
-    P.append(f'<rect x="{lx}" y="190" width="14" height="220" rx="7" fill="url(#pfaslg)"/>')
-    P.append(f'<text x="{lx-6}" y="196" font-size="11" fill="{_MUTED}" text-anchor="end" '
+    P.append(f'<rect x="{gx}" y="206" width="14" height="200" rx="7" fill="url(#pfaslg)"/>')
+    P.append(f'<text x="{gx-9}" y="212" font-size="11" fill="{_MUTED}" text-anchor="end" '
              f'font-family="{_FONT}">{L["high"]}</text>')
-    P.append(f'<text x="{lx-6}" y="410" font-size="11" fill="{_MUTED}" text-anchor="end" '
+    P.append(f'<text x="{gx-9}" y="406" font-size="11" fill="{_MUTED}" text-anchor="end" '
              f'font-family="{_FONT}">{L["low"]}</text>')
 
+    # rounded on ALL corners (clip the square-cornered soil band too), and fill the
+    # container width (no centred max-width cap).
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
             f'preserveAspectRatio="xMidYMid meet" font-family="{_FONT}" '
-            f'style="width:100%;height:auto;max-width:{W}px;display:block;margin:auto">'
-            + "".join(P) + '</svg>')
+            f'style="width:100%;height:auto;display:block">'
+            f'<defs><clipPath id="pfascard"><rect x="0" y="0" width="{W}" height="{H}" rx="24"/></clipPath></defs>'
+            f'<g clip-path="url(#pfascard)">' + "".join(P) + '</g></svg>')
 
 
 def plant_svg_from_res(res, t_index=-1, *, lang="ko", labels=True, bg=_SKY, grain_signal=None):
