@@ -1,6 +1,5 @@
 """General-audience (Korean) Simple-mode view. Split out of app.py (HANDOFF P3-1)."""
 import streamlit as st
-import streamlit.components.v1 as components
 
 import model_api as api
 import plots
@@ -82,8 +81,13 @@ def render(cfg):
         # grain safety chip (안전/주의/초과) — only for the EFSA-4 congeners, so a
         # borrowed reference signal is never shown as a food-safety verdict.
         _grain_sig = _intake["signal"] if _intake.get("in_group") else None
-        components.html(plot_svg.plant_svg_from_res(res, ti, lang="ko",
-                                                    grain_signal=_grain_sig), height=560)
+        # Render the SVG INLINE (not in a fixed-height components.html iframe): the
+        # iframe height was pinned at 560px, so in the wide layout the width:100%
+        # SVG scaled taller than 560 and its bottom (roots/soil/pore-water) clipped.
+        # Inline markdown lets height:auto track the width → full-width, never cut.
+        st.markdown(plot_svg.plant_svg_from_res(res, ti, lang="ko",
+                                                grain_signal=_grain_sig),
+                    unsafe_allow_html=True)
         st.markdown(
             f"<span class='pfas-caveat'>ⓘ 대략적 예측 · 실측과 ~{api.uncertainty_factor():.0f}배 "
             f"차이 가능</span>", unsafe_allow_html=True)
