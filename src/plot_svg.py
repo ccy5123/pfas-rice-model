@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 """Inline-SVG rice-plant accumulation map (no Plotly).
 
-A clean, bold rice-plant glyph rendered as a self-contained SVG string, with each
-organ (roots+seed / leaf blades / central culm / grain ear) shaded by a heat
-colormap of its PFAS value. SVG gives true round stroke caps and pixel-crisp
-vectors, so it matches the icon design far better than Plotly path shapes.
+A clean rice-plant glyph rendered as a self-contained SVG string, styled to the
+shared design: a calm warm-paper canvas + a shallow soil band (no vivid sky/heavy
+soil), each organ (roots+seed / leaf blades / central culm / grain ear) shaded by
+a heat colormap of its PFAS value, white label cards with a colour swatch + value
++ a "최고" chip on the top-accumulating organ joined by leader lines, a rounded
+concentration legend and a dark pore-water tag.
 
-Pure functions (no Streamlit import): `plant_svg(...)` takes the per-organ values,
-`plant_svg_from_res(res, t_index)` builds them from a `model_api` result — the SVG
-analogue of `plots.fig_schematic_from_res`. The app renders the returned string
-with `st.components.v1.html`.
+The junction circle between stem and root is filled with the BACKGROUND colour
+(no outline), sitting in front of the roots and behind the stem, so it just masks
+the overlap. No compartment carries an outline.
+
+Pure functions (no Streamlit). `plant_svg_from_res(res, t_index)` builds the values
+from a `model_api` result — the SVG analogue of `plots.fig_schematic_from_res`.
 """
 from __future__ import annotations
 
@@ -17,18 +21,37 @@ import numpy as np
 
 import model_api as api
 
-# warm agricultural heat ramp (matches plots._HEAT): cream→wheat→gold→ochre→terracotta
+# heat ramp (cream → wheat → gold → ochre → terracotta), matches plots._HEAT / design
 _STOPS = [(0.0, (244, 247, 238)), (0.22, (234, 223, 155)), (0.5, (231, 178, 76)),
           (0.75, (217, 138, 68)), (1.0, (180, 86, 46))]
-# a more saturated sky background for the plant card
-_SKY = "#8FCFEE"
-_SOIL = "#7A5A34"
+
+# design palette
+_PAPER = "#F7F3EC"       # canvas background (was a vivid sky — calm paper now)
+_SOIL = "#E3D6BC"        # shallow soil band (light tan)
+_SOIL_DK = "#D6C6A6"
+_SPECK = "#C7A574"
+_INK = "#211E18"
+_MUTED = "#5C554A"
+_BORDER = "#E4DCCE"
+_LEADER = "#C9B48C"
+_PWBG = "#4A3520"        # pore-water chip
+_PWTX = "#F3EAD4"
+_CHIP_TOP_BG, _CHIP_TOP_TX = "#FBE4DE", "#B23A2E"     # "최고"
+_CHIP_SAFE_BG, _CHIP_SAFE_TX = "#DCEFE6", "#0E6B4F"   # "안전"
+_CHIP_WARN_BG, _CHIP_WARN_TX = "#FAEBD1", "#9A5A00"
+_CHIP_DANG_BG, _CHIP_DANG_TX = "#FADEDA", "#B23A2E"
 _FONT = "'Malgun Gothic','맑은 고딕',sans-serif"
+_MONO = "'DM Mono','SFMono-Regular',Consolas,'Malgun Gothic',monospace"
 
 _LAB = {"ko": {"root": "뿌리", "stem": "줄기", "leaf": "잎", "grain": "낟알",
-               "conc": "농도", "high": "높음", "low": "낮음", "pw": "토양수"},
+               "conc": "농도", "high": "높음", "low": "낮음", "pw": "토양수", "top": "최고",
+               "safe": "안전", "warn": "주의", "dang": "초과"},
         "en": {"root": "Roots", "stem": "Stem", "leaf": "Leaf", "grain": "Grain",
-               "conc": "level", "high": "high", "low": "low", "pw": "pore water"}}
+               "conc": "level", "high": "high", "low": "low", "pw": "pore water", "top": "top",
+               "safe": "safe", "warn": "caution", "dang": "over"}}
+_SIGCHIP = {"green": ("safe", _CHIP_SAFE_BG, _CHIP_SAFE_TX),
+            "amber": ("warn", _CHIP_WARN_BG, _CHIP_WARN_TX),
+            "red": ("dang", _CHIP_DANG_BG, _CHIP_DANG_TX)}
 
 
 def _heat(f):
@@ -58,9 +81,34 @@ def _fmt(v):
     return "—" if (v is None or not np.isfinite(v)) else f"{v:.3g}"
 
 
+def _leader(x1, y1, x2, y2):
+    return (f'<path d="M{x1},{y1} L{x2},{y2}" fill="none" stroke="{_LEADER}" '
+            f'stroke-width="1.4"/>')
+
+
+def _card(x, y, name, val, swatch, chip=None):
+    """White label card (colour swatch + name + mono value + optional chip). x,y = top-left."""
+    w, h = 168, 48
+    out = [f'<g><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="#FFFFFF" '
+           f'stroke="{_BORDER}" stroke-width="1"/>',
+           f'<rect x="{x+10}" y="{y+11}" width="7" height="{h-22}" rx="3.5" fill="{swatch}"/>',
+           f'<text x="{x+26}" y="{y+20}" font-size="13" font-weight="700" fill="{_INK}" '
+           f'font-family="{_FONT}">{name}</text>',
+           f'<text x="{x+26}" y="{y+38}" font-size="14" fill="{_MUTED}" '
+           f'font-family="{_MONO}">{val}</text>']
+    if chip:
+        label, cbg, ctx = chip
+        cw = 34 + 8 * max(0, len(label) - 2)
+        out.append(f'<rect x="{x+w-cw-10}" y="{y+9}" width="{cw}" height="18" rx="9" fill="{cbg}"/>')
+        out.append(f'<text x="{x+w-10-cw/2:.0f}" y="{y+22}" font-size="11" font-weight="700" '
+                   f'fill="{ctx}" text-anchor="middle" font-family="{_FONT}">{label}</text>')
+    out.append('</g>')
+    return "".join(out)
+
+
 def plant_svg(values, *, cmin, cmax, cwo=None, lang="ko", labels=True,
-              bg=_SKY, W=520, H=560):
-    """Return a self-contained SVG string of the rice-plant map (no outlines)."""
+              grain_signal=None, bg=_PAPER, W=760, H=560):
+    """Return a self-contained SVG string of the rice-plant map (design style)."""
     L = _LAB.get(lang, _LAB["ko"])
     root = values.get("root")
     stem = values.get("stem", values.get("straw"))
@@ -68,68 +116,98 @@ def plant_svg(values, *, cmin, cmax, cwo=None, lang="ko", labels=True,
     grain = values.get("grain")
     cr, cs, cl, cg = (_col(root, cmin, cmax), _col(stem, cmin, cmax),
                       _col(leaf, cmin, cmax), _col(grain, cmin, cmax))
+    # which organ accumulates most (gets the "최고" chip)
+    named = {"root": root, "stem": stem, "leaf": leaf, "grain": grain}
+    finite = {k: float(v) for k, v in named.items() if v is not None and np.isfinite(v)}
+    top_organ = max(finite, key=finite.get) if finite else None
 
-    def lab(x, y, key, val, anchor="start"):                 # annotation box (no outline)
-        if not labels:
-            return ""
-        bx = x - 4 if anchor == "start" else x - 88
-        tx = x if anchor == "start" else x - 84
-        return (f'<g><rect x="{bx}" y="{y-15}" width="92" height="30" rx="8" '
-                f'fill="rgba(255,255,255,0.86)"/>'
-                f'<text x="{tx}" y="{y-2}" font-size="13" font-weight="700" fill="#2f3b33">{L[key]}</text>'
-                f'<text x="{tx}" y="{y+12}" font-size="12" fill="#586257">{_fmt(val)}</text></g>')
+    tx, ty = 120, 70                       # plant translate (native 512-box → frame)
+    soil_top = 476
+    P = []
+    P.append(f'<rect x="0" y="0" width="{W}" height="{H}" rx="20" fill="{bg}"/>')
+    # shallow soil band (no outline) + a few faint speckles; roots dip in
+    P.append(f'<path d="M0,{soil_top} Q190,{soil_top-8} 380,{soil_top-2} '
+             f'Q560,{soil_top+4} {W},{soil_top-6} L{W},{H} L0,{H} Z" fill="{_SOIL}"/>')
+    P.append(f'<path d="M0,{soil_top+34} Q220,{soil_top+26} 430,{soil_top+32} '
+             f'Q600,{soil_top+38} {W},{soil_top+30} L{W},{H} L0,{H} Z" fill="{_SOIL_DK}" opacity="0.6"/>')
+    for sx, sy, r in [(150, 520, 3), (240, 536, 2.4), (470, 520, 3), (610, 540, 2.4), (330, 545, 2.4)]:
+        P.append(f'<ellipse cx="{sx}" cy="{sy}" rx="{r}" ry="{r*0.7:.1f}" fill="{_SPECK}" opacity="0.5"/>')
 
-    lg = "".join(f'<stop offset="{p*100:.0f}%" stop-color="rgb{c}"/>' for p, c in _STOPS)
-    soil = f'<path d="M0,470 Q130,462 200,468 Q290,474 520,468 L520,{H} L0,{H} Z" fill="{_SOIL}"/>'
-    cwo_txt = ""
+    # ---- the plant (native 512 coords; NO outlines; junction circle = bg) ----
+    P.append(f'<g transform="translate({tx},{ty})">')
+    P.append(f'<g stroke="{cr}" stroke-width="18" stroke-linecap="round" fill="none">'
+             f'<path d="M246,394 A42,42 0 0 1 198.9,435.7"/>'
+             f'<path d="M266,394 A42,42 0 0 0 313.1,435.7"/>'
+             f'<path d="M256,395 L256,452"/></g>')
+    # junction circle: BACKGROUND colour, no outline, in front of roots / behind stem
+    P.append(f'<circle cx="256" cy="378" r="24" fill="{bg}"/>')
+    P.append(f'<g stroke="{cs}" stroke-width="30" stroke-linecap="round" fill="none">'
+             f'<path d="M256,378 L256,170 A80,80 0 0 1 296,100.7"/></g>')
+    P.append(f'<g stroke="{cl}" stroke-width="30" stroke-linecap="round" fill="none">'
+             f'<path d="M178.1,172.6 L216.9,211.4"/><path d="M333.3,215.5 L294.5,254.3"/>'
+             f'<path d="M178.3,258.2 L217.1,297.0"/><path d="M333.3,296.7 L294.5,335.5"/></g>')
+    P.append(f'<g fill="{cg}">'
+             f'<ellipse cx="349.3" cy="63.5" rx="28.8" ry="18.7" transform="rotate(-22 349.3 63.5)"/>'
+             f'<ellipse cx="398.7" cy="101.3" rx="28.8" ry="18.7" transform="rotate(27 398.7 101.3)"/>'
+             f'<ellipse cx="352.3" cy="123.1" rx="28.8" ry="18.7" transform="rotate(52 352.3 123.1)"/>'
+             f'<ellipse cx="409.9" cy="157.3" rx="28.8" ry="18.7" transform="rotate(51 409.9 157.3)"/></g>')
+    P.append('</g>')
+
+    # ---- leader lines ON TOP of the plant, ending at each organ's near edge with
+    #      a small connector dot (so they read as clean connectors, not crossing) ----
+    if labels:
+        ends = {"grain": (472, 190), "leaf": (298, 328), "stem": (361, 372), "root": (368, 520)}
+        starts = {"grain": (198, 174), "leaf": (198, 306), "stem": (198, 388), "root": (198, 500)}
+        for k in ("grain", "leaf", "stem", "root"):
+            (sx, sy), (ex, ey) = starts[k], ends[k]
+            P.append(_leader(sx, sy, ex, ey))
+            P.append(f'<circle cx="{ex}" cy="{ey}" r="3" fill="{_LEADER}"/>')
+
+    # ---- label cards (on top) ----
+    if labels:
+        def chip_for(key, color_v):
+            if key == top_organ:
+                return (L["top"], _CHIP_TOP_BG, _CHIP_TOP_TX)
+            if key == "grain" and grain_signal in _SIGCHIP:
+                nm, cbg, ctx = _SIGCHIP[grain_signal]
+                return (L[nm], cbg, ctx)
+            return None
+        P.append(_card(30, 150, L["grain"], _fmt(grain), cg, chip_for("grain", cg)))
+        P.append(_card(30, 282, L["leaf"], _fmt(leaf), cl, chip_for("leaf", cl)))
+        P.append(_card(30, 364, L["stem"], _fmt(stem), cs, chip_for("stem", cs)))
+        P.append(_card(30, 476, L["root"], _fmt(root), cr, chip_for("root", cr)))
+
+    # ---- pore-water tag (dark chip) ----
     if cwo is not None and np.isfinite(cwo):
-        cwo_txt = (f'<g><rect x="332" y="500" width="152" height="34" rx="9" fill="rgba(70,48,26,0.92)"/>'
-                   f'<text x="408" y="514" text-anchor="middle" font-size="12" fill="#f3ead4">{L["pw"]}</text>'
-                   f'<text x="408" y="528" text-anchor="middle" font-size="12" fill="#f3ead4">PFAS={cwo:.3g} µg/L</text></g>')
+        P.append(f'<g><rect x="{W-232}" y="{H-70}" width="196" height="42" rx="12" fill="{_PWBG}"/>'
+                 f'<text x="{W-134}" y="{H-52}" text-anchor="middle" font-size="12.5" '
+                 f'font-weight="700" fill="{_PWTX}" font-family="{_FONT}">{L["pw"]} (pore water)</text>'
+                 f'<text x="{W-134}" y="{H-36}" text-anchor="middle" font-size="12" '
+                 f'fill="{_PWTX}" font-family="{_MONO}">PFAS = {cwo:.3g} µg/L</text></g>')
 
-    # The icon is translated DOWN so the roots sit inside the soil; the junction
-    # circle is background-coloured (in front of roots / behind stem) to mask the
-    # overlap. No element carries an outline.
-    return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="100%" '
-        f'height="{H}" font-family="{_FONT}" style="max-width:{W}px;display:block;margin:auto">'
-        f'<rect width="{W}" height="{H}" rx="20" fill="{bg}"/>'
-        f'{soil}'
-        f'<g transform="translate(4,70)">'
-        f'<g stroke="{cr}" stroke-width="18" stroke-linecap="round" fill="none">'
-        f'<path d="M246,394 A42,42 0 0 1 198.9,435.7"/>'
-        f'<path d="M266,394 A42,42 0 0 0 313.1,435.7"/>'
-        f'<path d="M256,395 L256,452"/></g>'
-        f'<circle cx="256" cy="378" r="24" fill="{bg}"/>'
-        f'<g stroke="{cs}" stroke-width="30" stroke-linecap="round" fill="none">'
-        f'<path d="M256,378 L256,170 A80,80 0 0 1 296,100.7"/></g>'
-        f'<g stroke="{cl}" stroke-width="30" stroke-linecap="round" fill="none">'
-        f'<path d="M178.1,172.6 L216.9,211.4"/><path d="M333.3,215.5 L294.5,254.3"/>'
-        f'<path d="M178.3,258.2 L217.1,297.0"/><path d="M333.3,296.7 L294.5,335.5"/></g>'
-        f'<g fill="{cg}">'
-        f'<ellipse cx="349.3" cy="63.5" rx="28.8" ry="18.7" transform="rotate(-22 349.3 63.5)"/>'
-        f'<ellipse cx="398.7" cy="101.3" rx="28.8" ry="18.7" transform="rotate(27 398.7 101.3)"/>'
-        f'<ellipse cx="352.3" cy="123.1" rx="28.8" ry="18.7" transform="rotate(52 352.3 123.1)"/>'
-        f'<ellipse cx="409.9" cy="157.3" rx="28.8" ry="18.7" transform="rotate(51 409.9 157.3)"/></g>'
-        f'</g>'
-        f'{cwo_txt}'
-        f'{lab(150, 150, "grain", grain, "end")}'
-        f'{lab(60, 300, "leaf", leaf)}'
-        f'{lab(60, 392, "stem", stem)}'
-        f'{lab(150, 520, "root", root, "end")}'
-        f'<defs><linearGradient id="lg" x1="0" y1="1" x2="0" y2="0">{lg}</linearGradient></defs>'
-        f'<rect x="490" y="170" width="16" height="230" rx="6" fill="url(#lg)"/>'
-        f'<text x="498" y="160" font-size="12" fill="#33414b" text-anchor="middle">{L["conc"]}</text>'
-        f'<text x="486" y="176" font-size="11" fill="#33414b" text-anchor="end">{L["high"]}</text>'
-        f'<text x="486" y="400" font-size="11" fill="#33414b" text-anchor="end">{L["low"]}</text>'
-        f'</svg>')
+    # ---- rounded concentration legend (right) ----
+    lg = "".join(f'<stop offset="{p*100:.0f}%" stop-color="rgb{c}"/>' for p, c in _STOPS)
+    lx = W - 44
+    P.append(f'<defs><linearGradient id="pfaslg" x1="0" y1="1" x2="0" y2="0">{lg}</linearGradient></defs>')
+    P.append(f'<text x="{lx+7}" y="176" font-size="12" fill="{_MUTED}" text-anchor="middle" '
+             f'font-family="{_FONT}">{L["conc"]}</text>')
+    P.append(f'<rect x="{lx}" y="190" width="14" height="220" rx="7" fill="url(#pfaslg)"/>')
+    P.append(f'<text x="{lx-6}" y="196" font-size="11" fill="{_MUTED}" text-anchor="end" '
+             f'font-family="{_FONT}">{L["high"]}</text>')
+    P.append(f'<text x="{lx-6}" y="410" font-size="11" fill="{_MUTED}" text-anchor="end" '
+             f'font-family="{_FONT}">{L["low"]}</text>')
+
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
+            f'preserveAspectRatio="xMidYMid meet" font-family="{_FONT}" '
+            f'style="width:100%;height:auto;max-width:{W}px;display:block;margin:auto">'
+            + "".join(P) + '</svg>')
 
 
-def plant_svg_from_res(res, t_index=-1, *, lang="ko", labels=True, bg=_SKY):
+def plant_svg_from_res(res, t_index=-1, *, lang="ko", labels=True, bg=_PAPER, grain_signal=None):
     """Build the SVG plant map from a `model_api` result at one time index."""
     sv = api.schematic_values(res, "conc", t_index)
-    return plant_svg(sv["values"], cmin=sv["cmin"], cmax=sv["cmax"],
-                     cwo=sv.get("Cwo"), lang=lang, labels=labels, bg=bg)
+    return plant_svg(sv["values"], cmin=sv["cmin"], cmax=sv["cmax"], cwo=sv.get("Cwo"),
+                     lang=lang, labels=labels, bg=bg, grain_signal=grain_signal)
 
 
 if __name__ == "__main__":
