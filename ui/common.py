@@ -5,6 +5,7 @@ import os
 
 import numpy as np
 import streamlit as st
+import streamlit.components.v1 as components
 
 import model_api as api
 import plots
@@ -418,8 +419,11 @@ _APP_CSS = """
   --pfas-shadow:0 1px 2px rgba(40,34,24,.05), 0 6px 20px rgba(40,34,24,.07);
   --pfas-shadow-sm:0 1px 2px rgba(40,34,24,.06);
 }
-@media (prefers-color-scheme: dark){
-  :root{
+/* Dark tokens key off the ACTUAL Streamlit app theme (stamped on <html> by the
+   JS probe in _sync_theme), NOT the OS `prefers-color-scheme` — otherwise a user
+   who forces the light theme while their OS is dark gets dark cards/shadows on a
+   light app. Default (no attribute yet / probe failed) stays light. */
+:root[data-pfas-theme="dark"]{
     --pfas-safe:#3BCB9C; --pfas-safe-bg:#16302A; --pfas-safe-bd:#2E6152;
     --pfas-warn:#E8B24C; --pfas-warn-bg:#322813; --pfas-warn-bd:#6B5726;
     --pfas-dang:#F0796E; --pfas-dang-bg:#351F1C; --pfas-dang-bd:#7A413A;
@@ -427,7 +431,6 @@ _APP_CSS = """
     --pfas-ink:#ECE6D9; --pfas-sub:#B7AE9C;
     --pfas-shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
     --pfas-shadow-sm:0 1px 2px rgba(0,0,0,.4);
-  }
 }
 /* Toss-style: soft-shadow rounded cards, minimal borders, generous spacing. */
 .block-container{ padding-top:2.4rem; padding-bottom:3.2rem; max-width:1120px; }
@@ -502,9 +505,40 @@ section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked)
 """
 
 
+# A 0-height helper iframe whose JS reads the REAL app background (Streamlit does
+# not expose its theme as a CSS var or attribute) and stamps data-pfas-theme on the
+# parent <html>, so the CSS above follows the app theme, not the OS. Same-origin
+# srcdoc iframe → window.parent access is allowed. Re-runs each rerun.
+_THEME_PROBE = """
+<script>
+(function(){
+  function apply(){
+    try{
+      var doc = window.parent.document;
+      var app = doc.querySelector('.stApp');
+      if(!app) return;
+      var m = getComputedStyle(app).backgroundColor.match(/\\d+/g);
+      if(!m || m.length < 3) return;
+      var lum = 0.2126*(+m[0]) + 0.7152*(+m[1]) + 0.0722*(+m[2]);
+      doc.documentElement.setAttribute('data-pfas-theme', lum < 128 ? 'dark' : 'light');
+    }catch(e){}
+  }
+  apply();
+  var n = 0, id = setInterval(function(){ apply(); if(++n > 12) clearInterval(id); }, 200);
+})();
+</script>
+"""
+
+
+def _sync_theme():
+    """Detect the actual Streamlit theme and mirror it onto <html data-pfas-theme>."""
+    components.html(_THEME_PROBE, height=0)
+
+
 def inject_css():
-    """Inject the small CSS polish once per render (idempotent)."""
+    """Inject the small CSS polish once per render (idempotent), then sync the theme."""
     st.markdown(_APP_CSS, unsafe_allow_html=True)
+    _sync_theme()
 
 
 # Safety signal: colour-blind-safe 4-way encoding (colour + shape + KO + EN label
