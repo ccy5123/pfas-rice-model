@@ -79,7 +79,11 @@ def render(cfg):
                         float(res["t"][-1]), 1.0,
                         help="슬라이더를 옮기면 그 날짜의 축적 상태로 색이 바뀝니다.")
         ti = _nearest_index(res["t"], day)
-        components.html(plot_svg.plant_svg_from_res(res, ti, lang="ko"), height=560)
+        # grain safety chip (안전/주의/초과) — only for the EFSA-4 congeners, so a
+        # borrowed reference signal is never shown as a food-safety verdict.
+        _grain_sig = _intake["signal"] if _intake.get("in_group") else None
+        components.html(plot_svg.plant_svg_from_res(res, ti, lang="ko",
+                                                    grain_signal=_grain_sig), height=560)
         st.markdown(
             f"<span class='pfas-caveat'>ⓘ 대략적 예측 · 실측과 ~{api.uncertainty_factor():.0f}배 "
             f"차이 가능</span>", unsafe_allow_html=True)
