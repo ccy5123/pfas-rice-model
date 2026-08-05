@@ -315,7 +315,7 @@ def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, si
                   else _t("inv.summary_no_ci", lang))
                + _t("inv.summary_tail", lang))
     mc2.markdown(summary)
-    st.plotly_chart(plots.fig_exposure_posterior(est, lang=lang), width="stretch")
+    st.plotly_chart(plots.fig_exposure_posterior(est, lang=lang), width="stretch", theme=None)
     # how well the model reproduces the entered measurements at the best estimate
     names = plots._PLAIN_KO if lang == "ko" else {}
     fit_rows = " · ".join(
