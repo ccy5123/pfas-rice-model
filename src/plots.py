@@ -215,7 +215,8 @@ def fig_where_plain(res, lang="en", band=False):
         yaxis_title="조직 속 PFAS [µg/kg]" if ko else "PFAS in the tissue [µg per kg]",
         xaxis_title="벼 부위" if ko else "part of the rice plant", **_LAYOUT)
     if band:
-        fig.update_yaxes(type="log", tickformat=".2g")
+        # decade ticks only (dtick=1 in log space) so the labels don't crowd/overlap
+        fig.update_yaxes(type="log", dtick=1, tickformat=".3g", minor=dict(showgrid=False))
         fig.update_xaxes(range=[-0.5, 2.7])                 # room for the value labels
     return fig
 

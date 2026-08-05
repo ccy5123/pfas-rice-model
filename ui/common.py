@@ -458,6 +458,8 @@ h1,h2,h3{ letter-spacing:-.02em; }
    [data-baseweb="tab"] selector matched NOTHING here, so the padding never applied
    (the pill stayed cramped). Target the real element and give it generous room. */
 .stTabs [role="tablist"], .stTabs [data-testid="stTabList"]{ gap:8px; flex-wrap:wrap; border-bottom:none; }
+/* remove the 2px baseline under the tab row (the "underline" beneath the pill) */
+.stTabs [role="tablist"]::after, .stTabs [data-testid="stTabList"]::after{ display:none !important; }
 .stTabs [data-testid="stTab"]{ font-weight:600; border-radius:999px;
   padding-left:22px !important; padding-right:22px !important;
   padding-top:8px !important; padding-bottom:8px !important; }
