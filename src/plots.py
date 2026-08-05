@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import numpy as np
 import plotly.graph_objects as go
+import plotly.io as pio
 from plotly.subplots import make_subplots
 from plotly.colors import sample_colorscale
 
@@ -24,7 +25,28 @@ _PLAIN_KO = {"root": "뿌리", "stem": "줄기", "leaf": "잎", "grain": "낟알
 
 def _plain(lang):
     return _PLAIN_KO if lang == "ko" else _PLAIN
-_LAYOUT = dict(template="plotly_white", hoverlabel=dict(namelength=-1),
+# ---- brand Plotly template (applied to every non-schematic chart via _LAYOUT) ----
+_CATEGORICAL = ["#0E7A63", "#E69F00", "#56B4E9", "#8E5AA8", "#D55E00", "#7A5230", "#0072B2", "#C7A93B"]
+_SEQUENTIAL = [[0.0, "#F1F7F2"], [0.5, "#63BC9C"], [1.0, "#0A5A49"]]
+
+
+def pfas_template():
+    """Self-contained brand template (warm paper look, teal accent, Pretendard).
+    Uses an explicit light chart surface so charts render identically under
+    Streamlit dark mode when drawn with `theme=None` (mirrors the plant map)."""
+    ink, muted, grid = "#211E18", "#5C554A", "#E9E1D2"
+    return go.layout.Template(layout=dict(
+        font=dict(family="Pretendard, 'Malgun Gothic', sans-serif", size=14, color=ink),
+        paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF", colorway=_CATEGORICAL,
+        colorscale=dict(sequential=_SEQUENTIAL),
+        title=dict(font=dict(size=17, color=ink)),
+        xaxis=dict(gridcolor=grid, zerolinecolor=grid, linecolor=grid, tickfont=dict(color=muted)),
+        yaxis=dict(gridcolor=grid, zerolinecolor=grid, linecolor=grid, tickfont=dict(color=muted)),
+        legend=dict(font=dict(color=muted)), margin=dict(l=56, r=24, t=48, b=48)))
+
+
+pio.templates["pfas"] = pfas_template()
+_LAYOUT = dict(template="pfas", hoverlabel=dict(namelength=-1),
                margin=dict(l=60, r=20, t=50, b=50))
 # Default "accumulation heat" colour scale for the plant map (more = hotter). A warm
 # agricultural ramp cream→wheat→gold→ochre→terracotta: still reads "more = more
@@ -161,23 +183,38 @@ def fig_where_plain(res, lang="en", band=False):
     order = ["root", "straw", "grain"]
     vals = {"root": res["conc"]["root"][-1], "straw": res["straw"][-1],
             "grain": res["conc"]["grain"][-1]}
-    err_y = None
+    xs = [nm[t_] for t_ in order]
+    ys = [float(vals[t_]) for t_ in order]
+    cols = [_COL.get(t_, "#1f77b4") for t_ in order]
     if band:
-        bands = {t_: api.predictive_band(float(vals[t_])) for t_ in order}
+        # The band is multiplicative (×/÷ ~7). On a LOG y-axis its up/down whiskers
+        # are symmetric (log(v·7)−log(v) == log(v)−log(v/7)) instead of the lop-sided
+        # look a linear axis gives, so we plot the estimate as a MARKER with error
+        # bars (bars read wrong on a log scale — their baseline is arbitrary).
+        bands = {t_: api.predictive_band(v) for t_, v in zip(order, ys)}
         err_y = dict(type="data", symmetric=False,
-                     array=[bands[t_]["hi"] - float(vals[t_]) for t_ in order],
-                     arrayminus=[float(vals[t_]) - bands[t_]["lo"] for t_ in order],
-                     color="#888", thickness=1.4, width=7)
-    fig = go.Figure(go.Bar(
-        x=[nm[t_] for t_ in order], y=[vals[t_] for t_ in order],
-        marker_color=[_COL.get(t_, "#1f77b4") for t_ in order], error_y=err_y,
-        text=[f"{vals[t_]:.2g}" for t_ in order], textposition="outside",
-        hovertemplate="%{x}: %{y:.3g} µg/kg<extra></extra>"))
+                     array=[bands[t_]["hi"] - v for t_, v in zip(order, ys)],
+                     arrayminus=[v - bands[t_]["lo"] for t_, v in zip(order, ys)],
+                     color="#9a9384", thickness=1.6, width=9)
+        fig = go.Figure(go.Scatter(
+            x=xs, y=ys, mode="markers+text", error_y=err_y,
+            marker=dict(size=16, color=cols, line=dict(color="#ffffff", width=1.5)),
+            text=[f"{v:.2g}" for v in ys], textposition="middle right",
+            textfont=dict(size=13), cliponaxis=False,
+            hovertemplate="%{x}: %{y:.3g} µg/kg<extra></extra>"))
+    else:
+        fig = go.Figure(go.Bar(
+            x=xs, y=ys, marker_color=cols,
+            text=[f"{v:.2g}" for v in ys], textposition="outside",
+            hovertemplate="%{x}: %{y:.3g} µg/kg<extra></extra>"))
     fig.update_layout(
         title=(f"{res['congener']}가 식물에서 모이는 곳 (수확 시)" if ko
                else f"Where {res['congener']} ends up in the plant (at harvest)"),
         yaxis_title="조직 속 PFAS [µg/kg]" if ko else "PFAS in the tissue [µg per kg]",
         xaxis_title="벼 부위" if ko else "part of the rice plant", **_LAYOUT)
+    if band:
+        fig.update_yaxes(type="log", tickformat=".2g")
+        fig.update_xaxes(range=[-0.5, 2.7])                 # room for the value labels
     return fig
 
 
