@@ -460,6 +460,10 @@ h1,h2,h3{ letter-spacing:-.02em; }
 .stTabs [role="tablist"], .stTabs [data-testid="stTabList"]{ gap:8px; flex-wrap:wrap; border-bottom:none; }
 /* remove the 2px baseline under the tab row (the "underline" beneath the pill) */
 .stTabs [role="tablist"]::after, .stTabs [data-testid="stTabList"]::after{ display:none !important; }
+/* react-aria draws a 2px accent-colored SelectionIndicator bar under the active
+   tab — with the filled green pill it reads as a stray underline; hide it. */
+.stTabs .react-aria-SelectionIndicator,
+.stTabs [class*="SelectionIndicator"]{ display:none !important; }
 .stTabs [data-testid="stTab"]{ font-weight:600; border-radius:999px;
   padding-left:22px !important; padding-right:22px !important;
   padding-top:8px !important; padding-bottom:8px !important; }
