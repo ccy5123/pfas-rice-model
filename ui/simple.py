@@ -91,8 +91,10 @@ def render(cfg):
         st.markdown(
             f"<span class='pfas-caveat'>ⓘ 대략적 예측 · 실측과 ~{api.uncertainty_factor():.0f}배 "
             f"차이 가능</span>", unsafe_allow_html=True)
-        st.caption("**색이 진할수록 그 부위에 PFAS가 많습니다.** 날짜 슬라이더로 한 철 축적을 "
-                   "보세요. (짚 = 줄기+잎 평균)")
+        st.caption("**색이 진할수록 그 부위에 PFAS가 많습니다.** 카드의 숫자는 그 부위 "
+                   "**1 kg에 들어있는 PFAS 양(µg/kg 농도)**이고, 맨 아래 **공극수**는 논물·흙물 "
+                   "1 L에 녹아있는 양(µg/L)입니다. 날짜 슬라이더로 한 철 축적을 보세요. "
+                   "(짚 = 줄기+잎 평균)")
 
     # ---- Simple tab 2: build-up over time ----------------------------------
     with s_tabs[1]:
