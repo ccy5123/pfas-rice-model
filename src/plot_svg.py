@@ -87,16 +87,22 @@ def _leader(x1, y1, x2, y2):
             f'stroke-width="1.4"/>')
 
 
-def _card(x, y, name, val, swatch, chip=None):
-    """White label card (colour swatch + name + mono value + optional chip). x,y = top-left."""
+def _card(x, y, name, val, swatch, chip=None, unit="µg/kg"):
+    """White label card (colour swatch + name + mono value + optional chip). x,y = top-left.
+
+    `unit` is drawn small next to the value so the bare number reads as a
+    concentration (µg per kg of fresh tissue), not an unlabelled figure."""
     w, h = 168, 48
     out = [f'<g><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="#FFFFFF" '
            f'stroke="{_BORDER}" stroke-width="1"/>',
            f'<rect x="{x+10}" y="{y+11}" width="7" height="{h-22}" rx="3.5" fill="{swatch}"/>',
            f'<text x="{x+26}" y="{y+20}" font-size="13" font-weight="700" fill="{_INK}" '
            f'font-family="{_FONT}">{name}</text>',
-           f'<text x="{x+26}" y="{y+38}" font-size="14" fill="{_MUTED}" '
-           f'font-family="{_MONO}">{val}</text>']
+           f'<text x="{x+26}" y="{y+38}" font-family="{_MONO}">'
+           f'<tspan font-size="14" fill="{_MUTED}">{val}</tspan>'
+           + (f'<tspan font-size="10.5" fill="{_MUTED}" dx="4" font-family="{_FONT}">{unit}</tspan>'
+              if unit else "")
+           + '</text>']
     if chip:
         label, cbg, ctx = chip
         cw = 34 + 8 * max(0, len(label) - 2)
