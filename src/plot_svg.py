@@ -114,8 +114,10 @@ def _card(x, y, name, val, swatch, chip=None, unit="µg/kg"):
 
 
 def plant_svg(values, *, cmin, cmax, cwo=None, lang="ko", labels=True,
-              grain_signal=None, bg=_SKY, W=760, H=560):
-    """Return a self-contained SVG string of the rice-plant map (design style)."""
+              grain_signal=None, bg=_SKY, W=760, H=560, unit="µg/kg"):
+    """Return a self-contained SVG string of the rice-plant map (design style).
+
+    `unit` labels each tissue value (µg/kg for concentration, L/kg for BAF)."""
     L = _LAB.get(lang, _LAB["ko"])
     root = values.get("root")
     stem = values.get("stem", values.get("straw"))
@@ -163,7 +165,10 @@ def plant_svg(values, *, cmin, cmax, cwo=None, lang="ko", labels=True,
     # ---- leader lines ON TOP of the plant, ending at each organ's near edge with
     #      a small connector dot (so they read as clean connectors, not crossing) ----
     if labels:
-        ends = {"grain": (472, 190), "leaf": (298, 328), "stem": (361, 372), "root": (368, 520)}
+        # end dots sit on each organ's CENTRELINE (stem/root were on the left edge /
+        # bottom tip before). Stem bar is centred at frame x=376; the central root
+        # runs down x=376, so both dots move to x=376 (mid-organ).
+        ends = {"grain": (472, 190), "leaf": (298, 328), "stem": (376, 356), "root": (376, 498)}
         starts = {"grain": (198, 174), "leaf": (198, 306), "stem": (198, 388), "root": (198, 500)}
         for k in ("grain", "leaf", "stem", "root"):
             (sx, sy), (ex, ey) = starts[k], ends[k]
@@ -179,10 +184,10 @@ def plant_svg(values, *, cmin, cmax, cwo=None, lang="ko", labels=True,
                 nm, cbg, ctx = _SIGCHIP[grain_signal]
                 return (L[nm], cbg, ctx)
             return None
-        P.append(_card(30, 150, L["grain"], _fmt(grain), cg, chip_for("grain", cg)))
-        P.append(_card(30, 282, L["leaf"], _fmt(leaf), cl, chip_for("leaf", cl)))
-        P.append(_card(30, 364, L["stem"], _fmt(stem), cs, chip_for("stem", cs)))
-        P.append(_card(30, 476, L["root"], _fmt(root), cr, chip_for("root", cr)))
+        P.append(_card(30, 150, L["grain"], _fmt(grain), cg, chip_for("grain", cg), unit=unit))
+        P.append(_card(30, 282, L["leaf"], _fmt(leaf), cl, chip_for("leaf", cl), unit=unit))
+        P.append(_card(30, 364, L["stem"], _fmt(stem), cs, chip_for("stem", cs), unit=unit))
+        P.append(_card(30, 476, L["root"], _fmt(root), cr, chip_for("root", cr), unit=unit))
 
     # ---- pore-water tag (dark chip) ----
     if cwo is not None and np.isfinite(cwo):
@@ -215,11 +220,15 @@ def plant_svg(values, *, cmin, cmax, cwo=None, lang="ko", labels=True,
             f'<g clip-path="url(#pfascard)">' + "".join(P) + '</g></svg>')
 
 
-def plant_svg_from_res(res, t_index=-1, *, lang="ko", labels=True, bg=_SKY, grain_signal=None):
-    """Build the SVG plant map from a `model_api` result at one time index."""
-    sv = api.schematic_values(res, "conc", t_index)
+def plant_svg_from_res(res, t_index=-1, *, lang="ko", labels=True, bg=_SKY,
+                       grain_signal=None, metric="conc"):
+    """Build the SVG plant map from a `model_api` result at one time index.
+
+    `metric` is "conc" (µg/kg) or "baf" (L/kg); the unit label follows it."""
+    sv = api.schematic_values(res, metric, t_index)
+    unit = "L/kg" if metric == "baf" else "µg/kg"
     return plant_svg(sv["values"], cmin=sv["cmin"], cmax=sv["cmax"], cwo=sv.get("Cwo"),
-                     lang=lang, labels=labels, bg=bg, grain_signal=grain_signal)
+                     lang=lang, labels=labels, bg=bg, grain_signal=grain_signal, unit=unit)
 
 
 if __name__ == "__main__":

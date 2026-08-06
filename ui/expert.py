@@ -4,6 +4,7 @@ import streamlit as st
 
 import model_api as api
 import plots
+import plot_svg
 
 from ui.common import (_nearest_index, _simulate, _drivers_tuple, _simulate_twopool_seq,
                        _render_inverse_estimator, _glossary_md, _png_bytes, _html_bytes)
@@ -81,33 +82,30 @@ def render(cfg):
 
     # ---- Tab 1: the plant + soil accumulation map ---------------------------
     with tabs[0]:
+        # Expert reuses the SAME plant/soil SVG map as the Simple view (rendered
+        # inline so the wide layout never clips it), just in English.
         if is_biomon:
             vals = dict(measured_bio["conc"])
             finite = [v for v in vals.values() if v is not None and np.isfinite(v)]
             cmax = max(finite) if finite else 1.0
-            fig = plots.fig_plant_schematic(
-                vals, cmin=0.0, cmax=cmax, label="measured conc [µg/kg]",
-                Cwo=measured_bio.get("Cwo"), title=f"{congener} — measured tissue map")
-            st.plotly_chart(fig, width="stretch", theme=None)
-            st.caption("Compartments coloured by the MEASURED concentration. Stem/leaf share the "
-                       "straw colour when only straw is reported.")
+            st.markdown(plot_svg.plant_svg(vals, cmin=0.0, cmax=cmax,
+                                           cwo=measured_bio.get("Cwo"), lang="en"),
+                        unsafe_allow_html=True)
+            st.caption("Compartments coloured by the MEASURED concentration [µg/kg]; the tag shows "
+                       "the pore-water Cwᵒ [µg/L]. Stem/leaf share the straw colour when only straw "
+                       "is reported.")
         else:
-            cc1, cc2, cc3 = st.columns([1.3, 1, 1])
-            metric = cc1.radio("Colour by", ["concentration", "BAF"], horizontal=True)
+            metric = st.radio("Colour by", ["concentration", "BAF"], horizontal=True)
             metric_key = "baf" if metric == "BAF" else "conc"
-            animate = cc2.checkbox("▶ animate season", value=False,
-                                   help="Autoplay the accumulation through the season.")
-            day = cc3.slider("Day after transplant", float(res["t"][0]), float(res["t"][-1]),
-                             float(res["t"][-1]), 1.0, disabled=animate)
-            if animate:
-                st.plotly_chart(plots.fig_schematic_animated(res, metric_key), width="stretch", theme=None)
-            else:
-                ti = _nearest_index(res["t"], day)
-                st.plotly_chart(plots.fig_schematic_from_res(res, metric_key, ti, obs=None),
-                                width="stretch", theme=None)
-            st.caption("Each compartment is filled by its accumulation on a shared colorbar — drag the "
-                       "day slider (or hit ▶) to watch where PFAS builds up. Leaf is xylem-terminal, "
-                       "grain is phloem-fed; the root retains the anion (low f_xy).")
+            day = st.slider("Day after transplant", float(res["t"][0]), float(res["t"][-1]),
+                            float(res["t"][-1]), 1.0)
+            ti = _nearest_index(res["t"], day)
+            st.markdown(plot_svg.plant_svg_from_res(res, ti, lang="en", metric=metric_key),
+                        unsafe_allow_html=True)
+            st.caption("Each compartment is filled by its accumulation on a shared colour scale — drag "
+                       "the day slider to watch where PFAS builds up (numbers in µg/kg, or L/kg for "
+                       "BAF; the tag is pore-water µg/L). Leaf is xylem-terminal, grain is phloem-fed; "
+                       "the root retains the anion (low f_xy).")
 
     # ---- Tab 2: tissue concentration dynamics -------------------------------
     with tabs[1]:
