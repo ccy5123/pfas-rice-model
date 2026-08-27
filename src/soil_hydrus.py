@@ -118,13 +118,29 @@ def build_hydrus_engine(exe: str = HYDRUS_EXE):
     return False, log
 
 
-def paddy_kd(n_C: int, group: str = "PFCA", f_oc: float = 0.02) -> float:
-    """Linear soil distribution coefficient Kd [L/kg] for a congener.
+def paddy_kd(n_C: int | None = None, group: str = "PFCA", f_oc: float = 0.02,
+             *, logKow: float | None = None) -> float:
+    """Linear soil distribution coefficient Kd [L/kg].
 
-    Kd = Koc(chain length, head group) * f_oc, with Koc from the C3 QSPR
-    (Higgins & Luthy slope, Milinovic PFOA anchor) in ``literature_params``.
-    PFCA C_n has n-1 perfluorinated carbons; PFSA C_n has n.
+    Two branches, one per compound class (phase 3 of the neutral extension):
+
+    * **PFAS (default)** -- ``Kd = Koc(chain length, head group) * f_oc`` with Koc
+      from the C3 QSPR (Higgins & Luthy slope, Milinovic PFOA anchor).  PFCA C_n
+      has n-1 perfluorinated carbons; PFSA C_n has n.
+    * **Neutral organic** (``logKow=`` given, ``n_C`` then ignored) --
+      ``Kd = 0.41*K_ow * f_oc`` (Karickhoff 1981, :func:`literature_params.koc_neutral`).
+      This is the hydrophobic-partition counterpart of the PFAS chain-length QSPR;
+      a PFAS Kow is ill-defined, which is why the two branches exist at all.
+
+    For a WEAK ELECTROLYTE only the neutral species partitions this way, so the
+    caller should pass the neutral-fraction-corrected value if that matters
+    (``koc_neutral(logKow)*f_n``); at paddy pH a weak acid is largely dissociated
+    and this Kd is then an UPPER bound.  PROVISIONAL for ionogenic compounds.
     """
+    if logKow is not None:
+        return lp.koc_to_KF(lp.koc_neutral(float(logKow)), f_oc)
+    if n_C is None:
+        raise TypeError("paddy_kd needs either n_C (PFAS) or logKow (neutral)")
     head = "sulfonate" if group.upper() == "PFSA" else "carboxylate"
     n_pfc = n_C - 1 if group.upper() == "PFCA" else n_C
     return lp.koc_to_KF(lp.koc(n_pfc, head), f_oc)
@@ -278,10 +294,12 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, depth: float = 100.0,
 # ---------------------------------------------------------------------------
 # coupling: HYDRUS soil -> PlantInputs
 # ---------------------------------------------------------------------------
-def inputs_from_hydrus(congener_n_C: int, group: str = "PFCA", *, season: float = 120.0,
+def inputs_from_hydrus(congener_n_C: int | None = None, group: str = "PFCA", *,
+                       season: float = 120.0,
                        Cwo_ref: float = 1.0, f_oc: float = 0.02,
                        qtp_from_hydrus: bool = True, area_per_hill_m2: float | None = None,
-                       n_t: int = 241, biomass: str = "oryza", **run_kw):
+                       n_t: int = 241, biomass: str = "oryza",
+                       logKow: float | None = None, **run_kw):
     """Build a :class:`PlantInputs` whose ``Cwo`` AND ``Q_TP`` come from a real
     HYDRUS-1D paddy run for the congener, with growth ``M`` from the selected
     ``biomass`` driver (ORYZA2000 by default; ``"growth_rice"`` for the logistic).
@@ -297,6 +315,10 @@ def inputs_from_hydrus(congener_n_C: int, group: str = "PFCA", *, season: float 
         paddy is unstressed and only diverges under soil-water limitation. If
         False, the measured ``forcing_rice.Q_TP`` is used directly (soil run uses
         the default gaussian potential transpiration).
+    logKow : pass a log Kow to run a NEUTRAL organic instead of a PFAS congener --
+        the soil Kd then comes from Karickhoff (``0.41*K_ow*f_oc``) and
+        ``congener_n_C``/``group`` are ignored.  Only the Kd derivation differs;
+        the HYDRUS scenario itself is compound-agnostic.
     Returns (PlantInputs, PaddyResult).
     """
     from pfas_rice_plant_module_4pool_surf import PlantInputs
@@ -305,7 +327,7 @@ def inputs_from_hydrus(congener_n_C: int, group: str = "PFCA", *, season: float 
     if area_per_hill_m2 is None:
         area_per_hill_m2 = fr.AREA_PER_HILL_M2
 
-    Kd = paddy_kd(congener_n_C, group, f_oc)
+    Kd = paddy_kd(congener_n_C, group, f_oc, logKow=logKow)
     # drive the soil run with the measured transpiration shape (mm/day -> cm/day)
     tpot_fn = (lambda d: fr.transpiration_mm_d(d, season) / 10.0) if qtp_from_hydrus else None
     res = run_paddy_hydrus(Kd, season=season, tpot_fn=tpot_fn, **run_kw)

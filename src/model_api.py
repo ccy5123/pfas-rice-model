@@ -62,19 +62,29 @@ def _load_cwo_kleach():
 _CWO_KLEACH, _CWO_KLEACH_FALLBACK = _load_cwo_kleach()
 
 
-def default_k_leach(congener=None, n_C=None, group=None):
+def default_k_leach(congener=None, n_C=None, group=None, *, logKow=None):
     """Per-congener default leaching rate for `cwo_profile='flooded'`, calibrated to
     HYDRUS-1D. Known congeners use the calibrated table; a novel/SMILES compound falls
-    back to k_leach(log10 Koc) (short chains leach faster, long chains -> ~0)."""
+    back to k_leach(log10 Koc) (short chains leach faster, long chains -> ~0).
+
+    `logKow` selects the NEUTRAL branch (phase 3): `params/cwo_kleach.csv` is a
+    PFAS-only calibration, so a neutral organic reuses only its k_leach(log10 Koc)
+    REGRESSION, evaluated at the Karickhoff neutral Koc (`koc_neutral`). The
+    regression was fit over the PFAS Koc range, so a neutral outside that range is an
+    EXTRAPOLATION (clipped to [0, 0.15]) -- the leaching DIRECTION is meaningful
+    (hydrophobic -> buffered, polar -> leaches), the rate is provisional."""
     if congener and congener in _CWO_KLEACH:
         return _CWO_KLEACH[congener]
-    if n_C is not None:
-        import literature_params as lp
+    import literature_params as lp
+    if logKow is not None:
+        Koc = lp.koc_neutral(float(logKow))
+    elif n_C is not None:
         Koc = lp.koc(n_C, {"PFCA": "carboxylate", "PFSA": "sulfonate",
                            "ether": "ether"}.get(group, "carboxylate"))
-        a, b = _CWO_KLEACH_FALLBACK
-        return float(np.clip(a + b * np.log10(Koc), 0.0, _KLEACH_MAX))
-    return 0.02
+    else:
+        return 0.02
+    a, b = _CWO_KLEACH_FALLBACK
+    return float(np.clip(a + b * np.log10(Koc), 0.0, _KLEACH_MAX))
 # tissue keys that compose "straw" (the bulk shoot reported in agronomy)
 STRAW_PARTS = ("stem", "leaf")
 
@@ -424,7 +434,7 @@ def simulate_neutral(logKow, *, name=None, pKa=None, is_acid=True, Cwo=1.0,
                      gamma=0.0, season=120.0, n_t=241, measured_forcing=True,
                      biomass="oryza", drivers=None, soil_pH=None, tissue_pH=None,
                      phloem_pH=PHLOEM_PH, ion_trap=True, K_AW=0.0, mol_weight=200.0,
-                     air=None):
+                     air=None, cwo_profile="constant", cwo_kw=None):
     """Run the 4-compartment ODE for a NEUTRAL organic or a WEAK ELECTROLYTE.
 
     The DPU-base counterpart of :func:`simulate`: binding comes from the Briggs
@@ -437,6 +447,14 @@ def simulate_neutral(logKow, *, name=None, pKa=None, is_acid=True, Cwo=1.0,
     electrolyte: both membrane pathways run in parallel weighted by ``(f_n, f_d)``.
 
     Returns the same dict shape as :func:`simulate`.
+
+    ``cwo_profile`` mirrors :func:`simulate`'s exposure-shape switch
+    (``'constant'`` | ``'flooded'`` | ``'hydrus'``, mean-normalised to ``Cwo``) but
+    resolves the soil sorption through the NEUTRAL Koc branch --
+    ``koc_neutral(logKow)`` instead of the PFAS chain-length QSPR.  A hydrophobic
+    neutral therefore stays buffered and a polar one leaches, the same physics that
+    makes long-chain PFAS buffered and short-chain PFAS leach.  ``cwo_kw`` passes
+    through to :func:`cwo_profile_series`.
 
     CAVEATS (see docs/NEUTRAL_DPU_EXTENSION_DESIGN_KR.md):
       * Air exchange is OFF (phase 2), so a volatile compound is over-predicted.
@@ -457,6 +475,12 @@ def simulate_neutral(logKow, *, name=None, pKa=None, is_acid=True, Cwo=1.0,
         t = np.linspace(0.0, season, n_t)
         Cwo_series, Qtp, M, leaf_loss = _default_drivers(
             t, season, Cwo, measured_forcing, biomass)
+        if cwo_profile != "constant":
+            # neutral branch of the exposure shape: K_F / k_leach from Karickhoff
+            # Koc(logKow), not the PFAS chain-length QSPR (phase 3).
+            Cwo_series = cwo_profile_series(
+                t, level=Cwo, profile=cwo_profile, logKow=float(logKow),
+                **(cwo_kw or {}))
     inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
 
     cmpd = lp.neutral_compound(
@@ -535,18 +559,48 @@ def apportionment(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommen
     return res
 
 
-def simulate_from_smiles(smiles, *, name=None, f_xy=None, f_xy_override=None, **kw):
-    """Run the 4-compartment model for an arbitrary PFAS given by a SMILES string.
+def simulate_from_smiles(smiles, *, name=None, f_xy=None, f_xy_override=None,
+                         compound_class=None, logKow=None, pKa=None, is_acid=True,
+                         **kw):
+    """Run the 4-compartment model for an arbitrary compound given by a SMILES string.
 
-    Uses the RDKit structure adapter (``pfas_structure``): a structure that matches
-    a known congener is run through the canonical curated parameters; a novel
-    structure gets binding from the QSPR and a head-group-offset f_xy (PROVISIONAL).
-    Extra keyword args (Cwo, season, drivers, lipid_loading, ...) pass to ``simulate``.
+    Uses the RDKit structure adapter (``pfas_structure``) and dispatches on compound
+    class (phase 3 of the neutral extension):
 
-    Returns the usual ``simulate`` dict plus ``descriptors`` (the parsed structure)
-    and ``provisional`` (True for novel / non-calibrated structures).  Requires RDKit.
+    * **PFAS** (perfluorinated backbone + strong-acid head) -- a structure matching a
+      known congener runs through the canonical curated parameters; a novel one gets
+      binding from the QSPR and a head-group-offset f_xy (PROVISIONAL).
+    * **Neutral organic / weak electrolyte** (everything else, or any structure given
+      an explicit ``pKa``) -- routed to :func:`simulate_neutral` with ``log K_ow`` from
+      RDKit Crippen ``MolLogP`` unless ``logKow`` supplies a measured value.
+
+    ``compound_class`` forces the branch (``'PFAS'`` | ``'organic'``); the default
+    ``None`` classifies from the structure.  Extra keyword args pass to whichever
+    simulate is called, so use that branch's arguments.
+
+    Returns the usual dict plus ``descriptors`` (the parsed structure),
+    ``compound_class``, and ``provisional``.  Requires RDKit.
     """
-    from pfas_structure import compound_from_smiles
+    from pfas_structure import (compound_from_smiles, descriptors,
+                                neutral_compound_from_smiles)
+    d0 = descriptors(smiles)
+    cls = compound_class or ("organic" if pKa is not None else d0.compound_class)
+
+    if cls != "PFAS":
+        cmpd, d = neutral_compound_from_smiles(
+            smiles, name=name, logKow=logKow, pKa=pKa, is_acid=is_acid,
+            f_xy=f_xy if f_xy is not None else f_xy_override)
+        res = simulate_neutral(cmpd.logKow, name=cmpd.name, pKa=pKa, is_acid=is_acid,
+                               f_xy=f_xy if f_xy is not None else f_xy_override,
+                               mol_weight=float(d.mol_weight), **kw)
+        res["descriptors"] = d
+        res["compound_class"] = "organic"
+        # logKow drives EVERY neutral parameter, so a Crippen estimate is provisional;
+        # a measured logKow is not.  No rice neutral time series exists to validate
+        # against either way (docs/HANDOFF_neutral_extension.md section 6).
+        res["provisional"] = (logKow is None)
+        return res
+
     cmpd, d = compound_from_smiles(smiles, name=name, f_xy=f_xy)
     fxy_ov = f_xy_override if f_xy_override is not None else f_xy
     known = name or d.matched_name
@@ -562,6 +616,7 @@ def simulate_from_smiles(smiles, *, name=None, f_xy=None, f_xy_override=None, **
                   "kappa_d_W2fit": cmpd.kappa_d, "L_Ph_W2fit": cmpd.L_Ph}
         res = simulate(cmpd.name, record=record, f_xy_override=fxy_ov, **kw)
     res["descriptors"] = d
+    res["compound_class"] = "PFAS"
     res["provisional"] = (d.matched_name is None) or (not d.is_linear)
     return res
 
@@ -1087,8 +1142,8 @@ def build_hydrus_engine():
     return sh.build_hydrus_engine()
 
 
-def hydrus_drivers(congener, season=120.0, Cwo_ref=1.0, f_oc=0.02, n_t=241,
-                   qtp_from_hydrus=True, biomass="oryza", **run_kw):
+def hydrus_drivers(congener=None, season=120.0, Cwo_ref=1.0, f_oc=0.02, n_t=241,
+                   qtp_from_hydrus=True, biomass="oryza", logKow=None, **run_kw):
     """Run a real HYDRUS-1D paddy soil model for `congener` and return a `drivers`
     dict (+ the raw PaddyResult) for `simulate(drivers=…)`.
 
@@ -1097,14 +1152,24 @@ def hydrus_drivers(congener, season=120.0, Cwo_ref=1.0, f_oc=0.02, n_t=241,
     `Q_TP(t)`; `M(t)` is the selected `biomass` driver (ORYZA2000 by default).
     `Cwᵒ(t)` is normalised to season-mean `Cwo_ref` so the average exposure matches a
     constant-Cwo run. Extra `run_kw` (flood_until, percolation, …) pass through to
-    `soil_hydrus.run_paddy_hydrus`."""
+    `soil_hydrus.run_paddy_hydrus`.
+
+    Pass `logKow` instead of `congener` to drive the soil run for a NEUTRAL organic
+    (phase 3): the Kd then comes from the Karickhoff `koc_neutral` branch rather than
+    the PFAS chain-length QSPR. Everything downstream is unchanged -- the HYDRUS
+    scenario does not care which class the solute is, only its Kd."""
     import soil_hydrus as sh
-    if congener not in _CONG:
-        raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
-    c = _CONG[congener]
-    pin, res = sh.inputs_from_hydrus(c["n_C"], c["group"], season=season,
+    if logKow is None:
+        if congener not in _CONG:
+            raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
+        c = _CONG[congener]
+        n_C, group = c["n_C"], c["group"]
+    else:
+        n_C, group = None, "PFCA"                 # ignored on the neutral branch
+    pin, res = sh.inputs_from_hydrus(n_C, group, season=season,
                                      Cwo_ref=Cwo_ref, f_oc=f_oc, n_t=n_t,
-                                     qtp_from_hydrus=qtp_from_hydrus, biomass=biomass, **run_kw)
+                                     qtp_from_hydrus=qtp_from_hydrus, biomass=biomass,
+                                     logKow=logKow, **run_kw)
     drivers = dict(t=np.asarray(pin.t, float), Cwo=np.asarray(pin.Cwo, float),
                    Qtp=np.asarray(pin.Qtp, float), M=np.asarray(pin.M, float))
     if getattr(pin, "leaf_loss", None) is not None:
@@ -1129,7 +1194,7 @@ _HEADGROUP = {"PFCA": "carboxylate", "PFSA": "sulfonate", "ether": "ether"}
 def cwo_profile_series(t, level=1.0, profile="constant", *, n_C=8, group="PFCA",
                        congener=None, flood_fraction=1.0, k_leach=None, f_oc=0.02,
                        C_total=5.0, theta_g_drained=0.35, theta_g_flooded=0.60,
-                       **hydrus_kw):
+                       logKow=None, **hydrus_kw):
     """Time-resolved pore-water C_w^o(t) on grid `t`, normalised to mean == `level`.
 
     profile:
@@ -1149,6 +1214,13 @@ def cwo_profile_series(t, level=1.0, profile="constant", *, n_C=8, group="PFCA",
     `flood_fraction` of the season is flooded (remainder drained -> terminal
     concentration). Defaults give continuous flooding (=1.0): a monotone leaching
     decline for short chains, ~flat for long chains.
+
+    `logKow` switches the sorption capacity to the NEUTRAL branch (phase 3): K_F comes
+    from the Karickhoff `koc_neutral(logKow)` instead of the PFAS chain-length QSPR,
+    and `k_leach` defaults to the neutral `default_k_leach(logKow=...)` regression
+    fallback. `n_C`/`group` are then ignored. The same physics runs either way -- only
+    the Koc source differs -- so a hydrophobic neutral stays buffered and a polar one
+    leaches, exactly as chain length does for PFAS.
     """
     t = np.asarray(t, float)
     if profile == "constant":
@@ -1156,17 +1228,19 @@ def cwo_profile_series(t, level=1.0, profile="constant", *, n_C=8, group="PFCA",
     season = float(t[-1]) if t[-1] > 0 else 1.0
 
     if profile == "hydrus":
-        if congener is None:
-            raise ValueError("cwo_profile='hydrus' needs the congener name")
+        if congener is None and logKow is None:
+            raise ValueError("cwo_profile='hydrus' needs the congener name (PFAS) "
+                             "or logKow (neutral)")
         hd, _ = hydrus_drivers(congener, season=season, Cwo_ref=float(level),
-                               f_oc=f_oc, n_t=len(t), **hydrus_kw)
+                               f_oc=f_oc, n_t=len(t), logKow=logKow, **hydrus_kw)
         return np.interp(t, hd["t"], hd["Cwo"])
 
     if profile == "flooded":
         import literature_params as lp
         if k_leach is None:                              # per-congener HYDRUS-calibrated default
-            k_leach = default_k_leach(congener, n_C, group)
-        Koc = lp.koc(n_C, _HEADGROUP.get(group, "carboxylate"))
+            k_leach = default_k_leach(congener, n_C, group, logKow=logKow)
+        Koc = (lp.koc_neutral(float(logKow)) if logKow is not None
+               else lp.koc(n_C, _HEADGROUP.get(group, "carboxylate")))
         K_F = lp.koc_to_KF(Koc, f_oc, n=1.0)             # linear Kd (stable; n=1)
         flooded = t < (flood_fraction * season)
         Cwo, _ = pore_water_from_inventory(

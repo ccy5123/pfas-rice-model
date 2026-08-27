@@ -42,6 +42,7 @@ from dataclasses import dataclass, field
 try:
     from rdkit import Chem
     from rdkit.Chem import Descriptors as _rdDesc
+    from rdkit.Chem import Crippen as _rdCrippen
     from rdkit import RDLogger
     RDLogger.DisableLog("rdApp.*")          # silence parse warnings (we handle None)
 except ImportError as exc:                  # pragma: no cover
@@ -52,6 +53,12 @@ except ImportError as exc:                  # pragma: no cover
 
 import literature_params as L
 from pfas_rice_plant_module import Compound
+
+# Minimum perfluorinated carbons for the PFAS (permanent-anion) branch.  Below this a
+# carboxylate/sulfonate is an ordinary ionizable organic, not a PFAS -- see
+# Descriptors.compound_class.  3 keeps PFBA/PFPrA (the shortest curated congeners) on
+# the PFAS branch while sending 2,4-D, benzoic acid etc. to the neutral branch.
+PFAS_MIN_PERFLUORO_C = 3
 
 _PARAMS_JSON = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                             "params", "parameters.json")
@@ -153,12 +160,28 @@ class Descriptors:
     branched: bool               # a carbon with >= 3 carbon neighbours
     is_linear: bool              # straight perfluoroalkyl acid (QSPR-calibrated domain)
     matched_name: str | None = None
+    logKow_crippen: float | None = None      # RDKit Crippen MolLogP (neutral-branch QSPR input)
     notes: list[str] = field(default_factory=list)
 
     @property
     def transport_class(self) -> str:
         """Head-group class used for the f_xy offset.  Ether backbone -> 'ether'."""
         return "ether" if self.n_ether_O > 0 else self.head_group
+
+    @property
+    def compound_class(self) -> str:
+        """``'PFAS'`` or ``'organic'`` -- which model branch the structure belongs to.
+
+        PFAS means a **permanently dissociated** anion: a strong acid head group on a
+        perfluorinated backbone (the CF2 chain is what drives the pKa to ~0).  A
+        carboxylic acid with NO perfluorination is an ordinary weak acid (2,4-D has
+        head_group 'carboxylate' and n_perfluoroC 0), so both conditions are required.
+        Anything else routes to the neutral / weak-electrolyte DPU branch, where the
+        caller may still supply a ``pKa``.
+        """
+        return ("PFAS" if (self.n_perfluoroC >= PFAS_MIN_PERFLUORO_C
+                           and self.head_group in ("carboxylate", "sulfonate"))
+                else "organic")
 
 
 def descriptors(smiles: str) -> Descriptors:
@@ -207,12 +230,22 @@ def descriptors(smiles: str) -> Descriptors:
         mol_weight=float(_rdDesc.MolWt(mol)),
         n_C=n_C, n_F=n_F, n_perfluoroC=n_perfluoroC, n_CF2=n_CF2, n_CF3=n_CF3,
         n_ether_O=n_ether_O, head_group=head, branched=branched, is_linear=is_linear,
+        logKow_crippen=float(_rdCrippen.MolLogP(mol)),
     )
     d.matched_name = _match_known(d)
-    if head not in ("carboxylate", "sulfonate"):
+    if d.compound_class == "organic":
+        # NOT a permanent anion -> the neutral / weak-electrolyte DPU branch handles it
+        # (phase 3).  This used to be a bare "assumption violated" flag with nowhere to go.
+        d.notes.append(
+            f"compound class: ORGANIC (head '{head}', {d.n_perfluoroC} perfluorinated C) -- "
+            "not a permanent anion, so the PFAS branch does not apply.  Use "
+            "neutral_compound_from_smiles() / simulate_from_smiles(): binding comes from the "
+            f"Briggs lipid term at Crippen logKow={d.logKow_crippen:.2f} (an ESTIMATE -- supply "
+            "a measured logKow when you have one), and a pKa makes it a weak electrolyte.")
+    elif head not in ("carboxylate", "sulfonate"):
         d.notes.append(f"head group '{head}': the model assumes a PERMANENT ANION (f_d~1); "
-                       "sulfonamides/neutral species violate this -> speciation is APPROXIMATE")
-    if not d.is_linear:
+                       "sulfonamides violate this -> speciation is APPROXIMATE")
+    if not d.is_linear and d.compound_class == "PFAS":
         d.notes.append("non-linear/ether/branched: outside the carboxylate/sulfonate QSPR "
                        "calibration domain -> binding/Koc are PROVISIONAL")
     return d
@@ -295,6 +328,88 @@ def compound_from_smiles(smiles: str, *, name: str | None = None,
         d.notes.append("OVERALL: PROVISIONAL (novel/non-calibrated structure or no measured "
                        "anchor); binding predicted by QSPR, translocation is a head-group estimate")
     return cmpd, d
+
+
+# ---------------------------------------------------------------------------
+# 3b. structure -> NEUTRAL / WEAK-ELECTROLYTE Compound   (phase 3)
+# ---------------------------------------------------------------------------
+def neutral_compound_from_smiles(smiles: str, *, name: str | None = None,
+                                 logKow: float | None = None,
+                                 pKa: float | None = None, is_acid: bool = True,
+                                 pH: float = L.PADDY_PH, P_n: float | None = None,
+                                 L_Ph: float = 1.0, f_xy: float | None = None,
+                                 K_AW: float = 0.0):
+    """Build a NEUTRAL / WEAK-ELECTROLYTE :class:`Compound` from a SMILES string.
+
+    Returns ``(compound, descriptors)`` -- the same contract as
+    :func:`compound_from_smiles`, for the other half of the compound spectrum.
+
+    This branch is in one way *easier* than the PFAS one: the whole neutral DPU
+    parameterisation keys off a single descriptor, ``log K_ow``, and RDKit's Crippen
+    ``MolLogP`` estimates it directly from the structure.  There is no PFAS analogue
+    of that -- a PFAS ``K_ow`` is not even well defined (the molecule is both
+    hydrophobic and hydrophilic and is permanently ionised), which is why the PFAS
+    branch had to build read-across plus a fragment QSPR instead.
+
+    ``logKow`` : pass a MEASURED value to override Crippen.  Recommended when one
+        exists: Crippen is an atom-contribution estimate (typically within ~0.5-1 log
+        unit, worse for polar heterocycles), and every downstream neutral parameter --
+        ``K_lip`` (Briggs), TSCF, ``K_oc`` -- is a function of it, so its error
+        propagates everywhere.  The descriptor notes record which source was used.
+    ``pKa`` : ``None`` (default) = strictly neutral.  Supplying it makes the compound a
+        weak electrolyte, with ``(f_n, f_d)`` from :func:`literature_params.speciation`
+        at the SOIL ``pH`` and both membrane pathways running in parallel.  pKa is NOT
+        predicted from structure here -- RDKit has no reliable pKa model, so an
+        unsupplied pKa means "treat as neutral", which is stated rather than guessed.
+    """
+    d = descriptors(smiles)
+    if logKow is None:
+        logKow = float(d.logKow_crippen)
+        kow_src = f"RDKit Crippen MolLogP = {logKow:.2f} (ESTIMATE)"
+    else:
+        logKow = float(logKow)
+        kow_src = f"user-supplied measured logKow = {logKow:.2f}"
+
+    cmpd = L.neutral_compound(
+        logKow, name=name or d.formula, pKa=pKa, is_acid=is_acid, pH=pH,
+        P_n=L.PN_DEFAULT if P_n is None else float(P_n),
+        L_Ph=L_Ph, f_xy=f_xy, K_AW=K_AW)
+    cmpd.logKow = logKow
+    cmpd.mol_weight = float(d.mol_weight)
+
+    spec = ("strictly NEUTRAL (pKa not supplied -> f_n=1, f_d=0)" if pKa is None else
+            f"WEAK {'ACID' if is_acid else 'BASE'} (pKa={pKa:g} at pH={pH:g} -> "
+            f"f_n={cmpd.fn:.3f}, f_d={cmpd.fd:.3f})")
+    d.notes.append(f"NEUTRAL branch: logKow from {kow_src};  {spec};  "
+                   f"K_lip=Briggs a*Kow^b;  f_xy=Briggs TSCF bell"
+                   + ("" if f_xy is None else " (user-supplied)"))
+    if d.compound_class == "PFAS":
+        d.notes.append("WARNING: this structure looks like a PFAS (permanent anion) but was "
+                       "run on the NEUTRAL branch -- the Briggs Kow correlations are not "
+                       "calibrated for perfluorinated anions.  Use compound_from_smiles().")
+    return cmpd, d
+
+
+def compound_from_smiles_auto(smiles: str, **kw):
+    """Dispatch a SMILES to the right branch by :attr:`Descriptors.compound_class`.
+
+    Returns ``(compound, descriptors, compound_class)``.  ``compound_class`` is
+    ``'PFAS'`` or ``'organic'``; PFAS goes to :func:`compound_from_smiles`, anything
+    else to :func:`neutral_compound_from_smiles`.  Keyword arguments are forwarded to
+    whichever builder is chosen, so pass only that branch's arguments (e.g. ``pKa=``
+    only makes sense on the neutral branch).
+
+    Supplying ``pKa`` forces the neutral/weak-electrolyte branch even for a
+    PFAS-looking structure -- that is the honest reading of an explicit pKa, and it is
+    how a user models e.g. a fluorotelomer or sulfonamide that is NOT fully dissociated.
+    """
+    d = descriptors(smiles)
+    cls = "organic" if kw.get("pKa") is not None else d.compound_class
+    if cls == "PFAS":
+        c, d = compound_from_smiles(smiles, **kw)
+    else:
+        c, d = neutral_compound_from_smiles(smiles, **kw)
+    return c, d, cls
 
 
 # ---------------------------------------------------------------------------
