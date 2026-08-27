@@ -1,8 +1,15 @@
 # 중성 유기화합물(neutral) + 약전해질(weak electrolyte) 확장 — 설계 문서
 
-> 상태: **DESIGN (구현 전)** · rev.2 · 대상 브랜치 `claude/neutral-organic-compound-tutphi`
+> 상태: **Phase 1 구현 완료 (P1 DONE)** · rev.3 · 브랜치 `claude/neutral-organic-compound-tutphi`
+> 실행: `python validation/neutral_probe.py` · `pytest tests/test_neutral.py`
+> API: `model_api.simulate_neutral(logKow, pKa=None, ...)` → `simulate()`와 동일한 dict
 > 선행 문서: `docs/dpu_model_summary_corrected.tex` (중성 DPU 원본),
 > `docs/pfas_rice_compartmental_model.tex` (IOC/PFAS 확장), `docs/theory_anchor.tex` (Briggs/Trapp 대조표)
+>
+> **rev.3 변경점 (Phase 1 구현)**: ① Phase 1 코드 착지 + 회귀 가드(부록 B).
+> ② **정정 2건 — 구현 중 단언문이 설계 오류를 검출**: §5.1 이온트랩의 PFAS 극한
+> ($\Lambda\to1$이 아니라 $10^{\Delta pH}$; 꺼짐은 속도론적), §11.4 Trapp의 fw 기준 지질
+> (우리 dw 값과 같은 양이 아니며 12.3배 차이). ③ D9 `P_n` 기본값 결정.
 >
 > **rev.2 변경점**: ① 약전해질을 **비목표 → Phase 1 범위**로 편입 (사용자 결정).
 > 이에 따라 "중성 스위치 = `z=0`"이 **`(f_n, f_d)` 가중합**으로 바뀜 (D7) — 세 케이스가 한 코드경로.
@@ -203,8 +210,17 @@ return j_n + j_ed + j_carr
 
 ### D6. 기본 경로 불변 — 회귀 가드
 다음이 **한 자리도 변하면 안 된다**: `reproduce_demo.py` log10 RMSE **0.029**,
-`tests/` 전체(현재 174 passed, 2 skipped), `simulate()`의 모든 기본 인자 동작.
-새 테스트 `tests/test_neutral.py`가 이를 명시적으로 assert 한다.
+`tests/` 전체(Phase 1 착수 시점 실측 **188 passed, 2 skipped**), `simulate()`의 기본 인자 동작.
+`tests/test_neutral.py`가 골든 BAF 값으로 이를 assert 한다.
+**Phase 1 검증 결과**: 변경 전/후 코드를 각각 실행해 14개 시나리오 140개 float를
+**정확한 `==`로 비교 → 전부 일치**. RMSE 0.029 유지, 전체 **204 passed, 2 skipped**.
+
+### D9 (신규, Phase 1). `P_n` 기본값 = **1000** — 빠른 교환(평형) 극한
+DPU base에는 뿌리 막 저항이 **아예 없고**($\dot q_\mathrm{up}$이 외부 BC, $K_{PW}$는 즉시 분배),
+Briggs RCF도 마쇄 뿌리의 **평형** 상관식이다. 즉 base 모델은 $P_n\to\infty$ 극한이다.
+$P_n=1000$이면 $\log K_{ow}$ 0.5–6 전 구간에서 $C_\mathrm{root}/B_\mathrm{root}\ge0.989$
+(≥200이면 이미 수 % 이내)이고 stiffness/런타임 비용도 없다.
+$P_n$은 **속도**이므로 낮추면 도달 속도만 느려지고 평형 목표값은 불변 — 테스트로 고정.
 
 ---
 
@@ -236,8 +252,18 @@ return j_n + j_ed + j_carr
 | $\log K_{ow}$ | RDKit `Crippen.MolLogP` | — | 3 |
 
 > **이온트랩 sanity**: $pK_a=4$, $pH_\mathrm{leaf}=7.2$, $pH_\mathrm{ph}=8.0$ ⇒ $\Lambda\approx6.3$.
-> 즉 약산은 체관에서 ~6배 농축된다 — 2,4-D류 체관이동성 제초제의 고전적 설명이며,
-> PFAS에서 이 항이 꺼지는 이유($f_n\approx0$이라 갇힐 중성분자가 없음)를 그대로 보여준다.
+> 즉 약산은 체관에서 ~6배 농축된다 — 2,4-D류 체관이동성 제초제의 고전적 설명.
+>
+> **⛔ rev.2의 오류 정정 (Phase 1 구현 중 단언문이 검출)**: rev.2는 "PFAS 극한에서 $\Lambda\to1$이라
+> 트랩이 스스로 꺼진다"고 적었으나 **틀렸다.** $\Lambda$는 *중성종이 수송을 담당한다고 가정하고* 유도한
+> **평형비**이므로, $pK_a\to-\infty$에서 양변이 완전 해리되어
+> $\Lambda\to10^{\,pH_\mathrm{ph}-pH_\mathrm{leaf}}=10^{0.8}=6.31$ 로 간다 — 1이 아니다.
+> PFAS에서 트랩이 꺼지는 것은 **열역학이 아니라 속도론** 때문이다: 그 평형비를 만들어 줄 flux를
+> 중성종이 나르는데 $f_n\to0$이다. 실제 판별량은 **투과도 가중 비율**
+> $\Pi = \dfrac{P_n f_n}{P_d f_d}$ (`literature_params.neutral_pathway_ratio`)이고,
+> 잎 세포질 pH 7.2에서 $\Pi$ = **2.0 ($pK_a$ 4 제초제)** vs **2.0×10⁻⁷ (PFSA)** — **10⁷배** 붕괴한다.
+> ⇒ Phase 1.5는 $L_{Ph}$에 $\Lambda$를 곱하는 것이 **아니라**, 체관 적재 컨덕턴스를 $f_n$에 비례시켜야
+> 한다. 그래야 PFAS가 $\Lambda=6.3$의 가짜 농축을 받지 않는다.
 
 ---
 
@@ -294,8 +320,10 @@ return j_n + j_ed + j_carr
 - [ ] **알려진 한계 명시**: 낟알 과대(§3-4) — Phase 1.5/2 전까지 grain 결과는 보고하지 않음
 
 ### Phase 1.5
-- [ ] $pK_a \le 0$ (PFAS 극한)에서 $\Lambda\to1$ → PFAS 결과 불변
-- [ ] $pK_a=4$ 약산에서 체관 농축 $\Lambda\approx6$ 재현
+- [x] ~~$pK_a \le 0$에서 $\Lambda\to1$~~ — **틀린 기준. §5.1 정정 참조** ($\Lambda\to10^{\Delta pH}$)
+- [ ] 체관 적재 컨덕턴스를 $f_n$에 비례시켜, PFAS($f_n\approx0$)에서 트랩 기여가 $<10^{-6}$로 소거
+- [ ] $pK_a=4$ 약산에서 체관 농축 $\Lambda\approx6.3$ 재현
+- [ ] PFAS 결과 불변 (RMSE 0.029, 골든값)
 - [ ] pH 민감도: $pH_\mathrm{ph}$ 8.0→7.5에서 grain BAF가 단조 감소
 
 ### Phase 2
@@ -426,7 +454,7 @@ $$K_{PA}=\frac{B_k\,\rho_k}{K_{AW}},\qquad
 | 현미 | 조지방 **3.04–3.59% dw**; 별도 보고 **2.75–4.49% dw**; n-헥산 추출 1.92–2.72% | 0.030 (0.027–0.036) | **일치 (measured 확인)** |
 | 볏짚(줄기+잎) | 에테르추출물 **2.04% DM**; 친유성 추출물 **3.4% DM** | — | **아래 정합성 검사** |
 | 잎 (유사체) | 라이그래스 EE **4.2% DM**, 알팔파 3.1%, 클로버 2.8%, 옥수수사일리지 2.7% (Palmquist & Jenkins 1980) | 0.055 (0.04–0.07) | 범위 상단이지만 **녹색 활성 엽신으로 타당** |
-| 뿌리 | Trapp(2015) DPU 계열 기본 **root lipid 0.025** | 0.020 (0.01–0.03) | **정합** |
+| 뿌리 | Trapp(2015) DPU 계열 기본 **root lipid 0.025** | 0.020 (0.01–0.03) | **⛔ 정합 아님 — 기준이 다름 (§11.4)** |
 
 **정합성 검사 (독립적 교차검증)** — 볏짚은 줄기(대+엽초)와 엽신의 혼합이다.
 질량비 70:30 가정 시 $0.7\times0.015+0.3\times0.055=\mathbf{0.027}$,
@@ -447,6 +475,35 @@ $$K_{PA}=\frac{B_k\,\rho_k}{K_{AW}},\qquad
 | ID | 항목 | 대응 |
 |---|---|---|
 | R6 (신규) | 잎 지질이 갈락토지질 우세 → 옥탄올 유사성 가정 위배 가능 | Phase 1에서 잎 `f_lip` 민감도 스윕(0.04/0.055/0.07)을 수용 기준에 포함 |
+| R7 (신규) | **측정 지질 vs Briggs "옥탄올 등가"의 12.3배 격차** | §11.4 — 두 경로를 모두 제공, 측정값을 기본으로 |
+
+### 11.4 ⛔ 정정 — Trapp의 0.025는 **fw 기준**이고, 우리 값과 같은 양이 아니다
+
+rev.2의 "Trapp 0.025 vs 우리 0.020 → 정합" 판정은 **틀렸다.** Phase 1 구현 중
+`validation/neutral_probe.py`의 Briggs RCF 대조에서 드러났다.
+
+Briggs의 경험식 $\mathrm{RCF}=0.82+0.03\,K_{ow}^{0.77}$을 Trapp은 $W + L\,a\,K_{ow}^{b}$로 읽으며,
+여기서 $L\approx0.025$는 **fresh weight 기준**이다. 우리 `total_lipid`는 **dry weight 기준**이고
+$B_k$ 식은 $(1-\theta_{fw})$로 dw→fw 변환을 한다. 즉 두 값은 **다른 기준의 다른 양**이다.
+
+| | 지질항 계수 | 비고 |
+|---|---|---|
+| Briggs 경험식 | $0.03\;K_{ow}^{0.77}$ | fw 기준 "옥탄올 등가" |
+| 우리 기계론식 | $(1-\theta)f_\mathrm{lip}^{dw}a = 0.00244\;K_{ow}^{0.77}$ | dw 측정값 |
+| **비율** | **12.3×** | |
+
+Briggs를 맞추려면 뿌리 지질이 **dw의 25%** 여야 하는데(= Trapp의 0.025 fw를 $\theta=0.90$에서
+dw로 환산한 값), 그런 뿌리는 없다. ⇒ Briggs의 0.03은 **분석적으로 측정되는 지질이 아니라
+세포벽·수베린·큐틴 흡착까지 흡수한 실효 흡착용량**이다.
+
+**핵심은 무엇이 맞았는가다**: $K_{ow}$ **기울기는 0.770/log로 정확히 일치**한다(구조는 옳다).
+어긋나는 것은 계수(절편)뿐이고, 그것은 정의·기준의 차이다.
+
+**결정**: 두 경로를 모두 제공하되 **측정값을 기본**으로 한다 — 이 모델이 다른 모든 결합 pool을
+다루는 방식(basis A, 측정 pool)과 일관되고, 어긋남을 숨기지 않는다.
+Briggs 정합 실행이 필요하면 `literature_params.LIPID_OCT_EQUIV_FW` +
+`f_lip_from_fresh_weight()`로 fw 기준 앵커를 쓸 수 있다.
+이는 PFAS 쪽 `K_cw` 공백과 **같은 성격의 공백**이다 — 실측 흡착계수의 부재.
 
 ---
 
@@ -510,10 +567,15 @@ assert abs(root_uptake(2.0, 0.5, c0, Environment(z=0)) - 1.5) < 1e-12   # 순수
 ## 부록 B. 진행 체크리스트
 
 - [x] **P0** 설계 문서 작성
-- [x] **O1** 조직 총 지질 분율 조사 → §11 (레포 DB + 문헌 교차검증)
+- [x] **O1** 조직 총 지질 분율 조사 → §11 (레포 DB + 문헌 교차검증 + §11.4 정정)
 - [x] **O4** 약전해질 범위 결정 → Phase 1/1.5 편입
-- [ ] **P1** speciation + 중성 코어 + 회귀 가드 ← *다음*
-- [ ] **P1.5** 약전해질 완성 (체관 이온트랩)
+- [x] **P1** speciation + 중성 코어 + 회귀 가드 — **DONE**
+      (`4pool_surf`: `pKa/is_acid/z/P_n/K_lip/K_AW` + `f_lip/pH`, `root_uptake` D7 재구성;
+      `literature_params`: `speciation/ion_trap_factor/neutral_pathway_ratio/briggs_*`
+      `/koc_neutral/neutral_compound/f_lip_from_fresh_weight`;
+      `model_api.simulate_neutral` + `_solve_and_package` 추출;
+      `validation/neutral_probe.py`; `tests/test_neutral.py` 16개)
+- [ ] **P1.5** 약전해질 완성 (체관 적재를 $f_n$ 비례로 — §5.1 정정 반영) ← *다음*
 - [ ] **P2** 기체 교환 + 단위 테스트
 - [ ] **P3** 토양 $K_{oc}$ · SMILES · app 통합
 - [ ] **P4** 검증 데이터 문헌 조사 (§8.2) — 병행 가능

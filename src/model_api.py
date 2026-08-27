@@ -338,6 +338,22 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
                     L_Ph=L_Ph, f_xy=f_xy, g_xy=g_xy, g_ph=g_ph, K_surf=float(K_surf))
     comps = _compartments()
     env = Environment(E=E_m_mV / 1000.0)
+    return _solve_and_package(
+        cmpd, comps, env, inputs, t, Cwo_series, Qtp, M, season, congener,
+        params=dict(f_xy=f_xy, L_Ph=L_Ph, kappa_d=kappa_d, g_xy=g_xy, g_ph=g_ph,
+                    K_PL=c["K_PL_Lkg"], K_prot=c["K_prot_Lkg"],
+                    K_cw=c["K_cw_wholecw_Lkg"]["root"], K_surf=float(K_surf),
+                    n_C=c["n_C"], group=c["group"]))
+
+
+def _solve_and_package(cmpd, comps, env, inputs, t, Cwo_series, Qtp, M, season,
+                       label, params):
+    """Integrate the 4-compartment ODE and build the standard result dict.
+
+    Extracted verbatim from ``simulate`` so the neutral/weak-electrolyte entry point
+    (:func:`simulate_neutral`) returns exactly the same shape, computed by exactly the
+    same code, rather than a parallel copy that could drift.
+    """
     model = RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs)
     sol = model.solve(t)
     C = sol.y                                            # (4, n_t)
@@ -351,7 +367,7 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     baf_series = {k: C[i] / cw for i, k in enumerate(TISSUES)}
     root_baf_total = float(C[ROOT, -1] / cwo_ref + cmpd.K_surf)
     return dict(
-        t=t, congener=congener, success=bool(sol.success), season=season,
+        t=t, congener=label, success=bool(sol.success), season=season,
         conc={k: C[i] for i, k in enumerate(TISSUES)},
         straw=straw,
         Cwo=Cwo_series, Qtp=Qtp, M=M,                    # the drivers actually used
@@ -362,11 +378,85 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         cwo_ref=cwo_ref,
         B_k={k: float(B[i]) for i, k in enumerate(TISSUES)},
         N=float(env.N), eN=float(np.exp(env.N)),
-        params=dict(f_xy=f_xy, L_Ph=L_Ph, kappa_d=kappa_d, g_xy=g_xy, g_ph=g_ph,
-                    K_PL=c["K_PL_Lkg"], K_prot=c["K_prot_Lkg"],
-                    K_cw=c["K_cw_wholecw_Lkg"]["root"], K_surf=float(K_surf),
-                    n_C=c["n_C"], group=c["group"]),
+        params=params,
     )
+
+
+# Rice tissue TOTAL lipid, dry-weight mass fraction -- params/rice_tissue_params.csv
+# `total_lipid` (brown grain MEASURED; root/stem/leaf are literature estimates).  This
+# is the Briggs sorptive phase and is DELIBERATELY separate from the phospholipid
+# fractions in `tissue_composition_recommended`: leaf membrane lipid is mostly
+# thylakoid galactolipid, not phospholipid, so the two must not be conflated.
+TISSUE_TOTAL_LIPID_DW = {"root": 0.020, "stem": 0.015, "leaf": 0.055, "grain": 0.030}
+
+
+def _compartments_neutral(f_lip=None):
+    """`_compartments()` plus the TOTAL-lipid fraction the Briggs term needs."""
+    fl = dict(TISSUE_TOTAL_LIPID_DW) | dict(f_lip or {})
+    comps = _compartments()
+    for cmp_ in comps:
+        cmp_.f_lip = float(fl[cmp_.name])
+    return comps
+
+
+def simulate_neutral(logKow, *, name=None, pKa=None, is_acid=True, Cwo=1.0,
+                     E_m_mV=-120.0, P_n=None, L_Ph=1.0, f_xy=None, f_lip=None,
+                     gamma=0.0, season=120.0, n_t=241, measured_forcing=True,
+                     biomass="oryza", drivers=None, soil_pH=None):
+    """Run the 4-compartment ODE for a NEUTRAL organic or a WEAK ELECTROLYTE.
+
+    The DPU-base counterpart of :func:`simulate`: binding comes from the Briggs
+    lipid term (``K_lip = a*K_ow^b`` against the tissue TOTAL lipid) instead of the
+    PFAS protein/phospholipid/cell-wall pools, root uptake is Fickian ``P_n``
+    permeation instead of GHK + carrier, and root->xylem loading is the Briggs TSCF
+    bell instead of a fitted ``f_xy``.
+
+    ``pKa=None`` gives a strictly neutral compound.  Supplying ``pKa`` makes it a weak
+    electrolyte: both membrane pathways run in parallel weighted by ``(f_n, f_d)``.
+
+    Returns the same dict shape as :func:`simulate`.
+
+    CAVEATS (see docs/NEUTRAL_DPU_EXTENSION_DESIGN_KR.md):
+      * Air exchange is OFF (phase 2), so a volatile compound is over-predicted.
+      * The grain is a phloem-fed terminal sink with no loss term, so its
+        concentration is NOT yet meaningful -- report root/straw only until the
+        phloem ion trap (phase 1.5) and gas exchange (phase 2) land.
+      * Rice root/stem/leaf total lipid are literature ESTIMATES, not measurements.
+    """
+    import literature_params as lp
+    if drivers is not None:
+        t = np.asarray(drivers["t"], dtype=float)
+        Cwo_series = np.asarray(drivers["Cwo"], dtype=float)
+        Qtp = np.asarray(drivers["Qtp"], dtype=float)
+        M = np.asarray(drivers["M"], dtype=float)
+        leaf_loss = drivers.get("leaf_loss")
+        season = float(t[-1])
+    else:
+        t = np.linspace(0.0, season, n_t)
+        Cwo_series, Qtp, M, leaf_loss = _default_drivers(
+            t, season, Cwo, measured_forcing, biomass)
+    inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
+
+    cmpd = lp.neutral_compound(
+        logKow, name=name, pKa=pKa, is_acid=is_acid,
+        pH=lp.PADDY_PH if soil_pH is None else soil_pH,
+        P_n=lp.PN_DEFAULT if P_n is None else float(P_n),
+        L_Ph=L_Ph, f_xy=f_xy)
+    comps = _compartments_neutral(f_lip)
+    for cmp_ in comps:                       # neutral organics ARE metabolised
+        cmp_.gamma = float(gamma)
+    env = Environment(E=E_m_mV / 1000.0)
+    res = _solve_and_package(
+        cmpd, comps, env, inputs, t, Cwo_series, Qtp, M, season,
+        cmpd.name,
+        params=dict(logKow=float(logKow), pKa=pKa, is_acid=bool(is_acid),
+                    fn=float(cmpd.fn), fd=float(cmpd.fd), z=cmpd.z,
+                    K_lip=float(cmpd.K_lip), P_n=float(cmpd.P_n),
+                    f_xy=float(cmpd.f_xy), L_Ph=float(cmpd.L_Ph), gamma=float(gamma),
+                    f_lip={c.name: float(c.f_lip) for c in comps}))
+    res["briggs"] = dict(tscf=lp.briggs_tscf(logKow), rcf=lp.briggs_rcf(logKow),
+                         K_lip=lp.briggs_klip(logKow))
+    return res
 
 
 def apportionment(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",

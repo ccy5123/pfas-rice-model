@@ -164,6 +164,160 @@ def f_d(pKa: float, pH: float = PADDY_PH):
     return 1.0 / (1.0 + np.power(10.0, np.asarray(pKa, float) - np.asarray(pH, float)))
 
 
+def speciation(pKa: float, pH: float = PADDY_PH, is_acid: bool = True):
+    """Henderson-Hasselbalch -> ``(f_n, f_d)``: the neutral and the IONIC fraction.
+
+    Acid  HA <-> A(-) + H(+):  f_d = 1/(1 + 10**(pKa - pH))   (the anion)
+    Base  BH(+) <-> B + H(+):  f_d = 1/(1 + 10**(pH - pKa))   (the CATION)
+
+    This is the single switch that selects the compound class in the plant module:
+    a neutral gives (1, 0), PFAS gives (0, 1), and a weak electrolyte anything in
+    between.  ``f_d`` for an acid is exactly the existing :func:`f_d`.
+    """
+    fd = (f_d(pKa, pH) if is_acid else
+          1.0 / (1.0 + np.power(10.0, np.asarray(pH, float) - np.asarray(pKa, float))))
+    return 1.0 - fd, fd
+
+
+def ion_trap_factor(pKa: float, pH_source: float, pH_sink: float,
+                    is_acid: bool = True) -> float:
+    """Weak-electrolyte ION TRAP enrichment between two compartments [-].
+
+        Lambda = (1 + 10**(pH_sink - pKa)) / (1 + 10**(pH_source - pKa))     (acid)
+
+    The neutral species crosses the membrane freely and re-dissociates on the far
+    side; whichever side is more alkaline holds more of a weak ACID as the
+    membrane-impermeable anion, so the acid accumulates there.  With the phloem
+    (pH ~8.0) as sink and the leaf cytosol (pH ~7.2) as source, a pKa-4 acid gives
+    Lambda ~ 6.3 -- the textbook explanation for phloem-mobile acidic herbicides.
+
+    This is an EQUILIBRIUM ratio, and it is derived ASSUMING the neutral species
+    carries the transport.  Do not read its strong-acid limit as physics: as
+    pKa -> -infinity both sides are fully dissociated and Lambda -> 10**(pH_sink -
+    pH_source) (6.3 for 7.2 -> 8.0), NOT 1.  The trap does not switch off
+    thermodynamically for a permanent anion -- it switches off KINETICALLY, because
+    the flux that would establish that ratio is carried by the neutral fraction and
+    f_n -> 0.  The quantity that actually decides whether the pathway matters is the
+    permeability-weighted fraction :func:`neutral_pathway_ratio`, which collapses by
+    ~7 orders of magnitude between a pKa-4 acid and PFAS.  That is the quantitative
+    form of assumption A5: a permanent anion has no neutral species to ferry across
+    the membrane, so its phloem loading must be carrier/channel (L_Ph), not a pH
+    trap (see docs/theory_anchor.tex and the report's Eq. Cphl).
+    """
+    ex = 1.0 if is_acid else -1.0
+    num = 1.0 + 10.0 ** (ex * (pH_sink - pKa))
+    den = 1.0 + 10.0 ** (ex * (pH_source - pKa))
+    return float(num / den)
+
+
+# ===========================================================================
+# NEUTRAL organics -- the Briggs/Trapp DPU base the IOC model extends
+# ===========================================================================
+# The neutral-compound relationships the PFAS core switches OFF (see
+# docs/dpu_model_summary_corrected.tex and docs/theory_anchor.tex eq. briggsT).
+# They are QSPRs in log K_ow, which is ill-defined for PFAS surfactants -- hence
+# the separate chain-length QSPRs above for the anion.
+BRIGGS_A = 1.22          # lipid-water sorption coefficient [L/kg lipid]  (Trapp 2004)
+BRIGGS_B = 0.77          # K_ow exponent [-]                             (Briggs 1982)
+TSCF_MAX = 0.784         # bell height [-]                               (Briggs 1982)
+TSCF_LOGKOW_OPT = 1.78   # bell centre in log K_ow [-]
+TSCF_WIDTH = 2.44        # bell width  [-]
+PN_OVER_PD = 10.0 ** 3.5  # neutral / ion membrane permeability ratio     (Trapp 2000)
+
+# Default neutral root conductance a_R*P_n [L/(day kg)].  The DPU base has NO root
+# membrane resistance at all (root uptake is an external boundary condition and K_PW
+# is an instantaneous partition), and Briggs' RCF is likewise an EQUILIBRIUM
+# correlation on macerated roots -- so the base model is the fast-exchange limit
+# P_n -> infinity.  1000 puts the root within 1-2% of that limit across log K_ow
+# 0.5-6 at no runtime or stiffness cost (>=200 is already within a few %).  Lower it
+# to model a kinetically limited root; it is a rate, so it does not change the
+# equilibrium the root approaches, only how fast it gets there.
+PN_DEFAULT = 1000.0
+
+# --- Briggs "octanol-equivalent" lipid vs MEASURED lipid --------------------------
+# Briggs' RCF = 0.82 + 0.03*K_ow^0.77 is read by Trapp as W + L*a*K_ow^b with a
+# FRESH-weight lipid content L ~ 0.025 (the DPU family's default root value).  That
+# is NOT the same quantity as an analytically measured lipid fraction: at a rice
+# root's ~90% water content, L=0.025 fw implies ~25% of DRY weight as lipid, which
+# no root has.  The empirical coefficient is an "octanol equivalent" -- an effective
+# sorption capacity that also absorbs cell wall / suberin / cutin sorption.
+#
+# Consequence, quantified in validation/neutral_probe.py: feeding the MEASURED rice
+# lipid fractions (params/rice_tissue_params.csv, dry weight) into the mechanistic
+# B_k reproduces Briggs' K_ow SLOPE exactly (0.770/log unit) but sits ~12x below its
+# lipid COEFFICIENT.  Both are kept: the measured route is the default (consistent
+# with how this model treats every other binding pool), and this fw-basis anchor is
+# available for a Briggs-consistent run.
+LIPID_OCT_EQUIV_FW: dict[str, float] = {"root": 0.025}   # Trapp/Briggs, FRESH weight
+
+
+def neutral_pathway_ratio(pKa: float, pH: float, is_acid: bool = True,
+                          P_n_over_P_d: float = PN_OVER_PD) -> float:
+    """Permeability-weighted neutral / ionic membrane flux ratio ``P_n f_n / P_d f_d``.
+
+    Decides whether the neutral (ion-trap) pathway is relevant at all.  The neutral
+    species is a tiny fraction of a weak acid at cytosolic pH, but it is ~10**3.5
+    times more membrane-permeable, so the two effects fight; this is their product.
+
+    At leaf-cytosol pH 7.2 the ratio is ~2 for a pKa-4 herbicide (the neutral
+    pathway carries most of the flux) and ~1e-7 for a PFSA -- i.e. the trap is off
+    for PFAS by ~7 orders of magnitude, which is the kinetic statement that
+    :func:`ion_trap_factor` deliberately does not make.
+    """
+    fn, fd = speciation(pKa, pH, is_acid)
+    return float(P_n_over_P_d * fn / fd) if fd > 0 else float("inf")
+
+
+def f_lip_from_fresh_weight(L_fw: float, theta_fw: float) -> float:
+    """Convert a FRESH-weight lipid fraction to the DRY-weight ``Compartment.f_lip``.
+
+    ``binding_factors`` multiplies dry-weight fractions by ``(1 - theta_fw)``, so an
+    fw-basis value such as :data:`LIPID_OCT_EQUIV_FW` must be divided by the same
+    factor to enter on the correct basis.
+    """
+    return float(L_fw / (1.0 - theta_fw))
+
+
+def briggs_klip(logKow: float, a: float = BRIGGS_A, b: float = BRIGGS_B) -> float:
+    """Briggs lipid-water partition ``K_lip = a * K_ow**b`` [L/kg lipid].
+
+    Pairs with ``Compartment.f_lip``; together they are the lipid term of the
+    Briggs plant-water partition ``K_PW = W + a*K_ow**b*L``.
+    """
+    return float(a * np.power(10.0, logKow) ** b)
+
+
+def briggs_rcf(logKow: float) -> float:
+    """Briggs root concentration factor ``RCF = 0.82 + 0.03*K_ow**0.77`` [L/kg].
+
+    Macerated-barley-root correlation; used as an ORDER-OF-MAGNITUDE check on the
+    model's root BAF for a neutral compound, not as a model input.
+    """
+    return float(0.82 + 0.03 * np.power(10.0, logKow) ** 0.77)
+
+
+def briggs_tscf(logKow: float) -> float:
+    """Briggs transpiration-stream concentration factor (the TSCF *bell*) [-].
+
+        TSCF = 0.784 * exp(-(log K_ow - 1.78)**2 / 2.44)
+
+    Feeds the model's root->xylem loading factor ``f_xy`` for a NEUTRAL compound
+    (for PFAS, f_xy is fitted/monotone instead).  The bell peaks at log K_ow=1.78,
+    but note that the resulting TISSUE concentration peaks at a HIGHER log K_ow,
+    because tissue conc ~ TSCF * B and the binding factor B rises monotonically
+    with K_ow (see docs/NEUTRAL_DPU_EXTENSION_DESIGN_KR.md section 3).
+    """
+    return float(TSCF_MAX * np.exp(-(logKow - TSCF_LOGKOW_OPT) ** 2 / TSCF_WIDTH))
+
+
+def koc_neutral(logKow: float) -> float:
+    """Karickhoff (1981) ``K_oc = 0.41 * K_ow`` [L/kg] for a neutral organic.
+
+    The neutral counterpart of :func:`koc` (which is a PFAS chain-length QSPR).
+    """
+    return float(0.41 * np.power(10.0, logKow))
+
+
 # ===========================================================================
 # C3 -- soil sorption: Koc(chain length, head group)
 # ===========================================================================
@@ -498,6 +652,51 @@ def literature_compound(name: str | None = None, *,
         Vmax_out=Vmax_out, Km_out=Km_out,
         L_Ph=L_Ph, f_xy=f_xy,
         fd=float(f_d(PKA[head_group], pH)), fn=0.0,
+    )
+
+
+def neutral_compound(logKow: float, *, name: str | None = None,
+                     pKa: float | None = None, is_acid: bool = True,
+                     pH: float = PADDY_PH, z: int | None = None,
+                     P_n: float = PN_DEFAULT, L_Ph: float = 1.0,
+                     f_xy: float | None = None,
+                     kappa_d: float = 0.0, Vmax_in: float = 0.0, Km_in: float = 5.0,
+                     Vmax_out: float = 0.0, Km_out: float = 5.0,
+                     K_AW: float = 0.0) -> Compound:
+    """Build a :class:`Compound` for a NEUTRAL organic or a WEAK ELECTROLYTE.
+
+    The neutral counterpart of :func:`literature_compound`.  Binding comes from the
+    Briggs lipid term (``K_lip``, paired with ``Compartment.f_lip``) instead of the
+    PFAS protein/phospholipid/cell-wall QSPRs, and root->xylem loading from the
+    Briggs TSCF bell instead of a fitted ``f_xy``.
+
+    ``pKa=None`` (default) means a strictly neutral compound: ``(f_n, f_d) = (1, 0)``,
+    so the GHK/carrier branches of ``root_uptake`` vanish and only the Fickian ``P_n``
+    term is alive.  Supplying ``pKa`` turns it into a weak electrolyte: the fractions
+    come from :func:`speciation` at the SOIL pH, both membrane pathways run in
+    parallel, and the valence defaults to -1 for an acid / +1 for a base.
+
+    Note the carrier is OFF by default (``Vmax=0``): active PFAS transporters exist
+    to overcome anion exclusion, which a neutral molecule does not face.
+    """
+    if pKa is None:
+        fn, fd = 1.0, 0.0
+    else:
+        fn, fd = speciation(pKa, pH, is_acid)
+        fn, fd = float(fn), float(fd)
+        if z is None:
+            z = -1 if is_acid else +1
+    return Compound(
+        name=name or f"neutral(logKow={logKow:g})",
+        # PFAS-specific binding pools are OFF; the Briggs lipid term carries it
+        K_prot=0.0, K_PL=0.0, K_cw=0.0,
+        kappa_d=kappa_d, Vmax_in=Vmax_in, Km_in=Km_in,
+        Vmax_out=Vmax_out, Km_out=Km_out,
+        L_Ph=L_Ph,
+        f_xy=briggs_tscf(logKow) if f_xy is None else float(f_xy),
+        fd=fd, fn=fn,
+        pKa=pKa, is_acid=is_acid, z=z,
+        P_n=P_n, K_lip=briggs_klip(logKow), K_AW=K_AW,
     )
 
 

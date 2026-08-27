@@ -68,6 +68,13 @@ class Environment:
         """Dimensionless electrochemical driving force  N = zEF/(RT)."""
         return self.z * self.E * F_FARADAY / (R_GAS * self.T)
 
+    def N_for(self, cmpd=None) -> float:
+        """N for a specific compound: valence is a property of the CHEMICAL, not the
+        environment (a weak base is a cation, z=+1). `Compound.z` wins when supplied;
+        otherwise this falls back to `Environment.z` and reproduces `N` exactly."""
+        z = self.z if (cmpd is None or getattr(cmpd, "z", None) is None) else cmpd.z
+        return z * self.E * F_FARADAY / (R_GAS * self.T)
+
 
 @dataclass
 class Compound:
@@ -118,6 +125,23 @@ class Compound:
     # speciation (PFAS: fully dissociated)
     fd: float = 1.0
     fn: float = 0.0
+    # --- neutral / weak-electrolyte extension (DPU base) -----------------------
+    # Every field below defaults to the PFAS limit, where its term vanishes
+    # identically, so the anion path is numerically unchanged.  The speciation
+    # SWITCH is the (fn, fd) pair, NOT the valence: a weak acid carries a neutral
+    # molecule (potential-independent) AND an anion (potential-dependent) at the
+    # same time, so one global z cannot express it.  See root_uptake().
+    #   neutral      fn=1, fd=0  -> only the P_n Fickian term is alive
+    #   weak acid    fn+fd=1     -> both terms alive
+    #   PFAS         fn=0, fd=1  -> only the GHK term is alive (current behaviour)
+    pKa: float | None = None    # acid dissociation constant; None -> use fn/fd as given
+    is_acid: bool = True        # False for a weak base (conjugate acid is the CATION)
+    z: int | None = None        # ion valence; None -> Environment.z (acids -1, bases +1)
+    P_n: float = 0.0            # a_R*P_n, neutral passive conductance [L/(day kg)].
+                                # Trapp: the ion is ~10^3.5 less permeable, P_d ~ P_n*10^-3.5.
+    K_lip: float = 0.0          # Briggs lipid partition a*K_ow^b [L/kg lipid]; pairs with
+                                # Compartment.f_lip (TOTAL lipid), NOT with f_PL.
+    K_AW: float = 0.0           # air-water partition [-]; 0 keeps gas exchange off (A3)
 
 
 @dataclass
@@ -130,6 +154,15 @@ class Compartment:
     f_cw: float             # cell-wall mass fraction [kg/kg]
     S: float = 0.0          # specific surface area [m^2/kg] (only leaf/fruit ratio used)
     gamma: float = 0.0      # first-order metabolism [1/day] (PFAS ~ 0)
+    # TOTAL lipid mass fraction [kg/kg dw] -- the Briggs sorptive phase, paired with
+    # Compound.K_lip.  DISTINCT from f_PL (phospholipid): in the leaf the bulk of the
+    # membrane lipid is thylakoid galactolipid (MGDG/DGDG), not phospholipid, so the
+    # two must not be conflated.  See params/rice_tissue_params.csv `total_lipid`
+    # (root 0.020, stem 0.015, leaf 0.055, brown grain 0.030) and its leaf CAUTION note.
+    # 0 keeps the term off, so the PFAS binding factor is unchanged.
+    f_lip: float = 0.0
+    pH: float | None = None  # compartment pH; drives per-compartment speciation of a
+                             # weak electrolyte. None -> no speciation calc (PFAS).
 
 
 @dataclass
@@ -192,10 +225,16 @@ def binding_factors(comps: list[Compartment], cmpd: Compound) -> np.ndarray:
     (1 - theta_fw) onto a per-kg-fresh basis -- consistent with the model's fresh-mass
     M and fluxes. Compare to dw-reported data via C_dw = C_fw / (1 - theta_fw).
     4-POOL: f_cw is the WHOLE cell wall (polysaccharide + lignin lumped).
+
+    NEUTRAL/DPU: the extra `f_lip*K_lip` term makes this the general form of the
+    Briggs plant-water partition K_PW = W + a*K_ow^b*L -- set K_prot=K_cw=0 and it
+    reduces to Briggs exactly.  Both `f_lip` and `K_lip` default to 0, so the PFAS
+    binding factor is bit-identical to before.
     """
     return np.array([
         c.theta + (1.0 - c.theta) * (
-            c.f_prot * cmpd.K_prot + c.f_PL * cmpd.K_PL + c.f_cw * cmpd.K_cw)
+            c.f_prot * cmpd.K_prot + c.f_PL * cmpd.K_PL + c.f_cw * cmpd.K_cw
+            + c.f_lip * cmpd.K_lip)
         for c in comps
     ])
 
@@ -210,19 +249,30 @@ def _ghk_factor(N: float) -> float:
 def root_uptake(Cwo: float, Cw_root: float, cmpd: Compound, env: Environment) -> float:
     """Mass-specific root membrane uptake j_R [ug/(day kg)]  (Eq. JR_pfas).
 
-    Hybrid: ionic electrodiffusion (GHK) + saturable carrier (Michaelis-Menten).
-    For PFAS the neutral term is dropped (fn ~ 0).
+    Three PARALLEL pathways, each weighted by the species fraction it carries:
+
+        j_R = P_n*f_n*(Cwo - Cw)              neutral passive (potential-INdependent)
+            + kappa_d*g*f_d*(Cwo - e^N*Cw)    ionic electrodiffusion (GHK)
+            + carrier (Michaelis-Menten)
+
+    The GHK factor applies to the ION term ONLY -- that is what lets one code path
+    cover the whole speciation spectrum (see Compound):
+      * neutral    f_d=0 kills the GHK term, so the valence is irrelevant;
+      * weak acid  both terms are alive at the same time;
+      * PFAS       f_n=0 kills the neutral term -> identical to the previous code.
     """
-    N = env.N
+    N = env.N_for(cmpd)
     eN = np.exp(N)
     g = _ghk_factor(N)
+    # neutral passive permeation (Fickian; no membrane-potential term).  P_n defaults
+    # to 0, and 0.0 + x == x exactly, so the PFAS result is bit-identical.
+    j_n = cmpd.P_n * (cmpd.fn * Cwo - cmpd.fn * Cw_root)
     # ionic electrodiffusion (membrane + anion channel + aquaporin, lumped in kappa_d)
     j_ed = cmpd.kappa_d * g * (cmpd.fd * Cwo - cmpd.fd * eN * Cw_root)
     # carrier-mediated (active/facilitated), net influx - efflux
     j_carr = (cmpd.Vmax_in * Cwo / (cmpd.Km_in + Cwo)
               - cmpd.Vmax_out * Cw_root / (cmpd.Km_out + Cw_root))
-    # optional neutral passive term (negligible for PFAS): cmpd.fn * ...
-    return j_ed + j_carr
+    return j_n + j_ed + j_carr
 
 
 @dataclass
