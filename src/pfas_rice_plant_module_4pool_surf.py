@@ -52,6 +52,30 @@ R_GAS = 8.314462618       # J / (mol K)
 
 ROOT, STEM, LEAF, FRUIT = 0, 1, 2, 3   # compartment indices
 
+# Trapp cell-model pH anchors used by the weak-electrolyte phloem ion trap.
+LEAF_CYTOSOL_PH = 7.2     # leaf cytosol (the phloem loading SOURCE)
+PHLOEM_PH = 8.0           # sieve-tube sap: ALKALINE -> traps a weak acid
+# Neutral / ionic membrane permeability ratio P_n/P_d (Trapp 2000).  Re-exported by
+# literature_params.PN_OVER_PD; defined here because the ODE itself needs it.
+P_N_OVER_P_D = 10.0 ** 3.5
+
+
+def _speciation(pKa: float, pH: float, is_acid: bool = True):
+    """(f_n, f_d) by Henderson-Hasselbalch.  Mirrors literature_params.speciation,
+    duplicated here only to keep this module free of project imports (that module
+    imports Compound from here)."""
+    ex = 1.0 if is_acid else -1.0
+    fd = 1.0 / (1.0 + 10.0 ** (ex * (pKa - pH)))
+    return 1.0 - fd, fd
+
+
+def _ion_trap(pKa: float, pH_source: float, pH_sink: float, is_acid: bool = True) -> float:
+    """Equilibrium ion-trap enrichment between two compartments (see
+    literature_params.ion_trap_factor for the full derivation and caveats)."""
+    ex = 1.0 if is_acid else -1.0
+    return ((1.0 + 10.0 ** (ex * (pH_sink - pKa)))
+            / (1.0 + 10.0 ** (ex * (pH_source - pKa))))
+
 
 # ----------------------------------------------------------------------------
 # Parameter containers (organised by the Tier scheme of the report)
@@ -283,6 +307,51 @@ class RiceUptakeModel:
     inputs: PlantInputs
     phi: float = 0.1                    # phloem recirculation fraction to roots [-]
     T_C_Ph: float = 10.0                # phloem flux per unit grain dry mass [L/kg]
+    phloem_pH: float = PHLOEM_PH        # sieve-tube sap pH (weak-electrolyte ion trap)
+
+    def phloem_loading_factor(self) -> float:
+        """Effective leaf->phloem loading partition [-]  (``C_Phl = L * Cw_leaf``).
+
+        Two PARALLEL routes, mirroring ``root_uptake``:
+
+          carrier/channel   L_Ph          -- the fitted PFAS route (assumption A5)
+          neutral + trap    Lambda        -- the neutral species crosses the sieve-tube
+                                             membrane and re-dissociates in the alkaline
+                                             sap, so the TOTAL phloem concentration is
+                                             Lambda times the leaf's free concentration
+
+        The trap route is weighted by whether the neutral species can actually deliver
+        it, w = Pi/(1+Pi) with Pi = (P_n/P_d)*f_n/f_d -- the permeability-weighted
+        neutral fraction.  This is the correction that phase 1.5 exists for: multiplying
+        L_Ph by Lambda instead would hand a PERMANENT anion a spurious ~6.3x phloem
+        enrichment, because Lambda tends to 10**(dpH) rather than to 1 as pKa falls.
+        The trap switches off kinetically (f_n -> 0), not thermodynamically.
+
+        REQUIRES an explicit ``Compound.pKa`` AND a leaf ``Compartment.pH``.  Neither is
+        set on the PFAS path, so that path returns ``L_Ph`` unchanged BY CONSTRUCTION --
+        a guarantee, not a numerical coincidence (see the note in the module docstring
+        about supplying a PFAS pKa deliberately).
+
+        The gate w is phenomenological: the model has no phloem TRANSIT compartment, so
+        it represents loading at the leaf, not retention during transport.  The classic
+        extra phloem mobility of weak acids comes partly from that retention and is
+        therefore only partly captured here.
+
+        Recomputed per RHS call rather than cached: ``calibration.py`` fits by
+        ``setattr``-ing L_Ph onto the compound of an already-built model, and a cached
+        value would silently ignore that.  The PFAS branch is a single attribute test.
+        """
+        c = self.cmpd
+        pH_leaf = self.comps[LEAF].pH
+        if c.pKa is None or pH_leaf is None:
+            return c.L_Ph
+        fn, fd = _speciation(c.pKa, pH_leaf, c.is_acid)
+        lam = _ion_trap(c.pKa, pH_leaf, self.phloem_pH, c.is_acid)
+        if fd <= 0.0:                       # strictly neutral: nothing to trap
+            return c.L_Ph
+        pi = P_N_OVER_P_D * fn / fd
+        w = pi / (1.0 + pi)
+        return (1.0 - w) * c.L_Ph + w * lam
 
     def rhs(self, t: float, C: np.ndarray) -> np.ndarray:
         """RHS of dC/dt for the 4 compartments (Eqs. root, stem, leaf, fruit)."""
@@ -305,7 +374,8 @@ class RiceUptakeModel:
         # phloem flow and sap concentration (carrier loading at leaf; NOT pH trap)
         Q_Phl = dM[FRUIT] * self.T_C_Ph + self.phi * Qtp     # [L/day]
         Q_Phl = max(Q_Phl, 0.0)
-        C_Phl = self.cmpd.L_Ph * Cw[LEAF] + self.cmpd.g_ph * C[LEAF]   # free + lipid-bound [ug/L]
+        # L_Ph_eff == cmpd.L_Ph unless a weak-electrolyte pH trap is configured
+        C_Phl = self.phloem_loading_factor() * Cw[LEAF] + self.cmpd.g_ph * C[LEAF]   # free + lipid-bound [ug/L]
 
         g = [c.gamma for c in self.comps]
         dC = np.zeros(4)

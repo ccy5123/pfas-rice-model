@@ -20,7 +20,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 import literature_params as lp
 import model_api as api
 from pfas_rice_plant_module_4pool_surf import (
-    Compartment, Compound, Environment, binding_factors, root_uptake)
+    Compartment, Compound, Environment, PlantInputs, RiceUptakeModel,
+    binding_factors, root_uptake)
 
 # Golden PFAS BAFs (root, stem, leaf, grain), captured from the code BEFORE the
 # neutral extension landed and verified bit-identical after it.  These move only if
@@ -179,6 +180,101 @@ def test_simulate_neutral_matches_the_simulate_contract():
     for key in ("conc", "baf", "baf_final", "B_k"):
         assert set(neutral[key]) == set(pfas[key]) == set(api.TISSUES)
     assert neutral["briggs"]["tscf"] == pytest.approx(lp.briggs_tscf(2.0))
+
+
+# --------------------------------------------------------------------------
+# C. Phase 1.5 -- the weak-electrolyte phloem ion trap
+# --------------------------------------------------------------------------
+def test_trap_is_off_without_a_pKa_or_a_leaf_pH():
+    """The trap must be off BY CONSTRUCTION on the PFAS path, not by smallness.
+
+    simulate() supplies neither a pKa nor a compartment pH, so L_Ph_eff falls back to
+    the fitted carrier value exactly.  That matters because for the short chains the
+    fitted L_Ph is as low as 1e-5, which a residual trap term would swamp.
+    """
+    cmpd = api._compound_for("PFBA")
+    comps = api._compartments()                    # no pH set
+    inputs = _tiny_inputs()
+    model = RiceUptakeModel(env=Environment(), cmpd=cmpd, comps=comps, inputs=inputs)
+    assert model.phloem_loading_factor() == cmpd.L_Ph
+
+    cmpd.pKa = 0.5                                 # a pKa alone is not enough
+    model = RiceUptakeModel(env=Environment(), cmpd=cmpd, comps=comps, inputs=inputs)
+    assert model.phloem_loading_factor() == cmpd.L_Ph
+
+
+def _tiny_inputs():
+    t = np.linspace(0.0, 10.0, 11)
+    return PlantInputs(t=t, Cwo=np.ones(11), Qtp=np.full(11, 0.05),
+                       M=np.tile([0.01, 0.01, 0.01, 0.001], (11, 1)))
+
+
+def test_phloem_factor_follows_late_mutation_of_L_Ph():
+    """calibration.py fits by setattr-ing L_Ph onto an already-built model's compound.
+
+    An earlier cut of the trap cached the loading factor in __post_init__, which made
+    those mutations invisible and broke three calibration tests.  Keep it recomputed.
+    """
+    cmpd = api._compound_for("PFOA")
+    model = RiceUptakeModel(env=Environment(), cmpd=cmpd, comps=api._compartments(),
+                            inputs=_tiny_inputs())
+    before = model.phloem_loading_factor()
+    cmpd.L_Ph = before * 10.0
+    assert model.phloem_loading_factor() == pytest.approx(before * 10.0)
+
+
+def test_trap_strength_tracks_the_neutral_pathway_not_lambda():
+    """L_Ph_eff must follow Pi, the permeability-weighted neutral fraction.
+
+    Lambda alone tends to 10**(dpH) even for a permanent anion, so a formulation that
+    multiplied L_Ph by Lambda would hand PFAS a spurious ~6.3x enrichment.  Here a
+    strong acid must collapse back onto the bare carrier value instead.
+    """
+    weak = api.simulate_neutral(2.0, pKa=6.0, L_Ph=1e-3, n_t=121)
+    mid = api.simulate_neutral(2.0, pKa=4.0, L_Ph=1e-3, n_t=121)
+    strong = api.simulate_neutral(2.0, pKa=-3.0, L_Ph=1e-3, n_t=121)
+    # every case has essentially the same Lambda ...
+    assert strong["ion_trap"]["Lambda"] == pytest.approx(mid["ion_trap"]["Lambda"], rel=1e-3)
+    # ... but only the ones with a real neutral fraction actually load the phloem
+    assert weak["params"]["L_Ph_eff"] > mid["params"]["L_Ph_eff"] > 1.0
+    assert strong["params"]["L_Ph_eff"] == pytest.approx(1e-3, rel=1e-2)
+
+
+def test_trap_raises_the_grain_only_when_loading_is_limiting():
+    """Regime-dependent by construction, and worth pinning: the trap can only help
+    where phloem loading is the bottleneck.  At L_Ph ~ 1 the leaf is already drained,
+    so extra loading capacity buys nothing."""
+    limited_on = api.simulate_neutral(2.0, pKa=4.0, L_Ph=1e-3, n_t=121)
+    limited_off = api.simulate_neutral(2.0, pKa=4.0, L_Ph=1e-3, n_t=121, ion_trap=False)
+    assert limited_on["baf_final"]["grain"] > 3.0 * limited_off["baf_final"]["grain"]
+
+    sat_on = api.simulate_neutral(2.0, pKa=4.0, L_Ph=1.0, n_t=121)
+    sat_off = api.simulate_neutral(2.0, pKa=4.0, L_Ph=1.0, n_t=121, ion_trap=False)
+    assert sat_on["baf_final"]["grain"] == pytest.approx(
+        sat_off["baf_final"]["grain"], rel=0.1)
+
+
+def test_weak_electrolyte_ion_conductance_defaults_to_the_trapp_ratio():
+    """kappa_d = P_n / 10**3.5: the anion is permeable, just ~3000x less so.
+
+    Leaving it at 0 would shut the ionic pathway entirely, which for an acid that is
+    >99% dissociated at soil pH silently removes most of the root uptake.
+    """
+    c = lp.neutral_compound(2.0, pKa=4.0)
+    assert c.kappa_d == pytest.approx(lp.PN_DEFAULT / lp.PN_OVER_PD)
+    assert c.kappa_d > 0.0
+
+
+def test_plant_module_and_literature_params_speciation_agree():
+    """The plant module re-implements H-H locally to avoid a circular import, so pin
+    the two against each other."""
+    from pfas_rice_plant_module_4pool_surf import _ion_trap, _speciation
+    for pKa in (-3.0, 0.5, 4.0, 7.0, 10.0):
+        for is_acid in (True, False):
+            assert _speciation(pKa, 6.5, is_acid) == pytest.approx(
+                tuple(float(x) for x in lp.speciation(pKa, 6.5, is_acid)))
+            assert _ion_trap(pKa, 7.2, 8.0, is_acid) == pytest.approx(
+                lp.ion_trap_factor(pKa, 7.2, 8.0, is_acid))
 
 
 def test_metabolism_hook_reduces_tissue_concentration():

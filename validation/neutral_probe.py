@@ -178,11 +178,42 @@ def briggs_rcf_comparison():
     print()
 
 
+def phloem_trap_regimes():
+    """Phase 1.5: where the pH trap actually changes the answer, and where it cannot."""
+    print("=" * 78)
+    print("5. PHLOEM TRAP IN THE ODE  --  L_Ph_eff and the loading-limited regime")
+    print("=" * 78)
+    print("  pKa 4 weak acid, log K_ow 2.0.  'off' = leaf pH unset, so the carrier")
+    print("  value L_Ph is used unchanged.\n")
+    print(f"{'L_Ph base':>10} {'L_Ph_eff':>9} | {'leaf off':>9} {'leaf on':>8} | "
+          f"{'grain off':>10} {'grain on':>9} {'trap':>7}")
+    for lph in (1e-4, 1e-3, 1e-2, 1e-1, 1.0):
+        on = api.simulate_neutral(2.0, pKa=4.0, L_Ph=lph, n_t=121)
+        off = api.simulate_neutral(2.0, pKa=4.0, L_Ph=lph, n_t=121, ion_trap=False)
+        g_on, g_off = on["baf_final"]["grain"], off["baf_final"]["grain"]
+        print(f"{lph:10.0e} {on['params']['L_Ph_eff']:9.4f} | "
+              f"{off['baf_final']['leaf']:9.3f} {on['baf_final']['leaf']:8.3f} | "
+              f"{g_off:10.5f} {g_on:9.4f} {g_on / max(g_off, 1e-30):6.1f}x")
+    print("\n  The trap only helps where phloem LOADING is the bottleneck.  Once L_Ph")
+    print("  approaches 1 the leaf is already drained (leaf BAF collapses), so extra")
+    print("  loading capacity buys nothing -- the grain becomes leaf-SUPPLY limited.")
+    print("  PFAS sits in the loading-limited regime (fitted L_Ph 1e-5..0.06), which is")
+    print("  exactly why a Lambda-multiplied L_Ph would have been so damaging there.")
+
+    strong = api.simulate_neutral(2.0, pKa=-3.0, L_Ph=1e-3, n_t=121)
+    print(f"\n  Permanent-anion check: pKa=-3 gives L_Ph_eff="
+          f"{strong['params']['L_Ph_eff']:.6f} vs the bare carrier 1e-3 -- unchanged,")
+    print("  even though its Lambda is still 6.31.")
+    assert abs(strong["params"]["L_Ph_eff"] - 1e-3) / 1e-3 < 0.02
+    print()
+
+
 def main():
     speciation_limits()
     ion_trap()
     kow_sweep()
     briggs_rcf_comparison()
+    phloem_trap_regimes()
     print("=" * 78)
     print("ALL STRUCTURAL CHECKS PASSED")
     print("Reminder: structural verification against theory, NOT validation against")

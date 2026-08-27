@@ -61,7 +61,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from pfas_rice_plant_module import Compound, Environment
+from pfas_rice_plant_module import Compound, Environment, P_N_OVER_P_D
 
 # ---------------------------------------------------------------------------
 # references (mirrors docs/literature_db Source_Shortlist; status per database)
@@ -222,7 +222,8 @@ BRIGGS_B = 0.77          # K_ow exponent [-]                             (Briggs
 TSCF_MAX = 0.784         # bell height [-]                               (Briggs 1982)
 TSCF_LOGKOW_OPT = 1.78   # bell centre in log K_ow [-]
 TSCF_WIDTH = 2.44        # bell width  [-]
-PN_OVER_PD = 10.0 ** 3.5  # neutral / ion membrane permeability ratio     (Trapp 2000)
+PN_OVER_PD = P_N_OVER_P_D  # neutral / ion membrane permeability ratio    (Trapp 2000)
+                           # single definition lives in the plant module (the ODE uses it)
 
 # Default neutral root conductance a_R*P_n [L/(day kg)].  The DPU base has NO root
 # membrane resistance at all (root uptake is an external boundary condition and K_PW
@@ -660,7 +661,7 @@ def neutral_compound(logKow: float, *, name: str | None = None,
                      pH: float = PADDY_PH, z: int | None = None,
                      P_n: float = PN_DEFAULT, L_Ph: float = 1.0,
                      f_xy: float | None = None,
-                     kappa_d: float = 0.0, Vmax_in: float = 0.0, Km_in: float = 5.0,
+                     kappa_d: float | None = None, Vmax_in: float = 0.0, Km_in: float = 5.0,
                      Vmax_out: float = 0.0, Km_out: float = 5.0,
                      K_AW: float = 0.0) -> Compound:
     """Build a :class:`Compound` for a NEUTRAL organic or a WEAK ELECTROLYTE.
@@ -676,9 +677,16 @@ def neutral_compound(logKow: float, *, name: str | None = None,
     come from :func:`speciation` at the SOIL pH, both membrane pathways run in
     parallel, and the valence defaults to -1 for an acid / +1 for a base.
 
+    ``kappa_d`` (the ION's conductance) defaults to the Trapp relation
+    ``P_n / 10**3.5``, so a weak electrolyte's anion is permeable but ~3000x less so
+    than its neutral form.  Leaving it at 0 would wrongly shut the ionic pathway
+    completely.  It is irrelevant for a strictly neutral compound, where f_d = 0.
+
     Note the carrier is OFF by default (``Vmax=0``): active PFAS transporters exist
     to overcome anion exclusion, which a neutral molecule does not face.
     """
+    if kappa_d is None:
+        kappa_d = P_n / PN_OVER_PD
     if pKa is None:
         fn, fd = 1.0, 0.0
     else:

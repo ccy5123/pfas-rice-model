@@ -18,7 +18,8 @@ _ROOT = os.path.dirname(_HERE)
 
 from pfas_rice_plant_module_4pool_surf import (
     Environment, Compound, Compartment, RiceUptakeModel, PlantInputs,
-    binding_factors, root_uptake, _logistic, ROOT, STEM, LEAF, FRUIT)
+    binding_factors, root_uptake, _logistic, ROOT, STEM, LEAF, FRUIT,
+    LEAF_CYTOSOL_PH, PHLOEM_PH)
 import forcing_rice as fr
 import growth_rice as gr
 from soil_paddy import FreundlichSoil
@@ -347,14 +348,15 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
 
 
 def _solve_and_package(cmpd, comps, env, inputs, t, Cwo_series, Qtp, M, season,
-                       label, params):
+                       label, params, phloem_pH=PHLOEM_PH):
     """Integrate the 4-compartment ODE and build the standard result dict.
 
     Extracted verbatim from ``simulate`` so the neutral/weak-electrolyte entry point
     (:func:`simulate_neutral`) returns exactly the same shape, computed by exactly the
     same code, rather than a parallel copy that could drift.
     """
-    model = RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs)
+    model = RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs,
+                            phloem_pH=phloem_pH)
     sol = model.solve(t)
     C = sol.y                                            # (4, n_t)
     Mf = inputs.M_(t[-1])
@@ -390,19 +392,29 @@ def _solve_and_package(cmpd, comps, env, inputs, t, Cwo_series, Qtp, M, season,
 TISSUE_TOTAL_LIPID_DW = {"root": 0.020, "stem": 0.015, "leaf": 0.055, "grain": 0.030}
 
 
-def _compartments_neutral(f_lip=None):
-    """`_compartments()` plus the TOTAL-lipid fraction the Briggs term needs."""
+# Trapp cell-model compartment pH.  Only the leaf value is read today (it is the
+# SOURCE of phloem loading, whose sink is the alkaline sieve tube); the others are
+# carried so the weak-electrolyte speciation can be made per-compartment later.
+TISSUE_PH = {"root": 5.5, "stem": 5.5, "leaf": LEAF_CYTOSOL_PH, "grain": 5.5}
+
+
+def _compartments_neutral(f_lip=None, pH=None):
+    """`_compartments()` plus the TOTAL-lipid fraction the Briggs term needs, and the
+    compartment pH the weak-electrolyte ion trap needs."""
     fl = dict(TISSUE_TOTAL_LIPID_DW) | dict(f_lip or {})
+    ph = dict(TISSUE_PH) | dict(pH or {})
     comps = _compartments()
     for cmp_ in comps:
         cmp_.f_lip = float(fl[cmp_.name])
+        cmp_.pH = float(ph[cmp_.name])
     return comps
 
 
 def simulate_neutral(logKow, *, name=None, pKa=None, is_acid=True, Cwo=1.0,
                      E_m_mV=-120.0, P_n=None, L_Ph=1.0, f_xy=None, f_lip=None,
                      gamma=0.0, season=120.0, n_t=241, measured_forcing=True,
-                     biomass="oryza", drivers=None, soil_pH=None):
+                     biomass="oryza", drivers=None, soil_pH=None, tissue_pH=None,
+                     phloem_pH=PHLOEM_PH, ion_trap=True):
     """Run the 4-compartment ODE for a NEUTRAL organic or a WEAK ELECTROLYTE.
 
     The DPU-base counterpart of :func:`simulate`: binding comes from the Briggs
@@ -442,18 +454,29 @@ def simulate_neutral(logKow, *, name=None, pKa=None, is_acid=True, Cwo=1.0,
         pH=lp.PADDY_PH if soil_pH is None else soil_pH,
         P_n=lp.PN_DEFAULT if P_n is None else float(P_n),
         L_Ph=L_Ph, f_xy=f_xy)
-    comps = _compartments_neutral(f_lip)
+    comps = _compartments_neutral(f_lip, tissue_pH)
+    if not ion_trap:                         # isolate the trap's contribution
+        for cmp_ in comps:
+            cmp_.pH = None
     for cmp_ in comps:                       # neutral organics ARE metabolised
         cmp_.gamma = float(gamma)
     env = Environment(E=E_m_mV / 1000.0)
     res = _solve_and_package(
         cmpd, comps, env, inputs, t, Cwo_series, Qtp, M, season,
-        cmpd.name,
+        cmpd.name, phloem_pH=phloem_pH,
         params=dict(logKow=float(logKow), pKa=pKa, is_acid=bool(is_acid),
                     fn=float(cmpd.fn), fd=float(cmpd.fd), z=cmpd.z,
                     K_lip=float(cmpd.K_lip), P_n=float(cmpd.P_n),
                     f_xy=float(cmpd.f_xy), L_Ph=float(cmpd.L_Ph), gamma=float(gamma),
                     f_lip={c.name: float(c.f_lip) for c in comps}))
+    res["params"]["L_Ph_eff"] = float(
+        RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs,
+                        phloem_pH=phloem_pH).phloem_loading_factor())
+    if pKa is not None:
+        res["ion_trap"] = dict(
+            Lambda=lp.ion_trap_factor(pKa, comps[LEAF].pH or lp.PADDY_PH, phloem_pH, is_acid),
+            Pi=lp.neutral_pathway_ratio(pKa, comps[LEAF].pH or lp.PADDY_PH, is_acid),
+            active=comps[LEAF].pH is not None)
     res["briggs"] = dict(tscf=lp.briggs_tscf(logKow), rcf=lp.briggs_rcf(logKow),
                          K_lip=lp.briggs_klip(logKow))
     return res

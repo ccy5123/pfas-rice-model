@@ -1,6 +1,6 @@
 # 중성 유기화합물(neutral) + 약전해질(weak electrolyte) 확장 — 설계 문서
 
-> 상태: **Phase 1 구현 완료 (P1 DONE)** · rev.3 · 브랜치 `claude/neutral-organic-compound-tutphi`
+> 상태: **Phase 1 + 1.5 구현 완료** · rev.4 · 브랜치 `claude/neutral-organic-compound-tutphi`
 > 실행: `python validation/neutral_probe.py` · `pytest tests/test_neutral.py`
 > API: `model_api.simulate_neutral(logKow, pKa=None, ...)` → `simulate()`와 동일한 dict
 > 선행 문서: `docs/dpu_model_summary_corrected.tex` (중성 DPU 원본),
@@ -214,6 +214,7 @@ return j_n + j_ed + j_carr
 `tests/test_neutral.py`가 골든 BAF 값으로 이를 assert 한다.
 **Phase 1 검증 결과**: 변경 전/후 코드를 각각 실행해 14개 시나리오 140개 float를
 **정확한 `==`로 비교 → 전부 일치**. RMSE 0.029 유지, 전체 **204 passed, 2 skipped**.
+**Phase 1.5 재검증**: 동일 비교 재실행 → 여전히 비트 동일. 전체 **210 passed, 2 skipped**.
 
 ### D9 (신규, Phase 1). `P_n` 기본값 = **1000** — 빠른 교환(평형) 극한
 DPU base에는 뿌리 막 저항이 **아예 없고**($\dot q_\mathrm{up}$이 외부 BC, $K_{PW}$는 즉시 분배),
@@ -319,12 +320,46 @@ $P_n$은 **속도**이므로 낮추면 도달 속도만 느려지고 평형 목�
 - [ ] **R6 민감도**: 잎 `f_lip` 0.04/0.055/0.07 스윕에서 straw 피크 위치가 ±0.5 log 이내로 안정
 - [ ] **알려진 한계 명시**: 낟알 과대(§3-4) — Phase 1.5/2 전까지 grain 결과는 보고하지 않음
 
-### Phase 1.5
+### Phase 1.5 — **DONE**
 - [x] ~~$pK_a \le 0$에서 $\Lambda\to1$~~ — **틀린 기준. §5.1 정정 참조** ($\Lambda\to10^{\Delta pH}$)
-- [ ] 체관 적재 컨덕턴스를 $f_n$에 비례시켜, PFAS($f_n\approx0$)에서 트랩 기여가 $<10^{-6}$로 소거
-- [ ] $pK_a=4$ 약산에서 체관 농축 $\Lambda\approx6.3$ 재현
-- [ ] PFAS 결과 불변 (RMSE 0.029, 골든값)
-- [ ] pH 민감도: $pH_\mathrm{ph}$ 8.0→7.5에서 grain BAF가 단조 감소
+- [x] 트랩 기여를 $\Pi=\frac{P_nf_n}{P_df_d}$ 게이트로 가중 →
+      $L_{Ph}^\mathrm{eff}=(1-w)L_{Ph}+w\Lambda$, $w=\Pi/(1+\Pi)$
+- [x] **PFAS는 구조적으로 소거**: `pKa`와 잎 `pH`가 **둘 다** 있어야 트랩이 켜지고,
+      `simulate()`는 어느 쪽도 주지 않는다 ⇒ 수치적 우연이 아니라 **보증**
+- [x] $pK_a=4$ 약산에서 $\Lambda=6.31$ 재현, 강산($pK_a=-3$)은 $L_{Ph}$ 그대로
+- [x] PFAS 결과 불변 (RMSE 0.029, 골든값, 비트 동일 재확인)
+- [x] $\kappa_d$ 기본값을 Trapp 관계식 $P_n/10^{3.5}$로 배선 (§7.1 발견 ②)
+- [ ] pH 민감도 스윕 — Phase 2로 이월 (grain을 보고 가능하게 된 뒤)
+
+### 7.1 Phase 1.5 구현 중 발견 3건
+
+**① 트랩 효과는 영역 의존적이다 (설계 예측 밖).**
+$L_{Ph}^\mathrm{eff}$를 4.2로 올려도 grain이 안 움직이는 구간이 있어 분리 실험을 했다
+(`validation/neutral_probe.py` §5, $pK_a$ 4 · $\log K_{ow}$ 2.0):
+
+| 기저 $L_{Ph}$ | $L_{Ph}^\mathrm{eff}$ | leaf(off→on) | grain(off→on) | 트랩 효과 |
+|---|---|---|---|---|
+| 1e-4 | 4.20 | 65.3 → 0.28 | 3.33 → 24.4 | **7.3×** |
+| 1e-3 | 4.20 | 63.2 → 0.28 | 3.99 → 24.4 | **6.1×** |
+| 1e-2 | 4.20 | 46.5 → 0.28 | 9.33 → 24.4 | **2.6×** |
+| 1e-1 | 4.23 | 9.8 → 0.28 | 22.5 → 24.4 | 1.1× |
+| 1.0 | 4.53 | 1.17 → 0.26 | 25.3 → 24.3 | 1.0× |
+
+⇒ **트랩은 체관 *적재*가 병목일 때만 작동**한다. $L_{Ph}\to1$이면 잎이 이미 완전히 비워져
+(leaf BAF 65→0.28) 추가 적재 용량이 무의미해지고, grain은 **잎 *공급* 한계**로 넘어간다.
+PFAS의 피팅된 $L_{Ph}$는 1e-5~0.06 = **적재 한계 영역**이므로, $\Lambda$를 그냥 곱하는
+설계였다면 바로 그 영역에서 최대 피해를 냈을 것이다.
+
+**② `kappa_d=0`이 약산의 이온 경로를 통째로 막고 있었다.**
+`neutral_compound`의 초기 기본값 `kappa_d=0`은 중성($f_d=0$)에는 무해하지만, 토양 pH 6.5에서
+99.7%가 음이온인 $pK_a$ 4 약산에서는 **뿌리 흡수의 대부분을 조용히 삭제**한다.
+문서화만 해두고 배선하지 않았던 Trapp 관계식 $P_d=P_n\cdot10^{-3.5}$을 실제 기본값으로 넣었다.
+
+**③ 캐싱이 `calibration.py`를 깨뜨렸다 (기존 테스트가 검출).**
+$L_{Ph}^\mathrm{eff}$를 `__post_init__`에 캐시했더니 `calibration.py:89`의
+`setattr(model.cmpd, "L_Ph", …)`(이미 만들어진 model에 값을 주입해 피팅)가 무시되어
+캘리브레이션 테스트 3개가 실패했다. RHS마다 재계산하도록 되돌렸다(PFAS 분기는 속성 검사 1회).
+`test_phloem_factor_follows_late_mutation_of_L_Ph`로 고정.
 
 ### Phase 2
 포팅할 식 (DPU 원본 §5.4–5.8):
@@ -575,7 +610,10 @@ assert abs(root_uptake(2.0, 0.5, c0, Environment(z=0)) - 1.5) < 1e-12   # 순수
       `/koc_neutral/neutral_compound/f_lip_from_fresh_weight`;
       `model_api.simulate_neutral` + `_solve_and_package` 추출;
       `validation/neutral_probe.py`; `tests/test_neutral.py` 16개)
-- [ ] **P1.5** 약전해질 완성 (체관 적재를 $f_n$ 비례로 — §5.1 정정 반영) ← *다음*
+- [x] **P1.5** 약전해질 완성 — **DONE** (체관 트랩을 $\Pi$ 게이트로; `RiceUptakeModel.
+      phloem_loading_factor()`, `simulate_neutral(ion_trap=…, phloem_pH=…, tissue_pH=…)`,
+      `Compartment.pH`, 테스트 21→26개). 발견 3건은 §7.1.
+- [ ] **P2** 기체 교환 (§7 Phase 2) ← *다음*
 - [ ] **P2** 기체 교환 + 단위 테스트
 - [ ] **P3** 토양 $K_{oc}$ · SMILES · app 통합
 - [ ] **P4** 검증 데이터 문헌 조사 (§8.2) — 병행 가능
