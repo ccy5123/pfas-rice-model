@@ -34,7 +34,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── CLAUDE.md  README.md  requirements.txt  requirements-app.txt
 ├── reproduce_demo.py                 # entry point: Yamazaki BAF via full ODE (W2 fit)
 ├── build_parameters.py               # (re)assembles params/parameters.json from source tables
-├── app.py                            # Streamlit visualization tool (plant/soil map + 4 input modes)
+├── app.py                            # Streamlit assembler (41 lines) -> ui/ package
+├── ui/                               # the Streamlit app, split: __init__/common/sidebar/simple/expert/i18n
+│                                     #   simple = general-audience Korean (PFAS only); expert = full research EN
 ├── src/
 │   ├── pfas_rice_plant_module_4pool.py       # basis-A 4-compartment ODE (CANONICAL core)
 │   ├── pfas_rice_plant_module_4pool_surf.py  #  + K_surf (Fe/Mn-plaque dead-end pool)
@@ -67,7 +69,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (173 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse
+└── tests/                            # pytest (239 passed, 2 skipped): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, neutral(+phase3)
 
 ```
 
@@ -661,7 +663,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `test_plots.py::test_plain_figures_korean_variant` (English defaults still asserted); verified with headless Streamlit
   + Playwright screenshots of the Korean Simple landing and the English Expert UI.
 - **NEUTRAL organics + WEAK ELECTROLYTES — the DPU base switched back on (branch
-  `claude/neutral-organic-compound-tutphi`, PR #54; Phases 1/1.5/2 DONE, Phase 3 open)**: the core was the
+  `claude/neutral-organic-compound-tutphi`, PR #54; Phases 1/1.5/2/3 DONE — only the P4 literature
+  search remains)**: the core was the
   IOC/PFAS *extension* of the neutral Trapp/Brunetti DPU base, and the neutral terms had been switched OFF,
   not removed — so the model now covers the whole speciation spectrum without a new module.
   **`model_api.simulate_neutral(logKow, pKa=None, K_AW=…, air=…)`** returns the SAME dict shape as `simulate()`.
@@ -676,8 +679,12 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `K_AW>0`). New `literature_params` helpers: `speciation`, `ion_trap_factor`, `neutral_pathway_ratio`,
   `briggs_klip/rcf/tscf`, `koc_neutral`, `neutral_compound`, `f_lip_from_fresh_weight`.
   **PFAS is BIT-IDENTICAL** — verified each phase by running the pre-change checkout alongside and comparing
-  140 floats across 14 scenarios under exact `==` (not `allclose`); `reproduce_demo` stays at RMSE **0.029**;
-  suite 188 → **216 passed, 2 skipped**. `validation/neutral_probe.py`, `tests/test_neutral.py` (28).
+  **172 floats across 20 scenarios under exact `==`** (not `allclose` — a tolerance would hide exactly the drift
+  this guards). The harness is now COMMITTED as **`validation/pfas_bit_identity.py`** (it used to be rewritten
+  from scratch every session): `git archive <commit> | tar -x -C /tmp/base && python
+  validation/pfas_bit_identity.py /tmp/base` (exit 0 = identical). `reproduce_demo` stays at RMSE **0.029**;
+  suite 188 → 216 → **239 passed, 2 skipped**. `validation/neutral_probe.py`, `tests/test_neutral.py` (28),
+  `tests/test_neutral_phase3.py` (23).
   **Five design claims were REFUTED during implementation** (see `docs/HANDOFF_neutral_extension.md` §4 —
   do not re-introduce them): (a) "neutral = `z=0`" is wrong; (b) the ion trap's PFAS limit is `Λ→10^ΔpH`=6.31,
   NOT 1 — it switches off *kinetically* (`f_n→0`), and the deciding quantity is `P_n·f_n/(P_d·f_d)`, ~2 for a
@@ -691,6 +698,37 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `K_AW`=1e-2), so grain is reportable for volatile compounds — but a NON-volatile neutral's grain is still
   unbounded (metabolism `γ` is its only sink). Honest limit: `docs/literature_db/` has **no per-organ neutral
   time series for rice**, so this is structural verification against theory, NOT predictive validation.
+  **Phase 3 — peripheral integration (this session; adds NO physics, only wiring)**: (1) **soil Koc branch** —
+  `koc_neutral` (Karickhoff `0.41·Kow`) existed but nothing called it; `paddy_kd`/`inputs_from_hydrus`/
+  `hydrus_drivers`/`default_k_leach`/`cwo_profile_series` now take `logKow=` and `simulate_neutral` gained the
+  same `cwo_profile=` switch as `simulate`, so a polar neutral LEACHES (`k_leach` 0.034 at logKow 1, decline
+  ratio 0.04) and a hydrophobic one stays BUFFERED (`k_leach` 0 at logKow 6, ratio 1.00) — the same physics
+  chain length drives on the PFAS side. CAVEAT: `params/cwo_kleach.csv` is a PFAS-only HYDRUS calibration, so
+  neutrals reuse only its `k_leach(log10 Koc)` REGRESSION and EXTRAPOLATE outside the PFAS Koc range (direction
+  meaningful, rate provisional). (2) **SMILES branch** — `Descriptors.compound_class` requires a strong-acid head
+  **AND** a perfluorinated backbone: the head group alone is not enough, since **2,4-D parses as 'carboxylate'
+  with ZERO perfluorinated C** and is an ordinary weak acid. Below that switch, `neutral_compound_from_smiles`
+  (Crippen `MolLogP` → Briggs) + `compound_from_smiles_auto`, and `simulate_from_smiles` DISPATCHES on class
+  instead of flagging neutrals as an assumption violation with nowhere to go. The neutral branch is the EASIER
+  of the two — every neutral parameter is a function of one descriptor (`log Kow`) that RDKit estimates directly,
+  which has no PFAS analogue (a PFAS `Kow` is not well defined, hence read-across + fragment QSPR there) — but
+  the cost is that the SAME number drives `K_lip`, TSCF and `Koc` together, so a Crippen estimate propagates
+  everywhere → `provisional=True`; a measured `logKow=` clears it. `pKa` is NOT predicted (no reliable RDKit
+  model), so an unsupplied pKa means "treated as neutral", stated rather than guessed. (3) **app** — Expert
+  sidebar §2 is now "Compound" with a class radio (PFAS / neutral / weak electrolyte; logKow slider or SMILES,
+  `pKa`+acid/base, `K_AW`); **Simple (Korean, general-audience) stays PFAS-only** because the neutral branch has
+  no rice data to stand behind a plain-language number. Four PFAS-only spots handled: the header's `p['n_C']`/
+  `p['group']`, the `eᴺ` card (meaningless at `f_d=0` where GHK is identically zero → shows `f_n`; returns to
+  `eᴺ` for a weak electrolyte whose ionic pathway IS live), and the chain-length / compare / Bayesian-inverse
+  tabs, which explain themselves rather than render something wrong (guards must be `if/else`, NOT `st.stop()`,
+  which halts the whole page since tabs render eagerly). **Side effect — do not revert**: a perfluoroalkyl
+  **sulfonamide (FOSA) now classifies as `organic`** (pKa ~6, genuinely not a permanent anion; the old code said
+  so in a note yet ran it on the PFAS branch anyway). Verified with headless Streamlit + Playwright across
+  Simple / Expert-PFAS / neutral / weak-electrolyte (weak acid at pKa 4.5 reads `f_n` 0.010 / `f_d` 0.990 /
+  `z` −1, root BAF 1.39 → 0.79 as anion exclusion bites). **Remaining: only P4** — find per-organ neutral/weak-
+  electrolyte time series for RICE (pesticide-residue trials, paddy herbicide uptake, wastewater-reuse
+  pharmaceutical studies — weak electrolytes may have more data); without it the neutral branch stays
+  structural verification FOREVER.
   Docs: `docs/NEUTRAL_DPU_EXTENSION_DESIGN_KR.md` (design + corrections), `docs/HANDOFF_neutral_extension.md`.
 
 ## 7. Build & run
@@ -760,11 +798,22 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   exchange incl. the ρ-cancellation). In code: `model_api.simulate_neutral(2.0)` for a neutral,
   `simulate_neutral(2.0, pKa=4.0)` for a weak acid, `simulate_neutral(2.0, K_AW=1e-2)` for a
   volatile one. PFAS is unaffected — every added field defaults to the value that kills its term.
+  **Phase 3 entry points**: `simulate_neutral(3.0, cwo_profile="flooded")` runs the neutral soil-Koc
+  exposure shape (Karickhoff, engine-free); `model_api.simulate_from_smiles("CCNc1nc(Cl)nc(NC(C)C)n1")`
+  dispatches a structure to the right branch by `pfas_structure.Descriptors.compound_class` (add
+  `logKow=` to replace the Crippen estimate and clear `provisional`, `pKa=` for a weak electrolyte);
+  in the app, Expert sidebar §2 "Compound" → the class radio (Simple mode is PFAS-only).
+- **PFAS bit-identity guard** (the extension's TOP invariant — run it after ANY change that touches
+  the shared ODE/params path): `mkdir -p /tmp/base && git archive <commit> | tar -x -C /tmp/base &&
+  python validation/pfas_bit_identity.py /tmp/base`. Exit 0 = identical. It runs 20 scenarios /
+  172 floats through `simulate()` in BOTH checkouts (subprocess each, since the module names collide)
+  and compares under exact `==` — deliberately NOT `np.allclose`, because a tolerance hides exactly
+  the drift this is for.
 - Calibration: `python src/calibration.py`; Literature params: `python src/literature_params.py`.
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (173 collected, all pass with the full stack — RDKit + the built
+- Tests: `pip install pytest && pytest` (239 passed, 2 skipped with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
   module additionally skips unless `sci-adk` is installed, which CI's `rigor.yml` provides). On a bare
   clone the structure/SMILES tests skip without RDKit and the HYDRUS-engine tests in `test_soil_hydrus.py`

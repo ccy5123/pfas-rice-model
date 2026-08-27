@@ -1,15 +1,16 @@
-# 인수인계 — 중성/약전해질 확장 (Phase 3부터)
+# 인수인계 — 중성/약전해질 확장 (Phase 1–3 완료, P4부터)
 
 > 브랜치 `claude/neutral-organic-compound-tutphi` · PR #54 (draft)
 > 설계 문서: `docs/NEUTRAL_DPU_EXTENSION_DESIGN_KR.md` (rev.5)
-> **Phase 1 / 1.5 / 2 완료 · Phase 3 미착수**
+> **Phase 1 / 1.5 / 2 / 3 완료 · 남은 것은 P4(문헌 조사)뿐**
 
 ---
 
 ## 1. 한 줄 상태
 
-모델이 **PFAS 전용(영구 음이온)에서 화학종 스펙트럼 전체**로 확장됐다. 새 모듈을 만들지 않고
-중성 DPU 항들을 **다시 켜는** 방식이라, PFAS 경로는 **비트 단위로 불변**이다.
+모델이 **PFAS 전용(영구 음이온)에서 화학종 스펙트럼 전체**로 확장됐고(phase 1–2), 이제 그 확장이
+**토양(Koc) · 구조(SMILES) · app** 경로에까지 연결됐다(phase 3). 새 모듈을 만들지 않고 중성 DPU
+항들을 **다시 켜는** 방식이라, PFAS 경로는 **비트 단위로 불변**이다(20 시나리오 × 172 float, 정확 `==`).
 
 $$\underbrace{f_n=1,\;f_d=0}_{\text{중성}}\;\longleftrightarrow\;
 \underbrace{0<f_n<1}_{\text{약산/약염기}}\;\longleftrightarrow\;
@@ -25,19 +26,20 @@ $$\underbrace{f_n=1,\;f_d=0}_{\text{중성}}\;\longleftrightarrow\;
 방법 (다음 세션에서도 그대로 재사용할 것):
 
 ```bash
-SP=/tmp/scratch                     # 아무 임시 경로
-mkdir -p $SP/base && git archive <이전_커밋> | tar -x -C $SP/base
-python $SP/bitcmp.py $SP/base /home/user/pfas-rice-model
+mkdir -p /tmp/base && git archive <이전_커밋> | tar -x -C /tmp/base
+python validation/pfas_bit_identity.py /tmp/base        # 종료코드 0 = 동일
 ```
 
-`bitcmp.py`는 두 체크아웃에서 각각 `model_api.simulate()`를 돌려
-**14개 시나리오 × 140개 float**(4종 congener × 3개 `f_xy_source`, lipid_loading, flooded profile;
-BAF·straw·B_k·N·eN)를 `==`로 비교한다. 스크립트는 커밋돼 있지 않으므로 필요하면 재작성한다
-(로직은 단순: 두 경로에서 같은 러너를 subprocess로 실행 → JSON → 정확 비교).
+**스크립트는 이제 커밋돼 있다** — `validation/pfas_bit_identity.py` (phase 3에서 추가).
+매 세션 재작성하던 것을 레포에 넣었으므로 "방법을 기억"할 필요가 없다. 두 체크아웃에서 각각
+`model_api.simulate()`를 subprocess로 돌려 **20개 시나리오 × 172개 float**(4종 congener ×
+3개 `f_xy_source` + lipid_loading + flooded profile; BAF·straw·B_k·N·eN)를 `==`로 비교한다.
+`np.allclose`가 아닌 이유: 허용오차는 이 가드가 잡아야 할 바로 그 종류의 drift(합 순서 변경,
+0을 더했다 빼기, 기본값 변경)를 숨긴다.
 
 **추가 가드**
 - `python reproduce_demo.py` → log10 RMSE **0.029** (변하면 안 됨)
-- `pytest` 전체 → **216 passed, 2 skipped** (착수 시점 188에서 +28)
+- `pytest` 전체 → **239 passed, 2 skipped** (phase 3 기준선 216에서 +23)
 - `tests/test_neutral.py`의 `GOLDEN_PFAS` — 확장 이전에 뽑아 고정한 BAF 값
 
 ---
@@ -49,6 +51,7 @@ BAF·straw·B_k·N·eN)를 `==`로 비교한다. 스크립트는 커밋돼 있�
 | 1 | speciation + 중성 코어 (Briggs 결합/TSCF, $P_n$ Fick 투과) | `model_api.simulate_neutral(logKow, ...)` |
 | 1.5 | 약전해질 체관 이온트랩 | `simulate_neutral(pKa=…, ion_trap=…, phloem_pH=…)` |
 | 2 | 식물–대기 교환 (흡수/휘발/침적) | `simulate_neutral(K_AW=…, air=AirInputs(...))` |
+| 3 | 주변부 통합 (토양 Koc 분기 · SMILES 분기 · app 화합물종류 선택) | `simulate_neutral(cwo_profile=…)` · `simulate_from_smiles()` · Expert 사이드바 |
 
 **핵심 구조 (`src/pfas_rice_plant_module_4pool_surf.py`)**
 
@@ -59,7 +62,14 @@ BAF·straw·B_k·N·eN)를 `==`로 비교한다. 스크립트는 커밋돼 있�
 - `air_exchange()` — `K_AW > 0` 게이트.
 
 **신규 API/파일**
-- `model_api.simulate_neutral()` → `simulate()`와 **동일한 dict 모양**
+- `model_api.simulate_neutral()` → `simulate()`와 **동일한 dict 모양** (phase 3: `cwo_profile=`/`cwo_kw=`)
+- `model_api.simulate_from_smiles(..., compound_class=, logKow=, pKa=)` → 클래스 자동 분기
+- `pfas_structure`: `Descriptors.compound_class`/`.logKow_crippen`,
+  `neutral_compound_from_smiles()`, `compound_from_smiles_auto()`
+- `soil_hydrus.paddy_kd(logKow=)` / `inputs_from_hydrus(logKow=)`,
+  `model_api.hydrus_drivers(logKow=)` / `default_k_leach(logKow=)` / `cwo_profile_series(logKow=)`
+- `validation/pfas_bit_identity.py` — 커밋된 비트 동일성 가드 (§2)
+- `tests/test_neutral_phase3.py` — 23개 (dispatch + direction + UI 계약)
 - `literature_params`: `speciation`, `ion_trap_factor`, `neutral_pathway_ratio`,
   `briggs_klip/rcf/tscf`, `koc_neutral`, `neutral_compound`, `f_lip_from_fresh_weight`
 - `validation/neutral_probe.py` — 구조 검증 6블록 (실행하면 전부 assert)
@@ -88,24 +98,69 @@ BAF·straw·B_k·N·eN)를 `==`로 비교한다. 스크립트는 커밋돼 있�
 
 ---
 
-## 5. 남은 작업 — Phase 3 (다음 세션의 시작점)
+## 5. Phase 3 완료 (이 세션) · 남은 작업
 
-설계 문서 §6 "Phase 3 — 주변부 통합"이 그대로 To-Do다.
+설계 문서 §6 "Phase 3 — 주변부 통합" 3항목 **전부 완료**. Phase 3은 **물리를 추가하지 않는다** —
+phase 1–2가 만들어 둔 중성 파라미터화를, 아직 PFAS 전용이던 세 경로에 **연결**했을 뿐이다.
 
-1. **토양 $K_{oc}$ 중성 분기**
-   `literature_params.koc_neutral()` (Karickhoff $K_{oc}=0.41K_{ow}$)은 **이미 구현돼 있으나
-   `soil_hydrus`/`cwo_profile`에 배선되지 않았다.** 현재 그 경로들은 PFAS 사슬길이 QSPR 전용이다.
-   - `params/cwo_kleach.csv`(HYDRUS 보정)도 PFAS 13종 전용 → 중성은 $K_{oc}$ 회귀 fallback 필요.
-   - 검증: `simulate_neutral(cwo_profile="flooded")`이 성립하는가.
-2. **SMILES 경로**
-   `src/pfas_structure.py:213`이 지금은 중성종을 "가정 위반"으로 **flag만** 한다.
-   그 자리에 중성/약전해질 분기를 넣는다. RDKit `Crippen.MolLogP`가 $\log K_{ow}$를 바로 주므로
-   **PFAS보다 오히려 쉽다**(PFAS는 $K_{ow}$가 정의부터 애매해 read-across/QSPR을 따로 만들어야 했다).
-   `pKa`는 예측이 어려우므로 사용자 입력 또는 미지정(중성 취급)으로.
-3. **app 통합** — Expert 모드에 화합물 종류(PFAS/중성/약전해질) 선택.
-4. **P4 (병행 가능) — 검증 데이터 문헌 조사**: §6 참조.
+### 5.1 토양 $K_{oc}$ 중성 분기 ✅
+`koc_neutral`(Karickhoff $0.41K_{ow}$)은 구현돼 있었으나 **아무도 호출하지 않았다**.
+`paddy_kd` · `inputs_from_hydrus` · `hydrus_drivers` · `default_k_leach` · `cwo_profile_series`가
+`logKow=`를 받아 중성 분기로 가고, `simulate_neutral`은 `simulate`와 **같은 `cwo_profile` 스위치**를 갖는다.
 
----
+노출 형상이 PFAS와 **같은 물리**에서 나온다: 극성 중성물질은 유출되고(logKow 1 → `k_leach` 0.034,
+감소비 0.04) 소수성은 완충된다(logKow 6 → `k_leach` 0, 비 1.00) — PFAS에서 사슬길이가 하는 일 그대로.
+
+> ⚠ **한계**: `params/cwo_kleach.csv`는 **PFAS 13종 전용 HYDRUS 보정**이다. 중성은 그 표가 아니라
+> `k_leach(log10 Koc)` **회귀만** 재사용하므로 PFAS의 Koc 범위 밖에서는 **외삽**이다. **방향**은
+> 의미가 있고 **속도(rate)는 provisional** — docstring에 명시.
+
+### 5.2 SMILES 중성/약전해질 분기 ✅
+`Descriptors.compound_class`가 **강산 머리기 AND 과불소 골격**을 **둘 다** 요구한다.
+머리기만으로는 안 된다 — **2,4-D는 head_group='carboxylate'인데 과불소 탄소가 0개**인 평범한
+약산이라, 머리기 검사만 했다면 영구 음이온으로 잘못 분류했을 것이다.
+
+그 아래로 `neutral_compound_from_smiles`(Crippen `MolLogP` → Briggs)와,
+클래스로 분기하는 `simulate_from_smiles`가 붙었다. 예전에는 중성종을 "가정 위반"으로 **flag만 하고
+갈 곳이 없었다**.
+
+> **중성 쪽이 오히려 쉽다**: 중성 파라미터 전체가 **`log K_ow` 단 하나**의 함수이고 RDKit이 그것을
+> 구조에서 바로 준다. PFAS에는 대응물이 없다($K_{ow}$가 정의부터 애매) — 그래서 PFAS 쪽은
+> read-across + fragment QSPR을 따로 만들어야 했다.
+> **대가**: 같은 숫자 하나가 `K_lip` · TSCF · `K_oc`를 **동시에** 몰기 때문에 Crippen 추정오차가
+> 전부에 전파된다 → `provisional=True`. **측정 logKow를 주면 플래그가 꺼진다.**
+> `pKa`는 **예측하지 않는다**(RDKit에 신뢰할 모델이 없음) → 미지정 = 중성 취급이며, 그 사실을 말한다.
+
+### 5.3 app 화합물 종류 선택 ✅
+Expert 사이드바 §2가 "PFAS compound" → **"Compound"**, 맨 위에 클래스 라디오
+(PFAS / 중성 / 약전해질). 중성 클래스는 logKow(슬라이더 또는 SMILES), 약전해질은 `pKa`+산/염기,
+휘발성은 `K_AW`.
+
+**Simple(일반인·한국어) 모드는 PFAS 전용으로 유지** — 중성 분기는 벼 검증 데이터가 없으므로
+일반인용 평문 수치를 낼 근거가 없다.
+
+중성에서 깨지거나 오해를 부르던 4곳을 처리: 헤더의 `p['n_C']`/`p['group']`(중성 params에 없음),
+$e^N$ 카드(f_d=0이면 GHK 항이 항등적으로 0 → 중성분율 표시, 약전해질에서는 이온 경로가 실제로
+살아 있으므로 $e^N$ 복귀), 그리고 PFAS 전용 탭 3개(chain-length / compare / Bayesian inverse)는
+**잘못된 그림을 그리는 대신 이유를 설명**한다.
+
+> 함정 하나: 그 가드를 `st.stop()`으로 쓰면 **탭이 아니라 페이지 전체가 멈춘다**(탭은 eager 렌더).
+> `if/else`로 쓸 것.
+
+### 5.4 부수 변경 1건 (되돌리지 말 것)
+**퍼플루오로알킬 술폰아미드(FOSA)가 이제 `organic`으로 분류된다.** pKa~6으로 **영구 음이온이 아니고**,
+기존 코드도 노트로는 그렇게 말하면서 **PFAS 분기로 돌리고 있었다** — phase 3이 갈 곳을 만들어 줬다.
+기존 `test_pfas_structure::test_sulfonamide_speciation_warning`(플래그 검사)은 **수정 없이 통과**하고,
+새 라우팅은 `test_sulfonamide_now_has_somewhere_to_go`가 고정한다.
+
+### 5.5 남은 작업 — **P4 문헌 조사** (유일한 잔여 항목)
+설계 문서 §8.2. **벼 조직별 중성/약전해질 시계열 데이터**를 찾는 일이며, 코드 작업이 아니다.
+탐색 대상: 벼 농약 잔류 시험(조직별 분포), 논 제초제 흡수 실험, **하수 재이용 논의 의약품
+(약전해질) 흡수 연구** — 약전해질 쪽이 데이터가 더 있을 수 있다.
+**이것이 없으면 중성 분기는 영원히 "구조 검증"에 머문다**(§6).
+
+부수적으로 열린 것(우선순위 낮음): 중성/에터 **soil Koc 측정값 부재**(`KOC_ETHER_LOG_OFFSET=0`은
+명시적 GAP), 줄기 비표면적 $S$ 실측, 잎 갈락토지질의 Briggs 적용성(R6).
 
 ## 6. 정직한 한계 (보고할 때 반드시 병기)
 
@@ -118,15 +173,25 @@ BAF·straw·B_k·N·eN)를 `==`로 비교한다. 스크립트는 커밋돼 있�
   Briggs의 옥탄올 유사성 가정을 벗어날 수 있다(리스크 R6).
 - **줄기 $S$=2.7 m²/kg**: 원기둥 기하 유도값이고 실측이 아니다(PROVISIONAL).
 - **CI는 전체 테스트를 돌리지 않는다.** `rigor.yml`은 `tests/test_sci_adk_rigor.py`(과잉주장 가드)만
-  실행한다. 216 passed는 **로컬 수치**다.
+  실행한다. 239 passed는 **로컬 수치**다.
+- **(phase 3) 중성 `k_leach`는 외삽이다.** `params/cwo_kleach.csv`는 PFAS 13종 HYDRUS 보정이고
+  중성은 `k_leach(log10 Koc)` 회귀만 재사용한다 → **방향은 의미 있고 속도는 provisional**(§5.1).
+- **(phase 3) Crippen `MolLogP`는 추정이다.** 원자기여 추정치(보통 ~0.5–1 log 오차, 극성 헤테로고리는
+  더 나쁨)이고, 그 하나가 `K_lip`·TSCF·`K_oc`를 동시에 몰기 때문에 오차가 전부에 전파된다 →
+  `provisional=True`. **측정 logKow가 있으면 반드시 넣을 것**(§5.2).
+- **(phase 3) `pKa`는 예측하지 않는다.** 미지정이면 중성으로 취급하며, 그것은 **가정이지 추론이 아니다**.
 
 ---
 
 ## 7. 다음 세션 재개 프롬프트 (그대로 붙여넣기)
 
 ```
-docs/HANDOFF_neutral_extension.md 와 docs/NEUTRAL_DPU_EXTENSION_DESIGN_KR.md 를 읽고
-중성/약전해질 확장의 Phase 3 을 진행해줘. 브랜치는 claude/neutral-organic-compound-tutphi
-(PR #54, draft). Phase 1/1.5/2 는 완료됐고 PFAS 경로는 비트 단위로 불변이어야 해 —
-시작 전에 reproduce_demo RMSE 0.029 와 pytest 216 passed 를 기준선으로 먼저 확인해줘.
+docs/HANDOFF_neutral_extension.md 를 읽고 중성/약전해질 확장의 P4(문헌 조사)를 진행해줘.
+Phase 1/1.5/2/3 은 전부 완료됐고 코드 작업은 남아 있지 않아 — 남은 것은 벼 조직별
+중성·약전해질 시계열 데이터를 찾아 docs/literature_db/ 에 넣는 일이고, 그게 없으면
+중성 분기는 계속 "구조 검증"에 머문다(예측 검증 주장 금지).
+PFAS 경로는 비트 단위로 불변이어야 하고, 그 가드는 이제 커밋돼 있다:
+  mkdir -p /tmp/base && git archive <이전_커밋> | tar -x -C /tmp/base
+  python validation/pfas_bit_identity.py /tmp/base
+시작 전 기준선: reproduce_demo RMSE 0.029, pytest 239 passed 2 skipped.
 ```
