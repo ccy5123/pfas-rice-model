@@ -660,6 +660,38 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (뿌리/줄기/잎/낟알/짚) when `lang="ko"`. UI/i18n only — `parameters.json` and the model math are UNCHANGED. Tests:
   `test_plots.py::test_plain_figures_korean_variant` (English defaults still asserted); verified with headless Streamlit
   + Playwright screenshots of the Korean Simple landing and the English Expert UI.
+- **NEUTRAL organics + WEAK ELECTROLYTES — the DPU base switched back on (branch
+  `claude/neutral-organic-compound-tutphi`, PR #54; Phases 1/1.5/2 DONE, Phase 3 open)**: the core was the
+  IOC/PFAS *extension* of the neutral Trapp/Brunetti DPU base, and the neutral terms had been switched OFF,
+  not removed — so the model now covers the whole speciation spectrum without a new module.
+  **`model_api.simulate_neutral(logKow, pKa=None, K_AW=…, air=…)`** returns the SAME dict shape as `simulate()`.
+  `root_uptake` is now `j_n`(f_n-weighted Fickian `P_n`) + `j_ed`(f_d-weighted GHK) + carrier, with **the GHK
+  factor on the ION term only** — so `(f_n, f_d)`, NOT the valence, is the speciation switch (a weak acid is a
+  neutral molecule AND an anion at once, which one global `z` cannot express; `Compound.z` added, `Environment.z`
+  is the fallback). `binding_factors` gained `f_lip*K_lip` (Briggs `K_PW`; `Compartment.f_lip` is a NEW field —
+  leaf membrane lipid is mostly thylakoid galactolipid, and `params/rice_tissue_params.csv` already carried
+  `total_lipid` separately with that warning: root 0.020 / stem 0.015 / leaf 0.055 / brown grain 0.030 dw).
+  Phase 1.5 added the weak-acid phloem **ion trap** (`phloem_loading_factor()` = `(1-w)L_Ph + wΛ`,
+  `w=Π/(1+Π)`), Phase 2 the DPU **air exchange** (`AirInputs`/`permeabilities()`/`air_exchange()`, gated on
+  `K_AW>0`). New `literature_params` helpers: `speciation`, `ion_trap_factor`, `neutral_pathway_ratio`,
+  `briggs_klip/rcf/tscf`, `koc_neutral`, `neutral_compound`, `f_lip_from_fresh_weight`.
+  **PFAS is BIT-IDENTICAL** — verified each phase by running the pre-change checkout alongside and comparing
+  140 floats across 14 scenarios under exact `==` (not `allclose`); `reproduce_demo` stays at RMSE **0.029**;
+  suite 188 → **216 passed, 2 skipped**. `validation/neutral_probe.py`, `tests/test_neutral.py` (28).
+  **Five design claims were REFUTED during implementation** (see `docs/HANDOFF_neutral_extension.md` §4 —
+  do not re-introduce them): (a) "neutral = `z=0`" is wrong; (b) the ion trap's PFAS limit is `Λ→10^ΔpH`=6.31,
+  NOT 1 — it switches off *kinetically* (`f_n→0`), and the deciding quantity is `P_n·f_n/(P_d·f_d)`, ~2 for a
+  pKa-4 herbicide vs ~2e-7 for a PFSA; (c) Trapp's root lipid 0.025 is FRESH-weight, so it is not our dw value —
+  the mechanistic `B_k` reproduces Briggs' Kow slope (0.770/log) exactly but sits **12.3× below its lipid
+  coefficient**, because 0.03 is an "octanol equivalent", not measured lipid; (d) tissue concentration peaks at
+  logKow ≈3.5, NOT at the TSCF bell's 1.78 (conc ~ TSCF×B) — the original acceptance criterion would have
+  FAILED a correct implementation; (e) **ρ_k does NOT become a transport quantity** in the air block — it
+  cancels exactly, so `CLAUDE.md` §8's "no density prefactor" stands and no density field was added.
+  Side effect worth knowing: **volatilisation finally gives the grain a loss term** (grain BAF 142 → 0.23 at
+  `K_AW`=1e-2), so grain is reportable for volatile compounds — but a NON-volatile neutral's grain is still
+  unbounded (metabolism `γ` is its only sink). Honest limit: `docs/literature_db/` has **no per-organ neutral
+  time series for rice**, so this is structural verification against theory, NOT predictive validation.
+  Docs: `docs/NEUTRAL_DPU_EXTENSION_DESIGN_KR.md` (design + corrections), `docs/HANDOFF_neutral_extension.md`.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -722,6 +754,12 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   python validation/hydrus_coupled_run.py             # full soil→plant + figure/CSV
   ```
   (On Claude Code on the web the SessionStart hook builds this automatically.)
+- **Neutral / weak electrolytes**: `python validation/neutral_probe.py` (6 structural checks:
+  speciation limits, the ion trap's kinetic switch-off, the logKow sweep + where the tissue peak
+  really is, mechanistic `B_k` vs Briggs RCF, the phloem trap's loading-limited regime, and air
+  exchange incl. the ρ-cancellation). In code: `model_api.simulate_neutral(2.0)` for a neutral,
+  `simulate_neutral(2.0, pKa=4.0)` for a weak acid, `simulate_neutral(2.0, K_AW=1e-2)` for a
+  volatile one. PFAS is unaffected — every added field defaults to the value that kills its term.
 - Calibration: `python src/calibration.py`; Literature params: `python src/literature_params.py`.
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
