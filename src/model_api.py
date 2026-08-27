@@ -19,7 +19,7 @@ _ROOT = os.path.dirname(_HERE)
 from pfas_rice_plant_module_4pool_surf import (
     Environment, Compound, Compartment, RiceUptakeModel, PlantInputs,
     binding_factors, root_uptake, _logistic, ROOT, STEM, LEAF, FRUIT,
-    LEAF_CYTOSOL_PH, PHLOEM_PH)
+    LEAF_CYTOSOL_PH, PHLOEM_PH, AirInputs)
 import forcing_rice as fr
 import growth_rice as gr
 from soil_paddy import FreundlichSoil
@@ -348,7 +348,7 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
 
 
 def _solve_and_package(cmpd, comps, env, inputs, t, Cwo_series, Qtp, M, season,
-                       label, params, phloem_pH=PHLOEM_PH):
+                       label, params, phloem_pH=PHLOEM_PH, air=None):
     """Integrate the 4-compartment ODE and build the standard result dict.
 
     Extracted verbatim from ``simulate`` so the neutral/weak-electrolyte entry point
@@ -356,7 +356,7 @@ def _solve_and_package(cmpd, comps, env, inputs, t, Cwo_series, Qtp, M, season,
     same code, rather than a parallel copy that could drift.
     """
     model = RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs,
-                            phloem_pH=phloem_pH)
+                            phloem_pH=phloem_pH, air=air)
     sol = model.solve(t)
     C = sol.y                                            # (4, n_t)
     Mf = inputs.M_(t[-1])
@@ -397,6 +397,14 @@ TISSUE_TOTAL_LIPID_DW = {"root": 0.020, "stem": 0.015, "leaf": 0.055, "grain": 0
 # carried so the weak-electrolyte speciation can be made per-compartment later.
 TISSUE_PH = {"root": 5.5, "stem": 5.5, "leaf": LEAF_CYTOSOL_PH, "grain": 5.5}
 
+# Specific surface area [m2/kg fresh].  leaf=20 and grain=2 were already in the core;
+# STEM was missing (0), which silently gave the culm zero area and therefore zero air
+# exchange.  2.7 is the cylinder value 4/(rho*d) for a 5 mm culm at 0.30 kg/L -- the
+# same geometry reproduces the existing leaf (2/(rho*t), 0.2 mm blade -> 33 vs 20) and
+# grain (4/(rho*d), 2 mm -> 1.7 vs 2) anchors, so it is consistent with them, not a
+# free parameter.  Still PROVISIONAL: no measured rice culm specific area.
+TISSUE_SPECIFIC_AREA = {"root": 0.0, "stem": 2.7, "leaf": 20.0, "grain": 2.0}
+
 
 def _compartments_neutral(f_lip=None, pH=None):
     """`_compartments()` plus the TOTAL-lipid fraction the Briggs term needs, and the
@@ -407,6 +415,7 @@ def _compartments_neutral(f_lip=None, pH=None):
     for cmp_ in comps:
         cmp_.f_lip = float(fl[cmp_.name])
         cmp_.pH = float(ph[cmp_.name])
+        cmp_.S = float(TISSUE_SPECIFIC_AREA[cmp_.name])
     return comps
 
 
@@ -414,7 +423,8 @@ def simulate_neutral(logKow, *, name=None, pKa=None, is_acid=True, Cwo=1.0,
                      E_m_mV=-120.0, P_n=None, L_Ph=1.0, f_xy=None, f_lip=None,
                      gamma=0.0, season=120.0, n_t=241, measured_forcing=True,
                      biomass="oryza", drivers=None, soil_pH=None, tissue_pH=None,
-                     phloem_pH=PHLOEM_PH, ion_trap=True):
+                     phloem_pH=PHLOEM_PH, ion_trap=True, K_AW=0.0, mol_weight=200.0,
+                     air=None):
     """Run the 4-compartment ODE for a NEUTRAL organic or a WEAK ELECTROLYTE.
 
     The DPU-base counterpart of :func:`simulate`: binding comes from the Briggs
@@ -453,7 +463,11 @@ def simulate_neutral(logKow, *, name=None, pKa=None, is_acid=True, Cwo=1.0,
         logKow, name=name, pKa=pKa, is_acid=is_acid,
         pH=lp.PADDY_PH if soil_pH is None else soil_pH,
         P_n=lp.PN_DEFAULT if P_n is None else float(P_n),
-        L_Ph=L_Ph, f_xy=f_xy)
+        L_Ph=L_Ph, f_xy=f_xy, K_AW=K_AW)
+    cmpd.mol_weight = float(mol_weight)
+    cmpd.logKow = float(logKow)
+    if K_AW > 0.0 and air is None:
+        air = AirInputs()                    # clean-air default: volatilisation only
     comps = _compartments_neutral(f_lip, tissue_pH)
     if not ion_trap:                         # isolate the trap's contribution
         for cmp_ in comps:
@@ -463,7 +477,7 @@ def simulate_neutral(logKow, *, name=None, pKa=None, is_acid=True, Cwo=1.0,
     env = Environment(E=E_m_mV / 1000.0)
     res = _solve_and_package(
         cmpd, comps, env, inputs, t, Cwo_series, Qtp, M, season,
-        cmpd.name, phloem_pH=phloem_pH,
+        cmpd.name, phloem_pH=phloem_pH, air=air,
         params=dict(logKow=float(logKow), pKa=pKa, is_acid=bool(is_acid),
                     fn=float(cmpd.fn), fd=float(cmpd.fd), z=cmpd.z,
                     K_lip=float(cmpd.K_lip), P_n=float(cmpd.P_n),

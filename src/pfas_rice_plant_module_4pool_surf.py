@@ -166,6 +166,8 @@ class Compound:
     K_lip: float = 0.0          # Briggs lipid partition a*K_ow^b [L/kg lipid]; pairs with
                                 # Compartment.f_lip (TOTAL lipid), NOT with f_PL.
     K_AW: float = 0.0           # air-water partition [-]; 0 keeps gas exchange off (A3)
+    mol_weight: float = 200.0   # molar mass [g/mol]; only the air-exchange QSPRs use it
+    logKow: float | None = None  # only the cuticle permeability QSPR uses it
 
 
 @dataclass
@@ -187,6 +189,11 @@ class Compartment:
     f_lip: float = 0.0
     pH: float | None = None  # compartment pH; drives per-compartment speciation of a
                              # weak electrolyte. None -> no speciation calc (PFAS).
+    # NOTE: there is deliberately NO density field.  Density does not appear anywhere
+    # in this model's transport, not even in the air-exchange block, where the rho in
+    # the report's Q_VOL prefactor cancels the rho inside K_PA exactly (see
+    # RiceUptakeModel.air_exchange).  Densities for REPORTING live in
+    # model_api.DEFAULT_TISSUE_DENSITY.
 
 
 @dataclass
@@ -299,6 +306,84 @@ def root_uptake(Cwo: float, Cw_root: float, cmpd: Compound, env: Environment) ->
     return j_n + j_ed + j_carr
 
 
+# ----------------------------------------------------------------------------
+# Air exchange (DPU base sections 5.4-5.8) -- OFF unless Compound.K_AW > 0
+# ----------------------------------------------------------------------------
+# The permeability correlations below are stated in SI (metres, seconds, g/mol)
+# while this model runs in day / L / kg / ug.  Every air flux therefore ends up as
+#     [m2/kg] * [m/s] * [ug/L]  =  m3/(L*kg*s) * ug
+# and m3 = 1000 L, so ONE constant converts all three of them:
+M_S_TO_L_DAY = 1000.0 * 86400.0     # (m3->L) * (s->day) = 8.64e7
+RHO_WATER_SI = 1000.0               # kg/m3
+
+
+@dataclass
+class AirInputs:
+    """Atmospheric drivers for the plant-air exchange block.
+
+    Attach to :class:`RiceUptakeModel` as ``air=``; the whole block stays inert
+    unless the compound also has ``K_AW > 0`` (assumption A3 for PFAS).
+
+    Two fields are deliberately NOT named as in the DPU report, because both of
+    those symbols are already taken in this model:
+      ``RH``      is the report's phi (relative humidity); ``RiceUptakeModel.phi``
+                  is the phloem recirculation fraction.
+      ``z_path``  is the report's z (aqueous diffusion path); ``Environment.z``
+                  is the ion valence.
+    """
+    C_A: float = 0.0        # atmospheric concentration [ug/L air]
+    f_p: float = 0.0        # particle-bound fraction of C_A [-]
+    v_dep: float = 1e-3     # particle deposition velocity [m/s] (~0.001)
+    RH: float = 0.7         # relative humidity [-]  (report: phi)
+    z_path: float = 1e-3    # aqueous boundary-layer path [m]  (report: z)
+    D_O2: float = 2.1e-9    # O2 diffusivity in water [m2/s] at 25 C
+
+
+def _c_h2o_sat(T: float) -> float:
+    """Saturation water-vapour concentration [kg/m3] at temperature T [K]."""
+    T_C = T - 273.15
+    p = 610.7 * 10.0 ** (7.5 * T_C / (237.0 + T_C))          # Pa
+    return p / (461.9 * T)                                    # R/M_water = 461.9
+
+
+def permeabilities(cmpd: Compound, env: Environment, air: AirInputs,
+                   Qxyl: np.ndarray, A: np.ndarray) -> np.ndarray:
+    """Total plant-air permeability P_P per compartment [m/s]  (report Eq. Pp).
+
+    Cuticle, air boundary layer and the aqueous layer act in SERIES; the resulting
+    cuticular path and the stomatal path act in PARALLEL.  Per the report's
+    modelling assumptions: no exchange from the root (below ground), cuticle only
+    for the stem, cuticle + stomata for leaf and fruit.
+
+    ``A`` is the ABSOLUTE compartment surface area [m2] (= S * M), not the specific
+    area: the stomatal term is Q_XYL/A, so mixing a per-kg S with an absolute
+    Q_XYL would be a silent basis error.  (In the flux the A cancels again, but
+    keeping the bases consistent here is what makes that safe to rely on.)
+    """
+    m = cmpd.mol_weight
+    logKow = 0.0 if cmpd.logKow is None else cmpd.logKow
+    P_C = 10.0 ** (0.704 * logKow - 11.2)                     # cuticle
+    P_air = np.sqrt(300.0) * cmpd.K_AW / (200.0 * m ** 0.5)   # air boundary layer
+    P_aqua = (air.D_O2 / air.z_path) * (m / 32.0) ** -0.5     # aqueous layer
+    inv = sum(1.0 / p for p in (P_C, P_air, P_aqua) if p > 0.0)
+    P_C_tot = 1.0 / inv if inv > 0.0 else 0.0
+
+    # stomatal path, tied to the transpiration stream (report Eq. Ps)
+    P_S = np.zeros(4)
+    denom = (1.0 - min(air.RH, 0.999)) * _c_h2o_sat(env.T)
+    if denom > 0.0 and cmpd.K_AW > 0.0:
+        for k in (LEAF, FRUIT):
+            if A[k] <= 0.0:
+                continue
+            P_S[k] = (RHO_WATER_SI / denom) * (m / 18.0) ** -0.5 * cmpd.K_AW * (
+                Qxyl[k] / M_S_TO_L_DAY) / A[k]           # Q_XYL [L/day] -> [m3/s]
+
+    P_P = np.zeros(4)
+    for k in (STEM, LEAF, FRUIT):                             # ROOT stays 0
+        P_P[k] = P_C_tot + P_S[k]
+    return P_P
+
+
 @dataclass
 class RiceUptakeModel:
     env: Environment
@@ -308,6 +393,47 @@ class RiceUptakeModel:
     phi: float = 0.1                    # phloem recirculation fraction to roots [-]
     T_C_Ph: float = 10.0                # phloem flux per unit grain dry mass [L/kg]
     phloem_pH: float = PHLOEM_PH        # sieve-tube sap pH (weak-electrolyte ion trap)
+    air: "AirInputs | None" = None      # atmospheric exchange; inert unless K_AW > 0
+
+    def air_exchange(self, C: np.ndarray, B: np.ndarray, M: np.ndarray,
+                     Qxyl: np.ndarray) -> np.ndarray:
+        """Net atmospheric exchange per compartment [ug/(kg day)]  (Eqs. Qgas/Qvol/Qdep).
+
+            +Q_GAS  (1-f_p) * C_A * (A/M) * P_P            gaseous uptake
+            +Q_DEP  v_dep * f_p * C_A * (A/M)              particle deposition
+            -Q_VOL  (A/M) * P_P * C * rho / K_PA           volatilisation
+
+        DENSITY DOES NOT ENTER.  The report writes volatilisation as
+        (A*rho/M) * P_P * C / K_PA with K_PA = K_PW*rho/K_AW, and the rho in the
+        prefactor cancels the rho inside K_PA exactly:
+
+            (A*rho/M) * P_P * C / (K_PW*rho/K_AW)  ==  (A/M) * P_P * C * K_AW / K_PW
+
+        so the air-side concentration in equilibrium with the tissue is simply
+        C*K_AW/B_k.  This was worth checking rather than assuming: the design notes
+        for this phase predicted that tissue density would finally become a real
+        transport quantity here, and it does not.  The model's standing convention
+        (no density prefactor anywhere in transport) therefore holds unchanged.
+
+        Returns zeros unless an ``AirInputs`` is attached AND ``K_AW > 0``, which is
+        what keeps the PFAS path (assumption A3: non-volatile) untouched.
+        """
+        out = np.zeros(4)
+        if self.air is None or self.cmpd.K_AW <= 0.0:
+            return out
+        A = np.array([c.S for c in self.comps]) * M               # absolute area [m2]
+        P_P = permeabilities(self.cmpd, self.env, self.air, Qxyl, A)
+        a_over_m = A / np.maximum(M, 1e-12)                        # [m2/kg]
+        air = self.air
+        for k in range(4):
+            if a_over_m[k] <= 0.0 or (P_P[k] <= 0.0 and air.f_p <= 0.0):
+                continue
+            c_air_eq = C[k] * self.cmpd.K_AW / B[k]                # [ug/L air]
+            gas = (1.0 - air.f_p) * air.C_A * a_over_m[k] * P_P[k]
+            dep = air.v_dep * air.f_p * air.C_A * a_over_m[k]
+            vol = a_over_m[k] * P_P[k] * c_air_eq
+            out[k] = (gas + dep - vol) * M_S_TO_L_DAY
+        return out
 
     def phloem_loading_factor(self) -> float:
         """Effective leaf->phloem loading partition [-]  (``C_Phl = L * Cw_leaf``).
@@ -414,6 +540,11 @@ class RiceUptakeModel:
         dC[FRUIT] = (gam * f4 * (Qtp / M[FRUIT]) * Cw[STEM]
                      + gam * (Q_Phl / M[FRUIT]) * C_Phl
                      - g[FRUIT] * C[FRUIT] - mu[FRUIT] * C[FRUIT])
+        # plant-air exchange (gaseous uptake + deposition - volatilisation).  Returns
+        # exactly zeros for a non-volatile compound, so the PFAS path is untouched.
+        if self.air is not None and self.cmpd.K_AW > 0.0:
+            Qxyl = np.array([Qtp, Qtp, f3 * Qtp, f4 * Qtp])
+            dC = dC + self.air_exchange(C, B, M, Qxyl)
         return dC
 
     def solve(self, t_eval: np.ndarray, C0: np.ndarray | None = None):

@@ -208,12 +208,52 @@ def phloem_trap_regimes():
     print()
 
 
+def air_exchange():
+    """Phase 2: what the atmosphere does, and the density result the design got wrong."""
+    from pfas_rice_plant_module_4pool_surf import AirInputs
+
+    print("=" * 78)
+    print("6. PLANT-AIR EXCHANGE  --  volatilisation, and air-only exposure")
+    print("=" * 78)
+    base = api.simulate_neutral(2.0, n_t=121)
+    print(f"{'K_AW':>8} {'root':>9} {'stem':>9} {'leaf':>9} {'grain':>10}")
+    print(f"{'0 (off)':>8} " + " ".join(
+        f"{base['baf_final'][k]:9.4f}" for k in ("root", "stem", "leaf")) +
+        f" {base['baf_final']['grain']:10.4f}")
+    for k_aw in (1e-4, 1e-3, 1e-2):
+        r = api.simulate_neutral(2.0, K_AW=k_aw, n_t=121)
+        print(f"{k_aw:8.0e} " + " ".join(
+            f"{r['baf_final'][k]:9.4f}" for k in ("root", "stem", "leaf")) +
+            f" {r['baf_final']['grain']:10.4f}")
+    print("\n  The root is untouched (below ground, no exchange by assumption) while the")
+    print("  shoot loses to the atmosphere.  Note the side effect: volatilisation is a")
+    print("  real LOSS term for the grain, which until now was a sink-free terminal")
+    print("  accumulator -- the unphysical grain flagged in section 3 of the design doc.")
+
+    r = api.simulate_neutral(2.0, Cwo=0.0, K_AW=1e-2, air=AirInputs(C_A=1.0), n_t=121)
+    print(f"\n  Air-only exposure (clean soil, C_A=1): leaf {r['conc']['leaf'][-1]:.2f}, "
+          f"grain {r['conc']['grain'][-1]:.2f}, root {r['conc']['root'][-1]:.4f} ug/kg")
+    print("  -> the root sees only what the phloem recirculates back down.")
+    assert r["conc"]["root"][-1] < 0.01 * r["conc"]["leaf"][-1]
+
+    print("\n  DENSITY: the design notes predicted rho would finally become a real")
+    print("  transport quantity here.  It does not -- rho cancels exactly:")
+    a_over_m, P_P, C, K_PW, K_AW = 0.5 / 0.03, 1e-7, 12.3, 4.7, 3e-4
+    for rho in (0.1, 1.0, 5.0):
+        flux = (a_over_m * rho) * P_P * C / (K_PW * rho / K_AW)
+        print(f"    rho={rho:4.1f} kg/L  ->  Q_VOL = {flux:.10e}")
+    print("  so the model still carries NO density term in transport, and CLAUDE.md")
+    print("  section 8 needs no correction after all.")
+    print()
+
+
 def main():
     speciation_limits()
     ion_trap()
     kow_sweep()
     briggs_rcf_comparison()
     phloem_trap_regimes()
+    air_exchange()
     print("=" * 78)
     print("ALL STRUCTURAL CHECKS PASSED")
     print("Reminder: structural verification against theory, NOT validation against")

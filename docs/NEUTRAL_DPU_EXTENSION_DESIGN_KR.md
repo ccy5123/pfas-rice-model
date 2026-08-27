@@ -1,10 +1,15 @@
 # 중성 유기화합물(neutral) + 약전해질(weak electrolyte) 확장 — 설계 문서
 
-> 상태: **Phase 1 + 1.5 구현 완료** · rev.4 · 브랜치 `claude/neutral-organic-compound-tutphi`
+> 상태: **Phase 1 + 1.5 + 2 구현 완료** · rev.5 · 브랜치 `claude/neutral-organic-compound-tutphi`
 > 실행: `python validation/neutral_probe.py` · `pytest tests/test_neutral.py`
 > API: `model_api.simulate_neutral(logKow, pKa=None, ...)` → `simulate()`와 동일한 dict
 > 선행 문서: `docs/dpu_model_summary_corrected.tex` (중성 DPU 원본),
 > `docs/pfas_rice_compartmental_model.tex` (IOC/PFAS 확장), `docs/theory_anchor.tex` (Briggs/Trapp 대조표)
+>
+> **rev.5 변경점 (Phase 2 — 기체 교환)**: `AirInputs`/`permeabilities()`/`air_exchange()`
+> 착지 ($K_{AW}>0$ 게이트). **정정 1건**: gotcha ③($\rho_k$가 실물량이 된다)이 **틀렸음** —
+> 정확히 소거되므로 `CLAUDE.md` §8은 손대지 않는다. **부수 효과**: 휘발이 낟알의 소실항이 되어
+> §3-4의 비물리적 낟알이 해소된다(휘발성 화합물 한정). 줄기 $S$=2.7 배선. §7.2 참조.
 >
 > **rev.3 변경점 (Phase 1 구현)**: ① Phase 1 코드 착지 + 회귀 가드(부록 B).
 > ② **정정 2건 — 구현 중 단언문이 설계 오류를 검출**: §5.1 이온트랩의 PFAS 극한
@@ -215,6 +220,7 @@ return j_n + j_ed + j_carr
 **Phase 1 검증 결과**: 변경 전/후 코드를 각각 실행해 14개 시나리오 140개 float를
 **정확한 `==`로 비교 → 전부 일치**. RMSE 0.029 유지, 전체 **204 passed, 2 skipped**.
 **Phase 1.5 재검증**: 동일 비교 재실행 → 여전히 비트 동일. 전체 **210 passed, 2 skipped**.
+**Phase 2 재검증**: 동일 비교 재실행 → 여전히 비트 동일. 전체 **216 passed, 2 skipped**.
 
 ### D9 (신규, Phase 1). `P_n` 기본값 = **1000** — 빠른 교환(평형) 극한
 DPU base에는 뿌리 막 저항이 **아예 없고**($\dot q_\mathrm{up}$이 외부 BC, $K_{PW}$는 즉시 분배),
@@ -385,15 +391,48 @@ $$K_{PA}=\frac{B_k\,\rho_k}{K_{AW}},\qquad
 2. **기호 충돌 2건.**
    - `RiceUptakeModel.phi` = *체관 재순환 분율*, DPU의 $\phi$ = *상대습도* → 신규 필드는 **`RH`**.
    - `Environment.z` = *원자가*, DPU $P_\mathrm{aqua}$의 $z$ = *확산 경로 길이* → **`z_path`**.
-3. **$\rho_k$의 지위 변경.** 현재 $\rho_k$(`model_api.DEFAULT_TISSUE_DENSITY`)는 **보고용**이다
-   (초기 draft의 차원오류 prefactor와 달리 수송 ODE에 들어가지 않음 — `CLAUDE.md` §8).
-   기체교환 항에서는 $K_{PA}=B_k\rho_k/K_{AW}$로 **진짜 물리량이 된다.**
-   → `CLAUDE.md` §8의 "밀도는 수송에 안 들어간다" 서술을 그때 정정해야 한다.
+3. ~~**$\rho_k$의 지위 변경.**~~ **⛔ 이 예측은 틀렸다 — §7.2 발견 ① 참조.**
+   $\rho_k$는 기체교환 항에서도 **정확히 소거**된다. `CLAUDE.md` §8은 **정정할 필요가 없다.**
 4. **$S$(비표면적) 결측.** 현재 `Compartment.S`는 leaf=20.0, grain=2.0만 있고 **root/stem=0**이다.
    줄기 큐티클 교환을 켜려면 줄기 $S$가 필요 (DPU: 줄기는 큐티클 경로만, 뿌리는 휘발 없음).
 
-**수용 기준**: $K_{AW}=0$에서 Phase 1.5 결과와 완전 동일 / 단위 변환 테스트 /
-청정대기($C_A=0$)+휘발성에서 잎 감소 & **질량수지 폐쇄** / $C_A>0$ 단독노출에서 잎만 오염.
+**수용 기준 — 전부 충족 (DONE)**
+- [x] $K_{AW}=0$에서 Phase 1.5 결과와 **정확히 동일**(`==`), 대기 농도가 붙어 있어도 소거
+- [x] 단위 변환을 **손계산과 대조** — 단일 상수 $10^3\times86400=8.64\times10^7$
+- [x] 휘발성에서 잎/낟알 감소, **뿌리는 불변**(지하부 교환 없음)
+- [x] $C_A>0$ 단독 노출($C_w^o=0$)에서 잎 124 / 낟알 131 vs **뿌리 0.014** µg/kg
+- [x] PFAS 비트 동일 재확인, RMSE 0.029, 전체 **216 passed, 2 skipped**
+
+### 7.2 Phase 2 구현 중 발견 2건
+
+**① ⛔ $\rho_k$는 소거된다 — gotcha ③이 틀렸다.**
+DPU 원본은 $\dot Q_\mathrm{VOL}=(A\rho/M)P_P C/K_{PA}$, $K_{PA}=K_{PW}\rho/K_{AW}$로 쓰는데,
+prefactor의 $\rho$와 $K_{PA}$ 안의 $\rho$가 **정확히 상쇄**된다:
+
+$$\frac{A\rho}{M}P_P\frac{C}{K_{PW}\rho/K_{AW}} = \frac{A}{M}P_P\,\frac{C\,K_{AW}}{K_{PW}}$$
+
+수치 확인: $\rho$를 0.1→5.0 kg/L로 50배 바꿔도 $\dot Q_\mathrm{VOL}$이 **마지막 자리까지 동일**.
+⇒ 조직 밀도는 이 모델의 수송에 **어디에도 들어가지 않는다**(기체교환 포함).
+`CLAUDE.md` §8의 "밀도는 수송에 안 들어간다"는 **그대로 옳다** — 정정 불필요.
+코드에는 `Compartment.rho`를 **두지 않았다**(있으면 쓰이는 것처럼 오해되므로);
+밀도는 `model_api.DEFAULT_TISSUE_DENSITY`에 보고용으로만 남는다.
+
+**② 기체교환이 낟알 terminal-sink 폭주를 해결한다 (부수 효과, §3-4의 답).**
+낟알이 비물리적이었던 것은 **소실항이 없어서**였다. 휘발이 실제 소실항을 준다:
+
+| $K_{AW}$ | root | stem | leaf | grain |
+|---|---|---|---|---|
+| 0 (off) | 0.974 | 0.713 | 5.85 | **141.98** |
+| 1e-3 | 0.974 | 0.713 | 4.65 | 52.96 |
+| 1e-2 | 0.973 | 0.712 | 0.218 | **0.229** |
+
+⇒ **휘발성 중성물질에 대해서는 낟알을 보고할 수 있다.** 단 **비휘발성**($K_{AW}\approx0$)
+중성물질의 낟알은 여전히 소실항이 없어 과대 — 대사 $\gamma>0$가 유일한 소실 경로다.
+
+**③ 줄기 $S=0$ (gotcha ④)**: `TISSUE_SPECIFIC_AREA`에 2.7 m²/kg을 넣었다.
+자유 파라미터가 아니라 **원기둥 기하** $4/(\rho d)$(직경 5 mm, 0.30 kg/L)에서 나온 값이며,
+같은 기하가 기존 앵커를 재현한다(잎 판형 $2/(\rho t)$ 0.2 mm → 33 vs 코드 20;
+낟알 2 mm → 1.7 vs 코드 2). 여전히 PROVISIONAL — 벼 줄기 비표면적 실측은 없다.
 
 ### Phase 3
 - [ ] 중성 $K_{oc}$로 HYDRUS 구동 → `cwo_profile="flooded"` 형상이 중성에도 성립
@@ -613,7 +652,9 @@ assert abs(root_uptake(2.0, 0.5, c0, Environment(z=0)) - 1.5) < 1e-12   # 순수
 - [x] **P1.5** 약전해질 완성 — **DONE** (체관 트랩을 $\Pi$ 게이트로; `RiceUptakeModel.
       phloem_loading_factor()`, `simulate_neutral(ion_trap=…, phloem_pH=…, tissue_pH=…)`,
       `Compartment.pH`, 테스트 21→26개). 발견 3건은 §7.1.
-- [ ] **P2** 기체 교환 (§7 Phase 2) ← *다음*
+- [x] **P2** 기체 교환 — **DONE** (`AirInputs`, `permeabilities`, `air_exchange`;
+      `simulate_neutral(K_AW=…, air=…)`; 테스트 26→28개; 발견 2건은 §7.2)
+- [ ] **P3** 토양 $K_{oc}$ · SMILES · app 통합 ← *다음*
 - [ ] **P2** 기체 교환 + 단위 테스트
 - [ ] **P3** 토양 $K_{oc}$ · SMILES · app 통합
 - [ ] **P4** 검증 데이터 문헌 조사 (§8.2) — 병행 가능

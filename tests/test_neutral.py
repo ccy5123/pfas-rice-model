@@ -20,8 +20,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 import literature_params as lp
 import model_api as api
 from pfas_rice_plant_module_4pool_surf import (
-    Compartment, Compound, Environment, PlantInputs, RiceUptakeModel,
-    binding_factors, root_uptake)
+    AirInputs, Compartment, Compound, Environment, M_S_TO_L_DAY, PlantInputs,
+    RiceUptakeModel, binding_factors, permeabilities, root_uptake)
 
 # Golden PFAS BAFs (root, stem, leaf, grain), captured from the code BEFORE the
 # neutral extension landed and verified bit-identical after it.  These move only if
@@ -275,6 +275,80 @@ def test_plant_module_and_literature_params_speciation_agree():
                 tuple(float(x) for x in lp.speciation(pKa, 6.5, is_acid)))
             assert _ion_trap(pKa, 7.2, 8.0, is_acid) == pytest.approx(
                 lp.ion_trap_factor(pKa, 7.2, 8.0, is_acid))
+
+
+# --------------------------------------------------------------------------
+# D. Phase 2 -- plant/air exchange
+# --------------------------------------------------------------------------
+def test_air_exchange_is_inert_for_a_non_volatile_compound():
+    """K_AW = 0 must switch the whole block off, even with air drivers attached."""
+    off = api.simulate_neutral(2.0, n_t=121)
+    with_air = api.simulate_neutral(2.0, n_t=121, K_AW=0.0, air=AirInputs(C_A=5.0))
+    for k in api.TISSUES:
+        assert off["baf_final"][k] == with_air["baf_final"][k]
+
+
+def test_volatilisation_removes_shoot_burden_and_spares_the_root():
+    """Clean air: the shoot loses to the atmosphere, the root cannot (below ground)."""
+    base = api.simulate_neutral(2.0, n_t=121)
+    vol = api.simulate_neutral(2.0, n_t=121, K_AW=1e-2)
+    assert vol["baf_final"]["leaf"] < 0.2 * base["baf_final"]["leaf"]
+    assert vol["baf_final"]["grain"] < 0.2 * base["baf_final"]["grain"]
+    assert vol["baf_final"]["root"] == pytest.approx(base["baf_final"]["root"], rel=0.01)
+
+
+def test_atmospheric_exposure_alone_contaminates_only_the_shoot():
+    """C_A > 0 with clean soil: leaf and grain take up, the root only sees whatever
+    the phloem recirculates back down."""
+    r = api.simulate_neutral(2.0, Cwo=0.0, K_AW=1e-2, air=AirInputs(C_A=1.0), n_t=121)
+    leaf, root = r["conc"]["leaf"][-1], r["conc"]["root"][-1]
+    assert leaf > 1.0
+    assert root < 0.01 * leaf
+
+
+def test_air_flux_matches_the_hand_computed_unit_conversion():
+    """The DPU permeability QSPRs are SI (m/s, g/mol) but the model runs in
+    day/L/kg/ug.  Pin the single conversion constant against a hand calculation --
+    a wrong factor here would be a silent order-of-magnitude error.
+    """
+    cmpd = Compound("x", K_prot=0, K_PL=0, K_cw=0, kappa_d=0, Vmax_in=0, Km_in=1,
+                    Vmax_out=0, Km_out=1, L_Ph=1, f_xy=1, fn=1.0, fd=0.0,
+                    K_AW=1e-2, mol_weight=200.0, logKow=2.0)
+    comps = [Compartment("root", 0.9, 0, 0, 0), Compartment("stem", 0.83, 0, 0, 0, S=2.7),
+             Compartment("leaf", 0.78, 0, 0, 0, S=20.0),
+             Compartment("grain", 0.14, 0, 0, 0, S=2.0)]
+    model = RiceUptakeModel(env=Environment(), cmpd=cmpd, comps=comps,
+                            inputs=_tiny_inputs(), air=AirInputs(C_A=0.0))
+    M = np.array([0.01, 0.01, 0.01, 0.001])
+    B = np.array([0.9, 0.83, 0.78, 0.14])
+    C = np.array([0.0, 0.0, 10.0, 0.0])
+    Qxyl = np.array([0.05, 0.05, 0.04, 0.01])
+    A = np.array([c.S for c in comps]) * M
+    P_P = permeabilities(cmpd, Environment(), AirInputs(), Qxyl, A)
+    expected = -(A[2] / M[2]) * P_P[2] * (C[2] * cmpd.K_AW / B[2]) * M_S_TO_L_DAY
+    assert model.air_exchange(C, B, M, Qxyl)[2] == pytest.approx(expected, rel=1e-12)
+    assert M_S_TO_L_DAY == 1000.0 * 86400.0
+    assert P_P[0] == 0.0                                  # root: no exchange
+
+
+def test_density_cancels_out_of_the_air_flux():
+    """The design notes predicted density would become a real transport quantity here.
+    It does not: the rho in the report's Q_VOL prefactor cancels the rho inside
+    K_PA = K_PW*rho/K_AW exactly, so the model keeps no density field at all."""
+    A_over_M, P_P, C, K_PW, K_AW = 0.5 / 0.03, 1e-7, 12.3, 4.7, 3e-4
+    fluxes = [(A_over_M * rho) * P_P * C / (K_PW * rho / K_AW)
+              for rho in (0.1, 0.3, 1.0, 1.2, 5.0)]
+    assert all(f == pytest.approx(fluxes[0], rel=1e-15) for f in fluxes)
+    assert fluxes[0] == pytest.approx(A_over_M * P_P * C * K_AW / K_PW, rel=1e-15)
+    assert not hasattr(Compartment("x", 0.9, 0, 0, 0), "rho")
+
+
+def test_stem_has_a_surface_area_so_the_culm_can_exchange():
+    """S was 0 for the stem, which silently gave the culm zero area and no exchange."""
+    assert api.TISSUE_SPECIFIC_AREA["stem"] > 0.0
+    assert api.TISSUE_SPECIFIC_AREA["root"] == 0.0        # below ground: none by design
+    stem = next(c for c in api._compartments_neutral() if c.name == "stem")
+    assert stem.S == api.TISSUE_SPECIFIC_AREA["stem"]
 
 
 def test_metabolism_hook_reduces_tissue_concentration():
