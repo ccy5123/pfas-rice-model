@@ -1,59 +1,73 @@
-# 중성 유기화합물(neutral organic compound) 확장 — 설계 문서
+# 중성 유기화합물(neutral) + 약전해질(weak electrolyte) 확장 — 설계 문서
 
-> 상태: **DESIGN (구현 전)** · 대상 브랜치 `claude/neutral-organic-compound-tutphi`
+> 상태: **DESIGN (구현 전)** · rev.2 · 대상 브랜치 `claude/neutral-organic-compound-tutphi`
 > 선행 문서: `docs/dpu_model_summary_corrected.tex` (중성 DPU 원본),
 > `docs/pfas_rice_compartmental_model.tex` (IOC/PFAS 확장), `docs/theory_anchor.tex` (Briggs/Trapp 대조표)
+>
+> **rev.2 변경점**: ① 약전해질을 **비목표 → Phase 1 범위**로 편입 (사용자 결정).
+> 이에 따라 "중성 스위치 = `z=0`"이 **`(f_n, f_d)` 가중합**으로 바뀜 (D7) — 세 케이스가 한 코드경로.
+> ② 열린 항목 **O1(조직별 총 지질 분율) 해소** — 값은 이미 레포에 있었고, 문헌으로 교차검증 (§11).
 
 ---
 
 ## 0. 한 줄 요약
 
 현재 코어(`src/pfas_rice_plant_module_4pool_surf.py`)는 중성 DPU 위에 IOC 확장을 얹으면서 중성 항들을
-**삭제한 것이 아니라 꺼둔** 상태다. 따라서 중성 지원은 *새 모델을 만드는 일*이 아니라
+**삭제한 것이 아니라 꺼둔** 상태다. 따라서 이 작업은 *새 모델을 만드는 일*이 아니라
 **(a) 이미 뚫려 있는 hook 3개를 켜고, (b) 코드에서만 빠진 항 2블록(중성 투과 · 기체 교환)을 복원하고,
 (c) PFAS 전용 파라미터 경로를 우회하는 어댑터를 붙이는 일**이다.
+
+약전해질을 함께 여는 결정에 따라 목표는 **하나의 스펙트럼을 전부 덮는 것**이 된다:
+
+$$\underbrace{f_n=1,\;f_d=0}_{\text{중성}}\quad\longleftrightarrow\quad
+\underbrace{0<f_n<1}_{\text{약산/약염기}}\quad\longleftrightarrow\quad
+\underbrace{f_n=0,\;f_d=1}_{\text{PFAS (현재)}}$$
 
 ---
 
 ## 1. 목적 / 범위 / 비목표
 
 ### 1.1 목적
-중성 유기화합물(농약·의약품·산업용매 등, $f_n \approx 1$)에 대해 동일한 4-compartment 동적 ODE로
+중성 유기화합물($f_n\approx1$)과 약전해질($0<f_n<1$)에 대해 동일한 4-compartment 동적 ODE로
 뿌리/줄기/잎/낟알 농도 시계열을 계산할 수 있게 한다. PFAS 경로는 **수치적으로 완전히 불변**이어야 한다.
 
 ### 1.2 범위 (in scope)
+- **화학종 분율(speciation)**: Henderson–Hasselbalch, **구획별 pH** → $(f_n, f_d)$
 - 중성 분배: Briggs $K_{PW}$ 경로 (현 $B_k$의 특수화)
-- 중성 막투과: $P_n$ 항 복원, GHK 전기화학항 비활성화, carrier 비활성화
+- 중성 막투과: $P_n$ 항 복원 (이온 GHK 항과 **병렬** 가산)
 - 중성 전류(translocation): Briggs TSCF bell → `f_xy`
+- **약산 체관 이온트랩**: $L_{Ph}$의 기계론적 대체 (Phase 1.5)
 - 기체 교환 3항: $\dot Q_\mathrm{GAS}$, $\dot Q_\mathrm{VOL}$, $\dot Q_\mathrm{DEP}$ (DPU 원본 §5.4–5.8)
 - 대사 $\gamma_k > 0$ 활성화
 - 토양측 $K_{oc}$ 중성 분기 (Karickhoff)
-- SMILES → 중성 파라미터화 (RDKit `MolLogP`)
+- SMILES → 파라미터화 (RDKit `MolLogP`, `pKa`)
 
-### 1.3 비목표 (out of scope, 이번 확장에서 제외)
-- **약전해질(weak acid/base)**: $0 < f_n < 1$, pH 이온트랩. 중성($f_n\to1$)과 PFAS($f_n\to0$)의
-  *중간* 케이스로, 두 극한이 모두 서면 자연스럽게 얻어지지만 이번 설계에는 포함하지 않는다.
-  (구조는 열어 둔다 — §4 D2 참조)
+### 1.3 비목표 (out of scope)
 - 다성분($N$종 동시) 텐서 형태 및 대사 변환행렬 $\Gamma$의 비대각 항 — 현 코어는 1종 스칼라.
 - Method B(HYDRUS FORTRAN 개조).
-- 중성 화합물에 대한 two-pool / nstem / lipid-loading 등 PFAS 전용 탐색 모델의 이식.
+- 중성/약전해질에 대한 two-pool / nstem / lipid-loading 등 PFAS 전용 탐색 모델의 이식.
+- **양쪽성(zwitterion)·다가 이온** — $f_n+f_d=1$ 단일 해리 평형만 다룬다.
+- 액포(vacuole) 격리 — Trapp 세포모델의 액포 구획은 넣지 않는다(4구획 유지).
 
 ---
 
 ## 2. 왜 fork가 아니라 확장인가 — 이미 존재하는 hook
 
-| hook | 위치 | 현재 상태 | 중성에서의 역할 |
+| hook | 위치 | 현재 상태 | 확장에서의 역할 |
 |---|---|---|---|
-| `Compound.fd` / `Compound.fn` | `4pool_surf.py:118-120` | `fn`은 **선언만 되고 미사용** | $f_n$이 중성 투과항의 계수 |
-| `Environment.z` (원자가) | `:65-69` | `z=-1` 고정 | `z=0` → $N=0$ → GHK가 **자동으로 Fick 확산으로 축약** |
+| `Compound.fd` / `Compound.fn` | `4pool_surf.py:118-120` | `fn`은 **선언만 되고 미사용** | **speciation의 주 스위치** (D7) |
+| `Environment.z` (원자가) | `:65-69` | `z=-1` 고정 | 이온 분율에만 적용; 약염기는 $z=+1$ |
 | `Compartment.gamma` (1차 대사) | `:132` | 구조 존재, PFAS라 `0` | 중성 유기물의 주 소실경로 |
 | `root_uptake()` 중성항 주석 | `:224` | `# optional neutral passive term (negligible for PFAS): cmpd.fn * ...` | 구현 지점이 이미 표시됨 |
+| `literature_params.f_d(pKa, pH)` | `literature_params.py:162` | PFAS 정당화용($f_d\ge0.94$)으로만 사용 | **약전해질의 speciation 엔진 그대로 재사용** |
 
 또한 **수식은 이미 문서에 있다**:
 - `docs/pfas_rice_compartmental_model.tex:78` — $J_R$ 전체식에 중성 투과항
   $P_n\left(f_n^{o}C_w^{o}-f_n^{i}C_{w,1}\right)$ 이 명시되어 있고, `:90`에서
   "$f_n\to0$이면 소거"라고 적혀 있다. **코드에서만 생략된 것.**
 - `docs/theory_anchor.tex:167` — Briggs 중성 관계식(RCF/TSCF) 전사 완료.
+- `docs/theory_anchor.tex:253-255` — 약산 이온트랩이 "중성 형태가 있어야 작동"하며 PFAS에서는
+  꺼진다는 논증이 이미 서술되어 있다. **약전해질 확장은 이 문장을 코드로 옮기는 일이다.**
 - `docs/dpu_model_summary_corrected.tex` — 기체교환 전 항의 완전한 행렬식.
 
 즉 **이론 작업은 이미 끝나 있고, 코드 포팅만 남았다.**
@@ -66,26 +80,39 @@
 돌린 결과 (측정 forcing `forcing_rice.Q_TP` + `growth_rice` biomass, $C_w^o=1$, 120일):
 
 ```
- logKow      K_lip   TSCF   B_root |     root    straw    grain
-   0.50        3.0  0.401     0.91 |     0.78     0.91    55.42
-   1.78       28.6  0.784     0.96 |     0.73     1.86    94.22
-   3.00      249.1  0.426     1.40 |     1.20     2.59    59.73
-   4.50     3559.3  0.038     8.02 |     7.90     2.05     5.48
-   6.00    50858.1  0.001   102.62 |   102.59     0.10     0.02
+ logKow      K_lip   TSCF |     root    straw    grain
+   0.00        1.2  0.166 |    0.833    0.517    32.06
+   1.00       12.2  0.598 |    0.739    1.388    77.98
+   1.78       28.6  0.784 |    0.731    2.087    94.50   <- TSCF 최대
+   3.00      249.1  0.426 |    1.199    3.897    59.87
+   3.75     1180.5  0.100 |    2.619    4.582    24.11   <- straw 최대
+   4.50     3559.3  0.038 |    7.899    3.188     4.64
+   6.00    50858.1  0.001 |  102.593    0.108     0.01
 
 z=0  j_R(Cwo=2, Cw=0.5) = 1.5     (정확히 Fick — 기대값과 일치)
 z=-1 j_R(Cwo=2, Cw=0.5) = -2.269  (음이온 배제, e^N≈107)
 ```
+(§11 확정 지질값으로 재실행. 0.25 log 간격 전체 스윕 중 발췌.)
 
-**판정 3가지:**
+**판정 4가지:**
 
 1. **GHK → Fick 축약이 수치적으로 정확하다.** `z=0`에서 $N=0$, `_ghk_factor→1`, $e^N=1$이므로
-   $j_{ed}=\kappa_d(C_w^o - C_{w,1})$. 별도 분기 없이 성립.
+   $j_{ed}=\kappa_d(C_w^o - C_{w,1})$.
+   > ⚠ 단 이 `z=0` 트릭은 **probe 전용 지름길**이다. $P_n$ 항이 생기고 약전해질이 들어오면
+   > `z`를 건드리면 안 된다 — D7 참조.
 2. **중성 DPU의 특징 거동이 재현된다.** root는 Briggs RCF대로 $K_{ow}$에 단조 증가,
-   **straw는 $\log K_{ow}\approx2$–$3$에서 종 모양(bell) 피크** — PFAS 경로에서는 나올 수 없는 형태.
-3. **grain BAF 55–94는 비물리적이다.** $L_{Ph}=1$(중성이라 이온트랩 없이 체관액 ≈ 잎 자유농도)로 두면
-   낟알이 소실항 없는 terminal accumulator가 된다. ⇒ **Phase 1만으로는 불충분하고,
-   대사($\gamma$)·기체교환·$L_{Ph}(K_{ow})$가 함께 들어가야 한다**는 것이 이 검증의 핵심 결론.
+   **straw는 종 모양(bell)** — PFAS 경로에서는 나올 수 없는 형태.
+3. **⚠ straw 피크는 TSCF 피크와 위치가 다르다 (설계상 중요).**
+   TSCF 자체는 $\log K_{ow}=1.78$에서 최대지만, **straw 농도는 $\log K_{ow}\approx3.75$에서 최대**다.
+   조직 농도는 $C_\mathrm{straw}\propto \mathrm{TSCF}\cdot B$인데 $B$가 $K_{ow}$에 **단조 증가**하므로
+   가우시안 × 증가함수의 곱이 피크를 오른쪽으로 민다. 해석적으로도 확인된다 —
+   $B$의 지질항이 지배적일 때 $\frac{d}{dx}\!\left[-\frac{(x-1.78)^2}{2.44}+0.77\ln\!10\cdot x\right]=0$
+   $\Rightarrow x = 1.78 + \frac{0.77\ln 10 \cdot 2.44}{2} \approx 3.94$ (관측 3.75; 저-$K_{ow}$에서
+   $B$의 수분항이 지배해 실효 기울기가 0.77보다 작기 때문에 약간 왼쪽).
+   ⇒ **"TSCF 피크 = 조직 농도 피크"로 수용 기준을 쓰면 틀린다.** §7 Phase 1 기준에 반영.
+4. **grain BAF 32–94는 비물리적이다.** $L_{Ph}=1$로 두면 낟알이 소실항 없는 terminal accumulator가 된다.
+   ⇒ **Phase 1만으로는 불충분하고, 대사($\gamma$)·기체교환·기계론적 $L_{Ph}$가 함께 들어가야 한다**는 것이
+   이 검증의 핵심 결론이며, Phase 분할의 근거다.
 
 > 검증 스크립트는 Phase 1에서 `validation/neutral_probe.py`로 커밋한다(부록 A에 전문 수록).
 
@@ -95,144 +122,183 @@ z=-1 j_R(Cwo=2, Cw=0.5) = -2.269  (음이온 배제, e^N≈107)
 
 ### D1. 모듈을 fork하지 않는다 — `speciation` 스위치로 흡수
 `src/pfas_rice_plant_module_*.py`가 이미 6개다. 7번째(`_neutral.py`)를 만들면 향후 모든 수정이
-2배가 된다. 대신 **`Compound`에 `speciation` 필드를 추가**하고, 중성 전용 항은
-**기본값이 0이라 PFAS 경로에서 완전히 소거되는 가산항**으로 넣는다.
+2배가 된다. 대신 **중성 전용 항을 기본값 0이라 PFAS 경로에서 완전히 소거되는 가산항**으로 넣는다.
 
 ```python
 @dataclass
 class Compound:
     ...
-    speciation: str = "anion"     # "anion" | "neutral"
+    pKa: float | None = None      # None이면 speciation 계산 안 함 (하위호환)
+    is_acid: bool = True          # 약염기는 False (z=+1)
     P_n: float = 0.0              # 중성 수동투과 a_R*P_n [L/(day kg)]  (0 → 항 소거)
+    K_lip: float = 0.0            # Briggs 지질 분배 a*Kow^b [L/kg lipid] (0 → 항 소거)
     K_AW: float = 0.0             # 공기-물 분배 [-]      (0 → 기체교환 전체 소거)
 ```
 
-**불변식(invariant): `P_n=0, K_AW=0, fn=0`이면 RHS가 현재와 부동소수점 수준까지 동일해야 한다.**
+**불변식(invariant): `P_n=0, K_lip=0, K_AW=0, fn=0`이면 RHS가 현재와 부동소수점 수준까지 동일해야 한다.**
 
-### D2. 약전해질을 위한 자리를 남긴다
+### D2. 세 케이스를 하나의 코드경로로 (약전해질 포함)
 $j_R$을 `j_neutral + j_electrodiffusion + j_carrier`의 **합**으로 쓰고 각각 $f_n$, $f_d$로 가중한다.
-중성은 $(f_n,f_d)=(1,0)$, PFAS는 $(0,1)$. 약전해질은 $f_n+f_d=1$의 임의 값 — 즉
-**이번 구현이 자동으로 약전해질의 절반을 완성한다**(나머지 절반은 체관 이온트랩).
+
+| 화합물 | $f_n$ | $f_d$ | 활성 항 |
+|---|---|---|---|
+| 중성 | 1 | 0 | $P_n$ (Fick)만 |
+| 약산/약염기 | $0<f_n<1$ | $1-f_n$ | $P_n$ + GHK **둘 다** |
+| PFAS | 0 | 1 | GHK + carrier (현재와 동일) |
+
+### D7 (신규). **speciation 스위치는 `z`가 아니라 `(f_n, f_d)`다**
+rev.1에서는 "중성 = `Environment.z=0`"으로 잡았으나, 약전해질을 열면 **틀린 설계**가 된다:
+약산은 *중성 분자*(전위 무관)와 *음이온*(전위 영향)이 **동시에 존재**하므로 전역 `z` 하나로 표현할 수 없다.
+올바른 구조는 **GHK 인자를 이온 항에만 적용**하는 것이다:
+
+```python
+j_n    = cmpd.P_n * cmpd.fn * (Cwo - Cw_root)                          # 전위 무관
+j_ed   = cmpd.kappa_d * g * cmpd.fd * (Cwo - eN * Cw_root)             # 전위 의존 (GHK)
+j_carr = Vmax_in*Cwo/(Km_in+Cwo) - Vmax_out*Cw_root/(Km_out+Cw_root)
+return j_n + j_ed + j_carr
+```
+- 중성: `fd=0`이 GHK 항을 곱셈으로 죽인다 → `z` 값과 무관. **`z`를 건드릴 필요가 없다.**
+- PFAS: `fn=0`이 중성 항을 죽인다 → 현재와 동일.
+
+**부수 효과**: 원자가는 환경이 아니라 **화합물의 성질**이다(약염기는 $z=+1$).
+`Environment.z`는 하위호환을 위해 유지하되, `Compound`가 제공하면 그쪽을 우선한다.
+→ Phase 1에서 `Compound.z` 추가, `Environment.z`는 fallback.
+
+### D8 (신규). 구획별 pH — 이온트랩의 전제
+약전해질의 $f_n$은 **구획마다 다르다**(토양수 pH ≠ 세포질 pH ≠ 체관액 pH). Trapp 세포모델 표준값:
+
+| 상(phase) | pH | 비고 |
+|---|---|---|
+| 토양 공극수 | 5.5–6.5 | `literature_params.PADDY_PH` 이미 존재 |
+| 아포플라스트 / 물관액 | ~5.5 | 산성 |
+| 세포질 | ~7.2 | |
+| **체관액** | **~8.0** | **알칼리 → 약산이 갇힘(ion trap)** |
+
+⇒ `Compartment.pH: float | None = None` 신규 필드 + `PHLOEM_PH = 8.0` 상수.
+`None`이면 speciation 계산을 건너뛰어 현재 동작 유지.
 
 ### D3. 기체 교환은 `K_AW > 0`일 때만 켜지는 옵션 블록
 현 `rhs()`에는 $\dot Q_\mathrm{GAS}/\dot Q_\mathrm{VOL}/\dot Q_\mathrm{DEP}$가 **아예 없다**
-(가정 A3: `pfas_rice_compartmental_model.tex:63`). 이를 `rhs()` 말미에
-`if self.cmpd.K_AW > 0:` 가드 하나로 감싼 블록으로 추가한다. 새 입력은
-`AirInputs` 데이터클래스로 묶어 `RiceUptakeModel`의 **optional 필드**(`air: AirInputs | None = None`)로 둔다.
+(가정 A3: `pfas_rice_compartmental_model.tex:63`). `rhs()` 말미에 `if self.cmpd.K_AW > 0:` 가드
+하나로 감싼 블록으로 추가하고, 새 입력은 `AirInputs`로 묶어 `RiceUptakeModel`의
+**optional 필드**(`air: AirInputs | None = None`)로 둔다.
 
 ### D4. `Compartment`에 `f_lip`(총 지질 dw 분율)을 **새 필드로** 추가한다
 현 `f_PL`은 *인지질* 분율(PFAS의 막결합 상대)이고, Briggs 지질항은 *총 지질*을 쓴다.
-`f_PL`을 재해석해 재사용하면 의미가 충돌하고 `parameters.json`의
-`tissue_composition_recommended`(root 0.015 / stem 0.005 / leaf 0.010 / grain 0.003)와도 어긋난다.
-⇒ `f_lip: float = 0.0` 신규 필드 + `binding_factors()`에 `c.f_lip * cmpd.K_lip` 항 추가
-(기본 0이므로 PFAS 불변).
+**레포 DB가 이 구분을 이미 명시적으로 경고하고 있다** — `params/rice_tissue_params.csv`의 잎 행:
 
-> **결정 필요(열린 항목 O1)**: 벼 조직의 총 지질 dw 분율 문헌값 확보.
-> 잠정 anchor: 뿌리 ~0.02, 줄기 ~0.01, 잎 ~0.03, 현미 ~0.025 (현미 지질 2–3%는 확립된 값).
+> `f_PL_membrane … CAUTION: phospholipid is a MINORITY of leaf membrane lipid; thylakoid
+> galactolipids (MGDG/DGDG) dominate. Do NOT equate f_PL with total membrane lipid`
+
+문헌도 이를 뒷받침한다(MGDG+DGDG가 틸라코이드 지질의 최대 80%). ⇒ `f_PL` 재활용은 **금지**,
+`f_lip: float = 0.0` 신규 필드 + `binding_factors()`에 `c.f_lip * cmpd.K_lip` 항 추가
+(기본 0이므로 PFAS 불변). **값은 §11에서 확정.**
 
 ### D5. 파라미터는 `parameters.json`에 넣지 않고 **별도 레코드로 주입**한다
 `params/parameters.json`의 `congeners`는 PFAS 13종 전용 스키마
 (`n_C`, `group`, `f_xy_recommended`, `f_xy_W2fit`, `f_xy_oryza`, `K_cw_wholecw_Lkg`, …)다.
-중성 화합물을 여기 섞으면 `_transport_defaults()`(`model_api.py:442`)와
-`build_parameters.py`가 오염된다.
+중성 화합물을 여기 섞으면 `_transport_defaults()`(`model_api.py:442`)와 `build_parameters.py`가 오염된다.
 ⇒ **`model_api.simulate(record=…)` 주입 경로(이미 존재, `:304`)를 재사용**하고,
-중성 레코드는 `literature_params.neutral_compound(logKow, …)`가 생성한다.
-별도 파일 `params/neutral_compounds.json`(선택)에 예시 화합물만 둔다.
+레코드는 `literature_params.neutral_compound(logKow, pKa=None, …)`가 생성한다.
 
 ### D6. 기본 경로 불변 — 회귀 가드
-다음이 **한 자리도 변하면 안 된다**:
-- `reproduce_demo.py` log10 RMSE **0.029**
-- `tests/` 전체 (현재 174 passed, 2 skipped)
-- `simulate()`의 모든 기본 인자 동작
+다음이 **한 자리도 변하면 안 된다**: `reproduce_demo.py` log10 RMSE **0.029**,
+`tests/` 전체(현재 174 passed, 2 skipped), `simulate()`의 모든 기본 인자 동작.
 새 테스트 `tests/test_neutral.py`가 이를 명시적으로 assert 한다.
 
 ---
 
 ## 5. 수식 매핑표 — 중성 DPU ↔ 현재 IOC 코어
 
-| 항 | 중성 DPU (원본) | 현재 코어 (PFAS) | 중성 확장에서 할 일 |
+| 항 | 중성 DPU (원본) | 현재 코어 (PFAS) | 확장에서 할 일 |
 |---|---|---|---|
-| 분배 | $K_{PW}=W+a K_{ow}^{b} L$ | $B_k=\theta_{fw}+(1-\theta_{fw})\sum_i f_i K_i$ | **수식 변경 불필요.** $K_{prot}=K_{cw}=0$, `f_lip·K_lip` 항 추가 → 정확히 Briggs |
-| 뿌리 흡수 | $\dot q_\mathrm{up}=\dot U_\mathrm{HYD}/M_1$ (외부 BC) | GHK + Michaelis–Menten | $P_n(f_n^o C_w^o - f_n^i C_{w,1})$ 복원, `z=0`, `Vmax=0` |
-| 전류(TSCF) | 암묵적 $C/K_{PW}$ (제한 없음) | `f_xy` (TSCF analog, PFAS 피팅) | `f_xy ← 0.784\exp[-(\log K_{ow}-1.78)^2/2.44]` |
-| 체관 | **없음** (xylem-only) | $C_{Phl}=L_{Ph}C_{w,3}$ | $L_{Ph}(K_{ow})$ (Kleier 이동성). §7 Phase 3 |
+| 화학종 분율 | 없음 ($f_n\equiv1$) | $f_d\equiv1$ | **H–H + 구획별 pH** (D8) |
+| 분배 | $K_{PW}=W+a K_{ow}^{b} L$ | $B_k=\theta_{fw}+(1-\theta_{fw})\sum_i f_i K_i$ | **수식 변경 불필요.** `f_lip·K_lip` 항 추가 → 정확히 Briggs |
+| 뿌리 흡수 | $\dot q_\mathrm{up}=\dot U_\mathrm{HYD}/M_1$ (외부 BC) | GHK + Michaelis–Menten | $P_n$ 항 복원, **GHK는 $f_d$에만** (D7) |
+| 전류(TSCF) | 암묵적 $C/K_{PW}$ (제한 없음) | `f_xy` (PFAS 피팅) | `f_xy ← 0.784\exp[-(\log K_{ow}-1.78)^2/2.44]` |
+| 체관 | **없음** (xylem-only) | $C_{Phl}=L_{Ph}C_{w,3}$ | **약산 이온트랩으로 $L_{Ph}$ 기계론화** (Phase 1.5) |
 | 기체 교환 | $\dot Q_\mathrm{GAS},\dot Q_\mathrm{VOL},\dot Q_\mathrm{DEP}$ | **없음** (A3: $K_{AW}\approx0$) | **포팅 (Phase 2, 최대 작업)** |
 | 대사 | $\dot\Omega=\mathcal{G}C$ | `gamma` (=0) | $\gamma_k>0$ 활성화 |
-| 성장 희석 | 로지스틱 $M(t)$ | ORYZA2000 / growth_rice | 그대로 재사용 |
-| 낟알 형성 게이트 | 없음 | `grain_gate_` | 그대로 재사용 (DPU 정합) |
+| 성장 희석 · 낟알 게이트 | 로지스틱 $M(t)$ | ORYZA2000 · `grain_gate_` | 그대로 재사용 |
 
-### 5.1 중성 QSPR 목록 (Phase 1에서 `literature_params`에 추가)
+### 5.1 QSPR / 관계식 목록
 
-| 양 | 식 | 출처 | 비고 |
+| 양 | 식 | 출처 | Phase |
 |---|---|---|---|
-| $K_{lip}$ | $a K_{ow}^{b}$, $a=1.22$, $b=0.77$ | Briggs 1982 / Trapp 2004 | RCF $=0.82+0.03K_{ow}^{0.77}$에서 역산 |
-| TSCF | $0.784\exp\!\left[-\frac{(\log K_{ow}-1.78)^2}{2.44}\right]$ | Briggs 1982 | bell; 최댓값 0.784 @ $\log K_{ow}=1.78$ |
-| $P_n$ (막) | $P_d \approx P_n\cdot10^{-3.5}$ | Trapp 2000 | 이온 대비 중성이 $10^{3.5}$배 투과 |
-| $K_{oc}$ | $0.41\,K_{ow}$ | Karickhoff 1981 | 토양측; PFAS 사슬길이 QSPR 대체 |
-| $P_C$ (큐티클) | $10^{0.704\log K_{ow}-11.2}$ [m/s] | DPU 원본 식 (Pc) | Phase 2 |
-| $\log K_{ow}$ | RDKit `Crippen.MolLogP` | — | SMILES 경로 (Phase 3) |
+| $f_n$ (약산) | $1/(1+10^{\,pH-pK_a})$ | Henderson–Hasselbalch | 1 |
+| $f_n$ (약염기) | $1/(1+10^{\,pK_a-pH})$ | 〃 | 1 |
+| $K_{lip}$ | $a K_{ow}^{b}$, $a=1.22$, $b=0.77$ | Briggs 1982 / Trapp 2004 | 1 |
+| TSCF | $0.784\exp\!\left[-\frac{(\log K_{ow}-1.78)^2}{2.44}\right]$ | Briggs 1982 | 1 |
+| $P_n$ (막) | $P_d \approx P_n\cdot10^{-3.5}$ | Trapp 2000 | 1 |
+| **이온트랩 계수** | $\Lambda=\dfrac{1+10^{\,pH_\mathrm{ph}-pK_a}}{1+10^{\,pH_\mathrm{leaf}-pK_a}}$ | Trapp 2000 세포모델 | **1.5** |
+| $K_{oc}$ | $0.41\,K_{ow}$ | Karickhoff 1981 | 3 |
+| $P_C$ (큐티클) | $10^{0.704\log K_{ow}-11.2}$ [m/s] | DPU 원본 식 (Pc) | 2 |
+| $\log K_{ow}$ | RDKit `Crippen.MolLogP` | — | 3 |
+
+> **이온트랩 sanity**: $pK_a=4$, $pH_\mathrm{leaf}=7.2$, $pH_\mathrm{ph}=8.0$ ⇒ $\Lambda\approx6.3$.
+> 즉 약산은 체관에서 ~6배 농축된다 — 2,4-D류 체관이동성 제초제의 고전적 설명이며,
+> PFAS에서 이 항이 꺼지는 이유($f_n\approx0$이라 갇힐 중성분자가 없음)를 그대로 보여준다.
 
 ---
 
 ## 6. 파일별 변경 계획
 
-### Phase 1 — 중성 코어 (비휘발성 중성물질까지 커버)
+### Phase 1 — speciation + 중성 코어
 
 | 파일 | 변경 | 위험도 |
 |---|---|---|
-| `src/pfas_rice_plant_module_4pool_surf.py` | `Compound`에 `speciation`/`P_n`/`K_lip` 추가; `Compartment`에 `f_lip` 추가; `binding_factors()`에 지질항 1줄; `root_uptake()`에 중성항 1줄 | 낮음 (모두 기본값 0) |
-| `src/literature_params.py` | `neutral_compound()`, `briggs_klip()`, `briggs_tscf()`, `koc_neutral()` 추가 | 없음 (순수 추가) |
-| `src/model_api.py` | `simulate_neutral(logKow, …)` 래퍼 (내부적으로 `record=` 주입) | 낮음 |
+| `src/pfas_rice_plant_module_4pool_surf.py` | `Compound`에 `pKa`/`is_acid`/`z`/`P_n`/`K_lip` 추가; `Compartment`에 `f_lip`/`pH` 추가; `binding_factors()` 지질항 1줄; `root_uptake()` D7 형태로 재구성 | 낮음 (모두 기본값 0/None) |
+| `src/literature_params.py` | `speciation()`, `briggs_klip()`, `briggs_tscf()`, `neutral_compound()` 추가 | 없음 (순수 추가) |
+| `src/model_api.py` | `simulate_neutral(logKow, pKa=None, …)` 래퍼 (`record=` 주입) | 낮음 |
+| `params/rice_tissue_params.csv` | 변경 없음 — `total_lipid` 행 이미 존재 (§11) | 없음 |
 | `validation/neutral_probe.py` | 신규 — §3 검증 재현 | 없음 |
-| `tests/test_neutral.py` | 신규 — 회귀 가드 + Briggs bell 재현 | 없음 |
-| `docs/` (본 문서) | 상태 갱신 | — |
+| `tests/test_neutral.py` | 신규 — 회귀 가드 + Briggs bell + speciation 극한 | 없음 |
 
-### Phase 2 — 기체 교환 (중성 DPU의 나머지 절반)
+### Phase 1.5 — 약전해질 완성 (체관 이온트랩)
+
+| 파일 | 변경 |
+|---|---|
+| `src/pfas_rice_plant_module_4pool_surf.py` | `rhs()`의 `C_Phl` 계산을 $L_{Ph}$ 상수 → $\Lambda(pK_a,pH)$ 기반으로 (PFAS는 $f_n\to0$이라 자동 소거) |
+| `src/literature_params.py` | `ion_trap_factor(pKa, pH_leaf, pH_phloem)` |
+| `tests/test_neutral.py` | $pK_a\to-\infty$(PFAS 극한)에서 $\Lambda\to1$ 확인 |
+
+### Phase 2 — 기체 교환
 
 | 파일 | 변경 | 위험도 |
 |---|---|---|
-| `src/pfas_rice_plant_module_4pool_surf.py` | `AirInputs` 신규; `permeabilities()` 신규(P_C/P_air/P_aqua/P_S/P_P/K_PA); `rhs()`에 `if K_AW>0` 가드 블록 | **중** — RHS 수정 |
+| `src/pfas_rice_plant_module_4pool_surf.py` | `AirInputs` 신규; `permeabilities()` 신규; `rhs()`에 `if K_AW>0` 가드 블록 | **중** — RHS 수정 |
 | `src/model_api.py` | `AirInputs` 노출, 기본 대기 시나리오 | 낮음 |
-| `params/` | 조직별 $S$(비표면적, 줄기 미정) · $\rho_k$ 확정 | — |
-| `tests/test_neutral.py` | 휘발 질량수지 테스트 | — |
+| `params/` | 조직별 $S$(줄기 미정) · $\rho_k$ 확정 | — |
 
 ### Phase 3 — 주변부 통합
 
 | 파일 | 변경 |
 |---|---|
-| `src/soil_hydrus.py` / `literature_params.koc` | 중성 $K_{oc}=0.41K_{ow}$ 분기; `params/cwo_kleach.csv`(PFAS 13종 전용)는 $K_{oc}$ 회귀 fallback 사용 |
-| `src/pfas_structure.py` | `:213`의 "중성종 = 가정 위반 flag" 자리에 중성 분기 추가; RDKit `MolLogP` → Briggs 전 파라미터 |
-| `src/model_api.py` | $L_{Ph}(K_{ow})$ (Kleier), `simulate_from_smiles` 중성 경로 |
-| `app.py` | 화합물 종류 선택(PFAS / 중성) — Expert 모드만 |
+| `src/soil_hydrus.py` / `literature_params.koc` | 중성 $K_{oc}=0.41K_{ow}$ 분기; `params/cwo_kleach.csv`(PFAS 전용)는 $K_{oc}$ 회귀 fallback |
+| `src/pfas_structure.py` | `:213`의 "중성종 = 가정 위반 flag" 자리에 중성/약전해질 분기; `MolLogP` → Briggs |
+| `app.py` | 화합물 종류 선택(PFAS / 중성 / 약전해질) — Expert 모드만 |
 
 ---
 
-## 7. 단계별 상세 + 수용 기준
+## 7. 단계별 수용 기준
 
-### Phase 1 — 중성 코어
-
-**구현 내용**
-```python
-# root_uptake() — 세 항의 합으로 재구성 (D2)
-j_n    = cmpd.P_n * (cmpd.fn * Cwo - cmpd.fn * Cw_root)          # 신규 (중성 수동)
-j_ed   = cmpd.kappa_d * g * (cmpd.fd * Cwo - cmpd.fd * eN * Cw_root)   # 기존
-j_carr = Vmax_in*Cwo/(Km_in+Cwo) - Vmax_out*Cw/(Km_out+Cw)             # 기존
-return j_n + j_ed + j_carr
-```
-```python
-# binding_factors() — 지질항 추가
-c.theta + (1-c.theta)*(c.f_prot*K_prot + c.f_PL*K_PL + c.f_cw*K_cw + c.f_lip*K_lip)
-```
-
-**수용 기준**
+### Phase 1
 - [ ] `reproduce_demo.py` RMSE = 0.029 (변화 없음), 전체 테스트 통과
-- [ ] `P_n=K_lip=f_lip=0`에서 RHS가 기존과 `np.allclose(rtol=0, atol=0)` 수준 동일
-- [ ] $\log K_{ow}$ 스윕에서 straw TSCF bell 피크가 $\log K_{ow}\in[1.5,3.0]$에 존재
-- [ ] root BAF가 $K_{ow}$에 단조 증가하고 Briggs RCF와 order-of-magnitude 일치
-- [ ] **알려진 한계 명시**: 낟알 과대(§3-3) — Phase 2/3 전까지 grain 결과는 보고하지 않음
+- [ ] `P_n=K_lip=f_lip=0, fn=0`에서 RHS가 기존과 완전 동일
+- [ ] **D7 극한 테스트**: `fd=0` → `z`를 어떤 값으로 줘도 결과 불변 / `fn=0` → 현재 PFAS 결과와 동일
+- [ ] **TSCF 함수 자체**의 최대가 $\log K_{ow}=1.78$ (QSPR sanity, ODE와 무관)
+- [ ] **straw 농도**의 bell 피크가 $\log K_{ow}\in[3.0,4.5]$ (해석 예측 ~3.9, 관측 3.75 — §3-3).
+      **주의: 1.78이 아니다.** 피크가 1.78 근처로 나오면 지질 결합항이 안 걸린 것이다
+- [ ] root BAF가 $K_{ow}$에 단조 증가, Briggs RCF와 order-of-magnitude 일치
+- [ ] **R6 민감도**: 잎 `f_lip` 0.04/0.055/0.07 스윕에서 straw 피크 위치가 ±0.5 log 이내로 안정
+- [ ] **알려진 한계 명시**: 낟알 과대(§3-4) — Phase 1.5/2 전까지 grain 결과는 보고하지 않음
 
-### Phase 2 — 기체 교환
+### Phase 1.5
+- [ ] $pK_a \le 0$ (PFAS 극한)에서 $\Lambda\to1$ → PFAS 결과 불변
+- [ ] $pK_a=4$ 약산에서 체관 농축 $\Lambda\approx6$ 재현
+- [ ] pH 민감도: $pH_\mathrm{ph}$ 8.0→7.5에서 grain BAF가 단조 감소
 
+### Phase 2
 포팅할 식 (DPU 원본 §5.4–5.8):
 
 $$P_{C}=10^{0.704\log K_{ow}-11.2},\quad
@@ -248,54 +314,51 @@ $$K_{PA}=\frac{B_k\,\rho_k}{K_{AW}},\qquad
 \dot Q_\mathrm{GAS}=(1-f_p)C_A\frac{A}{M}P_P,\qquad
 \dot Q_\mathrm{DEP}=v_\mathrm{DEP}f_p C_A\frac{A}{M}$$
 
-**⚠ 이식 시 반드시 처리할 3가지 (gotcha)**
+**⚠ 이식 시 반드시 처리할 4가지 (gotcha)**
 
 1. **단위계 충돌.** DPU 투과도 상수들은 **SI(m, s, g/mol)** 기준이고 우리 모델은 **day, L, kg, µg**이다.
    $P\,[\mathrm{m/s}] \times A\,[\mathrm{m^2}] \to \mathrm{m^3/s}$ → $\times 10^3 \times 86400$ 로 L/day 변환.
-   $S$는 $\mathrm{m^2/kg}$, $\rho_k$는 kg/L. **전용 변환 헬퍼 하나로 격리하고 단위 테스트를 붙인다.**
+   **전용 변환 헬퍼 하나로 격리하고 단위 테스트를 붙인다.**
 2. **기호 충돌 2건.**
-   - `RiceUptakeModel.phi` = *체관 재순환 분율*, DPU의 $\phi$ = *상대습도*. → 신규 필드는 **`RH`**로.
-   - `Environment.z` = *원자가*, DPU $P_\mathrm{aqua}$의 $z$ = *확산 경로 길이*. → **`z_path`**로.
+   - `RiceUptakeModel.phi` = *체관 재순환 분율*, DPU의 $\phi$ = *상대습도* → 신규 필드는 **`RH`**.
+   - `Environment.z` = *원자가*, DPU $P_\mathrm{aqua}$의 $z$ = *확산 경로 길이* → **`z_path`**.
 3. **$\rho_k$의 지위 변경.** 현재 $\rho_k$(`model_api.DEFAULT_TISSUE_DENSITY`)는 **보고용**이다
    (초기 draft의 차원오류 prefactor와 달리 수송 ODE에 들어가지 않음 — `CLAUDE.md` §8).
    기체교환 항에서는 $K_{PA}=B_k\rho_k/K_{AW}$로 **진짜 물리량이 된다.**
-   → 문서/코드 주석에서 "밀도는 수송에 안 들어간다"는 서술을 **"중성 기체교환 항에서만 들어간다"**로 정정 필요.
+   → `CLAUDE.md` §8의 "밀도는 수송에 안 들어간다" 서술을 그때 정정해야 한다.
 4. **$S$(비표면적) 결측.** 현재 `Compartment.S`는 leaf=20.0, grain=2.0만 있고 **root/stem=0**이다.
    줄기 큐티클 교환을 켜려면 줄기 $S$가 필요 (DPU: 줄기는 큐티클 경로만, 뿌리는 휘발 없음).
 
-**수용 기준**
-- [ ] $K_{AW}=0$에서 Phase 1 결과와 완전 동일
-- [ ] 단위 변환 테스트 (알려진 $P$, $A$ → L/day)
-- [ ] 대기 청정($C_A=0$) + 휘발성 화합물 → 잎 농도가 휘발로 감소하고 **전체 질량수지가 닫힘**
-- [ ] $C_A>0$ 단독 노출(토양 무오염)에서 잎이 오염되고 뿌리는 거의 안 됨
+**수용 기준**: $K_{AW}=0$에서 Phase 1.5 결과와 완전 동일 / 단위 변환 테스트 /
+청정대기($C_A=0$)+휘발성에서 잎 감소 & **질량수지 폐쇄** / $C_A>0$ 단독노출에서 잎만 오염.
 
-### Phase 3 — 주변부 통합
+### Phase 3
 - [ ] 중성 $K_{oc}$로 HYDRUS 구동 → `cwo_profile="flooded"` 형상이 중성에도 성립
-- [ ] SMILES(중성) → 파라미터 → ODE 완주, `provisional` 플래그 정확
-- [ ] app Expert 모드에서 중성 화합물 선택 가능
+- [ ] SMILES(중성/약산) → 파라미터 → ODE 완주, `provisional` 플래그 정확
 
 ---
 
 ## 8. 검증 전략과 데이터 공백
 
 ### 8.1 구조 검증 (즉시 가능)
-- **Briggs 1982 barley**: RCF/TSCF 관계식 재현 — 모델이 아니라 QSPR 자체의 sanity check.
-- **TSCF bell 위치**: $\log K_{ow}=1.78$ 부근 피크 (§7 Phase 1 수용 기준).
-- **극한 일치**: $f_n\to0$이면 PFAS 결과와 정확히 일치 (D1 불변식).
+- **Briggs 1982 barley**: RCF/TSCF 관계식 재현 — QSPR 자체의 sanity check.
+- **TSCF bell 위치**: $\log K_{ow}=1.78$ 부근 피크.
+- **극한 일치**: $f_n\to0$이면 PFAS 결과와 정확히 일치 (D1/D7 불변식).
+- **이온트랩 극한**: $pK_a\to$ 매우 낮음 ⇒ $\Lambda\to1$ ⇒ PFAS의 "체관 트랩 없음"이 자동 재현.
 
 ### 8.2 데이터 검증 (제약 있음)
 - **Trapp 1994 bromacil**: DPU 원본의 검증 세트. 다만 **작물이 벼가 아니다.**
-- ⚠ **데이터 공백 (핵심)**: `docs/literature_db/`에 **벼 조직별(뿌리/줄기/잎/현미) 중성 유기물
-  시계열 데이터가 없다.** PFAS 쪽 Yamazaki/Tang/Kim/Li에 해당하는 중성 데이터셋이 없으므로,
+- ⚠ **데이터 공백 (핵심)**: `docs/literature_db/`에 **벼 조직별(뿌리/줄기/잎/현미) 중성·약전해질
+  유기물 시계열 데이터가 없다.** PFAS 쪽 Yamazaki/Tang/Kim/Li에 해당하는 것이 없으므로,
   **Phase 1–2는 "구조 검증"까지만 주장 가능하고 예측 검증(OOS)은 주장할 수 없다.**
   이는 PFAS 쪽에서 확립한 "재현 ≠ 예측" 원칙(`CLAUDE.md` §6)을 그대로 따른다.
-- 후보 데이터 탐색 대상: 벼 농약 잔류 시험(이미다클로프리드·트리사이클라졸 등 조직별 분포),
-  논 제초제 흡수 실험. → **별도 작업 항목 (문헌 조사)**
+- 후보 데이터 탐색 대상: 벼 농약 잔류 시험(조직별 분포), 논 제초제 흡수 실험,
+  **하수 재이용 논의 의약품(약전해질) 흡수 연구** — 약전해질 쪽이 오히려 데이터가 더 있을 수 있다.
+  → **별도 작업 항목 (P4 문헌 조사)**
 
 ### 8.3 표기 규칙
-중성 결과를 보고할 때 **반드시** 다음을 병기한다:
-`speciation="neutral"`, $\log K_{ow}$, 사용한 QSPR 출처, 그리고
-**"벼 중성물질 데이터 부재 → 구조 검증 단계"** 라는 단서.
+결과 보고 시 **반드시** 병기: `speciation`, $\log K_{ow}$, $pK_a$, 사용한 QSPR 출처,
+그리고 **"벼 검증 데이터 부재 → 구조 검증 단계"** 라는 단서.
 
 ---
 
@@ -305,12 +368,14 @@ $$K_{PA}=\frac{B_k\,\rho_k}{K_{AW}},\qquad
 |---|---|---|---|
 | R1 | `rhs()` 수정이 PFAS 경로를 미세하게 흔듦 | 높음 (RMSE 0.029 회귀) | D6 회귀 가드; 가산항 기본 0; RHS 동등성 테스트 |
 | R2 | 단위계 혼입 (SI ↔ day/L/kg) | 높음 (조용한 오차) | 변환 헬퍼 격리 + 단위 테스트 |
-| R3 | 벼 중성 검증 데이터 부재 | 중 | 주장 범위를 구조 검증으로 한정 (§8.3) |
-| R4 | 낟알 $L_{Ph}(K_{ow})$ 근거 부족 | 중 | Phase 3까지 grain 결과 비보고 |
-| O1 | 벼 조직 **총 지질** dw 분율 | — | 문헌 확보 필요 (D4) |
+| R3 | 벼 중성/약전해질 검증 데이터 부재 | 중 | 주장 범위를 구조 검증으로 한정 (§8.3) |
+| R4 | 낟알 $L_{Ph}$ 근거 부족 | 중 → **완화** | Phase 1.5의 이온트랩이 기계론적 근거 제공 |
+| R5 | 구획별 pH가 실측이 아님 | 중 | Trapp 표준값 사용 + 민감도 분석 (Phase 1.5 수용 기준) |
+| ~~O1~~ | ~~벼 조직 총 지질 분율~~ | — | **해소 — §11** |
 | O2 | 줄기 비표면적 $S$ | — | Phase 2 전 확보 |
 | O3 | 대사속도 $\gamma_k$ 출처 | — | 화합물별 문헌; 기본 0 유지 |
-| O4 | 약전해질을 언제 열 것인가 | — | 중성이 서면 재검토 (D2) |
+| ~~O4~~ | ~~약전해질을 언제 열 것인가~~ | — | **해소 — Phase 1/1.5로 편입 (사용자 결정)** |
+| O5 (신규) | 약염기($z=+1$) 검증 사례 | 낮음 | 약산 먼저; 약염기는 부호만 뒤집힘 |
 
 ---
 
@@ -318,7 +383,11 @@ $$K_{PA}=\frac{B_k\,\rho_k}{K_{AW}},\qquad
 
 | 기호 | 코드 | 단위 | 의미 |
 |---|---|---|---|
-| $f_n$ | `Compound.fn` | – | 중성 분율 (중성=1, PFAS=0) |
+| $f_n,\;f_d$ | `Compound.fn/.fd` | – | 중성/해리 분율 ($f_n+f_d=1$). **speciation의 주 스위치** |
+| $pK_a$ | `Compound.pKa` | – | `None`이면 speciation 미적용(하위호환) |
+| $z$ | `Compound.z` | – | 이온 원자가 (약산 −1, 약염기 +1); `Environment.z`는 fallback |
+| $pH_k$ | `Compartment.pH` | – | 구획 pH (D8) |
+| $\Lambda$ | `ion_trap_factor()` | – | 체관 이온트랩 농축 계수 |
 | $P_n$ | `Compound.P_n` | L/(day·kg) | $a_R P_n$ — 중성 수동투과 (질량비) |
 | $K_{lip}$ | `Compound.K_lip` | L/kg lipid | $a K_{ow}^{b}$ (Briggs 지질항) |
 | $K_{AW}$ | `Compound.K_AW` | – | 공기–물 분배; **0이면 기체교환 전체 소거** |
@@ -327,13 +396,65 @@ $$K_{PA}=\frac{B_k\,\rho_k}{K_{AW}},\qquad
 | $C_A$ | `AirInputs.C_A` | µg/L | 대기 농도 |
 | $f_p$ | `AirInputs.f_p` | – | 입자상 분율 |
 | $v_\mathrm{DEP}$ | `AirInputs.v_dep` | m/s | 침적 속도 (~0.001) |
-| $z_\mathrm{path}$ | `AirInputs.z_path` | m | 수상층 확산 경로 (Environment.`z`와 충돌 회피) |
+| $z_\mathrm{path}$ | `AirInputs.z_path` | m | 수상층 확산 경로 (원자가 `z`와 충돌 회피) |
+
+---
+
+## 11. O1 해소 — 조직별 총 지질 분율 `f_lip`
+
+### 11.1 결론: 값은 이미 레포에 있었다
+
+`params/rice_tissue_params.csv`에 **organ별 `total_lipid` 행이 이미 존재**한다
+(`f_PL_membrane`와 **별도 행**으로 — D4의 설계 근거가 데이터 레벨에서 이미 확립되어 있었다).
+
+| organ | low | **recommended** | high | evidence | source_key |
+|---|---|---|---|---|---|
+| root | 0.01 | **0.020** | 0.03 | estimate | `S_physiol` |
+| stem | 0.01 | **0.015** | 0.02 | estimate | `S_physiol` |
+| leaf | 0.04 | **0.055** | 0.07 | estimate | `S_physiol` |
+| grain_brown | 0.027 | **0.030** | 0.036 | **measured** | `S_proximate_rg` |
+| (husk) | 0.005 | 0.010 | 0.015 | estimate | `S_physiol` |
+| (grain_white) | 0.003 | 0.006 | 0.009 | measured | `S_USDA_white` |
+
+> **rev.1의 잠정 anchor는 틀렸다**: 잎을 0.03으로 적었으나 실제 DB 권장값은 **0.055**(~2×),
+> 줄기 0.01→0.015, 현미 0.025→0.030. Phase 1은 **위 표의 recommended 값을 쓴다.**
+
+### 11.2 문헌 교차검증
+
+| 조직 | 문헌값 | DB 값 | 판정 |
+|---|---|---|---|
+| 현미 | 조지방 **3.04–3.59% dw**; 별도 보고 **2.75–4.49% dw**; n-헥산 추출 1.92–2.72% | 0.030 (0.027–0.036) | **일치 (measured 확인)** |
+| 볏짚(줄기+잎) | 에테르추출물 **2.04% DM**; 친유성 추출물 **3.4% DM** | — | **아래 정합성 검사** |
+| 잎 (유사체) | 라이그래스 EE **4.2% DM**, 알팔파 3.1%, 클로버 2.8%, 옥수수사일리지 2.7% (Palmquist & Jenkins 1980) | 0.055 (0.04–0.07) | 범위 상단이지만 **녹색 활성 엽신으로 타당** |
+| 뿌리 | Trapp(2015) DPU 계열 기본 **root lipid 0.025** | 0.020 (0.01–0.03) | **정합** |
+
+**정합성 검사 (독립적 교차검증)** — 볏짚은 줄기(대+엽초)와 엽신의 혼합이다.
+질량비 70:30 가정 시 $0.7\times0.015+0.3\times0.055=\mathbf{0.027}$,
+50:50 가정 시 $\mathbf{0.035}$. 측정된 볏짚 지질 **2.04–3.4% DM**이 이 구간을 정확히 감싼다.
+⇒ **줄기 0.015와 잎 0.055는 서로 독립적인 볏짚 측정치와 모순되지 않는다.**
+
+### 11.3 남은 공백 (정직한 기술)
+- **뿌리·줄기·잎은 여전히 `estimate`다** — 벼 조직별 총 지질의 *직접 측정치*는 찾지 못했다.
+  문헌은 압도적으로 곡립/미강(상업적 가치)에 편중되어 있고, 영양기관 지질은
+  조성(지방산·갈락토지질 종류) 연구는 많으나 **dw 대비 총량**을 보고하지 않는다.
+- 따라서 `f_lip`은 **현미만 measured, 나머지는 근연 매트릭스 유추(analogy)**다.
+  민감도가 큰 것으로 드러나면(특히 잎, $K_{lip}$이 큰 친유성 화합물에서) 이것이 곧
+  **다음 실험 우선순위**가 된다 — PFAS 쪽 `K_cw` 공백과 같은 성격.
+- 지질 **조성**의 함의는 별개 리스크: 잎 지질의 대부분은 갈락토지질(MGDG/DGDG)로
+  **인지질·중성지질과 극성이 다르다.** Briggs $a K_{ow}^b$는 옥탄올 유사상을 가정하므로
+  잎에서 과대평가 가능. → §9 R6으로 추적.
+
+| ID | 항목 | 대응 |
+|---|---|---|
+| R6 (신규) | 잎 지질이 갈락토지질 우세 → 옥탄올 유사성 가정 위배 가능 | Phase 1에서 잎 `f_lip` 민감도 스윕(0.04/0.055/0.07)을 수용 기준에 포함 |
 
 ---
 
 ## 부록 A. 검증 스크립트 (§3 재현)
 
 Phase 1에서 `validation/neutral_probe.py`로 커밋 예정.
+**주의**: 아래는 $P_n$ 항이 없는 *현재* 코어에 대한 probe라 `z=0` 지름길을 쓴다.
+정식 구현에서는 D7에 따라 `z`를 건드리지 않고 `fn=1, fd=0`으로 전환한다.
 
 ```python
 """현 코어가 z=0에서 중성 DPU base로 축약되는지 확인하는 probe."""
@@ -355,11 +476,12 @@ b = gr.organ_biomass(t, season=season)
 M = np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]])
 inputs = PlantInputs(t=t, Cwo=np.ones(n), Qtp=Qtp, M=M)
 
-# NOTE: probe 단계에서는 f_PL 슬롯을 총지질로 임시 전용. 정식 구현에서는 f_lip 신규 필드(D4).
+# NOTE: probe 단계에서는 f_PL 슬롯을 총지질로 임시 전용하고 §11의 값을 쓴다.
+# 정식 구현에서는 f_lip 신규 필드(D4).
 comps = [Compartment("root",  0.90, 0.07, 0.020, 0.50),
-         Compartment("stem",  0.83, 0.05, 0.010, 0.72),
-         Compartment("leaf",  0.78, 0.10, 0.030, 0.56, S=20.0),
-         Compartment("grain", 0.14, 0.09, 0.025, 0.035, S=2.0)]
+         Compartment("stem",  0.83, 0.05, 0.015, 0.72),
+         Compartment("leaf",  0.78, 0.10, 0.055, 0.56, S=20.0),
+         Compartment("grain", 0.14, 0.09, 0.030, 0.035, S=2.0)]
 
 for logKow in (0.5, 1.78, 3.0, 4.5, 6.0):
     K_lip, tscf = briggs(logKow)
@@ -379,13 +501,33 @@ c0 = Compound("x", 0, 0, 0, kappa_d=1.0, Vmax_in=0, Km_in=1, Vmax_out=0, Km_out=
 assert abs(root_uptake(2.0, 0.5, c0, Environment(z=0)) - 1.5) < 1e-12   # 순수 Fick
 ```
 
+> §3의 표는 위 스크립트(§11 확정 지질값)를 0.25 log 간격 전체 스윕으로 돌려 발췌한 것이다.
+> Phase 1에서 정식 파일로 커밋할 때 스윕 범위를 `np.arange(0, 6.01, 0.25)`로 넓히고
+> straw 피크 위치를 함께 출력하여 §7의 수용 기준을 자동 검증한다.
+
 ---
 
 ## 부록 B. 진행 체크리스트
 
-- [ ] **P0** 설계 문서 검토·승인 ← *현재 단계*
-- [ ] **P1** 중성 코어 (§7 Phase 1) + 회귀 가드
-- [ ] **P1.5** O1(총 지질 분율) 문헌 확보
-- [ ] **P2** 기체 교환 (§7 Phase 2) + 단위 테스트
+- [x] **P0** 설계 문서 작성
+- [x] **O1** 조직 총 지질 분율 조사 → §11 (레포 DB + 문헌 교차검증)
+- [x] **O4** 약전해질 범위 결정 → Phase 1/1.5 편입
+- [ ] **P1** speciation + 중성 코어 + 회귀 가드 ← *다음*
+- [ ] **P1.5** 약전해질 완성 (체관 이온트랩)
+- [ ] **P2** 기체 교환 + 단위 테스트
 - [ ] **P3** 토양 $K_{oc}$ · SMILES · app 통합
 - [ ] **P4** 검증 데이터 문헌 조사 (§8.2) — 병행 가능
+
+---
+
+## 참고문헌 (§11 조사분)
+
+- FAO, *Rice in human nutrition* — 곡립 구조·조성. https://www.fao.org/4/t0567e/t0567e08.htm
+- 현미 조지방 (품종별 proximate, % dw). https://www.researchgate.net/figure/Proximate-composition-of-rice-varieties-dry-weight-basis_tbl1_345127310
+- 현미 지질 2.75–4.49% dw (질소·재식밀도 영향). https://pmc.ncbi.nlm.nih.gov/articles/PMC11604421/
+- 볏짚 에테르추출물 2.04% DM (FAO, 이집트 반추동물 사료). https://openknowledge.fao.org/server/api/core/bitstreams/e6ccb174-d8f0-454a-9680-3b651c6fa76c/content/x5494e07.htm
+- 볏짚 친유성 추출물 3.4% dw. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8981202/
+- 조사료 EE (라이그래스 4.2%, 알팔파 3.1% 등; Palmquist & Jenkins 1980). https://www.aafco.org/wp-content/uploads/2023/01/fat_analysis_palmquist.pdf
+- Trapp(2015) 계열 DPU 기본 root lipid 0.025 (ionizable PPCP generic model). https://academic.oup.com/etc/article/42/4/793/7730340
+- 틸라코이드 갈락토지질 MGDG/DGDG가 총 지질의 최대 80% (D4·R6 근거). https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5897459/
+- Brunetti et al. 2019, DPU module for HYDRUS. https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2019WR025432
