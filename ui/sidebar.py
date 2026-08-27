@@ -41,6 +41,16 @@ def build():
         preset_label = None
         preset_word = None
         use_custom_tables = False
+        # Compound class (phase 3 of the neutral extension). Simple mode is PFAS-only:
+        # the general-audience view is about the paddy PFAS story, and the neutral
+        # branch has no rice validation data to stand behind a plain-language number.
+        compound_class = "PFAS"
+        neutral_smiles = None
+        logKow = None
+        pKa = None
+        is_acid = True
+        K_AW = 0.0
+        compound_name = None
 
         if not expert:
             # ----------------------------- SIMPLE sidebar (한국어) -----------------------------
@@ -88,11 +98,74 @@ def build():
                      "engine (if built); biomonitoring needs no soil model.")
             use_custom_tables = (mode == "Custom tables (Cwᵒ + growth)")
 
-            st.header("2 · PFAS compound")
-            spec = st.radio("Specify by", ["Curated congener", "SMILES (structure)"], horizontal=True,
-                            help="Pick one of the 13 curated congeners, or paste ANY PFAS structure (SMILES) "
-                                 "to parameterise it from chemistry (RDKit read-across / QSPR).")
-            if spec == "Curated congener":
+            st.header("2 · Compound")
+            cls_label = st.radio(
+                "Compound class",
+                ["PFAS (permanent anion)", "Neutral organic", "Weak electrolyte (acid/base)"],
+                help="Which branch of the model runs. PFAS = permanently dissociated anion "
+                     "(GHK exclusion + carrier uptake, measured PFAS binding pools). Neutral / weak "
+                     "electrolyte = the Trapp/Briggs DPU base (Fickian permeation, lipid binding, "
+                     "TSCF bell), which the PFAS model is an extension of. "
+                     "NOTE: no rice per-organ dataset exists for neutral compounds, so that branch is "
+                     "structurally verified but NOT validated against data.")
+            compound_class = {"PFAS (permanent anion)": "PFAS",
+                              "Neutral organic": "neutral",
+                              "Weak electrolyte (acid/base)": "weak"}[cls_label]
+
+            if compound_class != "PFAS":
+                spec, congener = None, None
+                st.caption("⚠ Structural verification only — no rice validation data for this class.")
+                nsrc = st.radio("Get log K_ow from", ["Enter a value", "SMILES (RDKit estimate)"],
+                                horizontal=True,
+                                help="A measured log Kow is strongly preferred: it drives EVERY neutral "
+                                     "parameter (lipid binding K_lip, the TSCF bell, and soil Koc), so its "
+                                     "error propagates through all of them. RDKit's Crippen MolLogP is an "
+                                     "atom-contribution estimate, typically within ~0.5–1 log unit.")
+                if nsrc == "SMILES (RDKit estimate)":
+                    neutral_smiles = st.text_area(
+                        "SMILES", "CCNc1nc(Cl)nc(NC(C)C)n1", height=70,
+                        help="Any neutral / ionizable organic (default: atrazine).").strip()
+                    logKow = None
+                    if not api.rdkit_available():
+                        st.warning("RDKit is not installed — switch to **Enter a value**.")
+                    elif neutral_smiles:
+                        svg, why = _mol_svg(neutral_smiles)
+                        if svg is not None:
+                            import streamlit.components.v1 as components
+                            components.html(
+                                "<div style='background:#fff;border:1px solid #ddd;border-radius:6px;"
+                                f"display:flex;justify-content:center'>{svg}</div>", height=185)
+                            st.caption("structure (RDKit)")
+                        else:
+                            st.caption(f"⚠ {why}")
+                else:
+                    neutral_smiles = None
+                    logKow = st.slider("log K_ow", -1.0, 8.0, 3.0, 0.1,
+                                       help="Octanol–water partition coefficient. The single descriptor "
+                                            "the whole neutral parameterisation keys off.")
+                compound_name = st.text_input("Name (label only)", "").strip() or None
+                if compound_class == "weak":
+                    pKa = st.number_input("pKa", -2.0, 14.0, 4.5, 0.1,
+                                          help="Speciation at the SOIL pH sets (f_n, f_d); both membrane "
+                                               "pathways then run in parallel.")
+                    is_acid = st.radio("Ionises as", ["Acid (z = −1)", "Base (z = +1)"],
+                                       horizontal=True).startswith("Acid")
+                else:
+                    pKa, is_acid = None, True
+                K_AW = st.number_input("K_AW (air–water partition)", 0.0, 10.0, 0.0, 0.01,
+                                       format="%.4f",
+                                       help="0 switches plant–air exchange OFF entirely. A volatile "
+                                            "compound needs K_AW > 0, otherwise its shoot is "
+                                            "over-predicted (volatilisation is a real loss term).")
+            else:
+                neutral_smiles, logKow, pKa, is_acid, K_AW, compound_name = \
+                    None, None, None, True, 0.0, None
+                spec = st.radio("Specify by", ["Curated congener", "SMILES (structure)"], horizontal=True,
+                                help="Pick one of the 13 curated congeners, or paste ANY PFAS structure (SMILES) "
+                                     "to parameterise it from chemistry (RDKit read-across / QSPR).")
+            if compound_class != "PFAS":
+                pass
+            elif spec == "Curated congener":
                 congener = st.selectbox("PFAS congener", api.CONGENERS,
                                         index=api.CONGENERS.index("PFOA"), format_func=_cong_label)
             else:
@@ -310,4 +383,11 @@ def build():
     cfg.preset_label = preset_label
     cfg.preset_word = preset_word
     cfg.use_custom_tables = use_custom_tables
+    cfg.compound_class = compound_class
+    cfg.neutral_smiles = neutral_smiles
+    cfg.logKow = logKow
+    cfg.pKa = pKa
+    cfg.is_acid = is_acid
+    cfg.K_AW = K_AW
+    cfg.compound_name = compound_name
     return cfg

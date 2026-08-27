@@ -197,3 +197,60 @@ def test_known_pfas_from_smiles_is_unaffected_by_the_dispatcher():
     _ps()
     assert (api.simulate_from_smiles(PFOA_SMILES)["baf_final"]["root"]
             == api.simulate("PFOA")["baf_final"]["root"])
+
+
+# --------------------------------------------------------------------------
+# 4. the app wiring (phase 3 item 3)
+# --------------------------------------------------------------------------
+# The UI itself is verified with headless Streamlit + Playwright (repo convention);
+# what is worth locking in pytest is the CONTRACT between the sidebar and the runner,
+# because a renamed cfg field fails silently at render time rather than at import.
+def test_sidebar_exports_the_compound_class_contract():
+    import inspect
+    st = pytest.importorskip("streamlit")          # noqa: F841
+    import ui.sidebar
+    src = inspect.getsource(ui.sidebar.build)
+    for fld in ("compound_class", "neutral_smiles", "logKow", "pKa",
+                "is_acid", "K_AW", "compound_name"):
+        assert f"cfg.{fld}" in src, f"sidebar no longer exports cfg.{fld}"
+
+
+def test_simple_mode_stays_pfas_only():
+    """The general-audience view must not reach the unvalidated neutral branch."""
+    import inspect
+    pytest.importorskip("streamlit")
+    import ui.sidebar
+    src = inspect.getsource(ui.sidebar.build)
+    # the shared defaults block (used as-is by Simple mode) pins PFAS
+    assert 'compound_class = "PFAS"' in src
+
+
+def test_run_model_dispatches_on_compound_class():
+    import inspect
+    pytest.importorskip("streamlit")
+    import ui.common
+    src = inspect.getsource(ui.common.run_model)
+    assert 'compound_class' in src and '_simulate_neutral' in src
+
+
+def test_ui_modules_import():
+    """Catches syntax/name errors in the UI package without a Streamlit runtime."""
+    pytest.importorskip("streamlit")
+    import ui.common, ui.expert, ui.i18n, ui.sidebar, ui.simple    # noqa: F401
+
+
+def test_sulfonamide_now_has_somewhere_to_go():
+    """BEHAVIOUR CHANGE: a perfluoroalkyl sulfonamide (FOSA) is not a permanent anion
+    (pKa ~6), and before phase 3 it was flagged as violating the PFAS assumption while
+    still being run on the PFAS branch. It now classifies as 'organic' and routes to
+    the neutral / weak-electrolyte model, which is where that chemistry belongs.
+    The flag itself is unchanged -- the note still says NOT a PERMANENT ANION."""
+    ps = _ps()
+    fosa = "NS(=O)(=O)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)F"
+    d = ps.descriptors(fosa)
+    assert d.head_group == "sulfonamide"
+    assert d.compound_class == "organic"
+    assert any("PERMANENT ANION" in n for n in d.notes)
+    assert api.simulate_from_smiles(fosa)["compound_class"] == "organic"
+    # the PFAS branch is still reachable explicitly, for comparison against the old path
+    assert api.simulate_from_smiles(fosa, compound_class="PFAS")["compound_class"] == "PFAS"

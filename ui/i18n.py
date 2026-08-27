@@ -259,12 +259,16 @@ STRINGS = {
         "ko": ("👉 왼쪽에서 시나리오를 고르고 아래 🗺️ 지도를 보세요. 화학 지식은 필요 없습니다."),
     },
     "header.expert_caption": {
-        "en": ("Mechanistic 4-compartment dynamic model for permanently-anionic PFAS in paddy rice "
-               "(IOC extension of the Trapp/Brunetti DPU). Parameters are measured/cited "
-               "(docs/literature_db). Charts are interactive — hover, zoom, toggle. Outputs illustrative."),
-        "ko": ("Mechanistic 4-compartment dynamic model for permanently-anionic PFAS in paddy rice "
-               "(IOC extension of the Trapp/Brunetti DPU). Parameters are measured/cited "
-               "(docs/literature_db). Charts are interactive — hover, zoom, toggle. Outputs illustrative."),
+        "en": ("Mechanistic 4-compartment dynamic model for paddy rice, across the compound "
+               "spectrum: permanently-anionic PFAS (IOC extension) and neutral / weak-electrolyte "
+               "organics (the Trapp/Brunetti DPU base it extends). Parameters are measured/cited "
+               "(docs/literature_db); the neutral branch has no rice validation data. Charts are "
+               "interactive — hover, zoom, toggle. Outputs illustrative."),
+        "ko": ("Mechanistic 4-compartment dynamic model for paddy rice, across the compound "
+               "spectrum: permanently-anionic PFAS (IOC extension) and neutral / weak-electrolyte "
+               "organics (the Trapp/Brunetti DPU base it extends). Parameters are measured/cited "
+               "(docs/literature_db); the neutral branch has no rice validation data. Charts are "
+               "interactive — hover, zoom, toggle. Outputs illustrative."),
     },
 
     # ---- footer ----

@@ -104,6 +104,31 @@ def _simulate_smiles(smiles, **kw):
     return api.simulate_from_smiles(smiles, **kw)
 
 
+@st.cache_data(show_spinner="Running the neutral / weak-electrolyte model…")
+def _simulate_neutral(logKow, **kw):
+    """Cache a NEUTRAL / WEAK-ELECTROLYTE run (the Trapp/Briggs DPU base branch)."""
+    drv = kw.pop("drivers_tuple", None)
+    if drv is not None:
+        t, Cwo, Qtp, Mflat, ncol = drv
+        kw["drivers"] = dict(t=np.array(t), Cwo=np.array(Cwo), Qtp=np.array(Qtp),
+                             M=np.array(Mflat).reshape(-1, ncol))
+    kl = kw.pop("cwo_k_leach", None)
+    if kl is not None and kw.get("cwo_profile", "constant") != "constant":
+        kw["cwo_kw"] = {"k_leach": float(kl)}
+    return api.simulate_neutral(logKow, **kw)
+
+
+@st.cache_data(show_spinner=False)
+def _logkow_from_smiles(smiles):
+    """RDKit Crippen MolLogP for the sidebar's SMILES → log Kow estimate.
+    Returns (logKow, None) or (None, reason)."""
+    try:
+        from pfas_structure import descriptors
+        return float(descriptors(smiles).logKow_crippen), None
+    except Exception as e:                                   # noqa: BLE001
+        return None, f"{type(e).__name__}: {e}"
+
+
 @st.cache_data(show_spinner=False)
 def _mol_svg(smiles, w=290, h=170):
     """2-D structure as an SVG string (RDKit, Cairo-free → works on Streamlit Cloud).
@@ -650,7 +675,33 @@ def run_model(cfg):
     sim_kw = dict(E_m_mV=E_m, f_xy_source=fxy_source, biomass=biomass)
     desc = None
     provisional = False
-    if smiles:                                              # compound specified by structure
+    compound_class = getattr(cfg, "compound_class", "PFAS")
+
+    if compound_class != "PFAS":
+        # ---- neutral / weak-electrolyte branch (Trapp/Briggs DPU base) ----------
+        logKow = cfg.logKow
+        if logKow is None:                                  # from a SMILES structure
+            if not api.rdkit_available():
+                st.error("RDKit not installed — cannot read log Kow from a structure. "
+                         "`pip install rdkit`, or choose **Enter a value** in the sidebar.")
+                st.stop()
+            logKow, why = _logkow_from_smiles(cfg.neutral_smiles or "")
+            if logKow is None:
+                st.error(f"Could not parse that SMILES — check the structure.\n\n`{why}`")
+                st.stop()
+            # a Crippen estimate feeds K_lip, TSCF and Koc alike, so flag the whole run
+            provisional = True
+        nkw = dict(Cwo=Cwo_const, season=season, measured_forcing=measured,
+                   biomass=biomass, pKa=cfg.pKa, is_acid=cfg.is_acid,
+                   K_AW=float(cfg.K_AW or 0.0), name=cfg.compound_name)
+        if drivers is not None:
+            res = _simulate_neutral(logKow, drivers_tuple=_drivers_tuple(drivers), **nkw)
+        else:
+            res = _simulate_neutral(logKow, cwo_profile=cwo_profile,
+                                    cwo_k_leach=cwo_kleach, **nkw)
+        congener = res["congener"]
+        sim_kw = dict(biomass=biomass)                      # PFAS-only knobs do not apply
+    elif smiles:                                            # compound specified by structure
         if not api.rdkit_available():
             st.error("RDKit not installed — cannot parameterise a SMILES structure. "
                      "`pip install rdkit`, or switch to **Curated congener** in the sidebar.")
@@ -686,6 +737,7 @@ def run_model(cfg):
     cfg.res = res
     cfg.desc = desc
     cfg.provisional = provisional
+    cfg.compound_class = compound_class
     cfg.congener = congener
     cfg.obs = obs
     cfg.p = p

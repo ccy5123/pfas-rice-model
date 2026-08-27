@@ -238,7 +238,7 @@ def descriptors(smiles: str) -> Descriptors:
         # (phase 3).  This used to be a bare "assumption violated" flag with nowhere to go.
         d.notes.append(
             f"compound class: ORGANIC (head '{head}', {d.n_perfluoroC} perfluorinated C) -- "
-            "not a permanent anion, so the PFAS branch does not apply.  Use "
+            "NOT a PERMANENT ANION, so the PFAS branch does not apply.  Use "
             "neutral_compound_from_smiles() / simulate_from_smiles(): binding comes from the "
             f"Briggs lipid term at Crippen logKow={d.logKow_crippen:.2f} (an ESTIMATE -- supply "
             "a measured logKow when you have one), and a pKa makes it a weak electrolyte.")

@@ -34,8 +34,19 @@ def render(cfg):
     fxy_source = cfg.fxy_source
     biomass = cfg.biomass
     measured_bio = cfg.measured_bio
+    compound_class = getattr(cfg, "compound_class", "PFAS")
+    is_pfas = (compound_class == "PFAS")
     # ---------------------------------------------------------------- headline metrics
-    st.subheader(f"{congener}  (C{p['n_C']} {p['group']})  ·  source: {mode}")
+    if is_pfas:
+        st.subheader(f"{congener}  (C{p['n_C']} {p['group']})  ·  source: {mode}")
+    else:
+        spec_txt = ("neutral" if p.get("pKa") is None else
+                    f"weak {'acid' if p.get('is_acid') else 'base'}, pKa {p['pKa']:g}")
+        # the auto-generated label just restates logKow, which the header already shows
+        label = congener
+        if str(congener).startswith("neutral(logKow="):
+            label = "Neutral organic" if p.get("pKa") is None else "Weak electrolyte"
+        st.subheader(f"{label}  (log K_ow {p['logKow']:.2f}, {spec_txt})  ·  source: {mode}")
     c1, c2, c3, c4 = st.columns(4)
     for col, tis in zip((c1, c2, c3), ("root", "straw", "grain")):
         pred = res["straw_baf"] if tis == "straw" else res["baf_final"][tis]
@@ -43,10 +54,47 @@ def render(cfg):
         if bio_baf and tis in bio_baf:
             sub = f"measured {bio_baf[tis]:.2f}"
         col.metric(f"{tis} BAF [L/kg]", f"{pred:.2f}", sub, delta_color="off")
-    c4.metric("anion exclusion eᴺ", f"{res['eN']:.0f}", f"N={res['N']:.2f}", delta_color="off")
+    if is_pfas or p.get("fd", 0.0) > 0.0:
+        c4.metric("anion exclusion eᴺ", f"{res['eN']:.0f}", f"N={res['N']:.2f}", delta_color="off")
+    else:
+        # f_d = 0, so the GHK term is identically zero and eᴺ never enters the result
+        c4.metric("neutral fraction f_n", f"{p.get('fn', 1.0):.3f}", "no GHK exclusion",
+                  delta_color="off")
+
+    # ---- neutral / weak-electrolyte parameter panel -------------------------
+    if not is_pfas:
+        st.warning(
+            "⚠ **NEUTRAL / WEAK-ELECTROLYTE branch — structurally verified, NOT validated.** "
+            "The DB has no per-organ time series for a neutral organic in rice (there is no "
+            "counterpart to Yamazaki/Tang/Kim on the PFAS side), so these numbers reproduce the "
+            "Trapp/Briggs theory, not measurements. Also: the grain has no loss term other than "
+            "metabolism and volatilisation, so a **non-volatile** compound's grain is over-predicted; "
+            "and rice root/stem/leaf lipid fractions are literature ESTIMATES.")
+        with st.expander("🧪 Neutral parameters (Trapp/Briggs DPU base)", expanded=True):
+            nc1, nc2 = st.columns(2)
+            br = res.get("briggs", {})
+            nc1.markdown(
+                f"**Chemistry**\n\n"
+                f"- log K_ow = **{p['logKow']:.2f}**"
+                + ("  ·  *RDKit Crippen estimate*" if provisional else "  ·  *supplied*") + "\n"
+                f"- speciation: f_n = {p.get('fn', 1.0):.3f}, f_d = {p.get('fd', 0.0):.3f}"
+                + ("" if p.get("pKa") is None else f"  (pKa {p['pKa']:g}, z = {p.get('z')})") + "\n"
+                f"- K_AW = {getattr(cfg, 'K_AW', 0.0):.4g}"
+                + ("  — air exchange **off**" if not getattr(cfg, "K_AW", 0.0)
+                   else "  — plant–air exchange **on**"))
+            nc2.markdown(
+                f"**Model parameters**\n\n"
+                f"- K_lip = {p['K_lip']:.1f} L/kg lipid  (Briggs a·K_ow^b)\n"
+                f"- TSCF = {br.get('tscf', p['f_xy']):.4g}  ·  RCF = {br.get('rcf', float('nan')):.3g}\n"
+                f"- P_n = {p['P_n']:.4g} L/(day·kg)  ·  L_Ph = {p['L_Ph']:.3g}\n"
+                f"- B_k: " + ", ".join(f"{k} {v:.1f}" for k, v in res["B_k"].items()))
+            if provisional:
+                st.caption("• log K_ow came from RDKit Crippen MolLogP. It drives K_lip, the TSCF "
+                           "bell AND the soil K_oc together, so its error propagates into every "
+                           "number above — supply a measured value when one exists.")
 
     # ---- structure → parameters panel (SMILES mode) -------------------------
-    if desc is not None:
+    if desc is not None and is_pfas:
         kind = "read-across (matches a curated congener)" if desc.matched_name else "QSPR (novel structure)"
         with st.expander(f"🧬 Structure → parameters  ·  {kind}", expanded=True):
             if provisional:
@@ -114,7 +162,8 @@ def render(cfg):
         st.plotly_chart(plots.fig_tissue(res), width="stretch")
         st.plotly_chart(plots.fig_burden(res), width="stretch")
         st.markdown("**B_k [L/kg fw]** — " + ", ".join(f"{k}: {v:.2f}" for k, v in res["B_k"].items())
-                    + f"  ·  f_xy={p['f_xy']:.4g}, L_Ph={p['L_Ph']:.4g}, κ_d={p['kappa_d']:.3g}")
+                    + f"  ·  f_xy={p['f_xy']:.4g}, L_Ph={p['L_Ph']:.4g}"
+                    + (f", κ_d={p['kappa_d']:.3g}" if "kappa_d" in p else ""))
         st.caption("Top: tissue **concentration** C_k(t) [µg/kg] (intensive). Bottom: **PFAS mass** "
                    "(burden) = C_k(t)·M_k(t) [µg/hill] (extensive) — where the chemical actually ends up. "
                    "A tissue can be high-concentration yet low-mass (small organ), so the two views differ; "
@@ -202,29 +251,40 @@ def render(cfg):
 
     # ---- Tab 5: chain-length trends -----------------------------------------
     with tabs[4]:
-        key = st.selectbox("Parameter", ["K_PL", "K_prot", "K_cw_root",
-                                         "f_xy_recommended", "B_root", "B_grain"], index=0)
-        # a novel SMILES compound is not in the curated chain series -> ring a reference instead
-        chain_cong = congener if congener in api.CONGENERS else (
-            desc.matched_name if desc and desc.matched_name in api.CONGENERS else "PFOA")
-        st.plotly_chart(plots.fig_chain(api.chain_table(), chain_cong, key), width="stretch")
-        if congener not in api.CONGENERS:
-            st.caption(f"'{congener}' is a novel structure (not in the curated 13); the ring marks "
-                       f"**{chain_cong}** for reference. Its own parameters are in the 🧬 panel above.")
+        if not is_pfas:
+            st.info("Chain-length trends are a **PFAS** view: the x-axis is perfluorinated chain "
+                    "length and the curves are the PFAS binding/transport QSPRs. A neutral organic "
+                    "is parameterised from log K_ow instead, so it has no place on this axis. "
+                    "Switch the compound class to PFAS in the sidebar.")
+        else:
+            key = st.selectbox("Parameter", ["K_PL", "K_prot", "K_cw_root",
+                                             "f_xy_recommended", "B_root", "B_grain"], index=0)
+            # a novel SMILES compound is not in the curated chain series -> ring a reference instead
+            chain_cong = congener if congener in api.CONGENERS else (
+                desc.matched_name if desc and desc.matched_name in api.CONGENERS else "PFOA")
+            st.plotly_chart(plots.fig_chain(api.chain_table(), chain_cong, key), width="stretch")
+            if congener not in api.CONGENERS:
+                st.caption(f"'{congener}' is a novel structure (not in the curated 13); the ring marks "
+                           f"**{chain_cong}** for reference. Its own parameters are in the 🧬 panel above.")
 
     # ---- Tab 6: compare congeners -------------------------------------------
     with tabs[5]:
-        tissue = st.radio("Tissue", ["root", "straw", "grain"], index=1, horizontal=True)
-        if compare:
-            if drivers is not None:
-                dt = _drivers_tuple(drivers)
-                results = {nm: _simulate(nm, drivers_tuple=dt, **sim_kw) for nm in compare}
-            else:
-                results = {nm: _simulate(nm, Cwo=Cwo_const, season=season,
-                                         measured_forcing=measured, **sim_kw) for nm in compare}
-            st.plotly_chart(plots.fig_compare(results, tissue), width="stretch")
+        if not is_pfas:
+            st.info("Congener comparison covers the curated **PFAS** congeners. The neutral branch "
+                    "has no congener series to compare against — vary log K_ow in the sidebar to see "
+                    "the equivalent trend.")
         else:
-            st.info("Select congeners in the sidebar to compare.")
+            tissue = st.radio("Tissue", ["root", "straw", "grain"], index=1, horizontal=True)
+            if compare:
+                if drivers is not None:
+                    dt = _drivers_tuple(drivers)
+                    results = {nm: _simulate(nm, drivers_tuple=dt, **sim_kw) for nm in compare}
+                else:
+                    results = {nm: _simulate(nm, Cwo=Cwo_const, season=season,
+                                             measured_forcing=measured, **sim_kw) for nm in compare}
+                st.plotly_chart(plots.fig_compare(results, tissue), width="stretch")
+            else:
+                st.info("Select congeners in the sidebar to compare.")
 
     # ---- Tab 7: Tang TF (OOS) -----------------------------------------------
     with tabs[6]:
@@ -264,8 +324,14 @@ def render(cfg):
                     "tissue concentrations (Laplace posterior in log Cwᵒ; the well-posed "
                     "direction of `validation/bayesian_inverse_demo.py`). Transport is held at "
                     "the sidebar defaults.")
-        _render_inverse_estimator(congener, E_m_mV=E_m, f_xy_source=fxy_source,
-                                  biomass=biomass, key="inv_expert", simple=False)
+        if is_pfas:
+            _render_inverse_estimator(congener, E_m_mV=E_m, f_xy_source=fxy_source,
+                                      biomass=biomass, key="inv_expert", simple=False)
+        else:
+            st.info("The inverse estimator runs the **PFAS** forward model (its saturable GHK + "
+                    "carrier uptake is what makes inverting Cwᵒ a genuine nonlinear inverse rather "
+                    "than a division). It is not wired to the neutral branch. Switch the compound "
+                    "class to PFAS in the sidebar.")
         st.caption("Identifiability: only the EXPOSURE level is estimated here. From tissue data "
                    "alone Q_TP·f_xy is a product ridge and Cwᵒ vs root-uptake conductance is "
                    "degenerate, so pinning transport absolutely needs an independent measurement "
