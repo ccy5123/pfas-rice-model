@@ -32,21 +32,22 @@ The headline is not the two new datasets. It is what they exposed:
   when only their *product* is identifiable. On Briggs' own barley rows that costs log10
   RMSE **0.266 against the anchor's 0.111**.
 - **The default was not changed, and that is the decision, not an omission.** Restoring
-  the anchor helps Li 2019 and hurts both soil-grown tables (Liu, Kodešová). Fitting an
-  intermediate value would make the path's single real claim — that nothing is fitted —
-  false, and §4f shows a flat lipid rise is the wrong instrument anyway.
+  the anchor helps Li 2019 and hurts both soil-grown tables (Liu, Kodešová), and the two
+  sides disagree by more than the change is worth. Fitting an intermediate value would
+  make the path's single real claim — that nothing is fitted — false.
 
 **Three queue rows did not deliver what they asked for**, and that is recorded rather
 than papered over: A1 contains no rice, the supplied "McFarlane 1987" is the wrong paper
 entirely, and every C1/C2/C3 candidate screens out for a stated reason.
 
-**The A4 SI then arrived mid-session and changed the picture.** Kodešová 2019
-gives the cleanest exposure in the repo (measured soil concentration + the paper's
-own measured isotherm, same pot, same harvest) and it **votes the other way**:
-a-priori **0.191** with the shipped lipid, 0.216 with the anchor. It also
-**supersedes the Brunetti sighting** — it measures 1.10 for the compound Brunetti
-calibrated 13.3 for. So the partition deficit is **not global**: it is confined to
-log Kow ≳ 3. See §4f of the validation doc.
+**The A4 SI then arrived mid-session, and an adversarial re-read followed.**
+Kodešová 2019 gives the cleanest exposure in the repo and **votes the other way**
+(0.191 shipped vs 0.216 anchored); it also **supersedes the Brunetti sighting**,
+measuring 1.10 for the compound Brunetti calibrated 13.3 for. The re-read
+(`666459f`) then **retracted two of this session's own claims** — see §3 item 1 —
+and what is left is that **the datasets contradict each other** at log Kow
+3.5–4.5 by more than the anchor is worth. The anchor question is therefore **not
+decidable from the data in hand**; §4f and §5 of the validation doc carry it.
 
 ---
 
@@ -107,24 +108,43 @@ Freundlich unit reading) is defended on the implied `Koc` and flagged in the dat
 
 Ranked. The first is the only one that is both significant and unblocked.
 
-1. **Decide the anchor question, or leave it open deliberately.** The evidence is in
-   `docs/neutral_dpu_validation.md` §4d and §4f; reproduce with
-   `python validation/li2019_rcf_apriori.py` and
-   `python validation/kodesova2019_carbamazepine.py`. The A4 SI moved this: the
-   tally is now **2 tables against restoring the anchor (Kodešová, Liu) and 1 for
-   it (Li 2019)**, and the deficit the anchor would fix turns out to live only
-   above log Kow ≈ 3. Three outcomes are defensible and the choice is the user's:
-   - *keep `L = 0.01`* (current, and now the better-supported option) — the
-     measured value, corroborated by Li/Chiou's cereals, at the cost of a
-     documented 2.48× internal inconsistency with the Briggs anchor;
+1. **The anchor question is NOT currently decidable, and that is the finding.**
+   Evidence: `docs/neutral_dpu_validation.md` §4d–§4f; reproduce with
+   `python validation/li2019_rcf_apriori.py` (§3c and §3d especially) and
+   `python validation/kodesova2019_carbamazepine.py`.
+
+   Two props this handoff previously rested on were **retracted** in `666459f`,
+   and a later session must not reinstate them:
+   - the Li 2019 bias is *not* reliably monotone in log Kow — Namiki 2015 alone
+     supplies 10 of the 29 rows, all in the top two bins;
+   - raising `L` is **not** "the wrong instrument" for a Kow-dependent deficit.
+     `K_PW = W + L·a·Kow^b` is water-floor-dominated at low Kow, so scaling `L`
+     is inherently Kow-dependent. Li 2019 is genuine evidence **for** the anchor.
+
+   What blocks the decision is that **the datasets contradict each other**. At
+   log Kow 3.5–4.5, Li 2019 says the model is ~3× low (−0.462, n=11) and Liu 2023
+   — rice, the same hydroponic endpoint — says it is exact (−0.008, n=5). On
+   propiconazole, the one compound both measured, RCF is 43.65 (lettuce) vs 9.32
+   (rice): **4.7× apart, against an anchor worth 2.4×**. So the question is not
+   "is the partition too low" but **"which hydroponic dataset describes a rice
+   root above log Kow 3.5"**, and only new data settles it (§4, item 1).
+
+   Note also that `a = 1.22` carries **no citation anywhere in the repo**. Only
+   the product `L·a` is identifiable, so "raise `L` to 0.0247" and "raise `a` to
+   3.02" are the *same model* — which means "don't fit `L`, it is measured" is
+   not by itself an argument against the anchor.
+
+   Three outcomes remain defensible and the choice is the user's:
+   - *keep `L = 0.01`* (current) — defensible as "do not move without evidence",
+     supported mainly by Liu, which is rice and is exact where the anchor would
+     do most damage. Cost: a documented 2.48× inconsistency with the anchor.
    - *restore the anchor* via `ND.BRIGGS_ANCHORED_LIPID_FW` — internally
-     consistent, better on Li 2019, worse on both soil-grown tables;
-   - *add the missing term* — the physically right answer, and the only one that
-     can be lipophilicity-dependent, but blocked on a measured neutral-organic
-     cell-wall coefficient (see §4).
-   Do **not** quietly pick an intermediate fitted `L`. That is the one option that
-   destroys what the neutral path is for — and §4f now also shows a flat lipid
-   increase is the wrong instrument, since the model runs *high* at log Kow 2.25.
+     consistent, and Li 2019 supports it; worse on Liu and Kodešová.
+   - *add the missing term* — a measured neutral-organic cell-wall coefficient
+     (§4). It would fix the level independently of either dataset, but it is no
+     longer needed to *explain* the Li 2019 shape.
+   Do **not** quietly pick an intermediate fitted `L`: that destroys the path's
+   one real claim, that nothing is fitted.
 2. ~~Check the equilibration confounder on the Li table~~ ✅ **DONE** — section 3b of
    `validation/li2019_rcf_apriori.py`. The bias is **flat in exposure time** (−0.442 at
    1–3 d vs −0.447 at > 3 d; inside the high-Kow cell alone, −0.586 vs −0.517) and
