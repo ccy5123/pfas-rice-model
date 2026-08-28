@@ -130,6 +130,9 @@ Root BAF = `C_mobile + C_seq`.
    OOS of the two-pool root** — a per-organ Tang test needs the two-pool root merged
    with the `nstem_leaf` redistributed shoot (a future structural merge). Kim grain
    stays the informative two-pool OOS. ✅ DONE (this session).
+   **The structural merge has since been built and CONFIRMS this diagnosis** — see §6 ④
+   and `docs/twopool_root_exploration.md` §Result 8 (Tang OOS 1.398 → **0.801**, stalk
+   1.89 → 0.61, with the root mechanism unchanged).
 3. **The decisive experiment (cannot be done in-silico).** Per-congener
    **xylem-sap / root-water ratio** (direct f_xy, root-pressure exudate) **+** a
    **desorption-resistant root-fraction assay** (isolates the irreversible `k_seq` pool)
@@ -193,11 +196,25 @@ The two-pool BAF arc's in-silico work is **complete**. Items ①–③ are resol
 - **③ promotion decision** — ✅ DECIDED with the user (§4.1b): **DO NOT promote;
   keep opt-in.** `parameters.json` / defaults / `reproduce_demo` (RMSE 0.029) UNCHANGED.
 
+- **④ structural merge** (two-pool ROOT + `nstem_leaf` redistributed SHOOT) — ✅ **DONE**
+  (`validation/twopool_nstem_merge.py`, `docs/twopool_root_exploration.md` §Result 8,
+  `model_api.simulate_twopool_nstem`). **Result 7's diagnosis is CONFIRMED**: repairing
+  only the shoot, root mechanism untouched, drops the Tang per-organ OOS **1.398 → 0.801**
+  with the recovery carried by the diagnosed organ (stalk 1.89 → 0.61; leaf 0.38 → **0.28**,
+  best of any model). In-sample Yamazaki **0.301** (root 0.153) vs 0.278 for the same root
+  fit behind its own pass-through stem — and the *un-refit* transfer already gives 0.316, so
+  **swapping the whole shoot costs 0.04 log units** ⇒ the root mechanism is separable from
+  the shoot model. PFOS/PFUnDA `k_seq` separation survives and sharpens (4.0× at identical
+  K_PL). **Honest**: still does NOT beat single-pool lipid loading (0.516); the residual is
+  entirely the **endosperm** (1.21, the documented structural grain under-prediction); Tang
+  is 3 C5–C8 congeners so the long-chain root decoupling is *still* unexercised. ⇒ the
+  second clean per-organ OOS is now available and it **supports the structure**, but it does
+  **not** move the ③ promotion decision — the gate remains the §5 wet-lab assay.
+
 **What remains is NOT in-silico** — it is the **promotion gate / decisive experiment**:
 the `twopool_kseq_mechanism.md` §5 rice-root **cell-wall / Fe-Mn-plaque batch-sorption +
-desorption assay** (chain-length × head-group), and/or a second independent clean
-per-organ OOS once the two-pool **root** is merged with the `nstem_leaf` **redistributed
-shoot** (the structural merge that would make a per-organ Tang test fair; Result 7).
+desorption assay** (chain-length × head-group). (The structural-merge alternative route
+named here has been taken — see ④ — and did not by itself warrant promotion.)
 
 Carry the standing honest caveats forward on every claim: **Yamazaki in-sample fit,
 single clean OOS, PFDoDA near-MQL**. Do not promote `k_seq` into `parameters.json`

@@ -529,6 +529,33 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   SAME solve path as `simulate` — root/grain byte-identical). Guard
   `tests/test_model_api.py::test_twopool_simulate_organs_and_tang_passthrough_diagnosis`. Full record:
   `docs/twopool_root_exploration.md` §Result 7. EXPLORATORY; `parameters.json` UNCHANGED (no support for promotion).
+- **Structural MERGE — two-pool seq ROOT + `nstem_leaf` redistributed SHOOT (this session) — Result 7 CONFIRMED**:
+  the last in-silico item of the two-pool arc (handoff §6: "a fair per-organ Tang test needs the two-pool root merged
+  with the redistributed shoot"). `NStemLeafModel` gained optional `k_seq`/`k_rel`: `k_seq>0` APPENDS a sequestered
+  root state (irreversible apoplast/cell-wall sink sharing the root mass) so the reported root = mobile+seq;
+  **`k_seq=0` (default) adds NO state** → the pre-merge model, every default and every existing number are untouched.
+  Wired as `model_api.simulate_twopool_nstem` (root params from the cached Yamazaki fit + monotone physical `f_xy`;
+  `twopool_seq_params` exposes that set alone); `simulate_nstem_leaf` also gained `drivers=`, `K_cw_organ`,
+  `straw`/`straw_baf`. **Perf**: the RHS rebuilt `binding_factors` and interpolated the driver matrices column-by-column
+  on every one of ~3k calls/solve — caching the former + one `axis=0` interpolant per matrix HALVES the solve time,
+  Tang TFs identical to 6 dp. **Forcings matter structurally**: the redistributed shoot is transpiration-DEPOSITION fed,
+  so on the demo forcings (Q_TP peak 0.40, ~4× measured) the deposition route floods the grain and the re-fit collapses
+  onto its bounds (0.658) — the merge is run on the MEASURED forcings (`--demo` reproduces the pathology).
+  **Results** (`validation/twopool_nstem_merge.py`, `docs/twopool_root_exploration.md` §Result 8): in-sample Yamazaki
+  **0.301** (root 0.153) vs the same root fit behind its own pass-through stem 0.278 — and transferring that fit onto the
+  new shoot with **NO re-fit at all** already gives 0.316, i.e. **swapping the entire shoot costs 0.04 log units** and the
+  root RMSE is unchanged to 3 dp ⇒ the root mechanism is genuinely separable from the shoot model. Non-K_PL PFOS/PFUnDA
+  separation survives and sharpens (k_seq 0.047 vs 0.188 = **4.0×** at identical K_PL). **Tang per-organ OOS
+  (no Tang re-fit): 1.398 → 0.801**, recovery carried by the diagnosed organ (**stalk 1.89 → 0.61**; leaf 0.38 → **0.28**,
+  best of any model) ⇒ **Result 7's diagnosis is CONFIRMED — the two-pool's Tang failure was a SHOOT artifact.**
+  **Honest**: it does NOT beat single-pool lipid loading (0.516, still the Tang winner); the whole residual is the
+  **endosperm** (1.21, the documented structural grain under-prediction). The merge also EXPOSES a real tension: Tang's
+  TFs are high (stalk TF 2.2 > root) rewarding strong translocation, while Yamazaki's high long-chain root demands a
+  retaining `k_seq` — one (f_xy, k_seq) cannot satisfy both (same condition-dependence as `f_xy` PFOS 0.14 vs 0.32).
+  Tang is still only 3 C5–C8 congeners, so the long-chain root decoupling remains unexercised (Kim grain stays the
+  informative two-pool OOS) ⇒ strengthens the structural case but does NOT move the promotion decision (gate = the §5
+  wet-lab assay). Guards `tests/test_twopool_nstem_merge.py` (+ nstem_leaf/model_api). `parameters.json`,
+  `simulate()` and `reproduce_demo` (0.029) UNCHANGED.
 - **`k_seq` mechanistic provenance — literature synthesis (this session; handoff item ②/§4.5) — PARTIALLY SUPPORTED**:
   `docs/twopool_kseq_mechanism.md` — a fan-out, adversarially-verified deep-research synthesis (17 sources → 66
   candidate claims → 25 verified by 3-vote panels) answering whether the phenomenological U-shaped, non-K_PL,
@@ -689,6 +716,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   two-pool 1.40 worse than lipid 0.52 — pass-through stem collapses the stalk; Tang tests the shoot, two-pool fixes
   the root). Long-chain shoot-floor diagnostic:
   `python validation/twopool_root_seqrelease.py` (k_rel seq-release sweep + g_xy xylem-loading diagnostic; ~20 s).
+  **Structural merge** (two-pool root + redistributed shoot; the FAIR per-organ Tang OOS):
+  `python validation/twopool_nstem_merge.py` (transfer → Yamazaki re-fit → Tang OOS; ~40 min on the MEASURED forcings;
+  `--cached` reuses `twopool_nstem_fitted_params.json`, `--demo` reproduces the demo-forcing pathology). Opt-in API:
+  `model_api.simulate_twopool_nstem("PFOA")` → the standard `simulate_nstem_leaf` dict + the root mobile/seq split.
   Measured-forcing robustness re-fit: `python validation/twopool_root_measured.py` (re-fits on forcing_rice + ORYZA
   biomass; in-sample + Kim OOS vs fxy-doc baselines; ~3 min). Opt-in API (no re-fit; reuses the cached fit):
   `model_api.simulate_twopool_seq("PFUnDA")` → the standard `simulate()` dict + root mobile/seq split.
