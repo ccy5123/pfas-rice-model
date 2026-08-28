@@ -9,10 +9,11 @@
 > the §5/§6 consistency fix, closing §3 items 1–2) is the only thing still open.
 > Scientific record: **`docs/neutral_dpu_validation.md`** — §4a Liu, §4b Ge, §4c Hwang,
 > §4d Li 2019 hydroponic, §4e TSCF, §4f Kodešová, §4g the scoring artifact, §4h Li 2019
-> soil, §4i Kodešová's leaf, §4j Briggs 1983 stem, §5 the synthesis. **Read §5 first.**
+> soil, §4i Kodešová's leaf, §4j Briggs 1983's stem equations, **§4k Briggs 1983's
+> Table 1 — the only measured STEM test**, §5 the synthesis. **Read §5 first.**
 > `parameters.json`, `simulate()` and `reproduce_demo` (RMSE 0.029) are **UNCHANGED**
 > throughout — everything on this arc is additive or opt-in, and no PFAS number moved.
-> Full suite on the merged tree: **278 collected, 276 pass, 2 skip** (~12 min); the two
+> Full suite on the merged tree: **287 collected, 285 pass, 2 skip** (~12 min); the two
 > skips are the optional `emcee` and `sci-adk` deps.
 
 ---
@@ -75,6 +76,12 @@ both readings. Nothing moved (Liu 0.281 / Ge 0.783 / `reproduce_demo` 0.029 re-v
 The two prior anchor tests were switched off their global `TRAPP1994_LIPID_FW` mutation
 onto the mode.
 
+**Then item 4, once the paper was re-supplied**: Briggs 1983's Table 1 became
+`data_obs/neutral_obs_briggs1983_shoot.csv` + `validation/briggs1983_shoot.py` +
+`tests/test_briggs1983_shoot.py`, giving the repo its **first measured stem test**
+(a-priori RMSE 0.299) and closing §4j's cancellation argument empirically. See §3
+item 4 for what it did *not* deliver.
+
 **And a defect found while reading in:** §5's table and the whole of §6 still carried two
 of the three claims §2 lists as retracted — "Kodešová 0.191 is the best a-priori result"
 and the Brunetti-based "best-evidenced open question" synthesis — even though §4f and §4g
@@ -118,10 +125,9 @@ against the anchor.
 
 ## 3. Next tasks
 
-Ranked. **Items 1 and 2 of the previous handoff are DONE** — see §1. **Everything
-still on this list (3–5) is blocked on data that is not in the repo**; only item 6 is
-startable, and it is low value. This arc is finished until papers or measurements
-arrive — see §4 for what to ask for.
+Ranked. **Items 1, 2 and 4 are DONE** — see §1. What remains (3, 5) is **blocked on
+data that is not in the repo**; only item 6 is startable, and it is low value. This
+arc is finished until papers or measurements arrive — see §4 for what to ask for.
 
 1. ~~Put the anchor decision to rest~~ **DONE.** Default stays `lipid_source="measured"`;
    the alternative is a named mode, and the 3-vs-1 evidence is a command rather than a
@@ -140,16 +146,20 @@ arrive — see §4 for what to ask for.
    root-surface sorption inflating short hydroponic RCFs, which would bite hardest
    for hydrophobic compounds and is consistent with the −0.51/−0.35 split. Testing it
    needs the source studies' washing protocols, i.e. new papers (§4).
-4. **Mine what is left of Briggs 1983** — its per-section shoot concentrations (stem
-   base / central / leaf blade) are the only data identified that could constrain the
-   stem/leaf split independently of Ge 2017. §4j used only its fitted equations.
-   **⚠️ NEEDS THE PAPER RE-SUPPLIED.** An earlier revision of this list called it
-   "already in hand"; that meant the previous session's *scratchpad*, which is
-   ephemeral and does not survive into a new container. Verified: the repo carries
-   only the transcribed equations (`neutral_dpu.briggs_scf`) — no PDF, and nothing
-   in `docs/literature_db/raw_si/` (all ten files there are PFAS-side). So this item
-   is **blocked on data like items 3 and 5**, not startable. Pestic. Sci. 14:492–500,
-   `10.1002/ps.2780140506`.
+4. ~~Mine what is left of Briggs 1983~~ **DONE — see §4k.** The paper was re-supplied
+   and Table 1 is now `data_obs/neutral_obs_briggs1983_shoot.csv` (16 chemicals × 2
+   harvests × 3 shoot sections, hydroponic, exposure known). It delivered **more and
+   less** than the list expected. **More**: reconstructing the article's own Stem
+   Concentration Factor gives the repo's **first measured stem test** — a-priori
+   log10 RMSE **0.299**, indistinguishable from Briggs' own *fitted* equation
+   (0.282), which settles §4j's cancellation argument empirically (the 4.1× stem
+   coefficient gap is a provenance problem, not a prediction one). Plus a second,
+   independent confirmation of the terminal-accumulator leaf. **Less**: it does
+   **not** constrain the stem/leaf split, which is what it was wanted for — the
+   stem's share of the shoot burden moves a median **1.55× between two harvests one
+   day apart**, because the stem equilibrates and the leaf does not. That split is a
+   property of the exposure duration, not of the compound; do not treat it as a
+   model target.
 5. **Tissue specific surface areas** for rice — still the one input bounding the air
    term, still unsourced. The C2 papers supplied this round do **not** help (they are
    root morphology; the air term takes no root contribution).
@@ -163,17 +173,38 @@ arrive — see §4 for what to ask for.
 `docs/literature_db/Acquisition_Queue.csv` carries per-row status. **A2, A3, A4 are
 closed; A1 is PARTIAL** (it had no rice); **A5, B1, B2, C1, C2, C3 remain open**.
 
-**The one request that would move something.** *A hydroponic rice root RCF above
-log Kow 3.5.* That is the exact cell no table has — Liu tops out at 4.4 with only five
-rows there, Li 2019's rice rows are all below 3.1, Kodešová is a single point at 2.25 —
-and it is what would settle item 3. Note this is a **different** request from the
-queue's C3 ("rice root total lipid"), which is now the lower priority of the two.
+**The one request that would move something.** *More hydroponic RICE root RCF above
+log Kow 3.5, from an independent lab.* Note the precise shape of the gap, re-checked
+against the shipped tables: Liu 2023 **does** have 5 rice root rows above 3.5, and
+they are the ones saying the model is exact there (bias −0.008). Li 2019 has 21 rows
+above 3.5 and **not one of them is rice** — 13 other species, biased −0.46. So the
+disagreement is *rice versus everything else at high lipophilicity*, resting on five
+rows from one laboratory. What settles it is more rice in that range, not more
+species. (Li 2019's own rice rows are all below 3.1; Kodešová is a single point at
+2.25.) Note this is a **different** request from the queue's C3 ("rice root total
+lipid"), which is now the lower priority of the two.
 
-Also still wanted: **Briggs, Bromilow, Evans & Williams 1983** (`10.1002/ps.2780140506`)
-*again* — its per-section barley shoot concentrations are §3 item 4, and only its
-fitted equations were extracted before the session holding the PDF ended. Unchanged:
-the real McFarlane, Pfleeger & Fletcher 1987 (the file supplied under that name is a
-different paper); the two 2025 long-chain PFAS papers
+Briggs 1983 was re-supplied and is now **fully extracted** (§4k) — Table 1 is in
+`data_obs/`, so it will not need asking for a third time.
+
+Two other things in the re-supplied `DPU4OC_add.zip`, checked and recorded so they
+are not re-checked every session:
+
+- **`Mcfarlane1987.pdf` is STILL the wrong paper** — byte-for-byte the same
+  constructed-wetland nitrogen-isotope study (Erler & Eyre, *J. Environ. Qual.*
+  2010) that was supplied under that name before. Whatever source serves this
+  filename serves the wrong PDF, so re-requesting it the same way will not work;
+  queue A5 needs a different route. **Do not re-open it hoping it changed.**
+- **`Muensterman2026_correction.pdf` is a one-page erratum, not the article.** It
+  corrects eq. 4 of `10.1021/acs.est.5c11716` to `log k_IAM = 0.046·CHI_IAM + 0.42`.
+  That DOI is one of the two 2025 long-chain PFAS papers listed as not obtained, so
+  **B1 is still not obtained** — an erratum carries no data. It also changes nothing
+  here: the correction is to a *biomimetic-chromatography* calibration, while this
+  repo's `K_PL` comes from Chen 2025's K_MW and `K_prot` from Zhou 2025's dialysis
+  `K_prow`. Worth knowing only if a future session adopts the Muensterman method.
+
+Still wanted, unchanged:
+the real McFarlane, Pfleeger & Fletcher 1987 (supplied twice now, wrong both times); the two 2025 long-chain PFAS papers
 (B1/B2); a neutral compound in rice **grain** under root-only exposure (C1 — the one
 entirely untested compartment; every candidate this round had residues below LOD).
 
@@ -225,7 +256,8 @@ python validation/li2019_soil_table.py            # 376 soil rows: the sign flip
 python validation/li2019_rcf_apriori.py --fast    # 29 hydroponic rows + the anchor
 python validation/kodesova2019_carbamazepine.py   # exposure, anchor vote, leaf, metabolism
 python validation/schriever2020_tscf.py           # TSCF alone, 97 values
-python validation/briggs1983_stem.py              # the stem anchor, ~1 s
+python validation/briggs1983_stem.py              # the stem anchor (equations), ~1 s
+python validation/briggs1983_shoot.py             # the stem against DATA, ~1 s
 
 # the closed anchor decision, as a command rather than a claim (~6 min)
 python validation/neutral_dpu_validation.py --lipid-source both
@@ -236,7 +268,7 @@ python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.c
 python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_ge2017.csv   # 0.783
 python reproduce_demo.py                                                            # 0.029
 
-pytest -q                                          # 278 collected, 276 pass, 2 skip
+pytest -q                                          # 287 collected, 285 pass, 2 skip
 ```
 
 **Resume prompt.**
@@ -250,8 +282,8 @@ pytest -q                                          # 278 collected, 276 pass, 2 
 > failure mode that produced two of them: the body of the validation doc gets corrected
 > and the **Honest summary does not**, so check §6 against §4 whenever you change a
 > result. Remaining work, honestly ranked: §3 item 3 (the Li 2019 hydroponic anomaly —
-> blocked, needs a hydroponic rice root RCF above log Kow 3.5) then item 4 (Briggs
-> 1983's per-section shoot data — **also blocked: the paper is not in the repo and
-> must be re-supplied**). Everything on §3 items 3–5 is blocked on data, so do not
-> start one expecting to finish it; §4 says what to ask for. The PFAS side is a
-> separate arc — `docs/HANDOFF_BAF_twopool.md`.
+> blocked, needs a hydroponic rice root RCF above log Kow 3.5) and item 5 (rice
+> tissue specific surface areas). Both are blocked on data, so do not start one
+> expecting to finish it; §4 says what to ask for. Item 4 is done (§4k) and its
+> table is extracted into `data_obs/`, so it will not need the paper again. The
+> PFAS side is a separate arc — `docs/HANDOFF_BAF_twopool.md`.

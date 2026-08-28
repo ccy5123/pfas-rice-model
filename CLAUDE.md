@@ -73,7 +73,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (278 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (287 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -959,6 +959,36 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (Liu 0.206 on the equilibrium basis is best; the open anomaly is Li 2019's hydroponic half), and every quoted neutral
   number now names its `lipid_source`/`mode`. Tests: `test_li2019_schriever_tables.py` (default is a no-op; the 2.48×
   and the Kow dependence reach `model_api`; the 3-vs-1 tally pinned).
+- **Briggs 1983 Table 1 mined — the repo's FIRST measured STEM test (this session)**: `data_obs/
+  neutral_obs_briggs1983_shoot.csv` + `validation/briggs1983_shoot.py` + `tests/test_briggs1983_shoot.py` (9) +
+  docs §4k. §4j had compared the repo's stem to Briggs 1983's *fitted equations*; its **Table 1** — the data behind
+  them — was never transcribed. 16 non-ionised chemicals (7 O-methylcarbamoyloximes + 9 phenylureas), log Kow
+  −0.57→3.7, barley shoots cut into leaf/central-stem/stem-base at 24 and 48 h, from a **nutrient solution of known
+  concentration** (the cleanest exposure class, like Liu/Li-hydroponic). Table 1's % distribution × total dpm ÷ the
+  section fresh weights (§2.2: 0.54/0.40/1.2 g, six plants) ÷ the solution conc **reconstructs the Stem Concentration
+  Factor the article itself defines and plots**. **Reconstruction verified 3×** before scoring: eq.(3) from the
+  transcribed coefficients peaks at SCF **6.39 @ logKow 4.43** (paper: "about 6 … at about 4.5"); the reconstructed
+  central-stem SCF sits on that curve at bias **+0.049** (the paper says its points "fit quite well"); the stem BASE
+  runs high (+0.188) exactly as the article predicts from direct contact with the treating solution. All 32
+  (compound×harvest) rows sum to 100±0.1% — which caught **two wrong digits in the PDF text layer** (4-chlorophenylurea
+  24h Upper 77.4 not 17.4; phenylurea 48h Middle 3.7 not 3.1), confirmed against the rendered page.
+  **RESULT — a-priori, nothing fitted: the repo's stem `K_PW`×TSCF predicts the measured central-stem SCF at log10
+  RMSE 0.299 (bias −0.030), statistically indistinguishable from Briggs' OWN FITTED eq.(3) at 0.282** — i.e. at the
+  level the root tables reach (Liu 0.281, Li2019 0.598). **This settles §4j empirically**: the 4.1× stem-coefficient
+  gap really does cancel in the observable, so it is a **provenance** problem, not a prediction problem (the rice culm
+  composition remains unmeasured — it is just not *wrong* where checkable). **NEGATIVE finding, equally important**:
+  the table does **NOT** constrain the stem/leaf **split**, which is what handoff item 4 wanted it for — the stem's
+  share of the shoot burden moves a **median 1.55× (max 2.11×) between two harvests one day apart**, because the stem
+  equilibrates and the leaf does not; scored as an equilibrium the leaf's bias **GROWS +0.229 (24h) → +0.586 (48h)**,
+  the terminal-accumulator signature (§3), which the article states independently ("leaf amounts generally increased up
+  to 72 or 96 h"). So the leaf half is a **second independent confirmation of the terminal-accumulator structure**
+  (different species/exposure from Ge 2017), not a split constraint. The 3 compounds the article flags reproduce its own
+  diagnoses (aldicarb 3.6× high = in-planta oxidation, "about three times"; aldoxycarb 3.7× = the logKow<0 TSCF
+  underestimate the paper names; 4-(4-bromophenoxy)phenylurea excluded, never equilibrated). Scope: barley seedlings,
+  24–48 h, one lab, and §2.2's *typical* section weights applied to every test. **Deliberately NOT wired into `--obs`**
+  (the Hwang §4c reason: 48-h barley sections vs a 120-day rice season). Independent of the open `lipid_source`
+  question (that anchor touches only the root — pinned by a test). `parameters.json`, `simulate()` and
+  `reproduce_demo` (0.029) UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1008,7 +1038,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   In code: `model_api.simulate_neutral(3.72, lipid_source="briggs_anchor")` / `ND.rice_compartments(lipid_source=…)`.
   Default is `"measured"` — every published neutral number is on it.
 - **Briggs 1983 stem anchor**: `python validation/briggs1983_stem.py` (~1 s; transcription self-check · the 4.1×
-  coefficient gap · why it largely cancels in the observable).
+  coefficient gap · why it largely cancels in the observable). **The DATA behind those equations**:
+  `python validation/briggs1983_shoot.py` (~1 s; reconstruction self-checks · the stem a-priori RMSE 0.299 ·
+  why the stem/leaf split is NOT extractable · the article's own flagged compounds).
 - **Li 2019 SOIL table (376 rows, the sign flip)**: `python validation/li2019_soil_table.py` (~5 s; hydroponic-vs-soil
   sign flip · per-crop-lipid collapse · the measured-vs-estimated `K_om` split · why `α_pt` is not applied).
 - **Li 2019 root partition + the anchor diagnosis**: `python validation/li2019_rcf_apriori.py` (a-priori n=29 by
@@ -1064,7 +1096,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (278 collected; 276 pass, 2 skip, all pass with the full stack — RDKit + the built
+- Tests: `pip install pytest && pytest` (287 collected; 285 pass, 2 skip, all pass with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
   module additionally skips unless `sci-adk` is installed, which CI's `rigor.yml` provides). On a bare
   clone the structure/SMILES tests skip without RDKit and the HYDRUS-engine tests in `test_soil_hydrus.py`

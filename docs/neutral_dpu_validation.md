@@ -764,6 +764,78 @@ would arbitrate it. It is recorded, exposed as `briggs_scf()`, and pinned by a
 test. The stem is a **provenance** problem, not a prediction problem, and it ranks
 below both the root question and the exposure-term work.
 
+*(The last sentence was an argument when it was written. §4k now measures it —
+and the "no measured table would arbitrate it" clause is what turned out to be
+wrong: the arbitrating table was inside the same paper, in a section §4j did not
+read.)*
+
+### 4k. Briggs 1983's own table — the stem, scored against measurements
+
+`data_obs/neutral_obs_briggs1983_shoot.csv` · `validation/briggs1983_shoot.py` ·
+`tests/test_briggs1983_shoot.py`
+
+§4j compared the repo's stem to Briggs' *fitted equations*. His **Table 1** — the
+data behind them — had never been transcribed. It gives, for **16 non-ionised
+chemicals** over log Kow −0.57 to 3.7, the distribution of the shoot burden
+across leaf blade / central stem / stem base at **24 and 48 h**, after uptake by
+11-day-old barley from a **nutrient solution of known concentration**. Section 2.2
+gives the section fresh weights (0.54 / 0.40 / 1.2 g, six plants). Those four
+published numbers reconstruct the Stem Concentration Factor the article defines:
+
+```
+SCF = (total dpm × section %/100) ÷ section g ÷ solution dpm mL⁻¹     [L/kg fw]
+```
+
+**The reconstruction is checked before anything is scored with it**, three ways.
+Eq. (3) computed from the transcribed coefficients peaks at **SCF 6.39 at log Kow
+4.43** against the paper's stated "about 6 … at about 4.5". The reconstructed
+central-stem SCF sits on that curve at **bias +0.049** — the article says its own
+points "fit quite well" there, so the derived numbers *are* its Fig. 4. And the
+stem **base** runs high (+0.188), which the article predicts and explains as
+direct contact with the treating solution. Every (compound × harvest) row sums to
+100 ± 0.1 %, which caught two digits the PDF's text layer had wrong.
+
+**The result — the repo's first measured stem test, nothing fitted:**
+
+| | n | bias | RMSE |
+|---|---|---|---|
+| **repo `K_PW` × TSCF**, central stem | 30 | **−0.030** | **0.299** |
+| Briggs' own *fitted* eq. (3), same rows | 30 | +0.049 | 0.282 |
+| repo, stem base (contact-confounded) | 30 | +0.109 | 0.290 |
+
+The repo's stem predicts measured SCF **as well as the paper's own equation**,
+which had this very data to fit — and at the level the root tables reach (Liu
+0.281, Li 2019 hydroponic 0.598). **This settles §4j empirically**: the 4.1×
+coefficient gap really does cancel in the observable, so it is a provenance
+problem and not a prediction problem. The rice culm's composition is still
+unmeasured; it is simply not *wrong* anywhere it can be checked.
+
+**What it does NOT do, which is why item 4 was worth running rather than
+assuming.** The table was wanted to constrain the **stem/leaf split**
+independently of Ge 2017. It cannot. The stem equilibrates and the leaf does
+not, so the split is a function of **exposure duration**: the stem's share of the
+shoot burden falls by a **median 1.55× (up to 2.11×) between two harvests one day
+apart**. Scored as an equilibrium the leaf drifts by **+0.229 at 24 h and +0.586
+at 48 h** — the bias *growing* with exposure is the terminal-accumulator
+signature §3 describes, and the article states it independently ("leaf amounts
+generally increased up to 72 or 96 h"). So the leaf half is a **second,
+independent confirmation of the terminal-accumulator structure** — different
+species, different exposure from Ge 2017 — and not a split constraint.
+
+Three compounds deviate and the reconstruction reproduces the article's own
+diagnoses for each: **aldicarb** 3.6× high (it puts it at "about three times",
+from in-planta oxidation to a trapped polar sulphoxide), **aldoxycarb** 3.7× high
+(log Kow < 0, where the article says its own TSCF curve runs low), and
+**4-(4-bromophenoxy)phenylurea** 6.5× low (never equilibrated — the article
+excludes it from its own Fig. 4, and so does the CSV).
+
+**Scope.** Barley, 11-day seedlings, 24–48 h, one laboratory, two chemical
+series, and section weights that are the article's *typical* values applied to
+every test. It anchors the **partition form** for a stem. It says nothing about
+a rice culm. Deliberately **not** wired into the `--obs` harness, for the Hwang
+2017 reason (§4c): these are sections of a 48-hour barley seedling and the shared
+harness would run them against a 120-day rice season.
+
 ### 4g. A scoring artifact that affects every root number above
 
 `compare_to_obs(..., mode="equilibrium")` · `tests/test_li2019_schriever_tables.py`
@@ -849,7 +921,7 @@ per-row status and what is still missing.
 | **Inao 2018a/b** `10.1584/jpestics.D17-083` / `D17-084` | **Cannot test the 4-compartment split.** As flagged before the papers arrived, they sample *"the whole shoot of the rice plant above the water surface"* — no organ resolution. Still the only source of a measured paddy-water + layered-soil `C_w^o(t)`, so it remains the right dataset for a future HYDRUS-coupling test against a lumped shoot. |
 | **Brunetti 2021** `10.1021/acs.est.0c07420` | **Largely superseded — see §4f.** Its Table 1 reports *calibrated* posteriors, not raw concentrations: green-pea root `K_RW = 13.3` cm³/g fw for carbamazepine. That looked like the strongest evidence against the partition core until the A4 SI supplied a **direct measurement of the same compound**: 1.10 L/kg fw across 4 plants and 3 soils, against Briggs' 1.56. Brunetti's value is ~12× above the measurement, so the disagreement most likely sits in the calibration rather than in Briggs. |
 | **Hwang 2017** `10.1371/journal.pone.0172254` | **Run — §4c.** Its measured `Kd` converts the soil residue to a pore-water exposure, which is what makes it usable at all. Outcome is a *diagnosis, not a score*: the unstated fresh/dry basis spans the verdict, and the two readings fail on **opposite organs**. |
-| **Briggs 1983** `10.1002/ps.2780140506` | Shoot-distribution companion to the 1982 paper; not yet mined. |
+| **Briggs 1983** `10.1002/ps.2780140506` | **Fully mined — §4j (equations) and §4k (Table 1).** Shoot-distribution companion to the 1982 paper. Its Table 1 is now `data_obs/neutral_obs_briggs1983_shoot.csv`: 16 chemicals × 2 harvests × 3 shoot sections, hydroponic with a known solution, reconstructed into the SCF the article itself plots. It supplies the repo's **only measured stem test** (a-priori RMSE **0.299**) and, unexpectedly, a second independent confirmation of the terminal-accumulator leaf. It does **not** supply a stem/leaf split — that quantity moves ~1.6× in 24 h. |
 
 ### Is the root partition too low? No — the evidence splits by EXPOSURE ROUTE
 
@@ -956,6 +1028,17 @@ log Kow 3.5.
   artifact, whose Kow-dependent discount peaks almost exactly at carbamazepine's
   log Kow 2.25. On the basis these tables actually measure it is **0.237**, and
   **Liu 2023 at 0.206** is the best.
+- **The stem now has a measured test too** (§4k), which it did not when §4j was
+  written: against Briggs 1983's own Table 1 — 16 chemicals, hydroponic, exposure
+  known — the repo predicts the measured Stem Concentration Factor at **log10
+  RMSE 0.299 with nothing fitted**, statistically indistinguishable from the
+  paper's own *fitted* equation (0.282). So the 4.1× stem coefficient gap §4j
+  found is confirmed to be a **provenance** problem, not a prediction one. The
+  same table also confirms the **terminal-accumulator leaf** from a second,
+  independent direction (its equilibrium-scored bias grows +0.229 → +0.586
+  between the 24 h and 48 h harvests), but it does **not** yield a stem/leaf
+  split — that quantity moves a median 1.55× in one day, so it is a property of
+  the exposure duration rather than of the compound.
 - **Every number here is on `lipid_source="measured"`**, the default — and on
   `mode="ode"` *except* §4h's soil numbers, which are equilibrium-basis. Both are
   named modes rather than buried constants precisely because neither choice is

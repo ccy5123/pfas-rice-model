@@ -1,0 +1,154 @@
+# Briggs, Bromilow, Evans & Williams (1983), Pestic. Sci. 14:492-500,
+# "Relationships Between Lipophilicity and the Distribution of Non-ionised
+# Chemicals in Barley Shoots Following Uptake by the Roots"
+# doi:10.1002/ps.2780140506  -- READ AT SOURCE, Table 1 + section 2.2.
+#
+# The SHOOT companion to Briggs 1982, which is where this repo's whole neutral
+# path comes from. 1982 anchored the ROOT; this anchors the STEM, and until now
+# only its fitted equations were in the repo (neutral_dpu.briggs_scf, docs 4j) --
+# the underlying per-section table was never transcribed.
+#
+# WHAT IT IS. 16 non-ionised chemicals (7 O-methylcarbamoyloximes, 9 substituted
+# phenylureas), log Kow -0.57 to 3.7, taken up by 11-day-old barley from a
+# STIRRED NUTRIENT SOLUTION of known concentration, harvested at 24 and 48 h and
+# cut into three sections: leaf blade ("Upper"), central stem ("Middle") and stem
+# base ("Base"). So the exposure is known exactly -- the cleanest kind there is,
+# the same footing as Liu 2023 and Li 2019's hydroponic half, and unlike every
+# soil-grown table it carries no sorption model.
+#
+# HOW value WAS COMPUTED, from four published quantities and nothing else:
+#     pct            Table 1, % of shoot burden in that section
+#     total_dpm      Table 1, total chemical in shoots (six plants combined)
+#     solution_dpm_ml Table 1, initial solution concentration
+#     section_g      section 2.2, typical fresh weight of that section
+#                      (bases 0.54 g, central 0.40 g, tops 1.2 g, six plants)
+#     value = (total_dpm * pct/100) / section_g / solution_dpm_ml   [L/kg fw]
+# which is the Stem Concentration Factor the article itself defines and plots
+# (its Fig. 4), so the reconstruction is checkable against the paper: see
+# validation/briggs1983_shoot.py, which reproduces the stated Fig. 4 maximum.
+#
+# SELF-CHECK ON THE TRANSCRIPTION. All 32 (compound x time) rows sum to
+# 100.0 +/- 0.1 % across the three sections. That caught two errors in the PDF's
+# text layer, both confirmed against the rendered page: 4-chlorophenylurea 24 h
+# Upper is 77.4 (not 17.4) and phenylurea 48 h Middle is 3.7 (not 3.1).
+#
+# READ THE CAVEATS BEFORE SCORING ANYTHING WITH THIS.
+#  * BARLEY, not rice, and an 11-day-old seedling over 24-48 h, not a season.
+#  * section_g are the article's TYPICAL weights applied to every test -- section
+#    2.2 says some early phenylurea tests were not weighed at all. So the
+#    absolute value carries a mass uncertainty the % distribution does not; the
+#    log-ratio BETWEEN sections of one compound is the better-conditioned
+#    quantity, and the leaf/stem ratio is what constrains the split.
+#  * equilibrated = 0 marks 4-(4-bromophenoxy)phenylurea, which the article
+#    itself excludes from its Fig. 4 (it reached constant values only in the
+#    bases, and only after 48 h). Exclude it from any equilibrium comparison.
+#  * metabolised = 1 marks aldicarb and 3-(methylthio)phenylurea, measured as
+#    parent PLUS oxidation products; the article attributes their ~3x stem excess
+#    to in-planta oxidation trapping a polar metabolite, not to partition.
+#  * the article notes the stem BASE can run up to 2x the central section partly
+#    from DIRECT CONTACT with the treating solution -- the same confound Li 2025
+#    and Hwang 2017 carry. stem_central is the cleaner of the two.
+#  * Briggs' "stem" is "not the true stem but is formed from the leaf bases and
+#    developing new leaves" (section 2.2). It is a shoot base, not a rice culm.
+#
+# NOT WIRED INTO THE --obs HARNESS, deliberately, for the Hwang 2017 reason
+# (docs 4c): tissue names here are sections of a 48-h barley seedling and the
+# shared harness would run them against a 120-day RICE season. Use
+# validation/briggs1983_shoot.py, which makes the right comparison.
+compound,log_kow,tissue,value,basis,endpoint,hours,series,pct_of_shoot,total_dpm,solution_dpm_ml,section_g,equilibrated,metabolised,species,note
+aldoxycarb,-0.57,leaf,1.99,fw,scf,24,oxime,91.0,7332,2794,1.2,1,0,barley,Briggs1983 Tab1 24h 91.0% of 7332 dpm / 1.2 g / 2794 dpm ml-1
+aldoxycarb,-0.57,stem_central,0.2034,fw,scf,24,oxime,3.1,7332,2794,0.4,1,0,barley,Briggs1983 Tab1 24h 3.1% of 7332 dpm / 0.4 g / 2794 dpm ml-1
+aldoxycarb,-0.57,stem_base,0.2867,fw,scf,24,oxime,5.9,7332,2794,0.54,1,0,barley,Briggs1983 Tab1 24h 5.9% of 7332 dpm / 0.54 g / 2794 dpm ml-1
+aldoxycarb,-0.57,leaf,2.7647,fw,scf,48,oxime,91.2,10164,2794,1.2,1,0,barley,Briggs1983 Tab1 48h 91.2% of 10164 dpm / 1.2 g / 2794 dpm ml-1
+aldoxycarb,-0.57,stem_central,0.2546,fw,scf,48,oxime,2.8,10164,2794,0.4,1,0,barley,Briggs1983 Tab1 48h 2.8% of 10164 dpm / 0.4 g / 2794 dpm ml-1
+aldoxycarb,-0.57,stem_base,0.4042,fw,scf,48,oxime,6.0,10164,2794,0.54,1,0,barley,Briggs1983 Tab1 48h 6.0% of 10164 dpm / 0.54 g / 2794 dpm ml-1
+oxamyl,-0.47,leaf,1.1017,fw,scf,24,oxime,90.1,3234,2204,1.2,1,0,barley,Briggs1983 Tab1 24h 90.1% of 3234 dpm / 1.2 g / 2204 dpm ml-1
+oxamyl,-0.47,stem_central,0.1577,fw,scf,24,oxime,4.3,3234,2204,0.4,1,0,barley,Briggs1983 Tab1 24h 4.3% of 3234 dpm / 0.4 g / 2204 dpm ml-1
+oxamyl,-0.47,stem_base,0.1495,fw,scf,24,oxime,5.5,3234,2204,0.54,1,0,barley,Briggs1983 Tab1 24h 5.5% of 3234 dpm / 0.54 g / 2204 dpm ml-1
+oxamyl,-0.47,leaf,2.2177,fw,scf,48,oxime,89.7,6539,2204,1.2,1,0,barley,Briggs1983 Tab1 48h 89.7% of 6539 dpm / 1.2 g / 2204 dpm ml-1
+oxamyl,-0.47,stem_central,0.4005,fw,scf,48,oxime,5.4,6539,2204,0.4,1,0,barley,Briggs1983 Tab1 48h 5.4% of 6539 dpm / 0.4 g / 2204 dpm ml-1
+oxamyl,-0.47,stem_base,0.2692,fw,scf,48,oxime,4.9,6539,2204,0.54,1,0,barley,Briggs1983 Tab1 48h 4.9% of 6539 dpm / 0.54 g / 2204 dpm ml-1
+aldicarb,1.08,leaf,4.7459,fw,scf,24,oxime,81.3,18059,2578,1.2,1,1,barley,Briggs1983 Tab1 24h 81.3% of 18059 dpm / 1.2 g / 2578 dpm ml-1
+aldicarb,1.08,stem_central,1.7688,fw,scf,24,oxime,10.1,18059,2578,0.4,1,1,barley,Briggs1983 Tab1 24h 10.1% of 18059 dpm / 0.4 g / 2578 dpm ml-1
+aldicarb,1.08,stem_base,1.1156,fw,scf,24,oxime,8.6,18059,2578,0.54,1,1,barley,Briggs1983 Tab1 24h 8.6% of 18059 dpm / 0.54 g / 2578 dpm ml-1
+aldicarb,1.08,leaf,13.329,fw,scf,48,oxime,89.1,46279,2578,1.2,1,1,barley,Briggs1983 Tab1 48h 89.1% of 46279 dpm / 1.2 g / 2578 dpm ml-1
+aldicarb,1.08,stem_central,2.4683,fw,scf,48,oxime,5.5,46279,2578,0.4,1,1,barley,Briggs1983 Tab1 48h 5.5% of 46279 dpm / 0.4 g / 2578 dpm ml-1
+aldicarb,1.08,stem_base,1.7952,fw,scf,48,oxime,5.4,46279,2578,0.54,1,1,barley,Briggs1983 Tab1 48h 5.4% of 46279 dpm / 0.54 g / 2578 dpm ml-1
+benzaldehyde_omc,1.49,leaf,0.8869,fw,scf,24,oxime,73.6,4091,2829,1.2,1,0,barley,Briggs1983 Tab1 24h 73.6% of 4091 dpm / 1.2 g / 2829 dpm ml-1
+benzaldehyde_omc,1.49,stem_central,0.3254,fw,scf,24,oxime,9.0,4091,2829,0.4,1,0,barley,Briggs1983 Tab1 24h 9.0% of 4091 dpm / 0.4 g / 2829 dpm ml-1
+benzaldehyde_omc,1.49,stem_base,0.466,fw,scf,24,oxime,17.4,4091,2829,0.54,1,0,barley,Briggs1983 Tab1 24h 17.4% of 4091 dpm / 0.54 g / 2829 dpm ml-1
+benzaldehyde_omc,1.49,leaf,1.9313,fw,scf,48,oxime,81.7,8025,2829,1.2,1,0,barley,Briggs1983 Tab1 48h 81.7% of 8025 dpm / 1.2 g / 2829 dpm ml-1
+benzaldehyde_omc,1.49,stem_central,0.4468,fw,scf,48,oxime,6.3,8025,2829,0.4,1,0,barley,Briggs1983 Tab1 48h 6.3% of 8025 dpm / 0.4 g / 2829 dpm ml-1
+benzaldehyde_omc,1.49,stem_base,0.6304,fw,scf,48,oxime,12.0,8025,2829,0.54,1,0,barley,Briggs1983 Tab1 48h 12.0% of 8025 dpm / 0.54 g / 2829 dpm ml-1
+4_chlorobenzaldehyde_omc,2.27,leaf,6.0946,fw,scf,24,oxime,79.7,38137,4156,1.2,1,0,barley,Briggs1983 Tab1 24h 79.7% of 38137 dpm / 1.2 g / 4156 dpm ml-1
+4_chlorobenzaldehyde_omc,2.27,stem_central,1.7206,fw,scf,24,oxime,7.5,38137,4156,0.4,1,0,barley,Briggs1983 Tab1 24h 7.5% of 38137 dpm / 0.4 g / 4156 dpm ml-1
+4_chlorobenzaldehyde_omc,2.27,stem_base,2.1751,fw,scf,24,oxime,12.8,38137,4156,0.54,1,0,barley,Briggs1983 Tab1 24h 12.8% of 38137 dpm / 0.54 g / 4156 dpm ml-1
+4_chlorobenzaldehyde_omc,2.27,leaf,15.7923,fw,scf,48,oxime,89.7,87803,4156,1.2,1,0,barley,Briggs1983 Tab1 48h 89.7% of 87803 dpm / 1.2 g / 4156 dpm ml-1
+4_chlorobenzaldehyde_omc,2.27,stem_central,1.8486,fw,scf,48,oxime,3.5,87803,4156,0.4,1,0,barley,Briggs1983 Tab1 48h 3.5% of 87803 dpm / 0.4 g / 4156 dpm ml-1
+4_chlorobenzaldehyde_omc,2.27,stem_base,2.6604,fw,scf,48,oxime,6.8,87803,4156,0.54,1,0,barley,Briggs1983 Tab1 48h 6.8% of 87803 dpm / 0.54 g / 4156 dpm ml-1
+3_4_dichlorobenzaldehyde_omc,2.89,leaf,3.634,fw,scf,24,oxime,62.9,21076,3040,1.2,1,0,barley,Briggs1983 Tab1 24h 62.9% of 21076 dpm / 1.2 g / 3040 dpm ml-1
+3_4_dichlorobenzaldehyde_omc,2.89,stem_central,2.8772,fw,scf,24,oxime,16.6,21076,3040,0.4,1,0,barley,Briggs1983 Tab1 24h 16.6% of 21076 dpm / 0.4 g / 3040 dpm ml-1
+3_4_dichlorobenzaldehyde_omc,2.89,stem_base,2.6319,fw,scf,24,oxime,20.5,21076,3040,0.54,1,0,barley,Briggs1983 Tab1 24h 20.5% of 21076 dpm / 0.54 g / 3040 dpm ml-1
+3_4_dichlorobenzaldehyde_omc,2.89,leaf,9.8182,fw,scf,48,oxime,82.4,43467,3040,1.2,1,0,barley,Briggs1983 Tab1 48h 82.4% of 43467 dpm / 1.2 g / 3040 dpm ml-1
+3_4_dichlorobenzaldehyde_omc,2.89,stem_central,2.6094,fw,scf,48,oxime,7.3,43467,3040,0.4,1,0,barley,Briggs1983 Tab1 48h 7.3% of 43467 dpm / 0.4 g / 3040 dpm ml-1
+3_4_dichlorobenzaldehyde_omc,2.89,stem_base,2.7273,fw,scf,48,oxime,10.3,43467,3040,0.54,1,0,barley,Briggs1983 Tab1 48h 10.3% of 43467 dpm / 0.54 g / 3040 dpm ml-1
+3_phenoxybenzaldehyde_omc,3.12,leaf,1.709,fw,scf,24,oxime,56.9,8989,2494,1.2,1,0,barley,Briggs1983 Tab1 24h 56.9% of 8989 dpm / 1.2 g / 2494 dpm ml-1
+3_phenoxybenzaldehyde_omc,3.12,stem_central,1.4597,fw,scf,24,oxime,16.2,8989,2494,0.4,1,0,barley,Briggs1983 Tab1 24h 16.2% of 8989 dpm / 0.4 g / 2494 dpm ml-1
+3_phenoxybenzaldehyde_omc,3.12,stem_base,1.7955,fw,scf,24,oxime,26.9,8989,2494,0.54,1,0,barley,Briggs1983 Tab1 24h 26.9% of 8989 dpm / 0.54 g / 2494 dpm ml-1
+3_phenoxybenzaldehyde_omc,3.12,leaf,4.1147,fw,scf,48,oxime,70.3,17517,2494,1.2,1,0,barley,Briggs1983 Tab1 48h 70.3% of 17517 dpm / 1.2 g / 2494 dpm ml-1
+3_phenoxybenzaldehyde_omc,3.12,stem_central,1.9315,fw,scf,48,oxime,11.0,17517,2494,0.4,1,0,barley,Briggs1983 Tab1 48h 11.0% of 17517 dpm / 0.4 g / 2494 dpm ml-1
+3_phenoxybenzaldehyde_omc,3.12,stem_base,2.4323,fw,scf,48,oxime,18.7,17517,2494,0.54,1,0,barley,Briggs1983 Tab1 48h 18.7% of 17517 dpm / 0.54 g / 2494 dpm ml-1
+3_mesylphenylurea,-0.12,leaf,1.0078,fw,scf,24,phenylurea,84.9,3967,2785,1.2,1,0,barley,Briggs1983 Tab1 24h 84.9% of 3967 dpm / 1.2 g / 2785 dpm ml-1
+3_mesylphenylurea,-0.12,stem_central,0.1531,fw,scf,24,phenylurea,4.3,3967,2785,0.4,1,0,barley,Briggs1983 Tab1 24h 4.3% of 3967 dpm / 0.4 g / 2785 dpm ml-1
+3_mesylphenylurea,-0.12,stem_base,0.2849,fw,scf,24,phenylurea,10.8,3967,2785,0.54,1,0,barley,Briggs1983 Tab1 24h 10.8% of 3967 dpm / 0.54 g / 2785 dpm ml-1
+3_mesylphenylurea,-0.12,leaf,1.5361,fw,scf,48,phenylurea,84.7,6061,2785,1.2,1,0,barley,Briggs1983 Tab1 48h 84.7% of 6061 dpm / 1.2 g / 2785 dpm ml-1
+3_mesylphenylurea,-0.12,stem_central,0.1306,fw,scf,48,phenylurea,2.4,6061,2785,0.4,1,0,barley,Briggs1983 Tab1 48h 2.4% of 6061 dpm / 0.4 g / 2785 dpm ml-1
+3_mesylphenylurea,-0.12,stem_base,0.5199,fw,scf,48,phenylurea,12.9,6061,2785,0.54,1,0,barley,Briggs1983 Tab1 48h 12.9% of 6061 dpm / 0.54 g / 2785 dpm ml-1
+phenylurea,0.8,leaf,2.7807,fw,scf,24,phenylurea,85.0,16233,4135,1.2,1,0,barley,Briggs1983 Tab1 24h 85.0% of 16233 dpm / 1.2 g / 4135 dpm ml-1
+phenylurea,0.8,stem_central,0.4613,fw,scf,24,phenylurea,4.7,16233,4135,0.4,1,0,barley,Briggs1983 Tab1 24h 4.7% of 16233 dpm / 0.4 g / 4135 dpm ml-1
+phenylurea,0.8,stem_base,0.7488,fw,scf,24,phenylurea,10.3,16233,4135,0.54,1,0,barley,Briggs1983 Tab1 24h 10.3% of 16233 dpm / 0.54 g / 4135 dpm ml-1
+phenylurea,0.8,leaf,3.7879,fw,scf,48,phenylurea,87.8,21407,4135,1.2,1,0,barley,Briggs1983 Tab1 48h 87.8% of 21407 dpm / 1.2 g / 4135 dpm ml-1
+phenylurea,0.8,stem_central,0.4789,fw,scf,48,phenylurea,3.7,21407,4135,0.4,1,0,barley,Briggs1983 Tab1 48h 3.7% of 21407 dpm / 0.4 g / 4135 dpm ml-1
+phenylurea,0.8,stem_base,0.8149,fw,scf,48,phenylurea,8.5,21407,4135,0.54,1,0,barley,Briggs1983 Tab1 48h 8.5% of 21407 dpm / 0.54 g / 4135 dpm ml-1
+4_fluorophenylurea,1.04,leaf,3.3591,fw,scf,24,phenylurea,85.1,17057,3601,1.2,1,0,barley,Briggs1983 Tab1 24h 85.1% of 17057 dpm / 1.2 g / 3601 dpm ml-1
+4_fluorophenylurea,1.04,stem_central,0.6276,fw,scf,24,phenylurea,5.3,17057,3601,0.4,1,0,barley,Briggs1983 Tab1 24h 5.3% of 17057 dpm / 0.4 g / 3601 dpm ml-1
+4_fluorophenylurea,1.04,stem_base,0.8421,fw,scf,24,phenylurea,9.6,17057,3601,0.54,1,0,barley,Briggs1983 Tab1 24h 9.6% of 17057 dpm / 0.54 g / 3601 dpm ml-1
+4_fluorophenylurea,1.04,leaf,7.462,fw,scf,48,phenylurea,90.8,35512,3601,1.2,1,0,barley,Briggs1983 Tab1 48h 90.8% of 35512 dpm / 1.2 g / 3601 dpm ml-1
+4_fluorophenylurea,1.04,stem_central,0.6657,fw,scf,48,phenylurea,2.7,35512,3601,0.4,1,0,barley,Briggs1983 Tab1 48h 2.7% of 35512 dpm / 0.4 g / 3601 dpm ml-1
+4_fluorophenylurea,1.04,stem_base,1.1871,fw,scf,48,phenylurea,6.5,35512,3601,0.54,1,0,barley,Briggs1983 Tab1 48h 6.5% of 35512 dpm / 0.54 g / 3601 dpm ml-1
+3_methylthiophenylurea,1.57,leaf,1.6261,fw,scf,24,phenylurea,79.1,5432,2202,1.2,1,1,barley,Briggs1983 Tab1 24h 79.1% of 5432 dpm / 1.2 g / 2202 dpm ml-1
+3_methylthiophenylurea,1.57,stem_central,0.518,fw,scf,24,phenylurea,8.4,5432,2202,0.4,1,1,barley,Briggs1983 Tab1 24h 8.4% of 5432 dpm / 0.4 g / 2202 dpm ml-1
+3_methylthiophenylurea,1.57,stem_base,0.5665,fw,scf,24,phenylurea,12.4,5432,2202,0.54,1,1,barley,Briggs1983 Tab1 24h 12.4% of 5432 dpm / 0.54 g / 2202 dpm ml-1
+3_methylthiophenylurea,1.57,leaf,4.4117,fw,scf,48,phenylurea,85.9,13571,2202,1.2,1,1,barley,Briggs1983 Tab1 48h 85.9% of 13571 dpm / 1.2 g / 2202 dpm ml-1
+3_methylthiophenylurea,1.57,stem_central,0.9861,fw,scf,48,phenylurea,6.4,13571,2202,0.4,1,1,barley,Briggs1983 Tab1 48h 6.4% of 13571 dpm / 0.4 g / 2202 dpm ml-1
+3_methylthiophenylurea,1.57,stem_base,0.8788,fw,scf,48,phenylurea,7.7,13571,2202,0.54,1,1,barley,Briggs1983 Tab1 48h 7.7% of 13571 dpm / 0.54 g / 2202 dpm ml-1
+4_chlorophenylurea,1.8,leaf,3.5913,fw,scf,24,phenylurea,77.4,20078,3606,1.2,1,0,barley,Briggs1983 Tab1 24h 77.4% of 20078 dpm / 1.2 g / 3606 dpm ml-1
+4_chlorophenylurea,1.8,stem_central,1.1553,fw,scf,24,phenylurea,8.3,20078,3606,0.4,1,0,barley,Briggs1983 Tab1 24h 8.3% of 20078 dpm / 0.4 g / 3606 dpm ml-1
+4_chlorophenylurea,1.8,stem_base,1.4745,fw,scf,24,phenylurea,14.3,20078,3606,0.54,1,0,barley,Briggs1983 Tab1 24h 14.3% of 20078 dpm / 0.54 g / 3606 dpm ml-1
+4_chlorophenylurea,1.8,leaf,9.5912,fw,scf,48,phenylurea,87.8,47270,3606,1.2,1,0,barley,Briggs1983 Tab1 48h 87.8% of 47270 dpm / 1.2 g / 3606 dpm ml-1
+4_chlorophenylurea,1.8,stem_central,1.2453,fw,scf,48,phenylurea,3.8,47270,3606,0.4,1,0,barley,Briggs1983 Tab1 48h 3.8% of 47270 dpm / 0.4 g / 3606 dpm ml-1
+4_chlorophenylurea,1.8,stem_base,2.0391,fw,scf,48,phenylurea,8.4,47270,3606,0.54,1,0,barley,Briggs1983 Tab1 48h 8.4% of 47270 dpm / 0.54 g / 3606 dpm ml-1
+4_bromophenylurea,1.98,leaf,3.9764,fw,scf,24,phenylurea,76.8,17378,2797,1.2,1,0,barley,Briggs1983 Tab1 24h 76.8% of 17378 dpm / 1.2 g / 2797 dpm ml-1
+4_bromophenylurea,1.98,stem_central,1.0562,fw,scf,24,phenylurea,6.8,17378,2797,0.4,1,0,barley,Briggs1983 Tab1 24h 6.8% of 17378 dpm / 0.4 g / 2797 dpm ml-1
+4_bromophenylurea,1.98,stem_base,1.8754,fw,scf,24,phenylurea,16.3,17378,2797,0.54,1,0,barley,Briggs1983 Tab1 24h 16.3% of 17378 dpm / 0.54 g / 2797 dpm ml-1
+4_bromophenylurea,1.98,leaf,9.8545,fw,scf,48,phenylurea,87.4,37844,2797,1.2,1,0,barley,Briggs1983 Tab1 48h 87.4% of 37844 dpm / 1.2 g / 2797 dpm ml-1
+4_bromophenylurea,1.98,stem_central,1.3192,fw,scf,48,phenylurea,3.9,37844,2797,0.4,1,0,barley,Briggs1983 Tab1 48h 3.9% of 37844 dpm / 0.4 g / 2797 dpm ml-1
+4_bromophenylurea,1.98,stem_base,2.1799,fw,scf,48,phenylurea,8.7,37844,2797,0.54,1,0,barley,Briggs1983 Tab1 48h 8.7% of 37844 dpm / 0.54 g / 2797 dpm ml-1
+3_4_dichlorophenylurea,2.64,leaf,1.7502,fw,scf,24,phenylurea,49.4,12606,2965,1.2,1,0,barley,Briggs1983 Tab1 24h 49.4% of 12606 dpm / 1.2 g / 2965 dpm ml-1
+3_4_dichlorophenylurea,2.64,stem_central,1.318,fw,scf,24,phenylurea,12.4,12606,2965,0.4,1,0,barley,Briggs1983 Tab1 24h 12.4% of 12606 dpm / 0.4 g / 2965 dpm ml-1
+3_4_dichlorophenylurea,2.64,stem_base,3.0076,fw,scf,24,phenylurea,38.2,12606,2965,0.54,1,0,barley,Briggs1983 Tab1 24h 38.2% of 12606 dpm / 0.54 g / 2965 dpm ml-1
+3_4_dichlorophenylurea,2.64,leaf,5.5505,fw,scf,48,phenylurea,71.1,27776,2965,1.2,1,0,barley,Briggs1983 Tab1 48h 71.1% of 27776 dpm / 1.2 g / 2965 dpm ml-1
+3_4_dichlorophenylurea,2.64,stem_central,1.7565,fw,scf,48,phenylurea,7.5,27776,2965,0.4,1,0,barley,Briggs1983 Tab1 48h 7.5% of 27776 dpm / 0.4 g / 2965 dpm ml-1
+3_4_dichlorophenylurea,2.64,stem_base,3.7125,fw,scf,48,phenylurea,21.4,27776,2965,0.54,1,0,barley,Briggs1983 Tab1 48h 21.4% of 27776 dpm / 0.54 g / 2965 dpm ml-1
+4_phenoxyphenylurea,2.8,leaf,1.6536,fw,scf,24,phenylurea,52.0,10261,2689,1.2,1,0,barley,Briggs1983 Tab1 24h 52.0% of 10261 dpm / 1.2 g / 2689 dpm ml-1
+4_phenoxyphenylurea,2.8,stem_central,1.4119,fw,scf,24,phenylurea,14.8,10261,2689,0.4,1,0,barley,Briggs1983 Tab1 24h 14.8% of 10261 dpm / 0.4 g / 2689 dpm ml-1
+4_phenoxyphenylurea,2.8,stem_base,2.3461,fw,scf,24,phenylurea,33.2,10261,2689,0.54,1,0,barley,Briggs1983 Tab1 24h 33.2% of 10261 dpm / 0.54 g / 2689 dpm ml-1
+4_phenoxyphenylurea,2.8,leaf,4.8841,fw,scf,48,phenylurea,71.5,22042,2689,1.2,1,0,barley,Briggs1983 Tab1 48h 71.5% of 22042 dpm / 1.2 g / 2689 dpm ml-1
+4_phenoxyphenylurea,2.8,stem_central,1.7624,fw,scf,48,phenylurea,8.6,22042,2689,0.4,1,0,barley,Briggs1983 Tab1 48h 8.6% of 22042 dpm / 0.4 g / 2689 dpm ml-1
+4_phenoxyphenylurea,2.8,stem_base,3.0208,fw,scf,48,phenylurea,19.9,22042,2689,0.54,1,0,barley,Briggs1983 Tab1 48h 19.9% of 22042 dpm / 0.54 g / 2689 dpm ml-1
+4_4_bromophenoxyphenylurea,3.7,leaf,0.0153,fw,scf,24,phenylurea,1.8,3913,3848,1.2,0,0,barley,Briggs1983 Tab1 24h 1.8% of 3913 dpm / 1.2 g / 3848 dpm ml-1
+4_4_bromophenoxyphenylurea,3.7,stem_central,0.0559,fw,scf,24,phenylurea,2.2,3913,3848,0.4,0,0,barley,Briggs1983 Tab1 24h 2.2% of 3913 dpm / 0.4 g / 3848 dpm ml-1
+4_4_bromophenoxyphenylurea,3.7,stem_base,1.8078,fw,scf,24,phenylurea,96.0,3913,3848,0.54,0,0,barley,Briggs1983 Tab1 24h 96.0% of 3913 dpm / 0.54 g / 3848 dpm ml-1
+4_4_bromophenoxyphenylurea,3.7,leaf,0.1709,fw,scf,48,phenylurea,6.7,11776,3848,1.2,0,0,barley,Briggs1983 Tab1 48h 6.7% of 11776 dpm / 1.2 g / 3848 dpm ml-1
+4_4_bromophenoxyphenylurea,3.7,stem_central,0.7115,fw,scf,48,phenylurea,9.3,11776,3848,0.4,0,0,barley,Briggs1983 Tab1 48h 9.3% of 11776 dpm / 0.4 g / 3848 dpm ml-1
+4_4_bromophenoxyphenylurea,3.7,stem_base,4.7605,fw,scf,48,phenylurea,84.0,11776,3848,0.54,0,0,barley,Briggs1983 Tab1 48h 84.0% of 11776 dpm / 0.54 g / 3848 dpm ml-1
