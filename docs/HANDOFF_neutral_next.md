@@ -88,6 +88,12 @@ on this branch; the 2 skips are the optional `emcee` and `sci-adk` deps.
 | the repo's best a-priori root result, appropriate basis | **Liu 2023, 0.206** (not Kodešová) |
 | the same, driver-free (equilibrium `K_PW`) | measured `RCF_fw` median **1.10** vs 1.56 shipped / 2.53 anchored |
 | Brunetti's pea `K_RW` vs that measurement | 13.3 vs **1.10** — ~12× above, so **superseded** |
+| **Li 2019 SOIL table**, n=376, 13 crops, nothing fitted | bias **+0.260** — model HIGH, opposite sign to its own hydroponic half |
+| the same, rows with a **measured** `K_om` | n=62, bias **+0.033** |
+| the same, each crop's **own** lipid | bias **−0.001**, RMSE 0.639 → 0.461 |
+| **Kodešová leaf/root** (translocation, exposure cancelled) | measured median **3.25** vs model **181** |
+| **Kodešová measured metabolism** (parent fraction) | root **0.919**, leaf **0.489** (lamb's lettuce 0.169) |
+| **Briggs 1983 stem anchor** | shipped `L·a` 4.1× above, but SCF differs ≤ **0.13 log** over log Kow 0–3.5 |
 | merge, Tang per-organ OOS | 0.801 (stalk 0.61, leaf 0.28) |
 
 **Caveats that must travel with every one of these.** Li 2019 is out-of-sample but the
@@ -122,13 +128,19 @@ Ranked. The first is the only one that is both significant and unblocked.
      `K_PW = W + L·a·Kow^b` is water-floor-dominated at low Kow, so scaling `L`
      is inherently Kow-dependent. Li 2019 is genuine evidence **for** the anchor.
 
-   What blocks the decision is that **the datasets contradict each other**. At
-   log Kow 3.5–4.5, Li 2019 says the model is ~3× low (−0.462, n=11) and Liu 2023
-   — rice, the same hydroponic endpoint — says it is exact (−0.008, n=5). On
-   propiconazole, the one compound both measured, RCF is 43.65 (lettuce) vs 9.32
-   (rice): **4.7× apart, against an anchor worth 2.4×**. So the question is not
-   "is the partition too low" but **"which hydroponic dataset describes a rice
-   root above log Kow 3.5"**, and only new data settles it (§4, item 1).
+   **Li 2019's SOIL table then reframed it again** (§4h). 376 rows, 13 crops,
+   from the same paper: the model runs **HIGH by +0.260** there, opposite in sign
+   to the same paper's hydroponic half (−0.432), and restoring the anchor makes
+   it much worse. So the tally is **three tables against the anchor and one for**,
+   and the one for is the outlier.
+
+   More useful than the tally: **where the exposure is measured or directly
+   known, the model is close to unbiased** — Liu −0.053, Li-soil measured-`K_om`
+   +0.033, Kodešová +0.162 — while estimated-`K_om` rows sit at +0.291. Most of
+   the neutral path's apparent partition error is an **exposure-term** problem,
+   which is the soil side, not `K_PW`. The Li 2019 hydroponic table stays an open
+   anomaly (no subgroup explains its −0.43; on propiconazole, the one compound it
+   and Liu both measured, they differ **4.7×**).
 
    Note also that `a = 1.22` carries **no citation anywhere in the repo**. Only
    the product `L·a` is identifiable, so "raise `L` to 0.0247" and "raise `a` to
@@ -162,12 +174,18 @@ Ranked. The first is the only one that is both significant and unblocked.
    was flattered and is *not* the repo's best a-priori result; Liu is. The anchor
    verdicts survive with **wider** margins. Default stays `"ode"`; which basis
    should headline is a one-line decision, open with the anchor question.
-4. **Mine Briggs 1983** (`10.1002/ps.2780140506`), the shoot-distribution companion,
+4. ~~Mine Briggs 1983~~ ✅ **DONE** — §4j. It carries a STEM anchor
+   (`log(K_stem/xylem − 0.82) = 0.95 logKow − 2.05`, `SCF = K × TSCF`), which the
+   repo's stem had never been checked against: shipped `L·a` 0.0366 vs anchor
+   0.0089, **4.1× above**, and with the root's flatter exponent. But it largely
+   **cancels** in the observable — SCF differs by at most **0.13 log** over
+   log Kow 0–3.5. A provenance problem, not a prediction problem.
+5. **Mine what is left of Briggs 1983** — its measured per-section shoot (`10.1002/ps.2780140506`), the shoot-distribution companion,
    already in hand and never opened. It is the only in-hand source that could constrain
    the stem/leaf split independently of Ge 2017.
-5. **Tissue specific surface areas** for rice — still the single input bounding the air
+6. **Tissue specific surface areas** for rice — still the single input bounding the air
    term, still unsourced. Note the C2 papers supplied this round do **not** help (§4).
-6. `NStemLeafModel` has no air hook; particle deposition (`eq:Qdep`) is still
+7. `NStemLeafModel` has no air hook; particle deposition (`eq:Qdep`) is still
    deliberately unimplemented. Both unchanged from the last handoff, both low value.
 
 ---

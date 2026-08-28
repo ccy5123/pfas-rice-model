@@ -715,6 +715,55 @@ what fitting one to a single dataset assumes. Note also that the metabolites are
 not inert: in lamb's lettuce leaves the epoxide *exceeds* the parent (17000 vs
 6400 ng/g), so a parent-only model understates the total burden several-fold.
 
+### 4j. Briggs 1983 — the STEM had an anchor too, and it was never read
+
+`validation/briggs1983_stem.py` · `neutral_dpu.briggs_scf`
+
+The companion to the 1982 paper this whole path is built on was sitting unread in
+the obtained set. It does for the shoot what 1982 did for the root — measures two
+compound series in barley shoots after root uptake and fits a partition of exactly
+the `K_PW` form (**verified at source**):
+
+```
+log(K_stem/xylem_sap − 0.82) = 0.95·log Kow − 2.05      (eq. 2)
+SCF = K_stem/xylem_sap × TSCF                            (eq. 3)
+```
+
+The implementation checks itself: computed from the coefficients alone, eq. 3
+peaks at **6.4 at log Kow 4.5**, against the paper's own "about 6 … at about
+log Kow = 4.5".
+
+**The stem had no anchor in this repo until now** — it runs Trapp 1994's soybean
+3 % lipid with the conventional `a = 1.22` and Briggs' *root* exponent 0.77:
+
+| organ | shipped `L·a` | Briggs anchor | ratio | exponent |
+|---|---|---|---|---|
+| root | 0.0122 | 0.0302 | **0.40** (2.5× below) | 0.77 vs 0.77 — same |
+| stem | 0.0366 | 0.0089 | **4.11** (4.1× above) | 0.77 vs **0.95** |
+
+So the two organs were parameterised from unrelated sources and neither was
+checked against the anchor that existed for it — the root missing low, the stem
+missing high.
+
+**But the consequences differ sharply, and that is the part to quote.** For the
+root the coefficient gap *is* the disagreement, because the exponent is shared.
+For the stem it largely **cancels** against Briggs' steeper slope:
+
+| log Kow | 0.0 | 1.0 | 1.78 | 2.5 | 3.5 | 4.5 | 5.5 |
+|---|---|---|---|---|---|---|---|
+| repo SCF ÷ Briggs SCF, log10 | +0.02 | +0.07 | +0.13 | +0.13 | −0.02 | −0.20 | −0.38 |
+
+At most **0.13 log** across log Kow 0–3.5, the range where the TSCF bell delivers
+anything at all; the larger deviations sit above 4.5 where TSCF has collapsed and
+the stem receives almost nothing — and where Briggs' own text says the predicted
+decline "was not tested", so both sides are extrapolating.
+
+**Nothing is changed.** The anchor is one species and is explicitly a shoot *base*
+rather than a true stem, and unlike the root case no measured table in this repo
+would arbitrate it. It is recorded, exposed as `briggs_scf()`, and pinned by a
+test. The stem is a **provenance** problem, not a prediction problem, and it ranks
+below both the root question and the exposure-term work.
+
 ### 4g. A scoring artifact that affects every root number above
 
 `compare_to_obs(..., mode="equilibrium")` · `tests/test_li2019_schriever_tables.py`

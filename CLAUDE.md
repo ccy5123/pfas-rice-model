@@ -751,6 +751,20 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     property**, which is what fitting one to a single dataset assumes. The epoxide EXCEEDS the parent in lamb's-lettuce
     leaves (17000 vs 6400 ng/g) ⇒ a parent-only model understates the burden several-fold.
   `tests/test_li2019_schriever_tables.py` (24). `parameters.json`, `simulate()` and `reproduce_demo` (0.029) UNCHANGED.
+- **Briggs 1983 — the STEM anchor that was never read (this session)**: `neutral_dpu.briggs_scf` /
+  `briggs_stem_xylem_partition` + `validation/briggs1983_stem.py`, docs §4j. The companion to Briggs 1982 sat unread
+  in the obtained set; it fits the SAME `K_PW` form to barley shoots (VERIFIED AT SOURCE):
+  `log(K_stem/xylem_sap − 0.82) = 0.95·logKow − 2.05` (eq.2), `SCF = K_stem/xylem × TSCF` (eq.3). Self-checking:
+  computed from the coefficients the peak is **6.4 @logKow 4.5** vs the paper's "about 6 … at about 4.5". ⇒ the stem
+  had **NO anchor** in this repo (Trapp soybean 3% lipid + conventional a=1.22 + the ROOT exponent 0.77):
+  **root `L·a` 0.0122 vs anchor 0.0302 = 2.5× BELOW; stem 0.0366 vs 0.0089 = 4.1× ABOVE** — two organs from unrelated
+  sources, neither checked, missing in OPPOSITE directions. **BUT the consequences differ and only §3 should be
+  quoted**: for the root the coefficient gap IS the disagreement (shared exponent), while for the stem it largely
+  **CANCELS** against Briggs' steeper b=0.95 — the observable SCF differs by at most **0.13 log** over logKow 0–3.5
+  (where TSCF delivers anything), swinging to −0.20/−0.38 only above 4.5 where TSCF has collapsed and Briggs' own text
+  says the decline "was not tested". ⇒ the stem is a **provenance** problem, not a prediction problem; ranks below the
+  root question and the exposure-term work. NOTHING CHANGED (one species, a shoot BASE not a true stem, and no measured
+  table in-repo would arbitrate it).
 - **ODE-vs-EQUILIBRIUM scoring artifact (this session) — `compare_to_obs(mode="equilibrium")`**: all three root-partition
   tables (Liu/Li2019/Kodešová) measure an EQUILIBRIUM over 24 h–26 d, but were scored by running the **120-d rice season**
   and reading `baf_final["root"]`. That imposes a **Kow-DEPENDENT, purely model-side discount** (ODE/K_PW = 0.91 @logKow
@@ -965,6 +979,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   structural checks alone — see `docs/neutral_dpu_validation.md`. In code:
   `model_api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0)` → the standard `simulate()` dict
   + `K_PW`/`TSCF`/`rcf_briggs` (first arg is a **log Kow**, not a congener; `drivers=`/`biomass=` as usual).
+- **Briggs 1983 stem anchor**: `python validation/briggs1983_stem.py` (~1 s; transcription self-check · the 4.1×
+  coefficient gap · why it largely cancels in the observable).
 - **Li 2019 SOIL table (376 rows, the sign flip)**: `python validation/li2019_soil_table.py` (~5 s; hydroponic-vs-soil
   sign flip · per-crop-lipid collapse · the measured-vs-estimated `K_om` split · why `α_pt` is not applied).
 - **Li 2019 root partition + the anchor diagnosis**: `python validation/li2019_rcf_apriori.py` (a-priori n=29 by

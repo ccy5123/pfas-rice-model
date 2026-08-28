@@ -176,6 +176,43 @@ def tscf(log_kow: float, model: str = "briggs") -> float:
     raise ValueError(f"unknown TSCF model {model!r}; use 'briggs' or 'schriever'")
 
 
+# --- Briggs 1983 STEM coefficients (Pestic. Sci. 14:492-500, their eqs. 2 and 3;
+# VERIFIED AT SOURCE) --------------------------------------------------------
+# The companion paper to Briggs 1982, and the only published anchor for the STEM
+# compartment. It has exactly the K_PW form -- a water floor plus a lipophilic
+# term -- but fitted to barley shoot bases rather than roots:
+#
+#     log(K_stem/xylem_sap - 0.82) = 0.95*log Kow - 2.05                  (eq. 2)
+#     SCF = K_stem/xylem_sap * TSCF                                       (eq. 3)
+#
+# so the anchored stem lipid term is L*a = 10^-2.05 = 0.0089 with b = 0.95.
+# Note what the repo runs instead: L = 0.03 (Trapp 1994 soybean) with the
+# conventional a = 1.22 and Briggs' ROOT exponent b = 0.77, i.e. L*a = 0.0366 --
+# 4.1x ABOVE this anchor, and with a flatter slope. That is the same class of
+# mismatch as the root's (BRIGGS_ANCHORED_LIPID_FW) but in the OPPOSITE
+# direction, and it is likewise left as-is rather than silently corrected.
+# `validation/briggs1983_stem.py` measures what it costs.
+STEM_SLOPE = 0.95         # b for the stem/xylem-sap partition [-]
+STEM_INTERCEPT = -2.05    # log10 of (L*a) for barley shoot bases [-]
+STEM_FLOOR = 0.82         # water floor, the same value Briggs found for roots
+
+
+def briggs_stem_xylem_partition(log_kow: float) -> float:
+    """K_stem/xylem sap (Briggs 1983 eq. 2) [L/kg]."""
+    return STEM_FLOOR + 10.0 ** (STEM_SLOPE * log_kow + STEM_INTERCEPT)
+
+
+def briggs_scf(log_kow: float, tscf_model: str = "briggs") -> float:
+    """Stem concentration factor (Briggs 1983 eq. 3): the stem/xylem-sap
+    partition times the fraction of the external solution reaching the xylem.
+
+    Reproduces the paper's own stated result -- a maximum of "about 6 ... at
+    about log Kow = 4.5" -- which is what makes this a transcription check
+    rather than an assertion.
+    """
+    return briggs_stem_xylem_partition(log_kow) * tscf(log_kow, model=tscf_model)
+
+
 def k_pw(log_kow: float, W: float, L: float, a: float = LIPID_OCTANOL_A,
          b: float = RCF_SLOPE) -> float:
     """Plant-water partition coefficient K_PW = W + L*a*Kow^b  [L/kg fw].

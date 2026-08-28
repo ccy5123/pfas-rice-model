@@ -489,3 +489,49 @@ def test_metabolism_alone_cannot_close_the_leaf_root_gap():
 
     assert model_leaf_root(1.5) > 5.0 * obs        # still far above at 1.5 d
     assert model_leaf_root(1.5) < model_leaf_root(7.0)   # shorter does help, but
+
+
+# --------------------------------------------------------------------------
+# Briggs 1983 -- the stem anchor
+# --------------------------------------------------------------------------
+def test_briggs1983_scf_reproduces_the_papers_own_stated_maximum():
+    """The transcription check. Briggs et al. 1983 state their eq. 3 peaks at
+    'about 6 ... at about log Kow = 4.5'; computing that from the coefficients
+    alone is what makes the implementation a check rather than an assertion."""
+    lk = np.linspace(-1.0, 7.0, 8001)
+    scf = np.array([ND.briggs_scf(x) for x in lk])
+    i = int(np.argmax(scf))
+    assert scf[i] == pytest.approx(6.0, abs=0.6)
+    assert lk[i] == pytest.approx(4.5, abs=0.15)
+
+
+def test_stem_runs_above_its_anchor_but_the_observable_largely_cancels():
+    """The stem's mismatch, recorded and NOT fixed -- and recorded at the right
+    size. The coefficient gap is 4.1x, but against Briggs' steeper exponent the
+    observable (SCF) differs by at most ~0.13 log over the range where TSCF
+    delivers anything. A later session must not quote the 4.1x as if it were the
+    error in a prediction."""
+    shipped = ND.TRAPP1994_LIPID_FW["stem"] * ND.LIPID_OCTANOL_A
+    anchor = 10.0 ** ND.STEM_INTERCEPT
+    assert shipped / anchor == pytest.approx(4.1, abs=0.1)
+    assert ND.STEM_SLOPE > ND.RCF_SLOPE          # steeper than the root's
+
+    W = ND.RICE_WATER["stem"]
+    L = ND.TRAPP1994_LIPID_FW["stem"]
+    diffs = [abs(np.log10(ND.k_pw(lk, W=W, L=L) * ND.tscf(lk) / ND.briggs_scf(lk)))
+             for lk in (0.0, 1.0, 1.78, 2.5, 3.5)]
+    assert max(diffs) < 0.15                     # the observable nearly cancels
+
+    # the two partitions cross, so this is a shape difference not an offset
+    below = ND.k_pw(2.0, W=W, L=L) > ND.briggs_stem_xylem_partition(2.0)
+    above = ND.k_pw(5.0, W=W, L=L) < ND.briggs_stem_xylem_partition(5.0)
+    assert below and above
+
+
+def test_root_and_stem_anchors_are_missed_in_opposite_directions():
+    """Read together, the two anchors say the neutral composition was assembled
+    from two unrelated sources and neither organ was checked against the anchor
+    that existed for it. No single correction fixes both."""
+    root_ratio = (ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A) / 10 ** ND.RCF_INTERCEPT
+    stem_ratio = (ND.TRAPP1994_LIPID_FW["stem"] * ND.LIPID_OCTANOL_A) / 10 ** ND.STEM_INTERCEPT
+    assert root_ratio < 1.0 < stem_ratio
