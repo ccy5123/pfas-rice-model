@@ -118,7 +118,10 @@ against the anchor.
 
 ## 3. Next tasks
 
-Ranked. **Items 1 and 2 of the previous handoff are DONE** — see §1.
+Ranked. **Items 1 and 2 of the previous handoff are DONE** — see §1. **Everything
+still on this list (3–5) is blocked on data that is not in the repo**; only item 6 is
+startable, and it is low value. This arc is finished until papers or measurements
+arrive — see §4 for what to ask for.
 
 1. ~~Put the anchor decision to rest~~ **DONE.** Default stays `lipid_source="measured"`;
    the alternative is a named mode, and the 3-vs-1 evidence is a command rather than a
@@ -138,8 +141,15 @@ Ranked. **Items 1 and 2 of the previous handoff are DONE** — see §1.
    for hydrophobic compounds and is consistent with the −0.51/−0.35 split. Testing it
    needs the source studies' washing protocols, i.e. new papers (§4).
 4. **Mine what is left of Briggs 1983** — its per-section shoot concentrations (stem
-   base / central / leaf blade) are the only in-hand data that could constrain the
+   base / central / leaf blade) are the only data identified that could constrain the
    stem/leaf split independently of Ge 2017. §4j used only its fitted equations.
+   **⚠️ NEEDS THE PAPER RE-SUPPLIED.** An earlier revision of this list called it
+   "already in hand"; that meant the previous session's *scratchpad*, which is
+   ephemeral and does not survive into a new container. Verified: the repo carries
+   only the transcribed equations (`neutral_dpu.briggs_scf`) — no PDF, and nothing
+   in `docs/literature_db/raw_si/` (all ten files there are PFAS-side). So this item
+   is **blocked on data like items 3 and 5**, not startable. Pestic. Sci. 14:492–500,
+   `10.1002/ps.2780140506`.
 5. **Tissue specific surface areas** for rice — still the one input bounding the air
    term, still unsourced. The C2 papers supplied this round do **not** help (they are
    root morphology; the air term takes no root contribution).
@@ -159,8 +169,11 @@ rows there, Li 2019's rice rows are all below 3.1, Kodešová is a single point 
 and it is what would settle item 3. Note this is a **different** request from the
 queue's C3 ("rice root total lipid"), which is now the lower priority of the two.
 
-Also still wanted, unchanged: the real McFarlane, Pfleeger & Fletcher 1987 (the file
-supplied under that name is a different paper); the two 2025 long-chain PFAS papers
+Also still wanted: **Briggs, Bromilow, Evans & Williams 1983** (`10.1002/ps.2780140506`)
+*again* — its per-section barley shoot concentrations are §3 item 4, and only its
+fitted equations were extracted before the session holding the PDF ended. Unchanged:
+the real McFarlane, Pfleeger & Fletcher 1987 (the file supplied under that name is a
+different paper); the two 2025 long-chain PFAS papers
 (B1/B2); a neutral compound in rice **grain** under root-only exposure (C1 — the one
 entirely untested compartment; every candidate this round had residues below LOD).
 
@@ -188,7 +201,12 @@ entirely untested compartment; every candidate this round had residues below LOD
 - **Do not silently upgrade a `doi_status`.** `verified` means the article itself was
   opened and read.
 - The papers live in an ephemeral scratchpad and are **not committed** (copyright).
-  Everything extracted is in `data_obs/` or the queue, with provenance.
+  Everything extracted is in `data_obs/` or the queue, with provenance. **The
+  corollary bit a later session:** a paper is "in hand" only for the session it was
+  supplied to. Anything not extracted into `data_obs/` or `raw_si/` before that
+  session ended is gone, and a task that depends on it is blocked, not startable
+  (this is what happened to §3 item 4). Extract before you finish, or say plainly
+  that the paper must be re-supplied.
 - Two assumptions are flagged in the data files rather than buried, and a later
   session should attack these first if it doubts a result: Kodešová's **Freundlich
   unit reading** (defended on the implied `K_oc` 222/189/154 across three soils; the
@@ -233,5 +251,7 @@ pytest -q                                          # 278 collected, 276 pass, 2 
 > and the **Honest summary does not**, so check §6 against §4 whenever you change a
 > result. Remaining work, honestly ranked: §3 item 3 (the Li 2019 hydroponic anomaly —
 > blocked, needs a hydroponic rice root RCF above log Kow 3.5) then item 4 (Briggs
-> 1983's per-section shoot data, already in hand and the only unmined thing here). The
-> PFAS side is a separate arc — `docs/HANDOFF_BAF_twopool.md`.
+> 1983's per-section shoot data — **also blocked: the paper is not in the repo and
+> must be re-supplied**). Everything on §3 items 3–5 is blocked on data, so do not
+> start one expecting to finish it; §4 says what to ask for. The PFAS side is a
+> separate arc — `docs/HANDOFF_BAF_twopool.md`.
