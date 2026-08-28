@@ -71,34 +71,41 @@ SEASON = 120.0
 SHOOT = dict(N=4, stem_transp_frac=0.45, lam_grain=0.05, retention=0.6)
 
 
-_TP_DEMO_FORCINGS = (TP.T, TP.CWO, TP.QTP, TP.MMAT, TP._dM)   # saved before any swap
-
-
-def _restore_demo_forcings():
-    TP.T, TP.CWO, TP.QTP, TP.MMAT, TP._dM = _TP_DEMO_FORCINGS
-
-
 def install_forcings(kind="measured"):
-    """Build the driver dict AND install the same forcings into TP, so the merged
-    model and the two-pool baseline are compared on identical drivers."""
+    """Build the driver dict for the merged model.
+
+    PURE: unlike `twopool_root_measured.install_measured_forcings`, this does NOT
+    swap TP's module-level forcing globals. It does not need to -- the merged model
+    is driven through `model_api.simulate_nstem_leaf(drivers=...)` and only uses TP
+    for its pure descriptor functions (`kseq_ushape`, `lipid_g`, `fit_ushape`) and
+    its observation table. Leaving TP untouched matters: those globals are shared
+    process-wide, and mutating them at import time corrupts anything else that
+    reads them (pytest imports every test module during collection, so an
+    import-time swap here silently broke an unrelated test in test_model_api).
+    """
     if kind == "demo":
         return dict(t=TP.T, Cwo=TP.CWO, Qtp=TP.QTP, M=TP.MMAT)
     t = np.linspace(0.0, SEASON, 241)
-    Qtp = fr.Q_TP(t, SEASON)
     b = organ_biomass(t, SEASON)
     M = np.maximum(np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-4)
-    TP.T, TP.CWO, TP.QTP, TP.MMAT = t, np.full_like(t, 1.0), Qtp, M
-    TP._dM = np.gradient(M, t, axis=0)
-    return dict(t=t, Cwo=np.full_like(t, 1.0), Qtp=Qtp, M=M)
+    return dict(t=t, Cwo=np.full_like(t, 1.0), Qtp=fr.Q_TP(t, SEASON), M=M)
 
 
-DRIVERS = install_forcings("measured")
+DRIVERS = None      # set by main() / the test fixture; see `_drivers()`
+
+
+def _drivers():
+    """The forcings in force, built on first use (never at import)."""
+    global DRIVERS
+    if DRIVERS is None:
+        DRIVERS = install_forcings("measured")
+    return DRIVERS
 
 
 # ---------------------------------------------------------------------------
 # merged forward model (thin wrapper over the API -- no duplicated ODE)
 # ---------------------------------------------------------------------------
-def simulate_merged(c, p, kseq, drivers=DRIVERS, **kw):
+def simulate_merged(c, p, kseq, drivers=None, **kw):
     """Merged two-pool-root + redistributed-shoot run for congener dict `c`.
 
     `p` holds the transport globals (kappa_d, L_Ph, gxy/gph lipid gate); `kseq`
@@ -111,7 +118,8 @@ def simulate_merged(c, p, kseq, drivers=DRIVERS, **kw):
         c["name"], f_xy_source="recommended", K_cw_organ="root",
         kappa_d_override=p["kappa_d"], L_Ph_override=p["L_Ph"],
         g_xy_override=gxy, g_ph_override=gph,
-        k_seq=float(kseq), drivers=drivers, **opts)
+        k_seq=float(kseq), drivers=drivers if drivers is not None else _drivers(),
+        **opts)
 
 
 def tissues(c, p, kseq, **kw):
@@ -248,14 +256,11 @@ def tang_oos(p, q, dose=DOSE):
     print(f"{'cong':6}{'organ':>11}{'obs':>8}{'merged':>9}{'2pool':>9}"
           f"{'mono':>9}{'lipid':>9}{'refit(IS)':>11}")
     acc = {k: [] for k in ("merged", "2pool", "mono", "lipid", "refit")}
-    # the pass-through-stem two-pool baseline is reproduced exactly as
-    # twopool_root_oos_tang.py publishes it (its own demo forcings + cached fit)
-    saved = (TP.T, TP.CWO, TP.QTP, TP.MMAT, TP._dM)
-    _restore_demo_forcings()
+    # the pass-through-stem two-pool baseline, exactly as twopool_root_oos_tang.py
+    # publishes it: TP keeps its own demo forcings + cached fit (nothing here swaps them)
     p2, q2 = TP.load_fit()
     import twopool_root_oos_tang as T2
     tf_2pool_all = {nm: T2.twopool_tf(api._CONG[nm], p2, q2) for nm in api.TANG_CONGENERS}
-    TP.T, TP.CWO, TP.QTP, TP.MMAT, TP._dM = saved
     for nm in api.TANG_CONGENERS:
         obs = api.tang_observed_tf(nm, dose)
         tf_merged = merged_tang_tf(nm, p, q)

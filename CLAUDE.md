@@ -42,6 +42,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── pfas_rice_plant_module_nstem.py       # N serial stem segments (multi-height MIXER; Yamazaki gradient)
 │   ├── pfas_rice_plant_module_nstem_leaf.py  # N stem segs + explicit leaf (transpiration deposition+RETENTION; Tang over-translocation fix)
 │   ├── pfas_rice_plant_module.py             # import alias → 4pool_surf (basis-A); legacy name
+│   ├── neutral_dpu.py                        # NEUTRAL-organic (Briggs/Kow) path: same ODE with z=0 (no exclusion/carrier)
 │   ├── soil_paddy.py                         # Freundlich soil → C_w^o(t) (legacy redox sign)
 │   ├── soil_paddy_redox_corrected.py         # W3-corrected redox (dilution+leaching; USE THIS)
 │   ├── soil_hydrus.py                        # REAL HYDRUS-1D run via phydrus → Cwo(t),Qtp(t) (Method A; wired + app live mode)
@@ -67,7 +68,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (173 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse
+└── tests/                            # pytest (211 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -529,6 +530,34 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   SAME solve path as `simulate` — root/grain byte-identical). Guard
   `tests/test_model_api.py::test_twopool_simulate_organs_and_tang_passthrough_diagnosis`. Full record:
   `docs/twopool_root_exploration.md` §Result 7. EXPLORATORY; `parameters.json` UNCHANGED (no support for promotion).
+- **NEUTRAL-organic (Briggs/Kow) path (this session) — IMPLEMENTED + QSPR-consistent, NOT YET data-validated**:
+  `src/neutral_dpu.py` + `validation/neutral_dpu_validation.py` + `tests/test_neutral_dpu.py` +
+  `docs/neutral_dpu_validation.md`. The neutral DPU base was DERIVED (`dpu_model_summary_corrected.tex`) but never
+  implemented — `Compound.fn` was pinned at 0.0 and used in NO equation, the neutral membrane term existed only as a
+  comment, and `data_obs/` holds only PFAS. **Why it matters**: every PFAS result is entangled with FITTED PFAS-specific
+  params (`f_xy`, `k_seq`, lipid conductances) — hence "reproduction, not prediction". A neutral compound has `K_PW` and
+  `TSCF` both fixed from OUTSIDE by log-Kow QSPRs with nothing to tune, so it is the ONLY setting where the DPU
+  **backbone** (4 compartments, xylem advection, growth dilution, terminal accumulation) is testable apart from the ionic
+  extension. **No new ODE**: a neutral compound is the SAME 4pool ODE with `z=0` (⇒ `N=0`, GHK→1, exclusion `e^N` 107→**1**,
+  so the membrane term degenerates EXACTLY to passive Fickian `κ_d(Cwo−Cw)`), `Vmax=0` (no carrier), `f_prot=f_cw=0` +
+  `K_PL=a·Kow^b` (so `binding_factors` returns the Trapp/Briggs `K_PW = W + L·a·Kow^b` term for term), `f_xy = TSCF(logKow)`
+  (Briggs bell, computed not fitted), and **phloem OFF** (the base explicitly excludes it; the phloem is an ADDITION of the
+  ionisable extension). **Results**: (1) the partition adapter reproduces Briggs `RCF = 0.82+10^(0.77logKow−1.52)` to
+  **machine precision** (1.3e-16) — it IS the published core, not a re-fit; (2) with **zero fitted parameters** the run
+  reproduces the qualitative Kow law (polar→shoot, lipophilic→root) and the **straw/root ratio peaks at exactly logKow
+  1.78 = the Briggs TSCF peak**, crossing 1 near logKow 4.5; (3) **scope quantified**: with no phloem/air/γ the leaf is an
+  unbounded terminal accumulator (leaf BAF 194 at γ=0 → 19 at a 7-d half-life, root unchanged 0.62) ⇒ for neutrals
+  metabolism is LOAD-BEARING and volatilisation is unimplemented (`k_aw_warning` refuses to run a high-K_AW compound
+  silently). **HONEST**: these are checks vs published QSPRs and vs the model's own structure — **NOT validation against
+  measured plant data**. §5 of the script is the comparison harness (dw→fw conversion on the run's own water contents,
+  since (1−θ) does NOT cancel in a tissue/root ratio — the Tang fresh/dry trap) and is **inert until a measured table is
+  supplied** (`--obs`; schema `data_obs/neutral_obs_template.csv`, which deliberately holds NO data — its placeholder rows
+  are refused by the loader). **Why no dataset**: the environment's network policy blocks ALL publisher/PMC/J-STAGE/
+  Crossref hosts at the proxy (403 on CONNECT); search worked, fetching did not, so **nothing was transcribed from a paper
+  not already in the repo**. Candidate datasets ranked in the doc (Liu 2023 STOTEN 858:159826 = only rice set with a Kow
+  series × time × per-organ; Inao 2018 J.Pestic.Sci. 43:132 = OA + measured paddy-water/soil time series ⇒ tests the HYDRUS
+  coupling; Ge 2017; Trapp 1994 bromacil; Brunetti 2021 carbamazepine). Once a table is dropped in, the reported RMSE is a
+  **genuine a-priori prediction** — the only one in the repo — to be read against the PFAS a-priori 0.84–0.95.
 - **Structural MERGE — two-pool seq ROOT + `nstem_leaf` redistributed SHOOT (this session) — Result 7 CONFIRMED**:
   the last in-silico item of the two-pool arc (handoff §6: "a fair per-organ Tang test needs the two-pool root merged
   with the redistributed shoot"). `NStemLeafModel` gained optional `k_seq`/`k_rel`: `k_seq>0` APPENDS a sequestered
@@ -723,6 +752,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   Measured-forcing robustness re-fit: `python validation/twopool_root_measured.py` (re-fits on forcing_rice + ORYZA
   biomass; in-sample + Kim OOS vs fxy-doc baselines; ~3 min). Opt-in API (no re-fit; reuses the cached fit):
   `model_api.simulate_twopool_seq("PFUnDA")` → the standard `simulate()` dict + root mobile/seq split.
+- **Neutral organics (Briggs/Kow base)**: `python src/neutral_dpu.py` (per-compound TSCF/K_PW/BAF demo);
+  `python validation/neutral_dpu_validation.py` (partition anchor + Kow signature + metabolism scope + switch;
+  add `--obs data_obs/<table>.csv` for the measured comparison — see `docs/neutral_dpu_validation.md`).
 - Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
   `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
@@ -757,7 +789,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (173 collected, all pass with the full stack — RDKit + the built
+- Tests: `pip install pytest && pytest` (211 collected, all pass with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
   module additionally skips unless `sci-adk` is installed, which CI's `rigor.yml` provides). On a bare
   clone the structure/SMILES tests skip without RDKit and the HYDRUS-engine tests in `test_soil_hydrus.py`

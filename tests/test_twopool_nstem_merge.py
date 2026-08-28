@@ -31,10 +31,23 @@ import twopool_nstem_merge as MG  # noqa: E402
 
 @pytest.fixture(scope="module")
 def fit():
-    MG.DRIVERS = MG.install_forcings("measured")
+    MG.DRIVERS = MG.install_forcings("measured")   # explicit; import must not do this
     import json
     d = json.load(open(MG.FIT_CACHE))
     return d["global"], np.array(d["ushape_q"])
+
+
+def test_import_does_not_mutate_shared_forcings():
+    """Regression: this module used to swap `twopool_root_exploration`'s forcing
+    globals at IMPORT time. pytest imports every test module during collection, so
+    that silently corrupted an unrelated test (test_model_api's two-pool drift
+    guard reads those globals) -- and only when the full suite ran, never in
+    isolation. Importing must leave them exactly as the two-pool arc set them."""
+    import twopool_root_exploration as TP
+    assert TP.T[-1] == pytest.approx(120.0)
+    assert TP.QTP.max() == pytest.approx(0.40, abs=0.01)     # demo, not measured 0.098
+    assert MG.install_forcings("measured")["Qtp"].max() < 0.15   # ... and it stays demo
+    assert TP.QTP.max() == pytest.approx(0.40, abs=0.01)
 
 
 def test_merged_in_sample_yamazaki_rmse(fit):
