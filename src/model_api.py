@@ -483,7 +483,8 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
                         L_Ph_override=None, kappa_d_override=None,
                         lipid_loading=False, g_xy_override=None, g_ph_override=None,
                         season=150.0, n_t=361, N=4, stem_transp_frac=0.45,
-                        lam_grain=0.05, retention=0.6, biomass_fn=None):
+                        lam_grain=0.05, retention=0.6, biomass_fn=None,
+                        k_seq=0.0, k_rel=0.0, K_cw_organ="stem", drivers=None):
     """Redistributed-shoot uptake run (N stem segments + explicit leaf), the Tang
     2026 over-translocation fix (see `pfas_rice_plant_module_nstem_leaf`).
 
@@ -501,21 +502,45 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
     biomass_fn : callable (t, season) -> dict{root,stem,leaf,grain} [kg/hill] for the
         organ biomass driver. Default None -> the mechanistic ORYZA2000 (`oryza_growth`).
         Pass `gr.organ_biomass` for the lightweight growth_rice reconstruction.
+    k_seq, k_rel : optional TWO-POOL root (mobile + sequestered) rates [1/day].
+        k_seq=0 (default) keeps the single root pool -- identical to the pre-merge
+        model. With k_seq>0 the reported `root` is mobile+sequestered and the extra
+        keys `root_mobile`/`root_seq`/`seq_fraction` are returned. Use
+        `simulate_twopool_nstem()` to get the fitted two-pool parameter set.
+    K_cw_organ : which tissue's cell-wall K_cw parameterises the binding ('stem'
+        default, as before; 'root' matches the two-pool root fit's convention).
+    drivers : optional standard driver dict {t, Cwo, Qtp, M} with M as the FOUR
+        organ columns [root, stem, leaf, grain] (the stem column is split evenly
+        over the N segments), plus optional 'leaf_loss'. Overrides season/n_t/
+        biomass_fn -- used to run this model on another script's forcings.
     """
     from pfas_rice_plant_module_nstem_leaf import (
         NStemLeafModel, PlantInputsNL, make_stem_leaf_compartments, split_from_stem_frac)
     if congener not in _CONG:
         raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
 
-    t = np.linspace(0.0, float(season), int(n_t))
-    Qtp = fr.Q_TP(t, season)
-    b = (biomass_fn or _biomass_fn("oryza"))(t, season)   # default: mechanistic ORYZA2000
-    M = np.column_stack(
-        [np.maximum(b["root"], 1e-9)]
-        + [np.maximum(b["stem"] / N, 1e-9)] * N
-        + [np.maximum(b["leaf"], 1e-9), np.maximum(b["grain"], 1e-9)])
-    inputs = PlantInputsNL(t=t, Cwo=np.full_like(t, float(Cwo)), Qtp=Qtp, M=M,
-                           leaf_loss=b.get("leaf_death_rate"))
+    if drivers is not None:
+        t = np.asarray(drivers["t"], dtype=float)
+        season = float(t[-1])
+        Qtp = np.asarray(drivers["Qtp"], dtype=float)
+        Cwo_series = np.asarray(drivers["Cwo"], dtype=float)
+        organ_M = np.asarray(drivers["M"], dtype=float)      # (n_t, 4) organ columns
+        M = np.column_stack(
+            [np.maximum(organ_M[:, 0], 1e-9)]
+            + [np.maximum(organ_M[:, 1] / N, 1e-9)] * N
+            + [np.maximum(organ_M[:, 2], 1e-9), np.maximum(organ_M[:, 3], 1e-9)])
+        leaf_loss = drivers.get("leaf_loss")
+    else:
+        t = np.linspace(0.0, float(season), int(n_t))
+        Qtp = fr.Q_TP(t, season)
+        b = (biomass_fn or _biomass_fn("oryza"))(t, season)  # default: mechanistic ORYZA2000
+        M = np.column_stack(
+            [np.maximum(b["root"], 1e-9)]
+            + [np.maximum(b["stem"] / N, 1e-9)] * N
+            + [np.maximum(b["leaf"], 1e-9), np.maximum(b["grain"], 1e-9)])
+        Cwo_series = np.full_like(t, float(Cwo))
+        leaf_loss = b.get("leaf_death_rate")
+    inputs = PlantInputsNL(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
 
     g = _COMP
     _kw = lambda d: dict(theta=d["theta_fw"], f_prot=d["f_prot"], f_PL=d["f_PL"], f_cw=d["f_cw"])
@@ -523,30 +548,46 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
         N, _kw(g["stem"]), _kw(g["root"]), _kw(g["leaf"]), _kw(g["grain_brown"]))
     cmpd = _compound_for(congener, f_xy_source, f_xy_override, L_Ph_override,
                          kappa_d_override, lipid_loading, g_xy_override, g_ph_override,
-                         K_cw_organ="stem")
+                         K_cw_organ=K_cw_organ)
     tau, lam_leaf, lam_grain = split_from_stem_frac(N, stem_transp_frac, lam_grain)
     env = Environment(E=E_m_mV / 1000.0)
     model = NStemLeafModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs, tau=tau,
-                           lam_leaf=lam_leaf, lam_grain=lam_grain, retention=retention)
+                           lam_leaf=lam_leaf, lam_grain=lam_grain, retention=retention,
+                           k_seq=float(k_seq), k_rel=float(k_rel))
     sol = model.solve(t)
-    Y = sol.y                                            # (N+3, n_t)
+    Y = sol.y                                            # (N+3 [+1 if two-pool], n_t)
     seg = slice(1, N + 1)
     Mseg = M[:, seg]
     stem_conc = np.sum(Y[seg, :] * Mseg.T, axis=0) / np.sum(Mseg.T, axis=0)
-    conc = {"root": Y[0], "stem": stem_conc, "leaf": Y[model.LEAF], "grain": Y[model.GRAIN]}
-    cwo_ref = float(Cwo) if Cwo else 1.0
+    conc = {"root": model.root_total(Y), "stem": stem_conc,
+            "leaf": Y[model.LEAF], "grain": Y[model.GRAIN]}
+    if model.two_pool:                                   # expose the root split
+        conc["root_mobile"] = Y[model.ROOT]
+        conc["root_seq"] = Y[model.SEQ]
+    cwo_ref = float(Cwo_series[-1]) if Cwo_series[-1] > 0 else (
+        float(np.nanmax(Cwo_series)) if np.nanmax(Cwo_series) > 0 else 1.0)
     baf_final = {k: float(v[-1] / cwo_ref) for k, v in conc.items()}
+    # straw = mass-weighted stem+leaf (the aggregate Yamazaki/BAF endpoint)
+    Mf = M[-1]
+    M_stem_tot, M_leaf = float(np.sum(Mf[seg])), float(Mf[model.LEAF])
+    straw = (stem_conc * M_stem_tot + conc["leaf"] * M_leaf) / (M_stem_tot + M_leaf)
     return dict(
         t=t, congener=congener, success=bool(sol.success), season=float(season),
-        conc=conc,
+        conc=conc, Cwo=Cwo_series, Qtp=Qtp, leaf_loss=leaf_loss,
+        straw=straw, straw_baf=float(straw[-1] / cwo_ref), cwo_ref=cwo_ref,
         baf={k: v / cwo_ref for k, v in conc.items()},
         baf_final=baf_final,
-        tf_final={k: baf_final[k] / baf_final["root"] for k in conc},
+        tf_final={k: baf_final[k] / baf_final["root"]
+                  for k in ("root", "stem", "leaf", "grain")},
+        seq_fraction=(float(Y[model.SEQ, -1] / max(conc["root"][-1], 1e-12))
+                      if model.two_pool else 0.0),
         M=M, N=N,
         params=dict(f_xy=float(cmpd.f_xy), retention=float(retention),
                     stem_transp_frac=float(stem_transp_frac), lam_leaf=float(lam_leaf),
                     lam_grain=float(lam_grain), n_C=_CONG[congener]["n_C"],
-                    group=_CONG[congener]["group"]),
+                    group=_CONG[congener]["group"], L_Ph=float(cmpd.L_Ph),
+                    kappa_d=float(cmpd.kappa_d), g_xy=float(cmpd.g_xy),
+                    g_ph=float(cmpd.g_ph), k_seq=float(k_seq), k_rel=float(k_rel)),
     )
 
 
@@ -720,6 +761,58 @@ def simulate_twopool_seq(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, season=120.0,
                     g_xy=float(gxy), g_ph=float(gph), k_seq=kseq, k_rel=float(k_rel),
                     K_PL=c["K_PL_Lkg"], n_C=c["n_C"], group=c["group"]),
     )
+
+
+def twopool_seq_params(congener, kseq_override=None):
+    """Fitted two-pool ROOT parameter set for `congener` (from the cached Yamazaki fit).
+
+    Returns dict(kappa_d, L_Ph, g_xy, g_ph, k_seq) -- the transport globals plus the
+    non-K_PL U-shaped k_seq(n, head_group). Pure lookup, no ODE: it is what makes the
+    root mechanism portable onto another shoot model (see `simulate_twopool_nstem`).
+    """
+    if congener not in _CONG:
+        raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
+    (p, q), TP = _twopool_seq()
+    c = _CONG[congener]
+    gxy, gph = TP.lipid_g(c["K_PL_Lkg"], c["group"], p["gxy"], p["gph"],
+                          p["K_half"], p["pfsa_ln"])
+    kseq = float(kseq_override) if kseq_override is not None else \
+        float(TP.kseq_ushape(c["n_C"], c["group"], q))
+    return dict(kappa_d=float(p["kappa_d"]), L_Ph=float(p["L_Ph"]),
+                g_xy=float(gxy), g_ph=float(gph), k_seq=kseq)
+
+
+def simulate_twopool_nstem(congener="PFOA", kseq_override=None, k_rel=0.0,
+                           f_xy_source="recommended", K_cw_organ="root", **kw):
+    """MERGED model: two-pool sequestration ROOT + redistributed (N-stem+leaf) SHOOT.
+
+    The structural merge the Tang per-organ OOS asked for. The two model halves were
+    developed against different defects and, until now, could not be tested together:
+
+      * `simulate_twopool_seq` fixes the ROOT (mobile/sequestered split, non-K_PL
+        U-shaped k_seq) but keeps the basic 4pool PASS-THROUGH stem, so its stalk TF
+        collapses and a per-organ comparison is unfair (validation/twopool_root_oos_tang.py);
+      * `simulate_nstem_leaf` fixes the SHOOT (transpiration deposition + retention
+        across N stem segments) but keeps a single root pool, so it cannot hold a high
+        long-chain root BAF while still delivering to the shoot.
+
+    This runs the redistributed shoot with the root mechanism switched on, using the
+    two-pool root parameters (kappa_d, L_Ph, the K_PL-gated lipid conductances and
+    k_seq) from the cached Yamazaki fit and the monotone physical `f_xy_recommended`.
+    Returns the `simulate_nstem_leaf` dict (+ root_mobile/root_seq/seq_fraction).
+
+    EXPLORATORY / opt-in: `parameters.json`, `simulate()` and `reproduce_demo` are
+    UNCHANGED. The cached fit was made against the 4pool shoot, so transferring it
+    here is itself an approximation -- see validation/twopool_nstem_merge.py, which
+    re-fits the merged model on Yamazaki before the Tang per-organ OOS.
+    """
+    tp = twopool_seq_params(congener, kseq_override)
+    kw.setdefault("kappa_d_override", tp["kappa_d"])
+    kw.setdefault("L_Ph_override", tp["L_Ph"])
+    kw.setdefault("g_xy_override", tp["g_xy"])
+    kw.setdefault("g_ph_override", tp["g_ph"])
+    return simulate_nstem_leaf(congener, f_xy_source=f_xy_source, K_cw_organ=K_cw_organ,
+                               k_seq=tp["k_seq"], k_rel=float(k_rel), **kw)
 
 
 # ---------------------------------------------------------------------------

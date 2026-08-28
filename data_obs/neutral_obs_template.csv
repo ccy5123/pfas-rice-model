@@ -1,0 +1,45 @@
+# Measured NEUTRAL-organic uptake observations -> validation/neutral_dpu_validation.py --obs
+#
+# THIS FILE CONTAINS NO REAL MEASUREMENTS. The rows below are schema examples with
+# obviously fake values; delete them and paste transcribed values from a paper.
+# Never leave an EXAMPLE row in a file you then treat as data.
+#
+# Columns (required): compound, log_kow, tissue, value, basis, endpoint
+#   compound   free text; rows sharing a compound+log_kow are one model run
+#   log_kow    octanol-water partition coefficient (log10). Drives EVERYTHING in
+#              the neutral path (K_PW and TSCF), so cite the source you used --
+#              values differ by up to ~0.5 log between databases.
+#   tissue     root | stem | leaf | grain | straw   (straw = mass-weighted stem+leaf)
+#   value      the measured number
+#   basis      fw | dw    -- dry-weight values are converted onto the model's
+#              fresh-weight basis using the tissue water contents of the run.
+#              (1-theta) differs by tissue, so it does NOT cancel in a tissue/root
+#              ratio -- getting this column wrong is the classic silent error, and
+#              it is what the Tang 2026 fresh-vs-dry artifact was.
+#   endpoint   baf  = tissue conc / exposure conc  [L/kg]
+#              conc = tissue conc, only usable if exposure_ugL is given
+#              tf   = tissue conc / root conc  [-]
+#
+# Columns (optional but strongly recommended):
+#   exposure_ugL  pore-water / hydroponic solution concentration [ug/L]
+#   half_life_d   in-planta dissipation half-life [d]. NOT optional in practice:
+#                 with no metabolism the leaf is an unbounded terminal accumulator
+#                 (validation section 3), so a run without it is an UPPER BOUND.
+#   K_AW          air-water partition coefficient; >1e-4 triggers a warning, since
+#                 volatilisation is not implemented (no air terms in the core ODE)
+#   season_d      exposure duration [d] if not the default 120
+#   note          anything a reader needs (cultivar, hydroponic vs soil, table/figure)
+#
+# Sanity checks before you trust a comparison:
+#   * the compound must be NON-IONISED at the experiment's pH -- sulfonylureas,
+#     phenoxy acids and most sulfonamides are weak acids and belong on the ionic
+#     path, not here;
+#   * root-only exposure. Foliar-applied or air-exposed studies test deposition,
+#     not root uptake, and will look like a model failure;
+#   * a Kow SERIES is what actually tests the QSPR; a single compound tests only
+#     the dynamics.
+#
+compound,log_kow,tissue,value,basis,endpoint,exposure_ugL,half_life_d,K_AW,season_d,note
+EXAMPLE-polar,0.50,root,0.00,fw,baf,0,,,,DELETE THIS ROW - schema example, not data
+EXAMPLE-polar,0.50,leaf,0.00,fw,baf,0,,,,DELETE THIS ROW - schema example, not data
+EXAMPLE-lipophilic,4.00,root,0.00,dw,tf,0,,,,DELETE THIS ROW - schema example, not data

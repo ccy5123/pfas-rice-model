@@ -397,6 +397,88 @@ solve path as `simulate`.
 
 ---
 
+## Result 8 — the structural MERGE (`validation/twopool_nstem_merge.py`): Result 7's diagnosis CONFIRMED
+
+Result 7 ended with a falsifiable structural claim: *the two-pool's Tang failure is a
+**shoot** artifact, not a root-mechanism failure, and a fair per-organ test needs the
+two-pool **root** merged with the `nstem_leaf` **redistributed shoot***. That merge is
+now built (`NStemLeafModel(k_seq=, k_rel=)`; `model_api.simulate_twopool_nstem`) and the
+claim is **confirmed**.
+
+**The merged model.** State vector `[root_mobile, stem_1..stem_N, leaf, grain, root_seq]`:
+the root mechanism of this document (mobile pool feeds the xylem with the monotone
+physical `f_xy` + the K_PL-gated lipid term; sequestered pool is an irreversible sink at
+rate `k_seq`, sharing the root mass so it dilutes with root growth) driving the
+redistributed shoot (N stem segments, transpiration deposition + retention). `k_seq = 0`
+appends no state at all, so the pre-merge `nstem_leaf` is recovered exactly.
+
+**Forcings matter here, structurally.** The redistributed shoot is *transpiration-
+deposition* fed, so unlike the phloem-fed 4pool shoot it is strongly sensitive to `Q_TP`.
+On the **demo** forcings (peak `Q_TP` 0.40 L/d/hill, ~4× the measured 0.098) the
+deposition route floods the grain and the re-fit collapses onto its bounds (in-sample
+0.658, grain 0.977). The merge is therefore run on the **measured** forcings
+(`forcing_rice` `Q_TP` + `growth_rice` ORYZA-IR72 biomass) — the same family as Result 6
+and as the Tang runs. `--demo` reproduces the pathological case.
+
+### In-sample (Yamazaki, measured forcings)
+
+| stage | overall log10 RMSE | root | straw | grain |
+|---|---|---|---|---|
+| **Stage 1** — transfer the cached two-pool fit onto the new shoot, **no re-fit at all** | 0.316 | 0.154 | 0.335 | 0.404 |
+| **Stage 2** — re-fit the merged model (same 7 globals → root-match → U-shape) | **0.301** | **0.153** | 0.319 | 0.382 |
+| reference: same root fit behind its OWN pass-through-stem 4pool shoot (Result 6) | 0.278 | 0.154 | — | — |
+
+Two things worth stating plainly. First, **swapping the entire shoot costs 0.04 log
+units with no re-fit whatsoever** (Stage 1) — the root fit is not shoot-specific, which
+is what makes the merge legitimate rather than a re-parameterisation. Second, the
+**root** RMSE is unchanged to three decimals (0.153–0.154) across all three rows: the
+root mechanism is genuinely separable from the shoot model, exactly as Result 7 argued.
+The **non-K_PL PFOS/PFUnDA separation survives and sharpens** — `k_seq` 0.047 vs 0.188,
+**4.0×** at identical `K_PL = 31623`.
+
+### Out-of-sample (Tang 2026 per-organ TF, dw, 0.1 µg/g — no Tang re-fit)
+
+| model (OOS) | overall | stalk | leaf | endosperm |
+|---|---|---|---|---|
+| **MERGED two-pool root + redistributed shoot** | **0.801** | **0.61** | **0.28** | 1.21 |
+| two-pool root, pass-through stem (Result 7) | 1.398 | 1.89 | 0.38 | 1.46 |
+| single-pool monotone `f_xy` | 1.232 | 1.15 | 0.98 | 1.50 |
+| single-pool lipid loading | 0.516 | 0.47 | 0.58 | 0.49 |
+| single-pool Tang-refit `f_xy` (**in-sample**) | 0.519 | — | — | — |
+
+**Result 7 is confirmed.** Holding the root mechanism fixed and repairing only the shoot
+recovers **0.60 log units** (1.398 → 0.801), and the recovery is carried by the organ the
+diagnosis named: **stalk 1.89 → 0.61**, while the leaf — already the two-pool's best
+organ — improves further to **0.28, the best of any model tested**. The two-pool root
+mechanism was never what Tang was failing on.
+
+**What it does NOT show, stated honestly.** The merged model does **not** beat
+single-pool lipid loading (0.516), which remains the Tang OOS winner. The entire residual
+is the **endosperm** (1.21 vs lipid's 0.49) — the documented structural grain
+under-prediction (`docs/tang2026_grain_units_exploration.md`), not a shoot-transport
+issue. And there is a real tension the merge exposes rather than resolves: Tang's per-organ
+TFs are **high** (stalk TF 2.2 — the stalk exceeds the root), which rewards models that
+translocate strongly, whereas Yamazaki's high long-chain **root** BAF is exactly what
+demands a retaining `k_seq` sink. One `(f_xy, k_seq)` pair cannot satisfy both — the same
+dataset/condition dependence already documented for `f_xy` (PFOS 0.14 Yamazaki vs 0.32
+Tang; `docs/DELIVERABLE_GAP_B_fxy.md`).
+
+**Standing caveats, unchanged:** Yamazaki in-sample fit; Tang is a single independent set
+of **three C5–C8 congeners**, so the long-chain root decoupling — the two-pool's whole
+purpose — is *still* not exercised by it (Kim 2019 grain, Result 4, remains the
+informative two-pool OOS); GenX rides the provisional ether `f_xy`; PFDoDA is near-MQL.
+So this **strengthens the structural case** (the mechanism transfers across shoot models
+and improves a genuine cross-dataset OOS) but does **not** by itself move the promotion
+decision — that gate is still the `twopool_kseq_mechanism.md` §5 wet-lab assay.
+
+Reproduce: `python validation/twopool_nstem_merge.py` (re-fit, ~40 min) or `--cached`.
+Guards: `tests/test_twopool_nstem_merge.py` (in-sample 0.301 / separation 4× / OOS 0.801),
+`tests/test_nstem_leaf.py` (mass conservation with the seq pool; `k_seq=0` inert),
+`tests/test_model_api.py::test_simulate_twopool_nstem_fixes_both_defects_at_once`.
+`parameters.json`, `simulate()` and `reproduce_demo` (RMSE 0.029) are **UNCHANGED**.
+
+---
+
 ## Mechanistic provenance of `k_seq` (literature) — `docs/twopool_kseq_mechanism.md`
 
 The U-shaped, non-K_PL, head-group-dependent `k_seq` was, until now, purely
