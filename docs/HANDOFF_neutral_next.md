@@ -281,24 +281,43 @@ Simple/Expert split would need a decision about where a neutral compound belongs
 
 ## 4. Blocked on data or experiment (not code)
 
-**Fetchable literature** (ranked; full rationale in the session transcript and
-`docs/neutral_dpu_validation.md` §5):
+**Fetchable literature — the full list is now a file**:
+**`docs/literature_db/Acquisition_Queue.csv`** (priority, DOI, `doi_status`, what to
+extract from each, and why it matters). Papers already in hand are deliberately not in
+it — those are in `docs/neutral_dpu_validation.md` §5.
 
-1. **Rice organ total lipid, fresh weight** — currently Trapp's *soybean* values.
-   Scales `K_PW` linearly, so it directly conditions the 0.281. Cheapest real gain.
-   Must come from a source that states its basis unambiguously.
-2. **A neutral compound measured in rice GRAIN under root-only exposure** — the one
-   completely untested compartment, and the food-safety endpoint. Look for submerged /
-   nursery-box application trials reporting brown rice + straw; **foliar application is
-   useless here** (tests deposition, not root uptake).
-3. **Schriever 2020 SI** — the 97 per-compound TSCF values, to test the TSCF QSPR
-   directly rather than through the plant model.
-4. **Kodešová et al. 2019 ESPR** `10.1007/s11356-019-04333-9` *(DOI unverified)* — the
-   measured concentrations behind Brunetti 2021, to settle the open `K_RW` = 13.3 vs
-   Briggs `K_PW` ≈ 1.0 disagreement.
-5. **McFarlane, Pfleeger & Fletcher 1987**, *J. Environ. Qual.* 16(4):372–376
-   *(unverified)* — the bromacil measurements behind Trapp 1994, which are figure-only
-   in Trapp.
+Headlines, so this section still reads on its own:
+
+| # | what it unlocks | DOI | status |
+|---|---|---|---|
+| **A1** | **rice ROOT lipid** — `K_PW` is linear in it, so it conditions the 0.281 directly. Get **the SI** | `10.1016/j.envint.2019.02.020` | search-only |
+| A2 | rice STRAW lipid, basis stated (3.4 % dw lipophilic extractives) — **open access** | `10.3389/fpls.2022.868319` | search-only |
+| A3 | the 97 per-compound TSCF values — **SI only**, the article is in hand | `10.1016/j.scitotenv.2020.136667` | verified |
+| A4 | the measured concentrations behind Brunetti's `K_RW` = 13.3 | `10.1007/s11356-019-04333-9` | unverified |
+| A5 | the bromacil data behind Trapp 1994 (figure-only there) | *(none — McFarlane 1987, JEQ 16(4):372–376)* | none |
+| B1/B2 | the 2 long-chain PFAS papers never obtained (5 of 7 were) | `10.1021/acs.est.5c11716`, `10.1139/er-2025-0116` | verified |
+| C1–C3 | rice **grain** neutral data, rice **specific surface areas**, a fallback root-lipid source | *(no paper identified — search specs)* | none |
+
+**⚠ Two things to carry with this list.**
+
+*It cannot be fetched from inside a session.* Every academic host is blocked by this
+environment's network egress policy — `journals.plos.org`, PMC, Europe PMC, `doi.org`
+and Crossref were all checked and refused. `WebSearch` works (that is how A1/A2 were
+found) but `WebFetch` does not, so **nothing here was verified at source**: `doi_status`
+says exactly how far each one got. These have to arrive out-of-band, the way
+`DPU4OC.zip` did.
+
+*The definition of "lipid" matters more than the number.* The `L` in
+`K_PW = W + L·a·Kow^b` is an **operationally defined octanol-like phase** calibrated so
+the expression reproduces measured RCF — Briggs' own barley anchor `L·a = 10^−1.52`
+implies `L ≈ 2.5 %` of **fresh** weight. Measured rice straw spans **0.14–1.0 % dw** as
+crude fat (ether extract) but **3.4 % dw** as dichloromethane lipophilic extractives
+(A2): a 3–24× spread that is a difference of *definition*, not of measurement quality.
+Substituting a proximate crude-fat value therefore changes what the parameter **means**,
+not just its value, and could be worse than the current cited-soybean state. That is why
+**A1 outranks A2** — its lipid is defined in an RCF-modelling context, the same
+operational meaning as ours. Same class of trap as the three basis errors this repo has
+already hit.
 
 **Wet lab** (cannot be fetched): in-planta half-lives for the Ge compounds (the model
 predicts ≈7 d — a falsifiable prediction); rice-root cell-wall / Fe-Mn-plaque
