@@ -684,6 +684,33 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     paths and is now the top wet-lab item on the neutral side. `parameters.json`, `simulate()` and `reproduce_demo`
     (RMSE 0.029) UNCHANGED; the `subset` filter is inert on tables without the column so **Liu 0.281 / Ge 0.783 are
     bit-identical** (pinned by a test).
+- **Kodešová 2019 SI arrived (this session) — queue A4 CLOSED; the anchor vote flips and Brunetti is superseded**:
+  `src/../data_obs/neutral_obs_kodesova2019.csv` + `validation/kodesova2019_carbamazepine.py` +
+  `docs/neutral_dpu_validation.md` §4f. Carbamazepine root partition, **4 plants × 3 soils × 2 treatments (n=21)**,
+  with the **cleanest exposure in the repo**: root conc (SI Tab S2, ng/g **dw**, basis stated) ÷ pore water derived
+  from the SOIL conc measured on the SAME pot at the SAME harvest (Tab S4) via the paper's OWN measured Freundlich
+  isotherms (`c=(C_soil/K_F)^n`) — no mass balance, no pot geometry, no dissipation model. CAR is un-ionised
+  everywhere (pKa 1.0/13.9) and `DT50>1000 d`, so the authors' own reason for not computing BAFs does not apply.
+  - **A-priori log10 RMSE 0.191 (n=21), nothing fitted — the BEST a-priori result in the repo** (Liu 0.281,
+    Li2019 0.598, Ge 0.783).
+  - **VOTES AGAINST restoring the Briggs anchor**, and is well-conditioned to (at log Kow 2.25 the two compositions
+    differ 1.6×): shipped/anchored = Kodešová **0.191**/0.216 · Liu **0.281**/0.288 · Li2019 0.598/**0.331**.
+    ⇒ tally **2 tables against the anchor, 1 for it**, and the two against are the soil-grown / rice ones.
+    Driver-free cross-check agrees in ORDERING (measured `RCF_fw` median **1.10** vs `K_PW` 1.56 shipped / 2.53
+    anchored — the shipped root already runs HIGH here); survives the dw→fw lever (θ 0.85–0.95 keeps the anchor
+    0.21 log worse).
+  - **SUPERSEDES the Brunetti sighting**: Brunetti's calibrated pea `K_RW`=13.3 is **~12× ABOVE a direct measurement
+    of the same compound** (1.10), while Briggs lands within ~1.5×. So that disagreement sits in the calibration,
+    not the partition core ⇒ the "four sightings" synthesis is REWRITTEN: the deficit is **NOT global, it is confined
+    to log Kow ≳ 3** (Li2019 bias −0.03 below 2 → −0.69 above 4.5; Kodešová at 2.25 is POSITIVE).
+  - **Pivotal assumption, flagged not buried**: the Freundlich unit reading. Defended by the `Koc` it implies
+    (**222/189/154** across 3 soils spanning 3.8× in organic carbon — inside CAR's literature band) and by the derived
+    pore water (0.10–0.70 mg/L) matching both the applied solution (~0.5–1.0 mg/L) and the sorption study's 0.5–10 mg/L
+    range; the alternative g/cm³ reading gives `Koc`~1600 and would REVERSE the vote. Tests pin the derivation, the
+    `Koc` band, and the opposing votes (`tests/test_li2019_schriever_tables.py`, 15).
+  - Limits: 4 leafy/root vegetables, **no rice**; one compound at one lipophilicity (says nothing about the high-Kow
+    end where the deficit lives); roots rinsed not exhaustively cleaned (biases obs UP, i.e. against this conclusion).
+  `parameters.json`, `simulate()` and `reproduce_demo` (0.029) UNCHANGED.
 - **Structural MERGE — two-pool seq ROOT + `nstem_leaf` redistributed SHOOT (this session) — Result 7 CONFIRMED**:
   the last in-silico item of the two-pool arc (handoff §6: "a fair per-organ Tang test needs the two-pool root merged
   with the redistributed shoot"). `NStemLeafModel` gained optional `k_seq`/`k_rel`: `k_seq>0` APPENDS a sequestered
@@ -892,6 +919,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   only — the 18 Briggs barley rows are held out; pass `subset=None` in code to score everything).
 - **TSCF QSPR on its own (no plant model)**: `python validation/schriever2020_tscf.py` (97 measured TSCF values;
   Briggs bell RMSE 0.310 / bias −0.221 on the 30 un-ionised rows vs the fitted Schriever refit's in-sample 0.234).
+- **Kodešová 2019 carbamazepine (queue A4; the anchor vote)**: `python validation/kodesova2019_carbamazepine.py`
+  (exposure from the paper's own measured isotherms + the `Koc` defence of the unit reading; a-priori 0.191;
+  the shipped-vs-anchored table across all three root datasets; the Brunetti verdict; the dw→fw sensitivity).
 - **Hwang 2017 (lettuce/chlorpyrifos; neutral, handoff A3)**: `python validation/hwang2017_lettuce.py`
   (exposure from the measured `Kd`; internal-consistency check on Table 1; the fw/dw basis span vs the
   `K_PW` ceiling; soil-contact bound; half-life/growth/water sensitivity). Read the VERDICT block — the

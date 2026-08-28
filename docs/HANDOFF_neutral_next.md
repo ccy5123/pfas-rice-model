@@ -7,7 +7,7 @@
 > the Expert neutral tab, the acquisition queue, and now the work below, which is stacked
 > on the same branch.
 > Scientific records: **`docs/neutral_dpu_validation.md`** (neutral path — §4d Li 2019
-> partition, §4e TSCF, §3b air, §4c Hwang) and **`docs/twopool_root_exploration.md`
+> partition, §4e TSCF, §4f Kodešová, §3b air, §4c Hwang) and **`docs/twopool_root_exploration.md`
 > §Result 8** (structural merge). Read those first.
 > `parameters.json`, `simulate()` and `reproduce_demo` (RMSE 0.029) are **UNCHANGED**
 > throughout — everything here is additive or opt-in.
@@ -22,23 +22,31 @@ actually contained, with a per-row status, rather than a want-list.
 
 The headline is not the two new datasets. It is what they exposed:
 
-- **Both a-priori inputs of the neutral path are biased LOW, and this session measured
-  each one directly.** The partition by a species-independent offset (§4d), TSCF by
-  −0.221 on a 0–1 scale (§4e).
+- **Both a-priori inputs were measured directly for the first time**, and both look
+  biased low on the tables that spread widest in lipophilicity: the partition by a
+  species-independent offset (§4d), TSCF by −0.221 on a 0–1 scale (§4e). But see the
+  A4 result below — the partition half of that does **not** hold at moderate Kow.
 - **Part of the partition offset is the model's own doing.** `neutral_dpu` anchors on
   Briggs' RCF (`L·a = 0.0302`) but the rice compartment runs `0.0122` — **2.48× under** —
   because it substituted a measured lipid and kept the conventional octanol correction,
   when only their *product* is identifiable. On Briggs' own barley rows that costs log10
   RMSE **0.266 against the anchor's 0.111**.
 - **The default was not changed, and that is the decision, not an omission.** Restoring
-  the anchor helps two tables and hurts the only *rice* one. Fitting an intermediate
-  value would make the path's single real claim — that nothing is fitted — false.
+  the anchor helps Li 2019 and hurts both soil-grown tables (Liu, Kodešová). Fitting an
+  intermediate value would make the path's single real claim — that nothing is fitted —
+  false, and §4f shows a flat lipid rise is the wrong instrument anyway.
 
 **Three queue rows did not deliver what they asked for**, and that is recorded rather
 than papered over: A1 contains no rice, the supplied "McFarlane 1987" is the wrong paper
 entirely, and every C1/C2/C3 candidate screens out for a stated reason.
 
-**The one thing to ask the user for is the SI of A4** (Kodešová 2019). See §4.
+**The A4 SI then arrived mid-session and changed the picture.** Kodešová 2019
+gives the cleanest exposure in the repo (measured soil concentration + the paper's
+own measured isotherm, same pot, same harvest) and it **votes the other way**:
+a-priori **0.191** with the shipped lipid, 0.216 with the anchor. It also
+**supersedes the Brunetti sighting** — it measures 1.10 for the compound Brunetti
+calibrated 13.3 for. So the partition deficit is **not global**: it is confined to
+log Kow ≳ 3. See §4f of the validation doc.
 
 ---
 
@@ -49,6 +57,7 @@ entirely, and every C1/C2/C3 candidate screens out for a stated reason.
 | `1019461` | `data_obs/neutral_obs_li2019_rcf.csv` (48 rows) + `data_obs/tscf_obs_schriever2020.csv` (97 rows), `validation/li2019_rcf_apriori.py`, `validation/schriever2020_tscf.py`, the `subset` filter, `BRIGGS_ANCHORED_LIPID_FW`, `tests/test_li2019_schriever_tables.py` (11) |
 | `d4dd996` | the queue rewritten as a delivery record; `docs/neutral_dpu_validation.md` §4d, §4e and the four-sightings synthesis |
 | `2de5619` | section 3b — the kinetic explanation ruled out; stale test counts refreshed |
+| *(this commit)* | queue A4 closed: `data_obs/neutral_obs_kodesova2019.csv`, `validation/kodesova2019_carbamazepine.py`, §4f, the sightings synthesis rewritten |
 
 **Prior sessions on this branch**: `c6e9d8a` (Expert neutral tab), `494acc4` (the queue),
 `9216dd1` (the previous handoff). Merged earlier: `d8e7f9a` air exchange, `97dbe75`
@@ -74,6 +83,9 @@ on this branch; the 2 skips are the optional `emcee` and `sci-adk` deps.
 | Liu 2023 root partition (unchanged) | 0.281 |
 | Ge 2017 per-organ TF (unchanged) | 0.783; minimum 0.210 at a 7-day half-life |
 | Hwang 2017, both basis readings | 0.610 fw / 0.726 dw — **a diagnosis, not scores** |
+| **Kodešová 2019 carbamazepine**, n=21, 4 plants × 3 soils, nothing fitted | log10 RMSE **0.191** — best a-priori in the repo; 0.216 at the anchor |
+| the same, driver-free (equilibrium `K_PW`) | measured `RCF_fw` median **1.10** vs 1.56 shipped / 2.53 anchored |
+| Brunetti's pea `K_RW` vs that measurement | 13.3 vs **1.10** — ~12× above, so **superseded** |
 | merge, Tang per-organ OOS | 0.801 (stalk 0.61, leaf 0.28) |
 
 **Caveats that must travel with every one of these.** Li 2019 is out-of-sample but the
@@ -84,7 +96,10 @@ across species, and Li's own crop table (0.10 %–1.14 %) says it does. Exposure
 and ruled out** (§3 item 2), so it is no longer a live caveat. The TSCF table is 16 species, none
 of them rice, and barley is half of it; the Briggs bell is out-of-sample there but **not
 independent** (same lab, same species, same method lineage). The neutral **grain
-compartment remains entirely untested** — that has not changed.
+compartment remains entirely untested** — that has not changed. Kodešová is four
+leafy/root vegetables at a single log Kow of 2.25, so it says nothing about the
+high-Kow end where §4d's deficit actually lives; its one pivotal assumption (the
+Freundlich unit reading) is defended on the implied `Koc` and flagged in the data file.
 
 ---
 
@@ -92,18 +107,24 @@ compartment remains entirely untested** — that has not changed.
 
 Ranked. The first is the only one that is both significant and unblocked.
 
-1. **Decide the anchor question, or leave it open deliberately.** The evidence is laid
-   out in `docs/neutral_dpu_validation.md` §4d and reproducible with
-   `python validation/li2019_rcf_apriori.py`. Three outcomes are defensible and the
-   choice is the user's, not a session's:
-   - *keep `L = 0.01`* (current) — the measured value, now corroborated by Li/Chiou's
-     cereals, at the cost of a documented 2.48× internal inconsistency;
-   - *restore the anchor* via `ND.BRIGGS_ANCHORED_LIPID_FW` — internally consistent and
-     better on 2 of 3 tables, worse on the rice one;
-   - *add the missing term* — the physically right answer, blocked on a measured
-     neutral-organic cell-wall coefficient (see §4).
+1. **Decide the anchor question, or leave it open deliberately.** The evidence is in
+   `docs/neutral_dpu_validation.md` §4d and §4f; reproduce with
+   `python validation/li2019_rcf_apriori.py` and
+   `python validation/kodesova2019_carbamazepine.py`. The A4 SI moved this: the
+   tally is now **2 tables against restoring the anchor (Kodešová, Liu) and 1 for
+   it (Li 2019)**, and the deficit the anchor would fix turns out to live only
+   above log Kow ≈ 3. Three outcomes are defensible and the choice is the user's:
+   - *keep `L = 0.01`* (current, and now the better-supported option) — the
+     measured value, corroborated by Li/Chiou's cereals, at the cost of a
+     documented 2.48× internal inconsistency with the Briggs anchor;
+   - *restore the anchor* via `ND.BRIGGS_ANCHORED_LIPID_FW` — internally
+     consistent, better on Li 2019, worse on both soil-grown tables;
+   - *add the missing term* — the physically right answer, and the only one that
+     can be lipophilicity-dependent, but blocked on a measured neutral-organic
+     cell-wall coefficient (see §4).
    Do **not** quietly pick an intermediate fitted `L`. That is the one option that
-   destroys what the neutral path is for.
+   destroys what the neutral path is for — and §4f now also shows a flat lipid
+   increase is the wrong instrument, since the model runs *high* at log Kow 2.25.
 2. ~~Check the equilibration confounder on the Li table~~ ✅ **DONE** — section 3b of
    `validation/li2019_rcf_apriori.py`. The bias is **flat in exposure time** (−0.442 at
    1–3 d vs −0.447 at > 3 d; inside the high-Kow cell alone, −0.586 vs −0.517) and
@@ -127,15 +148,17 @@ Ranked. The first is the only one that is both significant and unblocked.
 **Read `docs/literature_db/Acquisition_Queue.csv` first** — it now carries a `status`
 column per row and, for the rows that arrived, what they actually contained.
 
-**The one request worth making.** *The SI of Kodešová et al. 2019,*
+**A4 is closed** — the SI arrived and is worked up in §4f. What remains is
+lower-value, and the two search specs are now the binding gaps.
+
+*Previous request, for the record.* *The SI of Kodešová et al. 2019,*
 `10.1007/s11356-019-04333-9` *(Tables S2 and S5).* The article arrived and gives the
 chemical side — carbamazepine log Kow 2.25, pKa 1.0/13.9 so un-ionised throughout, and
 Freundlich `KF` for three soils, which is the soil→pore-water conversion the exposure
-needs. The measured root and leaf concentrations are SI-only. **With that SI this stops
-being a comparison and becomes a test**: a neutral compound, per-organ, across 3 soils ×
-4 plants, with the exposure pinned by the paper's own sorption data — and it bears
-directly on the Brunetti `K_RW` disagreement, which is now one of four sightings of the
-same under-prediction.
+needs; the measured root and leaf concentrations were SI-only. **It delivered exactly
+what was hoped for, and then contradicted the expectation**: a-priori log10 RMSE 0.191,
+the best in the repo, but voting *against* the anchor and superseding rather than
+confirming the Brunetti sighting.
 
 Still outstanding, lower value: the real McFarlane, Pfleeger & Fletcher 1987 (J. Environ.
 Qual. 16(4):372–376 — the file supplied under that name is a different paper); the two

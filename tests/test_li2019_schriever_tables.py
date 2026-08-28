@@ -216,6 +216,67 @@ def test_logd_beats_logp_on_the_ionisable_rows():
         S.score(rows, "briggs", "logP")["rho"] + 0.2
 
 
+# --------------------------------------------------------------------------
+# Kodesova 2019 — the A4 table, and the anchor vote it casts
+# --------------------------------------------------------------------------
+KODESOVA = os.path.join(ROOT, "data_obs", "neutral_obs_kodesova2019.csv")
+
+
+def test_kodesova_rcf_is_reproducible_from_the_published_numbers():
+    """Every value must be recomputable from the three measured quantities its
+    own note records, so the file stays a derivation and not a transcription of
+    someone's arithmetic. RCF = C_root / (C_soil/KF)^n."""
+    import re
+
+    KF = {"HCh": 3.86, "HCa": 2.97, "AE": 0.71}
+    n = 1.13
+    rows = _rows(KODESOVA)
+    assert len(rows) == 21          # 4 plants x 3 soils x 2 treatments, minus 3 NA
+    for r in rows:
+        root = float(re.search(r"root (\d+) ng/g", r["note"]).group(1))
+        soil = float(re.search(r"soil (\d+) ng/g", r["note"]).group(1))
+        cw = (soil / 1000.0 / KF[r["soil"]]) ** n
+        assert float(r["pore_water_mgL"]) == pytest.approx(cw, rel=1e-3)
+        assert float(r["value"]) == pytest.approx(root / 1000.0 / cw, rel=1e-3)
+        assert r["basis"] == "dw"   # the article states dry weight explicitly
+        assert float(r["log_kow"]) == 2.25
+
+
+def test_kodesova_isotherm_reading_gives_a_literature_koc():
+    """The one pivotal assumption, pinned. Reading KF at mg/kg per mg/L makes it
+    the distribution ratio at c = 1 mg/L, so KF/Cox is a Koc -- and it must land
+    in carbamazepine's literature band across three very different soils. If it
+    ever does not, the derived exposure is wrong and every value above with it."""
+    import kodesova2019_carbamazepine as K
+
+    kocs = [K.KF[s] / K.COX[s] for s in K.KF]
+    assert all(100 <= k <= 500 for k in kocs)
+    assert max(kocs) / min(kocs) < 2.0          # consistent despite 3.8x in Cox
+    # derived pore water must sit on the scale of the applied solution (~1 mg/L)
+    cw = [float(r["pore_water_mgL"]) for r in _rows(KODESOVA)]
+    assert 0.05 < min(cw) and max(cw) < 2.0
+
+
+def test_kodesova_votes_against_restoring_the_anchor():
+    """The decision content. Carbamazepine at log Kow 2.25 separates the two
+    compositions by ~1.6x, so this is a well-conditioned vote -- and it goes the
+    opposite way to Li 2019. Both tables are pinned here so a later default
+    change has to confront the disagreement rather than inherit one side."""
+    import neutral_dpu_validation as V
+
+    drv = V.drivers()
+    orig = ND.TRAPP1994_LIPID_FW["root"]
+    try:
+        shipped = [V.compare_to_obs(p, drv, quiet=True) for p in (KODESOVA, LI2019)]
+        ND.TRAPP1994_LIPID_FW["root"] = ND.BRIGGS_ANCHORED_LIPID_FW["root"]
+        anchored = [V.compare_to_obs(p, drv, quiet=True) for p in (KODESOVA, LI2019)]
+    finally:
+        ND.TRAPP1994_LIPID_FW["root"] = orig
+    assert shipped[0] < anchored[0]          # Kodesova prefers the shipped lipid
+    assert anchored[1] < shipped[1]          # Li 2019 prefers the anchor
+    assert shipped[0] < 0.25                 # and it is the best a-priori root fit
+
+
 def test_spearman_helper_handles_ties():
     import schriever2020_tscf as S
 
