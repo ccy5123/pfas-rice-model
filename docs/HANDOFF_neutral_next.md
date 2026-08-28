@@ -1,249 +1,178 @@
 # HANDOFF — neutral-organic path: what is done, what is next
 
 > Session handoff for the next Claude/dev.
-> PRs [#56](https://github.com/ccy5123/pfas-rice-model/pull/56) and
-> [#57](https://github.com/ccy5123/pfas-rice-model/pull/57) are **merged**; `main` is at
-> `b3b5004`. Open: **[#58](https://github.com/ccy5123/pfas-rice-model/pull/58)** (draft) —
-> the Expert neutral tab, the acquisition queue, and now the work below, which is stacked
-> on the same branch.
-> Scientific records: **`docs/neutral_dpu_validation.md`** (neutral path — §4d Li 2019
-> partition, §4e TSCF, §4f Kodešová, §3b air, §4c Hwang) and **`docs/twopool_root_exploration.md`
-> §Result 8** (structural merge). Read those first.
+> **PRs [#56](https://github.com/ccy5123/pfas-rice-model/pull/56),
+> [#57](https://github.com/ccy5123/pfas-rice-model/pull/57),
+> [#58](https://github.com/ccy5123/pfas-rice-model/pull/58) and
+> [#59](https://github.com/ccy5123/pfas-rice-model/pull/59) are MERGED.** Nothing is
+> left open on this arc.
+> Scientific record: **`docs/neutral_dpu_validation.md`** — §4a Liu, §4b Ge, §4c Hwang,
+> §4d Li 2019 hydroponic, §4e TSCF, §4f Kodešová, §4g the scoring artifact, §4h Li 2019
+> soil, §4i Kodešová's leaf, §4j Briggs 1983 stem, §5 the synthesis. **Read §5 first.**
 > `parameters.json`, `simulate()` and `reproduce_demo` (RMSE 0.029) are **UNCHANGED**
-> throughout — everything here is additive or opt-in.
+> throughout — everything on this arc is additive or opt-in, and no PFAS number moved.
+> Full suite on the merged tree: **274 collected, 272 pass, 2 skip** (~11 min); the two
+> skips are the optional `emcee` and `sci-adk` deps.
 
 ---
 
 ## 0. TL;DR
 
-**The papers arrived** (`DPU4OC_add.zip`), and the previous handoff's blocking item is
-cleared. `docs/literature_db/Acquisition_Queue.csv` is now a **record** of what each row
-actually contained, with a per-row status, rather than a want-list.
+The acquisition queue's papers arrived and have been **mined out**. Four measured
+tables now ship, and the question the last handoff was built around has **dissolved
+rather than been answered**.
 
-The headline is not the two new datasets. It is what they exposed:
+**It is not "the root partition is too low". It is "the exposure term is the weak
+part".** Where the exposure is measured or directly known, the model is close to
+unbiased on three independent tables; the large deviations sit where the exposure was
+*estimated*:
 
-- **Both a-priori inputs were measured directly for the first time**, and both look
-  biased low on the tables that spread widest in lipophilicity: the partition by a
-  species-independent offset (§4d), TSCF by −0.221 on a 0–1 scale (§4e). But see the
-  A4 result below — the partition half of that does **not** hold at moderate Kow.
-- **Part of the partition offset is the model's own doing.** `neutral_dpu` anchors on
-  Briggs' RCF (`L·a = 0.0302`) but the rice compartment runs `0.0122` — **2.48× under** —
-  because it substituted a measured lipid and kept the conventional octanol correction,
-  when only their *product* is identifiable. On Briggs' own barley rows that costs log10
-  RMSE **0.266 against the anchor's 0.111**.
-- **The default was not changed, and that is the decision, not an omission.** Restoring
-  the anchor helps Li 2019 and hurts both soil-grown tables (Liu, Kodešová), and the two
-  sides disagree by more than the change is worth. Fitting an intermediate value would
-  make the path's single real claim — that nothing is fitted — false.
+| dataset | n | exposure | bias |
+|---|---|---|---|
+| Liu 2023 (rice) | 14 | hydroponic, **known** | −0.053 |
+| Li 2019 soil, `K_om` **experimental** | 62 | soil, **measured** | **+0.033** |
+| Kodešová 2019 | 21 | soil, **measured isotherm** | +0.162 |
+| Li 2019 soil, `K_om` from a QSPR | 261 | soil, **estimated** | +0.291 |
+| Li 2019 hydroponic | 29 | hydroponic, known | **−0.432** ← the open anomaly |
 
-**Three queue rows did not deliver what they asked for**, and that is recorded rather
-than papered over: A1 contains no rice, the supplied "McFarlane 1987" is the wrong paper
-entirely, and every C1/C2/C3 candidate screens out for a stated reason.
-
-**The A4 SI then arrived mid-session, and an adversarial re-read followed.**
-Kodešová 2019 gives the cleanest exposure in the repo and **votes the other way**
-(0.191 shipped vs 0.216 anchored); it also **supersedes the Brunetti sighting**,
-measuring 1.10 for the compound Brunetti calibrated 13.3 for. The re-read
-(`666459f`) then **retracted two of this session's own claims** — see §3 item 1 —
-and what is left is that **the datasets contradict each other** at log Kow
-3.5–4.5 by more than the anchor is worth. The anchor question is therefore **not
-decidable from the data in hand**; §4f and §5 of the validation doc carry it.
+**The anchor decision is effectively settled by evidence, not by choice.** Li 2019's
+hydroponic half was the only thing arguing for restoring the Briggs anchor; its own
+**soil half, twelve times larger, argues the opposite**, and restoring the anchor makes
+that table much worse (+0.645, RMSE 0.639 → 0.873). Three tables against, one for.
+**Recommendation: keep `L = 0.01`, and record that the reason is "no evidence to
+move", not "0.01 is validated".** The user has not ruled on this — see §3 item 1.
 
 ---
 
-## 1. What this session delivered
+## 1. What this arc delivered
 
 | commit | what |
 |---|---|
-| `1019461` | `data_obs/neutral_obs_li2019_rcf.csv` (48 rows) + `data_obs/tscf_obs_schriever2020.csv` (97 rows), `validation/li2019_rcf_apriori.py`, `validation/schriever2020_tscf.py`, the `subset` filter, `BRIGGS_ANCHORED_LIPID_FW`, `tests/test_li2019_schriever_tables.py` (11) |
-| `d4dd996` | the queue rewritten as a delivery record; `docs/neutral_dpu_validation.md` §4d, §4e and the four-sightings synthesis |
-| `2de5619` | section 3b — the kinetic explanation ruled out; stale test counts refreshed |
-| *(this commit)* | queue A4 closed: `data_obs/neutral_obs_kodesova2019.csv`, `validation/kodesova2019_carbamazepine.py`, §4f, the sightings synthesis rewritten |
+| `1019461` | `data_obs/neutral_obs_li2019_rcf.csv` (48) + `tscf_obs_schriever2020.csv` (97), `li2019_rcf_apriori.py`, `schriever2020_tscf.py`, the `subset` filter, `BRIGGS_ANCHORED_LIPID_FW` |
+| `d4dd996` | the acquisition queue rewritten as a delivery record; docs §4d, §4e |
+| `2de5619` | §3b — the kinetic explanation for the Li offset ruled out |
+| `78d5794` | queue A4 closed: `neutral_obs_kodesova2019.csv` (21), `kodesova2019_carbamazepine.py`, §4f |
+| `666459f` | **two of this arc's own claims retracted** — see §2 |
+| `a3b07fa` | `compare_to_obs(mode="equilibrium")` — the ODE scoring artifact, §4g |
+| `784ef4d` | `neutral_obs_li2019_soil.csv` (376) + `li2019_soil_table.py` + Kodešová's leaf half, §4h/§4i |
+| `5426237` | Briggs 1983 read: `briggs_scf()`, `briggs1983_stem.py`, §4j |
 
-**Prior sessions on this branch**: `c6e9d8a` (Expert neutral tab), `494acc4` (the queue),
-`9216dd1` (the previous handoff). Merged earlier: `d8e7f9a` air exchange, `97dbe75`
-Hwang, `50b5586` `model_api.simulate_neutral`.
+Earlier on the same arc: `d8e7f9a` air exchange, `97dbe75` Hwang, `50b5586`
+`model_api.simulate_neutral`, `c6e9d8a` the Expert neutral tab, `494acc4` the queue.
 
 **⚠️ CI does not test any of this.** `.github/workflows/rigor.yml` runs only
-`tests/test_sci_adk_rigor.py`, so a green check says nothing about the model. Run the
-full suite locally before claiming green: **274 collected, 272 pass, 2 skip** (~11 min)
-on this branch; the 2 skips are the optional `emcee` and `sci-adk` deps.
+`tests/test_sci_adk_rigor.py`. Run `pytest -q` locally before claiming green.
 
 ---
 
-## 2. Numbers to trust
+## 2. Things this arc got wrong and then corrected — do not reinstate them
 
-| result | metric |
-|---|---|
-| **Li 2019 root partition**, 29 out-of-sample rows, 11 species, nothing fitted | log10 RMSE **0.598**; every species biased low, −0.30 → −0.95 |
-| the same, held-out Briggs barley rows (in-sample, for contrast) | 0.266 shipped / **0.111** at the anchor |
-| **TSCF direct**, 30 un-ionised rows, Briggs bell | RMSE **0.310**, bias **−0.221**, Spearman +0.794 |
-| the same, `schriever_tscf` — **in-sample, its own training set** | 0.234, bias −0.094 |
-| logD vs logP on the full 97 (Schriever's own claim, checked) | rank corr +0.313 → **+0.653** |
-| root-lipid scan, full ODE — Li 2019 / Liu 2023 / Ge 2017 | L=0.010 **0.598 / 0.281 / 0.783**; L=0.0247 (anchor) 0.331 / **0.288** / 0.651 |
-| Liu 2023 root partition (unchanged) | 0.281 |
-| Ge 2017 per-organ TF (unchanged) | 0.783; minimum 0.210 at a 7-day half-life |
-| Hwang 2017, both basis readings | 0.610 fw / 0.726 dw — **a diagnosis, not scores** |
-| **Kodešová 2019 carbamazepine**, n=21, 4 plants × 3 soils, nothing fitted | log10 RMSE 0.191 on the ODE basis, **0.237** on the appropriate equilibrium basis (§4g) |
-| the repo's best a-priori root result, appropriate basis | **Liu 2023, 0.206** (not Kodešová) |
-| the same, driver-free (equilibrium `K_PW`) | measured `RCF_fw` median **1.10** vs 1.56 shipped / 2.53 anchored |
-| Brunetti's pea `K_RW` vs that measurement | 13.3 vs **1.10** — ~12× above, so **superseded** |
-| **Li 2019 SOIL table**, n=376, 13 crops, nothing fitted | bias **+0.260** — model HIGH, opposite sign to its own hydroponic half |
-| the same, rows with a **measured** `K_om` | n=62, bias **+0.033** |
-| the same, each crop's **own** lipid | bias **−0.001**, RMSE 0.639 → 0.461 |
-| **Kodešová leaf/root** (translocation, exposure cancelled) | measured median **3.25** vs model **181** |
-| **Kodešová measured metabolism** (parent fraction) | root **0.919**, leaf **0.489** (lamb's lettuce 0.169) |
-| **Briggs 1983 stem anchor** | shipped `L·a` 4.1× above, but SCF differs ≤ **0.13 log** over log Kow 0–3.5 |
-| merge, Tang per-organ OOS | 0.801 (stalk 0.61, leaf 0.28) |
+Three claims were made, written into the docs, and then retracted on re-reading. Each
+is pinned by a test now. A later session that "rediscovers" any of them is going
+backwards.
 
-**Caveats that must travel with every one of these.** Li 2019 is out-of-sample but the
-model's root is parameterised for *rice* and only 4 of the 29 rows are rice; the rest is
-a deliberate test of Briggs' own claim that root lipophilic character does not vary much
-across species, and Li's own crop table (0.10 %–1.14 %) says it does. Exposure times run
-6 h to 12 d — that confounder was pre-registered in the file and has now been **checked
-and ruled out** (§3 item 2), so it is no longer a live caveat. The TSCF table is 16 species, none
-of them rice, and barley is half of it; the Briggs bell is out-of-sample there but **not
-independent** (same lab, same species, same method lineage). The neutral **grain
-compartment remains entirely untested** — that has not changed. Kodešová is four
-leafy/root vegetables at a single log Kow of 2.25, so it says nothing about the
-high-Kow end where §4d's deficit actually lives; its one pivotal assumption (the
-Freundlich unit reading) is defended on the implied `Koc` and flagged in the data file.
+1. **"The Li 2019 bias is monotone in log Kow."** Not robust. **Namiki 2015 alone
+   supplies 10 of the 29 rows, all in the top two Kow bins**, as two compounds × five
+   species. Collapsing compound × study flattens the top two bins (−0.576, −0.501).
+   What survives: no bias below log Kow 2, −0.3 to −0.6 above, and all ten source
+   studies biased the same way.
+2. **"A flat lipid rise is the wrong instrument for a Kow-dependent deficit."**
+   Wrong. `K_PW = W + L·a·Kow^b` is water-floor-dominated at low Kow, so scaling `L`
+   is *inherently* Kow-dependent (+0.045 log at log Kow 1, +0.391 at 5). Li 2019
+   hydroponic is genuine evidence **for** the anchor, not against it.
+3. **"Kodešová 0.191 is the best a-priori result in the repo."** It was flattered by
+   a scoring artifact (§4g): root tables measure an equilibrium but were scored
+   through the 120-day rice season, which discounts the root by a Kow-dependent
+   factor peaking at 0.55 near log Kow 1.78 — right where Kodešová sits. On the
+   appropriate basis it is **0.237**, and **Liu 2023 at 0.206** is the best.
+
+Also worth carrying: **`a = 1.22` has no citation anywhere in the repo.** Only the
+product `L·a` is identifiable, so "raise `L` to 0.0247" and "raise `a` to 3.02" are
+the same model — which means "don't fit the measured `L`" is *not* an argument
+against the anchor.
 
 ---
 
-## 3. Next tasks (in-silico)
+## 3. Next tasks
 
-Ranked. The first is the only one that is both significant and unblocked.
+Ranked. Only the first two are worth a session on their own, and both are one-line
+decisions rather than work.
 
-1. **The anchor question is NOT currently decidable, and that is the finding.**
-   Evidence: `docs/neutral_dpu_validation.md` §4d–§4f; reproduce with
-   `python validation/li2019_rcf_apriori.py` (§3c and §3d especially) and
-   `python validation/kodesova2019_carbamazepine.py`.
-
-   Two props this handoff previously rested on were **retracted** in `666459f`,
-   and a later session must not reinstate them:
-   - the Li 2019 bias is *not* reliably monotone in log Kow — Namiki 2015 alone
-     supplies 10 of the 29 rows, all in the top two bins;
-   - raising `L` is **not** "the wrong instrument" for a Kow-dependent deficit.
-     `K_PW = W + L·a·Kow^b` is water-floor-dominated at low Kow, so scaling `L`
-     is inherently Kow-dependent. Li 2019 is genuine evidence **for** the anchor.
-
-   **Li 2019's SOIL table then reframed it again** (§4h). 376 rows, 13 crops,
-   from the same paper: the model runs **HIGH by +0.260** there, opposite in sign
-   to the same paper's hydroponic half (−0.432), and restoring the anchor makes
-   it much worse. So the tally is **three tables against the anchor and one for**,
-   and the one for is the outlier.
-
-   More useful than the tally: **where the exposure is measured or directly
-   known, the model is close to unbiased** — Liu −0.053, Li-soil measured-`K_om`
-   +0.033, Kodešová +0.162 — while estimated-`K_om` rows sit at +0.291. Most of
-   the neutral path's apparent partition error is an **exposure-term** problem,
-   which is the soil side, not `K_PW`. The Li 2019 hydroponic table stays an open
-   anomaly (no subgroup explains its −0.43; on propiconazole, the one compound it
-   and Liu both measured, they differ **4.7×**).
-
-   Note also that `a = 1.22` carries **no citation anywhere in the repo**. Only
-   the product `L·a` is identifiable, so "raise `L` to 0.0247" and "raise `a` to
-   3.02" are the *same model* — which means "don't fit `L`, it is measured" is
-   not by itself an argument against the anchor.
-
-   Three outcomes remain defensible and the choice is the user's:
-   - *keep `L = 0.01`* (current) — defensible as "do not move without evidence",
-     supported mainly by Liu, which is rice and is exact where the anchor would
-     do most damage. Cost: a documented 2.48× inconsistency with the anchor.
-   - *restore the anchor* via `ND.BRIGGS_ANCHORED_LIPID_FW` — internally
-     consistent, and Li 2019 supports it; worse on Liu and Kodešová.
-   - *add the missing term* — a measured neutral-organic cell-wall coefficient
-     (§4). It would fix the level independently of either dataset, but it is no
-     longer needed to *explain* the Li 2019 shape.
-   Do **not** quietly pick an intermediate fitted `L`: that destroys the path's
-   one real claim, that nothing is fitted.
-2. ~~Check the equilibration confounder on the Li table~~ ✅ **DONE** — section 3b of
-   `validation/li2019_rcf_apriori.py`. The bias is **flat in exposure time** (−0.442 at
-   1–3 d vs −0.447 at > 3 d; inside the high-Kow cell alone, −0.586 vs −0.517) and
-   **monotone in log Kow** (−0.03 → −0.31 → −0.46 → −0.69). Non-equilibrium is ruled
-   out as the driver, and the deficit is in the lipophilic sorption term — it vanishes
-   at low Kow where the water floor dominates. Restoring the anchor is worth +0.394 log
-   against an observed −0.688 in the worst cell, so it accounts for ~57 % and the rest
-   is not lipid. Pinned by a test.
-3. ~~The ODE-vs-equilibrium scoring artifact~~ ✅ **DONE** —
-   `compare_to_obs(mode="equilibrium")`, §4g of the validation doc. Root tables
-   measure an equilibrium but were scored through the 120-day rice season, which
-   discounts the root by a Kow-dependent 0.01–0.26 log. Rescored: Liu
-   0.281→**0.206**, Li 2019 0.598→**0.541**, Kodešová 0.191→**0.237**. Kodešová
-   was flattered and is *not* the repo's best a-priori result; Liu is. The anchor
-   verdicts survive with **wider** margins. Default stays `"ode"`; which basis
-   should headline is a one-line decision, open with the anchor question.
-4. ~~Mine Briggs 1983~~ ✅ **DONE** — §4j. It carries a STEM anchor
-   (`log(K_stem/xylem − 0.82) = 0.95 logKow − 2.05`, `SCF = K × TSCF`), which the
-   repo's stem had never been checked against: shipped `L·a` 0.0366 vs anchor
-   0.0089, **4.1× above**, and with the root's flatter exponent. But it largely
-   **cancels** in the observable — SCF differs by at most **0.13 log** over
-   log Kow 0–3.5. A provenance problem, not a prediction problem.
-5. **Mine what is left of Briggs 1983** — its measured per-section shoot (`10.1002/ps.2780140506`), the shoot-distribution companion,
-   already in hand and never opened. It is the only in-hand source that could constrain
-   the stem/leaf split independently of Ge 2017.
-6. **Tissue specific surface areas** for rice — still the single input bounding the air
-   term, still unsourced. Note the C2 papers supplied this round do **not** help (§4).
-7. `NStemLeafModel` has no air hook; particle deposition (`eq:Qdep`) is still
-   deliberately unimplemented. Both unchanged from the last handoff, both low value.
+1. **Put the anchor decision to rest** (either way, or a deliberate "no"). Evidence in
+   §4d, §4h, §5; reproduce with `li2019_rcf_apriori.py` and `li2019_soil_table.py`.
+   The recommendation is **keep `L = 0.01`** — but record the reason honestly: the
+   evidence no longer supports moving, not that 0.01 is validated.
+   `ND.BRIGGS_ANCHORED_LIPID_FW` runs the alternative.
+2. **Decide which basis headlines the neutral path** — ODE (0.281 / 0.598 / 0.191) or
+   equilibrium (0.206 / 0.541 / 0.237). The equilibrium numbers are what the tables
+   actually measure; the ODE ones are what the repo has quoted. `mode="ode"` is still
+   the default so nothing has moved. Switching means updating the module header,
+   CLAUDE.md and this doc together.
+3. **Chase the Li 2019 hydroponic anomaly** (§5). It is the one open disagreement and
+   no subgroup explains it: aquatic −0.39 vs terrestrial −0.46, organochlorines −0.51
+   vs everything else −0.35, the four rice rows −0.28, all ten studies negative. On
+   propiconazole — the one compound it and Liu both measured at log Kow 3.72 — they
+   report RCF **43.65** (lettuce) vs **9.32** (rice). Hypothesis on the table:
+   root-surface sorption inflating short hydroponic RCFs, which would bite hardest
+   for hydrophobic compounds and is consistent with the −0.51/−0.35 split. Testing it
+   needs the source studies' washing protocols, i.e. new papers (§4).
+4. **Mine what is left of Briggs 1983** — its per-section shoot concentrations (stem
+   base / central / leaf blade) are the only in-hand data that could constrain the
+   stem/leaf split independently of Ge 2017. §4j used only its fitted equations.
+5. **Tissue specific surface areas** for rice — still the one input bounding the air
+   term, still unsourced. The C2 papers supplied this round do **not** help (they are
+   root morphology; the air term takes no root contribution).
+6. `NStemLeafModel` has no air hook; particle deposition (`eq:Qdep`) is deliberately
+   unimplemented. Both low value.
 
 ---
 
-## 4. Blocked on data or experiment (not code)
+## 4. Blocked on data or experiment
 
-**Read `docs/literature_db/Acquisition_Queue.csv` first** — it now carries a `status`
-column per row and, for the rows that arrived, what they actually contained.
+`docs/literature_db/Acquisition_Queue.csv` carries per-row status. **A2, A3, A4 are
+closed; A1 is PARTIAL** (it had no rice); **A5, B1, B2, C1, C2, C3 remain open**.
 
-**A4 is closed** — the SI arrived and is worked up in §4f. What remains is
-lower-value, and the two search specs are now the binding gaps.
+**The one request that would move something.** *A hydroponic rice root RCF above
+log Kow 3.5.* That is the exact cell no table has — Liu tops out at 4.4 with only five
+rows there, Li 2019's rice rows are all below 3.1, Kodešová is a single point at 2.25 —
+and it is what would settle item 3. Note this is a **different** request from the
+queue's C3 ("rice root total lipid"), which is now the lower priority of the two.
 
-*Previous request, for the record.* *The SI of Kodešová et al. 2019,*
-`10.1007/s11356-019-04333-9` *(Tables S2 and S5).* The article arrived and gives the
-chemical side — carbamazepine log Kow 2.25, pKa 1.0/13.9 so un-ionised throughout, and
-Freundlich `KF` for three soils, which is the soil→pore-water conversion the exposure
-needs; the measured root and leaf concentrations were SI-only. **It delivered exactly
-what was hoped for, and then contradicted the expectation**: a-priori log10 RMSE 0.191,
-the best in the repo, but voting *against* the anchor and superseding rather than
-confirming the Brunetti sighting.
+Also still wanted, unchanged: the real McFarlane, Pfleeger & Fletcher 1987 (the file
+supplied under that name is a different paper); the two 2025 long-chain PFAS papers
+(B1/B2); a neutral compound in rice **grain** under root-only exposure (C1 — the one
+entirely untested compartment; every candidate this round had residues below LOD).
 
-Still outstanding, lower value: the real McFarlane, Pfleeger & Fletcher 1987 (J. Environ.
-Qual. 16(4):372–376 — the file supplied under that name is a different paper); the two
-2025 long-chain PFAS papers (B1/B2); and the C1–C3 search specs, whose candidates this
-round all screened out for reasons now recorded in the queue.
+**Wet lab**, re-ranked by what the new results imply:
 
-**Wet lab, ranked by what it would settle.**
-
-1. **A neutral-organic cell-wall / non-lipid sorption coefficient for rice root.** New
-   top item. Four independent sightings now say the root partition is too low (§5 of the
-   validation doc), the anchor accounts for ~2.5× of it, and the residue is consistent
-   with a sorbing phase the neutral composition sets to zero. The PFAS side needs the
-   same measurement — it is GAP A there — so **one experiment serves both paths**.
-2. Rice **root total lipid**, basis stated, measured the way Li/Chiou's crop values were
-   (queue C3). This is what A1 was supposed to supply.
-3. In-planta half-lives for the Ge compounds — the model predicts ≈ 7 d, a falsifiable
-   prediction.
-4. Unchanged from before: the `k_seq` promotion gate (rice-root cell-wall / Fe–Mn-plaque
-   batch sorption + desorption across chain length × head group — note this overlaps
-   item 1 and could be one campaign); per-congener xylem-sap / root-water ratio.
+1. **A measured pore-water concentration alongside tissue** for any neutral compound
+   in rice. §5 now locates most of the apparent partition error in the exposure term,
+   so this beats any further partition work.
+2. In-planta half-lives — but note §4i: they are **species-dependent** (carbamazepine
+   leaf parent fraction 0.17 in lamb's lettuce, 0.81 in radish, same compound, same
+   soils, same harvest), so a single fitted value is not a compound property.
+3. A neutral-organic cell-wall coefficient (PFAS **GAP A**, serves both paths). It has
+   dropped in priority: it is no longer needed to explain any table.
+4. Unchanged: the `k_seq` promotion gate; per-congener xylem-sap / root-water ratio.
 
 ---
 
 ## 5. Housekeeping
 
-- **#58 is an open draft** carrying the Expert neutral tab, the queue and this session's
-  work. Marking it ready or merging is the user's call — do not flip it unasked.
-- **CI only runs `tests/test_sci_adk_rigor.py`.** A green check does not mean a change is
-  tested. Run `pytest -q` locally (~15 min).
-- **`subset` is a load-bearing convention now.** `data_obs/*.csv` may carry a `subset`
-  column; `compare_to_obs` scores `subset="apriori"` by default and files without the
-  column are untouched. That inertness is what keeps Liu 0.281 / Ge 0.783 bit-identical,
-  and it is pinned by a test. Do not "simplify" it away.
-- **Do not silently upgrade a `doi_status`.** Several rows moved `search-only → verified`
-  this session because the article itself arrived and was read. That is the only
-  legitimate route.
-- The papers live in an ephemeral session scratchpad and are **not committed** (copyright).
-  Everything extracted from them is in `data_obs/` or the queue, with provenance.
+- **CI only runs `tests/test_sci_adk_rigor.py`.** A green check means nothing here.
+- **`subset` and `mode` are load-bearing conventions.** `compare_to_obs` scores
+  `subset="apriori"` and `mode="ode"` by default; files without a `subset` column are
+  untouched, which is what keeps Liu 0.281 / Ge 0.783 bit-identical. Both are pinned
+  by tests. Do not "simplify" either away.
+- **Do not silently upgrade a `doi_status`.** `verified` means the article itself was
+  opened and read.
+- The papers live in an ephemeral scratchpad and are **not committed** (copyright).
+  Everything extracted is in `data_obs/` or the queue, with provenance.
+- Two assumptions are flagged in the data files rather than buried, and a later
+  session should attack these first if it doubts a result: Kodešová's **Freundlich
+  unit reading** (defended on the implied `K_oc` 222/189/154 across three soils; the
+  alternative gives ~1600 and would reverse that table's vote), and that Kodešová's
+  **mass balance does not close** (measured soil holds 25–33 % of the applied load).
 
 ---
 
@@ -252,30 +181,30 @@ round all screened out for reasons now recorded in the queue.
 ```bash
 pip install -r requirements.txt
 
-# the two new tests, and the diagnosis
-python validation/li2019_rcf_apriori.py --fast    # a-priori 0.598 + the anchor table
-python validation/schriever2020_tscf.py           # TSCF alone: 0.310, bias -0.221
-python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_li2019_rcf.csv
+# the four new tables and what they show
+python validation/li2019_soil_table.py            # 376 soil rows: the sign flip, ~5 s
+python validation/li2019_rcf_apriori.py --fast    # 29 hydroponic rows + the anchor
+python validation/kodesova2019_carbamazepine.py   # exposure, anchor vote, leaf, metabolism
+python validation/schriever2020_tscf.py           # TSCF alone, 97 values
+python validation/briggs1983_stem.py              # the stem anchor, ~1 s
 
-# the unchanged baselines — these two must not move
-python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.csv   # 0.281
-python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_ge2017.csv    # 0.783
-python reproduce_demo.py                                                             # 0.029
+# the baselines that must not move
+python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.csv  # 0.281
+python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_ge2017.csv   # 0.783
+python reproduce_demo.py                                                            # 0.029
 
-pytest -q
+pytest -q                                          # 274 collected, 272 pass, 2 skip
 ```
 
-**Resume prompt — pick by what arrived.**
+**Resume prompt.**
 
-*If the Kodešová SI arrived*:
-
-> The SI of `10.1007/s11356-019-04333-9` is at `<path>`. Build a per-organ neutral obs
-> table from Tables S2/S5 (carbamazepine only — atenolol and sulfamethoxazole are
-> ionisable and belong on the ionic path), converting soil concentration to pore water
-> with the paper's own Freundlich `KF` per soil, and record the weight basis the SI
-> states. Then run it as an a-priori test and report it against Liu 0.281 / Li 0.598.
-> It bears on the four-sightings question in `docs/neutral_dpu_validation.md` §5, so say
-> explicitly whether it is a fifth sighting or a counter-example.
-
-*If nothing new arrived*, take §3 item 1 to the user as a decision, then §3 items 2–3,
-which are both small and both unblocked. Do not manufacture work on §3 items 4–5.
+> The neutral-organic arc is merged and its papers are mined out. Read
+> `docs/neutral_dpu_validation.md` §5 and §2 of `docs/HANDOFF_neutral_next.md` before
+> touching anything — §2 lists three claims this arc made and then retracted, and
+> re-deriving any of them is going backwards. Two decisions are open and both are
+> one-line (§3 items 1–2): whether to move the root lipid off `L = 0.01`, and whether
+> the headline numbers switch to the equilibrium basis. Neither is blocked on data;
+> both are the user's call. If new work is wanted instead, the honest ranking is §3
+> item 3 (the Li 2019 hydroponic anomaly, needs new papers) then item 4 (Briggs 1983's
+> per-section shoot data, already in hand). The PFAS side is a separate arc —
+> `docs/HANDOFF_BAF_twopool.md`.
