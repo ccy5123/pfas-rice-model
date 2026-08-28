@@ -13,11 +13,16 @@
 # the root partition core is too LOW. This is the direct measurement that
 # question was asking for, on the same compound.
 #
-# It also lands on the other side of the decision left open by section 4d: the Li
-# 2019 table wants the Briggs anchor restored, the Liu 2023 rice table does not,
-# and the tie-break was missing. This is a third vote, and a well-conditioned one:
-# carbamazepine sits at log Kow 2.25, where the shipped and anchored compositions
-# differ by 1.6x, so the two are cleanly separable.
+# It also lands on the anchor decision, and well-conditioned: carbamazepine sits
+# at log Kow 2.25, where the shipped and anchored compositions differ by 1.6x.
+#
+# Sections 6 and 7 use the LEAF half of the same table, which the root comparison
+# leaves untouched. Section 6 tests TRANSLOCATION with the exposure cancelled
+# (a leaf/root ratio needs no exposure at all, so it does not inherit the
+# isotherm assumption section 1 defends). Section 7 is the more valuable: the
+# paper measured carbamazepine's METABOLITES alongside the parent, so in-planta
+# transformation stops being the free parameter every half-life statement in
+# this repo has had to treat it as.
 #
 # THE EXPOSURE, which is what makes the dataset usable. Three measured quantities
 # and no model in between:
@@ -43,6 +48,8 @@ sys.path.insert(0, HERE)
 
 import neutral_dpu as ND                                       # noqa: E402
 import neutral_dpu_validation as V                             # noqa: E402
+
+TISSUES = ("root", "stem", "leaf", "grain")
 
 OBS = os.path.join(ROOT_DIR, "data_obs", "neutral_obs_kodesova2019.csv")
 LIU = os.path.join(ROOT_DIR, "data_obs", "neutral_obs_liu2023.csv")
@@ -118,9 +125,10 @@ def section3_anchor(drv):
     print("\n   Carbamazepine at log Kow 2.25 separates the two compositions by 1.6x,")
     print("   so this is a well-conditioned vote rather than a marginal one -- and it")
     print("   votes with Liu (the rice table) and against Li 2019.")
-    print("   That makes the tally 2 tables against restoring the anchor, 1 for it,")
-    print("   and the two against are the ones measured on soil-grown plants at")
-    print("   moderate lipophilicity -- the regime this model is actually used in.")
+    print("   With Li 2019's SOIL table added (validation/li2019_soil_table.py, 356")
+    print("   rows, +0.250 shipped vs +0.637 anchored) the tally is THREE tables")
+    print("   against restoring the anchor and ONE for it -- and the one for it is")
+    print("   the hydroponic half of a paper whose own soil half says the opposite.")
 
     # driver-free cross-check: the ODE root BAF is not K_PW, so show both framings
     obs = np.array([float(r["value"]) for r in rows()]) * (1.0 - ND.RICE_WATER["root"])
@@ -186,6 +194,131 @@ def section5_sensitivity():
     print("   attack if this result is ever doubted.")
 
 
+# SI Table S2, carbamazepine and its four measured metabolites, ng/g dry weight.
+# Values reported as "< x" (below quantification) are entered as 0, which makes
+# the parent fraction below a lower bound on transformation rather than an
+# estimate of it. Spinach and arugula are omitted: their metabolite rows carry
+# NAs and censored values in the soils where the roots were not analysed.
+#            plant, soil, treatment : [CAR, EPX, OXC, RTC, DHC]
+KOD_ROOT = {
+    ("lamb's lettuce", "HCh", "M"): [1900, 170, 17, 0, 3.5],
+    ("lamb's lettuce", "HCh", "S"): [3000, 320, 36, 0, 4],
+    ("lamb's lettuce", "HCa", "M"): [2000, 290, 30, 0, 3.7],
+    ("lamb's lettuce", "HCa", "S"): [2400, 440, 46, 0, 4.7],
+    ("lamb's lettuce", "AE", "M"): [4400, 390, 40, 19, 8.2],
+    ("lamb's lettuce", "AE", "S"): [8600, 1300, 160, 98, 15],
+    ("radish", "HCh", "M"): [2100, 80.5, 0.66, 0, 3],
+    ("radish", "HCh", "S"): [2600, 67, 1.1, 0, 4.3],
+    ("radish", "HCa", "M"): [2100, 84.5, 2.2, 0, 2.55],
+    ("radish", "HCa", "S"): [3100, 110, 1.5, 0, 4.2],
+    ("radish", "AE", "M"): [5700, 195, 4.2, 0, 9.7],
+    ("radish", "AE", "S"): [7900, 340, 9.7, 0, 12],
+}
+KOD_LEAF = {
+    ("lamb's lettuce", "HCh", "M"): [6400, 17000, 2400, 190, 10],
+    ("lamb's lettuce", "HCh", "S"): [4600, 20000, 3300, 220, 8.2],
+    ("lamb's lettuce", "HCa", "M"): [3300, 17000, 2500, 300, 5.6],
+    ("lamb's lettuce", "HCa", "S"): [1400, 10000, 1500, 220, 0],
+    ("lamb's lettuce", "AE", "M"): [1600, 5700, 710, 100, 0],
+    ("lamb's lettuce", "AE", "S"): [2700, 12000, 1800, 580, 0],
+    ("radish", "HCh", "M"): [19000, 4100, 200, 100, 28],
+    ("radish", "HCh", "S"): [21000, 5600, 270, 150, 32],
+    ("radish", "HCa", "M"): [11000, 1500, 66, 44, 16.5],
+    ("radish", "HCa", "S"): [15000, 2000, 100, 68, 22],
+    ("radish", "AE", "M"): [31500, 8800, 450, 285, 48],
+    ("radish", "AE", "S"): [53000, 15000, 1000, 620, 89],
+}
+# every (plant, soil, treatment) cell of Table S2 that reports both organs
+KOD_LEAF_ROOT = [
+    (1900, 6400), (3000, 4600), (2000, 3300), (2400, 1400), (4400, 1600), (8600, 2700),
+    (990, 2900), (1500, 2000), (2800, 2300), (2800, 1900), (5200, 4600),
+    (1600, 6900), (1800, 8400), (4000, 13000), (3400, 23000),
+    (2100, 19000), (2600, 21000), (2100, 11000), (3100, 15000),
+    (5700, 31500), (7900, 53000),
+]
+HARVEST_D = 23.0        # 20 d (lamb's lettuce, radish) to 26 d (spinach, arugula)
+
+
+def section6_translocation(drv):
+    """The leaf data, which the root-only comparison above leaves on the table.
+
+    A leaf/root ratio needs no exposure at all -- it cancels -- so it is the one
+    thing in this dataset that tests TRANSLOCATION rather than partition, and it
+    does so without inheriting the isotherm assumption section 1 defends.
+    """
+    print("\n" + "=" * 84)
+    print("6. TRANSLOCATION — leaf/root, with the exposure cancelled")
+    print("=" * 84)
+    obs = np.array([l / r for r, l in KOD_LEAF_ROOT])
+    print(f"   measured leaf/root, n={len(obs)}: median {np.median(obs):.2f}, "
+          f"range {obs.min():.2f}-{obs.max():.2f}")
+    m = ND.simulate_neutral(ND.NeutralCompound("carbamazepine", LOG_KOW), drv)
+    t = np.asarray(drv["t"])
+    i = int(np.argmin(np.abs(t - HARVEST_D)))
+    lr = m["conc"]["leaf"][i] / m["conc"]["root"][i]
+    print(f"   model leaf/root at the matched harvest ({HARVEST_D:.0f} d): {lr:.1f}"
+          f"   -> {lr / np.median(obs):.0f}x over")
+    print("\n   That is the terminal-leaf runaway of section 3 of the validation doc,")
+    print("   measured for the first time against per-organ data with the exposure")
+    print("   divided out. But read the next block before calling it a model error.")
+    print(f"\n   {'in-planta half-life':>22}{'model leaf/root':>18}")
+    for hl in (None, 30, 14, 7, 3, 1.5):
+        g = 0.0 if hl is None else float(np.log(2.0) / hl)
+        comps = ND.rice_compartments(gammas={k: g for k in TISSUES})
+        mm = ND.simulate_neutral(ND.NeutralCompound("carbamazepine", LOG_KOW), drv,
+                                 comps=comps)
+        lab = "none (recalcitrant)" if hl is None else f"{hl} d"
+        print(f"   {lab:>22}{mm['conc']['leaf'][i] / mm['conc']['root'][i]:>18.1f}")
+    print(f"\n   Metabolism CANNOT close it: even a 1.5-day half-life leaves the model")
+    print(f"   ~9x above the measured median of {np.median(obs):.2f}. So the leaf excess is")
+    print("   NOT only the missing gamma -- most of it is the driver mismatch, a rice")
+    print("   season's transpiration per unit leaf mass applied to a 340 cm3 pot of")
+    print("   lettuce. That is a WARNING about the Ge 2017 result: its half-life")
+    print("   minimum at ~7 d may be absorbing the same mismatch rather than")
+    print("   measuring metabolism.")
+
+
+def section7_measured_metabolism():
+    """gamma stops being a free parameter, for one compound at least.
+
+    Every half-life statement in this repo so far has been an inference from a
+    fit. Kodesova measured the metabolites alongside the parent, so the parent
+    fraction is a direct observation of in-planta transformation.
+    """
+    print("\n" + "=" * 84)
+    print("7. IN-PLANTA TRANSFORMATION, MEASURED RATHER THAN FITTED")
+    print("=" * 84)
+
+    def parent_fraction(d):
+        return {k: v[0] / sum(v) for k, v in d.items()}
+
+    pr, pl = parent_fraction(KOD_ROOT), parent_fraction(KOD_LEAF)
+    print("   parent fraction = CAR / (CAR + its four measured metabolites)")
+    print("   ('< LOQ' entered as 0, so these are UPPER bounds on the parent share")
+    print("   and therefore LOWER bounds on transformation)\n")
+    print(f"   {'plant':18}{'root':>16}{'leaf':>16}")
+    for plant in ("lamb's lettuce", "radish"):
+        r = [v for k, v in pr.items() if k[0] == plant]
+        l = [v for k, v in pl.items() if k[0] == plant]
+        print(f"   {plant:18}{np.mean(r):>9.3f} ±{np.std(r):.3f}"
+              f"{np.mean(l):>9.3f} ±{np.std(l):.3f}")
+    ar, al = list(pr.values()), list(pl.values())
+    print(f"   {'both':18}{np.mean(ar):>16.3f}{np.mean(al):>16.3f}")
+    print("\n   Two things follow, and the second is the more useful.")
+    print("   (i) Transformation is a SHOOT process here: the root stays ~92 % parent")
+    print("       while the leaf drops to 49 % on average. So gamma = 0 is simply")
+    print("       wrong for carbamazepine, and 'recalcitrant' cannot be assumed for")
+    print("       a neutral organic the way it is defensible for PFAS.")
+    print("   (ii) It is strongly SPECIES-dependent -- lamb's lettuce leaf 0.17,")
+    print("       radish leaf 0.81, a 4.8x difference on the same compound, the same")
+    print("       soils and the same harvest. An in-planta half-life is therefore")
+    print("       not a compound property, which is what fitting one to a single")
+    print("       dataset implicitly assumes.")
+    print("\n   Note the metabolites are not inert: in lamb's lettuce leaves the")
+    print("   epoxide EXCEEDS the parent (17000 vs 6400 ng/g), so a model that")
+    print("   tracks only the parent understates the total burden several-fold.")
+
+
 def main():
     drv = V.drivers()
     print("KODESOVA 2019 — CARBAMAZEPINE ROOT PARTITION FROM THREE SOILS")
@@ -195,20 +328,30 @@ def main():
     section3_anchor(drv)
     section4_brunetti()
     section5_sensitivity()
+    section6_translocation(drv)
+    section7_measured_metabolism()
     print("\n" + "=" * 84)
     print("VERDICT")
     print("=" * 84)
-    print(f"   a-priori log10 RMSE {rmse:.3f} on 21 rows, nothing fitted -- the best")
-    print("   a-priori result in this repo, on the cleanest exposure it has (measured")
-    print("   soil concentration + the paper's own measured isotherm, same pot, same")
-    print("   harvest, on a compound that is un-ionised everywhere and effectively")
-    print("   non-degrading, DT50 > 1000 d).")
-    print("   It does TWO things to the open questions. It weakens the Brunetti")
-    print("   sighting, by measuring ~1.1 where Brunetti calibrated 13.3. And it votes")
-    print("   AGAINST restoring the Briggs anchor, with Liu and against Li 2019.")
-    print("   Neither is decisive on its own -- four vegetables, one compound, one")
-    print("   lipophilicity, no rice -- but the direction is now 2:1 on soil-grown")
-    print("   plants, which is the regime this model is used in.")
+    print(f"   a-priori log10 RMSE {rmse:.3f} on 21 rows through the ODE, nothing fitted --")
+    print("   but on the appropriate EQUILIBRIUM basis it is 0.237 (see section 4g of")
+    print("   docs/neutral_dpu_validation.md): this table sits at log Kow 2.25, almost")
+    print("   exactly where the rice season's xylem drain is largest, so the ODE score")
+    print("   flatters it. Liu 2023 at 0.206 is the repo's best a-priori root result,")
+    print("   not this one.")
+    print("\n   What this table does settle:")
+    print("     * it WEAKENS the Brunetti sighting -- measuring ~1.1 for the compound")
+    print("       Brunetti calibrated 13.3 for;")
+    print("     * it votes AGAINST restoring the Briggs anchor, joining Liu and Li")
+    print("       2019's SOIL table -- three tables against, one for;")
+    print("     * section 7 measures in-planta transformation instead of fitting it,")
+    print("       and finds carbamazepine is NOT recalcitrant in the shoot (leaf")
+    print("       parent fraction 0.49, as low as 0.17) even though its soil DT50")
+    print("       exceeds 1000 d. Soil persistence does not imply plant persistence.")
+    print("\n   And what it does NOT settle: four leafy/root vegetables, one compound,")
+    print("   one lipophilicity, no rice. It says nothing about the high-Kow end where")
+    print("   the Li 2019 hydroponic deficit lives, and section 6 shows the leaf side")
+    print("   is dominated by the rice-driver mismatch rather than by the model.")
     return rmse
 
 

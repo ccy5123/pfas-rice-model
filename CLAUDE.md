@@ -721,6 +721,36 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   - Limits: 4 leafy/root vegetables, **no rice**; one compound at one lipophilicity (says nothing about the high-Kow
     end where the deficit lives); roots rinsed not exhaustively cleaned (biases obs UP, i.e. against this conclusion).
   `parameters.json`, `simulate()` and `reproduce_demo` (0.029) UNCHANGED.
+- **Li 2019 Table S2 (376 SOIL rows) + Kodešová's LEAF half (this session) — the sign FLIPS, and the open
+  question is REFRAMED**: `data_obs/neutral_obs_li2019_soil.csv` + `validation/li2019_soil_table.py`, and §6/§7 of
+  `validation/kodesova2019_carbamazepine.py`; docs §4h/§4i.
+  - **THE SIGN FLIP**: the SAME paper's soil table (n=376, 13 crops) runs the model **HIGH +0.260** where its
+    hydroponic half (n=29) runs it **LOW −0.432**. ⇒ "the root partition is too low" is a property of ONE EXPOSURE
+    ROUTE, not of the partition core. Restoring the anchor makes the soil table much worse (+0.645, RMSE 0.639→0.873)
+    ⇒ tally is now **3 tables against the anchor, 1 for**, and the 1 for is the hydroponic half of a paper whose own
+    soil half says the opposite.
+  - **The COMPOSITION TERM works**: substituting each crop's OWN measured lipid (11× spread, radish 0.09% → wheat
+    1.14%) takes the bias **+0.260 → −0.001** (RMSE 0.639→0.461). So `K_PW = W + L·a·Kow^b`'s FORM is right across a
+    large range in `L`. (Caveat: `f_lip` is Li's own model input ⇒ consistency, not independent validation.)
+  - **MOST OF THE ERROR IS THE EXPOSURE, NOT THE PLANT**: Li derive `value` as soil conc ÷ `K_om`, and their Table S3
+    says which `K_om` was measured. **Experimental `K_om` (n=62): bias +0.033 — essentially unbiased**; QSPR `K_om`
+    (n=261): +0.291; and the f_om gradient agrees (+0.499 <1% OM → +0.101 >4%). Combined with Liu (−0.053) and
+    Kodešová (+0.162), **on all three tables with a measured/known exposure the bias is −0.05…+0.16** ⇒ the neutral
+    path's apparent partition error is largely a **SOIL-SIDE exposure problem**, not a `K_PW` problem. `α_pt` is NOT
+    applied (Li median 0.098): what Li put in `α_pt`, Briggs put in the flatter exponent b=0.77 vs Li's `Kow^1.03`
+    (20× apart @logKow 5) — dividing would double-count.
+  - **Kodešová LEAF (§4i)**: leaf/root cancels the exposure ⇒ a pure TRANSLOCATION test. Measured median **3.25**
+    (0.31–9.05) vs model **181** (~55× over) — §3's terminal-leaf runaway, now measured per-organ. **Metabolism CANNOT
+    close it**: even a 1.5-d half-life leaves 28.5 ⇒ most of the excess is the **rice-driver mismatch** (a rice season's
+    transpiration per unit leaf mass on a 340 cm³ pot of lettuce). ⇒ **WARNING on the Ge 2017 "≈7 d half-life"**: it may
+    be absorbing the same mismatch rather than measuring metabolism.
+  - **METABOLISM MEASURED, not fitted (first in the repo)**: Kodešová quantified CAR's 4 metabolites, so the parent
+    fraction is a direct observation — root **0.919**, leaf **0.489** (lamb's lettuce 0.169, radish 0.810). ⇒ (i) `γ=0`
+    is WRONG for carbamazepine despite a soil `DT50>1000 d` — **soil persistence ≠ plant persistence**; (ii) it is
+    strongly SPECIES-dependent (4.8×, same compound/soils/harvest) ⇒ an in-planta half-life is **not a compound
+    property**, which is what fitting one to a single dataset assumes. The epoxide EXCEEDS the parent in lamb's-lettuce
+    leaves (17000 vs 6400 ng/g) ⇒ a parent-only model understates the burden several-fold.
+  `tests/test_li2019_schriever_tables.py` (24). `parameters.json`, `simulate()` and `reproduce_demo` (0.029) UNCHANGED.
 - **ODE-vs-EQUILIBRIUM scoring artifact (this session) — `compare_to_obs(mode="equilibrium")`**: all three root-partition
   tables (Liu/Li2019/Kodešová) measure an EQUILIBRIUM over 24 h–26 d, but were scored by running the **120-d rice season**
   and reading `baf_final["root"]`. That imposes a **Kow-DEPENDENT, purely model-side discount** (ODE/K_PW = 0.91 @logKow
@@ -935,6 +965,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   structural checks alone — see `docs/neutral_dpu_validation.md`. In code:
   `model_api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0)` → the standard `simulate()` dict
   + `K_PW`/`TSCF`/`rcf_briggs` (first arg is a **log Kow**, not a congener; `drivers=`/`biomass=` as usual).
+- **Li 2019 SOIL table (376 rows, the sign flip)**: `python validation/li2019_soil_table.py` (~5 s; hydroponic-vs-soil
+  sign flip · per-crop-lipid collapse · the measured-vs-estimated `K_om` split · why `α_pt` is not applied).
 - **Li 2019 root partition + the anchor diagnosis**: `python validation/li2019_rcf_apriori.py` (a-priori n=29 by
   species → the A1 lipid table → the anchor diagnosis → the full-ODE root-lipid scan; ~3 min, `--fast` skips the scan
   and prints the recorded numbers). Also runnable through the shared harness:

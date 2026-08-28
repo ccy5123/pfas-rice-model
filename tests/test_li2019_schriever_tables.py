@@ -382,3 +382,110 @@ def test_spearman_helper_handles_ties():
     # ties must be averaged, not left in arbitrary encounter order
     assert S.spearman([1, 1, 2, 2], [1, 1, 2, 2]) == pytest.approx(1.0)
     assert np.isnan(S.spearman([1, 1, 1], [1, 2, 3]))
+
+
+# --------------------------------------------------------------------------
+# Li 2019 Table S2 -- the soil companion, which disagrees in SIGN
+# --------------------------------------------------------------------------
+LI2019_SOIL = os.path.join(ROOT, "data_obs", "neutral_obs_li2019_soil.csv")
+
+
+def test_li2019_soil_table_is_intact():
+    rows = _rows(LI2019_SOIL)
+    assert len(rows) == 376                       # all of the SI's rows
+    assert len({r["species"] for r in rows}) == 13
+    assert Counter(r["kom_source"] for r in rows) == {
+        "estimated": 261, "experimental": 62, "unmatched": 53}
+    # the 20 Zhang 2005 rows are a field survey with no stated duration
+    assert sum(1 for r in rows if r["exposure_d"] == "") == 20
+    # per-crop lipid must span the ~12x range the SI carries. Note the SI gives
+    # radish as both 0.09 and 0.10 % in different source studies while the
+    # article text quotes 0.10; the SI value is kept per row.
+    fl = [float(r["f_lip"]) for r in rows]
+    assert min(fl) == pytest.approx(0.0009) and max(fl) == pytest.approx(0.0114)
+
+
+def test_the_two_halves_of_li2019_disagree_in_sign():
+    """The finding this table exists for. Same paper, same authors, same
+    fresh-weight convention -- but the hydroponic half says the model is LOW and
+    the soil half, twelve times larger, says it is HIGH. That is what makes 'the
+    root partition is too low' a property of one exposure route rather than of
+    the partition core, and it is why the anchor decision stays open."""
+    import li2019_soil_table as S
+
+    soil = S.load()
+    n_hy, b_hy = S._hydroponic_bias()
+    n_so, b_so, _ = S.bias(soil)
+    assert n_hy == 29 and n_so == 376
+    assert b_hy < -0.3 and b_so > +0.2            # opposite signs, both large
+
+
+def test_soil_table_argues_against_the_anchor_and_own_lipid_removes_the_bias():
+    import li2019_soil_table as S
+
+    rows = S.load()
+    _, b_rice, e_rice = S.bias(rows, "rice")
+    _, b_anch, e_anch = S.bias(rows, "anchor")
+    _, b_own, e_own = S.bias(rows, "own")
+    assert b_anch > b_rice and e_anch > e_rice    # the anchor makes it worse
+    assert abs(b_own) < 0.05                      # own lipid -> unbiased
+    assert e_own < e_rice                         # and tighter
+
+
+def test_measured_kom_rows_are_nearly_unbiased():
+    """Where the exposure conversion is measured rather than estimated, the model
+    is close to unbiased -- which relocates most of this table's apparent error
+    from the plant model to the soil side."""
+    import li2019_soil_table as S
+
+    rows = S.load()
+    n_exp, b_exp, _ = S.bias([r for r in rows if r["kom_source"] == "experimental"])
+    n_est, b_est, _ = S.bias([r for r in rows if r["kom_source"] == "estimated"])
+    assert n_exp == 62 and n_est == 261
+    assert abs(b_exp) < 0.10 < b_est
+
+
+# --------------------------------------------------------------------------
+# Kodesova's leaf half: translocation, and metabolism that was MEASURED
+# --------------------------------------------------------------------------
+def test_metabolism_is_measured_not_fitted_and_is_species_dependent():
+    """Section 7. Every in-planta half-life in this repo has been an inference
+    from a fit; Kodesova measured the metabolites, so the parent fraction is a
+    direct observation. Two things must hold, and both bear on how the Ge 2017
+    half-life scan should be read."""
+    import kodesova2019_carbamazepine as K
+
+    root = {k: v[0] / sum(v) for k, v in K.KOD_ROOT.items()}
+    leaf = {k: v[0] / sum(v) for k, v in K.KOD_LEAF.items()}
+    assert np.mean(list(root.values())) > 0.85     # root stays mostly parent
+    assert np.mean(list(leaf.values())) < 0.60     # the shoot transforms it
+    # and it is a SPECIES property, not a compound one -- same compound, same
+    # soils, same harvest, 4x apart
+    lettuce = np.mean([v for k, v in leaf.items() if k[0] == "lamb's lettuce"])
+    radish = np.mean([v for k, v in leaf.items() if k[0] == "radish"])
+    assert radish / lettuce > 3.0
+
+
+def test_metabolism_alone_cannot_close_the_leaf_root_gap():
+    """Section 6, and the warning it carries for Ge 2017: even a 1.5-day
+    half-life leaves the model far above the measured leaf/root, so a half-life
+    fitted to leaf data is absorbing the driver mismatch, not just metabolism."""
+    import kodesova2019_carbamazepine as K
+    import neutral_dpu_validation as V
+
+    drv = V.drivers()
+    t = np.asarray(drv["t"])
+    i = int(np.argmin(np.abs(t - K.HARVEST_D)))
+    obs = np.median([l / r for r, l in K.KOD_LEAF_ROOT])
+    assert 2.0 < obs < 5.0
+
+    def model_leaf_root(half_life):
+        g = float(np.log(2.0) / half_life)
+        comps = ND.rice_compartments(gammas={k: g for k in
+                                             ("root", "stem", "leaf", "grain")})
+        m = ND.simulate_neutral(ND.NeutralCompound("carbamazepine", K.LOG_KOW),
+                                drv, comps=comps)
+        return m["conc"]["leaf"][i] / m["conc"]["root"][i]
+
+    assert model_leaf_root(1.5) > 5.0 * obs        # still far above at 1.5 d
+    assert model_leaf_root(1.5) < model_leaf_root(7.0)   # shorter does help, but

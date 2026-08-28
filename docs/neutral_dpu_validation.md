@@ -615,6 +615,106 @@ lipophilicity, so it says nothing about the high-Kow end where §4d's deficit
 lives; roots were rinsed, not exhaustively cleaned, though adhering soil would
 bias the observation *up* and so works against the conclusion drawn here.
 
+### 4h. The soil half of Li 2019 — 376 rows that flip the sign
+
+`data_obs/neutral_obs_li2019_soil.csv` · `validation/li2019_soil_table.py`
+
+Table S2 of the same paper as §4d: **376 soil-grown root RCFs over 13 crops**,
+twelve times the hydroponic table, with each crop's measured root lipid attached.
+It was overlooked when the hydroponic table was mined, and it changes the reading.
+
+| Li 2019 table | n | mean log10 bias |
+|---|---|---|
+| **S1, hydroponic** (§4d) | 29 | **−0.432** — model LOW |
+| **S2, soil** | 376 | **+0.260** — model HIGH |
+
+Same authors, same fresh-weight convention, same endpoint definition, opposite
+sign. So "the root partition is too low" is a property of **one exposure route**,
+not of the partition core — and the larger half argues *against* moving the
+default:
+
+| root composition | bias | RMSE |
+|---|---|---|
+| **shipped** `L` = 0.010 | +0.260 | **0.639** |
+| anchored `L` = 0.0247 | +0.645 | 0.873 |
+
+**Two results here do generalise.**
+
+*The composition term works.* Substituting each crop's **own** measured lipid for
+the model's rice value — across an 11× spread, radish 0.09 % to wheat 1.14 % —
+takes the mean bias from **+0.260 to −0.001** and tightens RMSE 0.639 → 0.461. So
+the *form* `K_PW = W + L·a·Kow^b` handles a large range in `L` correctly. (Caveat:
+`f_lip` is Li's own model input, so this is consistency inside their framework,
+not independent validation.)
+
+*Most of the apparent error is the exposure, not the plant.* `value` here is
+**derived** — Li divide the measured soil concentration by `K_om` — and their
+Table S3 records which `K_om` was measured and which was estimated:
+
+| `K_om` source | n | bias |
+|---|---|---|
+| **experimental** | 62 | **+0.033** |
+| from a QSPR | 261 | +0.291 |
+| unmatched | 53 | +0.371 |
+
+**On the rows with a measured `K_om` the model is essentially unbiased.** The soil
+organic-matter gradient says the same (bias +0.499 below 1 % OM, +0.101 above 4 %).
+That now holds on three independent tables — these 62 rows, Liu 2023, and
+Kodešová 2019, all with a measured or directly known exposure — which relocates
+most of the neutral path's apparent partition error onto the **exposure term**,
+a soil-side problem rather than a `K_PW` problem.
+
+One framing note. Li's own model writes `RCF_water = α_pt·[f_pw + f_ch K_ch +
+f_lip K_lip]` with a median `α_pt` of **0.098** here, i.e. their equilibrium term
+is ~10× their measured RCF. This model has no `α_pt` and lands on the measured
+values anyway, because Briggs' `b = 0.77` is far flatter than Li's
+`K_lip ≈ Kow^1.03` (20× apart at log Kow 5). What Li put in `α_pt`, Briggs put in
+the exponent; dividing by `α_pt` here would double-count.
+
+### 4i. Kodešová's leaf half — translocation, and metabolism that was measured
+
+Sections 6 and 7 of `validation/kodesova2019_carbamazepine.py`. The root
+comparison in §4f used half the table; the leaf half answers two different
+questions, and one of them removes a free parameter.
+
+**Translocation, with the exposure cancelled.** A leaf/root ratio needs no
+exposure at all, so it does not inherit the isotherm assumption §4f defends.
+Measured (n=21, 20–26 d): median **3.25**, range 0.31–9.05. Model at the matched
+harvest: **181** — ~55× over. That is §3's terminal-leaf runaway, measured for
+the first time against per-organ data with the exposure divided out.
+
+**But metabolism cannot close it**, and that is the useful part:
+
+| in-planta half-life | ∞ | 30 d | 14 d | 7 d | 3 d | 1.5 d |
+|---|---|---|---|---|---|---|
+| model leaf/root | 181 | 147 | 119 | 86 | 49 | **28.5** |
+
+Even a 1.5-day half-life leaves the model ~9× above the measurement. So the leaf
+excess is **not only the missing γ** — most of it is the driver mismatch, a rice
+season's transpiration per unit leaf mass applied to a 340 cm³ pot of lettuce.
+**That is a warning about §4b**: the Ge 2017 half-life minimum at ≈7 d may be
+absorbing the same mismatch rather than measuring metabolism, so it should not be
+quoted as a prediction of an in-planta half-life without that caveat.
+
+**Metabolism, measured rather than fitted.** Kodešová quantified carbamazepine's
+four metabolites alongside the parent, so the parent fraction is a direct
+observation — the first in this repo:
+
+| | root | leaf |
+|---|---|---|
+| lamb's lettuce | 0.874 ± 0.030 | **0.169** ± 0.044 |
+| radish | 0.963 ± 0.005 | **0.810** ± 0.047 |
+| both | 0.919 | 0.489 |
+
+Two consequences. **Transformation is a shoot process**, and it is large — so
+`γ = 0` is simply wrong for carbamazepine even though its *soil* DT50 exceeds
+1000 d. Soil persistence does not imply plant persistence. And it is strongly
+**species-dependent** (0.17 vs 0.81 on the same compound, same soils, same
+harvest), so an in-planta half-life is not a compound property — which is exactly
+what fitting one to a single dataset assumes. Note also that the metabolites are
+not inert: in lamb's lettuce leaves the epoxide *exceeds* the parent (17000 vs
+6400 ng/g), so a parent-only model understates the total burden several-fold.
+
 ### 4g. A scoring artifact that affects every root number above
 
 `compare_to_obs(..., mode="equilibrium")` · `tests/test_li2019_schriever_tables.py`
@@ -694,52 +794,48 @@ per-row status and what is still missing.
 | **Hwang 2017** `10.1371/journal.pone.0172254` | **Run — §4c.** Its measured `Kd` converts the soil residue to a pore-water exposure, which is what makes it usable at all. Outcome is a *diagnosis, not a score*: the unstated fresh/dry basis spans the verdict, and the two readings fail on **opposite organs**. |
 | **Briggs 1983** `10.1002/ps.2780140506` | Shoot-distribution companion to the 1982 paper; not yet mined. |
 
-### Is the root partition too low? The evidence splits by lipophilicity
+### Is the root partition too low? No — the evidence splits by EXPOSURE ROUTE
 
-This looked, until the A4 SI arrived, like one accumulating result. It is not.
-The sightings do not agree, and where they disagree is informative.
+This looked, in turn, like one accumulating result, then like a lipophilicity
+split, and then like a contradiction between two hydroponic datasets. With Li
+2019's soil table (§4h) added it resolves into something simpler and more useful.
 
-| sighting | log Kow | direction and size | weight |
+| dataset | n | exposure | mean bias |
 |---|---|---|---|
-| **Li 2019** (§4d), 29 rows, 11 species | −0.5 → 5.4 | model **low**, and the deficit *grows* with Kow: −0.03 below 2, −0.69 above 4.5 | strongest — n = 29, every species the same way |
-| **Hwang 2017** (§4c), fresh-weight reading | 4.01 | measurement 2.8–10.4× **above** the `K_PW` ceiling | one compound, lettuce, unstated basis |
-| **the internal anchor** (§4d) | all | shipped `L·a` is 2.48× under Briggs' own | not a sighting — the *cause* of part of the above |
-| **Kodešová 2019** (§4f), 21 rows, 4 species | 2.25 | model **high** by ~1.5× — a **counter-example** | cleanest exposure in the repo |
-| **Brunetti 2021** calibrated pea `K_RW` = 13.3 | 2.25 | looked ~8× low; **now ~12× above a direct measurement of the same compound** | calibrated posterior, largely **superseded** by §4f |
+| Liu 2023 (rice) | 14 | hydroponic, **known solution** | −0.053 |
+| Li 2019 S2, `K_om` **experimental** | 62 | soil, **measured** conversion | **+0.033** |
+| Kodešová 2019 | 21 | soil, **measured** isotherm | +0.162 |
+| Li 2019 S2, `K_om` from a QSPR | 261 | soil, **estimated** conversion | +0.291 |
+| Li 2019 S1 | 29 | hydroponic | **−0.432** |
 
-Two of the five moved when the A4 SI arrived, and both moved the same way:
-**Brunetti is no longer evidence about the partition core** — §4f measures 1.10
-for the compound Brunetti calibrated 13.3 for — and **Kodešová actively opposes**
-the group at moderate lipophilicity.
+**Where the exposure is measured or directly known, the model is close to
+unbiased** — three independent tables, two exposure routes, bias −0.05 to +0.16.
+The large deviations sit where the exposure was *estimated* (+0.29) or, in the S1
+case, where it is known but the measurements themselves are the outlier.
 
-What survives is narrower, and better posed than "the root partition is too low".
-It is also, after an adversarial re-read (§3c/§3d of `li2019_rcf_apriori.py`), a
-**disagreement between the datasets rather than between the model and the world**:
+That reframes the open question twice over. It is not "is `K_PW` too low" — on the
+best-conditioned data it is about right. And most of the neutral path's apparent
+partition error is an **exposure-term** problem, which is the soil side, not the
+plant side.
 
-| band | Li 2019 | Liu 2023 (rice) | Kodešová 2019 |
-|---|---|---|---|
-| log Kow 2.0–3.5 | n=6, **−0.305** | n=2, −0.207 | n=21, **+0.162** |
-| log Kow 3.5–4.5 | n=11, **−0.462** | n=5, **−0.008** | — |
+**The S1 anomaly stays open.** It is the one hydroponic table with a known
+solution that disagrees, by −0.43, and no subgroup explains it: aquatic −0.39 vs
+terrestrial −0.46, organochlorines −0.51 vs everything else −0.35, the four rice
+rows −0.28, and all ten source studies negative. A plausible mechanism is
+root-surface sorption inflating short-exposure hydroponic RCFs, which would bite
+hardest for the hydrophobic compounds — consistent with the −0.51 vs −0.35 split
+— but that is a hypothesis, not a finding. On propiconazole, the one compound
+S1 and Liu 2023 both measured at log Kow 3.72, they report RCF **43.65**
+(lettuce) and **9.32** (rice): **4.7× apart**, against an anchor worth 2.4×.
 
-At 3.5–4.5 Li 2019 says the model is ~3× **low** and Liu — rice, the same
-hydroponic root-partition endpoint — says it is essentially **exact**. On
-**propiconazole, the one compound both measured** at log Kow 3.72, they report
-RCF **43.65** (lettuce) and **9.32** (rice): **4.7× apart**. The anchor is worth
-0.38 log = 2.4×, so *the spread between the measurements is larger than the
-parameter change being argued over*. No re-fitting inside this repo resolves that.
+**For the anchor decision this is now three tables against and one for**, and the
+one for is the hydroponic half of a paper whose own soil half says the opposite.
 
-So the honest statement of the open question is not "is the partition too low"
-but **"which of two hydroponic root datasets describes a rice root at log Kow
-> 3.5"** — and the only thing that settles it is a rice measurement in that
-range, which none of the four tables provides.
-
-A sorbing phase the neutral composition lacks remains the natural *physical*
-reading of a deficit that is absent at low Kow and large above it, and the PFAS
-side of this same repo carries exactly one (`f_cw·K_cw`, whole cell wall) with its
-coefficient listed as **GAP A**. A measured neutral-organic cell-wall partition
-coefficient would serve both paths at once. But note it is no longer needed to
-*explain* the Li 2019 shape — restoring the anchor already does that — so its
-value now is settling the *level* independently of either dataset.
+A sorbing phase the neutral composition lacks remains a live physical idea, and
+the PFAS side carries exactly one (`f_cw·K_cw`, **GAP A**) — a measured
+neutral-organic cell-wall coefficient would serve both paths. But it is no longer
+needed to explain any of the tables above, so it drops below the exposure-side
+work in priority.
 
 ## 6. Honest summary
 
@@ -763,10 +859,18 @@ value now is settling the *level* independently of either dataset.
   it reaches **0.191**, the best a-priori result here. That table also **reverses
   two open questions**: it supersedes the Brunetti disagreement and it votes
   against restoring the Briggs anchor, opposite to Li 2019.
-- **The anchor decision is not resolvable from the data now in hand**, and §5 says
-  why: Li 2019 and Liu 2023 disagree *with each other* at log Kow 3.5–4.5 by more
-  than the anchor is worth — 4.7× on the one compound both measured. Treat any
-  claim about the partition level above log Kow 3 as open.
+- **The apparent partition error is mostly an EXPOSURE-term problem** (§4h, §5):
+  on the three tables where the exposure is measured or directly known the bias is
+  −0.05 to +0.16, while the estimated-`K_om` rows sit at +0.29. Li 2019's own soil
+  half (n=376) runs the model HIGH, opposite to its hydroponic half (n=29) — so
+  the anchor decision is now three tables against and one for, and that one is the
+  outlier. Treat the S1 hydroponic deficit as an open anomaly, not as evidence
+  about `K_PW`.
+- **In-planta metabolism was measured for the first time** (§4i): carbamazepine's
+  leaf parent fraction is 0.49 on average and 0.17 in lamb's lettuce, despite a
+  soil DT50 > 1000 d. `γ = 0` is not a safe default for neutral organics, and a
+  half-life fitted to leaf data absorbs the rice-driver mismatch — which is a
+  caveat the Ge 2017 ≈7 d figure must now carry.
 - Both a-priori inputs are now measured directly and **both are biased low**:
   the partition by the offset above, and TSCF by **−0.221** on a 0–1 scale
   (§4e, the first test of TSCF in this repo without the plant model in between).
