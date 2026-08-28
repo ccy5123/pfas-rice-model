@@ -665,10 +665,15 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     `a=1.22` ⇒ product 0.0122, **2.48× below the anchor it claims** (the header itself says only the product is
     identifiable). Cost on Briggs' OWN barley rows: log10 RMSE **0.266 vs the anchor's 0.111**.
   - **NOT kinetic** (§3b, the PRE-REGISTERED confounder): the bias is **flat in exposure time** (−0.442 @1–3 d vs
-    −0.447 @>3 d; within logKow>3.5 alone −0.586 vs −0.517) and **monotone in log Kow** (−0.03→−0.31→−0.46→−0.69).
-    Li/Chiou's own `α_pt`(non-equilibrium) story predicts the opposite ⇒ RULED OUT; the deficit is in the **lipophilic
-    sorption term** (it vanishes at low Kow where the water floor `W` dominates). The anchor is worth +0.394 log vs an
-    observed −0.688 in the worst cell ⇒ accounts for **~57%**; the residual ~2× at high Kow is NOT lipid.
+    −0.447 @>3 d; within logKow>3.5 alone −0.586 vs −0.517), so Li/Chiou's own `α_pt`(non-equilibrium) story is
+    RULED OUT; the deficit is in the **lipophilic sorption term** (absent below logKow 2 where the water floor `W`
+    dominates, −0.3…−0.6 above). **TWO CORRECTIONS from an adversarial re-read (§3c)**: (a) the **monotone** ladder is
+    NOT robust — Namiki 2015 alone supplies 10/29 rows, all in the top two bins as 2 compounds × 5 species; collapsing
+    compound×study gives −0.030/−0.305/−0.576/**−0.501**, i.e. the top two bins go FLAT. What survives is the low-Kow
+    zero + all TEN studies biased the same way (−0.20…−0.89). (b) the earlier claim that "a flat lipid rise is the
+    wrong instrument for a Kow-dependent deficit" was **WRONG** — `K_PW=W+L·a·Kow^b` is water-floor-dominated at low
+    Kow, so scaling `L` IS inherently Kow-dependent (+0.045 log @logKow 1 → +0.391 @5), close to the observed shape and
+    worth 60–75% of it ⇒ **Li 2019 is genuine evidence FOR the anchor**.
   - **DEFAULT UNCHANGED — deliberately.** Restoring the anchor improves Li 2019 (0.598→0.331) and Ge 2017
     (0.783→0.651) but DEGRADES **Liu 2023, the only RICE table** (0.281→0.288); an intermediate `L≈0.015` fits all
     three and would make the path's one real claim (nothing is fitted) false. `ND.BRIGGS_ANCHORED_LIPID_FW` makes the
@@ -679,9 +684,13 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     1982 measures no lipid at all** (verified: he attributes the 0.82 floor to root WATER), so 1.00% and 2.47% are both
     inferences from a paper that measured neither; the 2.5× excess reads as **non-lipid sorption** (cell wall/lignin =
     the PFAS side's `f_cw·K_cw`, GAP A) which the neutral composition zeroes.
-  - **Root partition is too low — now FOUR sightings** (Brunetti pea `K_RW` ~8×, Hwang fw root 2.8–10.4×, Li 2019 n=29
-    offset, + the anchor as partial CAUSE). ⇒ a measured **neutral-organic cell-wall coefficient** would serve BOTH
-    paths and is now the top wet-lab item on the neutral side. `parameters.json`, `simulate()` and `reproduce_demo`
+  - **The DATASETS CONTRADICT EACH OTHER — this is the real obstacle (§3d)**: at logKow 3.5–4.5, Li 2019 says the
+    model is ~3× LOW (−0.462, n=11) while **Liu 2023 (rice, same hydroponic endpoint) says it is EXACT** (−0.008, n=5);
+    on **propiconazole, the one compound BOTH measured** (logKow 3.72) they report RCF **43.65 (lettuce) vs 9.32
+    (rice) = 4.7×**, i.e. the spread BETWEEN measurements EXCEEDS the 2.4× the anchor is worth. ⇒ the open question is
+    NOT "is the partition too low" but **"which hydroponic dataset describes a RICE root above logKow 3.5"**, and
+    nothing in-repo settles it — only a rice measurement in that range. A measured **neutral-organic cell-wall
+    coefficient** still serves BOTH paths (PFAS GAP A) and stays the top wet-lab item. `parameters.json`, `simulate()` and `reproduce_demo`
     (RMSE 0.029) UNCHANGED; the `subset` filter is inert on tables without the column so **Liu 0.281 / Ge 0.783 are
     bit-identical** (pinned by a test).
 - **Kodešová 2019 SI arrived (this session) — queue A4 CLOSED; the anchor vote flips and Brunetti is superseded**:

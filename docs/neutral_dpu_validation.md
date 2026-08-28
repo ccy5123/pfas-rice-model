@@ -440,11 +440,27 @@ under-predicts them. Splitting the 29 rows settles which story is right:
 | log Kow 3.5 – 4.5 | 11 | −0.462 |
 | log Kow > 4.5 | 8 | **−0.688** |
 
-**Flat in exposure time, monotone in log Kow** — and inside the high-Kow cell
-alone, longer exposures are no better (−0.586 under 3 d vs −0.517 over). So
-non-equilibrium is ruled out as the driver, and the deficit sits in the
-**lipophilic sorption term**: it vanishes at low Kow, where the water floor `W`
-dominates and there is no lipid term to be wrong about.
+**Flat in exposure time** — and inside the high-Kow cell alone, longer exposures
+are no better (−0.586 under 3 d vs −0.517 over). So non-equilibrium is ruled out
+as the driver, and the deficit sits in the **lipophilic sorption term**: it
+vanishes at low Kow, where the water floor `W` dominates and there is no lipid
+term to be wrong about.
+
+**Two caveats on the Kow ladder, added after an adversarial re-read (§3c of the
+script).** First, the *monotone* reading is not robust: **one study, Namiki 2015,
+supplies 10 of the 29 rows and all 10 sit in the top two bins**, as two compounds
+measured in five species each. Collapsing every compound × study pair to one row
+gives −0.030 / −0.305 / −0.576 / **−0.501** — the top two bins go **flat**, not
+still rising. What does survive is that the bias is absent below log Kow 2 and
+−0.3 to −0.6 above it, and that **all ten source studies are biased the same
+way** (−0.20 to −0.89), so it is not one lab's artifact. Second, and more
+importantly for the decision below: an earlier version of this section argued
+that a flat increase in `L` was "the wrong instrument" for a Kow-dependent
+deficit. **That was wrong.** `K_PW = W + L·a·Kow^b` is dominated by the water
+floor at low Kow, so scaling `L` is *inherently* Kow-dependent — restoring the
+anchor shifts predictions by +0.045 log at log Kow 1 and +0.391 at log Kow 5,
+which is close to the shape of the observed bias and delivers 60–75 % of it.
+**So this table is genuine evidence in favour of restoring the anchor.**
 
 **Part of that deficit is internal to the model, not a disagreement with the world.**
 `neutral_dpu` anchors on Briggs' RCF, whose lipid term is `L·a = 10^−1.52 =
@@ -651,25 +667,34 @@ Two of the five moved when the A4 SI arrived, and both moved the same way:
 for the compound Brunetti calibrated 13.3 for — and **Kodešová actively opposes**
 the group at moderate lipophilicity.
 
-What survives is narrower, and better posed than "the root partition is too low":
+What survives is narrower, and better posed than "the root partition is too low".
+It is also, after an adversarial re-read (§3c/§3d of `li2019_rcf_apriori.py`), a
+**disagreement between the datasets rather than between the model and the world**:
 
-> **The deficit is confined to the lipophilic end.** Below log Kow ≈ 2 there is
-> essentially no bias (Li 2019: −0.03; Kodešová at 2.25 is *positive*). Above 4.5
-> it reaches −0.69. That is the signature of a missing **sorption** term, not a
-> wrong water floor and not a global scale error — and §4d already showed it is
-> not kinetic either.
+| band | Li 2019 | Liu 2023 (rice) | Kodešová 2019 |
+|---|---|---|---|
+| log Kow 2.0–3.5 | n=6, **−0.305** | n=2, −0.207 | n=21, **+0.162** |
+| log Kow 3.5–4.5 | n=11, **−0.462** | n=5, **−0.008** | — |
 
-A sorbing phase the neutral composition does not have is the natural reading, and
-the PFAS side of this same repo carries exactly one (`f_cw·K_cw`, whole cell wall)
-and lists its coefficient as **GAP A**. A measured neutral-organic cell-wall
-partition coefficient would serve both paths at once and remains the highest-value
-wet-lab item on this side, ahead of the in-planta half-lives.
+At 3.5–4.5 Li 2019 says the model is ~3× **low** and Liu — rice, the same
+hydroponic root-partition endpoint — says it is essentially **exact**. On
+**propiconazole, the one compound both measured** at log Kow 3.72, they report
+RCF **43.65** (lettuce) and **9.32** (rice): **4.7× apart**. The anchor is worth
+0.38 log = 2.4×, so *the spread between the measurements is larger than the
+parameter change being argued over*. No re-fitting inside this repo resolves that.
 
-But note what §4f costs that story: a missing sorption term should not make the
-model run *high* anywhere, and at log Kow 2.25 it does. Either the water floor is
-slightly generous for these species, or the ODE's xylem drain is too weak near the
-TSCF peak. Both are open, and neither is addressed by adding lipid — which is
-also why raising `L` to fix the lipophilic end would be the wrong instrument.
+So the honest statement of the open question is not "is the partition too low"
+but **"which of two hydroponic root datasets describes a rice root at log Kow
+> 3.5"** — and the only thing that settles it is a rice measurement in that
+range, which none of the four tables provides.
+
+A sorbing phase the neutral composition lacks remains the natural *physical*
+reading of a deficit that is absent at low Kow and large above it, and the PFAS
+side of this same repo carries exactly one (`f_cw·K_cw`, whole cell wall) with its
+coefficient listed as **GAP A**. A measured neutral-organic cell-wall partition
+coefficient would serve both paths at once. But note it is no longer needed to
+*explain* the Li 2019 shape — restoring the anchor already does that — so its
+value now is settling the *level* independently of either dataset.
 
 ## 6. Honest summary
 
@@ -692,8 +717,11 @@ also why raising `L` to fix the lipophilic end would be the wrong instrument.
   concentration plus the paper's own measured isotherm, same pot, same harvest)
   it reaches **0.191**, the best a-priori result here. That table also **reverses
   two open questions**: it supersedes the Brunetti disagreement and it votes
-  against restoring the Briggs anchor, opposite to Li 2019. The partition
-  deficit is therefore **not global** — it is confined to log Kow above ~3.
+  against restoring the Briggs anchor, opposite to Li 2019.
+- **The anchor decision is not resolvable from the data now in hand**, and §5 says
+  why: Li 2019 and Liu 2023 disagree *with each other* at log Kow 3.5–4.5 by more
+  than the anchor is worth — 4.7× on the one compound both measured. Treat any
+  claim about the partition level above log Kow 3 as open.
 - Both a-priori inputs are now measured directly and **both are biased low**:
   the partition by the offset above, and TSCF by **−0.221** on a 0–1 scale
   (§4e, the first test of TSCF in this repo without the plant model in between).

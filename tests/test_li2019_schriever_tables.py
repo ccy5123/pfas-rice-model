@@ -157,12 +157,16 @@ def test_default_composition_is_untouched_by_the_new_constant():
     assert comps["root"].f_PL == pytest.approx(0.01 / (1.0 - 0.90))
 
 
-def test_partition_bias_is_flat_in_exposure_and_grows_with_kow():
-    """The diagnosis in section 3b, pinned. The competing explanation for the
-    Li 2019 offset is non-equilibrium (Li et al.'s own alpha_pt), which predicts
-    the bias shrinks with exposure time. It does not, and it grows with log Kow
-    instead -- which is what puts the deficit in the sorption term. If a future
-    change ever flips either of those, the recorded conclusion is wrong."""
+def test_partition_bias_is_flat_in_exposure_and_absent_at_low_kow():
+    """The part of section 3b that is ROBUST, pinned. The competing explanation
+    for the Li 2019 offset is non-equilibrium (Li et al.'s own alpha_pt), which
+    predicts the bias shrinks with exposure time; it does not. And the bias is
+    absent below log Kow 2, where the water floor dominates, but large above --
+    which is what puts the deficit in the sorption term.
+
+    NOT pinned here, deliberately: strict monotonicity across all four bins. It
+    holds on the raw rows but not once one study's replicates are collapsed
+    (section 3c), so asserting it would freeze an over-claim into the suite."""
     rows = [r for r in _rows(LI2019) if r["subset"] == "apriori"]
     W = ND.RICE_WATER["root"]
     La = ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
@@ -178,9 +182,29 @@ def test_partition_bias_is_flat_in_exposure_and_grows_with_kow():
 
     by_kow = [bias([r for r in rows if lo <= float(r["log_kow"]) < hi])
               for lo, hi in ((-1, 2), (2, 3.5), (3.5, 4.5), (4.5, 9))]
-    assert all(b > nxt for b, nxt in zip(by_kow, by_kow[1:]))   # monotone downward
     assert by_kow[0] > -0.1                   # no bias where the water floor rules
-    assert by_kow[-1] < -0.5                  # large where the lipid term rules
+    assert all(b < -0.25 for b in by_kow[1:])  # large wherever the lipid term rules
+
+    # 3c: collapse each compound x study to one row -- the top two bins go flat,
+    # so the ladder is not monotone under a fair count. Pinned so the weaker,
+    # correct reading is the one the suite defends.
+    seen, reps = set(), []
+    for r in rows:
+        key = (r["compound"], r["source_study"])
+        if key not in seen:
+            seen.add(key)
+            reps.append(r)
+    top = [bias([r for r in reps if lo <= float(r["log_kow"]) < hi])
+           for lo, hi in ((3.5, 4.5), (4.5, 9))]
+    assert top[1] > top[0]                    # NOT still rising once collapsed
+
+    # 3c(ii): raising L is Kow-dependent by construction, so it is not the wrong
+    # shape of fix -- the earlier claim that it was is what this pins against.
+    La = ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
+    Lb = ND.BRIGGS_ANCHORED_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
+    shift = [np.log10((W + Lb * 10 ** (ND.RCF_SLOPE * k))
+                      / (W + La * 10 ** (ND.RCF_SLOPE * k))) for k in (1.0, 5.0)]
+    assert shift[0] < 0.1 and shift[1] > 0.35
 
 
 # --------------------------------------------------------------------------

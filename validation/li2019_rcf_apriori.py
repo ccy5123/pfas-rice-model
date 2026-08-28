@@ -39,13 +39,18 @@
 # of the point: the shipped composition fits the 18 barley rows the RCF QSPR was
 # fitted to at log10 RMSE 0.266, where the anchor itself reaches 0.111.
 #
-# WHY THE DEFAULT IS NOT CHANGED HERE. Restoring the anchor improves two of the
-# three tables and DEGRADES the third -- and the third, Liu 2023, is the only one
-# measured on rice. An intermediate L would fit all three, but fitting L is
-# exactly what this path must not do: the neutral path's whole claim is that
-# K_PW and TSCF come from log Kow with nothing tuned. So the anchor is offered as
-# an opt-in (`neutral_dpu.BRIGGS_ANCHORED_LIPID_FW`), the discrepancy is pinned
-# by a test, and the promotion decision is left to the user.
+# WHY THE DEFAULT IS NOT CHANGED HERE -- and read 3c and 3d before using this
+# script to argue either way, because they weaken the first version of this file.
+# 3c: the monotone Kow ladder in 3b is partly ONE study's replicates (Namiki 2015
+# supplies 10 of the 29 rows, all in the top two bins), and raising L is a
+# correction of close to the RIGHT shape, not the wrong instrument as first
+# claimed -- so this table is genuine evidence FOR the anchor. 3d: what actually
+# blocks the decision is that Li 2019 and Liu 2023 disagree with EACH OTHER at
+# log Kow 3.5-4.5 by more than the anchor is worth (on propiconazole, the one
+# compound both measured, they differ 4.7x). The obstacle is between the
+# datasets, not between the model and the data, so no re-fitting inside this repo
+# resolves it. The anchor stays an opt-in (`neutral_dpu.BRIGGS_ANCHORED_LIPID_FW`),
+# the discrepancy is pinned by a test, and the decision is left to the user.
 #
 #   python validation/li2019_rcf_apriori.py            # full run (~3 min)
 #   python validation/li2019_rcf_apriori.py --fast     # skip the ODE scan
@@ -243,6 +248,128 @@ def section3b_where_the_bias_lives():
     print("   come from the lipid fraction at all.")
 
 
+def section3c_how_robust_is_that(drv=None):
+    """How much of section 3b survives an adversarial look? Two things do not.
+
+    Written after the first version of this script over-claimed. Kept as its own
+    section so the weakening is visible rather than quietly edited into 3b.
+    """
+    print("\n" + "=" * 84)
+    print("3c. HOW ROBUST IS THAT — two ways the section-3b reading is weaker")
+    print("=" * 84)
+    rows = []
+    with open(LI2019, newline="") as f:
+        for r in csv.DictReader(x for x in f if not x.lstrip().startswith("#")):
+            if r.get("subset") == "apriori":
+                rows.append(r)
+    W = ND.RICE_WATER["root"]
+    La = ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
+
+    def bias(rs):
+        return (len(rs), float(np.mean([
+            np.log10(W + La * 10.0 ** (ND.RCF_SLOPE * float(r["log_kow"])))
+            - np.log10(float(r["value"])) for r in rs])))
+
+    print("   (i) THE REPLICATE STRUCTURE. One study, Namiki 2015, supplies 10 of the")
+    print("   29 rows -- and all 10 sit in the two highest Kow bins, as the SAME two")
+    print("   compounds measured in five species each. Collapsing every")
+    print("   compound x study pair to one row is the fair count:\n")
+    seen, reps = set(), []
+    for r in rows:
+        k = (r["compound"], r["source_study"])
+        if k not in seen:
+            seen.add(k)
+            reps.append(r)
+    bands = ((-1, 2, "< 2"), (2, 3.5, "2 - 3.5"), (3.5, 4.5, "3.5 - 4.5"), (4.5, 9, "> 4.5"))
+    print(f"   {'logKow':>10}{'all rows':>20}{'one row per cmpd x study':>28}")
+    for lo, hi, lab in bands:
+        a = bias([r for r in rows if lo <= float(r["log_kow"]) < hi])
+        b = bias([r for r in reps if lo <= float(r["log_kow"]) < hi])
+        print(f"   {lab:>10}   n={a[0]:2d}  bias {a[1]:+.3f}      n={b[0]:2d}  bias {b[1]:+.3f}")
+    print("\n   The MONOTONE ladder does not survive: collapsed, the top two bins are")
+    print("   flat (-0.576, -0.501) rather than still rising. What DOES survive is the")
+    print("   part the diagnosis actually needs -- essentially no bias below log Kow 2,")
+    print("   and -0.3 to -0.6 above it -- plus the fact that all TEN studies are")
+    print("   biased the same way, so it is not one lab's artifact:\n")
+    for s in sorted({r["source_study"] for r in rows}):
+        rs = [r for r in rows if r["source_study"] == s]
+        n, b = bias(rs)
+        lk = [float(r["log_kow"]) for r in rs]
+        print(f"      {s:30s} n={n:2d}  logKow {min(lk):5.2f}-{max(lk):5.2f}  bias {b:+.3f}")
+
+    print("\n   (ii) RAISING L IS *NOT* THE WRONG SHAPE OF FIX. An earlier version of")
+    print("   this file argued a flat lipid increase could not explain a Kow-dependent")
+    print("   deficit. That was wrong: K_PW = W + L*a*Kow^b is dominated by the water")
+    print("   floor W at low Kow, so scaling L is inherently Kow-dependent --")
+    Lb = ND.BRIGGS_ANCHORED_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
+    print(f"\n   {'logKow':>8}{'shipped':>10}{'anchored':>10}{'shift':>9}{'observed bias':>15}")
+    for lk, lab in ((1.0, "< 2"), (2.25, "2 - 3.5"), (4.0, "3.5 - 4.5"), (5.0, "> 4.5")):
+        a = W + La * 10.0 ** (ND.RCF_SLOPE * lk)
+        b = W + Lb * 10.0 ** (ND.RCF_SLOPE * lk)
+        band = next(x for x in bands if x[2] == lab)
+        obs = bias([r for r in reps if band[0] <= float(r["log_kow"]) < band[1]])[1]
+        print(f"   {lk:>8.2f}{a:>10.2f}{b:>10.2f}{np.log10(b / a):>+9.3f}{obs:>+15.3f}")
+    print("\n   -- and that shift has close to the RIGHT shape for the observed bias,")
+    print("   delivering roughly 60-75% of it. So Li 2019 is genuine evidence FOR")
+    print("   restoring the anchor, and the case against it has to rest on the other")
+    print("   datasets, not on the shape of the correction.")
+
+
+def section3d_the_datasets_contradict(drv=None):
+    """The actual obstacle to deciding: two hydroponic root tables disagree with
+    each other, at the same lipophilicity, by more than the anchor is worth."""
+    print("\n" + "=" * 84)
+    print("3d. THE DATASETS CONTRADICT EACH OTHER — which is why this is not decidable")
+    print("=" * 84)
+    W = ND.RICE_WATER["root"]
+    La = ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
+
+    def load(p, sub=None, conv=1.0):
+        with open(p, newline="") as f:
+            rs = [r for r in csv.DictReader(x for x in f
+                                            if not x.lstrip().startswith("#"))
+                  if r.get("compound")]
+        if sub:
+            rs = [r for r in rs if r.get("subset") == sub]
+        return [(float(r["log_kow"]), float(r["value"]) * conv, r) for r in rs]
+
+    def bias(t):
+        if not t:
+            return 0, float("nan")
+        return len(t), float(np.mean([np.log10(W + La * 10.0 ** (ND.RCF_SLOPE * lk))
+                                      - np.log10(v) for lk, v, _ in t]))
+
+    li = load(LI2019, "apriori")
+    liu = load(LIU2023)
+    kod = load(os.path.join(ROOT_DIR, "data_obs", "neutral_obs_kodesova2019.csv"),
+               conv=1.0 - W)
+    print("   Model bias by dataset and Kow band (negative = model LOW):\n")
+    print(f"   {'band':>12}{'Li 2019':>18}{'Liu 2023 (rice)':>20}{'Kodesova 2019':>18}")
+    for lo, hi, lab in ((2.0, 3.5, "2 - 3.5"), (3.5, 4.5, "3.5 - 4.5")):
+        cells = []
+        for t in (li, liu, kod):
+            n, b = bias([x for x in t if lo <= x[0] < hi])
+            cells.append(f"n={n:2d} {b:+.3f}" if n else "     --   ")
+        print(f"   {lab:>12}{cells[0]:>18}{cells[1]:>20}{cells[2]:>18}")
+    print("\n   At 3.5-4.5 Li 2019 says the model is ~4x LOW and Liu -- rice, the same")
+    print("   hydroponic endpoint -- says it is essentially EXACT. Both cannot be")
+    print("   accommodated by any single value of L.")
+    shared = {c.lower() for _, _, r in li for c in [r["compound"]]} & \
+             {r["compound"].lower() for _, _, r in liu}
+    for c in sorted(shared):
+        print(f"\n   The clearest case is the one compound both measured, {c}:")
+        for nm, t in (("Li 2019 ", li), ("Liu 2023", liu)):
+            for lk, v, r in t:
+                if r["compound"].lower() == c:
+                    print(f"      {nm}  log Kow {lk:.2f}   RCF {v:7.2f}   "
+                          f"({r.get('species', 'rice')})")
+    print("\n   ~4.7x apart, same compound, same lipophilicity, both hydroponic root")
+    print("   partitions. The anchor is worth 0.38 log = 2.4x, so the disagreement")
+    print("   BETWEEN the measurements is larger than the parameter change being")
+    print("   argued over. That is the real obstacle, and no amount of re-fitting")
+    print("   inside this repo resolves it.")
+
+
 def section4_scan(drv, fast=False):
     print("\n" + "=" * 84)
     print("4. WHAT MOVES IF THE ROOT LIPID MOVES — all three tables, full ODE")
@@ -280,24 +407,29 @@ def main(fast=False):
     section2_lipid_table()
     section3_anchor()
     section3b_where_the_bias_lives()
+    section3c_how_robust_is_that()
+    section3d_the_datasets_contradict()
     section4_scan(drv, fast=fast)
     print("\n" + "=" * 84)
     print("VERDICT")
     print("=" * 84)
     print(f"   a-priori log10 RMSE on 29 out-of-sample rows = {rmse:.3f}, against 0.281")
-    print("   for Liu 2023 (n=14, rice, narrower Kow range). The error is NOT scatter:")
-    print("   every one of the 11 species is biased the same way, low, so this is one")
-    print("   offset rather than eleven disagreements.")
-    print("   That offset is traced in section 3 to the model's own composition, and")
-    print("   section 4 shows correcting it helps two tables and hurts the rice one.")
-    print("   DEFAULT UNCHANGED. Raising L to fit would turn the neutral path's one")
-    print("   genuine claim -- that nothing is fitted -- into a fitted result.")
-    print("   The physical reading is that the excess sorption Briggs' coefficient")
-    print("   carries is NOT lipid: it is the non-lipid solid phase (cell wall,")
-    print("   lignin) that this repo's PFAS side models explicitly as f_cw*K_cw and")
-    print("   documents as GAP A, and that the neutral composition sets to zero.")
-    print("   Closing it needs a measured neutral-organic cell-wall coefficient,")
-    print("   not a larger lipid fraction.")
+    print("   for Liu 2023 (rice, narrower Kow range) and 0.191 for Kodesova 2019.")
+    print("   What is SOLID: the error is one direction, not scatter -- all 11 species")
+    print("   and all 10 source studies are biased low -- and it is absent below log")
+    print("   Kow 2, where the water floor dominates and there is no lipid term to be")
+    print("   wrong about. Section 3b rules out non-equilibrium as the driver.")
+    print("   What is NOT: the monotone ladder in 3b is partly one study's replicates")
+    print("   (3c), and raising L is a correction of close to the right SHAPE, not the")
+    print("   wrong instrument -- so this table is genuine evidence FOR the anchor.")
+    print("   Why the decision still does not follow: section 3d. Li 2019 and Liu 2023")
+    print("   disagree with EACH OTHER at 3.5-4.5 by more than the anchor is worth,")
+    print("   and on the one compound both measured they differ 4.7x. The obstacle is")
+    print("   between the datasets, not between the model and the data.")
+    print("   DEFAULT UNCHANGED, and the open question is now correctly posed: it is")
+    print("   not 'is the partition too low' but 'which of two hydroponic root")
+    print("   datasets describes a rice root'. A rice measurement at log Kow > 3.5")
+    print("   would settle it; nothing inside this repo can.")
     return rmse
 
 
