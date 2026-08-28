@@ -807,6 +807,14 @@ which is the honest outcome: the tables disagree more clearly, not less.
 mode is reported rather than switched. Which basis should headline the neutral
 path is a one-line decision left open with the anchor question.
 
+**A consequence worth stating plainly: this document quotes both bases, in
+different sections.** §4a, §4d and §4f are ODE-basis; §4h's soil numbers are
+equilibrium-basis, because `li2019_soil_table.py` scores `k_pw` directly with no
+ODE. Neither is wrong, but an RMSE here means nothing without its mode — the same
+table reads **0.549 → 0.670** (ODE) or **0.639 → 0.873** (equilibrium) across the
+two lipid readings. `--lipid-source both --mode …` now prints either, so the
+labels can be checked rather than trusted.
+
 ### What these numbers do not settle
 
 Two studies, one crop, seventeen compound-tissue pairs. The **grain compartment is
@@ -828,7 +836,7 @@ per-row status and what is still missing.
 | **Li 2019** `10.1016/j.envint.2019.02.020` | **Used — §4d**, but not for what it was requested for. Asked for a rice root lipid (queue A1); **contains no rice**. Delivered instead the lipid's operational definition verified at source (fresh weight, 90 % root water) plus Table S1's 48 hydroponic RCF values, now the repo's second a-priori partition test. |
 | **Schriever 2020 SI** `10.1016/j.scitotenv.2020.136667` | **Used — §4e.** Queue A3 closed. All 97 TSCF values transcribed, letting the TSCF QSPR be tested with no plant model in between for the first time. |
 | **Rosado 2022** `10.3389/fpls.2022.868319` | **Read, deliberately not adopted.** Queue A2. Confirms rice straw lipophilic extractives at **3.4 ± 0.1 % dry basis** (dichloromethane), stated explicitly. Not interchangeable with the model's fresh-weight octanol-equivalent `L`, and converting it needs a straw fresh/dry ratio the paper does not give. |
-| **Kodešová 2019** `10.1007/s11356-019-04333-9` | **Used — §4f.** Queue A4, closed: the SI arrived. Carbamazepine root partition, 4 plants × 3 soils, with the exposure derived from the paper's own measured soil concentrations and Freundlich isotherms. **log10 RMSE 0.191 — the best a-priori result in the repo** — and it does two things to the open questions: it **supersedes the Brunetti sighting** (measures 1.10 where Brunetti calibrated 13.3 for the same compound) and it **votes against restoring the Briggs anchor**. |
+| **Kodešová 2019** `10.1007/s11356-019-04333-9` | **Used — §4f.** Queue A4, closed: the SI arrived. Carbamazepine root partition, 4 plants × 3 soils, with the exposure derived from the paper's own measured soil concentrations and Freundlich isotherms. **log10 RMSE 0.191 on the ODE basis, 0.237 on the equilibrium basis** — and it does two things to the open questions: it **supersedes the Brunetti sighting** (measures 1.10 where Brunetti calibrated 13.3 for the same compound) and it **votes against restoring the Briggs anchor**. It is *not* the repo's best a-priori result: §4g shows the 0.191 was flattered by the ODE scoring artifact, which peaks almost exactly at this compound's log Kow 2.25. Liu 2023 at **0.206** is. |
 | **"McFarlane 1987"** | **Wrong paper.** The supplied file is a constructed-wetland nitrogen isotope study — no bromacil, no plant uptake. Queue A5 remains open. |
 | **Deng 2018 / Shi 2025 / Li 2021 / Kondo 2019 / Boulange 2015 / Phong 2008** | **Screened out for queue C1** (a neutral compound in rice **grain** under root-only exposure). Deng samples exactly the right matrices — soil, straw, hull, brown rice — but reports **all final residues below the detection limit**. The rest are subcellular-uptake or water/soil dissipation studies with no grain compartment. The grain remains the one entirely untested compartment. |
 | **Gu 2017 / Parida 2021 / Wang 2024 / Li 2019 (PeerJ)** | **Screened out for queue C2** (tissue specific surface area). All are **root** morphology, and the air-exchange term takes no root contribution at all; root area enters this model only through `a_R`, which is lumped into `kappa_d` and is documented as non-separable without inhibitor data. Parida's specific root area is figure-only and dry-basis. |
@@ -886,6 +894,42 @@ neutral-organic cell-wall coefficient would serve both paths. But it is no longe
 needed to explain any of the tables above, so it drops below the exposure-side
 work in priority.
 
+### The decision, and why it is a mode rather than a value
+
+**Settled: the default stays `lipid_source="measured"` (`L_root` = 1 % fw).** The
+reason is *"the evidence no longer supports moving"*, **not** *"1 % is validated
+for rice"* — it is not. No rice organ lipid has been measured; the root value is
+corroborated by measured *cereal* roots (Li 2019: barley 1.00, wheat 1.10–1.14,
+maize 0.53 %) and stem/leaf are still Trapp's soybean figures.
+
+The alternative is kept **runnable, not deleted**, because the question is open
+rather than answered:
+
+```bash
+python validation/neutral_dpu_validation.py --lipid-source both   # add --mode equilibrium
+```
+
+| table | n | ODE: measured / anchor | better | equilibrium: measured / anchor |
+|---|---|---|---|---|
+| Liu 2023 (rice) | 14 | **0.281** / 0.288 | measured | **0.206** / 0.286 |
+| Ge 2017 (per-organ) | 6 | 0.783 / **0.651** | anchor | 0.783 / **0.651** |
+| Li 2019 hydroponic | 29 | 0.598 / **0.331** | anchor | 0.541 / **0.295** |
+| Kodešová 2019 | 21 | **0.191** / 0.216 | measured | **0.237** / 0.410 |
+| Li 2019 soil | 376 | **0.549** / 0.670 | measured | **0.639** / 0.873 |
+
+Ge has no root rows, so the basis does not apply to it — the two columns agree.
+
+Three points the raw tally hides. The anchor **raises** predicted root uptake, and
+the tables it damages are the ones where the model **already runs high** — so the
+two directions are not symmetric. The largest table it damages (n=376) is the
+**soil half of the same paper** as the one it most improves. And only the product
+`L·a` is identifiable, so "raise `L` to 0.0247" and "raise `a` to 3.02" are the
+same model — which means *"don't fit the measured `L`"* is **not** an argument
+against the anchor. Note `a = 1.22` has no citation anywhere in this repo.
+
+What would settle it is named in §5: a hydroponic **rice** root RCF above
+log Kow 3.5.
+
 ## 6. Honest summary
 
 - The neutral path is **implemented**, is the published Briggs core (verified to
@@ -905,9 +949,23 @@ work in priority.
   is what happens when the range and the species count go up.
 - On the **cleanest exposure in the repo** (Kodešová 2019, §4f — measured soil
   concentration plus the paper's own measured isotherm, same pot, same harvest)
-  it reaches **0.191**, the best a-priori result here. That table also **reverses
-  two open questions**: it supersedes the Brunetti disagreement and it votes
-  against restoring the Briggs anchor, opposite to Li 2019.
+  it reaches **0.191**. That table **reverses two open questions**: it supersedes
+  the Brunetti disagreement and it votes against restoring the Briggs anchor,
+  opposite to Li 2019. It is **not** the best a-priori result here, though it was
+  briefly recorded as such: §4g shows the 0.191 was flattered by the ODE scoring
+  artifact, whose Kow-dependent discount peaks almost exactly at carbamazepine's
+  log Kow 2.25. On the basis these tables actually measure it is **0.237**, and
+  **Liu 2023 at 0.206** is the best.
+- **Every number here is on `lipid_source="measured"`**, the default — and on
+  `mode="ode"` *except* §4h's soil numbers, which are equilibrium-basis. Both are
+  named modes rather than buried constants precisely because neither choice is
+  settled: `neutral_dpu.LIPID_SOURCES` selects the root-lipid reading (1 % fw
+  measured vs Briggs' implied 2.47 %, up to 2.5× apart for lipophilic compounds)
+  and `compare_to_obs(mode=…)` selects the scoring basis. **An RMSE in this
+  document means nothing without both labels** — the same soil table reads
+  0.549 → 0.670 or 0.639 → 0.873 depending only on the basis. Run
+  `validation/neutral_dpu_validation.py --lipid-source both [--mode equilibrium]`
+  to check any of it rather than taking this document's word for it.
 - **The apparent partition error is mostly an EXPOSURE-term problem** (§4h, §5):
   on the three tables where the exposure is measured or directly known the bias is
   −0.05 to +0.16, while the estimated-`K_om` rows sit at +0.29. Li 2019's own soil
@@ -934,14 +992,23 @@ work in priority.
   and 0.783 above are unaffected, and so is every PFAS number.
 - **Hwang 2017 (§4c) is a diagnosis, not a score.** Its RMSEs (0.610 fw / 0.726 dw)
   are not validation results: the unstated fresh/dry basis spans the verdict and
-  the two readings fail on opposite organs. Its value is that it **independently
-  corroborates the Brunetti discrepancy below** — for lipophilic compounds in
-  soil-grown plants the Briggs root partition looks too low, now seen in two
-  unrelated datasets rather than one.
+  the two readings fail on opposite organs. When it was run it looked like an
+  independent corroboration of the Brunetti discrepancy — a second sighting of
+  "the Briggs root partition is too low for lipophilic compounds in soil-grown
+  plants". **§4f then superseded Brunetti**, so that synthesis no longer stands:
+  Hwang's fw root exceedance is now a single unresolved sighting whose basis is
+  itself unstated, not half of a pattern.
 - Remaining gaps: the **grain compartment is untested** (no suitable dataset
-  exists); rice-specific organ lipid contents are still borrowed from soybean;
-  **tissue specific surface areas** are ratios, not measurements, which bounds how
-  far an absolute volatilisation flux can be trusted; and the **root partition for
-  lipophilic compounds** — the Brunetti `K_RW` 13.3 vs a Briggs `K_PW` of ~1.0 for
-  carbamazepine, now joined by Hwang's 3–10× root exceedance — is an open question
-  against the partition core itself, and after §4c the best-evidenced one.
+  exists); the root lipid is corroborated by measured *cereal* roots but stem and
+  leaf are still Trapp's soybean figures, and no rice organ lipid has been
+  measured; **tissue specific surface areas** are ratios, not measurements, which
+  bounds how far an absolute volatilisation flux can be trusted.
+- The **open anomaly is now Li 2019's hydroponic half** (§4d, §5), not the
+  partition core. Earlier revisions of this document nominated the Brunetti
+  `K_RW` 13.3 vs Briggs ≈1.0 disagreement as the best-evidenced open question
+  against `K_PW`; **§4f retired that** by measuring 1.10 for the same compound,
+  and §4h then showed the deficit is confined to one *exposure route* rather than
+  being a property of the partition. What is left unexplained is a −0.43 offset
+  on 29 hydroponic rows that no subgroup accounts for, against a rice table
+  (Liu) that is unbiased over the same range. Settling it needs a hydroponic
+  **rice** root RCF above log Kow 3.5 — the one cell no table in hand covers.

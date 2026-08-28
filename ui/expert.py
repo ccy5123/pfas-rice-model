@@ -313,6 +313,16 @@ def render(cfg):
                                     "the small terminal grain hard; it is a statement about "
                                     "assuming unrestricted loading, not a prediction.")
 
+        n_lipid = st.radio(
+            "root lipid reading", ["measured", "briggs_anchor"], horizontal=True,
+            help="An OPEN question, so it is a switch rather than a constant. "
+                 "'measured' = 1% fresh weight, from measured cereal roots (the default, and "
+                 "what every published number here is on). 'briggs_anchor' = 2.47%, the lipid "
+                 "term Briggs' 1982 regression implies — he measured no lipid at all. They are "
+                 "2.5x apart for lipophilic compounds and ~equal below log Kow 1. Evidence is "
+                 "3 measured tables to 1 against the anchor; see docs/neutral_dpu_validation.md "
+                 "section 5.")
+
         n_air = st.checkbox("plant–air exchange (volatilisation + gaseous uptake)", value=False,
                             help="Off by default: it needs K_AW and a molar mass, which the strict "
                                  "Kow-only a-priori run does not use. Identically zero at K_AW = 0.")
@@ -333,7 +343,7 @@ def render(cfg):
                 float(n_logkow), name=(n_name or "neutral"), Cwo=Cwo_const, season=season,
                 MW=n_mw, K_AW=float(n_kaw), half_life=(float(n_hl) or None),
                 tscf_model=n_tscf, phloem=n_phloem, air=n_air, air_kw=air_kw,
-                biomass=biomass, measured_forcing=measured)
+                lipid_source=n_lipid, biomass=biomass, measured_forcing=measured)
         except ValueError as e:                       # e.g. air enabled without a molar mass
             st.error(str(e))
             nres = None

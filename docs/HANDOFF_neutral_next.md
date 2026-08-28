@@ -35,12 +35,17 @@ unbiased on three independent tables; the large deviations sit where the exposur
 | Li 2019 soil, `K_om` from a QSPR | 261 | soil, **estimated** | +0.291 |
 | Li 2019 hydroponic | 29 | hydroponic, known | **−0.432** ← the open anomaly |
 
-**The anchor decision is effectively settled by evidence, not by choice.** Li 2019's
+**The anchor decision is now CLOSED — and it closed as a mode, not a value.** Li 2019's
 hydroponic half was the only thing arguing for restoring the Briggs anchor; its own
-**soil half, twelve times larger, argues the opposite**, and restoring the anchor makes
-that table much worse (+0.645, RMSE 0.639 → 0.873). Three tables against, one for.
-**Recommendation: keep `L = 0.01`, and record that the reason is "no evidence to
-move", not "0.01 is validated".** The user has not ruled on this — see §3 item 1.
+**soil half, twelve times larger, argues the opposite**. Three tables against, one for.
+The default stays **`lipid_source="measured"` (`L` = 0.01)**, recorded with the reason
+*"no evidence to move"*, **not** *"0.01 is validated"* — and the alternative is kept
+runnable as a named mode rather than deleted, because the question is open, not
+answered. Reproduce the whole trade-off with one command:
+
+```bash
+python validation/neutral_dpu_validation.py --lipid-source both   # add --mode equilibrium
+```
 
 ---
 
@@ -59,6 +64,23 @@ move", not "0.01 is validated".** The user has not ruled on this — see §3 ite
 
 Earlier on the same arc: `d8e7f9a` air exchange, `97dbe75` Hwang, `50b5586`
 `model_api.simulate_neutral`, `c6e9d8a` the Expert neutral tab, `494acc4` the queue.
+
+**Then, closing the two open decisions**, the root-lipid anchor became a named mode
+`lipid_source="measured"|"briggs_anchor"` in the repo's own idiom (`f_xy_source`,
+`cwo_profile`, `biomass`, `tscf_model`), threaded `rice_compartments` →
+`neutral_dpu.simulate_neutral` → `model_api.simulate_neutral` → `compare_to_obs`, with
+`compare_lipid_sources()` / `--lipid-source both` scoring all five shipped tables under
+both readings. Nothing moved (Liu 0.281 / Ge 0.783 / `reproduce_demo` 0.029 re-verified).
+The two prior anchor tests were switched off their global `TRAPP1994_LIPID_FW` mutation
+onto the mode.
+
+**And a defect found while reading in:** §5's table and the whole of §6 still carried two
+of the three claims §2 lists as retracted — "Kodešová 0.191 is the best a-priori result"
+and the Brunetti-based "best-evidenced open question" synthesis — even though §4f and §4g
+retract both in the body. They survived in the **Honest summary**, the section most likely
+to be read on its own. Now corrected, along with the mixed-basis problem in §3 item 2.
+Treat that as the standing risk in this document: the body gets updated, the summary
+does not.
 
 **⚠️ CI does not test any of this.** `.github/workflows/rigor.yml` runs only
 `tests/test_sci_adk_rigor.py`. Run `pytest -q` locally before claiming green.
@@ -95,19 +117,17 @@ against the anchor.
 
 ## 3. Next tasks
 
-Ranked. Only the first two are worth a session on their own, and both are one-line
-decisions rather than work.
+Ranked. **Items 1 and 2 of the previous handoff are DONE** — see §1.
 
-1. **Put the anchor decision to rest** (either way, or a deliberate "no"). Evidence in
-   §4d, §4h, §5; reproduce with `li2019_rcf_apriori.py` and `li2019_soil_table.py`.
-   The recommendation is **keep `L = 0.01`** — but record the reason honestly: the
-   evidence no longer supports moving, not that 0.01 is validated.
-   `ND.BRIGGS_ANCHORED_LIPID_FW` runs the alternative.
-2. **Decide which basis headlines the neutral path** — ODE (0.281 / 0.598 / 0.191) or
-   equilibrium (0.206 / 0.541 / 0.237). The equilibrium numbers are what the tables
-   actually measure; the ODE ones are what the repo has quoted. `mode="ode"` is still
-   the default so nothing has moved. Switching means updating the module header,
-   CLAUDE.md and this doc together.
+1. ~~Put the anchor decision to rest~~ **DONE.** Default stays `lipid_source="measured"`;
+   the alternative is a named mode, and the 3-vs-1 evidence is a command rather than a
+   doc claim. Recorded in `docs/neutral_dpu_validation.md` §5.
+2. ~~Decide which basis headlines the neutral path~~ **DONE, as "quote both".**
+   `mode="ode"` stays the default so no published number moved, and every quoted number
+   now names its basis. This also caught a real inconsistency: **the document was already
+   mixing bases across sections** — §4a/§4d/§4f are ODE, §4h's soil numbers are
+   equilibrium — so the same table read 0.549→0.670 or 0.639→0.873 depending on a mode
+   nobody was stating. Both are now printed by the same command.
 3. **Chase the Li 2019 hydroponic anomaly** (§5). It is the one open disagreement and
    no subgroup explains it: aquatic −0.39 vs terrestrial −0.46, organochlorines −0.51
    vs everything else −0.35, the four rice rows −0.28, all ten studies negative. On
@@ -188,6 +208,10 @@ python validation/kodesova2019_carbamazepine.py   # exposure, anchor vote, leaf,
 python validation/schriever2020_tscf.py           # TSCF alone, 97 values
 python validation/briggs1983_stem.py              # the stem anchor, ~1 s
 
+# the closed anchor decision, as a command rather than a claim (~6 min)
+python validation/neutral_dpu_validation.py --lipid-source both
+python validation/neutral_dpu_validation.py --lipid-source both --mode equilibrium
+
 # the baselines that must not move
 python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.csv  # 0.281
 python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_ge2017.csv   # 0.783
@@ -198,13 +222,15 @@ pytest -q                                          # 274 collected, 272 pass, 2 
 
 **Resume prompt.**
 
-> The neutral-organic arc is merged and its papers are mined out. Read
-> `docs/neutral_dpu_validation.md` §5 and §2 of `docs/HANDOFF_neutral_next.md` before
-> touching anything — §2 lists three claims this arc made and then retracted, and
-> re-deriving any of them is going backwards. Two decisions are open and both are
-> one-line (§3 items 1–2): whether to move the root lipid off `L = 0.01`, and whether
-> the headline numbers switch to the equilibrium basis. Neither is blocked on data;
-> both are the user's call. If new work is wanted instead, the honest ranking is §3
-> item 3 (the Li 2019 hydroponic anomaly, needs new papers) then item 4 (Briggs 1983's
-> per-section shoot data, already in hand). The PFAS side is a separate arc —
-> `docs/HANDOFF_BAF_twopool.md`.
+> The neutral-organic arc is merged, its papers are mined out, and **both open
+> decisions are now closed** (§3 items 1–2): the root lipid stays at `L = 0.01` as the
+> default of a named `lipid_source` mode, and the docs quote both scoring bases with
+> every number labelled. Read `docs/neutral_dpu_validation.md` §5 and §2 of
+> `docs/HANDOFF_neutral_next.md` before touching anything — §2 lists three claims this
+> arc made and then retracted, and re-deriving any of them is going backwards. Note the
+> failure mode that produced two of them: the body of the validation doc gets corrected
+> and the **Honest summary does not**, so check §6 against §4 whenever you change a
+> result. Remaining work, honestly ranked: §3 item 3 (the Li 2019 hydroponic anomaly —
+> blocked, needs a hydroponic rice root RCF above log Kow 3.5) then item 4 (Briggs
+> 1983's per-section shoot data, already in hand and the only unmined thing here). The
+> PFAS side is a separate arc — `docs/HANDOFF_BAF_twopool.md`.

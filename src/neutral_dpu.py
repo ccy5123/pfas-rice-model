@@ -102,6 +102,12 @@ Scope and honesty
   with.  Note `params/parameters.json` cannot supply them: it carries
   *phospholipid* fractions (membrane binding of anions), a lower bound on the
   total lipid Briggs partitioning refers to.
+  The ROOT value is the one live disagreement in this module: 1% fw sits 2.48x
+  below the lipid term Briggs' own regression implies, and which of the two is
+  right is NOT settled -- so it is a named mode, `lipid_source="measured"`
+  (default) vs `"briggs_anchor"`, not a constant.  See LIPID_SOURCES, and run
+  `validation/neutral_dpu_validation.py --lipid-source both` for the evidence.
+  Every published number from this module is on the default.
 * Metabolism `gamma` is genuinely non-zero for most neutral organics (unlike
   PFAS), so it is exposed per compartment and defaults to 0 only so that a run
   without a measured half-life is obviously an upper bound.
@@ -350,16 +356,44 @@ TRAPP1994_LIPID_FW = {"root": 0.01, "stem": 0.03, "leaf": 0.03, "grain": 0.03}
 # one factor and leaves the other, which is not a neutral substitution.
 # Measured on Briggs' own barley rows the cost is log10 RMSE 0.266 against the
 # anchor's 0.111 (validation/li2019_rcf_apriori.py section 3).
-# It is left as-is DELIBERATELY: restoring the anchor improves the Li 2019 and
-# Ge 2017 tables and DEGRADES Liu 2023, which is the only rice one, and picking
-# an intermediate L would make the path's headline claim -- nothing is fitted --
-# false. The physical reading is that Briggs' coefficient carries non-lipid
+# It is left as-is DELIBERATELY. Restoring the anchor improves Li 2019's
+# hydroponic rows and Ge 2017 but DEGRADES three tables -- Liu 2023 (the only
+# rice one), Kodesova 2019, and Li 2019's own 376-row SOIL half, which is 12x
+# larger than the hydroponic half arguing for it. Picking an intermediate L
+# would make the path's headline claim -- nothing is fitted -- false.
+# The physical reading is that Briggs' coefficient carries non-lipid
 # sorption (cell wall, lignin: this repo's f_cw*K_cw, GAP A) that the neutral
 # composition zeroes, so the fix is a measured cell-wall coefficient, not a
-# bigger lipid fraction. Pass BRIGGS_ANCHORED_LIPID_FW to run the anchor instead:
-#     rice_compartments(lipids=ND.BRIGGS_ANCHORED_LIPID_FW)
+# bigger lipid fraction. Run the anchor with the named mode instead:
+#     rice_compartments(lipid_source="briggs_anchor")
 BRIGGS_ANCHORED_LIPID_FW = dict(TRAPP1994_LIPID_FW,
                                 root=10.0 ** RCF_INTERCEPT / LIPID_OCTANOL_A)
+
+# The two readings above as a NAMED MODE, in the repo's own idiom (`f_xy_source`,
+# `cwo_profile`, `biomass`, `tscf_model`). The point is that the question this
+# selects between is genuinely unsettled -- see the discrepancy note above and
+# docs/neutral_dpu_validation.md section 5 -- so the alternative is kept runnable
+# and testable rather than decided by whichever constant got written down.
+#
+#   "measured"      L_root = 1% fw. Measured cereal root lipid (Li 2019 A1:
+#                   barley 1.00, wheat 1.10-1.14, maize 0.53%), adopted from
+#                   Trapp 1994. DEFAULT.
+#   "briggs_anchor" L_root = 2.47% fw, i.e. L*a = 10^-1.52 exactly. NOT a
+#                   measurement -- the lipid term Briggs' 1982 barley regression
+#                   implies. Briggs measured no lipid at all.
+#
+# The evidence is 3 tables to 1 AGAINST restoring the anchor, and the one for it
+# is the hydroponic half of a paper whose own soil half (12x larger) says the
+# opposite; `validation/neutral_dpu_validation.py --lipid-source both` prints the
+# comparison on any table. The default is "measured" because the evidence no
+# longer supports moving -- NOT because 1% is validated for rice, which it is
+# not. Only the PRODUCT L*a is identifiable, so raising L to 0.0247 and raising
+# `a` to 3.02 are the same model; note `a = 1.22` itself has no citation here.
+LIPID_SOURCES = {
+    "measured": TRAPP1994_LIPID_FW,
+    "briggs_anchor": BRIGGS_ANCHORED_LIPID_FW,
+}
+DEFAULT_LIPID_SOURCE = "measured"
 RICE_SURFACE = {"leaf": 20.0, "grain": 2.0}
 # Briggs' sorption exponent b is 0.77 for roots and stems; Trapp 1994 uses 0.95
 # for LEAVES (their eq. 1 discussion), i.e. leaf lipid is closer to octanol.
@@ -367,15 +401,24 @@ LEAF_SORPTION_EXPONENT = 0.95
 
 
 def rice_compartments(lipids: dict | None = None, waters: dict | None = None,
-                      gammas: dict | None = None) -> list[Compartment]:
+                      gammas: dict | None = None,
+                      lipid_source: str = DEFAULT_LIPID_SOURCE) -> list[Compartment]:
     """[root, stem, leaf, grain] with neutral (Briggs) composition.
 
     `lipids` are FRESH-weight fractions, the same basis as the water contents
     (see the note on TRAPP1994_LIPID_FW -- mixing the bases is the classic error
     here and understates K_PW by ~10x for lipophilic compounds).
+
+    `lipid_source` selects the tissue-lipid reading -- "measured" (default) or
+    "briggs_anchor"; see LIPID_SOURCES for what each one is and why the choice is
+    still open. `lipids` overrides individual tissues on top of whichever is
+    selected, so an explicit dict still wins.
     """
+    if lipid_source not in LIPID_SOURCES:
+        raise ValueError(f"unknown lipid_source {lipid_source!r}; "
+                         f"expected one of {sorted(LIPID_SOURCES)}")
     W = dict(RICE_WATER, **(waters or {}))
-    L = dict(TRAPP1994_LIPID_FW, **(lipids or {}))
+    L = dict(LIPID_SOURCES[lipid_source], **(lipids or {}))
     g = dict.fromkeys(W, 0.0)
     g.update(gammas or {})
     return [neutral_compartment(k, W=W[k], L=L[k],
@@ -424,11 +467,16 @@ def air_exchange(c: NeutralCompound, **kw):
 def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
                      phloem=False, phi: float = 0.1, T_C_Ph: float = 10.0,
                      L_Ph: float = 1.0, tscf_model=None, C0=None,
-                     air=False, air_kw=None):
+                     air=False, air_kw=None,
+                     lipid_source: str = DEFAULT_LIPID_SOURCE):
     """Run the 4-compartment DPU for a NEUTRAL organic.
 
     drivers : {t, Cwo, Qtp, M} on a common grid -- the same driver contract as
         `model_api.simulate(drivers=...)`; M is (n_t, 4) organ fresh mass [kg].
+
+    lipid_source : which tissue-lipid reading to build the compartments from,
+        "measured" (default) or "briggs_anchor" -- see LIPID_SOURCES. Ignored
+        when `comps` is passed, since those are already built.
 
     air : plant-air exchange (volatilisation + gaseous uptake), OFF by default.
         `True` builds a `plant_air.AirExchange` from the compound's `K_AW`, `MW`
@@ -458,7 +506,8 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
     Cwo = np.asarray(drivers["Cwo"], dtype=float)
     Qtp = np.asarray(drivers["Qtp"], dtype=float)
     M = np.asarray(drivers["M"], dtype=float)
-    comps = comps if comps is not None else rice_compartments()
+    comps = (comps if comps is not None
+             else rice_compartments(lipid_source=lipid_source))
 
     if tscf_model is not None:
         cmpd = replace(cmpd, tscf_model=tscf_model)

@@ -289,13 +289,10 @@ def test_kodesova_votes_against_restoring_the_anchor():
     import neutral_dpu_validation as V
 
     drv = V.drivers()
-    orig = ND.TRAPP1994_LIPID_FW["root"]
-    try:
-        shipped = [V.compare_to_obs(p, drv, quiet=True) for p in (KODESOVA, LI2019)]
-        ND.TRAPP1994_LIPID_FW["root"] = ND.BRIGGS_ANCHORED_LIPID_FW["root"]
-        anchored = [V.compare_to_obs(p, drv, quiet=True) for p in (KODESOVA, LI2019)]
-    finally:
-        ND.TRAPP1994_LIPID_FW["root"] = orig
+    shipped = [V.compare_to_obs(p, drv, quiet=True, lipid_source="measured")
+               for p in (KODESOVA, LI2019)]
+    anchored = [V.compare_to_obs(p, drv, quiet=True, lipid_source="briggs_anchor")
+                for p in (KODESOVA, LI2019)]
     assert shipped[0] < anchored[0]          # Kodesova prefers the shipped lipid
     assert anchored[1] < shipped[1]          # Li 2019 prefers the anchor
     assert shipped[0] < 0.25                 # and it is the best a-priori root fit
@@ -361,17 +358,88 @@ def test_equilibrium_mode_does_not_change_the_anchor_verdicts():
 
     drv = V.drivers()
     kod = os.path.join(ROOT, "data_obs", "neutral_obs_kodesova2019.csv")
-    orig = ND.TRAPP1994_LIPID_FW["root"]
-    try:
-        ship = [V.compare_to_obs(p, drv, quiet=True, mode="equilibrium")
-                for p in (kod, LI2019)]
-        ND.TRAPP1994_LIPID_FW["root"] = ND.BRIGGS_ANCHORED_LIPID_FW["root"]
-        anch = [V.compare_to_obs(p, drv, quiet=True, mode="equilibrium")
-                for p in (kod, LI2019)]
-    finally:
-        ND.TRAPP1994_LIPID_FW["root"] = orig
+    ship = [V.compare_to_obs(p, drv, quiet=True, mode="equilibrium",
+                             lipid_source="measured") for p in (kod, LI2019)]
+    anch = [V.compare_to_obs(p, drv, quiet=True, mode="equilibrium",
+                             lipid_source="briggs_anchor") for p in (kod, LI2019)]
     assert ship[0] < anch[0] and anch[1] < ship[1]     # same opposite verdicts
     assert anch[0] - ship[0] > 0.10                    # but a much wider margin
+
+
+# --------------------------------------------------------------------------
+# lipid_source as a named mode
+# --------------------------------------------------------------------------
+def test_lipid_source_default_is_measured_and_changes_nothing():
+    """The mode is additive: selecting the default explicitly must be the same
+    object graph as not selecting anything. If this ever fails, every published
+    neutral number silently changed meaning."""
+    assert ND.DEFAULT_LIPID_SOURCE == "measured"
+    assert ND.LIPID_SOURCES["measured"] is ND.TRAPP1994_LIPID_FW
+    assert ND.LIPID_SOURCES["briggs_anchor"] is ND.BRIGGS_ANCHORED_LIPID_FW
+
+    implicit = ND.rice_compartments()
+    explicit = ND.rice_compartments(lipid_source="measured")
+    for a, b in zip(implicit, explicit):
+        assert (a.name, a.theta, a.f_PL) == (b.name, b.theta, b.f_PL)
+
+
+def test_lipid_source_selects_the_two_readings_and_lipids_still_overrides():
+    anchored = {c.name: c for c in ND.rice_compartments(lipid_source="briggs_anchor")}
+    measured = {c.name: c for c in ND.rice_compartments(lipid_source="measured")}
+    # 2.48x in the lipid term, root only
+    assert anchored["root"].f_PL / measured["root"].f_PL == pytest.approx(2.48, abs=0.02)
+    for organ in ("stem", "leaf", "grain"):
+        assert anchored[organ].f_PL == pytest.approx(measured[organ].f_PL)
+    # an explicit `lipids` dict still wins over the selected mode
+    forced = {c.name: c for c in ND.rice_compartments(lipid_source="briggs_anchor",
+                                                      lipids={"root": 0.01})}
+    assert forced["root"].f_PL == pytest.approx(measured["root"].f_PL)
+    with pytest.raises(ValueError):
+        ND.rice_compartments(lipid_source="nonsense")
+
+
+def test_lipid_source_reaches_the_forward_run_and_the_public_api():
+    """The selector has to survive the whole way to `model_api`, or the mode is
+    documentation rather than a switch. Checked on a lipophilic compound, where
+    the two readings are ~2.4x apart, and on a hydrophilic one, where they are
+    not -- the Kow dependence is the point (see LIPID_SOURCES)."""
+    import model_api as api
+
+    hi = [api.simulate_neutral(4.0, season=60.0, n_t=61, lipid_source=s)
+          for s in ("measured", "briggs_anchor")]
+    assert hi[1]["baf_final"]["root"] / hi[0]["baf_final"]["root"] > 2.0
+    assert hi[0]["params"]["lipid_source"] == "measured"
+    assert hi[1]["params"]["lipid_source"] == "briggs_anchor"
+
+    lo = [api.simulate_neutral(0.0, season=60.0, n_t=61, lipid_source=s)
+          for s in ("measured", "briggs_anchor")]
+    assert lo[1]["baf_final"]["root"] / lo[0]["baf_final"]["root"] < 1.1
+
+    # and omitting it is the default, bit-identical
+    dflt = api.simulate_neutral(4.0, season=60.0, n_t=61)
+    assert dflt["baf_final"]["root"] == hi[0]["baf_final"]["root"]
+
+
+def test_compare_lipid_sources_reproduces_the_three_to_one_tally():
+    """The anchor decision as a command. The docs claim 3 tables against and 1
+    for; this asserts the code still says so, so the doc claim cannot go stale
+    while the numbers underneath move."""
+    import neutral_dpu_validation as V
+
+    rows = V.compare_lipid_sources(drv=V.drivers())
+    by = {label: (m, a) for label, m, a in rows}
+    assert len(rows) == 5
+    # the anchor wins only on the two the docs say it wins on
+    won = {label for label, (m, a) in by.items() if a < m}
+    assert won == {"Ge 2017 (per-organ)", "Li 2019 hydroponic"}
+    # and the table it damages is the SOIL half of the paper it most helps
+    m_soil, a_soil = by["Li 2019 soil"]
+    assert a_soil - m_soil > 0.10
+    # NOTE the basis: this is mode="ode". docs section 4h quotes 0.639 -> 0.873
+    # for the same table, which is the EQUILIBRIUM basis that li2019_soil_table.py
+    # scores on (k_pw directly, no ODE). Both are right; neither number means
+    # anything without its mode, which is why they are labelled in the docs.
+    assert m_soil == pytest.approx(0.549, abs=0.02)
 
 
 def test_spearman_helper_handles_ties():

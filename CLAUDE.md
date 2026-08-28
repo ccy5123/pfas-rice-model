@@ -936,6 +936,29 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (뿌리/줄기/잎/낟알/짚) when `lang="ko"`. UI/i18n only — `parameters.json` and the model math are UNCHANGED. Tests:
   `test_plots.py::test_plain_figures_korean_variant` (English defaults still asserted); verified with headless Streamlit
   + Playwright screenshots of the Korean Simple landing and the English Expert UI.
+- **Root-lipid anchor promoted from a buried constant to a NAMED MODE `lipid_source` (this session)**: the neutral
+  path's root lipid was a single constant (`L=0.01`) with the alternative reachable only by importing a dict, even
+  though the choice is genuinely unsettled and moves a lipophilic compound's root partition up to **2.5×** (K_PW ratio
+  1.02× at logKow 0 → 2.46× at 5; only the PRODUCT `L·a` is identifiable, and **`a=1.22` has no citation in the repo**).
+  Now `neutral_dpu.LIPID_SOURCES` = **`"measured"`** (L_root=1% fw, measured cereal roots — Li2019 barley 1.00/wheat
+  1.10–1.14/maize 0.53%; DEFAULT) vs **`"briggs_anchor"`** (2.47% fw = `L·a=10^−1.52` exactly, i.e. what Briggs' 1982
+  barley regression implies — **Briggs measured no lipid at all**), threaded through `rice_compartments(lipid_source=)`
+  → `neutral_dpu.simulate_neutral` → `model_api.simulate_neutral` (reported in `params["lipid_source"]`) →
+  `validation.compare_to_obs`/`equilibrium_rcf`. The repo's own idiom (`f_xy_source`, `cwo_profile`, `biomass`,
+  `tscf_model`, `mode`); an explicit `lipids=` dict still overrides. **New `compare_lipid_sources()` +
+  `--lipid-source both` scores all 5 shipped tables under BOTH readings side by side**, so the anchor evidence is a
+  reproducible command instead of a doc claim. **DECISION: default stays `"measured"` — because the evidence no longer
+  supports moving, NOT because 1% fw is validated for rice** (it is not; the rice-specific organ lipid gap is open, and
+  stem/leaf are still Trapp's soybean values). Evidence is **3 tables against restoring the anchor, 1 for**, and the one
+  for is the hydroponic half of a paper whose own 12×-larger soil half says the opposite; the anchor also raises
+  predicted root uptake on tables where the model ALREADY runs high. **Nothing moved: Liu 0.281 / Ge 0.783 /
+  `reproduce_demo` 0.029 re-verified bit-identical**; the two prior anchor tests were switched off their global
+  `TRAPP1994_LIPID_FW` mutation onto the mode. **Docs §5/§6 also made consistent with §4f/§4g** — the "Kodešová 0.191 is
+  the best a-priori result" line and the "Brunetti is the best-evidenced open question" synthesis had been retracted in
+  the body but SURVIVED in the Honest-summary section (the part most likely to be read alone); both now corrected
+  (Liu 0.206 on the equilibrium basis is best; the open anomaly is Li 2019's hydroponic half), and every quoted neutral
+  number now names its `lipid_source`/`mode`. Tests: `test_li2019_schriever_tables.py` (default is a no-op; the 2.48×
+  and the Kow dependence reach `model_api`; the 3-vs-1 tally pinned).
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -979,6 +1002,11 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   structural checks alone — see `docs/neutral_dpu_validation.md`. In code:
   `model_api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0)` → the standard `simulate()` dict
   + `K_PW`/`TSCF`/`rcf_briggs` (first arg is a **log Kow**, not a congener; `drivers=`/`biomass=` as usual).
+- **Root-lipid anchor, both readings side by side**: `python validation/neutral_dpu_validation.py --lipid-source both`
+  (all 5 shipped tables under `"measured"` vs `"briggs_anchor"`; add `--mode equilibrium` for the appropriate basis on
+  the root tables, `--obs <table>` to restrict it to one). Single alternative run: `--lipid-source briggs_anchor --obs …`.
+  In code: `model_api.simulate_neutral(3.72, lipid_source="briggs_anchor")` / `ND.rice_compartments(lipid_source=…)`.
+  Default is `"measured"` — every published neutral number is on it.
 - **Briggs 1983 stem anchor**: `python validation/briggs1983_stem.py` (~1 s; transcription self-check · the 4.1×
   coefficient gap · why it largely cancels in the observable).
 - **Li 2019 SOIL table (376 rows, the sign flip)**: `python validation/li2019_soil_table.py` (~5 s; hydroponic-vs-soil
