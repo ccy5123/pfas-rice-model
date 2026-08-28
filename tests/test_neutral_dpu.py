@@ -223,6 +223,30 @@ def test_obs_template_carries_no_data():
     assert V.load_neutral_obs(path) == []
 
 
+def test_conc_endpoint_requires_exposure(tmp_path):
+    """The schema advertises endpoint='conc', but the model predicts a BAF. A raw
+    concentration is only comparable once divided by the exposure it was measured
+    against -- so a 'conc' row without exposure_ugL must be REFUSED, not silently
+    compared as though ug/kg were L/kg (which is what the harness used to do)."""
+    import neutral_dpu_validation as V
+    drv = V.drivers()
+    hdr = "compound,log_kow,tissue,value,basis,endpoint,exposure_ugL\n"
+
+    def write(name, row):
+        f = tmp_path / name
+        f.write_text(hdr + row)
+        return str(f)
+
+    with pytest.raises(ValueError, match="exposure_ugL"):
+        V.compare_to_obs(write("bad.csv", "probe,2.0,root,1.5,fw,conc,\n"), drv, quiet=True)
+    with pytest.raises(ValueError, match="unknown endpoint"):
+        V.compare_to_obs(write("ugly.csv", "probe,2.0,root,1.5,fw,nonsense,\n"), drv, quiet=True)
+    # with the exposure supplied, conc/exposure must equal the same row as a BAF
+    as_conc = V.compare_to_obs(write("c.csv", "probe,2.0,root,3.0,fw,conc,2.0\n"), drv, quiet=True)
+    as_baf = V.compare_to_obs(write("b.csv", "probe,2.0,root,1.5,fw,baf,\n"), drv, quiet=True)
+    assert as_conc == pytest.approx(as_baf, rel=1e-9)
+
+
 def test_obs_loader_reads_and_converts(tmp_path):
     import neutral_dpu_validation as V
     p = tmp_path / "obs.csv"

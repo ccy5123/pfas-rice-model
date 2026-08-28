@@ -15,17 +15,19 @@
 # compartments, xylem advection, growth dilution, terminal accumulation -- is
 # exposed on its own.
 #
-# WHAT THIS SCRIPT DOES AND DOES NOT ESTABLISH. Sections 1-4 are checks against
-# published QSPRs and against the model's own structure; they can falsify the
-# implementation and they quantify its scope, but they are NOT validation against
-# measured plant data. Section 5 is the harness that does that -- and it is inert
-# until a measured table is supplied (`data_obs/neutral_obs_template.csv` gives the
-# schema). The environment this was written in blocks all publisher/PMC/Crossref
-# access, so no measured neutral dataset could be obtained; see
-# docs/neutral_dpu_validation.md for the shortlist of datasets to drop in.
+# WHAT EACH SECTION ESTABLISHES. Sections 1-4 are checks against published QSPRs
+# and against the model's own structure: they can falsify the implementation and
+# they quantify its scope, but on their own they are NOT validation against
+# measured plant data. Section 5 is that comparison, and section 6 scans the two
+# inputs the strict a-priori run does not have (in-planta half-life, TSCF QSPR).
+# Two measured rice tables ship with the repo:
+#   data_obs/neutral_obs_liu2023.csv  root partition, 14 compounds  (RMSE 0.281)
+#   data_obs/neutral_obs_ge2017.csv   per-organ TF, 3 compounds     (RMSE 0.783)
+# both predicted with NOTHING fitted. `data_obs/neutral_obs_template.csv` is the
+# schema for adding your own. See docs/neutral_dpu_validation.md.
 #
-#   python validation/neutral_dpu_validation.py
-#   python validation/neutral_dpu_validation.py --obs data_obs/my_neutral_obs.csv
+#   python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.csv
+#   python validation/neutral_dpu_validation.py            (structural checks only)
 # =============================================================================
 from __future__ import annotations
 import csv, os, sys
@@ -240,6 +242,20 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
             else:
                 pred = m["baf_final"][tis]
             o = r["value"]
+            if ep == "conc":
+                # the model predicts a BAF; a measured CONCENTRATION only becomes
+                # comparable once divided by the exposure it was measured against.
+                # Refuse rather than silently compare a ug/kg to an L/kg.
+                exp = r.get("exposure_ugL")
+                if exp in (None, ""):
+                    raise ValueError(
+                        f"{name}/{tis}: endpoint='conc' needs exposure_ugL to be "
+                        "comparable to the model (which predicts conc/exposure). "
+                        "Supply it, or report the row as endpoint='baf'.")
+                o = o / float(exp)
+            elif ep not in ("baf", "tf"):
+                raise ValueError(f"{name}/{tis}: unknown endpoint {ep!r} "
+                                 "(expected baf, conc or tf)")
             if basis == "dw":     # dw -> fw on the model's own water contents
                 if ep == "tf":
                     wt = waters["grain"] if tis == "grain" else waters.get(tis, 0.80)
@@ -321,13 +337,12 @@ def main(obs_path=None):
           f"Kow signature {'PASS' if ok2 else 'FAIL'}, neutral switch "
           f"{'PASS' if ok4 else 'FAIL'}")
     if rmse is None:
-        print("  measured-data comparison: NOT RUN — no observation table supplied.")
-        print("  => The neutral path is IMPLEMENTED and internally consistent with the")
-        print("     published Briggs QSPRs, and it reproduces the qualitative Kow law")
-        print("     with zero fitted parameters. It is NOT YET VALIDATED against measured")
-        print("     plant data. That step needs a measured table (schema:")
-        print("     data_obs/neutral_obs_template.csv); candidate datasets and the access")
-        print("     problem are documented in docs/neutral_dpu_validation.md.")
+        print("  measured-data comparison: NOT RUN in this invocation (no --obs given).")
+        print("  => These structural checks show the path IS the published Briggs core and")
+        print("     reproduces the qualitative Kow law with zero fitted parameters. For the")
+        print("     a-priori predictions against measured rice data, re-run with")
+        print("       --obs data_obs/neutral_obs_liu2023.csv   (root partition, RMSE 0.281)")
+        print("       --obs data_obs/neutral_obs_ge2017.csv    (per-organ TF,  RMSE 0.783)")
     else:
         print(f"  measured-data comparison: log10 RMSE {rmse:.3f} (a-priori, nothing fitted)")
     return ok1 and ok2 and ok4

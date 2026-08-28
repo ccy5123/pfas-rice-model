@@ -23,8 +23,8 @@
 # the neutral path.
 #
 # CONDITIONS. Soil-treated pots, rice, 60-day exposure sample. Two treatment
-# levels are reported; both are entered, and the FR (lower, environmentally
-# closer) rows are the primary comparison -- the same convention used for the
+# levels are reported; only the FR (lower, environmentally closer) rows are entered
+# here -- the same dose convention used for the
 # Tang 2026 dose series elsewhere in this repo.
 #
 # HALF-LIFE. Ge report soil dissipation half-lives, not in-planta ones, so

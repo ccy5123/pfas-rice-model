@@ -177,6 +177,35 @@ a QSPR fitted to barley.
 | hexaconazole | 3.90 | 8.32 | 11.7 | 1.40 |
 | difenoconazole | 4.40 | 44.9 | 29.2 | 0.65 |
 
+**The reconstructed shoot values, recorded but not used.** The same `S3 × S4`
+reconstruction also yields stem and leaf concentrations. They are *not* in the
+comparison table — a 72-hour exposure of 25-day seedlings is not comparable to the
+season-long growing run the model drives, and root partition is the only endpoint
+that transfers because it is an equilibrium. They are kept here so the
+reconstruction does not have to be redone if a short-exposure driver is ever built:
+
+| compound | log Kow | root | stem | leaf | stem/root | leaf/root |
+|---|---:|---:|---:|---:|---:|---:|
+| nitenpyram | −0.66 | 0.86 | 0.50 | 1.15 | 0.58 | 1.34 |
+| dinotefuran | −0.55 | 1.00 | 0.33 | 0.88 | 0.33 | 0.88 |
+| thiamethoxam | −0.13 | 1.13 | 1.84 | 4.65 | 1.63 | 4.12 |
+| imidacloprid | 0.57 | 0.73 | 1.96 | 2.66 | 2.68 | 3.63 |
+| clothianidin | 0.70 | 1.23 | 0.41 | 0.89 | 0.33 | 0.72 |
+| acetamiprid | 0.80 | 0.44 | 0.94 | 2.99 | 2.12 | 6.77 |
+| thiacloprid | 1.26 | 3.14 | 2.75 | 4.62 | 0.88 | 1.47 |
+| triadimefon | 2.77 | 2.89 | 2.74 | 1.15 | 0.95 | 0.40 |
+| myclobutanil | 2.94 | 7.21 | 13.58 | 14.38 | 1.88 | 1.99 |
+| epoxiconazole | 3.58 | 8.04 | 9.04 | 3.96 | 1.13 | 0.49 |
+| propiconazole | 3.72 | 9.32 | 10.99 | 4.75 | 1.18 | 0.51 |
+| flusilazole | 3.87 | 15.38 | 13.88 | 3.52 | 0.90 | 0.23 |
+| hexaconazole | 3.90 | 8.32 | 11.04 | 6.36 | 1.33 | 0.76 |
+| difenoconazole | 4.40 | 44.94 | 5.22 | 0.21 | 0.12 | 0.005 |
+
+(Concentrations as tabulated in Table S4, i.e. mg/kg at a 1 mg/L exposure, so the
+root column is numerically the RCF used above. Note these shoot ratios are *not*
+the paper's own main-text TFs, which come from the separate 100 µg/L kinetics run
+and differ by roughly 2× — a different experiment, not a contradiction.)
+
 **log10 RMSE = 0.281** (n = 14). Eleven of fourteen fall within a factor of 1.5,
 across a 50-fold range of measured RCF. The worst miss is thiacloprid (5.4× under).
 The half-life sensitivity is **flat** (0.281 → 0.294 at a 3-day half-life), which is
