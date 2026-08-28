@@ -64,7 +64,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── OVERVIEW_KR.md                # ★ 종합 진입점: 기능·검증·데이터공백·필요실험·notation 표 (+모식도)
 │   ├── pfas_rice_compartmental_model.tex / dpu_model_summary_corrected.tex
 │   ├── DELIVERABLE_GAP_A_Kcw.md / DELIVERABLE_GAP_B_fxy.md / theory_anchor.tex / H8_handoff_S6_final.md / sources.csv
-│   ├── neutral_dpu_validation.md     # NEUTRAL path: anchors, a-priori results, open gaps
+│   ├── neutral_dpu_validation.md     # NEUTRAL path: anchors, a-priori results (Liu/Ge/Hwang), open gaps
 │   ├── HANDOFF_neutral_next.md       # ★ NEXT SESSION: A1 air exchange -> A3 Hwang -> A2 API
 │   ├── visualization_tool.md         # app.py guide: plant/soil map, 4 modes, HYDRUS I/O, biomonitoring
 │   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
@@ -604,6 +604,27 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   shipped **stem `S`=0** leaves the stem term inert, pinned by a test). Particle deposition (`eq:Qdep`) deliberately
   NOT implemented (separate deposition pathway; `f_particle` only excludes the particle-bound share from `eq:Qgas`).
   Opt-in and scoped to the 4pool core + neutral path — `parameters.json`, `simulate()` and the PFAS models unchanged.
+- **Hwang 2017 lettuce/chlorpyrifos (this session; handoff A3) — DIAGNOSIS, not a score**:
+  `validation/hwang2017_lettuce.py` + `tests/test_hwang2017.py` (8) + §4c of `docs/neutral_dpu_validation.md`.
+  The only TIME-RESOLVED PER-ORGAN neutral dataset to hand (3 samplings × 2 soil levels), LIPOPHILIC (logKow 4.01,
+  Briggs falling limb) and the only one with a MEASURED `Kd` — which is what makes it usable, converting the soil
+  residue to the pore-water exposure `Ce(t)=C0·(½)^(t/T)/Kd` the model needs. **Its RMSEs (0.610 fw / 0.726 dw) are
+  NOT validation results** — four limits stack (lettuce not rice, 1 compound, **Table 1's fw/dw basis UNSTATED in the
+  article** ≈20× lever, growth-curve form `Ig`/`Kg` not in the transcription ⇒ reconstructed log-log, roots grew in
+  soil ⇒ contact-confounded like Li 2025). **What it DOES establish**: (i) Table 1 is internally consistent on ONE
+  basis — `whole` = mass-weighted mean of leaf+root at root mass fraction **5.4±0.9%**, identical at every sampling —
+  and 5.4% is characteristic of FRESH weight (dw would be ~11%); (ii) the modelled root cannot exceed its equilibrium
+  partition, so `K_PW`=15.8 L/kg is a STRUCTURAL CEILING and the basis flips the verdict (fw: measurement **2.8–10.4×
+  ABOVE** ⇒ unreachable; dw: **under** it); (iii) **the two readings fail on OPPOSITE organs** (fw leaf 0.489/root
+  0.711; dw root 0.393/leaf 0.948) ⇒ the basis decides WHERE the model is wrong, not WHETHER — not a units artifact;
+  (iv) soil contact can't explain the exceedance (would need 12–49% of washed root mass to be soil). **Payoff**: the
+  fw root exceedance is the SAME direction/magnitude as the open **Brunetti 2021** `K_RW`=13.3 vs Briggs ≈1.0
+  disagreement ⇒ "Briggs root partition too low for LIPOPHILIC compounds in SOIL-GROWN plants" now has **two
+  independent sightings**, making it the best-evidenced open question against the partition core. **Trap named in
+  code+docs**: the half-life scan improves dw (0.73→0.30) and worsens fw, so the fit "prefers" dw — using that to pick
+  the basis is CIRCULAR and overrides the only non-circular evidence (i). `Tp` scanned, never adopted (the authors say
+  it is not their measurement). **Deliberately NOT a `data_obs/` CSV**: the shared `--obs` harness would run it on the
+  RICE drivers (120 d, constant Cwo) and return a silently meaningless number. `parameters.json`/model math UNCHANGED.
 - **Structural MERGE — two-pool seq ROOT + `nstem_leaf` redistributed SHOOT (this session) — Result 7 CONFIRMED**:
   the last in-silico item of the two-pool arc (handoff §6: "a fair per-organ Tang test needs the two-pool root merged
   with the redistributed shoot"). `NStemLeafModel` gained optional `k_seq`/`k_rel`: `k_seq>0` APPENDS a sequestered
@@ -803,6 +824,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   RMSE 0.281) and `--obs data_obs/neutral_obs_ge2017.csv` (per-organ TF, RMSE 0.783); both also print the partition
   anchor + Kow signature + metabolism scope + switch and the half-life/TSCF sensitivity. Omit `--obs` for the
   structural checks alone — see `docs/neutral_dpu_validation.md`.
+- **Hwang 2017 (lettuce/chlorpyrifos; neutral, handoff A3)**: `python validation/hwang2017_lettuce.py`
+  (exposure from the measured `Kd`; internal-consistency check on Table 1; the fw/dw basis span vs the
+  `K_PW` ceiling; soil-contact bound; half-life/growth/water sensitivity). Read the VERDICT block — the
+  RMSEs are a diagnosis, not a validation score. Not wired into `--obs` on purpose (wrong species/drivers).
 - **Plant-air exchange** (volatilisation + gaseous uptake; opt-in, neutral path): `python src/plant_air.py`
   (permeabilities + volatilisation half-life across a volatility ladder). In code:
   `neutral_dpu.simulate_neutral(cmpd, drivers, air=True, air_kw=dict(C_air=…, S=…))` — needs `NeutralCompound(MW=…,

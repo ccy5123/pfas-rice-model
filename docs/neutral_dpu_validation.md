@@ -326,6 +326,76 @@ log10 RMSE **0.605 → 0.198** on the partition term alone, and the Ge predictio
 improved from 1.099 → 0.783. Mixing the two bases understates `K_PW` about tenfold
 for lipophilic compounds.
 
+### 4c. Hwang et al. 2017 — a diagnosis, not a score (lettuce, chlorpyrifos)
+
+`python validation/hwang2017_lettuce.py`
+
+The only **time-resolved per-organ** neutral dataset to hand (3 samplings × 2 soil
+levels), **lipophilic** (log Kow 4.01, on the falling limb of the Briggs bell where
+Ge's difenoconazole sits), and the only one supplying a **measured `Kd`** — which is
+what makes it usable, since it converts a soil residue into the pore-water exposure
+the model needs: `Ce(t) = C0·(½)^(t/T)/Kd`.
+
+**It is not on the footing of Liu 2023 / Ge 2017, and its RMSEs must not be quoted
+as validation.** Four limits stack, two of them unresolvable from the article:
+lettuce not rice and one compound; **Table 1's fresh/dry basis is not stated**
+(a ~20× lever at 95 % water); the **growth curve's functional form is not in the
+transcription** (`Ig`, `Kg` without the equation — reconstructed as log-log, since
+an exponential reading gives 10¹⁹ g); and the roots grew **in soil**, so with
+`Koc ≈ 2219` the root endpoint is contact-confounded the way Li 2025 is.
+
+What it nonetheless establishes:
+
+**(i) Table 1 is internally consistent on one basis.** `whole` is the mass-weighted
+mean of leaf and root at a root mass fraction of **5.4 ± 0.9 %**, the same at every
+sampling (4 usable rows; two are forced to 0 by 1-dp rounding). So the columns can
+be read together — and 5.4 % is characteristic of **fresh** weight for lettuce
+(dry weight would put ~11 % in the root). Weak evidence, but it is the only
+non-circular evidence there is, and it agrees with the convention that produce
+residues are reported as-eaten.
+
+**(ii) The basis spans the verdict.** The modelled root cannot exceed its
+equilibrium partition — `K_PW = 15.8 L/kg` is a *structural ceiling*:
+
+| reading | measured root BAF | vs ceiling | consequence |
+|---|---:|---:|---|
+| fresh weight | 44–165 | **2.8–10.4× above** | the model structurally **cannot reach** it |
+| dry weight | 4.4–16.5 | 0.28–1.04× | measurement sits **under** it; model over-predicts |
+
+**(iii) The two readings fail on OPPOSITE organs** — the sharpest result here:
+
+| basis | root RMSE | leaf RMSE | |
+|---|---:|---:|---|
+| fw | 0.711 | **0.489** | leaf predicted well, root unreachable |
+| dw | **0.393** | 0.948 | root bracketed, leaf over by 3–24× |
+
+(overall 0.610 fw / 0.726 dw). Neither reading makes the plant coherent: swapping
+the basis only moves *which* organ is wrong. So the discrepancy is **not a units
+artifact awaiting a footnote** — something about a lipophilic compound in a
+soil-grown plant is genuinely missing.
+
+**(iv) It corroborates an already-open problem.** On the fresh reading the measured
+root exceeds the Briggs ceiling by 3–10×, and soil contact cannot account for it
+(explaining the 10 mg/kg rows outright would need **12–49 %** of the washed root
+mass to be soil). That is the **same direction and comparable magnitude** as the
+open **Brunetti 2021** disagreement (calibrated pea root `K_RW` = 13.3 vs a Briggs
+`K_PW` ≈ 1.0 for carbamazepine, §5). Two independent sightings of one thing: for
+**lipophilic compounds in soil-grown plants the Briggs root partition looks too
+low**.
+
+**A trap named explicitly.** The half-life scan improves the dry reading a lot
+(0.73 → 0.30 at 4 d) and makes the fresh one steadily worse — metabolism can only
+lower modelled concentrations, so it helps wherever the model is too high. The fit
+therefore "prefers" dry weight. **That is not evidence about the basis**: choosing
+the reading that lets the model fit is circular, and it would be choosing against
+(i). The basis is an open question about the *paper*, not about the model —
+cheapest fix is to ask the authors.
+
+**Not shipped as a `data_obs/` table, deliberately.** The shared `--obs` harness
+runs every row on the *rice* drivers (120 d, constant exposure); Hwang is lettuce
+over 40 d under a decaying one, so a number from that path would be silently
+meaningless. The data lives in the dedicated script's constants instead.
+
 ### What these numbers do not settle
 
 Two studies, one crop, seventeen compound-tissue pairs. The **grain compartment is
@@ -349,7 +419,7 @@ All ten obtained papers were read; here is what each is actually good for.
 | **Liu 2023** `10.1016/j.scitotenv.2022.159826` | **Used — §4a**, once the SI arrived. Table S1 gives log Kow for all 21 compounds (PubChem-sourced); Tables S3 × S4 reconstruct total tissue concentrations. Its shoot TFs remain unused (72-h seedling exposure, not comparable to a season run). |
 | **Inao 2018a/b** `10.1584/jpestics.D17-083` / `D17-084` | **Cannot test the 4-compartment split.** As flagged before the papers arrived, they sample *"the whole shoot of the rice plant above the water surface"* — no organ resolution. Still the only source of a measured paddy-water + layered-soil `C_w^o(t)`, so it remains the right dataset for a future HYDRUS-coupling test against a lumped shoot. |
 | **Brunetti 2021** `10.1021/acs.est.0c07420` | **Parameter cross-check, not a data table.** Its Table 1 reports *calibrated* posteriors, not raw concentrations: green-pea root `K_RW = 13.3` cm³/g fw and stem `K_SW = 11.8` for carbamazepine (log Kow ≈ 2.45). The Briggs `K_PW` for the same compound is ≈ 1.0 — **an order of magnitude lower**. Either pea tissue is far more sorptive than Briggs' barley, or the calibration absorbed other processes. Worth pursuing: it is a direct quantitative disagreement with the partition core, on the framework's own reference implementation. |
-| **Hwang 2017** `10.1371/journal.pone.0172254` | Open access, transcribable (Table 1: chlorpyrifos root/leaf in lettuce, 21/30/40 d). Lettuce not rice, one compound, and soil-basis exposure — a useful secondary check, not a QSPR test. |
+| **Hwang 2017** `10.1371/journal.pone.0172254` | **Run — §4c.** Its measured `Kd` converts the soil residue to a pore-water exposure, which is what makes it usable at all. Outcome is a *diagnosis, not a score*: the unstated fresh/dry basis spans the verdict, and the two readings fail on **opposite organs**. |
 | **Briggs 1983** `10.1002/ps.2780140506` | Shoot-distribution companion to the 1982 paper; not yet mined. |
 
 ## 6. Honest summary
@@ -372,9 +442,16 @@ All ten obtained papers were read; here is what each is actually good for.
   sinks. It is opt-in (`simulate_neutral(air=True)`) because it needs `K_AW` and a
   molar mass, which the strict Kow-only a-priori run does not use — so the 0.281
   and 0.783 above are unaffected, and so is every PFAS number.
+- **Hwang 2017 (§4c) is a diagnosis, not a score.** Its RMSEs (0.610 fw / 0.726 dw)
+  are not validation results: the unstated fresh/dry basis spans the verdict and
+  the two readings fail on opposite organs. Its value is that it **independently
+  corroborates the Brunetti discrepancy below** — for lipophilic compounds in
+  soil-grown plants the Briggs root partition looks too low, now seen in two
+  unrelated datasets rather than one.
 - Remaining gaps: the **grain compartment is untested** (no suitable dataset
   exists); rice-specific organ lipid contents are still borrowed from soybean;
   **tissue specific surface areas** are ratios, not measurements, which bounds how
-  far an absolute volatilisation flux can be trusted; and the Brunetti `K_RW`
-  discrepancy (13.3 vs a Briggs `K_PW` of ~1.0 for carbamazepine) is an open
-  question against the partition core itself.
+  far an absolute volatilisation flux can be trusted; and the **root partition for
+  lipophilic compounds** — the Brunetti `K_RW` 13.3 vs a Briggs `K_PW` of ~1.0 for
+  carbamazepine, now joined by Hwang's 3–10× root exceedance — is an open question
+  against the partition core itself, and after §4c the best-evidenced one.

@@ -134,7 +134,48 @@ unbounded terminal accumulator without metabolism *or* volatilisation. Right now
 one of those two sinks exists, so every volatile compound is an upper bound by
 construction.
 
-### A3. Hwang 2017 — a second per-organ test, with a growth + exposure model
+### A3. Hwang 2017 — a second per-organ test, with a growth + exposure model  ✅ **DONE**
+
+> **Run**: `validation/hwang2017_lettuce.py` + `tests/test_hwang2017.py` (8) + §4c of
+> `docs/neutral_dpu_validation.md`. Outcome is a **diagnosis, not a score** — and the
+> pre-registered caveat below is exactly what decided it.
+>
+> **The basis was NOT resolvable.** This session had no way to re-read the article
+> (the environment's network policy blocks every academic host), but that changes
+> nothing: the brief already recorded that the basis *is not stated in the text*, so
+> the previous session had the PDF and found it absent. It is a question for the
+> authors, not for a re-read.
+>
+> **What the run establishes.** (i) Table 1 is internally consistent on ONE basis —
+> `whole` is the mass-weighted mean of leaf and root at a root mass fraction of
+> **5.4 ± 0.9 %**, identical at every sampling — and 5.4 % is characteristic of
+> **fresh** weight for lettuce (dry would be ~11 %). (ii) The modelled root cannot
+> exceed its equilibrium partition, `K_PW = 15.8 L/kg`, so the basis flips the
+> verdict: read fresh the measurement is **2.8–10.4× above that ceiling**
+> (unreachable), read dry it sits **under** it. (iii) The sharpest result — **the two
+> readings fail on OPPOSITE organs** (fw: leaf 0.489 / root 0.711; dw: root 0.393 /
+> leaf 0.948), so the basis decides *where* the model is wrong, not *whether*; the
+> discrepancy is not a units artifact awaiting a footnote. (iv) Soil contact cannot
+> explain the root exceedance (it would need 12–49 % of washed root mass to be soil).
+>
+> **Why it was worth doing anyway**: the fresh-reading root exceedance is the **same
+> direction and magnitude as the open Brunetti 2021 `K_RW` disagreement**, so the
+> "Briggs root partition is too low for lipophilic compounds in soil-grown plants"
+> problem now has **two independent sightings** instead of one. That promotes it to
+> the best-evidenced open question against the partition core.
+>
+> **A trap named in the code and docs**: the half-life scan improves the dry reading
+> (0.73 → 0.30) and worsens the fresh one, so the fit "prefers" dry weight. Using
+> that to choose the basis would be **circular** and would override the only
+> non-circular evidence (i). Do not let a later session quietly do it.
+>
+> **Deliberately NOT shipped as a `data_obs/` CSV**: the shared `--obs` harness would
+> run it on the *rice* drivers (120 d, constant exposure) and return a silently
+> meaningless number. The data stays in the script's constants.
+>
+> `Tp` was scanned, never adopted — the authors' caveat (§6) holds.
+
+**Original brief, for the record.**
 
 `10.1371/journal.pone.0172254` (PLOS ONE, open access). Chlorpyrifos in lettuce from
 treated soil. **All values needed are recorded in §6 below**, because the uploaded
