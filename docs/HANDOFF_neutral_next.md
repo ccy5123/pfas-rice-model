@@ -66,7 +66,7 @@ Hwang, `50b5586` `model_api.simulate_neutral`.
 
 **⚠️ CI does not test any of this.** `.github/workflows/rigor.yml` runs only
 `tests/test_sci_adk_rigor.py`, so a green check says nothing about the model. Run the
-full suite locally before claiming green: **262 collected, 260 pass, 2 skip** (~10 min)
+full suite locally before claiming green: **265 collected, 263 pass, 2 skip** (~11 min)
 on this branch; the 2 skips are the optional `emcee` and `sci-adk` deps.
 
 ---
