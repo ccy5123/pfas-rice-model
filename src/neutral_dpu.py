@@ -122,6 +122,7 @@ import numpy as np
 from pfas_rice_plant_module_4pool_surf import (
     Compartment, Compound, Environment, PlantInputs, RiceUptakeModel,
     binding_factors, ROOT, STEM, LEAF, FRUIT,
+    _speciation, P_N_OVER_P_D, LEAF_CYTOSOL_PH,
 )
 
 # --- Briggs 1982 coefficients (docs/theory_anchor.tex eqs. briggsT / briggsR) --
@@ -255,6 +256,15 @@ class NeutralCompound:
     gamma: float = 0.0
     tscf: float | None = None         # override the QSPR if TSCF was measured
     tscf_model: str = "briggs"        # 'briggs' (default) or 'schriever'
+    # --- weak electrolyte (opt-in; None = the strictly-neutral path above) -----
+    # With a pKa the compound stops being purely neutral and becomes a weak
+    # acid/base: part neutral molecule, part ion. That case cannot be expressed by
+    # this module's z=0 trick -- see the speciation block in the plant module --
+    # so it is routed through the (fn, fd) pair instead. `pKa=None` keeps every
+    # published neutral number bit-identical.
+    pKa: float | None = None
+    is_acid: bool = True              # False -> weak BASE (its ion is a CATION)
+    pH: float = 6.5                   # root-zone pH setting (fn, fd); paddy pore water
 
     @property
     def TSCF(self) -> float:
@@ -278,7 +288,7 @@ def neutral_compound(c: NeutralCompound, a: float = LIPID_OCTANOL_A,
     Briggs/Trapp K_PW (see header). Vmax = 0 removes the carrier; f_xy is the
     Briggs TSCF, computed rather than fitted.
     """
-    return Compound(
+    kw = dict(
         name=c.name, K_prot=0.0, K_PL=a * 10.0 ** (b * c.log_kow), K_cw=0.0,
         kappa_d=float(c.kappa_d),
         Vmax_in=0.0, Km_in=1.0, Vmax_out=0.0, Km_out=1.0,
@@ -292,6 +302,42 @@ def neutral_compound(c: NeutralCompound, a: float = LIPID_OCTANOL_A,
         # Setting fd=0 would zero the uptake entirely, which is the wrong reading.
         fd=1.0,
         fn=1.0,
+    )
+    kw.update(_weak_electrolyte_kw(c))    # {} unless a pKa was supplied
+    return Compound(**kw)
+
+
+def _weak_electrolyte_kw(c: NeutralCompound) -> dict:
+    """The extra `Compound` fields a WEAK ELECTROLYTE needs; `{}` when `pKa` is
+    None, so the strictly-neutral path is untouched.
+
+    Two choices are made here and both are calibrated to stay CONTINUOUS with the
+    neutral limit above, which is the property that makes this safe to add:
+
+    `P_n = kappa_d`. Above, `kappa_d` is the neutral molecule's passive
+    conductance (with z=0 the GHK term has already degenerated to Fickian), so the
+    neutral species keeps exactly the conductance it had. A weak acid with pKa far
+    ABOVE the pH is then numerically the same compound as the same molecule run
+    with `pKa=None` -- no discontinuity at the boundary between the two modes.
+
+    `kappa_d -> kappa_d * 10^-3.5` for the ION. That is Trapp's relation
+    (`P_N_OVER_P_D`): the charged species is ~10^3.5 times less membrane-permeable
+    than its neutral form. So as pKa falls the compound does not merely lose the
+    neutral route, it becomes genuinely harder to take up -- which is the physics,
+    and is why a permanent anion needs a carrier at all.
+
+    NOTE this is NOT how a PFAS is run: `simulate()` fits `kappa_d` directly as the
+    lumped ionic conductance and does not derive it from a neutral counterpart.
+    """
+    if c.pKa is None:
+        return {}
+    fn, fd = _speciation(c.pKa, c.pH, c.is_acid)
+    return dict(
+        pKa=float(c.pKa), is_acid=bool(c.is_acid),
+        z=(-1 if c.is_acid else +1),
+        P_n=float(c.kappa_d),
+        kappa_d=float(c.kappa_d) / P_N_OVER_P_D,
+        fn=float(fn), fd=float(fd),
     )
 
 
@@ -508,6 +554,13 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
     M = np.asarray(drivers["M"], dtype=float)
     comps = (comps if comps is not None
              else rice_compartments(lipid_source=lipid_source))
+    if cmpd.pKa is not None and comps[LEAF].pH is None:
+        # give the leaf a cytosolic pH so the phloem ION TRAP is available. It only
+        # does anything when `phloem=True`; with the neutral base's default
+        # (phloem off, L_Ph=0) this is inert. Copy rather than mutate a
+        # caller-supplied compartment list.
+        comps = list(comps)
+        comps[LEAF] = replace(comps[LEAF], pH=LEAF_CYTOSOL_PH)
 
     if tscf_model is not None:
         cmpd = replace(cmpd, tscf_model=tscf_model)

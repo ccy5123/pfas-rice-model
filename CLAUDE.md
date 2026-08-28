@@ -989,6 +989,32 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (the Hwang §4c reason: 48-h barley sections vs a 120-day rice season). Independent of the open `lipid_source`
   question (that anchor touches only the root — pinned by a test). `parameters.json`, `simulate()` and
   `reproduce_demo` (0.029) UNCHANGED.
+- **WEAK-ELECTROLYTE speciation ported from PR #54 — the two parallel neutral implementations reconciled
+  (this session)**: `src/pfas_rice_plant_module_4pool_surf.py` (speciation block) + `src/literature_params.py`
+  (`speciation`/`ion_trap_factor`/`neutral_pathway_ratio`) + `model_api.simulate_neutral(pKa=…, is_acid=…, pH=…)`
+  + `tests/test_weak_electrolyte.py` (13). **The problem**: TWO independent neutral-organic implementations existed —
+  this repo's `neutral_dpu.py` (separate module, reaches a neutral by `z=0`; carries all 5 measured tables and every
+  published a-priori number) and **PR #54/#55** (extends the PFAS core in place with an `(fn, fd)` speciation pair;
+  structural verification only, `dirty`/33 commits behind main). They overlapped on air exchange, `simulate_neutral`
+  and the Briggs lipid partition — but #54 could do **one thing the merged path cannot: a WEAK ELECTROLYTE**, which is
+  a neutral molecule AND an ion simultaneously and so cannot be expressed by one global valence (`z` must be 0 or −1;
+  the compound is genuinely both). **ONLY that capability was ported**; the duplicated parts were dropped in favour of
+  what already ships. Ported: `(fn,fd)`-weighted 3-pathway `root_uptake` (GHK on the ION term only), `Environment.N_for`
+  (valence moves onto the COMPOUND — a weak base is a cation, z=+1), `Compound.pKa/is_acid/z/P_n`, `Compartment.pH`,
+  and `RiceUptakeModel.phloem_loading_factor()` (leaf→sieve-tube pH ion trap, weighted by `w=Π/(1+Π)`,
+  `Π=(P_n/P_d)·f_n/f_d`). NOT ported: the air block (main has `src/plant_air.py`), `f_lip`/`K_lip` (main's
+  `neutral_compartment` carries the Briggs lipid on `f_PL`), the Briggs QSPR duplicates. **Continuity is the safety
+  property**: `_weak_electrolyte_kw` sets `P_n = kappa_d` so a weak acid with pKa ≫ pH reproduces the `pKa=None`
+  neutral path to <0.1%, i.e. `pKa=` extends this model rather than being a second one; the ION gets
+  `kappa_d·10^−3.5` (Trapp `P_N_OVER_P_D`). **Verified bit-identical** (exact `==`, 67 floats over 6 scenarios):
+  PFAS `simulate()` for PFBA/PFOA/PFOS/PFDoDA/GenX × recommended/W2fit, AND the neutral path — so Liu 0.281 /
+  Ge 0.783 / stem 0.299 / `reproduce_demo` 0.029 all still describe what the code does. **New physics reachable**:
+  root BAF collapses 1.51→0.0001 as pKa falls 12→−3, and at the SAME pKa a weak BASE gives 1.51 vs the acid's 0.079
+  (~19×) because the cation is ATTRACTED by the inside-negative membrane. The `ion_trap_factor` correction is pinned
+  by a test: Λ → `10^ΔpH` = 6.31 as pKa falls, **NOT** 1, so multiplying `L_Ph` by it would hand a permanent anion a
+  spurious 6.3× phloem enrichment — the trap switches off **kinetically** (`neutral_pathway_ratio` 2 → 1e-7, a 10⁷
+  collapse), never thermodynamically. **NOT VALIDATED**: no measured weak-electrolyte rice dataset exists here, so
+  this is structural capability, not a predictive claim. `parameters.json` UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1032,6 +1058,12 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   structural checks alone — see `docs/neutral_dpu_validation.md`. In code:
   `model_api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0)` → the standard `simulate()` dict
   + `K_PW`/`TSCF`/`rcf_briggs` (first arg is a **log Kow**, not a congener; `drivers=`/`biomass=` as usual).
+- **Weak electrolytes (acids/bases, not just strict neutrals)**: `model_api.simulate_neutral(2.45, pKa=4.5)` —
+  `pKa=None` (default) is the strictly-neutral path and is bit-identical to before; a pKa routes through the
+  `(f_n, f_d)` speciation pair instead (`is_acid=False` for a base, whose ion is a CATION and is ATTRACTED not
+  excluded; `pH=` sets the root-zone split; add `phloem=True` for the leaf→sieve-tube pH ion trap). Helpers:
+  `literature_params.speciation` / `ion_trap_factor` / `neutral_pathway_ratio`. NOT validated against data —
+  no measured weak-electrolyte rice dataset exists here.
 - **Root-lipid anchor, both readings side by side**: `python validation/neutral_dpu_validation.py --lipid-source both`
   (all 5 shipped tables under `"measured"` vs `"briggs_anchor"`; add `--mode equilibrium` for the appropriate basis on
   the root tables, `--obs <table>` to restrict it to one). Single alternative run: `--lipid-source briggs_anchor --obs …`.

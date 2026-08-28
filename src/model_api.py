@@ -871,7 +871,8 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
                      tscf_model="briggs", phloem=False, L_Ph=1.0,
                      air=False, air_kw=None, waters=None, lipids=None,
                      biomass="oryza", measured_forcing=True, drivers=None,
-                     tscf=None, lipid_source=None):
+                     tscf=None, lipid_source=None,
+                     pKa=None, is_acid=True, pH=6.5):
     """Run the 4-compartment DPU for a NEUTRAL (non-ionised) organic.
 
     The neutral analogue of `simulate()`: same driver machinery, same result-dict
@@ -908,6 +909,19 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
         `lipid_source`. Rice-specific organ lipid remains an open gap: the root
         value is corroborated by measured CEREAL roots (Li 2019), but stem/leaf
         are still Trapp 1994's soybean figures.
+    pKa / is_acid / pH : turn this into a WEAK ELECTROLYTE instead of a strictly
+        neutral compound. `pKa=None` (default) is the neutral path and is
+        bit-identical to before. With a pKa the compound is part neutral molecule
+        and part ion at once -- a case the neutral path's `z=0` trick cannot
+        express, since one valence has to be either 0 or -1 -- so it routes through
+        the `(f_n, f_d)` speciation pair instead (see the speciation block in
+        `pfas_rice_plant_module_4pool_surf`). `pH` is the root-zone pH that sets the
+        split; `is_acid=False` makes it a weak base, whose ion is a CATION and so
+        is ATTRACTED by the inside-negative membrane rather than excluded. Turning
+        `phloem=True` on as well activates the leaf->sieve-tube pH ion trap, the
+        textbook mechanism for phloem-mobile acidic herbicides.
+        NOT VALIDATED: no measured weak-electrolyte rice dataset exists in this
+        repo, so this is structural capability, not a predictive claim.
     drivers / biomass / measured_forcing : exactly as `simulate()`.
     """
     import neutral_dpu as ND
@@ -932,7 +946,8 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
                                  lipid_source=lipid_source)
     cmpd = ND.NeutralCompound(name=name, log_kow=float(log_kow), MW=float(MW),
                               K_AW=float(K_AW), kappa_d=float(kappa_d),
-                              tscf=tscf, tscf_model=tscf_model)
+                              tscf=tscf, tscf_model=tscf_model,
+                              pKa=pKa, is_acid=bool(is_acid), pH=float(pH))
     res = ND.simulate_neutral(cmpd, drv, comps=comps, phloem=phloem, L_Ph=L_Ph,
                               air=air, air_kw=air_kw)
 
