@@ -1,0 +1,106 @@
+# Li, Chiou, Li & Schnoor (2019), Environment International 126:46-53,
+# "Improved prediction of the bioconcentration factors of organic contaminants
+#  from soils into plant/crop roots by related physicochemical parameters"
+# doi:10.1016/j.envint.2019.02.020  -- DOI VERIFIED AT SOURCE this session
+#  (the article header reads "Environment International 126 (2019) 46-53").
+#
+# ROOT CONCENTRATION FACTOR from HYDROPONIC solution, Table S1 of the SI
+# (Li2019_SI.docx, "Data on chemical uptakes by plant roots from hydroponic
+# solutions plotted in Figure 1"), n = 48 over 11 source studies.
+#
+# WHY THIS TABLE. It is the same endpoint as data_obs/neutral_obs_liu2023.csv --
+# an equilibrium root partition measured against a KNOWN solution concentration,
+# with no soil, no transpiration integral and no growth model in between -- but
+# it is 2x larger, spans a wider lipophilicity range (log Kow -0.57 to 5.41 vs
+# -0.66 to 4.4), covers 11 plant species instead of one, and includes FOUR RICE
+# rows. So it is the second independent a-priori test of the partition core.
+#
+# TRANSCRIPTION, not reconstruction. Values are copied from Table S1 as
+# published; the only arithmetic is RCF = 10^(log RCF), because the SI tabulates
+# the logarithm. No digitising and no unit conversion were needed.
+#
+# BASIS = fw. Li et al. state (article, Methods): "When the reported RCF(soil) or
+# RCF(water) data of chemicals are based on the dry plant weight, they are
+# converted to the fresh-weight values for consistency of the treatment. This
+# conversion is made by assuming the water content to be 90% by weight for all
+# fresh roots." So the whole table is already on the model's fresh-weight basis.
+# Note what that costs: rows whose source reported dry weight carry Li et al.'s
+# uniform 90%-water assumption, not their own measured water content.
+#
+# WHAT IS EXCLUDED, and why.
+#   * The 18 BRIGGS et al. (1982) BARLEY rows are kept in the file but marked
+#     `subset=calibration`. They are the data the Briggs RCF QSPR was FITTED to,
+#     which is the QSPR this model's K_PW is. Scoring them would be reproduction,
+#     not prediction. validation/neutral_dpu_validation.py scores only
+#     `subset=apriori` rows unless asked otherwise.
+#   * CLOTRIMAZOLE is excluded outright (weak base, pKa 6.02): it is substantially
+#     cationic at hydroponic pH, so it belongs on the ionic path -- the same
+#     speciation rule that removed the seven sulfonylureas from the Liu 2023 file.
+#   * The two CHLOROPHENOLS are KEPT but flagged: pKa 8.56 (o-) and 7.89 (2,4-di-)
+#     leave them >98% neutral at the pH 5.5-6.5 of a hydroponic solution. This is
+#     a judgement, not a certainty -- the source studies do not all state pH.
+#
+# EXPOSURE TIME IS THE KNOWN CONFOUNDER, and it is pre-registered here rather
+# than discovered afterwards. Li et al.'s own model writes RCF = alpha_pt * K_PW
+# where alpha_pt <= 1 is a quasi-equilibrium factor, and they argue it falls with
+# increasing Kow because lipophilic compounds equilibrate slowly. This model has
+# no alpha_pt (it predicts the equilibrium), so it should OVER-predict the short,
+# high-Kow rows and match the long or low-Kow ones. `exposure_d` is carried in
+# the file so that expectation is testable rather than rhetorical.
+#
+# SPECIES. The model's root is parameterised for RICE (water content from
+# params/parameters.json, lipid from Trapp 1994 soybean). Applying it across 11
+# species is a deliberate test of Briggs' own generalisation (Briggs et al. 1982,
+# p.501, verified at source): "the lipophilic nature of root solids does not vary
+# widely amongst the plant species studied". Li et al.'s Table S2 contradicts
+# that -- their per-crop root lipid spans 0.10% (radish) to 1.14% (wheat), 11x --
+# so a cross-species residual here is expected and is itself the measurement.
+#
+compound,log_kow,tissue,value,basis,endpoint,exposure_ugL,half_life_d,K_AW,season_d,note,species,exposure_d,subset,source_study
+o-Chlorophenol,2.15,root,2.884,fw,baf,,,,,Li2019 Table S1; RCF=10^0.46,Rice,2.0,apriori,Su and Zhu  2006
+2;4-Dichlorophenol,3.08,root,12.5893,fw,baf,,,,,Li2019 Table S1; RCF=10^1.1,Rice,2.0,apriori,Su and Zhu  2006
+Atrazine,2.64,root,2.0893,fw,baf,,,,,Li2019 Table S1; RCF=10^0.32,Rice,2.0,apriori,Su and Zhu  2006
+Oxamyl,-0.47,root,1.1749,fw,baf,,,,,Li2019 Table S1; RCF=10^0.07,Parrot feather,1.0,apriori,De Carvalho et al.  2007
+4-Fluorophenylurea,1.04,root,1.0715,fw,baf,,,,,Li2019 Table S1; RCF=10^0.03,Parrot feather,2.0,apriori,De Carvalho et al.  2007
+4-Chlorophenylurea,1.8,root,1.9498,fw,baf,,,,,Li2019 Table S1; RCF=10^0.29,Parrot feather,2.0,apriori,De Carvalho et al.  2007
+4-(4-Bromophenoxy)phenylurea,3.7,root,74.131,fw,baf,,,,,Li2019 Table S1; RCF=10^1.87,Parrot feather,1.0,apriori,De Carvalho et al.  2007
+Cyanophos,3.75,root,79.4328,fw,baf,,,,,Li2019 Table S1; RCF=10^1.9,Plantago major L.,9.0,apriori,Romeh  2014
+Fluconazole,0.25,root,0.5248,fw,baf,,,,,Li2019 Table S1; RCF=10^-0.28,Lettuce,9.0,apriori,García-Valcárcel et al.  2016
+Propiconazole,3.72,root,43.6516,fw,baf,,,,,Li2019 Table S1; RCF=10^1.64,Lettuce,9.0,apriori,García-Valcárcel et al.  2016
+Atrazine,2.64,root,2.9512,fw,baf,,,,,Li2019 Table S1; RCF=10^0.47,Hydrilla verticillata,0.25,apriori,Hinman and Klaine  1992
+Chlordane,5.41,root,588.8437,fw,baf,,,,,Li2019 Table S1; RCF=10^2.77,Hydrilla verticillata,6.0,apriori,Hinman and Klaine  1992
+Ethion,5.07,root,363.0781,fw,baf,,,,,Li2019 Table S1; RCF=10^2.56,Water hyacinth,10.0,apriori,Xia and Ma  2006
+Phenanthrene,4.46,root,144.544,fw,baf,,,,,Li2019 Table S1; RCF=10^2.16,Red clover,12.0,apriori,Gao et al.  2008
+Pyrene,5.18,root,134.8963,fw,baf,,,,,Li2019 Table S1; RCF=10^2.13,Red clover,12.0,apriori,Gao et al.  2008
+o-Chlorophenol,2.15,root,3.1623,fw,baf,,,,,Li2019 Table S1; RCF=10^0.5,Rice seedling,2.0,apriori,Su et al.  2009
+1;4-Dichlorobenzene,3.37,root,21.3796,fw,baf,,,,,Li2019 Table S1; RCF=10^1.33,Phragmites australis,14.0,apriori,San Miguel et al.  2013
+1;2;4-Trichlorobenzene,4.02,root,46.7735,fw,baf,,,,,Li2019 Table S1; RCF=10^1.67,Phragmites australis,21.0,apriori,San Miguel et al.  2013
+Hexachlorocyclohexane (γ-HCH),3.72,root,23.4423,fw,baf,,,,,Li2019 Table S1; RCF=10^1.37,Phragmites australis,7.0,apriori,San Miguel et al.  2013
+β-HCH,3.78,root,14.7911,fw,baf,,,,,Li2019 Table S1; RCF=10^1.17,Hordeum vulgare,1.0,apriori,Namiki et al.  2015
+β-HCH,3.78,root,14.4544,fw,baf,,,,,Li2019 Table S1; RCF=10^1.16,Glycine max,1.0,apriori,Namiki et al.  2015
+β-HCH,3.78,root,17.378,fw,baf,,,,,Li2019 Table S1; RCF=10^1.24,Solanum lycopersicum,1.0,apriori,Namiki et al.  2015
+β-HCH,3.78,root,33.8844,fw,baf,,,,,Li2019 Table S1; RCF=10^1.53,Brassica oleracea,1.0,apriori,Namiki et al.  2015
+β-HCH,3.78,root,18.197,fw,baf,,,,,Li2019 Table S1; RCF=10^1.26,Cucurbita pepo,1.0,apriori,Namiki et al.  2015
+Dieldrin,4.55,root,295.1209,fw,baf,,,,,Li2019 Table S1; RCF=10^2.47,Hordeum vulgare,1.0,apriori,Namiki et al.  2015
+Dieldrin,4.55,root,295.1209,fw,baf,,,,,Li2019 Table S1; RCF=10^2.47,Glycine max,1.0,apriori,Namiki et al.  2015
+Dieldrin,4.55,root,295.1209,fw,baf,,,,,Li2019 Table S1; RCF=10^2.47,Solanum lycopersicum,1.0,apriori,Namiki et al.  2015
+Dieldrin,4.55,root,309.0295,fw,baf,,,,,Li2019 Table S1; RCF=10^2.49,Brassica oleracea,1.0,apriori,Namiki et al.  2015
+Dieldrin,4.55,root,295.1209,fw,baf,,,,,Li2019 Table S1; RCF=10^2.47,Cucurbita pepo,1.0,apriori,Namiki et al.  2015
+Aldoxycarb,-0.57,root,0.6607,fw,baf,,,,,Li2019 Table S1; RCF=10^-0.18,Barley,2.0,calibration,Briggs et al.  1982
+Oxamyl,-0.47,root,0.912,fw,baf,,,,,Li2019 Table S1; RCF=10^-0.04,Barley,2.0,calibration,Briggs et al.  1982
+Acetone 0-ethylcarbamoyloxime,-0.13,root,0.955,fw,baf,,,,,Li2019 Table S1; RCF=10^-0.02,Barley,2.0,calibration,Briggs et al.  1982
+Aldicarb,1.08,root,0.9333,fw,baf,,,,,Li2019 Table S1; RCF=10^-0.03,Barley,2.0,calibration,Briggs et al.  1982
+Benzaldehyde,1.49,root,1.4791,fw,baf,,,,,Li2019 Table S1; RCF=10^0.17,Barley,2.0,calibration,Briggs et al.  1982
+4-Chlorobenzaldehyde,2.27,root,2.8184,fw,baf,,,,,Li2019 Table S1; RCF=10^0.45,Barley,2.0,calibration,Briggs et al.  1982
+3;4-Dichlorobenzaldehyde,2.89,root,5.6234,fw,baf,,,,,Li2019 Table S1; RCF=10^0.75,Barley,2.0,calibration,Briggs et al.  1982
+3-Phenoxybenzaldehyde,3.12,root,8.7096,fw,baf,,,,,Li2019 Table S1; RCF=10^0.94,Barley,2.0,calibration,Briggs et al.  1982
+3-(3;4-Dichlorophenoxy)benzaldehyde,4.6,root,81.2831,fw,baf,,,,,Li2019 Table S1; RCF=10^1.91,Barley,2.0,calibration,Briggs et al.  1982
+3-Methylphenylurea,-0.12,root,0.7244,fw,baf,,,,,Li2019 Table S1; RCF=10^-0.14,Barley,2.0,calibration,Briggs et al.  1982
+Phenylurea,0.8,root,1.2023,fw,baf,,,,,Li2019 Table S1; RCF=10^0.08,Barley,2.0,calibration,Briggs et al.  1982
+4-Fluorophenylurea,1.04,root,1.0965,fw,baf,,,,,Li2019 Table S1; RCF=10^0.04,Barley,2.0,calibration,Briggs et al.  1982
+3-(Methylthio) phenylurea,1.57,root,0.9333,fw,baf,,,,,Li2019 Table S1; RCF=10^-0.03,Barley,2.0,calibration,Briggs et al.  1982
+4-Chlorophenylurea,1.8,root,1.9953,fw,baf,,,,,Li2019 Table S1; RCF=10^0.3,Barley,2.0,calibration,Briggs et al.  1982
+4-Bromophenylurea,1.98,root,3.1623,fw,baf,,,,,Li2019 Table S1; RCF=10^0.5,Barley,2.0,calibration,Briggs et al.  1982
+3;4-Dichlorophenylurea,2.64,root,5.8884,fw,baf,,,,,Li2019 Table S1; RCF=10^0.77,Barley,2.0,calibration,Briggs et al.  1982
+4-Phenoxyphenylurea,2.8,root,7.0795,fw,baf,,,,,Li2019 Table S1; RCF=10^0.85,Barley,2.0,calibration,Briggs et al.  1982
+4-(4-Bromophenoxy)phenylurea,3.7,root,34.6737,fw,baf,,,,,Li2019 Table S1; RCF=10^1.54,Barley,2.0,calibration,Briggs et al.  1982

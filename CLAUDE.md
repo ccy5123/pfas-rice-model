@@ -59,6 +59,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── examples/                         # ready-to-load CSVs for app.py (HYDRUS drivers + biomonitoring)
 ├── params/                           # parameters.json (CANONICAL) + source CSVs (Bk, f_xy, Kcw, ...)
 ├── data_obs/                         # observed BAF/TF (Yamazaki, Li2025) + yamazaki_stem_height.csv
+│                                     #  + NEUTRAL: liu2023/ge2017 (rice) · li2019_rcf (48 hydroponic RCF, 11 spp,
+│                                     #    `subset` col holds Briggs' own rows out) · tscf_obs_schriever2020 (97 TSCF)
 ├── validation/                       # S6 + nstem + hydrus_coupled_run reproduction scripts + figures
 ├── docs/
 │   ├── OVERVIEW_KR.md                # ★ 종합 진입점: 기능·검증·데이터공백·필요실험·notation 표 (+모식도)
@@ -71,7 +73,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (217 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (274 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -640,6 +642,142 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   the basis is CIRCULAR and overrides the only non-circular evidence (i). `Tp` scanned, never adopted (the authors say
   it is not their measurement). **Deliberately NOT a `data_obs/` CSV**: the shared `--obs` harness would run it on the
   RICE drivers (120 d, constant Cwo) and return a silently meaningless number. `parameters.json`/model math UNCHANGED.
+- **Acquisition-queue papers arrived (this session) — two new measured tables, and the ANCHOR they expose**:
+  `DPU4OC_add.zip` delivered rows A1–A4 + the C-row candidates of `docs/literature_db/Acquisition_Queue.csv`, which is
+  now a RECORD of what each one actually contained (status column per row) rather than a want-list. Three rows did not
+  deliver what they asked for and that is recorded explicitly: **A1 contains NO RICE**, the supplied `Mcfarlane1987.pdf`
+  is the **wrong paper** (constructed-wetland N isotopes), and **C1/C2/C3 candidates all screen out** (Deng 2018 samples
+  brown rice but every final residue is <LOD; the C2 papers are ROOT morphology while the air term takes no root
+  contribution and `a_R` is lumped into `kappa_d`; Honda 2023 is compositional mol%, not a total lipid mass fraction).
+  A2/A3 CLOSED; **A4 (Kodešová) is SI-NEEDED** and is the highest-value outstanding request (article gives log Kow 2.25,
+  pKa 1.0/13.9, Freundlich `KF` for 3 soils ⇒ with Tables S2/S5 it becomes a per-organ a-priori test with the exposure
+  pinned by the paper's own sorption data).
+  - **`data_obs/neutral_obs_li2019_rcf.csv`** (A1 Table S1) — 48 hydroponic RCF over 11 species, log Kow −0.57→5.41,
+    4 rice rows; the 18 Briggs barley rows ship marked `subset=calibration` and are held out. **A-priori log10 RMSE
+    0.598 (n=29)**, and the error is **one offset, not scatter** — all 11 species biased LOW (−0.30…−0.95).
+  - **`data_obs/tscf_obs_schriever2020.csv`** (A3 SI Table A3, all 97 rows) + `validation/schriever2020_tscf.py` —
+    the first test of **TSCF with no plant model in between** (previously only reachable through the Ge 2017 ODE
+    comparison, entangled with the unknown half-life). Default Briggs bell: **RMSE 0.310, bias −0.221** on the 30
+    un-ionised rows vs a FITTED model's in-sample 0.234. Free by-product: logD-vs-logP lifts rank corr 0.313→0.653,
+    confirming Schriever's own claim on their own table.
+  - **THE DIAGNOSIS** (`validation/li2019_rcf_apriori.py`): the offset is INTERNAL. `neutral_dpu` anchors on Briggs'
+    RCF (`L·a = 10^−1.52 = 0.0302`) but `rice_compartments` substitutes a MEASURED `L=0.01` and keeps the CONVENTIONAL
+    `a=1.22` ⇒ product 0.0122, **2.48× below the anchor it claims** (the header itself says only the product is
+    identifiable). Cost on Briggs' OWN barley rows: log10 RMSE **0.266 vs the anchor's 0.111**.
+  - **NOT kinetic** (§3b, the PRE-REGISTERED confounder): the bias is **flat in exposure time** (−0.442 @1–3 d vs
+    −0.447 @>3 d; within logKow>3.5 alone −0.586 vs −0.517), so Li/Chiou's own `α_pt`(non-equilibrium) story is
+    RULED OUT; the deficit is in the **lipophilic sorption term** (absent below logKow 2 where the water floor `W`
+    dominates, −0.3…−0.6 above). **TWO CORRECTIONS from an adversarial re-read (§3c)**: (a) the **monotone** ladder is
+    NOT robust — Namiki 2015 alone supplies 10/29 rows, all in the top two bins as 2 compounds × 5 species; collapsing
+    compound×study gives −0.030/−0.305/−0.576/**−0.501**, i.e. the top two bins go FLAT. What survives is the low-Kow
+    zero + all TEN studies biased the same way (−0.20…−0.89). (b) the earlier claim that "a flat lipid rise is the
+    wrong instrument for a Kow-dependent deficit" was **WRONG** — `K_PW=W+L·a·Kow^b` is water-floor-dominated at low
+    Kow, so scaling `L` IS inherently Kow-dependent (+0.045 log @logKow 1 → +0.391 @5), close to the observed shape and
+    worth 60–75% of it ⇒ **Li 2019 is genuine evidence FOR the anchor**.
+  - **DEFAULT UNCHANGED — deliberately.** Restoring the anchor improves Li 2019 (0.598→0.331) and Ge 2017
+    (0.783→0.651) but DEGRADES **Liu 2023, the only RICE table** (0.281→0.288); an intermediate `L≈0.015` fits all
+    three and would make the path's one real claim (nothing is fitted) false. `ND.BRIGGS_ANCHORED_LIPID_FW` makes the
+    alternative runnable; `tests/test_li2019_schriever_tables.py` (11) pins the 2.48× so it cannot drift back.
+    A1's real payoff is the **DEFINITION**, verified at source: Li/Chiou's `f_lip` is **fresh weight** (dry converted at
+    90% root water) inside an RCF expression of this model's form, and their cereals (barley 1.00 / wheat 1.10–1.14 /
+    maize 0.53 %) BRACKET the 1% in use ⇒ the value is corroborated, provenance upgraded soybean→cereal root. **Briggs
+    1982 measures no lipid at all** (verified: he attributes the 0.82 floor to root WATER), so 1.00% and 2.47% are both
+    inferences from a paper that measured neither; the 2.5× excess reads as **non-lipid sorption** (cell wall/lignin =
+    the PFAS side's `f_cw·K_cw`, GAP A) which the neutral composition zeroes.
+  - **The DATASETS CONTRADICT EACH OTHER — this is the real obstacle (§3d)**: at logKow 3.5–4.5, Li 2019 says the
+    model is ~3× LOW (−0.462, n=11) while **Liu 2023 (rice, same hydroponic endpoint) says it is EXACT** (−0.008, n=5);
+    on **propiconazole, the one compound BOTH measured** (logKow 3.72) they report RCF **43.65 (lettuce) vs 9.32
+    (rice) = 4.7×**, i.e. the spread BETWEEN measurements EXCEEDS the 2.4× the anchor is worth. ⇒ the open question is
+    NOT "is the partition too low" but **"which hydroponic dataset describes a RICE root above logKow 3.5"**, and
+    nothing in-repo settles it — only a rice measurement in that range. A measured **neutral-organic cell-wall
+    coefficient** still serves BOTH paths (PFAS GAP A) and stays the top wet-lab item. `parameters.json`, `simulate()` and `reproduce_demo`
+    (RMSE 0.029) UNCHANGED; the `subset` filter is inert on tables without the column so **Liu 0.281 / Ge 0.783 are
+    bit-identical** (pinned by a test).
+- **Kodešová 2019 SI arrived (this session) — queue A4 CLOSED; the anchor vote flips and Brunetti is superseded**:
+  `src/../data_obs/neutral_obs_kodesova2019.csv` + `validation/kodesova2019_carbamazepine.py` +
+  `docs/neutral_dpu_validation.md` §4f. Carbamazepine root partition, **4 plants × 3 soils × 2 treatments (n=21)**,
+  with the **cleanest exposure in the repo**: root conc (SI Tab S2, ng/g **dw**, basis stated) ÷ pore water derived
+  from the SOIL conc measured on the SAME pot at the SAME harvest (Tab S4) via the paper's OWN measured Freundlich
+  isotherms (`c=(C_soil/K_F)^n`) — no mass balance, no pot geometry, no dissipation model. CAR is un-ionised
+  everywhere (pKa 1.0/13.9) and `DT50>1000 d`, so the authors' own reason for not computing BAFs does not apply.
+  - **A-priori log10 RMSE 0.191 (n=21), nothing fitted** (Liu 0.281, Li2019 0.598, Ge 0.783) — **but that 0.191 is
+    FLATTERED by a scoring artifact, see the next bullet**; on the appropriate basis it is 0.237 and Liu (0.206) is
+    the repo's best a-priori result.
+  - **VOTES AGAINST restoring the Briggs anchor**, and is well-conditioned to (at log Kow 2.25 the two compositions
+    differ 1.6×): shipped/anchored = Kodešová **0.191**/0.216 · Liu **0.281**/0.288 · Li2019 0.598/**0.331**.
+    ⇒ tally **2 tables against the anchor, 1 for it**, and the two against are the soil-grown / rice ones.
+    Driver-free cross-check agrees in ORDERING (measured `RCF_fw` median **1.10** vs `K_PW` 1.56 shipped / 2.53
+    anchored — the shipped root already runs HIGH here); survives the dw→fw lever (θ 0.85–0.95 keeps the anchor
+    0.21 log worse).
+  - **SUPERSEDES the Brunetti sighting**: Brunetti's calibrated pea `K_RW`=13.3 is **~12× ABOVE a direct measurement
+    of the same compound** (1.10), while Briggs lands within ~1.5×. So that disagreement sits in the calibration,
+    not the partition core ⇒ the "four sightings" synthesis is REWRITTEN: the deficit is **NOT global, it is confined
+    to log Kow ≳ 3** (Li2019 bias −0.03 below 2 → −0.69 above 4.5; Kodešová at 2.25 is POSITIVE).
+  - **Pivotal assumption, flagged not buried**: the Freundlich unit reading. Defended by the `Koc` it implies
+    (**222/189/154** across 3 soils spanning 3.8× in organic carbon — inside CAR's literature band) and by the derived
+    pore water (0.10–0.70 mg/L) matching both the applied solution (~0.5–1.0 mg/L) and the sorption study's 0.5–10 mg/L
+    range; the alternative g/cm³ reading gives `Koc`~1600 and would REVERSE the vote. Tests pin the derivation, the
+    `Koc` band, and the opposing votes (`tests/test_li2019_schriever_tables.py`, 15).
+  - Limits: 4 leafy/root vegetables, **no rice**; one compound at one lipophilicity (says nothing about the high-Kow
+    end where the deficit lives); roots rinsed not exhaustively cleaned (biases obs UP, i.e. against this conclusion).
+  `parameters.json`, `simulate()` and `reproduce_demo` (0.029) UNCHANGED.
+- **Li 2019 Table S2 (376 SOIL rows) + Kodešová's LEAF half (this session) — the sign FLIPS, and the open
+  question is REFRAMED**: `data_obs/neutral_obs_li2019_soil.csv` + `validation/li2019_soil_table.py`, and §6/§7 of
+  `validation/kodesova2019_carbamazepine.py`; docs §4h/§4i.
+  - **THE SIGN FLIP**: the SAME paper's soil table (n=376, 13 crops) runs the model **HIGH +0.260** where its
+    hydroponic half (n=29) runs it **LOW −0.432**. ⇒ "the root partition is too low" is a property of ONE EXPOSURE
+    ROUTE, not of the partition core. Restoring the anchor makes the soil table much worse (+0.645, RMSE 0.639→0.873)
+    ⇒ tally is now **3 tables against the anchor, 1 for**, and the 1 for is the hydroponic half of a paper whose own
+    soil half says the opposite.
+  - **The COMPOSITION TERM works**: substituting each crop's OWN measured lipid (11× spread, radish 0.09% → wheat
+    1.14%) takes the bias **+0.260 → −0.001** (RMSE 0.639→0.461). So `K_PW = W + L·a·Kow^b`'s FORM is right across a
+    large range in `L`. (Caveat: `f_lip` is Li's own model input ⇒ consistency, not independent validation.)
+  - **MOST OF THE ERROR IS THE EXPOSURE, NOT THE PLANT**: Li derive `value` as soil conc ÷ `K_om`, and their Table S3
+    says which `K_om` was measured. **Experimental `K_om` (n=62): bias +0.033 — essentially unbiased**; QSPR `K_om`
+    (n=261): +0.291; and the f_om gradient agrees (+0.499 <1% OM → +0.101 >4%). Combined with Liu (−0.053) and
+    Kodešová (+0.162), **on all three tables with a measured/known exposure the bias is −0.05…+0.16** ⇒ the neutral
+    path's apparent partition error is largely a **SOIL-SIDE exposure problem**, not a `K_PW` problem. `α_pt` is NOT
+    applied (Li median 0.098): what Li put in `α_pt`, Briggs put in the flatter exponent b=0.77 vs Li's `Kow^1.03`
+    (20× apart @logKow 5) — dividing would double-count.
+  - **Kodešová LEAF (§4i)**: leaf/root cancels the exposure ⇒ a pure TRANSLOCATION test. Measured median **3.25**
+    (0.31–9.05) vs model **181** (~55× over) — §3's terminal-leaf runaway, now measured per-organ. **Metabolism CANNOT
+    close it**: even a 1.5-d half-life leaves 28.5 ⇒ most of the excess is the **rice-driver mismatch** (a rice season's
+    transpiration per unit leaf mass on a 340 cm³ pot of lettuce). ⇒ **WARNING on the Ge 2017 "≈7 d half-life"**: it may
+    be absorbing the same mismatch rather than measuring metabolism.
+  - **METABOLISM MEASURED, not fitted (first in the repo)**: Kodešová quantified CAR's 4 metabolites, so the parent
+    fraction is a direct observation — root **0.919**, leaf **0.489** (lamb's lettuce 0.169, radish 0.810). ⇒ (i) `γ=0`
+    is WRONG for carbamazepine despite a soil `DT50>1000 d` — **soil persistence ≠ plant persistence**; (ii) it is
+    strongly SPECIES-dependent (4.8×, same compound/soils/harvest) ⇒ an in-planta half-life is **not a compound
+    property**, which is what fitting one to a single dataset assumes. The epoxide EXCEEDS the parent in lamb's-lettuce
+    leaves (17000 vs 6400 ng/g) ⇒ a parent-only model understates the burden several-fold.
+  `tests/test_li2019_schriever_tables.py` (24). `parameters.json`, `simulate()` and `reproduce_demo` (0.029) UNCHANGED.
+- **Briggs 1983 — the STEM anchor that was never read (this session)**: `neutral_dpu.briggs_scf` /
+  `briggs_stem_xylem_partition` + `validation/briggs1983_stem.py`, docs §4j. The companion to Briggs 1982 sat unread
+  in the obtained set; it fits the SAME `K_PW` form to barley shoots (VERIFIED AT SOURCE):
+  `log(K_stem/xylem_sap − 0.82) = 0.95·logKow − 2.05` (eq.2), `SCF = K_stem/xylem × TSCF` (eq.3). Self-checking:
+  computed from the coefficients the peak is **6.4 @logKow 4.5** vs the paper's "about 6 … at about 4.5". ⇒ the stem
+  had **NO anchor** in this repo (Trapp soybean 3% lipid + conventional a=1.22 + the ROOT exponent 0.77):
+  **root `L·a` 0.0122 vs anchor 0.0302 = 2.5× BELOW; stem 0.0366 vs 0.0089 = 4.1× ABOVE** — two organs from unrelated
+  sources, neither checked, missing in OPPOSITE directions. **BUT the consequences differ and only §3 should be
+  quoted**: for the root the coefficient gap IS the disagreement (shared exponent), while for the stem it largely
+  **CANCELS** against Briggs' steeper b=0.95 — the observable SCF differs by at most **0.13 log** over logKow 0–3.5
+  (where TSCF delivers anything), swinging to −0.20/−0.38 only above 4.5 where TSCF has collapsed and Briggs' own text
+  says the decline "was not tested". ⇒ the stem is a **provenance** problem, not a prediction problem; ranks below the
+  root question and the exposure-term work. NOTHING CHANGED (one species, a shoot BASE not a true stem, and no measured
+  table in-repo would arbitrate it).
+- **ODE-vs-EQUILIBRIUM scoring artifact (this session) — `compare_to_obs(mode="equilibrium")`**: all three root-partition
+  tables (Liu/Li2019/Kodešová) measure an EQUILIBRIUM over 24 h–26 d, but were scored by running the **120-d rice season**
+  and reading `baf_final["root"]`. That imposes a **Kow-DEPENDENT, purely model-side discount** (ODE/K_PW = 0.91 @logKow
+  −0.5 · **0.55 @1.78** · **0.57 @2.25** · 0.99 @5.0 — the xylem drains the root hardest near the TSCF peak). Applying a
+  rice season's drain to a 24-h barley measurement is an ERROR, not a modelling choice. Rescored: **Liu 0.281→0.206 ·
+  Li2019 0.598→0.541 · Kodešová 0.191→0.237** (Ge unchanged — per-organ TF at 60 d, the season IS its endpoint).
+  ⇒ **Kodešová was flattered** (it sits at logKow 2.25, near the discount peak) so it is NOT the repo's best a-priori
+  result — **Liu 0.206 is**. The §4f anchor verdicts SURVIVE and their **margins widen** (shipped/anchored on the
+  equilibrium basis: Liu **0.206**/0.286 · Li2019 0.541/**0.295** · Kodešová **0.237**/0.410) ⇒ removing the artifact
+  **SHARPENS the dataset contradiction rather than resolving it**. `mode="ode"` stays the DEFAULT so no published number
+  moves silently; which basis should headline is a one-line decision left open with the anchor question.
+  `tests/test_li2019_schriever_tables.py` (18) pins the discount shape, the rescored ordering, and that the default is
+  unchanged.
 - **Structural MERGE — two-pool seq ROOT + `nstem_leaf` redistributed SHOOT (this session) — Result 7 CONFIRMED**:
   the last in-silico item of the two-pool arc (handoff §6: "a fair per-organ Tang test needs the two-pool root merged
   with the redistributed shoot"). `NStemLeafModel` gained optional `k_seq`/`k_rel`: `k_seq>0` APPENDS a sequestered
@@ -841,6 +979,20 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   structural checks alone — see `docs/neutral_dpu_validation.md`. In code:
   `model_api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0)` → the standard `simulate()` dict
   + `K_PW`/`TSCF`/`rcf_briggs` (first arg is a **log Kow**, not a congener; `drivers=`/`biomass=` as usual).
+- **Briggs 1983 stem anchor**: `python validation/briggs1983_stem.py` (~1 s; transcription self-check · the 4.1×
+  coefficient gap · why it largely cancels in the observable).
+- **Li 2019 SOIL table (376 rows, the sign flip)**: `python validation/li2019_soil_table.py` (~5 s; hydroponic-vs-soil
+  sign flip · per-crop-lipid collapse · the measured-vs-estimated `K_om` split · why `α_pt` is not applied).
+- **Li 2019 root partition + the anchor diagnosis**: `python validation/li2019_rcf_apriori.py` (a-priori n=29 by
+  species → the A1 lipid table → the anchor diagnosis → the full-ODE root-lipid scan; ~3 min, `--fast` skips the scan
+  and prints the recorded numbers). Also runnable through the shared harness:
+  `python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_li2019_rcf.csv` (scores `subset=apriori`
+  only — the 18 Briggs barley rows are held out; pass `subset=None` in code to score everything).
+- **TSCF QSPR on its own (no plant model)**: `python validation/schriever2020_tscf.py` (97 measured TSCF values;
+  Briggs bell RMSE 0.310 / bias −0.221 on the 30 un-ionised rows vs the fitted Schriever refit's in-sample 0.234).
+- **Kodešová 2019 carbamazepine (queue A4; the anchor vote)**: `python validation/kodesova2019_carbamazepine.py`
+  (exposure from the paper's own measured isotherms + the `Koc` defence of the unit reading; a-priori 0.191;
+  the shipped-vs-anchored table across all three root datasets; the Brunetti verdict; the dw→fw sensitivity).
 - **Hwang 2017 (lettuce/chlorpyrifos; neutral, handoff A3)**: `python validation/hwang2017_lettuce.py`
   (exposure from the measured `Kd`; internal-consistency check on Table 1; the fw/dw basis span vs the
   `K_PW` ceiling; soil-contact bound; half-life/growth/water sensitivity). Read the VERDICT block — the
@@ -884,7 +1036,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (217 collected; 215 pass, 2 skip, all pass with the full stack — RDKit + the built
+- Tests: `pip install pytest && pytest` (274 collected; 272 pass, 2 skip, all pass with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
   module additionally skips unless `sci-adk` is installed, which CI's `rigor.yml` provides). On a bare
   clone the structure/SMILES tests skip without RDKit and the HYDRUS-engine tests in `test_soil_hydrus.py`

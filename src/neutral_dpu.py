@@ -176,6 +176,43 @@ def tscf(log_kow: float, model: str = "briggs") -> float:
     raise ValueError(f"unknown TSCF model {model!r}; use 'briggs' or 'schriever'")
 
 
+# --- Briggs 1983 STEM coefficients (Pestic. Sci. 14:492-500, their eqs. 2 and 3;
+# VERIFIED AT SOURCE) --------------------------------------------------------
+# The companion paper to Briggs 1982, and the only published anchor for the STEM
+# compartment. It has exactly the K_PW form -- a water floor plus a lipophilic
+# term -- but fitted to barley shoot bases rather than roots:
+#
+#     log(K_stem/xylem_sap - 0.82) = 0.95*log Kow - 2.05                  (eq. 2)
+#     SCF = K_stem/xylem_sap * TSCF                                       (eq. 3)
+#
+# so the anchored stem lipid term is L*a = 10^-2.05 = 0.0089 with b = 0.95.
+# Note what the repo runs instead: L = 0.03 (Trapp 1994 soybean) with the
+# conventional a = 1.22 and Briggs' ROOT exponent b = 0.77, i.e. L*a = 0.0366 --
+# 4.1x ABOVE this anchor, and with a flatter slope. That is the same class of
+# mismatch as the root's (BRIGGS_ANCHORED_LIPID_FW) but in the OPPOSITE
+# direction, and it is likewise left as-is rather than silently corrected.
+# `validation/briggs1983_stem.py` measures what it costs.
+STEM_SLOPE = 0.95         # b for the stem/xylem-sap partition [-]
+STEM_INTERCEPT = -2.05    # log10 of (L*a) for barley shoot bases [-]
+STEM_FLOOR = 0.82         # water floor, the same value Briggs found for roots
+
+
+def briggs_stem_xylem_partition(log_kow: float) -> float:
+    """K_stem/xylem sap (Briggs 1983 eq. 2) [L/kg]."""
+    return STEM_FLOOR + 10.0 ** (STEM_SLOPE * log_kow + STEM_INTERCEPT)
+
+
+def briggs_scf(log_kow: float, tscf_model: str = "briggs") -> float:
+    """Stem concentration factor (Briggs 1983 eq. 3): the stem/xylem-sap
+    partition times the fraction of the external solution reaching the xylem.
+
+    Reproduces the paper's own stated result -- a maximum of "about 6 ... at
+    about log Kow = 4.5" -- which is what makes this a transcription check
+    rather than an assertion.
+    """
+    return briggs_stem_xylem_partition(log_kow) * tscf(log_kow, model=tscf_model)
+
+
 def k_pw(log_kow: float, W: float, L: float, a: float = LIPID_OCTANOL_A,
          b: float = RCF_SLOPE) -> float:
     """Plant-water partition coefficient K_PW = W + L*a*Kow^b  [L/kg fw].
@@ -295,6 +332,34 @@ def briggs_root_compartment() -> Compartment:
 # compounds; the Liu 2023 root data caught it (log10 RMSE 0.605 -> 0.198).
 RICE_WATER = {"root": 0.90, "stem": 0.83, "leaf": 0.78, "grain": 0.14}
 TRAPP1994_LIPID_FW = {"root": 0.01, "stem": 0.03, "leaf": 0.03, "grain": 0.03}
+
+# CORROBORATION of the root value, added when Acquisition_Queue.csv row A1
+# arrived. Li, Chiou, Li & Schnoor 2019 (Environ. Int. 126:46-53) tabulate root
+# lipid for 13 crops on an explicitly FRESH-weight basis (they convert dry-basis
+# reports at 90% root water) inside an RCF expression of this same form, so their
+# values are commensurable with L here. Their cereals -- barley 1.00%, wheat
+# 1.10-1.14%, maize 0.53% -- bracket the 1% above. RICE IS ABSENT from their
+# table, so the rice-specific gap is NOT closed; what improves is the provenance
+# of the number, from a soybean model run to measured cereal roots.
+#
+# THE ANCHOR DISCREPANCY -- read before changing anything here.
+# Briggs' fitted lipid term is L*a = 10^-1.52 = 0.0302. Substituting a measured
+# L = 0.01 while keeping the conventional a = 1.22 changes that product to
+# 0.0122, i.e. the rice root runs 2.5x BELOW the anchor this module claims. The
+# header says L and a are identifiable only as their product; this dict replaces
+# one factor and leaves the other, which is not a neutral substitution.
+# Measured on Briggs' own barley rows the cost is log10 RMSE 0.266 against the
+# anchor's 0.111 (validation/li2019_rcf_apriori.py section 3).
+# It is left as-is DELIBERATELY: restoring the anchor improves the Li 2019 and
+# Ge 2017 tables and DEGRADES Liu 2023, which is the only rice one, and picking
+# an intermediate L would make the path's headline claim -- nothing is fitted --
+# false. The physical reading is that Briggs' coefficient carries non-lipid
+# sorption (cell wall, lignin: this repo's f_cw*K_cw, GAP A) that the neutral
+# composition zeroes, so the fix is a measured cell-wall coefficient, not a
+# bigger lipid fraction. Pass BRIGGS_ANCHORED_LIPID_FW to run the anchor instead:
+#     rice_compartments(lipids=ND.BRIGGS_ANCHORED_LIPID_FW)
+BRIGGS_ANCHORED_LIPID_FW = dict(TRAPP1994_LIPID_FW,
+                                root=10.0 ** RCF_INTERCEPT / LIPID_OCTANOL_A)
 RICE_SURFACE = {"leaf": 20.0, "grain": 2.0}
 # Briggs' sorption exponent b is 0.77 for roots and stems; Trapp 1994 uses 0.95
 # for LEAVES (their eq. 1 discussion), i.e. leaf lipid is closer to octanol.

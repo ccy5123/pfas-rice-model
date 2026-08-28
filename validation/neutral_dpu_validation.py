@@ -257,14 +257,62 @@ def load_neutral_obs(path):
     return rows
 
 
-def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=False):
+def equilibrium_rcf(log_kow, lipids=None, waters=None, tissue="root"):
+    """The compartment's equilibrium partition K_PW -- no ODE, no drivers.
+
+    This is what a SHORT-EXPOSURE root concentration factor actually measures.
+    See `compare_to_obs(mode="equilibrium")` for why that distinction matters.
+    """
+    W = dict(ND.RICE_WATER, **(waters or {}))[tissue]
+    L = dict(ND.TRAPP1994_LIPID_FW, **(lipids or {}))[tissue]
+    b = ND.LEAF_SORPTION_EXPONENT if tissue == "leaf" else ND.RCF_SLOPE
+    return ND.k_pw(log_kow, W=W, L=L, b=b)
+
+
+def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=False,
+                   subset="apriori", group_by=None, mode="ode"):
     """Compare the model to a measured table. `half_life` (d) overrides the
-    per-row half_life_d for a sensitivity scan; `tscf_model` selects the QSPR."""
+    per-row half_life_d for a sensitivity scan; `tscf_model` selects the QSPR.
+
+    `subset` filters an optional `subset` column, whose whole purpose is to keep
+    a table's CALIBRATION rows out of an a-priori score while still shipping them
+    in the same file (data_obs/neutral_obs_li2019_rcf.csv carries the 18 Briggs
+    1982 barley rows the RCF QSPR was fitted to). Pass subset=None to score
+    everything. Files WITHOUT the column -- liu2023, ge2017 -- are unaffected, so
+    the published 0.281 / 0.783 cannot move because of this argument.
+
+    `group_by` names a column to also report per-group RMSE for (e.g. "species").
+
+    `mode` decides what the model side is:
+      "ode"          -- run the full 120-day rice season and read the tissue BAF.
+                        The default, and the right thing for a season-long
+                        endpoint (per-organ TF at harvest, Ge 2017).
+      "equilibrium"  -- compare a ROOT row against K_PW directly, with no ODE and
+                        no drivers. This is the honest comparison for a
+                        short-exposure root concentration factor, which is what
+                        Liu 2023, Li 2019 and Kodesova 2019 all measure (24 h to
+                        12 d), because the season-long ODE discounts the root by
+                        a Kow-DEPENDENT factor that has nothing to do with the
+                        partition being tested: -0.04 log at log Kow -0.5 but
+                        -0.26 at 1.78, where the xylem drains it hardest, and
+                        back to ~0 above 5. Applying a rice season's drain to a
+                        24-hour barley measurement is a model-side artifact.
+                        Non-root rows fall back to "ode".
+    """
+    if mode not in ("ode", "equilibrium"):
+        raise ValueError(f"mode must be 'ode' or 'equilibrium', got {mode!r}")
     if not quiet:
         print("\n" + "=" * 84)
         print(f"5. MEASURED-DATA COMPARISON — {path}")
         print("=" * 84)
     obs = load_neutral_obs(path)
+    if subset is not None and obs and "subset" in obs[0]:
+        held = [r for r in obs if r.get("subset") != subset]
+        obs = [r for r in obs if r.get("subset") == subset]
+        if held and not quiet:
+            kinds = sorted({r.get("subset", "") for r in held})
+            print(f"   [scoring subset={subset!r}; {len(held)} row(s) held out "
+                  f"as {kinds} -- see the file header for why]")
     if not obs:
         if not quiet:
             print("   (no rows) — supply a measured table to turn this into validation.")
@@ -275,7 +323,7 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
     for r in obs:
         by_cmpd.setdefault((r["compound"], r["log_kow"]), []).append(r)
 
-    pairs = []
+    pairs, tagged = [], []
     if not quiet:
         print(f"{'compound':16}{'logKow':>8}{'tissue':>8}{'obs':>10}{'model':>10}{'ratio':>9}")
     for (name, lk), rs in sorted(by_cmpd.items(), key=lambda x: x[0][1]):
@@ -284,11 +332,17 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
              if r.get("half_life_d") not in (None, "")), None)
         gam = float(np.log(2.0) / hl) if hl else 0.0
         comps = ND.rice_compartments(gammas={k: gam for k in TISSUES})
-        m = ND.simulate_neutral(ND.NeutralCompound(name, lk), drv, comps=comps,
-                                tscf_model=tscf_model)
+        # in equilibrium mode a root-only compound needs no ODE solve at all
+        if mode == "equilibrium" and all(r["tissue"] == "root" for r in rs):
+            m = None
+        else:
+            m = ND.simulate_neutral(ND.NeutralCompound(name, lk), drv, comps=comps,
+                                    tscf_model=tscf_model)
         for r in rs:
             tis, ep, basis = r["tissue"], r["endpoint"], r["basis"]
-            if tis == "straw":
+            if mode == "equilibrium" and tis == "root" and ep in ("baf", "conc"):
+                pred = equilibrium_rcf(lk, tissue="root")
+            elif tis == "straw":
                 pred = m["straw_baf"] if ep != "tf" else m["straw_baf"] / m["baf_final"]["root"]
             elif ep == "tf":
                 pred = m["tf_final"][tis]
@@ -317,6 +371,7 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
                     wt = waters.get(tis, 0.80)
                     o = o * (1.0 - wt)
             pairs.append((pred, o))
+            tagged.append((pred, o, r))
             ratio = pred / o if o > 0 else float("inf")
             if not quiet:
                 print(f"{name:16}{lk:>8.2f}{tis:>8}{o:>10.3f}{pred:>10.3f}"
@@ -326,6 +381,17 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
     if quiet:
         return rmse
     print(f"\n   log10 RMSE (n={len(pairs)}) = {rmse:.3f}")
+    if group_by and tagged and group_by in tagged[0][2]:
+        groups = {}
+        for p, o, r in tagged:
+            groups.setdefault(r[group_by], []).append(
+                (np.log10(max(p, 1e-6)) - np.log10(max(o, 1e-6))) ** 2)
+        print(f"   by {group_by}:")
+        for g, errs in sorted(groups.items(), key=lambda kv: -len(kv[1])):
+            bias = np.mean([np.log10(max(p, 1e-6)) - np.log10(max(o, 1e-6))
+                            for p, o, r in tagged if r[group_by] == g])
+            print(f"      {g:24s} n={len(errs):3d}  RMSE {np.sqrt(np.mean(errs)):.3f}"
+                  f"   mean log10 bias {bias:+.3f}")
     print("   NOTE: zero parameters were fitted to this table -- K_PW and TSCF come")
     print("   from log Kow alone, so this is a genuine a-priori prediction, and it is")
     print("   the only such test in this repo. Interpret it against the PFAS side's")

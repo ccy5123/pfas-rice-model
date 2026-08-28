@@ -1,0 +1,80 @@
+# Kodesova, Klement, Golovko, Fer, Koba, Kocarek, Nikodem & Grabic (2019),
+# Environ. Sci. Pollut. Res. 26:9876-9891, "Root uptake of atenolol,
+# sulfamethoxazole and carbamazepine, and their transformation in three soils
+# and four plants"  doi:10.1007/s11356-019-04333-9  -- DOI VERIFIED AT SOURCE.
+#
+# ROOT CONCENTRATION FACTOR for CARBAMAZEPINE, 4 plants x 3 soils x 2 treatments.
+# Acquisition_Queue.csv row A4, closed by the SI supplied this session.
+#
+# WHY IT IS WORTH HAVING. It is the only table in the repo where a SOIL-GROWN
+# root partition has its exposure pinned by the paper's OWN measured sorption
+# isotherm, on the same pots at the same harvest -- so no mass balance, no pot
+# geometry and no dissipation model enter. It is also the direct measurement
+# that the open Brunetti 2021 disagreement was asking for: Brunetti's calibrated
+# green-pea K_RW = 13.3 L/kg fw is for this same compound.
+#
+# HOW value WAS COMPUTED, from three measured quantities and nothing else:
+#     C_root   SI Table S2, ng/g DRY WEIGHT (the article states the basis)
+#     C_soil   SI Table S4, ng/g dry, same pot, same harvest
+#     KF, n    article Table 1, measured Freundlich isotherms per soil
+#                (CAR: HCh 3.86, HCa 2.97, AE 0.71; n = 1.13, shared)
+#   pore water  c = (C_soil / KF)^n           [mg/L]     from S = KF*c^(1/n)
+#   value       = C_root / c                  [L/kg dw]
+#
+# THE ISOTHERM CONVENTION IS THE ONE PIVOTAL ASSUMPTION, so it is argued rather
+# than assumed. (1) The EXPONENT: Table 1's unit string carries 1/n and n = 1.13,
+# so the isotherm is S = KF*c^0.885 -- concave, the normal shape; the alternative
+# S = KF*c^1.13 would make sorption more favourable as concentration rises, which
+# soils do not do. (2) The UNITS: at c = 1 mg/L the isotherm gives S = KF, so KF
+# is numerically the distribution ratio there. Dividing by each soil's measured
+# organic carbon (1.74 / 1.57 / 0.46 %) gives Koc = 222 / 189 / 154 -- consistent
+# across three soils spanning 3.8x in organic carbon, and inside carbamazepine's
+# literature Koc band of roughly 100-500. Reading KF in g/cm3 instead gives
+# Koc ~ 1600 in every soil, well outside it. The sorption study these isotherms
+# come from also worked at 0.5-10 mg/L, the same scale as the derived pore water
+# (0.10-0.70 mg/L). If this reading is ever overturned the conclusion flips, so
+# it is flagged here rather than buried.
+#
+# SPECIATION. Carbamazepine is pKa1 1.0 (basic) / pKa2 13.9 (acidic), so it is
+# un-ionised across the entire environmental range -- the cleanest possible fit
+# to the neutral path. log Kow 2.25 (article Table 1, sourced to Jones et al.
+# 2002). NOTE the repo carries 2.45 for carbamazepine elsewhere, from Brunetti.
+# The two metabolites and the other two parent compounds are EXCLUDED: atenolol
+# (pKa 9.6, cationic) and sulfamethoxazole (pKa 5.6, anionic) belong on the ionic
+# path, the same rule that removed the sulfonylureas from the Liu 2023 file.
+#
+# HONEST LIMITS. (i) Four leafy/root vegetables, no rice. (ii) Roots were rinsed,
+# not exhaustively cleaned, so adhering soil may inflate C_root -- that biases the
+# observation UP, i.e. against the conclusion drawn from it, so it is the safe
+# direction. (iii) The dw->fw conversion uses the model's own root water content;
+# it is a real lever and is scanned in the validation script. (iv) The authors
+# decline to compute bioaccumulation factors themselves, because dosing was
+# repeated and concentrations varied -- but their stated reason is dissipation,
+# and carbamazepine's DT50 is > 1000 d in all three soils, so it is the one
+# compound of the three where that objection does not bite. (v) A mass balance on
+# the applied load does not close (measured soil holds ~1/3 of what was applied),
+# which the authors attribute partly to small leakages; that is why the exposure
+# is taken from the MEASURED soil concentration rather than from the load.
+#
+compound,log_kow,tissue,value,basis,endpoint,exposure_ugL,half_life_d,K_AW,season_d,note,species,soil,treatment,pore_water_mgL
+carbamazepine,2.25,root,6.26,dw,baf,,,,,Kodesova2019 TabS2 root 4400 ng/g dw / TabS4 soil 520 ng/g dw via KF=0.71,lambs_lettuce,AE,M,0.7033
+carbamazepine,2.25,root,12.23,dw,baf,,,,,Kodesova2019 TabS2 root 8600 ng/g dw / TabS4 soil 520 ng/g dw via KF=0.71,lambs_lettuce,AE,S,0.7033
+carbamazepine,2.25,root,6.65,dw,baf,,,,,Kodesova2019 TabS2 root 2000 ng/g dw / TabS4 soil 1025 ng/g dw via KF=2.97,lambs_lettuce,HCa,M,0.3005
+carbamazepine,2.25,root,11.03,dw,baf,,,,,Kodesova2019 TabS2 root 2400 ng/g dw / TabS4 soil 770 ng/g dw via KF=2.97,lambs_lettuce,HCa,S,0.2175
+carbamazepine,2.25,root,10.17,dw,baf,,,,,Kodesova2019 TabS2 root 1900 ng/g dw / TabS4 soil 875 ng/g dw via KF=3.86,lambs_lettuce,HCh,M,0.1869
+carbamazepine,2.25,root,16.16,dw,baf,,,,,Kodesova2019 TabS2 root 3000 ng/g dw / TabS4 soil 870 ng/g dw via KF=3.86,lambs_lettuce,HCh,S,0.1857
+carbamazepine,2.25,root,8.93,dw,baf,,,,,Kodesova2019 TabS2 root 5200 ng/g dw / TabS4 soil 440 ng/g dw via KF=0.71,spinach,AE,S,0.5823
+carbamazepine,2.25,root,8.18,dw,baf,,,,,Kodesova2019 TabS2 root 2800 ng/g dw / TabS4 soil 1150 ng/g dw via KF=2.97,spinach,HCa,M,0.3423
+carbamazepine,2.25,root,9.58,dw,baf,,,,,Kodesova2019 TabS2 root 2800 ng/g dw / TabS4 soil 1000 ng/g dw via KF=2.97,spinach,HCa,S,0.2923
+carbamazepine,2.25,root,4.74,dw,baf,,,,,Kodesova2019 TabS2 root 990 ng/g dw / TabS4 soil 965 ng/g dw via KF=3.86,spinach,HCh,M,0.2088
+carbamazepine,2.25,root,6.98,dw,baf,,,,,Kodesova2019 TabS2 root 1500 ng/g dw / TabS4 soil 990 ng/g dw via KF=3.86,spinach,HCh,S,0.2149
+carbamazepine,2.25,root,11.69,dw,baf,,,,,Kodesova2019 TabS2 root 4000 ng/g dw / TabS4 soil 1150 ng/g dw via KF=2.97,arugula,HCa,M,0.3423
+carbamazepine,2.25,root,7.36,dw,baf,,,,,Kodesova2019 TabS2 root 3400 ng/g dw / TabS4 soil 1500 ng/g dw via KF=2.97,arugula,HCa,S,0.4621
+carbamazepine,2.25,root,11.77,dw,baf,,,,,Kodesova2019 TabS2 root 1600 ng/g dw / TabS4 soil 660 ng/g dw via KF=3.86,arugula,HCh,M,0.1359
+carbamazepine,2.25,root,17.34,dw,baf,,,,,Kodesova2019 TabS2 root 1800 ng/g dw / TabS4 soil 520 ng/g dw via KF=3.86,arugula,HCh,S,0.1038
+carbamazepine,2.25,root,12.09,dw,baf,,,,,Kodesova2019 TabS2 root 5700 ng/g dw / TabS4 soil 365 ng/g dw via KF=0.71,radish,AE,M,0.4715
+carbamazepine,2.25,root,12.90,dw,baf,,,,,Kodesova2019 TabS2 root 7900 ng/g dw / TabS4 soil 460 ng/g dw via KF=0.71,radish,AE,S,0.6123
+carbamazepine,2.25,root,11.02,dw,baf,,,,,Kodesova2019 TabS2 root 2100 ng/g dw / TabS4 soil 685 ng/g dw via KF=2.97,radish,HCa,M,0.1906
+carbamazepine,2.25,root,24.89,dw,baf,,,,,Kodesova2019 TabS2 root 3100 ng/g dw / TabS4 soil 470 ng/g dw via KF=2.97,radish,HCa,S,0.1245
+carbamazepine,2.25,root,13.37,dw,baf,,,,,Kodesova2019 TabS2 root 2100 ng/g dw / TabS4 soil 750 ng/g dw via KF=3.86,radish,HCh,M,0.1570
+carbamazepine,2.25,root,20.91,dw,baf,,,,,Kodesova2019 TabS2 root 2600 ng/g dw / TabS4 soil 610 ng/g dw via KF=3.86,radish,HCh,S,0.1243

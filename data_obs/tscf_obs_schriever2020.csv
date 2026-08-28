@@ -1,0 +1,135 @@
+# Schriever & Lamshoeft (2020), Science of the Total Environment 713:136667,
+# "Lipophilicity matters - a new look at experimental plant uptake data from
+#  literature"  doi:10.1016/j.scitotenv.2020.136667
+# SUPPLEMENTARY INFORMATION, Table A 3 ("Overview of pKa, logD, pH, TSCF, plant
+# species and author information of test compounds, n = 97").  All 97 rows are
+# transcribed here; the parse was checked against the SI's own Table A 1 species
+# tally (barley 51, poplar 15, cattails 8, wheat 6, tomato 4, potato 3, ...).
+#
+# WHY THIS FILE EXISTS. Until now TSCF could only be tested in this repo THROUGH
+# the plant ODE (data_obs/neutral_obs_ge2017.csv), where its error is entangled
+# with the unknown in-planta half-life -- which is exactly why the Ge 2017 result
+# is documented as an UPPER BOUND on transport error. This table tests the TSCF
+# QSPR on its own: measured TSCF against lipophilicity, no model in between.
+#
+# SENTINEL VALUES. The SI uses 999 for "not applicable / not reported" in the pKa
+# and test-pH columns; they are kept verbatim as 999 rather than blanked, so this
+# file stays a transcription. Readers of it must treat 999 as missing.
+#
+# WHICH QSPR IS IN-SAMPLE HERE, and it matters.
+#   * schriever_tscf() was FITTED to these 97 rows. Scoring it here is
+#     reproduction, not prediction. Marked `subset=calibration_schriever`.
+#   * briggs_tscf() (the repo's default) was fitted to Briggs, Bromilow & Evans
+#     1982 -- a different paper and different compounds from the Briggs et al.
+#     1987 rows here. So for the BRIGGS bell this table is out-of-sample, which
+#     is the useful direction, but not cleanly independent either: same lab,
+#     same species (barley), same method lineage. Call it out-of-sample, not
+#     independent.
+#
+# IONISATION. 74 of the 97 rows carry a pKa, and this repo's neutral path assumes
+# an UN-IONISED solute. `neutral_at_test_pH` is 1 where |logD(test pH) - logP| is
+# below 0.1, i.e. speciation shifts lipophilicity by under 0.1 log unit and the
+# neutral treatment is defensible; it is 0 otherwise. Rows with no reported test
+# pH (999) fall back to logD(pH 5.5). The strict neutral score uses only the 1s.
+#
+# LOG D vs LOG P. Schriever et al.'s central claim is that logD at the test pH,
+# not logP, is the right lipophilicity descriptor. Both are carried so that claim
+# is testable here rather than assumed.
+id,pKa,logP,logD_pH5.5,logD_pH7.4,logD_test_pH,pH_test,TSCF,species,authors,neutral_at_test_pH,subset
+570,999,-0.64,-0.22,-0.22,-0.22,999,0.28,Black willow,Yifru and Nzengung  2006,0,calibration_schriever
+571,999,-0.64,-0.22,-0.22,-0.22,999,0.29,Hybrid poplar,Yifru and Nzengung  2006,0,calibration_schriever
+572,999,-0.64,-0.22,-0.22,-0.22,999,0.36,Black willow,Yifru and Nzengung  2006,0,calibration_schriever
+581,999,2.22,2.04,2.04,2.04,6,0.82,Poplar Hybrid,Burken and Schnoor  1998,0,calibration_schriever
+1061,999,5.46,5.54,5.54,5.54,999,0.05,Chinese cabbage,Hayashi et al.  2010,1,calibration_schriever
+1062,999,5.46,5.54,5.54,5.54,999,0.07,Pumpkin,Hayashi et al.  2010,1,calibration_schriever
+1063,999,5.46,5.54,5.54,5.54,999,0.08,Bell pepper,Hayashi et al.  2010,1,calibration_schriever
+1064,999,5.46,5.54,5.54,5.54,999,0.08,Cabbage,Hayashi et al.  2010,1,calibration_schriever
+1065,999,5.46,5.54,5.54,5.54,999,0.11,Lettuce,Hayashi et al.  2010,1,calibration_schriever
+1066,999,5.46,5.54,5.54,5.54,999,0.13,Corn (maize),Hayashi et al.  2010,1,calibration_schriever
+1067,999,5.46,5.54,5.54,5.54,999,0.14,Tomato,Hayashi et al.  2010,1,calibration_schriever
+1068,999,5.46,5.54,5.54,5.54,999,0.17,Wheat,Hayashi et al.  2010,1,calibration_schriever
+1069,999,5.46,5.54,5.54,5.54,999,0.18,Cucumber,Hayashi et al.  2010,1,calibration_schriever
+1070,999,5.46,5.54,5.54,5.54,999,0.49,Zucchini,Hayashi et al.  2010,1,calibration_schriever
+1088,999,2.26,2.57,2.57,2.57,6,0.75,Poplar Hybrid,Burken and Schnoor  1998,0,calibration_schriever
+1572,4.7,4.78,4.16,2.45,3.71,6,0.04,Poplar Hybrid,Burken and Schnoor  1998,0,calibration_schriever
+1647,3.4,2.59,0.34,-0.83,-0.83,8,0.03,Barley,Briggs et al.  1987,0,calibration_schriever
+1648,3.4,2.59,0.34,-0.83,-0.83,8,0.03,Barley,Briggs et al.  1987,0,calibration_schriever
+1649,3.4,2.59,0.34,-0.83,-0.58,7,0.04,Barley,Briggs et al.  1987,0,calibration_schriever
+1650,3.4,2.59,0.34,-0.83,-0.58,7,0.04,Barley,Briggs et al.  1987,0,calibration_schriever
+1651,3.4,2.59,0.34,-0.83,0.03,6,0.05,Barley,Briggs et al.  1987,0,calibration_schriever
+1652,3.4,2.59,0.34,-0.83,0.03,6,0.06,Barley,Briggs et al.  1987,0,calibration_schriever
+1653,3.4,2.59,0.34,-0.83,0.34,5,0.49,Barley,Briggs et al.  1987,0,calibration_schriever
+1654,3.4,2.59,0.34,-0.83,0.34,5,0.58,Barley,Briggs et al.  1987,0,calibration_schriever
+1685,999,1.95,1.81,1.81,1.81,6,0.82,Poplar Hybrid,Burken and Schnoor  1998,0,calibration_schriever
+1700,999,3.21,3.1,3.1,3.1,6,0.80,Poplar Hybrid,Burken and Schnoor  1998,0,calibration_schriever
+1774,999,3.14,3.25,3.25,3.25,6,0.79,Poplar Hybrid,Burken and Schnoor  1998,0,calibration_schriever
+1776,999,2.68,2.61,2.61,2.61,6,0.81,Poplar Hybrid,Burken and Schnoor  1998,1,calibration_schriever
+1805,9.994,1.48,1.63,1.63,1.63,6,0.48,Poplar Hybrid,Burken and Schnoor  1998,0,calibration_schriever
+1818,9.1,-0.81,-3.7,-2.48,-3.09,999,0.00,Common cattails,Doucette et al.  2005,0,calibration_schriever
+1819,9.1,-0.81,-3.7,-2.48,-3.09,999,0.01,Common cattails,Doucette et al.  2005,0,calibration_schriever
+1820,9.1,-0.81,-3.7,-2.48,-3.09,999,0.01,Common cattails,Doucette et al.  2005,0,calibration_schriever
+1821,9.1,-0.81,-3.7,-2.48,-3.09,999,0.02,Common cattails,Doucette et al.  2005,0,calibration_schriever
+1905,999,1.68,1.79,1.79,1.79,999,0.46,Poplar Hybrid,Thompson et al.  1998,0,calibration_schriever
+1979,999,3.82,3.9,3.9,3.9,6,0.04,Poplar Hybrid,Burken and Schnoor  1998,1,calibration_schriever
+2037,999,-2.19,-1.2,-1.2,-1.2,6,0.16,Poplar Hybrid,Burken and Schnoor  1998,0,calibration_schriever
+2052,1.62,2.28,2.29,2.3,2.3,999,0.63,Barley,Shone and Wood  1972,1,calibration_schriever
+2053,1.62,2.28,2.29,2.3,2.3,999,0.68,Barley,Shone and Wood  1972,1,calibration_schriever
+2054,1.62,2.28,2.29,2.3,2.3,999,0.80,Barley,Shone and Wood  1972,1,calibration_schriever
+2055,1.62,2.28,2.29,2.3,2.3,999,0.84,Barley,Shone and Wood  1972,1,calibration_schriever
+2056,1.62,2.28,2.29,2.3,2.3,999,0.88,Barley,Shone and Wood  1972,1,calibration_schriever
+2057,1.62,2.28,2.29,2.3,2.3,999,0.92,Barley,Shone and Wood  1972,1,calibration_schriever
+2058,1.62,2.28,2.29,2.3,2.3,999,0.98,Barley,Shone and Wood  1972,1,calibration_schriever
+2060,1.62,2.28,2.29,2.3,2.29,5,0.90,Barley,Shone and Wood  1974,1,calibration_schriever
+2105,3.56,2.03,-0.45,-1.7,-1.44,7,0.05,Barley,Briggs et al.  1987,0,calibration_schriever
+2106,3.56,2.03,-0.45,-1.7,-0.45,5,0.91,Barley,Briggs et al.  1987,0,calibration_schriever
+2111,5.64,-0.14,-1.87,-3.06,-2.81,7,0.02,Barley,Briggs et al.  1987,0,calibration_schriever
+2112,5.64,-0.14,-1.87,-3.06,-1.87,4,0.04,Barley,Briggs et al.  1987,0,calibration_schriever
+2113,5.64,-0.14,-1.87,-3.06,-1.87,5,0.13,Barley,Briggs et al.  1987,0,calibration_schriever
+2114,-2.92,-0.27,-0.29,-0.29,-0.29,999,0.72,Hybrid poplar,Aitchison et al.  2000,1,calibration_schriever
+2145,15.3,-0.77,-0.55,-0.55,-0.55,999,0.11,Common cattails,Doucette et al.  2005,0,calibration_schriever
+2146,15.3,-0.77,-0.55,-0.55,-0.55,999,0.15,Common cattails,Doucette et al.  2005,0,calibration_schriever
+2147,15.3,-0.77,-0.55,-0.55,-0.55,999,0.15,Common cattails,Doucette et al.  2005,0,calibration_schriever
+2148,15.3,-0.77,-0.55,-0.55,-0.55,999,0.20,Common cattails,Doucette et al.  2005,0,calibration_schriever
+2415,9.8,2.05,-1.09,-0.27,-1.09,5,0.18,Barley,Inoue et al. 1998,0,calibration_schriever
+2416,9.8,2.05,-1.09,-0.27,-0.87,6,0.25,Barley,Inoue et al. 1998,0,calibration_schriever
+3362,13.6,2.88,0.17,0.17,0.17,5,0.81,Barley,Shone and Wood  1974,0,calibration_schriever
+3683,4.24,1.56,0.27,-1.51,-1.14,7,0.04,Barley,Briggs et al.  1987,0,calibration_schriever
+3684,4.24,1.56,0.27,-1.51,0.27,5,0.86,Barley,Briggs et al.  1987,0,calibration_schriever
+3711,2.84,3.01,0.43,-0.74,-0.74,8,0.04,Barley,Briggs et al.  1987,0,calibration_schriever
+3712,2.84,3.01,0.43,-0.74,-0.74,8,0.04,Barley,Briggs et al.  1987,0,calibration_schriever
+3713,2.84,3.01,0.43,-0.74,-0.49,7,0.05,Barley,Briggs et al.  1987,0,calibration_schriever
+3714,2.84,3.01,0.43,-0.74,-0.49,7,0.05,Barley,Briggs et al.  1987,0,calibration_schriever
+3715,2.84,3.01,0.43,-0.74,0.12,6,0.11,Barley,Briggs et al.  1987,0,calibration_schriever
+3716,2.84,3.01,0.43,-0.74,0.12,6,0.12,Barley,Briggs et al.  1987,0,calibration_schriever
+3717,2.84,3.01,0.43,-0.74,0.43,5,0.66,Barley,Briggs et al.  1987,0,calibration_schriever
+3718,2.84,3.01,0.43,-0.74,0.43,5,0.72,Barley,Briggs et al.  1987,0,calibration_schriever
+3846,3.21,1.8,-0.36,-1.71,-0.36,5,0.04,Barley,Briggs et al.  1987,0,calibration_schriever
+3847,3.21,1.8,-0.36,-1.71,-0.36,4,0.12,Barley,Briggs et al.  1987,0,calibration_schriever
+3979,9.83,1.51,-1.57,-0.85,-1.57,5,0.21,Barley,Inoue et al. 1998,0,calibration_schriever
+3980,9.83,1.51,-1.57,-0.85,-1.38,6,0.24,Barley,Inoue et al. 1998,0,calibration_schriever
+3981,9.83,1.51,-1.57,-0.85,-1,7,0.25,Barley,Inoue et al. 1998,0,calibration_schriever
+3988,4.2,2.56,2.44,2.49,2.47,6.5,0.78,Barley,Shone and Wood  1974,1,calibration_schriever
+4212,1.7,2.63,2.66,2.66,2.66,6,0.57,Poplar Hybrid,Burken and Schnoor  1998,1,calibration_schriever
+4227,1.7,2.63,2.66,2.66,2.66,6.5,0.75,Barley,Shone and Wood  1974,1,calibration_schriever
+4363,5.2,-0.87,-0.72,-0.72,-0.72,6.5,0.25,Barley,Shone and Wood  1974,0,calibration_schriever
+4386,999,-2.91,-1.71,-1.71,-1.71,999,0.21,Hybrid poplar,Yoon et al.  2002,0,calibration_schriever
+4956,5.04,2.53,1.46,1.47,1.47,6.5,0.09,Barley,Shone and Wood  1974,0,calibration_schriever
+6684,9.31,3.45,-0.13,0.66,0.08,6,0.19,Barley,Inoue et al. 1998,0,calibration_schriever
+6691,9.54,-0.26,-2.91,-1.8,-2.91,5,0.03,Barley,Inoue et al. 1998,0,calibration_schriever
+6692,9.54,-0.26,-2.91,-1.8,-2.62,6,0.04,Barley,Inoue et al. 1998,0,calibration_schriever
+6693,9.54,-0.26,-2.91,-1.8,-2.03,7,0.07,Barley,Inoue et al. 1998,0,calibration_schriever
+6694,9.54,-0.26,-2.91,-1.8,-1.8,8,0.09,Barley,Inoue et al. 1998,0,calibration_schriever
+6757,9.48,1.19,-1.62,-0.43,-1.62,5,0.17,Barley,Inoue et al. 1998,0,calibration_schriever
+6758,9.48,1.19,-1.62,-0.43,-1.31,6,0.19,Barley,Inoue et al. 1998,0,calibration_schriever
+6759,9.48,1.19,-1.62,-0.43,-0.68,7,0.19,Barley,Inoue et al. 1998,0,calibration_schriever
+A1*,0.23,1.24,-3.08,-3.09,-3.09,6.5,0.70,Potato,Lamshoeft et al.  2018,0,calibration_schriever
+B1*,8.4,0.91,0.92,0.53,0.71,6.5,0.67,Potato,Lamshoeft et al.  2018,0,calibration_schriever
+C1*,10.7,0.19,0.2,0.2,0.2,6.5,0.92,Potato,Lamshoeft et al.  2018,1,calibration_schriever
+D1*,10.3,-0.58,-0.51,-0.51,-0.51,6.5,0.67,Wheat,Lamshoeft et al.  2018,1,calibration_schriever
+E1*,11,-0.71,-0.71,-0.71,-0.71,6.5,0.69,Wheat,Lamshoeft et al.  2018,1,calibration_schriever
+E2*,11,-0.71,-0.71,-0.71,-0.71,6.5,0.78,Tomato,Lamshoeft et al.  2018,1,calibration_schriever
+F1*,9.7,-1.52,-1.52,-1.52,-1.52,6.5,0.28,Wheat,Lamshoeft et al.  2018,1,calibration_schriever
+F2*,9.7,-1.52,-1.52,-1.52,-1.52,6.5,0.31,Tomato,Lamshoeft et al.  2018,1,calibration_schriever
+G1*,4.06,-0.51,0.29,0.3,0.3,6.5,0.37,Wheat,Lamshoeft et al.  2018,0,calibration_schriever
+G2*,4.06,-0.51,0.29,0.3,0.3,6.5,0.33,Tomato,Lamshoeft et al.  2018,0,calibration_schriever
+H1*,3.58,0.54,-1.39,-1.41,-1.4,6.5,0.20,Wheat,Lamshoeft et al.  2018,0,calibration_schriever

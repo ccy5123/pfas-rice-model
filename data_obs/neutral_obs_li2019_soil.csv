@@ -1,0 +1,425 @@
+# Li, Chiou, Li & Schnoor (2019), Environment International 126:46-53
+# doi:10.1016/j.envint.2019.02.020  -- SI Table S2, "Data on chemical uptakes by
+# plant roots from SOILS plotted in Figures 2-4".  All 376 rows, 13 crops.
+# `exposure_d` is BLANK for the 20 Zhang et al. 2005 rows, whose duration the SI
+# gives as "N/A (field)" -- they are a field survey, not a timed exposure.
+#
+# THE COMPANION TO neutral_obs_li2019_rcf.csv, AND IT DISAGREES WITH IT. Same
+# paper, same authors, same fresh-weight convention -- but soil-grown instead of
+# hydroponic, 12x larger, and the model's bias flips SIGN on it (S1 hydroponic:
+# -0.43, model low; this table: +0.25, model high). That disagreement is the
+# reason this file exists: it makes the "root partition is too low" reading a
+# property of one exposure route rather than of the partition core.
+#
+# `value` is 10^(log RCF-water), Li et al.'s WATER-based root concentration
+# factor -- the same endpoint as the hydroponic table, so the two are directly
+# comparable. IMPORTANT: it is DERIVED, not measured. Li obtain it from the
+# measured soil-based RCF by dividing the soil concentration by K_om, so it
+# inherits whatever error is in K_om. That is not a footnote here: splitting the
+# rows on where K_om came from (their Table S3) changes the answer --
+#     K_om EXPERIMENTAL (n=62)   model bias +0.033   essentially unbiased
+#     K_om from a QSPR  (n=253)  model bias +0.284
+# so most of the apparent over-prediction is the soil-to-water conversion, not
+# the plant model. `kom_source` carries that split; use it.
+#
+# PER-CROP LIPID, and the test it enables. `flip` is the root lipid fraction Li
+# assign to each crop, fresh weight, on the same operational basis as the model's
+# L (see neutral_obs_li2019_rcf.csv for the definition, verified at source).
+# Substituting each crop's OWN lipid for the model's rice value collapses the
+# mean bias from +0.250 to +0.005 (RMSE 0.644 -> 0.470). So the composition TERM
+# is doing its job and the residual spread is not a failure of K_PW's form.
+# Caveat: `flip` is Li's own model input, so this is a consistency check inside
+# their framework, not an independent validation.
+#
+# alpha_pt IS NOT APPLIED, deliberately. Li's model writes
+# RCF_water = alpha_pt * [f_pw + f_ch*K_ch + f_lip*K_lip] with a median alpha_pt
+# of 0.098 here -- their equilibrium term is ~10x their measured RCF. This model
+# has no alpha_pt and reaches the same measured values, because Briggs' exponent
+# b = 0.77 is much flatter than Li's K_lip ~ Kow^1.03. The two frameworks split
+# the same data differently; dividing by alpha_pt would be double-counting.
+#
+# EXPOSURE TIME is 7-360 d where reported, mostly >40 d, so unlike the hydroponic
+# table these are not short-exposure measurements.
+#
+# NOT WIRED INTO --obs. These are 13 non-rice crops with a derived exposure; the
+# shared harness would run them on the 120-day rice ODE and return a number that
+# looks like the others but is not comparable. validation/li2019_soil_table.py
+# scores them against the equilibrium K_PW, which is the right comparison.
+#
+compound,log_kow,tissue,value,basis,endpoint,species,f_lip,f_om,alpha_pt,exposure_d,kom_source,source_study
+Penconazole,3.72,root,37.1535,fw,baf,Wheat,0.01100,0.00970,0.622,7,experimental,Jiang et al.  2016
+Penconazole,3.72,root,45.7088,fw,baf,Wheat,0.01100,0.03260,0.778,7,experimental,Jiang et al.  2016
+Penconazole,3.72,root,42.6580,fw,baf,Wheat,0.01100,0.05030,0.726,7,experimental,Jiang et al.  2016
+Penconazole,3.72,root,29.5121,fw,baf,Wheat,0.01100,0.01590,0.502,7,experimental,Jiang et al.  2016
+Penconazole,3.72,root,28.8403,fw,baf,Wheat,0.01100,0.02600,0.495,7,experimental,Jiang et al.  2016
+Aldrin,5.66,root,42.6580,fw,baf,Carrot,0.00240,0.03600,0.038,93,experimental,Harris and Sans  1967
+Aldrin,5.66,root,22.3872,fw,baf,Carrot,0.00240,0.66500,0.02,93,experimental,Harris and Sans  1967
+Dieldrin,4.55,root,16.9824,fw,baf,Carrot,0.00240,0.01400,0.198,93,experimental,Harris and Sans  1967
+Dieldrin,4.55,root,17.7828,fw,baf,Carrot,0.00240,0.03600,0.208,93,experimental,Harris and Sans  1967
+Dieldrin,4.55,root,16.5959,fw,baf,Carrot,0.00240,0.66500,0.193,93,experimental,Harris and Sans  1967
+Dieldrin,4.55,root,8.1283,fw,baf,Radish,0.00100,0.03600,0.222,35,experimental,Harris and Sans  1967
+Dieldrin,4.55,root,8.3176,fw,baf,Radish,0.00100,0.66500,0.228,35,experimental,Harris and Sans  1967
+Dieldrin,4.55,root,4.8978,fw,baf,Turnips,0.00100,0.03600,0.133,120,experimental,Harris and Sans  1967
+Dieldrin,4.55,root,3.2359,fw,baf,Onions,0.00100,0.03600,0.089,83,experimental,Harris and Sans  1967
+m-DCB  (1;3-DCB),3.44,root,10.0000,fw,baf,Spinach,0.00340,0.02820,0.963,,unmatched,Zhang et al.  2005
+m-DCB  (1;3-DCB),3.44,root,6.7608,fw,baf,Spinach,0.00340,0.00780,0.655,,unmatched,Zhang et al.  2005
+m-DCB  (1;3-DCB),3.44,root,2.8184,fw,baf,Carrot,0.00240,0.01410,0.363,,unmatched,Zhang et al.  2005
+m-DCB  (1;3-DCB),3.44,root,1.2882,fw,baf,Carrot,0.00240,0.00780,0.166,,unmatched,Zhang et al.  2005
+m-DCB  (1;3-DCB),3.44,root,1.5488,fw,baf,Radish,0.00090,0.02820,0.427,,unmatched,Zhang et al.  2005
+m-DCB  (1;3-DCB),3.44,root,1.1749,fw,baf,Radish,0.00090,0.00780,0.325,,unmatched,Zhang et al.  2005
+p-DCB (1;4-DCB),3.37,root,7.0795,fw,baf,Spinach,0.00340,0.02820,0.794,,unmatched,Zhang et al.  2005
+p-DCB (1;4-DCB),3.37,root,1.9498,fw,baf,Spinach,0.00340,0.01410,0.217,,unmatched,Zhang et al.  2005
+p-DCB (1;4-DCB),3.37,root,1.0965,fw,baf,Radish,0.00090,0.01410,0.333,,unmatched,Zhang et al.  2005
+o-DCB (1;2-DCB),3.38,root,7.4131,fw,baf,Spinach,0.00340,0.00780,0.805,,unmatched,Zhang et al.  2005
+o-DCB (1;2-DCB),3.38,root,1.4791,fw,baf,Carrot,0.00240,0.00780,0.216,,unmatched,Zhang et al.  2005
+o-DCB (1;2-DCB),3.38,root,0.9772,fw,baf,Radish,0.00090,0.00780,0.298,,unmatched,Zhang et al.  2005
+1;2;4-TCB,4.02,root,7.9433,fw,baf,Spinach,0.00340,0.02820,0.217,,estimated,Zhang et al.  2005
+1;2;4-TCB,4.02,root,7.9433,fw,baf,Spinach,0.00340,0.01410,0.219,,estimated,Zhang et al.  2005
+1;2;4-TCB,4.02,root,9.1201,fw,baf,Celery,0.00170,0.02820,0.491,,estimated,Zhang et al.  2005
+1;2;4-TCB,4.02,root,6.4565,fw,baf,Celery,0.00170,0.01410,0.349,,estimated,Zhang et al.  2005
+1;2;4-TCB,4.02,root,4.6774,fw,baf,Celery,0.00170,0.00780,0.253,,estimated,Zhang et al.  2005
+1;2;4-TCB,4.02,root,3.8905,fw,baf,Carrot,0.00240,0.01410,0.147,,estimated,Zhang et al.  2005
+1;2;4-TCB,4.02,root,2.2909,fw,baf,Radish,0.00090,0.02820,0.214,,estimated,Zhang et al.  2005
+1;2;4-TCB,4.02,root,1.7378,fw,baf,Radish,0.00090,0.01410,0.163,,estimated,Zhang et al.  2005
+Fluorene,4.18,root,8.3176,fw,baf,Radish,0.00100,0.12720,0.512,64,estimated,Cai et al.  2008
+Phenanthrene,4.46,root,21.8776,fw,baf,Radish,0.00100,0.12720,0.724,64,estimated,Cai et al.  2008
+Phenanthrene,4.46,root,20.8930,fw,baf,Radish,0.00100,0.04840,0.699,64,estimated,Cai et al.  2008
+Anthracene,4.54,root,5.1286,fw,baf,Radish,0.00100,0.03780,0.143,64,estimated,Cai et al.  2008
+Anthracene,4.54,root,5.1286,fw,baf,Radish,0.00100,0.12720,0.144,64,estimated,Cai et al.  2008
+Fluoranthene,5.16,root,36.3078,fw,baf,Radish,0.00100,0.00790,0.25,64,estimated,Cai et al.  2008
+Benzo[a]pyrene,6.34,root,41.6869,fw,baf,Radish,0.00100,0.03780,0.019,64,estimated,Cai et al.  2008
+Di(2-ethylhexyl) phthalate,7.6,root,630.9573,fw,baf,Radish,0.00100,0.06760,0.016,64,estimated,Cai et al.  2008
+Di(2-ethylhexyl) phthalate,7.6,root,954.9926,fw,baf,Radish,0.00100,0.12720,0.024,64,estimated,Cai et al.  2008
+Phenanthrene,4.46,root,3.7154,fw,baf,Ryegrass,0.00320,0.01450,0.039,45,estimated,Gao et al.  2005
+Phenanthrene,4.46,root,3.8905,fw,baf,Ryegrass,0.00320,0.01450,0.041,45,estimated,Gao et al.  2005
+Phenanthrene,4.46,root,18.6209,fw,baf,Chinese cabbage,0.00680,0.01450,0.094,45,estimated,Gao et al.  2005
+Phenanthrene,4.46,root,19.9526,fw,baf,Chinese cabbage,0.00680,0.01450,0.101,45,estimated,Gao et al.  2005
+Phenanthrene,4.46,root,19.9526,fw,baf,Chinese cabbage,0.00680,0.01450,0.099,45,estimated,Gao et al.  2005
+Phenanthrene,4.46,root,10.0000,fw,baf,Chinese cabbage,0.00680,0.01450,0.05,45,estimated,Gao et al.  2005
+Phenanthrene,4.46,root,9.1201,fw,baf,Chinese cabbage,0.00680,0.01450,0.046,45,estimated,Gao et al.  2005
+Phenanthrene,4.46,root,9.1201,fw,baf,Chinese cabbage,0.00680,0.01450,0.046,45,estimated,Gao et al.  2005
+Phenanthrene,4.46,root,8.5114,fw,baf,Chinese cabbage,0.00680,0.01450,0.043,45,estimated,Gao et al.  2005
+Phenanthrene,4.46,root,6.6069,fw,baf,Chinese cabbage,0.00680,0.01450,0.033,45,estimated,Gao et al.  2005
+Phenanthrene,4.46,root,5.0119,fw,baf,Amaranth,0.00320,0.01450,0.054,45,estimated,Gao et al.  2005
+Phenanthrene,4.46,root,5.6234,fw,baf,Amaranth,0.00320,0.01450,0.061,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,48.9779,fw,baf,Ryegrass,0.00320,0.01450,0.099,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,37.1535,fw,baf,Ryegrass,0.00320,0.01450,0.076,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,38.0189,fw,baf,Ryegrass,0.00320,0.01450,0.078,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,32.3594,fw,baf,Ryegrass,0.00320,0.01450,0.067,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,33.1131,fw,baf,Ryegrass,0.00320,0.01450,0.068,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,34.6737,fw,baf,Ryegrass,0.00320,0.01450,0.071,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,26.9153,fw,baf,Ryegrass,0.00320,0.01450,0.055,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,204.1738,fw,baf,Chinese cabbage,0.00680,0.01450,0.196,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,275.4229,fw,baf,Chinese cabbage,0.00680,0.01450,0.263,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,204.1738,fw,baf,Chinese cabbage,0.00680,0.01450,0.198,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,213.7962,fw,baf,Chinese cabbage,0.00680,0.01450,0.204,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,208.9296,fw,baf,Chinese cabbage,0.00680,0.01450,0.203,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,204.1738,fw,baf,Chinese cabbage,0.00680,0.01450,0.197,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,169.8244,fw,baf,Chinese cabbage,0.00680,0.01450,0.165,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,151.3561,fw,baf,Chinese cabbage,0.00680,0.01450,0.147,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,54.9541,fw,baf,Amaranth,0.00320,0.01450,0.113,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,48.9779,fw,baf,Amaranth,0.00320,0.01450,0.102,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,38.0189,fw,baf,Amaranth,0.00320,0.01450,0.078,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,31.6228,fw,baf,Amaranth,0.00320,0.01450,0.066,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,29.5121,fw,baf,Amaranth,0.00320,0.01450,0.062,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,33.8844,fw,baf,Amaranth,0.00320,0.01450,0.071,45,estimated,Gao et al.  2005
+Pyrene,5.18,root,30.1995,fw,baf,Amaranth,0.00320,0.01450,0.063,45,estimated,Gao et al.  2005
+α-HCH,3.81,root,0.1820,fw,baf,Radish,0.00100,0.06360,0.024,56,estimated,Mikes et al.  2009
+α-HCH,3.81,root,0.2570,fw,baf,Radish,0.00100,0.06360,0.034,70,estimated,Mikes et al.  2009
+β-HCH,3.78,root,0.7244,fw,baf,Radish,0.00100,0.06360,0.102,56,estimated,Mikes et al.  2009
+β-HCH,3.78,root,1.9498,fw,baf,Radish,0.00100,0.06360,0.272,70,estimated,Mikes et al.  2009
+γ-HCH,3.72,root,0.1549,fw,baf,Radish,0.00100,0.06360,0.025,56,unmatched,Mikes et al.  2009
+γ-HCH,3.72,root,0.3548,fw,baf,Radish,0.00100,0.06360,0.056,70,unmatched,Mikes et al.  2009
+HCB,5.5,root,8.9125,fw,baf,Radish,0.00100,0.06360,0.028,56,unmatched,Mikes et al.  2009
+o;p'-DDE,5.76,root,29.5121,fw,baf,Radish,0.00100,0.06360,0.051,56,unmatched,Mikes et al.  2009
+o;p'-DDE,5.76,root,54.9541,fw,baf,Radish,0.00100,0.06360,0.095,70,unmatched,Mikes et al.  2009
+p;p'-DDE,5.8,root,43.6516,fw,baf,Radish,0.00100,0.06360,0.069,56,unmatched,Mikes et al.  2009
+p;p'-DDE,5.8,root,107.1519,fw,baf,Radish,0.00100,0.06360,0.17,70,unmatched,Mikes et al.  2009
+o;p'-DDD,5.82,root,30.9030,fw,baf,Radish,0.00100,0.06360,0.047,56,unmatched,Mikes et al.  2009
+o;p'-DDD,5.82,root,107.1519,fw,baf,Radish,0.00100,0.06360,0.164,70,unmatched,Mikes et al.  2009
+p;p'-DDD,5.69,root,30.1995,fw,baf,Radish,0.00100,0.06360,0.061,56,unmatched,Mikes et al.  2009
+p;p'-DDD,5.69,root,131.8257,fw,baf,Radish,0.00100,0.06360,0.265,70,unmatched,Mikes et al.  2009
+o;p'-DDT,6.19,root,67.6083,fw,baf,Radish,0.00100,0.06360,0.043,56,unmatched,Mikes et al.  2009
+o;p'-DDT,6.19,root,208.9296,fw,baf,Radish,0.00100,0.06360,0.134,70,unmatched,Mikes et al.  2009
+p;p'-DDT,6.36,root,251.1886,fw,baf,Radish,0.00100,0.06360,0.11,56,unmatched,Mikes et al.  2009
+PCB 101,6.5,root,138.0384,fw,baf,Radish,0.00100,0.06360,0.044,56,unmatched,Mikes et al.  2009
+PCB 101,6.5,root,208.9296,fw,baf,Radish,0.00100,0.06360,0.066,70,unmatched,Mikes et al.  2009
+PCB 153,6.9,root,301.9952,fw,baf,Radish,0.00100,0.06360,0.038,56,unmatched,Mikes et al.  2009
+PCB 138,6.69,root,181.9701,fw,baf,Radish,0.00100,0.06360,0.037,70,unmatched,Mikes et al.  2009
+PCB 180,7.2,root,251.1886,fw,baf,Radish,0.00100,0.06360,0.016,56,unmatched,Mikes et al.  2009
+BDE-100,7.24,root,660.6934,fw,baf,Pumpkin,0.00700,0.03190,0.005,60,estimated,Huang et al.  2011
+BDE-100,7.24,root,407.3803,fw,baf,Maize,0.00530,0.03190,0.004,60,estimated,Huang et al.  2011
+BDE-100,7.24,root,575.4399,fw,baf,Ryegrass,0.00560,0.03190,0.006,60,estimated,Huang et al.  2011
+BDE-100,7.24,root,758.5776,fw,baf,Pumpkin,0.00700,0.01900,0.006,60,estimated,Huang et al.  2011
+BDE-100,7.24,root,691.8310,fw,baf,Maize,0.00530,0.01900,0.007,60,estimated,Huang et al.  2011
+BDE-100,7.24,root,467.7351,fw,baf,Ryegrass,0.00560,0.01900,0.005,60,estimated,Huang et al.  2011
+BDE-100,7.24,root,489.7788,fw,baf,Pumpkin,0.00700,0.00980,0.004,60,estimated,Huang et al.  2011
+BDE-100,7.24,root,501.1872,fw,baf,Maize,0.00530,0.00980,0.005,60,estimated,Huang et al.  2011
+BDE-100,7.24,root,691.8310,fw,baf,Ryegrass,0.00560,0.00980,0.007,60,estimated,Huang et al.  2011
+BDE-153,7.9,root,891.2509,fw,baf,Pumpkin,0.00700,0.03190,0.002,60,estimated,Huang et al.  2011
+BDE-153,7.9,root,4365.1583,fw,baf,Ryegrass,0.00560,0.03190,0.01,60,estimated,Huang et al.  2011
+BDE-153,7.9,root,1548.8166,fw,baf,Pumpkin,0.00700,0.01900,0.003,60,estimated,Huang et al.  2011
+BDE-153,7.9,root,2454.7089,fw,baf,Maize,0.00530,0.01900,0.006,60,estimated,Huang et al.  2011
+BDE-153,7.9,root,2344.2288,fw,baf,Ryegrass,0.00560,0.01900,0.005,60,estimated,Huang et al.  2011
+BDE-153,7.9,root,1995.2623,fw,baf,Pumpkin,0.00700,0.00980,0.004,60,estimated,Huang et al.  2011
+BDE-153,7.9,root,2187.7616,fw,baf,Maize,0.00530,0.00980,0.005,60,estimated,Huang et al.  2011
+BDE-153,7.9,root,1380.3843,fw,baf,Ryegrass,0.00560,0.00980,0.003,60,estimated,Huang et al.  2011
+BDE-154,7.82,root,3311.3112,fw,baf,Pumpkin,0.00700,0.03190,0.007,60,estimated,Huang et al.  2011
+BDE-154,7.82,root,3890.4514,fw,baf,Maize,0.00530,0.03190,0.011,60,estimated,Huang et al.  2011
+BDE-154,7.82,root,2187.7616,fw,baf,Pumpkin,0.00700,0.01900,0.005,60,estimated,Huang et al.  2011
+BDE-154,7.82,root,1737.8008,fw,baf,Maize,0.00530,0.01900,0.005,60,estimated,Huang et al.  2011
+BDE-154,7.82,root,1445.4398,fw,baf,Ryegrass,0.00560,0.01900,0.004,60,estimated,Huang et al.  2011
+BDE-154,7.82,root,1380.3843,fw,baf,Pumpkin,0.00700,0.00980,0.003,60,estimated,Huang et al.  2011
+BDE-154,7.82,root,1659.5869,fw,baf,Maize,0.00530,0.00980,0.005,60,estimated,Huang et al.  2011
+BDE-154,7.82,root,1380.3843,fw,baf,Ryegrass,0.00560,0.00980,0.004,60,estimated,Huang et al.  2011
+BDE-17,5.74,root,66.0693,fw,baf,Pumpkin,0.00700,0.03190,0.017,60,estimated,Huang et al.  2011
+BDE-17,5.74,root,69.1831,fw,baf,Maize,0.00530,0.03190,0.024,60,estimated,Huang et al.  2011
+BDE-17,5.74,root,47.8630,fw,baf,Ryegrass,0.00560,0.03190,0.015,60,estimated,Huang et al.  2011
+BDE-17,5.74,root,38.9045,fw,baf,Pumpkin,0.00700,0.01900,0.01,60,estimated,Huang et al.  2011
+BDE-17,5.74,root,45.7088,fw,baf,Maize,0.00530,0.01900,0.016,60,estimated,Huang et al.  2011
+BDE-17,5.74,root,39.8107,fw,baf,Ryegrass,0.00560,0.01900,0.013,60,estimated,Huang et al.  2011
+BDE-17,5.74,root,39.8107,fw,baf,Pumpkin,0.00700,0.00980,0.01,60,estimated,Huang et al.  2011
+BDE-183,8.27,root,4466.8359,fw,baf,Pumpkin,0.00700,0.03190,0.003,60,estimated,Huang et al.  2011
+BDE-183,8.27,root,4168.6938,fw,baf,Maize,0.00530,0.03190,0.004,60,estimated,Huang et al.  2011
+BDE-183,8.27,root,6760.8298,fw,baf,Ryegrass,0.00560,0.03190,0.007,60,estimated,Huang et al.  2011
+BDE-183,8.27,root,6456.5423,fw,baf,Pumpkin,0.00700,0.01900,0.005,60,estimated,Huang et al.  2011
+BDE-183,8.27,root,10471.2855,fw,baf,Maize,0.00530,0.01900,0.006,60,estimated,Huang et al.  2011
+BDE-183,8.27,root,8912.5094,fw,baf,Ryegrass,0.00560,0.01900,0.005,60,estimated,Huang et al.  2011
+BDE-183,8.27,root,977.2372,fw,baf,Pumpkin,0.00700,0.00980,0.001,60,estimated,Huang et al.  2011
+BDE-183,8.27,root,1479.1084,fw,baf,Maize,0.00530,0.00980,0.002,60,estimated,Huang et al.  2011
+BDE-183,8.27,root,1548.8166,fw,baf,Ryegrass,0.00560,0.00980,0.001,60,estimated,Huang et al.  2011
+BDE-206,8.47,root,18197.0086,fw,baf,Pumpkin,0.00700,0.03190,0.009,60,estimated,Huang et al.  2011
+BDE-206,8.47,root,26915.3480,fw,baf,Maize,0.00530,0.03190,0.017,60,estimated,Huang et al.  2011
+BDE-206,8.47,root,6025.5959,fw,baf,Ryegrass,0.00560,0.03190,0.004,60,estimated,Huang et al.  2011
+BDE-206,8.47,root,1348.9629,fw,baf,Pumpkin,0.00700,0.01900,0.001,60,estimated,Huang et al.  2011
+BDE-206,8.47,root,2344.2288,fw,baf,Maize,0.00530,0.01900,0.001,60,estimated,Huang et al.  2011
+BDE-206,8.47,root,1513.5612,fw,baf,Ryegrass,0.00560,0.01900,0.001,60,estimated,Huang et al.  2011
+BDE-209,8.7,root,20417.3794,fw,baf,Pumpkin,0.00700,0.00980,0.006,60,estimated,Huang et al.  2011
+BDE-209,8.7,root,12882.4955,fw,baf,Maize,0.00530,0.03190,0.005,60,estimated,Huang et al.  2011
+BDE-209,8.7,root,16218.1010,fw,baf,Ryegrass,0.00560,0.03190,0.006,60,estimated,Huang et al.  2011
+BDE-209,8.7,root,7244.3596,fw,baf,Pumpkin,0.00700,0.01900,0.002,60,estimated,Huang et al.  2011
+BDE-209,8.7,root,6606.9345,fw,baf,Maize,0.00530,0.01900,0.003,60,estimated,Huang et al.  2011
+BDE-209,8.7,root,5248.0746,fw,baf,Ryegrass,0.00560,0.01900,0.002,60,estimated,Huang et al.  2011
+BDE-209,8.7,root,2630.2680,fw,baf,Pumpkin,0.00700,0.00980,0.001,60,estimated,Huang et al.  2011
+BDE-28,5.94,root,91.2011,fw,baf,Maize,0.00530,0.03190,0.02,60,estimated,Huang et al.  2011
+BDE-28,5.94,root,89.1251,fw,baf,Maize,0.00530,0.01900,0.019,60,estimated,Huang et al.  2011
+BDE-28,5.94,root,117.4898,fw,baf,Ryegrass,0.00560,0.01900,0.024,60,estimated,Huang et al.  2011
+BDE-47,6.81,root,1230.2688,fw,baf,Pumpkin,0.00700,0.03190,0.027,60,estimated,Huang et al.  2011
+BDE-47,6.81,root,1000.0000,fw,baf,Maize,0.00530,0.03190,0.029,60,estimated,Huang et al.  2011
+BDE-47,6.81,root,977.2372,fw,baf,Ryegrass,0.00560,0.03190,0.027,60,estimated,Huang et al.  2011
+BDE-47,6.81,root,1047.1285,fw,baf,Pumpkin,0.00700,0.01900,0.023,60,estimated,Huang et al.  2011
+BDE-47,6.81,root,794.3282,fw,baf,Maize,0.00530,0.01900,0.023,60,estimated,Huang et al.  2011
+BDE-47,6.81,root,831.7638,fw,baf,Ryegrass,0.00560,0.01900,0.023,60,estimated,Huang et al.  2011
+BDE-47,6.81,root,281.8383,fw,baf,Pumpkin,0.00700,0.00980,0.006,60,estimated,Huang et al.  2011
+BDE-47,6.81,root,208.9296,fw,baf,Maize,0.00530,0.00980,0.006,60,estimated,Huang et al.  2011
+BDE-99,7.32,root,1862.0871,fw,baf,Pumpkin,0.00700,0.03190,0.013,60,estimated,Huang et al.  2011
+BDE-99,7.32,root,1819.7009,fw,baf,Maize,0.00530,0.03190,0.017,60,estimated,Huang et al.  2011
+BDE-99,7.32,root,1698.2437,fw,baf,Ryegrass,0.00560,0.03190,0.014,60,estimated,Huang et al.  2011
+BDE-99,7.32,root,1621.8101,fw,baf,Pumpkin,0.00700,0.01900,0.011,60,estimated,Huang et al.  2011
+BDE-99,7.32,root,1148.1536,fw,baf,Maize,0.00530,0.01900,0.01,60,estimated,Huang et al.  2011
+BDE-99,7.32,root,707.9458,fw,baf,Ryegrass,0.00560,0.01900,0.006,60,estimated,Huang et al.  2011
+BDE-99,7.32,root,707.9458,fw,baf,Pumpkin,0.00700,0.00980,0.005,60,estimated,Huang et al.  2011
+BDE-99,7.32,root,602.5596,fw,baf,Maize,0.00530,0.00980,0.005,60,estimated,Huang et al.  2011
+BDE-99,7.32,root,870.9636,fw,baf,Ryegrass,0.00560,0.00980,0.008,60,estimated,Huang et al.  2011
+α-HBCD,5.38,root,43.6516,fw,baf,Wheat,0.01100,0.01850,0.016,7,estimated,Zhu et al.  2016
+α-HBCD,5.38,root,54.9541,fw,baf,Wheat,0.01100,0.01850,0.021,14,estimated,Zhu et al.  2016
+α-HBCD,5.38,root,72.4436,fw,baf,Wheat,0.01100,0.01850,0.027,21,estimated,Zhu et al.  2016
+α-HBCD,5.38,root,107.1519,fw,baf,Wheat,0.01100,0.01850,0.041,28,estimated,Zhu et al.  2016
+β-HBCD,5.47,root,44.6684,fw,baf,Wheat,0.01100,0.01850,0.014,7,estimated,Zhu et al.  2016
+β-HBCD,5.47,root,54.9541,fw,baf,Wheat,0.01100,0.01850,0.017,14,estimated,Zhu et al.  2016
+β-HBCD,5.47,root,85.1138,fw,baf,Wheat,0.01100,0.01850,0.026,21,estimated,Zhu et al.  2016
+β-HBCD,5.47,root,128.8250,fw,baf,Wheat,0.01100,0.01850,0.039,28,estimated,Zhu et al.  2016
+γ-HBCD,5.8,root,44.6684,fw,baf,Wheat,0.01100,0.01850,0.006,7,estimated,Zhu et al.  2016
+γ-HBCD,5.8,root,79.4328,fw,baf,Wheat,0.01100,0.01850,0.011,14,estimated,Zhu et al.  2016
+γ-HBCD,5.8,root,102.3293,fw,baf,Wheat,0.01100,0.01850,0.015,21,estimated,Zhu et al.  2016
+γ-HBCD,5.8,root,162.1810,fw,baf,Wheat,0.01100,0.01850,0.023,28,estimated,Zhu et al.  2016
+Dieldrin,4.55,root,102.3293,fw,baf,Maize,0.00530,0.13280,0.537,39,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,125.8925,fw,baf,Maize,0.00530,0.00860,0.661,39,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,93.3254,fw,baf,Maize,0.00530,0.06550,0.495,39,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,93.3254,fw,baf,Maize,0.00530,0.08970,0.495,39,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,107.1519,fw,baf,Maize,0.00530,0.00690,0.563,39,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,102.3293,fw,baf,Maize,0.00530,0.00860,0.537,69,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,83.1764,fw,baf,Maize,0.00530,0.06550,0.442,69,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,120.2264,fw,baf,Maize,0.00530,0.01210,0.634,69,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,109.6478,fw,baf,Maize,0.00530,0.08970,0.586,69,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,120.2264,fw,baf,Maize,0.00530,0.00690,0.639,69,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,93.3254,fw,baf,Maize,0.00530,0.00860,0.495,90,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,58.8844,fw,baf,Maize,0.00530,0.06550,0.313,90,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,67.6083,fw,baf,Maize,0.00530,0.08970,0.355,90,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,72.4436,fw,baf,Maize,0.00530,0.00690,0.382,90,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,97.7237,fw,baf,Maize,0.00530,0.13280,0.519,39,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,91.2011,fw,baf,Maize,0.00530,0.06550,0.486,39,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,97.7237,fw,baf,Maize,0.00530,0.01210,0.517,39,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,67.6083,fw,baf,Maize,0.00530,0.08970,0.36,39,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,128.8250,fw,baf,Maize,0.00530,0.13280,0.687,69,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,120.2264,fw,baf,Maize,0.00530,0.00860,0.64,69,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,75.8578,fw,baf,Maize,0.00530,0.06550,0.397,69,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,102.3293,fw,baf,Maize,0.00530,0.01210,0.543,69,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,104.7129,fw,baf,Maize,0.00530,0.08970,0.554,69,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,64.5654,fw,baf,Maize,0.00530,0.00690,0.344,69,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,69.1831,fw,baf,Maize,0.00530,0.13280,0.366,90,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,64.5654,fw,baf,Maize,0.00530,0.06550,0.339,90,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,100.0000,fw,baf,Maize,0.00530,0.01210,0.524,90,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,102.3293,fw,baf,Maize,0.00530,0.08970,0.535,90,experimental,Beestman et al.  1969
+Dieldrin,4.55,root,102.3293,fw,baf,Maize,0.00530,0.00690,0.542,90,experimental,Beestman et al.  1969
+1;4-DCB,3.37,root,52.4807,fw,baf,Barely,0.01000,0.03550,2.159,7,estimated,Scheunert et al.  1994
+1;2;4-TCB,4.02,root,95.4993,fw,baf,Barely,0.01000,0.03550,0.906,7,estimated,Scheunert et al.  1994
+1;2;3;5-TeCB,4.59,root,245.4709,fw,baf,Barely,0.01000,0.03550,0.63,7,estimated,Scheunert et al.  1994
+Pentachlorobeneze,5.03,root,117.4898,fw,baf,Barely,0.01000,0.03550,0.109,7,unmatched,Scheunert et al.  1994
+Hexachlorobenze,5.5,root,186.2087,fw,baf,Barely,0.01000,0.03550,0.058,7,unmatched,Scheunert et al.  1994
+Naphthalene,3.36,root,7.5858,fw,baf,Wheat,0.01140,0.05310,0.281,45,estimated,Tao et al.  2009
+Naphthalene,3.36,root,5.2481,fw,baf,Wheat,0.01140,0.01410,0.192,45,estimated,Tao et al.  2009
+Naphthalene,3.36,root,11.4815,fw,baf,Wheat,0.01140,0.04330,0.417,45,estimated,Tao et al.  2009
+Naphthalene,3.36,root,15.1356,fw,baf,Wheat,0.01140,0.02710,0.56,45,estimated,Tao et al.  2009
+Naphthalene,3.36,root,5.3703,fw,baf,Wheat,0.01140,0.05710,0.198,45,estimated,Tao et al.  2009
+Naphthalene,3.36,root,9.5499,fw,baf,Wheat,0.01140,0.02600,0.348,45,estimated,Tao et al.  2009
+Naphthalene,3.36,root,8.7096,fw,baf,Wheat,0.01140,0.05310,0.32,45,estimated,Tao et al.  2009
+Naphthalene,3.36,root,6.6069,fw,baf,Wheat,0.01140,0.04810,0.245,45,estimated,Tao et al.  2009
+Naphthalene,3.36,root,6.9183,fw,baf,Wheat,0.01140,0.02670,0.252,45,estimated,Tao et al.  2009
+Naphthalene,3.36,root,12.0226,fw,baf,Wheat,0.01140,0.04740,0.444,45,estimated,Tao et al.  2009
+Naphthalene,3.36,root,12.5893,fw,baf,Wheat,0.01140,0.04160,0.462,45,estimated,Tao et al.  2009
+Acenaphthene,3.92,root,26.3027,fw,baf,Wheat,0.01140,0.05310,0.276,45,unmatched,Tao et al.  2009
+Acenaphthene,3.92,root,46.7735,fw,baf,Wheat,0.01140,0.04330,0.489,45,unmatched,Tao et al.  2009
+Acenaphthene,3.92,root,36.3078,fw,baf,Wheat,0.01140,0.02710,0.377,45,unmatched,Tao et al.  2009
+Acenaphthene,3.92,root,16.2181,fw,baf,Wheat,0.01140,0.05710,0.171,45,unmatched,Tao et al.  2009
+Acenaphthene,3.92,root,29.5121,fw,baf,Wheat,0.01140,0.02600,0.31,45,unmatched,Tao et al.  2009
+Acenaphthene,3.92,root,14.4544,fw,baf,Wheat,0.01140,0.03470,0.15,45,unmatched,Tao et al.  2009
+Acenaphthene,3.92,root,30.9030,fw,baf,Wheat,0.01140,0.05310,0.319,45,unmatched,Tao et al.  2009
+Acenaphthene,3.92,root,16.9824,fw,baf,Wheat,0.01140,0.03470,0.175,45,unmatched,Tao et al.  2009
+Acenaphthene,3.92,root,18.1970,fw,baf,Wheat,0.01140,0.06220,0.189,45,unmatched,Tao et al.  2009
+Acenaphthene,3.92,root,32.3594,fw,baf,Wheat,0.01140,0.04810,0.339,45,unmatched,Tao et al.  2009
+Acenaphthene,3.92,root,24.5471,fw,baf,Wheat,0.01140,0.02670,0.259,45,unmatched,Tao et al.  2009
+Acenaphthene,3.92,root,37.1535,fw,baf,Wheat,0.01140,0.04740,0.388,45,unmatched,Tao et al.  2009
+Acenaphthene,3.92,root,23.4423,fw,baf,Wheat,0.01140,0.04160,0.245,45,unmatched,Tao et al.  2009
+Fluorene,4.18,root,56.2341,fw,baf,Wheat,0.01140,0.05310,0.322,45,estimated,Tao et al.  2009
+Fluorene,4.18,root,32.3594,fw,baf,Wheat,0.01140,0.01410,0.188,45,estimated,Tao et al.  2009
+Fluorene,4.18,root,57.5440,fw,baf,Wheat,0.01140,0.04330,0.33,45,estimated,Tao et al.  2009
+Fluorene,4.18,root,40.7380,fw,baf,Wheat,0.01140,0.05710,0.235,45,estimated,Tao et al.  2009
+Fluorene,4.18,root,38.9045,fw,baf,Wheat,0.01140,0.03470,0.223,45,estimated,Tao et al.  2009
+Fluorene,4.18,root,53.7032,fw,baf,Wheat,0.01140,0.05310,0.306,45,estimated,Tao et al.  2009
+Fluorene,4.18,root,28.8403,fw,baf,Wheat,0.01140,0.03470,0.165,45,estimated,Tao et al.  2009
+Fluorene,4.18,root,33.8844,fw,baf,Wheat,0.01140,0.06220,0.196,45,estimated,Tao et al.  2009
+Fluorene,4.18,root,75.8578,fw,baf,Wheat,0.01140,0.04810,0.438,45,estimated,Tao et al.  2009
+Fluorene,4.18,root,51.2861,fw,baf,Wheat,0.01140,0.02670,0.295,45,estimated,Tao et al.  2009
+Fluorene,4.18,root,52.4807,fw,baf,Wheat,0.01140,0.04160,0.304,45,estimated,Tao et al.  2009
+Phenanthrene,4.46,root,46.7735,fw,baf,Wheat,0.01140,0.05310,0.142,45,estimated,Tao et al.  2009
+Phenanthrene,4.46,root,46.7735,fw,baf,Wheat,0.01140,0.01410,0.143,45,estimated,Tao et al.  2009
+Phenanthrene,4.46,root,112.2018,fw,baf,Wheat,0.01140,0.04330,0.341,45,estimated,Tao et al.  2009
+Phenanthrene,4.46,root,95.4993,fw,baf,Wheat,0.01140,0.02710,0.288,45,estimated,Tao et al.  2009
+Phenanthrene,4.46,root,43.6516,fw,baf,Wheat,0.01140,0.05710,0.131,45,estimated,Tao et al.  2009
+Phenanthrene,4.46,root,91.2011,fw,baf,Wheat,0.01140,0.02600,0.275,45,estimated,Tao et al.  2009
+Phenanthrene,4.46,root,47.8630,fw,baf,Wheat,0.01140,0.03470,0.145,45,estimated,Tao et al.  2009
+Phenanthrene,4.46,root,70.7946,fw,baf,Wheat,0.01140,0.05310,0.213,45,estimated,Tao et al.  2009
+Phenanthrene,4.46,root,56.2341,fw,baf,Wheat,0.01140,0.06220,0.172,45,estimated,Tao et al.  2009
+Phenanthrene,4.46,root,102.3293,fw,baf,Wheat,0.01140,0.04810,0.308,45,estimated,Tao et al.  2009
+Phenanthrene,4.46,root,77.6247,fw,baf,Wheat,0.01140,0.02670,0.237,45,estimated,Tao et al.  2009
+Phenanthrene,4.46,root,77.6247,fw,baf,Wheat,0.01140,0.04740,0.235,45,estimated,Tao et al.  2009
+Phenanthrene,4.46,root,77.6247,fw,baf,Wheat,0.01140,0.04160,0.237,45,estimated,Tao et al.  2009
+Anthracene,4.54,root,41.6869,fw,baf,Wheat,0.01140,0.05310,0.105,45,estimated,Tao et al.  2009
+Anthracene,4.54,root,48.9779,fw,baf,Wheat,0.01140,0.01410,0.125,45,estimated,Tao et al.  2009
+Anthracene,4.54,root,89.1251,fw,baf,Wheat,0.01140,0.02710,0.225,45,estimated,Tao et al.  2009
+Anthracene,4.54,root,66.0693,fw,baf,Wheat,0.01140,0.05710,0.167,45,estimated,Tao et al.  2009
+Anthracene,4.54,root,46.7735,fw,baf,Wheat,0.01140,0.02600,0.119,45,estimated,Tao et al.  2009
+Anthracene,4.54,root,93.3254,fw,baf,Wheat,0.01140,0.03470,0.234,45,estimated,Tao et al.  2009
+Anthracene,4.54,root,125.8925,fw,baf,Wheat,0.01140,0.05310,0.318,45,estimated,Tao et al.  2009
+Anthracene,4.54,root,22.3872,fw,baf,Wheat,0.01140,0.03470,0.057,45,estimated,Tao et al.  2009
+Anthracene,4.54,root,77.6247,fw,baf,Wheat,0.01140,0.06220,0.197,45,estimated,Tao et al.  2009
+Anthracene,4.54,root,141.2538,fw,baf,Wheat,0.01140,0.04810,0.36,45,estimated,Tao et al.  2009
+Anthracene,4.54,root,123.0269,fw,baf,Wheat,0.01140,0.04740,0.311,45,estimated,Tao et al.  2009
+Anthracene,4.54,root,123.0269,fw,baf,Wheat,0.01140,0.04160,0.309,45,estimated,Tao et al.  2009
+Fluoranthene,5.16,root,257.0396,fw,baf,Wheat,0.01140,0.05310,0.156,45,estimated,Tao et al.  2009
+Fluoranthene,5.16,root,346.7369,fw,baf,Wheat,0.01140,0.01410,0.21,45,estimated,Tao et al.  2009
+Fluoranthene,5.16,root,389.0451,fw,baf,Wheat,0.01140,0.04330,0.236,45,estimated,Tao et al.  2009
+Fluoranthene,5.16,root,489.7788,fw,baf,Wheat,0.01140,0.05710,0.298,45,estimated,Tao et al.  2009
+Fluoranthene,5.16,root,457.0882,fw,baf,Wheat,0.01140,0.03470,0.276,45,estimated,Tao et al.  2009
+Fluoranthene,5.16,root,457.0882,fw,baf,Wheat,0.01140,0.05310,0.277,45,estimated,Tao et al.  2009
+Fluoranthene,5.16,root,263.0268,fw,baf,Wheat,0.01140,0.03470,0.159,45,estimated,Tao et al.  2009
+Pyrene,5.18,root,131.8257,fw,baf,Wheat,0.01140,0.05310,0.076,45,estimated,Tao et al.  2009
+Pyrene,5.18,root,263.0268,fw,baf,Wheat,0.01140,0.01410,0.153,45,estimated,Tao et al.  2009
+Pyrene,5.18,root,346.7369,fw,baf,Wheat,0.01140,0.04330,0.202,45,estimated,Tao et al.  2009
+Pyrene,5.18,root,426.5795,fw,baf,Wheat,0.01140,0.05710,0.244,45,estimated,Tao et al.  2009
+Pyrene,5.18,root,457.0882,fw,baf,Wheat,0.01140,0.03470,0.265,45,estimated,Tao et al.  2009
+Pyrene,5.18,root,338.8442,fw,baf,Wheat,0.01140,0.05310,0.195,45,estimated,Tao et al.  2009
+Pyrene,5.18,root,223.8721,fw,baf,Wheat,0.01140,0.03470,0.128,45,estimated,Tao et al.  2009
+Pyrene,5.18,root,457.0882,fw,baf,Wheat,0.01140,0.06220,0.268,45,estimated,Tao et al.  2009
+Benzo[a]anthracene,5.61,root,1230.2688,fw,baf,Wheat,0.01140,0.01410,0.267,45,estimated,Tao et al.  2009
+Benzo[a]anthracene,5.61,root,1071.5193,fw,baf,Wheat,0.01140,0.04330,0.23,45,estimated,Tao et al.  2009
+Benzo[a]anthracene,5.61,root,691.8310,fw,baf,Wheat,0.01140,0.05310,0.148,45,estimated,Tao et al.  2009
+Benzo[a]anthracene,5.61,root,1071.5193,fw,baf,Wheat,0.01140,0.03470,0.228,45,estimated,Tao et al.  2009
+Chrysene,5.73,root,275.4229,fw,baf,Wheat,0.01140,0.05310,0.045,45,estimated,Tao et al.  2009
+Chrysene,5.73,root,1513.5612,fw,baf,Wheat,0.01140,0.01410,0.249,45,estimated,Tao et al.  2009
+Chrysene,5.73,root,1548.8166,fw,baf,Wheat,0.01140,0.05710,0.252,45,estimated,Tao et al.  2009
+Chrysene,5.73,root,1445.4398,fw,baf,Wheat,0.01140,0.03470,0.235,45,estimated,Tao et al.  2009
+benzo[b]fluoranthene,5.78,root,537.0318,fw,baf,Wheat,0.01140,0.03470,0.078,45,estimated,Tao et al.  2009
+benzo[b]fluoranthene,5.78,root,660.6934,fw,baf,Wheat,0.01140,0.06220,0.096,45,estimated,Tao et al.  2009
+benzo[b]fluoranthene,5.78,root,851.1380,fw,baf,Wheat,0.01140,0.04810,0.123,45,estimated,Tao et al.  2009
+benzo[b]fluoranthene,5.78,root,1698.2437,fw,baf,Wheat,0.01140,0.02670,0.246,45,estimated,Tao et al.  2009
+benzo[b]fluoranthene,5.78,root,912.0108,fw,baf,Wheat,0.01140,0.04160,0.133,45,estimated,Tao et al.  2009
+benzo[k]fluoranthene,6.2,root,467.7351,fw,baf,Wheat,0.01140,0.04330,0.026,45,estimated,Tao et al.  2009
+benzo[k]fluoranthene,6.2,root,1380.3843,fw,baf,Wheat,0.01140,0.02710,0.077,45,estimated,Tao et al.  2009
+benzo[k]fluoranthene,6.2,root,1380.3843,fw,baf,Wheat,0.01140,0.05710,0.076,45,estimated,Tao et al.  2009
+benzo[k]fluoranthene,6.2,root,912.0108,fw,baf,Wheat,0.01140,0.03470,0.051,45,estimated,Tao et al.  2009
+benzo[k]fluoranthene,6.2,root,645.6542,fw,baf,Wheat,0.01140,0.05310,0.036,45,estimated,Tao et al.  2009
+benzo[k]fluoranthene,6.2,root,1380.3843,fw,baf,Wheat,0.01140,0.03470,0.077,45,estimated,Tao et al.  2009
+benzo[k]fluoranthene,6.2,root,954.9926,fw,baf,Wheat,0.01140,0.06220,0.053,45,estimated,Tao et al.  2009
+benzo[k]fluoranthene,6.2,root,1096.4782,fw,baf,Wheat,0.01140,0.04740,0.061,45,estimated,Tao et al.  2009
+Benzo[a]pyrene,6.41,root,512.8614,fw,baf,Wheat,0.01140,0.05310,0.02,45,estimated,Tao et al.  2009
+Benzo[a]pyrene,6.41,root,489.7788,fw,baf,Wheat,0.01140,0.04330,0.02,45,estimated,Tao et al.  2009
+Benzo[a]pyrene,6.41,root,1174.8976,fw,baf,Wheat,0.01140,0.05710,0.047,45,estimated,Tao et al.  2009
+Benzo[a]pyrene,6.41,root,1348.9629,fw,baf,Wheat,0.01140,0.03470,0.054,45,estimated,Tao et al.  2009
+Benzo[a]pyrene,6.41,root,1148.1536,fw,baf,Wheat,0.01140,0.03470,0.046,45,estimated,Tao et al.  2009
+Benzo[a]pyrene,6.41,root,2041.7379,fw,baf,Wheat,0.01140,0.06220,0.082,45,estimated,Tao et al.  2009
+Dibenzo[a;h]anthracene,6.75,root,758.5776,fw,baf,Wheat,0.01140,0.05310,0.012,45,estimated,Tao et al.  2009
+Dibenzo[a;h]anthracene,6.75,root,1318.2567,fw,baf,Wheat,0.01140,0.04330,0.02,45,estimated,Tao et al.  2009
+Dibenzo[a;h]anthracene,6.75,root,1698.2437,fw,baf,Wheat,0.01140,0.02710,0.027,45,estimated,Tao et al.  2009
+Dibenzo[a;h]anthracene,6.75,root,1000.0000,fw,baf,Wheat,0.01140,0.02600,0.016,45,estimated,Tao et al.  2009
+Dibenzo[a;h]anthracene,6.75,root,1949.8446,fw,baf,Wheat,0.01140,0.03470,0.031,45,estimated,Tao et al.  2009
+Dibenzo[a;h]anthracene,6.75,root,1412.5375,fw,baf,Wheat,0.01140,0.05310,0.022,45,estimated,Tao et al.  2009
+Dibenzo[a;h]anthracene,6.75,root,2570.3958,fw,baf,Wheat,0.01140,0.03470,0.04,45,estimated,Tao et al.  2009
+Benzo[g;h;i]perylene,6.9,root,446.6836,fw,baf,Wheat,0.01140,0.05310,0.005,45,estimated,Tao et al.  2009
+Benzo[g;h;i]perylene,6.9,root,1148.1536,fw,baf,Wheat,0.01140,0.01410,0.013,45,estimated,Tao et al.  2009
+Benzo[g;h;i]perylene,6.9,root,3715.3523,fw,baf,Wheat,0.01140,0.02710,0.041,45,estimated,Tao et al.  2009
+Benzo[g;h;i]perylene,6.9,root,4168.6938,fw,baf,Wheat,0.01140,0.05710,0.047,45,estimated,Tao et al.  2009
+Benzo[g;h;i]perylene,6.9,root,1513.5612,fw,baf,Wheat,0.01140,0.02600,0.017,45,estimated,Tao et al.  2009
+Benzo[g;h;i]perylene,6.9,root,1584.8932,fw,baf,Wheat,0.01140,0.05310,0.017,45,estimated,Tao et al.  2009
+Arazine,2.71,root,6.3096,fw,baf,Barely,0.01000,0.03550,1.043,7,unmatched,Trapp et al.  1990
+1;2;4-Trichlorobenzene,3.98,root,19.0546,fw,baf,Barely,0.01000,0.03550,0.198,7,unmatched,Trapp et al.  1990
+1;2;3;5-Tetrachlorobenzene,4.59,root,141.2538,fw,baf,Barely,0.01000,0.03550,0.365,7,unmatched,Trapp et al.  1990
+Dieldrin,4.55,root,95.4993,fw,baf,Barely,0.01000,0.03550,0.269,7,experimental,Trapp et al.  1990
+Hexachlorobenzene,5.5,root,741.3102,fw,baf,Barely,0.01000,0.03550,0.235,7,experimental,Trapp et al.  1990
+2;4;6;2’;4’-PCB,5.92,root,1584.8932,fw,baf,Barely,0.01000,0.03550,0.189,7,estimated,Trapp et al.  1990
+DDT,6.36,root,2570.3958,fw,baf,Barely,0.01000,0.03550,0.113,7,unmatched,Trapp et al.  1990
+Phenanthrene,4.46,root,30.9030,fw,baf,Carrot,0.00240,0.02000,0.438,45,estimated,Kipopoulou et al.  1999
+Anthracene,4.54,root,16.2181,fw,baf,Carrot,0.00240,0.02000,0.192,45,estimated,Kipopoulou et al.  1999
+Fluoranthene,5.16,root,53.7032,fw,baf,Carrot,0.00240,0.02000,0.154,45,estimated,Kipopoulou et al.  1999
+Pyrene,5.18,root,70.7946,fw,baf,Carrot,0.00240,0.02000,0.194,45,estimated,Kipopoulou et al.  1999
+Benzo[a]anthracene,5.61,root,22.9087,fw,baf,Carrot,0.00240,0.02000,0.024,45,estimated,Kipopoulou et al.  1999
+Chrysene,5.73,root,41.6869,fw,baf,Carrot,0.00240,0.02000,0.032,45,estimated,Kipopoulou et al.  1999
+Benzo[e]pyrene,6.44,root,165.9587,fw,baf,Carrot,0.00240,0.02000,0.025,45,unmatched,Kipopoulou et al.  1999
+Benzo[b]fluoranthene,5.78,root,23.9883,fw,baf,Carrot,0.00240,0.02000,0.017,45,estimated,Kipopoulou et al.  1999
+Benzo[k]fluoranthene,6.2,root,74.1310,fw,baf,Carrot,0.00240,0.02000,0.019,45,estimated,Kipopoulou et al.  1999
+Benzo[a]pyrene,6.41,root,162.1810,fw,baf,Carrot,0.00240,0.02000,0.026,45,estimated,Kipopoulou et al.  1999
+Dibenz-[a;h]anthracene,6.75,root,380.1894,fw,baf,Carrot,0.00240,0.02000,0.028,45,unmatched,Kipopoulou et al.  1999
+Benz[phi]perylene,6.9,root,346.7369,fw,baf,Carrot,0.00240,0.02000,0.018,45,unmatched,Kipopoulou et al.  1999
+Indeno[1;2;3-cd]pyrene,6.7,root,269.1535,fw,baf,Carrot,0.00240,0.02000,0.022,45,estimated,Kipopoulou et al.  1999
+Galaxolide,5.9,root,48.9779,fw,baf,Carrot,0.00240,0.01550,0.026,60,estimated,Macherius et al.  2012
+Galaxolide,5.9,root,45.7088,fw,baf,Barely,0.01000,0.01550,0.006,60,estimated,Macherius et al.  2012
+Tonalide,5.7,root,18.1970,fw,baf,Carrot,0.00240,0.01550,0.015,60,estimated,Macherius et al.  2012
+Tonalide,5.7,root,54.9541,fw,baf,Barely,0.01000,0.01550,0.011,60,estimated,Macherius et al.  2012
+Triclocarban,4.9,root,8.1283,fw,baf,Radish,0.00100,0.03800,0.101,29,experimental,Wu et al.  2012
+Triclosan,4.8,root,7.4131,fw,baf,Radish,0.00100,0.13800,0.114,40,experimental,Pannu et al.  2012
+Triclosan,4.8,root,25.7040,fw,baf,Radish,0.00100,0.13800,0.398,40,experimental,Pannu et al.  2012
+Triclosan,4.8,root,13.8038,fw,baf,Radish,0.00100,0.04100,0.216,19,experimental,Prosser et al.  2014
+Triclosan,4.8,root,18.6209,fw,baf,Radish,0.00100,0.04100,0.293,19,experimental,Prosser et al.  2014
+Triclosan,4.8,root,6.6069,fw,baf,Radish,0.00100,0.04100,0.102,19,experimental,Prosser et al.  2014
+Triclosan,4.8,root,8.1283,fw,baf,Radish,0.00100,0.04100,0.127,19,experimental,Prosser et al.  2014
+Triclosan,4.8,root,10.9648,fw,baf,Radish,0.00100,0.04100,0.169,34,experimental,Prosser et al.  2014
+Triclosan,4.8,root,16.2181,fw,baf,Radish,0.00100,0.04100,0.253,19,experimental,Prosser et al.  2014
+Triclosan,4.8,root,5.3703,fw,baf,Radish,0.00100,0.04100,0.084,34,experimental,Prosser et al.  2014
+Triclosan,4.8,root,58.8844,fw,baf,Carrot,0.00240,0.03900,0.382,45,experimental,Prosser et al.  2014
+Triclosan,4.8,root,18.6209,fw,baf,Carrot,0.00240,0.03900,0.122,45,experimental,Prosser et al.  2014
+Triclosan,4.8,root,14.1254,fw,baf,Carrot,0.00240,0.03900,0.092,45,experimental,Prosser et al.  2014
+Triclosan,4.8,root,44.6684,fw,baf,Carrot,0.00240,0.03900,0.293,69,experimental,Prosser et al.  2014
+Triclosan,4.8,root,11.2202,fw,baf,Carrot,0.00240,0.03900,0.073,45,experimental,Prosser et al.  2014
+Trimethoprim,0.91,root,0.8511,fw,baf,Carrot,0.00240,0.00690,0.93,152,experimental,Boxall et al.  2006
+Carbamazepine,2.45,root,1.0471,fw,baf,Radish,0.00100,0.01720,0.742,35,experimental,Carter et al.  2014

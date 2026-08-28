@@ -2,9 +2,12 @@
 
 > `src/neutral_dpu.py` · `validation/neutral_dpu_validation.py` · `tests/test_neutral_dpu.py`
 > **Status: IMPLEMENTED, anchors verified at source, and validated a-priori
-> against two measured rice datasets** — root partition across 14 compounds and
-> 5 log-Kow units at log10 RMSE **0.281**, per-organ transfer factors at **0.783**,
-> both with nothing fitted. §4–§5 record what those numbers mean and what is left.
+> against four measured datasets** — root partition on rice at log10 RMSE **0.281**
+> (Liu 2023, n=14), per-organ transfer factors at **0.783** (Ge 2017), a second
+> root-partition table over 11 species at **0.598** (Li 2019, n=29, §4d) and
+> carbamazepine from three soils at **0.191** (Kodešová 2019, n=21, §4f) — all with
+> nothing fitted — plus TSCF tested on its own for the first time (§4e).
+> §4–§5 record what those numbers mean and what is left.
 
 ---
 
@@ -396,6 +399,414 @@ runs every row on the *rice* drivers (120 d, constant exposure); Hwang is lettuc
 over 40 d under a decaying one, so a number from that path would be silently
 meaningless. The data lives in the dedicated script's constants instead.
 
+### 4d. Root partition again — Li et al. 2019 (29 out-of-sample rows, 11 species)
+
+`data_obs/neutral_obs_li2019_rcf.csv` · `validation/li2019_rcf_apriori.py`
+
+This is the second independent a-priori test of `K_PW`, and the one that made the
+partition term's error legible. It arrived by accident: Li, Chiou, Li & Schnoor
+2019 (`10.1016/j.envint.2019.02.020`) was requested from the acquisition queue as
+row **A1**, for a **rice root lipid** value. **Its SI does not contain one** — no
+rice row appears anywhere in it. What it does contain is Table S1: **48
+hydroponic root concentration factors** over 11 species and log Kow −0.57 → 5.41,
+the same equilibrium endpoint as Liu 2023 but twice the size, over a wider range,
+and including four rice rows.
+
+Eighteen of the 48 are Briggs' own barley — the data the RCF QSPR was fitted to —
+so they are shipped marked `subset=calibration` and held out of the score. The
+remaining **29 are out-of-sample**; clotrimazole is excluded outright as a weak
+base (pKa 6.02), the same speciation rule that removed the sulfonylureas from the
+Liu file.
+
+**Result: log10 RMSE 0.598 (n = 29), nothing fitted.** But the number is not the
+finding. The finding is that **the error is one offset, not scatter**: every one
+of the 11 species is biased the same way, low, from −0.30 (lettuce) to −0.95
+(*Plantago*), with rice itself at −0.47. Eleven species do not agree by accident.
+
+**The offset is not kinetic, and that was pre-registered rather than discovered.**
+The obs file's header names the one confounder in advance: these are 6 h – 12 d
+exposures, and Li et al.'s own model writes RCF = α_pt·`K_PW` with α_pt ≤ 1
+falling as Kow rises, because lipophilic compounds equilibrate slowly. A model
+with no α_pt should therefore *over*-predict the short, high-Kow rows. It
+under-predicts them. Splitting the 29 rows settles which story is right:
+
+| split | n | mean log10 bias |
+|---|---|---|
+| exposure < 1 d | 1 | −0.124 |
+| exposure 1–3 d | 18 | −0.442 |
+| exposure > 3 d | 10 | −0.447 |
+| log Kow < 2 | 4 | **−0.030** |
+| log Kow 2 – 3.5 | 6 | −0.305 |
+| log Kow 3.5 – 4.5 | 11 | −0.462 |
+| log Kow > 4.5 | 8 | **−0.688** |
+
+**Flat in exposure time** — and inside the high-Kow cell alone, longer exposures
+are no better (−0.586 under 3 d vs −0.517 over). So non-equilibrium is ruled out
+as the driver, and the deficit sits in the **lipophilic sorption term**: it
+vanishes at low Kow, where the water floor `W` dominates and there is no lipid
+term to be wrong about.
+
+**Two caveats on the Kow ladder, added after an adversarial re-read (§3c of the
+script).** First, the *monotone* reading is not robust: **one study, Namiki 2015,
+supplies 10 of the 29 rows and all 10 sit in the top two bins**, as two compounds
+measured in five species each. Collapsing every compound × study pair to one row
+gives −0.030 / −0.305 / −0.576 / **−0.501** — the top two bins go **flat**, not
+still rising. What does survive is that the bias is absent below log Kow 2 and
+−0.3 to −0.6 above it, and that **all ten source studies are biased the same
+way** (−0.20 to −0.89), so it is not one lab's artifact. Second, and more
+importantly for the decision below: an earlier version of this section argued
+that a flat increase in `L` was "the wrong instrument" for a Kow-dependent
+deficit. **That was wrong.** `K_PW = W + L·a·Kow^b` is dominated by the water
+floor at low Kow, so scaling `L` is *inherently* Kow-dependent — restoring the
+anchor shifts predictions by +0.045 log at log Kow 1 and +0.391 at log Kow 5,
+which is close to the shape of the observed bias and delivers 60–75 % of it.
+**So this table is genuine evidence in favour of restoring the anchor.**
+
+**Part of that deficit is internal to the model, not a disagreement with the world.**
+`neutral_dpu` anchors on Briggs' RCF, whose lipid term is `L·a = 10^−1.52 =
+0.0302`. But `rice_compartments` substitutes a *measured* `L = 0.01` and keeps the
+*conventional* `a = 1.22`, which makes the product `0.0122` — **2.5× below the
+anchor the module claims**. The module header itself says `L` and `a` are
+identifiable only as their product; the rice compartment replaces one factor and
+leaves the other. The sharpest way to see the cost is on Briggs' own barley rows:
+
+| root composition | Briggs' barley rows (n=18) | Li 2019 a-priori (n=29) | Liu 2023 rice (n=14) |
+|---|---|---|---|
+| **shipped** `L·a` = 0.0122, b = 0.77 | 0.266 | 0.541 | **0.206** |
+| Briggs anchor `L·a` = 0.0302, b = 0.77 | **0.111** | **0.295** | 0.286 |
+| Li/Chiou `f_lip` = 0.010, `K_lip` = 1.27·Kow^1.03 | 0.284 | 0.528 | 0.638 |
+| *fitted (2 free params — not a-priori)* | *0.101* | *0.254* | *0.192* |
+
+(equilibrium `K_PW` log10 RMSE; the full-ODE scan in §4 of the script agrees in
+direction — Li 0.598 → 0.331 and Ge 0.783 → 0.651 at the anchor, Liu 0.281 → 0.288.)
+
+Sizing the two contributions: restoring the anchor shifts predictions by
+**+0.394 log**, against an observed **−0.688** in the worst cell (log Kow > 4.5).
+So the anchor accounts for about **57 %** of it, and the remaining ~2× at high
+lipophilicity does not come from the lipid fraction at all.
+
+**The default is NOT changed, and the reasoning is the point.** Restoring the
+anchor improves two tables and **degrades the only rice one**. An intermediate
+`L ≈ 0.015` would fit all three — and would convert the neutral path's single real
+claim, that nothing is fitted, into a fitted result. `BRIGGS_ANCHORED_LIPID_FW`
+makes the alternative runnable, a test pins the 2.48× discrepancy so it cannot
+drift back silently, and the promotion decision is left open.
+
+**What A1 did settle.** The queue's own DEFINITION NOTE said the *definition* of
+"lipid" mattered more than any number, and it was right. Verified at source: Li et
+al.'s `f_lip` is **fresh weight** (dry-basis reports converted at 90 % root water)
+and it enters an RCF expression of exactly this model's form, so their per-crop
+values are commensurable with `L`. Their cereals — **barley 1.00 %, wheat
+1.10–1.14 %, maize 0.53 %** — bracket the 1 % this repo runs. So the value is
+corroborated and its provenance improves from a soybean model run to measured
+cereal roots. Rice itself is still unmeasured.
+
+**And what it sharpened.** Li et al. assign Briggs' barley `f_lip ≈ 1.00 %`, while
+Briggs' fitted coefficient implies 2.47 %. **Briggs 1982 measures no lipid at
+all** — verified at source; he attributes the 0.82 floor to root *water* and never
+reports a lipid content — so both figures are inferences from a paper that
+measured neither. The physical reading of the 2.5× excess is that Briggs'
+coefficient carries **non-lipid sorption**: cell wall and lignin, which this
+repo's PFAS side models explicitly as `f_cw·K_cw` and lists as **GAP A**, and
+which the neutral composition sets to zero. If that is right, the fix is a
+measured neutral-organic cell-wall coefficient, not a larger lipid fraction.
+
+### 4e. TSCF on its own — Schriever & Lamshoeft 2020, all 97 values
+
+`data_obs/tscf_obs_schriever2020.csv` · `validation/schriever2020_tscf.py`
+
+Queue row **A3**, closed. Until now TSCF could only be reached *through* the plant
+ODE, in §4b, where its error is inseparable from the unknown in-planta half-life —
+which is exactly why the Ge result is recorded as an **upper bound** on transport
+error rather than a measurement of it. The SI's Table A 3 removes the model from
+the middle. All 97 rows are transcribed; the parse reproduces the SI's own Table
+A 1 species tally exactly (barley 51, poplar 15, cattails 8, wheat 6, …).
+
+TSCF is a bounded fraction with zeros present, so the metric is **linear** RMSE
+plus rank correlation, not the repo's usual log10.
+
+| QSPR | rows | RMSE | bias | Spearman |
+|---|---|---|---|---|
+| **`briggs_tscf`** (repo default), 30 un-ionised rows | 30 | 0.310 | **−0.221** | +0.794 |
+| `schriever_tscf` — **in-sample**, these are its training data | 30 | 0.234 | −0.094 | +0.744 |
+| `briggs_tscf`, barley only | 10 | 0.166 | −0.130 | +0.355 |
+| `briggs_tscf`, every other species | 20 | 0.361 | −0.267 | +0.647 |
+
+**The default TSCF under-predicts, by 0.22 on a 0–1 scale** — the *same direction*
+as the partition finding in §4d, which is why the two are reported together: both
+a-priori inputs of the neutral path are biased low, and this session measured each
+one directly. Two qualifications, both load-bearing. The Briggs bell is
+out-of-sample here (these are Briggs 1987 / Inoue / Shone & Wood compounds, not
+the 1982 set) but **not independent** — same lab, same species, same method
+lineage. And `schriever_tscf`'s 0.234 is *reproduction*: it is the floor a fitted
+model reaches on its own training set, not a rival result.
+
+One free by-product. On the full 97, Schriever & Lamshoeft's central claim is
+confirmed on their own table: switching the descriptor from log P to log D at the
+test pH lifts the Briggs bell's rank correlation from **+0.313 to +0.653**. That
+does not change this repo — the neutral path is un-ionised by construction — but
+it is an independent check that the transcription carries real signal.
+
+### 4f. Carbamazepine from three soils — Kodešová et al. 2019 (21 rows), and the anchor vote
+
+`data_obs/neutral_obs_kodesova2019.csv` · `validation/kodesova2019_carbamazepine.py`
+
+Queue row **A4**, closed by the SI. This table is small but it was fetched to
+settle two specific things, and it settles both — in the direction that was not
+expected.
+
+**The exposure is the cleanest in the repo.** Three measured quantities, no model
+between them: root concentration (SI Table S2, ng/g **dry weight**, basis stated),
+soil concentration from the *same pot at the same harvest* (Table S4), and the
+paper's own measured Freundlich isotherms per soil (Table 1). Then
+`c = (C_soil/K_F)^n` and `RCF = C_root/c`. No mass balance, no pot geometry, no
+dissipation model — and carbamazepine is un-ionised across the whole
+environmental range (pKa 1.0 / 13.9) with `DT50 > 1000 d` in all three soils, so
+the authors' own reason for declining to compute bioaccumulation factors
+(repeated dosing plus dissipation) does not bite for this one compound.
+
+The isotherm convention is the single pivotal assumption, so it is argued rather
+than assumed. At `c = 1 mg/L` the isotherm gives `S = K_F`, so `K_F/f_oc` is a
+`K_oc`: **222 / 189 / 154** across three soils spanning 3.8× in organic carbon —
+consistent, and inside carbamazepine's literature band. The alternative unit
+reading gives ~1600 everywhere. The derived pore water (0.10–0.70 mg/L) also
+lands on the scale of both the applied solution (~0.5–1.0 mg/L) and the sorption
+study's calibration range (0.5–10 mg/L).
+
+**Result: log10 RMSE 0.191 (n = 21), nothing fitted.** For scale, on the same
+path: Liu 2023 0.281, Li 2019 0.598. **But see §4g** — that 0.191 is flattered by
+a scoring artifact; on the appropriate equilibrium basis it is **0.237**, and Liu
+2023 at 0.206 is the best a-priori result here.
+
+**It votes against restoring the Briggs anchor**, and it is well-conditioned to
+do so: at log Kow 2.25 the two compositions differ by 1.6×.
+
+| root composition | Kodešová n=21 | Liu 2023 rice n=14 | Li 2019 n=29 |
+|---|---|---|---|
+| **shipped** `L` = 0.010 | **0.191** | **0.281** | 0.598 |
+| anchored `L` = 0.0247 | 0.216 | 0.288 | **0.331** |
+
+Driver-free cross-check, in case the rice ODE drivers are doing the work:
+measured `RCF_fw` median **1.10** against `K_PW` of **1.56** shipped and **2.53**
+anchored — the shipped composition already runs *high* here, and the anchor
+doubles the excess. The absolute numbers differ from the table above (the ODE's
+root BAF sits below `K_PW` because the xylem drains it, and log Kow 2.25 is near
+the TSCF peak where that drain is largest) but **the ordering is identical under
+both framings**, which is what the decision rests on. It also survives the
+dw→fw lever: across root water contents 0.85–0.95 the anchored composition stays
+0.21 log further from the data, because the lever moves both together.
+
+**And it weakens the Brunetti sighting — the one it was fetched for.**
+
+| | carbamazepine root partition |
+|---|---|
+| Brunetti 2021, *calibrated* green-pea `K_RW` | 13.3 L/kg fw |
+| **Kodešová 2019, measured**, 4 plants × 3 soils | **1.10** (0.47–2.49) |
+| Briggs `K_PW` as this model runs it | 1.56 |
+
+Brunetti's value is **~12× above a direct measurement of the same compound**,
+while Briggs lands within ~1.5×. So that disagreement is far more likely to sit
+in Brunetti's calibration — a posterior free to absorb whatever else the model
+was missing — than in the partition core. **This table is a counter-example to
+the four-sightings group below**, not a fifth member of it.
+
+Honest limits: four leafy/root vegetables and no rice; one compound at one
+lipophilicity, so it says nothing about the high-Kow end where §4d's deficit
+lives; roots were rinsed, not exhaustively cleaned, though adhering soil would
+bias the observation *up* and so works against the conclusion drawn here.
+
+### 4h. The soil half of Li 2019 — 376 rows that flip the sign
+
+`data_obs/neutral_obs_li2019_soil.csv` · `validation/li2019_soil_table.py`
+
+Table S2 of the same paper as §4d: **376 soil-grown root RCFs over 13 crops**,
+twelve times the hydroponic table, with each crop's measured root lipid attached.
+It was overlooked when the hydroponic table was mined, and it changes the reading.
+
+| Li 2019 table | n | mean log10 bias |
+|---|---|---|
+| **S1, hydroponic** (§4d) | 29 | **−0.432** — model LOW |
+| **S2, soil** | 376 | **+0.260** — model HIGH |
+
+Same authors, same fresh-weight convention, same endpoint definition, opposite
+sign. So "the root partition is too low" is a property of **one exposure route**,
+not of the partition core — and the larger half argues *against* moving the
+default:
+
+| root composition | bias | RMSE |
+|---|---|---|
+| **shipped** `L` = 0.010 | +0.260 | **0.639** |
+| anchored `L` = 0.0247 | +0.645 | 0.873 |
+
+**Two results here do generalise.**
+
+*The composition term works.* Substituting each crop's **own** measured lipid for
+the model's rice value — across an 11× spread, radish 0.09 % to wheat 1.14 % —
+takes the mean bias from **+0.260 to −0.001** and tightens RMSE 0.639 → 0.461. So
+the *form* `K_PW = W + L·a·Kow^b` handles a large range in `L` correctly. (Caveat:
+`f_lip` is Li's own model input, so this is consistency inside their framework,
+not independent validation.)
+
+*Most of the apparent error is the exposure, not the plant.* `value` here is
+**derived** — Li divide the measured soil concentration by `K_om` — and their
+Table S3 records which `K_om` was measured and which was estimated:
+
+| `K_om` source | n | bias |
+|---|---|---|
+| **experimental** | 62 | **+0.033** |
+| from a QSPR | 261 | +0.291 |
+| unmatched | 53 | +0.371 |
+
+**On the rows with a measured `K_om` the model is essentially unbiased.** The soil
+organic-matter gradient says the same (bias +0.499 below 1 % OM, +0.101 above 4 %).
+That now holds on three independent tables — these 62 rows, Liu 2023, and
+Kodešová 2019, all with a measured or directly known exposure — which relocates
+most of the neutral path's apparent partition error onto the **exposure term**,
+a soil-side problem rather than a `K_PW` problem.
+
+One framing note. Li's own model writes `RCF_water = α_pt·[f_pw + f_ch K_ch +
+f_lip K_lip]` with a median `α_pt` of **0.098** here, i.e. their equilibrium term
+is ~10× their measured RCF. This model has no `α_pt` and lands on the measured
+values anyway, because Briggs' `b = 0.77` is far flatter than Li's
+`K_lip ≈ Kow^1.03` (20× apart at log Kow 5). What Li put in `α_pt`, Briggs put in
+the exponent; dividing by `α_pt` here would double-count.
+
+### 4i. Kodešová's leaf half — translocation, and metabolism that was measured
+
+Sections 6 and 7 of `validation/kodesova2019_carbamazepine.py`. The root
+comparison in §4f used half the table; the leaf half answers two different
+questions, and one of them removes a free parameter.
+
+**Translocation, with the exposure cancelled.** A leaf/root ratio needs no
+exposure at all, so it does not inherit the isotherm assumption §4f defends.
+Measured (n=21, 20–26 d): median **3.25**, range 0.31–9.05. Model at the matched
+harvest: **181** — ~55× over. That is §3's terminal-leaf runaway, measured for
+the first time against per-organ data with the exposure divided out.
+
+**But metabolism cannot close it**, and that is the useful part:
+
+| in-planta half-life | ∞ | 30 d | 14 d | 7 d | 3 d | 1.5 d |
+|---|---|---|---|---|---|---|
+| model leaf/root | 181 | 147 | 119 | 86 | 49 | **28.5** |
+
+Even a 1.5-day half-life leaves the model ~9× above the measurement. So the leaf
+excess is **not only the missing γ** — most of it is the driver mismatch, a rice
+season's transpiration per unit leaf mass applied to a 340 cm³ pot of lettuce.
+**That is a warning about §4b**: the Ge 2017 half-life minimum at ≈7 d may be
+absorbing the same mismatch rather than measuring metabolism, so it should not be
+quoted as a prediction of an in-planta half-life without that caveat.
+
+**Metabolism, measured rather than fitted.** Kodešová quantified carbamazepine's
+four metabolites alongside the parent, so the parent fraction is a direct
+observation — the first in this repo:
+
+| | root | leaf |
+|---|---|---|
+| lamb's lettuce | 0.874 ± 0.030 | **0.169** ± 0.044 |
+| radish | 0.963 ± 0.005 | **0.810** ± 0.047 |
+| both | 0.919 | 0.489 |
+
+Two consequences. **Transformation is a shoot process**, and it is large — so
+`γ = 0` is simply wrong for carbamazepine even though its *soil* DT50 exceeds
+1000 d. Soil persistence does not imply plant persistence. And it is strongly
+**species-dependent** (0.17 vs 0.81 on the same compound, same soils, same
+harvest), so an in-planta half-life is not a compound property — which is exactly
+what fitting one to a single dataset assumes. Note also that the metabolites are
+not inert: in lamb's lettuce leaves the epoxide *exceeds* the parent (17000 vs
+6400 ng/g), so a parent-only model understates the total burden several-fold.
+
+### 4j. Briggs 1983 — the STEM had an anchor too, and it was never read
+
+`validation/briggs1983_stem.py` · `neutral_dpu.briggs_scf`
+
+The companion to the 1982 paper this whole path is built on was sitting unread in
+the obtained set. It does for the shoot what 1982 did for the root — measures two
+compound series in barley shoots after root uptake and fits a partition of exactly
+the `K_PW` form (**verified at source**):
+
+```
+log(K_stem/xylem_sap − 0.82) = 0.95·log Kow − 2.05      (eq. 2)
+SCF = K_stem/xylem_sap × TSCF                            (eq. 3)
+```
+
+The implementation checks itself: computed from the coefficients alone, eq. 3
+peaks at **6.4 at log Kow 4.5**, against the paper's own "about 6 … at about
+log Kow = 4.5".
+
+**The stem had no anchor in this repo until now** — it runs Trapp 1994's soybean
+3 % lipid with the conventional `a = 1.22` and Briggs' *root* exponent 0.77:
+
+| organ | shipped `L·a` | Briggs anchor | ratio | exponent |
+|---|---|---|---|---|
+| root | 0.0122 | 0.0302 | **0.40** (2.5× below) | 0.77 vs 0.77 — same |
+| stem | 0.0366 | 0.0089 | **4.11** (4.1× above) | 0.77 vs **0.95** |
+
+So the two organs were parameterised from unrelated sources and neither was
+checked against the anchor that existed for it — the root missing low, the stem
+missing high.
+
+**But the consequences differ sharply, and that is the part to quote.** For the
+root the coefficient gap *is* the disagreement, because the exponent is shared.
+For the stem it largely **cancels** against Briggs' steeper slope:
+
+| log Kow | 0.0 | 1.0 | 1.78 | 2.5 | 3.5 | 4.5 | 5.5 |
+|---|---|---|---|---|---|---|---|
+| repo SCF ÷ Briggs SCF, log10 | +0.02 | +0.07 | +0.13 | +0.13 | −0.02 | −0.20 | −0.38 |
+
+At most **0.13 log** across log Kow 0–3.5, the range where the TSCF bell delivers
+anything at all; the larger deviations sit above 4.5 where TSCF has collapsed and
+the stem receives almost nothing — and where Briggs' own text says the predicted
+decline "was not tested", so both sides are extrapolating.
+
+**Nothing is changed.** The anchor is one species and is explicitly a shoot *base*
+rather than a true stem, and unlike the root case no measured table in this repo
+would arbitrate it. It is recorded, exposed as `briggs_scf()`, and pinned by a
+test. The stem is a **provenance** problem, not a prediction problem, and it ranks
+below both the root question and the exposure-term work.
+
+### 4g. A scoring artifact that affects every root number above
+
+`compare_to_obs(..., mode="equilibrium")` · `tests/test_li2019_schriever_tables.py`
+
+All three root-partition tables (§4a, §4d, §4f) measure an **equilibrium** over
+24 h – 26 d. Until now they were all scored by running the **120-day rice
+season** and reading `baf_final["root"]`. That imposes a discount which is
+**Kow-dependent and purely model-side**: the xylem drains the root hardest near
+the TSCF peak.
+
+| log Kow | −0.5 | 1.0 | **1.78** | **2.25** | 3.72 | 5.0 |
+|---|---|---|---|---|---|---|
+| ODE root BAF ÷ `K_PW` | 0.91 | 0.61 | **0.55** | **0.57** | 0.85 | 0.99 |
+| in log units | −0.04 | −0.22 | **−0.26** | **−0.24** | −0.07 | −0.01 |
+
+Applying a rice season's drain to a 24-hour barley measurement is an error, not a
+modelling choice. Rescored on the appropriate basis:
+
+| table | ODE basis (as published) | **equilibrium basis** |
+|---|---|---|
+| Liu 2023, rice root, 72 h | 0.281 | **0.206** |
+| Li 2019, root, 6 h – 12 d | 0.598 | **0.541** |
+| Kodešová 2019, root, 20–26 d | 0.191 | **0.237** |
+| Ge 2017, per-organ TF at 60 d | 0.783 | 0.783 — *n/a, no root rows; the season IS the endpoint here* |
+
+**Two things follow.** First, **Kodešová was flattered by the artifact** — it sits
+at log Kow 2.25, almost exactly where the discount peaks — so the claim that it
+is "the best a-priori result in the repo" is wrong on the appropriate basis;
+**Liu 2023 at 0.206 is**. Second, the anchor verdicts of §4f **survive and their
+margins widen**:
+
+| root composition | Liu (rice) | Li 2019 | Kodešová |
+|---|---|---|---|
+| **shipped** `L` = 0.010 | **0.206** | 0.541 | **0.237** |
+| anchored `L` = 0.0247 | 0.286 | **0.295** | 0.410 |
+
+So removing the artifact **sharpens the contradiction rather than resolving it**,
+which is the honest outcome: the tables disagree more clearly, not less.
+
+**The default stays `mode="ode"`** so no published number moves silently, and the
+mode is reported rather than switched. Which basis should headline the neutral
+path is a one-line decision left open with the anchor question.
+
 ### What these numbers do not settle
 
 Two studies, one crop, seventeen compound-tissue pairs. The **grain compartment is
@@ -408,19 +819,72 @@ upper bound on the transport error rather than a measurement of it.
 
 ## 5. The other papers, and what each can and cannot do
 
-All ten obtained papers were read; here is what each is actually good for.
+Here is what each obtained paper is actually good for. The second block is the
+`DPU4OC_add.zip` delivery; `docs/literature_db/Acquisition_Queue.csv` carries the
+per-row status and what is still missing.
 
 | paper | verdict |
 |---|---|
+| **Li 2019** `10.1016/j.envint.2019.02.020` | **Used — §4d**, but not for what it was requested for. Asked for a rice root lipid (queue A1); **contains no rice**. Delivered instead the lipid's operational definition verified at source (fresh weight, 90 % root water) plus Table S1's 48 hydroponic RCF values, now the repo's second a-priori partition test. |
+| **Schriever 2020 SI** `10.1016/j.scitotenv.2020.136667` | **Used — §4e.** Queue A3 closed. All 97 TSCF values transcribed, letting the TSCF QSPR be tested with no plant model in between for the first time. |
+| **Rosado 2022** `10.3389/fpls.2022.868319` | **Read, deliberately not adopted.** Queue A2. Confirms rice straw lipophilic extractives at **3.4 ± 0.1 % dry basis** (dichloromethane), stated explicitly. Not interchangeable with the model's fresh-weight octanol-equivalent `L`, and converting it needs a straw fresh/dry ratio the paper does not give. |
+| **Kodešová 2019** `10.1007/s11356-019-04333-9` | **Used — §4f.** Queue A4, closed: the SI arrived. Carbamazepine root partition, 4 plants × 3 soils, with the exposure derived from the paper's own measured soil concentrations and Freundlich isotherms. **log10 RMSE 0.191 — the best a-priori result in the repo** — and it does two things to the open questions: it **supersedes the Brunetti sighting** (measures 1.10 where Brunetti calibrated 13.3 for the same compound) and it **votes against restoring the Briggs anchor**. |
+| **"McFarlane 1987"** | **Wrong paper.** The supplied file is a constructed-wetland nitrogen isotope study — no bromacil, no plant uptake. Queue A5 remains open. |
+| **Deng 2018 / Shi 2025 / Li 2021 / Kondo 2019 / Boulange 2015 / Phong 2008** | **Screened out for queue C1** (a neutral compound in rice **grain** under root-only exposure). Deng samples exactly the right matrices — soil, straw, hull, brown rice — but reports **all final residues below the detection limit**. The rest are subcellular-uptake or water/soil dissipation studies with no grain compartment. The grain remains the one entirely untested compartment. |
+| **Gu 2017 / Parida 2021 / Wang 2024 / Li 2019 (PeerJ)** | **Screened out for queue C2** (tissue specific surface area). All are **root** morphology, and the air-exchange term takes no root contribution at all; root area enters this model only through `a_R`, which is lumped into `kappa_d` and is documented as non-separable without inhibitor data. Parida's specific root area is figure-only and dry-basis. |
+| **Honda 2023 / Ji 2015** | **Screened out for queue C3** (rice root total lipid). Honda quantifies 120 lipid *species* compositionally (mol %, −P/+P ratios) with no total mass fraction; Ji measures bound suberin diacids, one apoplastic class. Neither gives an `L`. |
 | **Ge 2017** `10.1016/j.envpol.2017.04.043` | **Used — §4.** Complete and self-contained: TF, log Kow and pKa all in the article. |
 | **Briggs 1982** `10.1002/ps.2780130506` | **Anchor verified at source.** Eqs. 2 and 3 confirmed character-for-character; the 0.82 floor is explained as root water content, confirming the `K_PW` mapping. Its Table 1 (barley RCF/TSCF) is the QSPR's own training data, so it cannot serve as validation. |
 | **Schriever 2020** `10.1016/j.scitotenv.2020.136667` | **Alternative TSCF implemented.** Reprints Briggs eq. 3 verbatim (independent verification) and supplies a 97-value refit, now selectable and benchmarked in §4. Its per-compound TSCF values are in the SI, which was not obtained. |
 | **Trapp 1994** `10.1002/etc.5620130308` | **Tissue composition adopted** (root 1 %, stem/leaf 3 % lipid). Its Table 1 gives a complete driver set (transpiration, organ masses, water contents) for the bromacil runs, but the measured concentrations are in Figures 5–6 — **figure-only**, so an RMSE would need digitising. |
 | **Liu 2023** `10.1016/j.scitotenv.2022.159826` | **Used — §4a**, once the SI arrived. Table S1 gives log Kow for all 21 compounds (PubChem-sourced); Tables S3 × S4 reconstruct total tissue concentrations. Its shoot TFs remain unused (72-h seedling exposure, not comparable to a season run). |
 | **Inao 2018a/b** `10.1584/jpestics.D17-083` / `D17-084` | **Cannot test the 4-compartment split.** As flagged before the papers arrived, they sample *"the whole shoot of the rice plant above the water surface"* — no organ resolution. Still the only source of a measured paddy-water + layered-soil `C_w^o(t)`, so it remains the right dataset for a future HYDRUS-coupling test against a lumped shoot. |
-| **Brunetti 2021** `10.1021/acs.est.0c07420` | **Parameter cross-check, not a data table.** Its Table 1 reports *calibrated* posteriors, not raw concentrations: green-pea root `K_RW = 13.3` cm³/g fw and stem `K_SW = 11.8` for carbamazepine (log Kow ≈ 2.45). The Briggs `K_PW` for the same compound is ≈ 1.0 — **an order of magnitude lower**. Either pea tissue is far more sorptive than Briggs' barley, or the calibration absorbed other processes. Worth pursuing: it is a direct quantitative disagreement with the partition core, on the framework's own reference implementation. |
+| **Brunetti 2021** `10.1021/acs.est.0c07420` | **Largely superseded — see §4f.** Its Table 1 reports *calibrated* posteriors, not raw concentrations: green-pea root `K_RW = 13.3` cm³/g fw for carbamazepine. That looked like the strongest evidence against the partition core until the A4 SI supplied a **direct measurement of the same compound**: 1.10 L/kg fw across 4 plants and 3 soils, against Briggs' 1.56. Brunetti's value is ~12× above the measurement, so the disagreement most likely sits in the calibration rather than in Briggs. |
 | **Hwang 2017** `10.1371/journal.pone.0172254` | **Run — §4c.** Its measured `Kd` converts the soil residue to a pore-water exposure, which is what makes it usable at all. Outcome is a *diagnosis, not a score*: the unstated fresh/dry basis spans the verdict, and the two readings fail on **opposite organs**. |
 | **Briggs 1983** `10.1002/ps.2780140506` | Shoot-distribution companion to the 1982 paper; not yet mined. |
+
+### Is the root partition too low? No — the evidence splits by EXPOSURE ROUTE
+
+This looked, in turn, like one accumulating result, then like a lipophilicity
+split, and then like a contradiction between two hydroponic datasets. With Li
+2019's soil table (§4h) added it resolves into something simpler and more useful.
+
+| dataset | n | exposure | mean bias |
+|---|---|---|---|
+| Liu 2023 (rice) | 14 | hydroponic, **known solution** | −0.053 |
+| Li 2019 S2, `K_om` **experimental** | 62 | soil, **measured** conversion | **+0.033** |
+| Kodešová 2019 | 21 | soil, **measured** isotherm | +0.162 |
+| Li 2019 S2, `K_om` from a QSPR | 261 | soil, **estimated** conversion | +0.291 |
+| Li 2019 S1 | 29 | hydroponic | **−0.432** |
+
+**Where the exposure is measured or directly known, the model is close to
+unbiased** — three independent tables, two exposure routes, bias −0.05 to +0.16.
+The large deviations sit where the exposure was *estimated* (+0.29) or, in the S1
+case, where it is known but the measurements themselves are the outlier.
+
+That reframes the open question twice over. It is not "is `K_PW` too low" — on the
+best-conditioned data it is about right. And most of the neutral path's apparent
+partition error is an **exposure-term** problem, which is the soil side, not the
+plant side.
+
+**The S1 anomaly stays open.** It is the one hydroponic table with a known
+solution that disagrees, by −0.43, and no subgroup explains it: aquatic −0.39 vs
+terrestrial −0.46, organochlorines −0.51 vs everything else −0.35, the four rice
+rows −0.28, and all ten source studies negative. A plausible mechanism is
+root-surface sorption inflating short-exposure hydroponic RCFs, which would bite
+hardest for the hydrophobic compounds — consistent with the −0.51 vs −0.35 split
+— but that is a hypothesis, not a finding. On propiconazole, the one compound
+S1 and Liu 2023 both measured at log Kow 3.72, they report RCF **43.65**
+(lettuce) and **9.32** (rice): **4.7× apart**, against an anchor worth 2.4×.
+
+**For the anchor decision this is now three tables against and one for**, and the
+one for is the hydroponic half of a paper whose own soil half says the opposite.
+
+A sorbing phase the neutral composition lacks remains a live physical idea, and
+the PFAS side carries exactly one (`f_cw·K_cw`, **GAP A**) — a measured
+neutral-organic cell-wall coefficient would serve both paths. But it is no longer
+needed to explain any of the tables above, so it drops below the exposure-side
+work in priority.
 
 ## 6. Honest summary
 
@@ -433,6 +897,32 @@ All ten obtained papers were read; here is what each is actually good for.
   across 14 compounds and 5 log-Kow units at **log10 RMSE 0.281**, and **per-organ
   transfer factors** at **0.783** — both better than the PFAS side's a-priori
   0.84–0.95, which still carries fitted transport parameters.
+- On a **second, larger** root-partition table (Li 2019, 29 out-of-sample rows,
+  11 species, §4d) it reaches **0.598** — worse, and *informatively* so: the error
+  is a single offset shared by every species, traced to the model's own
+  composition running 2.48× below the Briggs anchor it claims. Read the two
+  numbers together: 0.281 is the result on rice over a narrower Kow range, 0.598
+  is what happens when the range and the species count go up.
+- On the **cleanest exposure in the repo** (Kodešová 2019, §4f — measured soil
+  concentration plus the paper's own measured isotherm, same pot, same harvest)
+  it reaches **0.191**, the best a-priori result here. That table also **reverses
+  two open questions**: it supersedes the Brunetti disagreement and it votes
+  against restoring the Briggs anchor, opposite to Li 2019.
+- **The apparent partition error is mostly an EXPOSURE-term problem** (§4h, §5):
+  on the three tables where the exposure is measured or directly known the bias is
+  −0.05 to +0.16, while the estimated-`K_om` rows sit at +0.29. Li 2019's own soil
+  half (n=376) runs the model HIGH, opposite to its hydroponic half (n=29) — so
+  the anchor decision is now three tables against and one for, and that one is the
+  outlier. Treat the S1 hydroponic deficit as an open anomaly, not as evidence
+  about `K_PW`.
+- **In-planta metabolism was measured for the first time** (§4i): carbamazepine's
+  leaf parent fraction is 0.49 on average and 0.17 in lamb's lettuce, despite a
+  soil DT50 > 1000 d. `γ = 0` is not a safe default for neutral organics, and a
+  half-life fitted to leaf data absorbs the rice-driver mismatch — which is a
+  caveat the Ge 2017 ≈7 d figure must now carry.
+- Both a-priori inputs are now measured directly and **both are biased low**:
+  the partition by the offset above, and TSCF by **−0.221** on a 0–1 scale
+  (§4e, the first test of TSCF in this repo without the plant model in between).
 - The error structure is interpretable and cross-validated between the two
   datasets: steep in half-life where the endpoint accumulates (leaf), flat where it
   equilibrates (root). The Ge leaf residual points to a specific in-planta

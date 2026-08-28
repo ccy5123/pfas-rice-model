@@ -1,0 +1,437 @@
+#!/usr/bin/env python3
+# =============================================================================
+# validation/li2019_rcf_apriori.py
+# -----------------------------------------------------------------------------
+# The second a-priori test of the neutral path's PARTITION term, and the
+# diagnosis it forced.
+#
+# WHAT ARRIVED. docs/literature_db/Acquisition_Queue.csv row A1 -- Li, Chiou, Li
+# & Schnoor 2019, Environ. Int. 126:46-53 -- was requested for a rice ROOT LIPID
+# value. Its SI does NOT contain one (no rice row anywhere in Tables S2/S4; the
+# article's own crop list is wheat, barley, carrot, radish, celery, maize,
+# pumpkin, turnip, onion, spinach, Chinese cabbage, ryegrass, amaranth). So the
+# top-ranked gap in the queue is NOT closed by the paper that was supposed to
+# close it. What it delivered instead is worth more, and this script is it:
+#
+#   1. Table S1 = 48 hydroponic root concentration factors over 11 species,
+#      log Kow -0.57..5.41. Shipped as data_obs/neutral_obs_li2019_rcf.csv, it
+#      is a SECOND independent a-priori test of K_PW -- twice the size of the
+#      Liu 2023 table, over a wider range, and including four rice rows.
+#   2. The operational DEFINITION of the lipid fraction, verified at source,
+#      which is what the queue's own DEFINITION NOTE said mattered more than any
+#      number: Li et al.'s f_lip is FRESH weight (they convert dry-basis reports
+#      at 90% root water), and it enters an RCF expression of exactly this
+#      model's form. So their per-crop values ARE commensurable with this
+#      model's L, and their cereals -- barley 1.00%, wheat 1.10-1.14%, maize
+#      0.53% -- bracket the 1% this repo already runs.
+#
+# THE DIAGNOSIS. Running the test exposed something the existing tables could
+# not: the model's rice root partition is systematically LOW, by a near-constant
+# offset in every one of the 11 species (mean log10 bias -0.30 to -0.95). The
+# cause is internal, not in the data. `neutral_dpu` anchors on Briggs' RCF, whose
+# lipid term is L*a = 10^-1.52 = 0.0302; but `rice_compartments` substitutes a
+# MEASURED lipid L = 0.01 while keeping the conventional a = 1.22, which silently
+# changes the anchored product to 0.0122 -- 2.5x below Briggs. The module knows L
+# and a are identifiable only as their product; the rice compartment nonetheless
+# replaces one factor and not the other.
+#
+# Section 3 shows what that costs on Briggs' OWN data, which is the sharpest form
+# of the point: the shipped composition fits the 18 barley rows the RCF QSPR was
+# fitted to at log10 RMSE 0.266, where the anchor itself reaches 0.111.
+#
+# WHY THE DEFAULT IS NOT CHANGED HERE -- and read 3c and 3d before using this
+# script to argue either way, because they weaken the first version of this file.
+# 3c: the monotone Kow ladder in 3b is partly ONE study's replicates (Namiki 2015
+# supplies 10 of the 29 rows, all in the top two bins), and raising L is a
+# correction of close to the RIGHT shape, not the wrong instrument as first
+# claimed -- so this table is genuine evidence FOR the anchor. 3d: what actually
+# blocks the decision is that Li 2019 and Liu 2023 disagree with EACH OTHER at
+# log Kow 3.5-4.5 by more than the anchor is worth (on propiconazole, the one
+# compound both measured, they differ 4.7x). The obstacle is between the
+# datasets, not between the model and the data, so no re-fitting inside this repo
+# resolves it. The anchor stays an opt-in (`neutral_dpu.BRIGGS_ANCHORED_LIPID_FW`),
+# the discrepancy is pinned by a test, and the decision is left to the user.
+#
+#   python validation/li2019_rcf_apriori.py            # full run (~3 min)
+#   python validation/li2019_rcf_apriori.py --fast     # skip the ODE scan
+# =============================================================================
+from __future__ import annotations
+import csv, os, sys
+
+import numpy as np
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(HERE)
+sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
+sys.path.insert(0, HERE)
+
+import neutral_dpu as ND                                       # noqa: E402
+import neutral_dpu_validation as V                             # noqa: E402
+
+LI2019 = os.path.join(ROOT_DIR, "data_obs", "neutral_obs_li2019_rcf.csv")
+LIU2023 = os.path.join(ROOT_DIR, "data_obs", "neutral_obs_liu2023.csv")
+GE2017 = os.path.join(ROOT_DIR, "data_obs", "neutral_obs_ge2017.csv")
+
+# Root lipid contents Li et al. 2019 report for crops, FRESH weight (article
+# p.49 and SI Table S2). Rice is absent -- that absence is the finding.
+LI2019_ROOT_LIPID_FW = {
+    "wheat": 0.0114, "barley": 0.0100, "maize": 0.0053, "pumpkin": 0.0070,
+    "chinese cabbage": 0.0068, "spinach": 0.0034, "ryegrass": 0.0032,
+    "amaranth": 0.0032, "carrot": 0.0024, "celery": 0.0017, "radish": 0.0010,
+    "turnip": 0.0010, "onion": 0.0010,
+}
+
+
+def _root_rows(path, subset=None):
+    """(log Kow, measured root BAF) for the root rows of an obs table."""
+    lk, v = [], []
+    with open(path, newline="") as f:
+        for r in csv.DictReader(x for x in f if not x.lstrip().startswith("#")):
+            if not r.get("compound") or r.get("tissue") != "root":
+                continue
+            if subset is not None and r.get("subset") != subset:
+                continue
+            lk.append(float(r["log_kow"]))
+            v.append(float(r["value"]))
+    return np.array(lk), np.array(v)
+
+
+def _kpw_rmse(lk, obs, La, b, W=None):
+    """log10 RMSE of the EQUILIBRIUM partition K_PW = W + L*a*Kow^b.
+
+    Used only for the anchor diagnosis. It is not the plant model: the ODE's root
+    BAF sits a few percent under K_PW (growth dilution and xylem export), so
+    these numbers are close to, but not identical with, section 1's.
+    """
+    W = ND.RICE_WATER["root"] if W is None else W
+    pred = W + La * 10.0 ** (b * lk)
+    return float(np.sqrt(np.mean((np.log10(pred) - np.log10(obs)) ** 2)))
+
+
+def _fit_anchor(lk, obs, W=None):
+    """FIT (L*a, b) to a root table. Explicitly not a-priori -- a diagnostic of
+    what the data want, to be compared against the two published anchors."""
+    from scipy.optimize import least_squares
+    W = ND.RICE_WATER["root"] if W is None else W
+
+    def res(p):
+        return np.log10(W + 10.0 ** p[0] * 10.0 ** (p[1] * lk)) - np.log10(obs)
+
+    r = least_squares(res, [np.log10(0.0302), ND.RCF_SLOPE])
+    return 10.0 ** r.x[0], r.x[1], float(np.sqrt(np.mean(r.fun ** 2)))
+
+
+def section1_apriori(drv):
+    print("=" * 84)
+    print("1. A-PRIORI PREDICTION — Li 2019 Table S1 hydroponic RCF, nothing fitted")
+    print("=" * 84)
+    rmse = V.compare_to_obs(LI2019, drv, group_by="species")
+    return rmse
+
+
+def section2_lipid_table():
+    print("\n" + "=" * 84)
+    print("2. WHAT A1 ACTUALLY DELIVERED ON THE LIPID QUESTION")
+    print("=" * 84)
+    print("   Li et al. 2019 root lipid contents, FRESH weight (their conversion:")
+    print("   dry-basis reports are rescaled at 90% root water). Rice is ABSENT.")
+    for k, v in sorted(LI2019_ROOT_LIPID_FW.items(), key=lambda kv: -kv[1]):
+        mark = "  <- cereal" if k in ("wheat", "barley", "maize") else ""
+        print(f"      {k:18s} {v * 100:5.2f} %{mark}")
+    cereals = [LI2019_ROOT_LIPID_FW[k] for k in ("wheat", "barley", "maize")]
+    print(f"\n   cereal mean {np.mean(cereals) * 100:.2f} % fw; this repo runs "
+          f"{ND.TRAPP1994_LIPID_FW['root'] * 100:.2f} % (Trapp 1994 soybean).")
+    print("   => The VALUE the repo uses is corroborated. Its PROVENANCE improves")
+    print("      from a soybean model run to measured cereal roots on a stated,")
+    print("      RCF-operational basis. Rice itself remains unmeasured (gap C3).")
+    print("\n   Note what this does NOT do: Briggs' fitted lipid term implies")
+    print(f"   L = {10 ** ND.RCF_INTERCEPT / ND.LIPID_OCTANOL_A * 100:.2f} % fw for his barley, whereas Li et al. assign")
+    print("   that same barley 1.00 %. Briggs 1982 itself reports NO lipid content")
+    print("   (verified at source: he attributes the 0.82 floor to root WATER and")
+    print("   never measures the lipid), so both figures are inferences, and they")
+    print("   disagree 2.5x. Section 3 is what that disagreement costs.")
+
+
+def section3_anchor():
+    print("\n" + "=" * 84)
+    print("3. THE ANCHOR DIAGNOSIS — the shipped root sits 2.5x below Briggs")
+    print("=" * 84)
+    shipped = ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
+    anchor = 10.0 ** ND.RCF_INTERCEPT
+    print(f"   Briggs 1982 anchored lipid term  L*a = {anchor:.4f}   (10^{ND.RCF_INTERCEPT})")
+    print(f"   what rice_compartments actually runs  = {shipped:.4f}   "
+          f"(L={ND.TRAPP1994_LIPID_FW['root']} x a={ND.LIPID_OCTANOL_A})")
+    print(f"   ratio {anchor / shipped:.2f}x low\n")
+    tables = [
+        ("Li2019 hydroponic RCF, a-priori rows", *_root_rows(LI2019, "apriori")),
+        ("Li2019 rows Briggs FITTED his QSPR to", *_root_rows(LI2019, "calibration")),
+        ("Liu2023 rice root (the only RICE table)", *_root_rows(LIU2023)),
+    ]
+    cands = [("shipped  L*a=%.4f b=%.2f" % (shipped, ND.RCF_SLOPE), shipped, ND.RCF_SLOPE),
+             ("Briggs anchor  L*a=%.4f b=%.2f" % (anchor, ND.RCF_SLOPE), anchor, ND.RCF_SLOPE),
+             ("Li/Chiou  f_lip=0.010 K_lip=1.27Kow^1.03", 0.0127, 1.03)]
+    print(f"   {'table':42s}" + "".join(f"{n.split()[0]:>12}" for n, _, _ in cands)
+          + f"{'fitted':>10}{'L*a':>9}{'b':>7}")
+    for name, lk, obs in tables:
+        cells = [f"{_kpw_rmse(lk, obs, La, b):>12.3f}" for _, La, b in cands]
+        La, b, r = _fit_anchor(lk, obs)
+        print(f"   {name:42s}" + "".join(cells) + f"{r:>10.3f}{La:>9.4f}{b:>7.3f}")
+    print("\n   equilibrium K_PW log10 RMSE; 'fitted' is 2 free parameters and is")
+    print("   NOT a-priori -- it is there to show what each table wants.")
+    print("\n   The second row is the sharp one: on the very barley data the RCF")
+    print("   QSPR was fitted to, the anchor reaches 0.111 and the shipped")
+    print("   composition only 0.266. That is an internal inconsistency, not a")
+    print("   disagreement with the world.")
+    print("   The third row is why it is not simply fixed: rice prefers the LOW")
+    print("   value. The tables disagree, and only one of them is rice.")
+
+
+def section3b_where_the_bias_lives():
+    """Is the offset kinetic (non-equilibrium) or is it in the sorption term?
+
+    This is the one confounder the obs file pre-registers rather than discovers.
+    Li et al.'s own model writes RCF = alpha_pt * K_PW with alpha_pt <= 1 falling
+    as Kow rises, because lipophilic compounds equilibrate slowly. If that were
+    driving the residual, the bias would SHRINK with exposure time. Splitting on
+    the exposure_d and log_kow columns settles it in six lines.
+    """
+    print("\n" + "=" * 84)
+    print("3b. IS THE OFFSET KINETIC, OR IS IT IN THE SORPTION TERM?")
+    print("=" * 84)
+    rows = []
+    with open(LI2019, newline="") as f:
+        for r in csv.DictReader(x for x in f if not x.lstrip().startswith("#")):
+            if r.get("subset") == "apriori":
+                rows.append(r)
+    W = ND.RICE_WATER["root"]
+    La = ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
+
+    def stats(rs):
+        e = [np.log10(W + La * 10.0 ** (ND.RCF_SLOPE * float(r["log_kow"])))
+             - np.log10(float(r["value"])) for r in rs]
+        return len(e), float(np.mean(e)), float(np.sqrt(np.mean(np.square(e))))
+
+    print("   by EXPOSURE TIME -- the non-equilibrium argument predicts the bias")
+    print("   shrinks as exposure grows:")
+    for lo, hi, lab in ((0, 1, "< 1 d"), (1, 3, "1-3 d"), (3, 99, "> 3 d")):
+        rs = [r for r in rows if lo <= float(r["exposure_d"]) < hi]
+        if rs:
+            n, b, e = stats(rs)
+            print(f"      {lab:8s} n={n:3d}   mean log10 bias {b:+.3f}   RMSE {e:.3f}")
+    print("\n   by LOG KOW -- a deficient lipophilic term predicts the bias GROWS,")
+    print("   and vanishes at low Kow where the water floor W dominates:")
+    for lo, hi, lab in ((-1, 2, "< 2"), (2, 3.5, "2 - 3.5"),
+                        (3.5, 4.5, "3.5 - 4.5"), (4.5, 9, "> 4.5")):
+        rs = [r for r in rows if lo <= float(r["log_kow"]) < hi]
+        if rs:
+            n, b, e = stats(rs)
+            print(f"      logKow {lab:10s} n={n:3d}   mean log10 bias {b:+.3f}   RMSE {e:.3f}")
+    hi_short = [r for r in rows if float(r["log_kow"]) >= 3.5
+                and float(r["exposure_d"]) < 3]
+    hi_long = [r for r in rows if float(r["log_kow"]) >= 3.5
+               and float(r["exposure_d"]) >= 3]
+    print("\n   and inside the high-Kow cell, where the two arguments would disagree:")
+    for lab, rs in (("logKow>3.5, < 3 d", hi_short), ("logKow>3.5, >= 3 d", hi_long)):
+        if rs:
+            n, b, _ = stats(rs)
+            print(f"      {lab:20s} n={n:3d}   mean log10 bias {b:+.3f}")
+    print("\n   VERDICT: the bias is FLAT in exposure time and MONOTONE in log Kow.")
+    print("   Non-equilibrium is ruled out as the driver -- longer exposures are no")
+    print("   better -- and the deficit sits squarely in the lipophilic sorption")
+    print("   term, exactly where section 3 locates it.")
+    anchor_log = np.log10(10.0 ** ND.RCF_INTERCEPT / La)
+    n, b, _ = stats([r for r in rows if float(r["log_kow"]) >= 4.5])
+    print(f"\n   Sizing it: restoring the anchor would shift predictions by "
+          f"{anchor_log:+.3f} log,")
+    print(f"   against an observed {b:+.3f} at log Kow > 4.5 -- so the anchor accounts for")
+    print(f"   about {anchor_log / abs(b) * 100:.0f}% of the worst cell, and the rest does not")
+    print("   come from the lipid fraction at all.")
+
+
+def section3c_how_robust_is_that(drv=None):
+    """How much of section 3b survives an adversarial look? Two things do not.
+
+    Written after the first version of this script over-claimed. Kept as its own
+    section so the weakening is visible rather than quietly edited into 3b.
+    """
+    print("\n" + "=" * 84)
+    print("3c. HOW ROBUST IS THAT — two ways the section-3b reading is weaker")
+    print("=" * 84)
+    rows = []
+    with open(LI2019, newline="") as f:
+        for r in csv.DictReader(x for x in f if not x.lstrip().startswith("#")):
+            if r.get("subset") == "apriori":
+                rows.append(r)
+    W = ND.RICE_WATER["root"]
+    La = ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
+
+    def bias(rs):
+        return (len(rs), float(np.mean([
+            np.log10(W + La * 10.0 ** (ND.RCF_SLOPE * float(r["log_kow"])))
+            - np.log10(float(r["value"])) for r in rs])))
+
+    print("   (i) THE REPLICATE STRUCTURE. One study, Namiki 2015, supplies 10 of the")
+    print("   29 rows -- and all 10 sit in the two highest Kow bins, as the SAME two")
+    print("   compounds measured in five species each. Collapsing every")
+    print("   compound x study pair to one row is the fair count:\n")
+    seen, reps = set(), []
+    for r in rows:
+        k = (r["compound"], r["source_study"])
+        if k not in seen:
+            seen.add(k)
+            reps.append(r)
+    bands = ((-1, 2, "< 2"), (2, 3.5, "2 - 3.5"), (3.5, 4.5, "3.5 - 4.5"), (4.5, 9, "> 4.5"))
+    print(f"   {'logKow':>10}{'all rows':>20}{'one row per cmpd x study':>28}")
+    for lo, hi, lab in bands:
+        a = bias([r for r in rows if lo <= float(r["log_kow"]) < hi])
+        b = bias([r for r in reps if lo <= float(r["log_kow"]) < hi])
+        print(f"   {lab:>10}   n={a[0]:2d}  bias {a[1]:+.3f}      n={b[0]:2d}  bias {b[1]:+.3f}")
+    print("\n   The MONOTONE ladder does not survive: collapsed, the top two bins are")
+    print("   flat (-0.576, -0.501) rather than still rising. What DOES survive is the")
+    print("   part the diagnosis actually needs -- essentially no bias below log Kow 2,")
+    print("   and -0.3 to -0.6 above it -- plus the fact that all TEN studies are")
+    print("   biased the same way, so it is not one lab's artifact:\n")
+    for s in sorted({r["source_study"] for r in rows}):
+        rs = [r for r in rows if r["source_study"] == s]
+        n, b = bias(rs)
+        lk = [float(r["log_kow"]) for r in rs]
+        print(f"      {s:30s} n={n:2d}  logKow {min(lk):5.2f}-{max(lk):5.2f}  bias {b:+.3f}")
+
+    print("\n   (ii) RAISING L IS *NOT* THE WRONG SHAPE OF FIX. An earlier version of")
+    print("   this file argued a flat lipid increase could not explain a Kow-dependent")
+    print("   deficit. That was wrong: K_PW = W + L*a*Kow^b is dominated by the water")
+    print("   floor W at low Kow, so scaling L is inherently Kow-dependent --")
+    Lb = ND.BRIGGS_ANCHORED_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
+    print(f"\n   {'logKow':>8}{'shipped':>10}{'anchored':>10}{'shift':>9}{'observed bias':>15}")
+    for lk, lab in ((1.0, "< 2"), (2.25, "2 - 3.5"), (4.0, "3.5 - 4.5"), (5.0, "> 4.5")):
+        a = W + La * 10.0 ** (ND.RCF_SLOPE * lk)
+        b = W + Lb * 10.0 ** (ND.RCF_SLOPE * lk)
+        band = next(x for x in bands if x[2] == lab)
+        obs = bias([r for r in reps if band[0] <= float(r["log_kow"]) < band[1]])[1]
+        print(f"   {lk:>8.2f}{a:>10.2f}{b:>10.2f}{np.log10(b / a):>+9.3f}{obs:>+15.3f}")
+    print("\n   -- and that shift has close to the RIGHT shape for the observed bias,")
+    print("   delivering roughly 60-75% of it. So Li 2019 is genuine evidence FOR")
+    print("   restoring the anchor, and the case against it has to rest on the other")
+    print("   datasets, not on the shape of the correction.")
+
+
+def section3d_the_datasets_contradict(drv=None):
+    """The actual obstacle to deciding: two hydroponic root tables disagree with
+    each other, at the same lipophilicity, by more than the anchor is worth."""
+    print("\n" + "=" * 84)
+    print("3d. THE DATASETS CONTRADICT EACH OTHER — which is why this is not decidable")
+    print("=" * 84)
+    W = ND.RICE_WATER["root"]
+    La = ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
+
+    def load(p, sub=None, conv=1.0):
+        with open(p, newline="") as f:
+            rs = [r for r in csv.DictReader(x for x in f
+                                            if not x.lstrip().startswith("#"))
+                  if r.get("compound")]
+        if sub:
+            rs = [r for r in rs if r.get("subset") == sub]
+        return [(float(r["log_kow"]), float(r["value"]) * conv, r) for r in rs]
+
+    def bias(t):
+        if not t:
+            return 0, float("nan")
+        return len(t), float(np.mean([np.log10(W + La * 10.0 ** (ND.RCF_SLOPE * lk))
+                                      - np.log10(v) for lk, v, _ in t]))
+
+    li = load(LI2019, "apriori")
+    liu = load(LIU2023)
+    kod = load(os.path.join(ROOT_DIR, "data_obs", "neutral_obs_kodesova2019.csv"),
+               conv=1.0 - W)
+    print("   Model bias by dataset and Kow band (negative = model LOW):\n")
+    print(f"   {'band':>12}{'Li 2019':>18}{'Liu 2023 (rice)':>20}{'Kodesova 2019':>18}")
+    for lo, hi, lab in ((2.0, 3.5, "2 - 3.5"), (3.5, 4.5, "3.5 - 4.5")):
+        cells = []
+        for t in (li, liu, kod):
+            n, b = bias([x for x in t if lo <= x[0] < hi])
+            cells.append(f"n={n:2d} {b:+.3f}" if n else "     --   ")
+        print(f"   {lab:>12}{cells[0]:>18}{cells[1]:>20}{cells[2]:>18}")
+    print("\n   At 3.5-4.5 Li 2019 says the model is ~4x LOW and Liu -- rice, the same")
+    print("   hydroponic endpoint -- says it is essentially EXACT. Both cannot be")
+    print("   accommodated by any single value of L.")
+    shared = {c.lower() for _, _, r in li for c in [r["compound"]]} & \
+             {r["compound"].lower() for _, _, r in liu}
+    for c in sorted(shared):
+        print(f"\n   The clearest case is the one compound both measured, {c}:")
+        for nm, t in (("Li 2019 ", li), ("Liu 2023", liu)):
+            for lk, v, r in t:
+                if r["compound"].lower() == c:
+                    print(f"      {nm}  log Kow {lk:.2f}   RCF {v:7.2f}   "
+                          f"({r.get('species', 'rice')})")
+    print("\n   ~4.7x apart, same compound, same lipophilicity, both hydroponic root")
+    print("   partitions. The anchor is worth 0.38 log = 2.4x, so the disagreement")
+    print("   BETWEEN the measurements is larger than the parameter change being")
+    print("   argued over. That is the real obstacle, and no amount of re-fitting")
+    print("   inside this repo resolves it.")
+
+
+def section4_scan(drv, fast=False):
+    print("\n" + "=" * 84)
+    print("4. WHAT MOVES IF THE ROOT LIPID MOVES — all three tables, full ODE")
+    print("=" * 84)
+    if fast:
+        print("   [--fast: skipped. Recorded result from the full run:]")
+        for L, a, b, c in ((0.0050, 0.818, 0.382, 0.902), (0.0100, 0.598, 0.281, 0.783),
+                           (0.0150, 0.471, 0.257, 0.719), (0.0200, 0.386, 0.267, 0.678),
+                           (0.0247, 0.331, 0.288, 0.651), (0.0300, 0.290, 0.316, 0.629)):
+            print(f"      L={L:.4f}   li2019 {a:.3f}   liu2023 {b:.3f}   ge2017 {c:.3f}")
+        return
+    orig = ND.TRAPP1994_LIPID_FW["root"]
+    briggs_L = 10.0 ** ND.RCF_INTERCEPT / ND.LIPID_OCTANOL_A
+    print(f"   {'root L':>8}{'li2019 n=29':>14}{'liu2023 n=14':>14}{'ge2017 n=6':>13}")
+    try:
+        for L in (0.0050, 0.0100, 0.0150, 0.0200, briggs_L, 0.0300):
+            ND.TRAPP1994_LIPID_FW["root"] = L
+            vals = [V.compare_to_obs(p, drv, quiet=True)
+                    for p in (LI2019, LIU2023, GE2017)]
+            tag = "  <- shipped" if abs(L - orig) < 1e-9 else (
+                "  <- Briggs anchor" if abs(L - briggs_L) < 1e-9 else "")
+            print(f"   {L:>8.4f}{vals[0]:>14.3f}{vals[1]:>14.3f}{vals[2]:>13.3f}{tag}")
+    finally:
+        ND.TRAPP1994_LIPID_FW["root"] = orig
+    print("\n   Li 2019 and Ge 2017 improve monotonically toward the Briggs anchor;")
+    print("   Liu 2023 -- the rice table -- has its optimum near L = 0.015 and gets")
+    print("   worse beyond it. No single value is best for all three.")
+
+
+def main(fast=False):
+    drv = V.drivers()
+    print("LI 2019 ROOT-PARTITION A-PRIORI TEST + THE ANCHOR DIAGNOSIS")
+    print(f"forcings: measured Q_TP, growth_rice biomass, season {V.SEASON:.0f} d\n")
+    rmse = section1_apriori(drv)
+    section2_lipid_table()
+    section3_anchor()
+    section3b_where_the_bias_lives()
+    section3c_how_robust_is_that()
+    section3d_the_datasets_contradict()
+    section4_scan(drv, fast=fast)
+    print("\n" + "=" * 84)
+    print("VERDICT")
+    print("=" * 84)
+    print(f"   a-priori log10 RMSE on 29 out-of-sample rows = {rmse:.3f}, against 0.281")
+    print("   for Liu 2023 (rice, narrower Kow range) and 0.191 for Kodesova 2019.")
+    print("   What is SOLID: the error is one direction, not scatter -- all 11 species")
+    print("   and all 10 source studies are biased low -- and it is absent below log")
+    print("   Kow 2, where the water floor dominates and there is no lipid term to be")
+    print("   wrong about. Section 3b rules out non-equilibrium as the driver.")
+    print("   What is NOT: the monotone ladder in 3b is partly one study's replicates")
+    print("   (3c), and raising L is a correction of close to the right SHAPE, not the")
+    print("   wrong instrument -- so this table is genuine evidence FOR the anchor.")
+    print("   Why the decision still does not follow: section 3d. Li 2019 and Liu 2023")
+    print("   disagree with EACH OTHER at 3.5-4.5 by more than the anchor is worth,")
+    print("   and on the one compound both measured they differ 4.7x. The obstacle is")
+    print("   between the datasets, not between the model and the data.")
+    print("   DEFAULT UNCHANGED, and the open question is now correctly posed: it is")
+    print("   not 'is the partition too low' but 'which of two hydroponic root")
+    print("   datasets describes a rice root'. A rice measurement at log Kow > 3.5")
+    print("   would settle it; nothing inside this repo can.")
+    return rmse
+
+
+if __name__ == "__main__":
+    main(fast="--fast" in sys.argv)
