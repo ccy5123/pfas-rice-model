@@ -2,8 +2,9 @@
 
 > `src/neutral_dpu.py` · `validation/neutral_dpu_validation.py` · `tests/test_neutral_dpu.py`
 > **Status: IMPLEMENTED, anchors verified at source, and validated a-priori
-> against one measured rice dataset** (Ge et al. 2017; log10 RMSE **1.099** with
-> nothing fitted). §4 records what that number means and what is still missing.
+> against two measured rice datasets** — root partition across 14 compounds and
+> 5 log-Kow units at log10 RMSE **0.281**, per-organ transfer factors at **0.783**,
+> both with nothing fitted. §4–§5 record what those numbers mean and what is left.
 
 ---
 
@@ -90,18 +91,18 @@ on the measured forcings:
 | log Kow | TSCF | K_PW root | root BAF | straw BAF | straw/root |
 |---:|---:|---:|---:|---:|---:|
 | −1.00 | 0.033 | 0.90 | 0.87 | 6.8 | 7.8 |
-| 0.00 | 0.214 | 0.90 | 0.74 | 34.5 | 46.9 |
-| 1.00 | 0.611 | 0.91 | 0.55 | 67.6 | 122.2 |
-| **1.78** | **0.784** | 0.93 | 0.51 | 76.4 | **149.8** |
-| 2.50 | 0.634 | 1.00 | 0.60 | 69.0 | 114.4 |
-| 3.50 | 0.233 | 1.50 | 1.21 | 36.8 | 30.5 |
-| 4.50 | 0.038 | 4.46 | 4.29 | 7.7 | 1.8 |
-| 5.50 | 0.003 | 21.9 | 21.8 | 0.6 | 0.03 |
+| 0.00 | 0.214 | 0.91 | 0.75 | 34.5 | 46.3 |
+| 1.00 | 0.611 | 0.97 | 0.59 | 67.6 | 114.1 |
+| **1.78** | **0.784** | 1.19 | 0.65 | 76.4 | **117.3** |
+| 2.50 | 0.634 | 1.93 | 1.16 | 69.0 | 59.5 |
+| 3.50 | 0.233 | 6.94 | 5.58 | 36.8 | 6.6 |
+| 4.50 | 0.038 | 36.5 | 35.1 | 7.7 | 0.22 |
+| 5.50 | 0.003 | 210 | 210 | 0.5 | 0.00 |
 
 The model reproduces the law every uptake study reports — polar compounds
 translocate to the shoot, lipophilic ones are retained in the root — and the
 **straw/root ratio peaks at exactly log Kow 1.78, the Briggs TSCF peak**, crossing
-1 between log Kow 4.5 and 5.5. Nothing was fitted to produce this.
+1 near log Kow 4.5. Nothing was fitted to produce this.
 
 **§3 Scope — metabolism and volatilisation are load-bearing here.** With no
 phloem, no air exchange and `γ = 0`, the leaf is the sole xylem terminal and its
@@ -112,11 +113,11 @@ from the PFAS case where `γ ≈ 0` is defensible:
 
 | half-life | γ [1/d] | leaf BAF | root BAF |
 |---|---:|---:|---:|
-| ∞ (recalcitrant) | 0 | 193.7 | 0.51 |
-| 60 d | 0.0116 | 119.5 | 0.51 |
-| 21 d | 0.0330 | 59.9 | 0.51 |
-| 7 d | 0.0990 | 19.4 | 0.51 |
-| 2 d | 0.3466 | 5.0 | 0.51 |
+| ∞ (recalcitrant) | 0 | 193.2 | 0.65 |
+| 60 d | 0.0116 | 119.1 | 0.65 |
+| 21 d | 0.0330 | 59.5 | 0.65 |
+| 7 d | 0.0990 | 19.1 | 0.65 |
+| 2 d | 0.3466 | 4.7 | 0.64 |
 
 The root is exposure-buffered and barely moves; the leaf spans 40×. **Report
 neutral runs with a measured half-life, or state them as an upper bound.**
@@ -130,81 +131,131 @@ verifiably off, and `root_uptake` is exactly `κ_d·(C_w^o − C_w,root)`.
 against the model's own structure. They can falsify the implementation and they
 quantify its scope. **They are not validation against measured plant data.**
 
-## 4. The a-priori prediction (Ge et al. 2017)
+## 4. The a-priori predictions
+
+Two independent rice datasets, both run with **nothing fitted** — `K_PW` and
+`TSCF` follow from log Kow alone.
+
+### 4a. Root partition — Liu et al. 2023 (14 compounds, 5 log-Kow units)
+
+`python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.csv`
+
+*Sci. Total Environ.* 858:159826, `10.1016/j.scitotenv.2022.159826`. Hydroponic
+rice; the subcellular experiment (1 mg/L, 72 h, 25-day seedlings).
+
+**Reconstruction.** Per-compound tissue concentrations appear only in figures, but
+the SI gives subcellular concentrations per tissue (Table S4) and the mass fraction
+of each subcellular component (Table S3) — and those fractions sum to exactly 1.00
+for every tissue. So the total is their mass-weighted sum, `C = Σ_f w_f·C_f`:
+arithmetic on published numbers, not digitising. It is checkable against the
+paper's own text — the reconstructed leaf/stem ratios for the neonicotinoids fall
+in 1.4–3.2 against the text's "TF_L/S … >2 (2.2–5.2)", and give "rest <1" for the
+triazoles as the text also states. The seven **sulfonylureas are excluded**: they
+are weak acids, ionised at the solution pH 5.6–5.8, and belong on the ionic path.
+
+**Why root partition is the cleanest possible test:** it needs no assumption about
+transpiration, exposure duration, or metabolism, because it is an *equilibrium* —
+Briggs' own observation that roots reach "an equilibrium concentration that does
+not change further with time". So this isolates the `K_PW` core, on rice, against
+a QSPR fitted to barley.
+
+| compound | log Kow | obs RCF | model | ratio |
+|---|---:|---:|---:|---:|
+| nitenpyram | −0.66 | 0.86 | 0.84 | 0.98 |
+| dinotefuran | −0.55 | 1.00 | 0.83 | 0.83 |
+| thiamethoxam | −0.13 | 1.13 | 0.77 | 0.68 |
+| imidacloprid | 0.57 | 0.73 | 0.64 | 0.88 |
+| clothianidin | 0.70 | 1.23 | 0.63 | 0.51 |
+| acetamiprid | 0.80 | 0.44 | 0.61 | 1.39 |
+| thiacloprid | 1.26 | 3.14 | 0.59 | 0.19 |
+| triadimefon | 2.77 | 2.89 | 1.65 | 0.57 |
+| myclobutanil | 2.94 | 7.21 | 2.13 | 0.30 |
+| epoxiconazole | 3.58 | 8.04 | 6.46 | 0.80 |
+| propiconazole | 3.72 | 9.32 | 8.36 | 0.90 |
+| flusilazole | 3.87 | 15.4 | 11.0 | 0.72 |
+| hexaconazole | 3.90 | 8.32 | 11.7 | 1.40 |
+| difenoconazole | 4.40 | 44.9 | 29.2 | 0.65 |
+
+**log10 RMSE = 0.281** (n = 14). Eleven of fourteen fall within a factor of 1.5,
+across a 50-fold range of measured RCF. The worst miss is thiacloprid (5.4× under).
+The half-life sensitivity is **flat** (0.281 → 0.294 at a 3-day half-life), which is
+exactly right for an equilibrium endpoint and is the counterpart of §4b, where it
+is steep.
+
+### 4b. Per-organ transfer — Ge et al. 2017 (3 compounds)
 
 `python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_ge2017.csv`
 
-**Dataset.** Ge, Cui, Yan, Li, Chai, Liu, Cheng & Yu (2017), *Environ. Pollut.*
-226:479–485, `10.1016/j.envpol.2017.04.043` — soil-grown rice, three neutral
-pesticides spanning log Kow −0.13 → 4.4, per-organ transfer factors at 60 days
-(their Table 2), with log Kow and pKa in the same paper (their Table 3).
-Transcribed to `data_obs/neutral_obs_ge2017.csv`.
-
-Their BCF is `C_plant/C_soil`, which would need a soil–water partition coefficient
-we do not have for that soil, so the comparison uses **TF** — a tissue/tissue
-ratio, in which the exposure term cancels. Values are dry weight and are converted
-onto the model's fresh-weight basis using the run's own tissue water contents.
-
-**Result — nothing fitted, `K_PW` and `TSCF` from log Kow alone:**
+*Environ. Pollut.* 226:479–485, `10.1016/j.envpol.2017.04.043`. Soil-grown rice,
+per-organ TF at 60 days (their Table 2), log Kow and pKa in the same paper (Table
+3). Their BCF is `C_plant/C_soil` and would need a soil–water coefficient we do not
+have, so the comparison uses **TF**, in which the exposure term cancels.
 
 | compound | log Kow | organ | observed TF | model | ratio |
 |---|---:|---|---:|---:|---:|
-| thiamethoxam | −0.13 | stem | 0.34 | 0.16 | 0.5× |
-| thiamethoxam | −0.13 | leaf | 15.8 | 99.0 | 6.3× |
-| imidacloprid | 0.57 | stem | 0.34 | 0.40 | 1.2× |
-| imidacloprid | 0.57 | leaf | 16.1 | 226.0 | 14× |
-| difenoconazole | 4.40 | stem | 0.034 | 0.19 | 5.7× |
-| difenoconazole | 4.40 | leaf | 0.044 | 6.2 | 141× |
+| thiamethoxam | −0.13 | stem | 0.34 | 0.17 | 0.5× |
+| thiamethoxam | −0.13 | leaf | 15.8 | 98.0 | 6.2× |
+| imidacloprid | 0.57 | stem | 0.34 | 0.43 | 1.3× |
+| imidacloprid | 0.57 | leaf | 16.1 | 218.6 | 14× |
+| difenoconazole | 4.40 | stem | 0.034 | 0.13 | 3.9× |
+| difenoconazole | 4.40 | leaf | 0.044 | 0.62 | 14× |
 
-**log10 RMSE = 1.099** (n = 6). This is the **only a-priori prediction in this
-repo** — read it against the PFAS side's a-priori error of ≈ 0.84–0.95, noting
-that the PFAS number still has fitted transport parameters behind it while this
-one has none.
+**log10 RMSE = 0.783** (n = 6), against the PFAS side's a-priori error of ≈ 0.84–0.95
+— which still has fitted transport parameters behind it, while this has none.
 
-**The error structure is the finding.** The **stem is predicted well** (0.5×,
-1.2×, 5.7×) while the **leaf is over-predicted by 6–141×**. That is precisely the
-failure mode §3 predicted: with `γ = 0` the leaf is an unbounded terminal
-accumulator, so a 60-day exposure integrates the entire transpiration stream into
-it. The model also gets the qualitative ordering right across 4.5 log units of
-Kow — polar compounds reach the leaf (TF ≫ 1), difenoconazole stays in the root
-(TF ≪ 1).
+**The error structure is the finding.** The **stem is predicted well** (0.5×, 1.3×,
+3.9×) while the **leaf is over-predicted by 6–14×** — precisely the failure mode §3
+predicts, since with `γ = 0` the leaf is an unbounded terminal accumulator over a
+60-day exposure. The model also gets the ordering right across 4.5 log units: polar
+compounds reach the leaf (TF ≫ 1), difenoconazole stays in the root (TF ≪ 1).
 
-**Sensitivity to the two inputs we do not have** (§6 of the script). Neither is a
-free parameter; both are unmeasured, so the scan says how much of the residual is
-a missing measurement rather than a broken structure:
+**Sensitivity** (§6 of the script) — a scan, not a fit:
 
 | in-planta half-life | Briggs TSCF | Schriever TSCF |
 |---|---:|---:|
-| none (γ = 0, strict a-priori) | **1.099** | 1.551 |
-| 60 d | 0.960 | 1.425 |
-| 30 d | 0.848 | 1.322 |
-| 14 d | 0.668 | 1.156 |
-| 7 d | 0.502 | 0.984 |
-| 3 d | 0.409 | 0.792 |
+| none (γ = 0, strict a-priori) | **0.783** | 1.212 |
+| 60 d | 0.622 | 1.061 |
+| 30 d | 0.488 | 0.933 |
+| 14 d | 0.274 | 0.716 |
+| **7 d** | **0.210** | 0.486 |
+| 3 d | 0.515 | 0.331 |
 
-Two things follow.
+Three things follow.
 
 1. **The residual is dominated by the missing dissipation rate, not by transport
-   structure.** The error falls monotonically as metabolism is imposed, reaching
-   0.41 at a 3-day half-life. At any plausible in-planta half-life below ~30 d the
-   neutral a-priori error is already at or below the PFAS a-priori error. Ge report
-   *soil* half-lives only (IMI 19–20 d, THX 26–30 d, DFZ 37–41 d) but do document
-   in-plant metabolism qualitatively (THX → clothianidin *in the plants*). The
-   half-life that reconciles the leaf is therefore a **testable prediction**, not a
-   calibration — measuring it would confirm or refute this reading.
-2. **The original Briggs bell beats the modern refit on this data**, at every
-   half-life (1.10 vs 1.55 at γ = 0). The broader Schriever bell gives
-   difenoconazole `TSCF = 0.37` against Briggs' 0.047, and Ge measured a leaf TF of
-   0.044 — the narrow bell is right about lipophilic compounds not reaching the
-   leaf. Worth knowing, since the refit rests on the larger dataset and might have
-   been assumed the better default.
+   structure** — and there is a genuine **minimum at ≈ 7 days**, not a monotone
+   slide toward faster loss. So the model does not merely prefer "more metabolism";
+   it predicts a specific in-planta half-life, which a measurement could test. Ge
+   report *soil* half-lives only (19–41 d) but document in-plant metabolism
+   qualitatively (THX → clothianidin *in the plants*).
+2. **The original Briggs bell beats the modern refit**, at every half-life. The
+   broader Schriever bell gives difenoconazole `TSCF = 0.37` against Briggs' 0.047,
+   and Ge measured a leaf TF of 0.044 — the narrow bell is right that lipophilic
+   compounds do not reach the leaf. Worth knowing, since the refit rests on the
+   larger dataset and might have been assumed the better default.
+3. Together with §4a the two datasets **cross-validate the diagnosis**: the
+   half-life sensitivity is steep where the endpoint is an accumulator (leaf) and
+   flat where it is an equilibrium (root).
 
-**What this does not settle.** Six data points, three compounds, one study, one
-soil, one time point. The grain compartment is not exercised at all (Ge harvested
-at 60 days, and no rice dataset found reports a neutral Kow series in grain under
-root-only exposure — the same gap that exists on the PFAS side). And the leaf
-result is confounded with the missing half-life, so the strict number is an upper
-bound on the error, not a measurement of the transport model.
+### A correction the data forced
+
+The first version of this module converted Trapp's lipid contents as *dry*-weight
+fractions. They are **fresh** weight — the same basis as `W`, as `K_PW = W +
+L·a·Kow^b` requires, and as Briggs' own barley anchor shows (`L·a = 10^−1.52` ⇒
+`L = 2.5 %` alongside `W = 0.82`). The Liu root data caught it immediately:
+log10 RMSE **0.605 → 0.198** on the partition term alone, and the Ge prediction
+improved from 1.099 → 0.783. Mixing the two bases understates `K_PW` about tenfold
+for lipophilic compounds.
+
+### What these numbers do not settle
+
+Two studies, one crop, seventeen compound-tissue pairs. The **grain compartment is
+not exercised at all** — no dataset found reports a neutral Kow series in grain
+under root-only exposure, the same gap that exists on the PFAS side. Liu's shoot
+TFs are not used, because a 72-hour seedling exposure is not comparable to the
+season-long growing run the model drives; only its root partition transfers. And
+the Ge leaf result stays confounded with the missing half-life, so 0.783 is an
+upper bound on the transport error rather than a measurement of it.
 
 ## 5. The other papers, and what each can and cannot do
 
@@ -216,7 +267,7 @@ All ten obtained papers were read; here is what each is actually good for.
 | **Briggs 1982** `10.1002/ps.2780130506` | **Anchor verified at source.** Eqs. 2 and 3 confirmed character-for-character; the 0.82 floor is explained as root water content, confirming the `K_PW` mapping. Its Table 1 (barley RCF/TSCF) is the QSPR's own training data, so it cannot serve as validation. |
 | **Schriever 2020** `10.1016/j.scitotenv.2020.136667` | **Alternative TSCF implemented.** Reprints Briggs eq. 3 verbatim (independent verification) and supplies a 97-value refit, now selectable and benchmarked in §4. Its per-compound TSCF values are in the SI, which was not obtained. |
 | **Trapp 1994** `10.1002/etc.5620130308` | **Tissue composition adopted** (root 1 %, stem/leaf 3 % lipid). Its Table 1 gives a complete driver set (transpiration, organ masses, water contents) for the bromacil runs, but the measured concentrations are in Figures 5–6 — **figure-only**, so an RMSE would need digitising. |
-| **Liu 2023** `10.1016/j.scitotenv.2022.159826` | **Partly usable; blocked on its SI.** Confirmed: hydroponic, 21 pesticides at 100 µg/L, 3–144 h, root/stem/leaf. But per-compound RCF/SCF/LCF live in Fig. 2 and Tables S4–S5, and log Kow in Table S1 — **the SI was not in the upload**. The text alone gives TF ranges and a few named values. Fetching the SI would make this the strongest rice dataset available. |
+| **Liu 2023** `10.1016/j.scitotenv.2022.159826` | **Used — §4a**, once the SI arrived. Table S1 gives log Kow for all 21 compounds (PubChem-sourced); Tables S3 × S4 reconstruct total tissue concentrations. Its shoot TFs remain unused (72-h seedling exposure, not comparable to a season run). |
 | **Inao 2018a/b** `10.1584/jpestics.D17-083` / `D17-084` | **Cannot test the 4-compartment split.** As flagged before the papers arrived, they sample *"the whole shoot of the rice plant above the water surface"* — no organ resolution. Still the only source of a measured paddy-water + layered-soil `C_w^o(t)`, so it remains the right dataset for a future HYDRUS-coupling test against a lumped shoot. |
 | **Brunetti 2021** `10.1021/acs.est.0c07420` | **Parameter cross-check, not a data table.** Its Table 1 reports *calibrated* posteriors, not raw concentrations: green-pea root `K_RW = 13.3` cm³/g fw and stem `K_SW = 11.8` for carbamazepine (log Kow ≈ 2.45). The Briggs `K_PW` for the same compound is ≈ 1.0 — **an order of magnitude lower**. Either pea tissue is far more sorptive than Briggs' barley, or the calibration absorbed other processes. Worth pursuing: it is a direct quantitative disagreement with the partition core, on the framework's own reference implementation. |
 | **Hwang 2017** `10.1371/journal.pone.0172254` | Open access, transcribable (Table 1: chlorpyrifos root/leaf in lettuce, 21/30/40 d). Lettuce not rice, one compound, and soil-basis exposure — a useful secondary check, not a QSPR test. |
@@ -229,11 +280,15 @@ All ten obtained papers were read; here is what each is actually good for.
   unmodified 4-compartment ODE.
 - It reproduces the qualitative Kow law with the translocation peak landing on the
   Briggs bell maximum, using **zero fitted parameters**.
-- Against measured rice data it predicts per-organ transfer factors a-priori at
-  **log10 RMSE 1.099**, with a clean, interpretable error structure: the stem is
-  right, the leaf is high because in-planta metabolism is missing, and imposing a
-  plausible half-life brings the error to 0.41–0.85.
+- Against measured rice data, with nothing fitted, it predicts **root partition**
+  across 14 compounds and 5 log-Kow units at **log10 RMSE 0.281**, and **per-organ
+  transfer factors** at **0.783** — both better than the PFAS side's a-priori
+  0.84–0.95, which still carries fitted transport parameters.
+- The error structure is interpretable and cross-validated between the two
+  datasets: steep in half-life where the endpoint accumulates (leaf), flat where it
+  equilibrates (root). The Ge leaf residual points to a specific in-planta
+  half-life of ≈ 7 days — a testable prediction, not a calibration.
 - Remaining gaps: the **grain compartment is untested** (no suitable dataset
-  exists); rice-specific organ lipid contents are still borrowed from soybean; the
-  Liu 2023 SI would add a proper Kow series; and the Brunetti `K_RW` discrepancy is
-  an open question against the partition core itself.
+  exists); rice-specific organ lipid contents are still borrowed from soybean; and
+  the Brunetti `K_RW` discrepancy (13.3 vs a Briggs `K_PW` of ~1.0 for
+  carbamazepine) is an open question against the partition core itself.

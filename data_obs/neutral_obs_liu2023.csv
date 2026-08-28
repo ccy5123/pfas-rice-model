@@ -1,0 +1,52 @@
+# Liu, Cheng, Zhou, Ma, Chen, Li, Sun, Yan, Geng, Wan & Yu (2023)
+# "Uptake kinetics and subcellular distribution of three classes of typical
+#  pesticides in rice plants" Sci. Total Environ. 858:159826
+# doi:10.1016/j.scitotenv.2022.159826
+#
+# ROOT CONCENTRATION FACTOR (RCF = C_root / C_solution), reconstructed from the SI.
+#
+# RECONSTRUCTION. The paper reports per-compound tissue concentrations only as
+# figures (Fig. 2, Fig. S2). Table S4 does give subcellular concentrations (cell
+# wall / organelle / soluble / apoplast) per tissue, and Table S3 gives the mass
+# fraction of each of those components -- and those fractions sum to exactly 1.00
+# for every tissue. So the total tissue concentration is their mass-weighted sum:
+#     C_tissue = sum_f  w_f(Table S3) * C_f(Table S4)
+# This is arithmetic on published numbers, not digitising, and it is checkable:
+# the resulting leaf/stem ratios for the neonicotinoids fall in 1.4-3.2, against
+# the paper's own text statement of "TF_L/S of neonicotinoid pesticides was >2
+# (2.2-5.2)"; for the triazoles it gives "rest <1" as the text also states.
+#
+# CONDITIONS. These come from the SUBCELLULAR experiment (section 2.3.3): single
+# pesticide at 1 mg/L, hydroponic, 72 h, 25-day-old seedlings -- NOT the 100 ug/L
+# 21-compound kinetics run. So RCF = C_root [mg/kg] / 1 mg/L, numerically equal to
+# the tabulated concentration. Absolute TFs from the same table are NOT included
+# here: they integrate transpiration over a 72-h seedling exposure, which the
+# season-long growing run this repo drives is not comparable to. Root partition IS
+# comparable, because it is an equilibrium -- Briggs' own point that roots reach
+# "an equilibrium concentration that does not change further with time".
+#
+# log Kow: Table S1, sourced there to PubChem (a few from EPA/FAO/ChemicalBook).
+#
+# SPECIATION. The seven SULFONYLUREAS in the paper are deliberately EXCLUDED: they
+# are weak acids (pKa ~3-5) and are ionised at the pH 5.6-5.8 of the nutrient
+# solution, so they belong on the ionic path, not this one. What remains is 7
+# neonicotinoids + 7 triazoles, all un-ionised, spanning log Kow -0.66 to 4.4.
+#
+# BASIS. The paper records fresh weight ("All fresh weight samples were recorded"),
+# and the model's concentrations are fresh weight, so basis=fw.
+#
+compound,log_kow,tissue,value,basis,endpoint,exposure_ugL,half_life_d,K_AW,season_d,note
+nitenpyram,-0.66,root,0.861,fw,baf,1000,,,,neonicotinoid; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h
+dinotefuran,-0.549,root,1.000,fw,baf,1000,,,,neonicotinoid; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h
+thiamethoxam,-0.13,root,1.130,fw,baf,1000,,,,neonicotinoid; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h
+imidacloprid,0.57,root,0.732,fw,baf,1000,,,,neonicotinoid; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h
+clothianidin,0.7,root,1.230,fw,baf,1000,,,,neonicotinoid; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h
+acetamiprid,0.8,root,0.441,fw,baf,1000,,,,neonicotinoid; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h
+thiacloprid,1.26,root,3.139,fw,baf,1000,,,,neonicotinoid; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h
+triadimefon,2.77,root,2.886,fw,baf,1000,,,,triazole; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h
+myclobutanil,2.94,root,7.211,fw,baf,1000,,,,triazole; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h
+epoxiconazole,3.58,root,8.036,fw,baf,1000,,,,triazole; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h
+propiconazole,3.72,root,9.323,fw,baf,1000,,,,triazole; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h
+flusilazole,3.87,root,15.383,fw,baf,1000,,,,triazole; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h
+hexaconazole,3.9,root,8.320,fw,baf,1000,,,,triazole; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h
+difenoconazole,4.4,root,44.938,fw,baf,1000,,,,triazole; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h

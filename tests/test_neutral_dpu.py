@@ -152,40 +152,67 @@ def test_schriever_refit_is_the_same_form_and_reproduces_briggs_paper():
 
 def test_lipid_defaults_are_the_cited_trapp1994_values():
     """The lipid contents must stay traceable to Trapp 1994 (root 1%, stem/leaf 3%
-    dry weight), not drift back to unsourced guesses."""
-    assert ND.TRAPP1994_LIPID_DW["root"] == 0.01
-    assert ND.TRAPP1994_LIPID_DW["stem"] == ND.TRAPP1994_LIPID_DW["leaf"] == 0.03
+    fresh weight), not drift back to unsourced guesses."""
+    assert ND.TRAPP1994_LIPID_FW["root"] == 0.01
+    assert ND.TRAPP1994_LIPID_FW["stem"] == ND.TRAPP1994_LIPID_FW["leaf"] == 0.03
     comps = {c.name: c for c in ND.rice_compartments()}
-    # stored as fresh-weight: f_PL*(1-theta) == dw fraction * (1-theta)
+    # FRESH-weight basis, same as W -- required for K_PW = W + L*a*Kow^b to add up.
+    # (Treating them as dry-weight understates K_PW ~10x; the Liu 2023 root data
+    # caught that error, log10 RMSE 0.605 -> 0.198.)
     fw_root = comps["root"].f_PL * (1.0 - comps["root"].theta)
-    assert fw_root == pytest.approx(0.01 * (1.0 - ND.RICE_WATER["root"]), rel=1e-9)
+    assert fw_root == pytest.approx(0.01, rel=1e-9)
+    # and Briggs' own barley anchor is likewise ~2.5% of FRESH weight
+    assert 10.0 ** ND.RCF_INTERCEPT / ND.LIPID_OCTANOL_A == pytest.approx(0.0247, abs=0.001)
 
 
 # --------------------------------------------------------------------------
 # the measured-data harness
 # --------------------------------------------------------------------------
 def test_ge2017_apriori_prediction():
-    """The repo's first genuine A-PRIORI prediction: Ge et al. 2017 per-organ
-    transfer factors for three neutral pesticides spanning log Kow -0.13 to 4.4,
-    with NOTHING fitted (K_PW and TSCF both follow from log Kow alone).
+    """A-PRIORI per-organ transfer factors, Ge et al. 2017: three neutral pesticides
+    spanning log Kow -0.13 to 4.4, with NOTHING fitted (K_PW and TSCF both follow
+    from log Kow alone).
 
-    Pins the headline (log10 RMSE ~1.10) and the error STRUCTURE that interprets
+    Pins the headline (log10 RMSE ~0.78) and the error STRUCTURE that interprets
     it: the stem is predicted well, the leaf is over-predicted, because the strict
-    a-priori run has no in-planta metabolism and the leaf is therefore an
-    unbounded terminal accumulator (validation section 3)."""
+    a-priori run has no in-planta metabolism and the leaf is therefore an unbounded
+    terminal accumulator (validation section 3). Imposing a realistic half-life
+    must therefore help a lot -- and it has a genuine MINIMUM (~7 d), which is a
+    testable prediction rather than a monotone slide toward faster loss."""
     import neutral_dpu_validation as V
     path = os.path.join(_ROOT, "data_obs", "neutral_obs_ge2017.csv")
     drv = V.drivers()
     rmse = V.compare_to_obs(path, drv, quiet=True)
-    assert rmse == pytest.approx(1.099, abs=0.05)
-    # the error is dominated by the MISSING half-life, not by transport structure:
-    # imposing a realistic in-planta dissipation must reduce it monotonically
-    errs = [V.compare_to_obs(path, drv, half_life=h, quiet=True)
-            for h in (None, 30.0, 14.0, 7.0, 3.0)]
-    assert errs == sorted(errs, reverse=True)
-    assert errs[-1] < 0.55
-    # and the ORIGINAL Briggs bell beats the broader modern refit on this data
+    assert rmse == pytest.approx(0.783, abs=0.05)
+    errs = {h: V.compare_to_obs(path, drv, half_life=h, quiet=True)
+            for h in (30.0, 14.0, 7.0, 3.0)}
+    assert errs[7.0] < 0.4 * rmse                 # metabolism explains most of it
+    assert errs[7.0] < errs[30.0] and errs[7.0] < errs[3.0]   # a real minimum
+    # the ORIGINAL Briggs bell beats the broader modern refit on this data
     assert V.compare_to_obs(path, drv, tscf_model="schriever", quiet=True) > rmse
+
+
+def test_liu2023_root_partition_apriori():
+    """The cleanest a-priori test available: root concentration factors for 14
+    un-ionised pesticides (7 neonicotinoids + 7 triazoles) spanning log Kow -0.66
+    to 4.4, reconstructed from Liu 2023's Tables S3 x S4.
+
+    Root partition needs NO assumption about transpiration, exposure duration or
+    metabolism -- it is an equilibrium -- so this isolates the Briggs K_PW core
+    on rice, against a QSPR fitted to barley. The half-life sensitivity must be
+    FLAT here, which is the counterpart of the Ge case where it is steep: root is
+    exposure-buffered, leaf is an accumulator."""
+    import neutral_dpu_validation as V
+    path = os.path.join(_ROOT, "data_obs", "neutral_obs_liu2023.csv")
+    drv = V.drivers()
+    rmse = V.compare_to_obs(path, drv, quiet=True)
+    assert rmse == pytest.approx(0.281, abs=0.04)
+    flat = V.compare_to_obs(path, drv, half_life=7.0, quiet=True)
+    assert abs(flat - rmse) < 0.02             # equilibrium endpoint: metabolism-insensitive
+    rows = V.load_neutral_obs(path)
+    assert len(rows) == 14 and all(r["tissue"] == "root" for r in rows)
+    assert min(r["log_kow"] for r in rows) < -0.6
+    assert max(r["log_kow"] for r in rows) > 4.3
 
 
 def test_obs_template_carries_no_data():

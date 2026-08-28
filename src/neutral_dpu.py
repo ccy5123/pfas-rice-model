@@ -88,12 +88,14 @@ Scope and honesty
   carbamazepine, neonicotinoids, triazoles) and `k_aw_warning()` flags a compound
   where that assumption is likely violated.
 * Tissue lipid contents are taken from Trapp, McFarlane & Matthies 1994 (the
-  canonical validation of this framework): root 1%, stem and leaf 3% dry weight.
-  Those are SOYBEAN values, not rice -- an organ-resolved total-lipid measurement
-  for rice remains a genuine gap -- but they are a cited anchor and they are what
-  the DPU base itself was exercised with.  Note `params/parameters.json` cannot
-  supply them: it carries *phospholipid* fractions (membrane binding of anions),
-  a lower bound on the total lipid Briggs partitioning refers to.
+  canonical validation of this framework): root 1%, stem and leaf 3% of FRESH
+  weight -- the same basis as the water contents, as `K_PW = W + L*a*Kow^b`
+  requires (see TRAPP1994_LIPID_FW).  Those are SOYBEAN values, not rice -- an
+  organ-resolved total-lipid measurement for rice remains a genuine gap -- but
+  they are a cited anchor and they are what the DPU base itself was exercised
+  with.  Note `params/parameters.json` cannot supply them: it carries
+  *phospholipid* fractions (membrane binding of anions), a lower bound on the
+  total lipid Briggs partitioning refers to.
 * Metabolism `gamma` is genuinely non-zero for most neutral organics (unlike
   PFAS), so it is exposed per compartment and defaults to 0 only so that a run
   without a measured half-life is obviously an upper bound.
@@ -277,12 +279,16 @@ def briggs_root_compartment() -> Compartment:
 #     l_L = 3%" for its soybean runs. These are the values the DPU base itself was
 #     exercised with. They are NOT rice measurements -- rice-specific total lipid
 #     resolved by organ is still a genuine gap -- but they are a cited anchor
-#     rather than the guesses that stood here before. Grain keeps a higher value
-#     (rice bran/embryo lipid); override via `rice_compartments(lipids=...)`.
-# NOTE these are DRY-weight fractions in Trapp's usage; `neutral_compartment`
-# takes FRESH-weight, so they are converted on the way in (see rice_compartments).
+#     rather than the guesses that stood here before.
+# BASIS (important, and easy to get wrong): these are FRESH-weight fractions, the
+# same basis as W. K_PW = W + L*a*Kow^b only adds up if both terms share a basis,
+# and Briggs' own barley anchor is L*a = 10^-1.52 => L = 0.0247, i.e. 2.5% of
+# FRESH weight -- next to his W = 0.82. Trapp likewise lists l_R = 1% alongside
+# "water content root W_R = 94.2%". Treating them as dry-weight fractions (as an
+# earlier revision of this file did) under-states K_PW ~10x for lipophilic
+# compounds; the Liu 2023 root data caught it (log10 RMSE 0.605 -> 0.198).
 RICE_WATER = {"root": 0.90, "stem": 0.83, "leaf": 0.78, "grain": 0.14}
-TRAPP1994_LIPID_DW = {"root": 0.01, "stem": 0.03, "leaf": 0.03, "grain": 0.03}
+TRAPP1994_LIPID_FW = {"root": 0.01, "stem": 0.03, "leaf": 0.03, "grain": 0.03}
 RICE_SURFACE = {"leaf": 20.0, "grain": 2.0}
 # Briggs' sorption exponent b is 0.77 for roots and stems; Trapp 1994 uses 0.95
 # for LEAVES (their eq. 1 discussion), i.e. leaf lipid is closer to octanol.
@@ -293,14 +299,15 @@ def rice_compartments(lipids: dict | None = None, waters: dict | None = None,
                       gammas: dict | None = None) -> list[Compartment]:
     """[root, stem, leaf, grain] with neutral (Briggs) composition.
 
-    `lipids` are DRY-weight fractions (Trapp 1994's convention); they are
-    converted to the fresh-weight basis the compartments carry.
+    `lipids` are FRESH-weight fractions, the same basis as the water contents
+    (see the note on TRAPP1994_LIPID_FW -- mixing the bases is the classic error
+    here and understates K_PW by ~10x for lipophilic compounds).
     """
     W = dict(RICE_WATER, **(waters or {}))
-    Ldw = dict(TRAPP1994_LIPID_DW, **(lipids or {}))
+    L = dict(TRAPP1994_LIPID_FW, **(lipids or {}))
     g = dict.fromkeys(W, 0.0)
     g.update(gammas or {})
-    return [neutral_compartment(k, W=W[k], L=Ldw[k] * (1.0 - W[k]),
+    return [neutral_compartment(k, W=W[k], L=L[k],
                                 S=RICE_SURFACE.get(k, 0.0), gamma=g[k])
             for k in ("root", "stem", "leaf", "grain")]
 

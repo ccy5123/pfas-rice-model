@@ -530,7 +530,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   SAME solve path as `simulate` — root/grain byte-identical). Guard
   `tests/test_model_api.py::test_twopool_simulate_organs_and_tang_passthrough_diagnosis`. Full record:
   `docs/twopool_root_exploration.md` §Result 7. EXPLORATORY; `parameters.json` UNCHANGED (no support for promotion).
-- **NEUTRAL-organic (Briggs/Kow) path (this session) — IMPLEMENTED + a-priori VALIDATED (RMSE 1.099)**:
+- **NEUTRAL-organic (Briggs/Kow) path (this session) — IMPLEMENTED + a-priori VALIDATED (root 0.281 / per-organ 0.783)**:
   `src/neutral_dpu.py` + `validation/neutral_dpu_validation.py` + `tests/test_neutral_dpu.py` +
   `docs/neutral_dpu_validation.md` + `data_obs/neutral_obs_ge2017.csv`. The neutral DPU base was DERIVED
   (`dpu_model_summary_corrected.tex`) but never implemented — `Compound.fn` was pinned at 0.0 and used in NO equation,
@@ -552,19 +552,31 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   with zero fitted params the straw/root ratio peaks at **exactly logKow 1.78 = the Briggs TSCF peak**; leaf is an
   unbounded terminal accumulator at γ=0 (leaf BAF 194 → 19 at a 7-d half-life, root unchanged 0.51) ⇒ for neutrals
   metabolism is LOAD-BEARING and volatilisation is unimplemented (`k_aw_warning` refuses a high-K_AW compound silently).
-  **A-PRIORI PREDICTION (the repo's first)**: Ge 2017 (`10.1016/j.envpol.2017.04.043`, rice, 3 neutral pesticides
-  logKow −0.13→4.4, per-organ TF at 60 d, dw) → **log10 RMSE 1.099 with NOTHING fitted** (vs the PFAS a-priori 0.84–0.95,
-  which still has fitted transport behind it). **The error STRUCTURE is the finding**: stem predicted well (0.5×/1.2×/5.7×),
-  leaf over by 6–141× — exactly the γ=0 unbounded-leaf failure mode §3 predicts. Sensitivity scan (NOT a fit): error falls
-  monotonically with imposed half-life 1.099→0.848 (30 d)→0.502 (7 d)→0.409 (3 d) ⇒ the residual is a **missing
-  measurement** (in-planta dissipation), not broken transport; the reconciling half-life is a testable PREDICTION. Also:
-  the ORIGINAL Briggs bell BEATS the broader modern Schriever refit at every half-life (1.10 vs 1.55) — the narrow bell is
-  right that lipophilic compounds do not reach the leaf (difenoconazole obs leaf TF 0.044). **Open**: grain compartment
-  UNTESTED (no dataset exists — same gap as PFAS); rice organ lipid still borrowed from soybean; Liu 2023
-  (`10.1016/j.scitotenv.2022.159826`) would be the strongest rice set but its per-compound RCF/log-Kow are in the SI,
-  which was not in the upload; Inao 2018 samples WHOLE SHOOT only (no organ split) so it can only test the HYDRUS
-  coupling against a lumped shoot; **Brunetti 2021's calibrated pea root `K_RW`=13.3 vs the Briggs `K_PW`≈1.0 is an
-  order-of-magnitude disagreement with the partition core** on the framework's own reference implementation — open.
+  **A-PRIORI PREDICTIONS (the repo's first), two independent rice datasets, NOTHING fitted**:
+  (1) **Liu 2023** (`10.1016/j.scitotenv.2022.159826`; SI Table S1 log Kow + Tables S3xS4 reconstruction of total
+  tissue conc — the fractions sum to exactly 1.00 per tissue, so it is arithmetic on published numbers, not digitising;
+  cross-checks against the paper's own text TF_L/S statements) → **root partition RCF for 14 un-ionised pesticides
+  (7 neonicotinoid + 7 triazole) spanning logKow −0.66→4.4 at log10 RMSE 0.281**, 11/14 within 1.5x over a 50-fold RCF
+  range. Root partition is the CLEANEST possible test: no transpiration/duration/metabolism assumption because it is an
+  equilibrium. The 7 sulfonylureas are EXCLUDED (weak acids, ionised at the solution pH 5.6–5.8 → ionic path).
+  (2) **Ge 2017** (`10.1016/j.envpol.2017.04.043`, per-organ TF at 60 d, dw) → **log10 RMSE 0.783** vs the PFAS a-priori
+  0.84–0.95 (which still has FITTED transport behind it). **The error STRUCTURE is the finding**: stem predicted well
+  (0.5x/1.3x/3.9x), leaf over by 6–14x — exactly the γ=0 unbounded-leaf failure mode §3 predicts. Sensitivity scan (NOT a
+  fit) has a genuine MINIMUM at ~7 d half-life (0.783→0.210, rising again to 0.515 at 3 d) ⇒ the model predicts a
+  SPECIFIC in-planta half-life, a testable prediction. The two datasets CROSS-VALIDATE the diagnosis: half-life
+  sensitivity is steep where the endpoint accumulates (leaf) and FLAT where it equilibrates (root, 0.281→0.294).
+  Also: the ORIGINAL Briggs bell BEATS the broader modern Schriever refit at every half-life (0.783 vs 1.212) — the
+  narrow bell is right that lipophilic compounds do not reach the leaf (difenoconazole obs leaf TF 0.044).
+  **CORRECTION the data forced**: the first cut converted Trapp's lipid contents as DRY weight; they are FRESH weight
+  (same basis as W, as `K_PW = W + L·a·Kow^b` requires, and as Briggs' own anchor `L·a=10^−1.52` ⇒ L=2.5% next to
+  W=0.82 shows). Liu's root data caught it — partition-term RMSE **0.605→0.198**, Ge 1.099→0.783. Mixing the bases
+  understates K_PW ~10x for lipophilic compounds.
+  **Open**: grain compartment UNTESTED (no dataset exists — same gap as PFAS); rice organ lipid still borrowed from
+  soybean; Liu's shoot TFs unused (72-h seedling exposure not comparable to a season run); Inao 2018 samples WHOLE
+  SHOOT only (no organ split) so it can only test the HYDRUS coupling against a lumped shoot; Trapp 1994's measured
+  concentrations are FIGURE-ONLY; **Brunetti 2021's calibrated pea root `K_RW`=13.3 vs the Briggs `K_PW`≈1.0 for
+  carbamazepine is an order-of-magnitude disagreement with the partition core** on the framework's own reference
+  implementation — open.
 - **Structural MERGE — two-pool seq ROOT + `nstem_leaf` redistributed SHOOT (this session) — Result 7 CONFIRMED**:
   the last in-silico item of the two-pool arc (handoff §6: "a fair per-organ Tang test needs the two-pool root merged
   with the redistributed shoot"). `NStemLeafModel` gained optional `k_seq`/`k_rel`: `k_seq>0` APPENDS a sequestered
@@ -760,9 +772,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   biomass; in-sample + Kim OOS vs fxy-doc baselines; ~3 min). Opt-in API (no re-fit; reuses the cached fit):
   `model_api.simulate_twopool_seq("PFUnDA")` → the standard `simulate()` dict + root mobile/seq split.
 - **Neutral organics (Briggs/Kow base)**: `python src/neutral_dpu.py` (per-compound TSCF/K_PW/BAF demo);
-  `python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_ge2017.csv` (partition anchor + Kow
-  signature + metabolism scope + switch + the **a-priori prediction vs Ge 2017** and its half-life/TSCF sensitivity;
-  omit `--obs` for the structural checks alone — see `docs/neutral_dpu_validation.md`).
+  `python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.csv` (root partition, 14 compounds,
+  RMSE 0.281) and `--obs data_obs/neutral_obs_ge2017.csv` (per-organ TF, RMSE 0.783); both also print the partition
+  anchor + Kow signature + metabolism scope + switch and the half-life/TSCF sensitivity. Omit `--obs` for the
+  structural checks alone — see `docs/neutral_dpu_validation.md`.
 - Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
   `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
