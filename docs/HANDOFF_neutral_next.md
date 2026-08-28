@@ -1,9 +1,11 @@
 # HANDOFF — neutral-organic path: what is done, what is next
 
 > Session handoff for the next Claude/dev.
-> Branch: **`claude/latest-handoff-review-da78q1`** · PR: **[#57](https://github.com/ccy5123/pfas-rice-model/pull/57)**
-> (draft), **stacked on [#56](https://github.com/ccy5123/pfas-rice-model/pull/56)** — #57's base is
-> #56's branch, so **#56 merges first**. Neither is merged yet.
+> **PRs [#56](https://github.com/ccy5123/pfas-rice-model/pull/56) and
+> [#57](https://github.com/ccy5123/pfas-rice-model/pull/57) are MERGED** — `main` is at
+> `b3b5004`, full suite re-run on the merged tree: **245 pass, 2 skip**.
+> Open: **[#58](https://github.com/ccy5123/pfas-rice-model/pull/58)** (draft, branch
+> `claude/latest-handoff-review-da78q1`) — the Expert-only neutral tab + this handoff.
 > Scientific records: **`docs/neutral_dpu_validation.md`** (neutral path, §3b air / §4c Hwang) and
 > **`docs/twopool_root_exploration.md` §Result 8** (structural merge). Read those first.
 > `parameters.json`, `simulate()` and `reproduce_demo` (RMSE 0.029) are **UNCHANGED**
@@ -13,20 +15,23 @@
 
 ## 0. TL;DR
 
-**§3's three tasks (A1 → A3 → A2) are all DONE.** The neutral-organic path is now
-structurally complete, tested against a third dataset, and reachable from the API:
+**The neutral-organic path is structurally complete and shipped.** §3's three tasks
+(A1 → A3 → A2) are done and merged, and the follow-up that could be done in-repo
+(§3.1-3, the app tab) is done too:
 
 - **A1 air exchange** — the leaf's second sink now exists, so a volatile compound is
   no longer an upper bound by construction. Structurally zero at `K_AW = 0`.
 - **A3 Hwang 2017** — a **diagnosis, not a score**: the article's unstated fresh/dry
   basis spans the verdict, and the two readings fail on *opposite organs*. Its payoff
   is corroborating the open **Brunetti** root-partition disagreement.
-- **A2 `model_api.simulate_neutral`** — the path is usable from the app/validation,
+- **A2 `model_api.simulate_neutral`** — reachable from the app/validation,
   bit-identical to the standalone module.
+- **The app tab** — Expert-only "🧪 Neutral organics" (PR #58).
 
-**What is next is mostly DATA, not code** (§4): the remaining items need papers,
-measurements or an email to Hwang's authors. §3.1 lists the few code-shaped
-follow-ups that did emerge.
+**What is left is almost entirely BLOCKED ON PAPERS**, and they are now enumerated with
+DOIs in **`docs/literature_db/Acquisition_Queue.csv`** (§4). Note the constraint that
+shapes everything below: **this environment cannot fetch them** — every academic host is
+blocked by the network egress policy. They have to arrive out-of-band.
 
 ---
 
@@ -37,17 +42,24 @@ follow-ups that did emerge.
 | `d8e7f9a` | **A1** air exchange: `src/plant_air.py`, opt-in `RiceUptakeModel(air=)`, `simulate_neutral(air=True)` |
 | `97dbe75` | **A3** Hwang 2017 as a diagnosis: basis spans the verdict; opposite-organ failure; Brunetti corroborated |
 | `50b5586` | **A2** `model_api.simulate_neutral(log_kow, …)` + drift guards (purely additive, 83 lines) |
+| `bb70b8a` | handoff rewritten for the A1/A3/A2 outcome |
+| *(merged)* | `8169257` = PR #56, `b3b5004` = PR #57 |
+| `c6e9d8a` | **app**: Expert-only "🧪 Neutral organics" tab (PR #58) |
+| `494acc4` | **`docs/literature_db/Acquisition_Queue.csv`** — the wanted papers, with DOIs and `doi_status` |
 
 **New files**: `src/plant_air.py`, `validation/hwang2017_lettuce.py`,
-`tests/test_plant_air.py` (18), `tests/test_hwang2017.py` (8).
+`tests/test_plant_air.py` (18), `tests/test_hwang2017.py` (8),
+`docs/literature_db/Acquisition_Queue.csv`.
 
-Full suite: **246 collected, 245 pass, 2 skip** (+29 vs the 217 this branch started
-from). The 2 skips are optional deps — `emcee` and `sci-adk`; the latter is exactly
-what GitHub CI installs and runs, so it is covered there.
+Full suite on merged `main`: **246 collected, 245 pass, 2 skip** (+29 vs the 217 this
+work started from). The 2 skips are optional deps — `emcee` and `sci-adk`.
 
-**Prior session** (also on this PR stack, #56): the structural merge and the neutral
-path's first implementation — commits `1a707e6`, `1028e3e`, `3ee864e`, `a8ba9e7`,
-`f7b870e`, `cc4c54c`.
+**⚠️ CI does not test any of this.** `.github/workflows/rigor.yml` runs only
+`tests/test_sci_adk_rigor.py`, so a green check says nothing about the model or the app.
+Run the full suite locally (~13 min) before claiming green.
+
+**Prior session** (merged as #56): the structural merge and the neutral path's first
+implementation — `1a707e6`, `1028e3e`, `3ee864e`, `a8ba9e7`, `f7b870e`, `cc4c54c`.
 
 ---
 
@@ -75,13 +87,12 @@ endosperm; Tang is three C5–C8 congeners so the long-chain root decoupling is 
 unexercised. The **promotion decision did not move** — the gate is still the wet-lab
 assay in `docs/twopool_kseq_mechanism.md` §5.
 
-Two more, added this session. **Air exchange**: the equations are the derivation's,
-but the flux scales with each tissue's specific SURFACE AREA, which this repo has
-only ever used as a leaf/grain *ratio* for the xylem split — so absolute
-volatilisation magnitudes are order-of-magnitude until the areas are measured, and
-the shipped stem area is 0. **Hwang**: lettuce not rice, one compound, an unstated
-fresh/dry basis and a reconstructed growth curve — its RMSEs are a diagnosis, never
-a validation score.
+Two more. **Air exchange**: the equations are the derivation's, but the flux scales with
+each tissue's specific SURFACE AREA, which this repo has only ever used as a leaf/grain
+*ratio* for the xylem split — so absolute volatilisation magnitudes are
+order-of-magnitude until the areas are measured, and the shipped stem area is 0.
+**Hwang**: lettuce not rice, one compound, an unstated fresh/dry basis and a
+reconstructed growth curve — its RMSEs are a diagnosis, never a validation score.
 
 ---
 
@@ -329,17 +340,18 @@ promotion gate**); per-congener xylem-sap / root-water ratio (direct `f_xy`); a 
 
 ## 5. Housekeeping
 
-- **PRs #56 and #57 are both drafts, and #57 is STACKED on #56** (its base is #56's
-  branch, not `main`), so #56 has to merge first. CI green on both, mergeable, no
-  review threads. Marking either ready for review is the user's call — do not flip
-  them unasked.
-- **Test counts**: CLAUDE.md now says 217; the branch is at **246 collected, 245 pass,
-  2 skip**. Refresh it when the stack merges (it was left alone here to avoid churning
-  a number that changes again on merge). The 2 skips are `emcee` and `sci-adk`, both
-  optional deps — `sci-adk` is what GitHub CI installs, so that file IS covered there.
-- **CI only runs `tests/test_sci_adk_rigor.py`** (`.github/workflows/rigor.yml`), so a
-  green check does NOT mean the change is tested. Run the full suite locally (~13 min)
-  before claiming green — none of this session's work would have been caught by CI.
+- **#56 and #57 are merged**; `main` = `b3b5004`. **#58 is an open draft** (the Expert
+  neutral tab + this handoff). Marking it ready or merging is the user's call — do not
+  flip it unasked.
+- **CI only runs `tests/test_sci_adk_rigor.py`** (`.github/workflows/rigor.yml`). A green
+  check does NOT mean a change is tested — none of this session's work would have been
+  caught by it. Run `pytest -q` locally (~13 min) before claiming green.
+- **Test counts**: CLAUDE.md still says 217; the tree is at **246 collected, 245 pass, 2
+  skip**. Worth refreshing next time CLAUDE.md is edited anyway.
+- **The network egress policy blocks every academic host** — PLOS, PMC, Europe PMC,
+  `doi.org`, Crossref all refused. `WebSearch` works; `WebFetch` does not. So no paper
+  can be verified at source from inside a session, and §4's `doi_status` column exists
+  for exactly that reason. Do not silently upgrade a `search-only` DOI to verified.
 - `docs/HANDOFF_BAF_twopool.md` §6 item ④ records the merge outcome; keep it in sync if
   the two-pool story moves again.
 
@@ -403,25 +415,30 @@ python validation/hwang2017_lettuce.py                                        # 
 
 # the merge
 python validation/twopool_nstem_merge.py --cached      # reuse the fit (~1 min)
-python validation/twopool_nstem_merge.py               # full re-fit (~40 min)
 
-# in code
+# in code / in the app
 python -c "import sys; sys.path.insert(0,'src'); import model_api as a; \
            print(a.simulate_neutral(2.45, name='carbamazepine', half_life=7.0)['baf_final'])"
+streamlit run app.py            # Expert mode -> the "🧪 Neutral organics" tab
 
-pytest tests/test_neutral_dpu.py tests/test_plant_air.py tests/test_hwang2017.py -q
 pytest -q                                              # the full suite, ~13 min
 ```
 
-**Resume prompt (example).** §3's tasks are finished, so pick from §3.1 or §4:
+**Resume prompt — pick by what arrived.**
 
-> `docs/HANDOFF_neutral_next.md` §3's A1/A3/A2 are all done. Take §3.1 item 1: find a
-> sourced measurement of rice tissue **specific surface area** [m²/kg fresh weight],
-> per organ, and wire it into `plant_air` (`AirExchange.S` / `neutral_dpu.RICE_SURFACE`).
-> It is the one input that bounds the new air-exchange term — the flux is linear in it
-> and the current values were never calibrated as absolute areas. Keep `parameters.json`,
-> `simulate()` and `reproduce_demo` (RMSE 0.029) unchanged, and state the source and its
-> weight basis explicitly (fresh vs dry has bitten this repo three times now).
+*If papers arrived* (the likely case — see §4 and
+`docs/literature_db/Acquisition_Queue.csv`):
 
-Or, if the user wants the app side instead, §3.1 item 3 (a neutral tab) — but ask them
-first where a neutral compound belongs in the Simple/Expert split.
+> The paper(s) in `docs/literature_db/Acquisition_Queue.csv` row <A1/A2/…> have arrived
+> at <path>. Extract the value, record the source and its **stated weight basis** in the
+> literature DB, and only then decide whether it should replace the current
+> `neutral_dpu` default. Read the DEFINITION NOTE at the bottom of that CSV first: a
+> proximate crude-fat number is **not** interchangeable with the `L` in
+> `K_PW = W + L·a·Kow^b`, which is an operationally calibrated octanol-like phase. If the
+> value changes `K_PW`, re-run the Liu 2023 and Ge 2017 a-priori comparisons and report
+> the movement honestly — those two numbers are the repo's only genuine a-priori results.
+
+*If nothing arrived*, the honest answer is that the neutral arc is at a natural stopping
+point and the remaining in-repo items (§3.1-4, §3.1-5) are low-value. Better uses of a
+session: ask the user which of §4 they can supply, or move to a different track
+(`docs/HANDOFF_BAF_twopool.md`, the PFAS side).
