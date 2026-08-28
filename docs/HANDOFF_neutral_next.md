@@ -48,6 +48,7 @@ entirely, and every C1/C2/C3 candidate screens out for a stated reason.
 |---|---|
 | `1019461` | `data_obs/neutral_obs_li2019_rcf.csv` (48 rows) + `data_obs/tscf_obs_schriever2020.csv` (97 rows), `validation/li2019_rcf_apriori.py`, `validation/schriever2020_tscf.py`, the `subset` filter, `BRIGGS_ANCHORED_LIPID_FW`, `tests/test_li2019_schriever_tables.py` (11) |
 | `d4dd996` | the queue rewritten as a delivery record; `docs/neutral_dpu_validation.md` §4d, §4e and the four-sightings synthesis |
+| `2de5619` | section 3b — the kinetic explanation ruled out; stale test counts refreshed |
 
 **Prior sessions on this branch**: `c6e9d8a` (Expert neutral tab), `494acc4` (the queue),
 `9216dd1` (the previous handoff). Merged earlier: `d8e7f9a` air exchange, `97dbe75`
@@ -79,8 +80,8 @@ on this branch; the 2 skips are the optional `emcee` and `sci-adk` deps.
 model's root is parameterised for *rice* and only 4 of the 29 rows are rice; the rest is
 a deliberate test of Briggs' own claim that root lipophilic character does not vary much
 across species, and Li's own crop table (0.10 %–1.14 %) says it does. Exposure times run
-6 h to 12 d, so short high-Kow rows may not have equilibrated — `exposure_d` is carried
-in the file so that can be checked rather than argued. The TSCF table is 16 species, none
+6 h to 12 d — that confounder was pre-registered in the file and has now been **checked
+and ruled out** (§3 item 2), so it is no longer a live caveat. The TSCF table is 16 species, none
 of them rice, and barley is half of it; the Briggs bell is out-of-sample there but **not
 independent** (same lab, same species, same method lineage). The neutral **grain
 compartment remains entirely untested** — that has not changed.
