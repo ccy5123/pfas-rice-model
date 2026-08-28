@@ -420,7 +420,30 @@ finding. The finding is that **the error is one offset, not scatter**: every one
 of the 11 species is biased the same way, low, from −0.30 (lettuce) to −0.95
 (*Plantago*), with rice itself at −0.47. Eleven species do not agree by accident.
 
-**The offset is internal to the model, not a disagreement with the world.**
+**The offset is not kinetic, and that was pre-registered rather than discovered.**
+The obs file's header names the one confounder in advance: these are 6 h – 12 d
+exposures, and Li et al.'s own model writes RCF = α_pt·`K_PW` with α_pt ≤ 1
+falling as Kow rises, because lipophilic compounds equilibrate slowly. A model
+with no α_pt should therefore *over*-predict the short, high-Kow rows. It
+under-predicts them. Splitting the 29 rows settles which story is right:
+
+| split | n | mean log10 bias |
+|---|---|---|
+| exposure < 1 d | 1 | −0.124 |
+| exposure 1–3 d | 18 | −0.442 |
+| exposure > 3 d | 10 | −0.447 |
+| log Kow < 2 | 4 | **−0.030** |
+| log Kow 2 – 3.5 | 6 | −0.305 |
+| log Kow 3.5 – 4.5 | 11 | −0.462 |
+| log Kow > 4.5 | 8 | **−0.688** |
+
+**Flat in exposure time, monotone in log Kow** — and inside the high-Kow cell
+alone, longer exposures are no better (−0.586 under 3 d vs −0.517 over). So
+non-equilibrium is ruled out as the driver, and the deficit sits in the
+**lipophilic sorption term**: it vanishes at low Kow, where the water floor `W`
+dominates and there is no lipid term to be wrong about.
+
+**Part of that deficit is internal to the model, not a disagreement with the world.**
 `neutral_dpu` anchors on Briggs' RCF, whose lipid term is `L·a = 10^−1.52 =
 0.0302`. But `rice_compartments` substitutes a *measured* `L = 0.01` and keeps the
 *conventional* `a = 1.22`, which makes the product `0.0122` — **2.5× below the
@@ -437,6 +460,11 @@ leaves the other. The sharpest way to see the cost is on Briggs' own barley rows
 
 (equilibrium `K_PW` log10 RMSE; the full-ODE scan in §4 of the script agrees in
 direction — Li 0.598 → 0.331 and Ge 0.783 → 0.651 at the anchor, Liu 0.281 → 0.288.)
+
+Sizing the two contributions: restoring the anchor shifts predictions by
+**+0.394 log**, against an observed **−0.688** in the worst cell (log Kow > 4.5).
+So the anchor accounts for about **57 %** of it, and the remaining ~2× at high
+lipophilicity does not come from the lipid fraction at all.
 
 **The default is NOT changed, and the reasoning is the point.** Restoring the
 anchor improves two tables and **degrades the only rice one**. An intermediate

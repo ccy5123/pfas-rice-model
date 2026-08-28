@@ -59,6 +59,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── examples/                         # ready-to-load CSVs for app.py (HYDRUS drivers + biomonitoring)
 ├── params/                           # parameters.json (CANONICAL) + source CSVs (Bk, f_xy, Kcw, ...)
 ├── data_obs/                         # observed BAF/TF (Yamazaki, Li2025) + yamazaki_stem_height.csv
+│                                     #  + NEUTRAL: liu2023/ge2017 (rice) · li2019_rcf (48 hydroponic RCF, 11 spp,
+│                                     #    `subset` col holds Briggs' own rows out) · tscf_obs_schriever2020 (97 TSCF)
 ├── validation/                       # S6 + nstem + hydrus_coupled_run reproduction scripts + figures
 ├── docs/
 │   ├── OVERVIEW_KR.md                # ★ 종합 진입점: 기능·검증·데이터공백·필요실험·notation 표 (+모식도)
@@ -71,7 +73,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (217 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (258 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -640,6 +642,48 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   the basis is CIRCULAR and overrides the only non-circular evidence (i). `Tp` scanned, never adopted (the authors say
   it is not their measurement). **Deliberately NOT a `data_obs/` CSV**: the shared `--obs` harness would run it on the
   RICE drivers (120 d, constant Cwo) and return a silently meaningless number. `parameters.json`/model math UNCHANGED.
+- **Acquisition-queue papers arrived (this session) — two new measured tables, and the ANCHOR they expose**:
+  `DPU4OC_add.zip` delivered rows A1–A4 + the C-row candidates of `docs/literature_db/Acquisition_Queue.csv`, which is
+  now a RECORD of what each one actually contained (status column per row) rather than a want-list. Three rows did not
+  deliver what they asked for and that is recorded explicitly: **A1 contains NO RICE**, the supplied `Mcfarlane1987.pdf`
+  is the **wrong paper** (constructed-wetland N isotopes), and **C1/C2/C3 candidates all screen out** (Deng 2018 samples
+  brown rice but every final residue is <LOD; the C2 papers are ROOT morphology while the air term takes no root
+  contribution and `a_R` is lumped into `kappa_d`; Honda 2023 is compositional mol%, not a total lipid mass fraction).
+  A2/A3 CLOSED; **A4 (Kodešová) is SI-NEEDED** and is the highest-value outstanding request (article gives log Kow 2.25,
+  pKa 1.0/13.9, Freundlich `KF` for 3 soils ⇒ with Tables S2/S5 it becomes a per-organ a-priori test with the exposure
+  pinned by the paper's own sorption data).
+  - **`data_obs/neutral_obs_li2019_rcf.csv`** (A1 Table S1) — 48 hydroponic RCF over 11 species, log Kow −0.57→5.41,
+    4 rice rows; the 18 Briggs barley rows ship marked `subset=calibration` and are held out. **A-priori log10 RMSE
+    0.598 (n=29)**, and the error is **one offset, not scatter** — all 11 species biased LOW (−0.30…−0.95).
+  - **`data_obs/tscf_obs_schriever2020.csv`** (A3 SI Table A3, all 97 rows) + `validation/schriever2020_tscf.py` —
+    the first test of **TSCF with no plant model in between** (previously only reachable through the Ge 2017 ODE
+    comparison, entangled with the unknown half-life). Default Briggs bell: **RMSE 0.310, bias −0.221** on the 30
+    un-ionised rows vs a FITTED model's in-sample 0.234. Free by-product: logD-vs-logP lifts rank corr 0.313→0.653,
+    confirming Schriever's own claim on their own table.
+  - **THE DIAGNOSIS** (`validation/li2019_rcf_apriori.py`): the offset is INTERNAL. `neutral_dpu` anchors on Briggs'
+    RCF (`L·a = 10^−1.52 = 0.0302`) but `rice_compartments` substitutes a MEASURED `L=0.01` and keeps the CONVENTIONAL
+    `a=1.22` ⇒ product 0.0122, **2.48× below the anchor it claims** (the header itself says only the product is
+    identifiable). Cost on Briggs' OWN barley rows: log10 RMSE **0.266 vs the anchor's 0.111**.
+  - **NOT kinetic** (§3b, the PRE-REGISTERED confounder): the bias is **flat in exposure time** (−0.442 @1–3 d vs
+    −0.447 @>3 d; within logKow>3.5 alone −0.586 vs −0.517) and **monotone in log Kow** (−0.03→−0.31→−0.46→−0.69).
+    Li/Chiou's own `α_pt`(non-equilibrium) story predicts the opposite ⇒ RULED OUT; the deficit is in the **lipophilic
+    sorption term** (it vanishes at low Kow where the water floor `W` dominates). The anchor is worth +0.394 log vs an
+    observed −0.688 in the worst cell ⇒ accounts for **~57%**; the residual ~2× at high Kow is NOT lipid.
+  - **DEFAULT UNCHANGED — deliberately.** Restoring the anchor improves Li 2019 (0.598→0.331) and Ge 2017
+    (0.783→0.651) but DEGRADES **Liu 2023, the only RICE table** (0.281→0.288); an intermediate `L≈0.015` fits all
+    three and would make the path's one real claim (nothing is fitted) false. `ND.BRIGGS_ANCHORED_LIPID_FW` makes the
+    alternative runnable; `tests/test_li2019_schriever_tables.py` (11) pins the 2.48× so it cannot drift back.
+    A1's real payoff is the **DEFINITION**, verified at source: Li/Chiou's `f_lip` is **fresh weight** (dry converted at
+    90% root water) inside an RCF expression of this model's form, and their cereals (barley 1.00 / wheat 1.10–1.14 /
+    maize 0.53 %) BRACKET the 1% in use ⇒ the value is corroborated, provenance upgraded soybean→cereal root. **Briggs
+    1982 measures no lipid at all** (verified: he attributes the 0.82 floor to root WATER), so 1.00% and 2.47% are both
+    inferences from a paper that measured neither; the 2.5× excess reads as **non-lipid sorption** (cell wall/lignin =
+    the PFAS side's `f_cw·K_cw`, GAP A) which the neutral composition zeroes.
+  - **Root partition is too low — now FOUR sightings** (Brunetti pea `K_RW` ~8×, Hwang fw root 2.8–10.4×, Li 2019 n=29
+    offset, + the anchor as partial CAUSE). ⇒ a measured **neutral-organic cell-wall coefficient** would serve BOTH
+    paths and is now the top wet-lab item on the neutral side. `parameters.json`, `simulate()` and `reproduce_demo`
+    (RMSE 0.029) UNCHANGED; the `subset` filter is inert on tables without the column so **Liu 0.281 / Ge 0.783 are
+    bit-identical** (pinned by a test).
 - **Structural MERGE — two-pool seq ROOT + `nstem_leaf` redistributed SHOOT (this session) — Result 7 CONFIRMED**:
   the last in-silico item of the two-pool arc (handoff §6: "a fair per-organ Tang test needs the two-pool root merged
   with the redistributed shoot"). `NStemLeafModel` gained optional `k_seq`/`k_rel`: `k_seq>0` APPENDS a sequestered
@@ -841,6 +885,13 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   structural checks alone — see `docs/neutral_dpu_validation.md`. In code:
   `model_api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0)` → the standard `simulate()` dict
   + `K_PW`/`TSCF`/`rcf_briggs` (first arg is a **log Kow**, not a congener; `drivers=`/`biomass=` as usual).
+- **Li 2019 root partition + the anchor diagnosis**: `python validation/li2019_rcf_apriori.py` (a-priori n=29 by
+  species → the A1 lipid table → the anchor diagnosis → the full-ODE root-lipid scan; ~3 min, `--fast` skips the scan
+  and prints the recorded numbers). Also runnable through the shared harness:
+  `python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_li2019_rcf.csv` (scores `subset=apriori`
+  only — the 18 Briggs barley rows are held out; pass `subset=None` in code to score everything).
+- **TSCF QSPR on its own (no plant model)**: `python validation/schriever2020_tscf.py` (97 measured TSCF values;
+  Briggs bell RMSE 0.310 / bias −0.221 on the 30 un-ionised rows vs the fitted Schriever refit's in-sample 0.234).
 - **Hwang 2017 (lettuce/chlorpyrifos; neutral, handoff A3)**: `python validation/hwang2017_lettuce.py`
   (exposure from the measured `Kd`; internal-consistency check on Table 1; the fw/dw basis span vs the
   `K_PW` ceiling; soil-contact bound; half-life/growth/water sensitivity). Read the VERDICT block — the
@@ -884,7 +935,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (217 collected; 215 pass, 2 skip, all pass with the full stack — RDKit + the built
+- Tests: `pip install pytest && pytest` (258 collected; 256 pass, 2 skip, all pass with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
   module additionally skips unless `sci-adk` is installed, which CI's `rigor.yml` provides). On a bare
   clone the structure/SMILES tests skip without RDKit and the HYDRUS-engine tests in `test_soil_hydrus.py`

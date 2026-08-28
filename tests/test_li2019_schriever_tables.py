@@ -157,6 +157,32 @@ def test_default_composition_is_untouched_by_the_new_constant():
     assert comps["root"].f_PL == pytest.approx(0.01 / (1.0 - 0.90))
 
 
+def test_partition_bias_is_flat_in_exposure_and_grows_with_kow():
+    """The diagnosis in section 3b, pinned. The competing explanation for the
+    Li 2019 offset is non-equilibrium (Li et al.'s own alpha_pt), which predicts
+    the bias shrinks with exposure time. It does not, and it grows with log Kow
+    instead -- which is what puts the deficit in the sorption term. If a future
+    change ever flips either of those, the recorded conclusion is wrong."""
+    rows = [r for r in _rows(LI2019) if r["subset"] == "apriori"]
+    W = ND.RICE_WATER["root"]
+    La = ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
+
+    def bias(rs):
+        return float(np.mean([
+            np.log10(W + La * 10.0 ** (ND.RCF_SLOPE * float(r["log_kow"])))
+            - np.log10(float(r["value"])) for r in rs]))
+
+    short = bias([r for r in rows if 1 <= float(r["exposure_d"]) < 3])
+    long_ = bias([r for r in rows if float(r["exposure_d"]) >= 3])
+    assert abs(short - long_) < 0.05          # flat in exposure time
+
+    by_kow = [bias([r for r in rows if lo <= float(r["log_kow"]) < hi])
+              for lo, hi in ((-1, 2), (2, 3.5), (3.5, 4.5), (4.5, 9))]
+    assert all(b > nxt for b, nxt in zip(by_kow, by_kow[1:]))   # monotone downward
+    assert by_kow[0] > -0.1                   # no bias where the water floor rules
+    assert by_kow[-1] < -0.5                  # large where the lipid term rules
+
+
 # --------------------------------------------------------------------------
 # the TSCF QSPR test itself
 # --------------------------------------------------------------------------
