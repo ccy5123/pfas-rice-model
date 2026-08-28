@@ -194,7 +194,30 @@ absolute numbers (this is exactly the trap that produced the Tang fresh/dry arti
 and the lipid-basis error in `a8ba9e7`); and the plant half-life is an *assumed* model
 input, not their measurement (§6).
 
-### A2. Expose the neutral path through `model_api`
+### A2. Expose the neutral path through `model_api`  ✅ **DONE**
+
+> **`model_api.simulate_neutral(log_kow, ...)`** — mirrors the `simulate_nstem_leaf` /
+> `simulate_twopool_seq` pattern: the same driver machinery (`drivers=`, `biomass=`,
+> `measured_forcing=`) and the same result-dict contract as `simulate()`
+> (`conc`/`baf`/`baf_final`/`straw`/`straw_baf`/`tf_final`/`cwo_ref`/`season`/`M`/
+> `params`), plus the neutral-only diagnostics (`K_PW`, `TSCF`, `rcf_briggs`,
+> `air_summary`). Air exchange and phloem stay opt-in; no default changes anywhere.
+>
+> The first argument is a **log Kow**, not a congener name — a neutral compound has
+> no congener analogue, and lipophilicity is the one input the QSPRs need.
+>
+> **Drift guards** (`tests/test_model_api.py`): the wrapper is bit-identical to
+> `neutral_dpu.simulate_neutral` on the same forcings, through BOTH the built-in
+> path and `drivers=`, so the published a-priori numbers cannot silently stop
+> describing what the API returns. Also pinned: the `simulate()`-shaped contract,
+> `N = 0` / `e^N = 1` (ionic machinery off), and that air exchange is opt-in and
+> bit-identical at `K_AW = 0`.
+>
+> **Streamlit tab: still not built, deliberately** — as the brief says, that needs a
+> decision about where a neutral compound belongs in the Simple/Expert split, and
+> the app is PFAS-only today. The API is what unblocks it.
+
+**Original brief, for the record.**
 
 `neutral_dpu` is currently standalone — every other capability in the repo is reachable
 through `model_api`, so the app and other validation cannot use it. Small, low-risk,

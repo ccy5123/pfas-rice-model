@@ -604,6 +604,16 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   shipped **stem `S`=0** leaves the stem term inert, pinned by a test). Particle deposition (`eq:Qdep`) deliberately
   NOT implemented (separate deposition pathway; `f_particle` only excludes the particle-bound share from `eq:Qgas`).
   Opt-in and scoped to the 4pool core + neutral path — `parameters.json`, `simulate()` and the PFAS models unchanged.
+- **NEUTRAL path exposed through `model_api` (this session; handoff A2) — DONE**: `model_api.simulate_neutral(log_kow, …)`
+  mirrors the `simulate_nstem_leaf`/`simulate_twopool_seq` opt-in pattern — same driver machinery (`drivers=`,
+  `biomass=`, `measured_forcing=`) and the same result-dict contract as `simulate()` (`conc`/`baf`/`baf_final`/
+  `straw`/`straw_baf`/`tf_final`/`cwo_ref`/`season`/`M`/`params`), plus the neutral-only diagnostics (`K_PW`,
+  `TSCF`, `rcf_briggs`, `air_summary`). First arg is a **log Kow**, not a congener (a neutral compound has no
+  congener analogue). `half_life=` sets γ; `air=`/`phloem=` stay opt-in. **Drift guards** (`test_model_api.py`):
+  bit-identical to `neutral_dpu.simulate_neutral` through BOTH the built-in forcings and `drivers=`, so the published
+  a-priori numbers (Liu 0.281 / Ge 0.783) cannot silently stop describing what the API returns; plus `N=0`/`e^N=1`
+  and air opt-in ≡ zero at `K_AW=0`. **No Streamlit tab yet, deliberately** — that needs a decision about where a
+  neutral compound belongs in the Simple/Expert split. Defaults / `parameters.json` UNCHANGED.
 - **Hwang 2017 lettuce/chlorpyrifos (this session; handoff A3) — DIAGNOSIS, not a score**:
   `validation/hwang2017_lettuce.py` + `tests/test_hwang2017.py` (8) + §4c of `docs/neutral_dpu_validation.md`.
   The only TIME-RESOLVED PER-ORGAN neutral dataset to hand (3 samplings × 2 soil levels), LIPOPHILIC (logKow 4.01,
@@ -823,7 +833,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.csv` (root partition, 14 compounds,
   RMSE 0.281) and `--obs data_obs/neutral_obs_ge2017.csv` (per-organ TF, RMSE 0.783); both also print the partition
   anchor + Kow signature + metabolism scope + switch and the half-life/TSCF sensitivity. Omit `--obs` for the
-  structural checks alone — see `docs/neutral_dpu_validation.md`.
+  structural checks alone — see `docs/neutral_dpu_validation.md`. In code:
+  `model_api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0)` → the standard `simulate()` dict
+  + `K_PW`/`TSCF`/`rcf_briggs` (first arg is a **log Kow**, not a congener; `drivers=`/`biomass=` as usual).
 - **Hwang 2017 (lettuce/chlorpyrifos; neutral, handoff A3)**: `python validation/hwang2017_lettuce.py`
   (exposure from the measured `Kd`; internal-consistency check on Table 1; the fw/dw basis span vs the
   `K_PW` ceiling; soil-contact bound; half-life/growth/water sensitivity). Read the VERDICT block — the
