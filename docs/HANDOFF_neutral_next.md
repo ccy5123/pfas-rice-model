@@ -25,9 +25,22 @@
 
 ## 0. TL;DR
 
-The acquisition queue's papers arrived and have been **mined out**. Four measured
-tables now ship, and the question the last handoff was built around has **dissolved
-rather than been answered**.
+Three things happened, in decreasing order of how much they change what you should do
+next.
+
+**(a) The model now spans the whole speciation spectrum**, not just permanent anions
+and strict neutrals. `simulate_neutral(logKow, pKa=…)` runs a **weak acid or base** —
+a molecule that is neutral and ionic at once, which no single valence can express.
+Ported from the parallel effort in PRs #54/#55, now closed as superseded (§1). It is
+**structural capability, not a validated prediction**: no measured weak-electrolyte
+rice dataset exists here.
+
+**(b) The stem has a measured test for the first time** (§4k): Briggs 1983's Table 1,
+a-priori log10 RMSE **0.299**, indistinguishable from the paper's own *fitted*
+equation. Five measured tables now ship.
+
+**(c) The acquisition queue's papers are mined out**, and the question the last
+handoff was built around has **dissolved rather than been answered**.
 
 **It is not "the root partition is too low". It is "the exposure term is the weak
 part".** Where the exposure is measured or directly known, the model is close to
@@ -68,6 +81,9 @@ python validation/neutral_dpu_validation.py --lipid-source both   # add --mode e
 | `a3b07fa` | `compare_to_obs(mode="equilibrium")` — the ODE scoring artifact, §4g |
 | `784ef4d` | `neutral_obs_li2019_soil.csv` (376) + `li2019_soil_table.py` + Kodešová's leaf half, §4h/§4i |
 | `5426237` | Briggs 1983 read: `briggs_scf()`, `briggs1983_stem.py`, §4j |
+| `f5e5593` | `lipid_source` as a named mode + the §5/§6 consistency fix |
+| `d784b07` | Briggs 1983 **Table 1** mined: `neutral_obs_briggs1983_shoot.csv`, `briggs1983_shoot.py`, §4k |
+| `21c3942` | **the weak-electrolyte port** — PRs #54/#55 reconciled |
 
 Earlier on the same arc: `d8e7f9a` air exchange, `97dbe75` Hwang, `50b5586`
 `model_api.simulate_neutral`, `c6e9d8a` the Expert neutral tab, `494acc4` the queue.
@@ -149,8 +165,9 @@ against the anchor.
 ## 3. Next tasks
 
 Ranked. **Items 1, 2 and 4 are DONE** — see §1. What remains (3, 5) is **blocked on
-data that is not in the repo**; only item 6 is startable, and it is low value. This
-arc is finished until papers or measurements arrive — see §4 for what to ask for.
+data that is not in the repo** — see §4 for what to ask for. Startable without new
+data: item 6 (low value), and the pieces left on the closed #54/#55 branches (§1),
+which are the better use of a session.
 
 1. ~~Put the anchor decision to rest~~ **DONE.** Default stays `lipid_source="measured"`;
    the alternative is a named mode, and the 3-vs-1 evidence is a command rather than a
@@ -286,6 +303,11 @@ python validation/briggs1983_shoot.py             # the stem against DATA, ~1 s
 python validation/neutral_dpu_validation.py --lipid-source both
 python validation/neutral_dpu_validation.py --lipid-source both --mode equilibrium
 
+# the weak-electrolyte capability the #54 port added (pKa=None is the old path)
+python -c "import sys; sys.path.insert(0,'src'); import model_api as a; \
+  print([round(a.simulate_neutral(2.45, pKa=p, season=60, n_t=61)['baf_final']['root'], 4) \
+         for p in (None, 12.0, 4.5, -3.0)])"      # 1.5119, 1.5119, 0.0791, 0.0001
+
 # the baselines that must not move
 python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.csv  # 0.281
 python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_ge2017.csv   # 0.783
@@ -296,17 +318,26 @@ pytest -q                                          # 300 collected, 298 pass, 2 
 
 **Resume prompt.**
 
-> The neutral-organic arc is merged, its papers are mined out, and **both open
-> decisions are now closed** (§3 items 1–2): the root lipid stays at `L = 0.01` as the
-> default of a named `lipid_source` mode, and the docs quote both scoring bases with
-> every number labelled. Read `docs/neutral_dpu_validation.md` §5 and §2 of
-> `docs/HANDOFF_neutral_next.md` before touching anything — §2 lists three claims this
-> arc made and then retracted, and re-deriving any of them is going backwards. Note the
-> failure mode that produced two of them: the body of the validation doc gets corrected
-> and the **Honest summary does not**, so check §6 against §4 whenever you change a
-> result. Remaining work, honestly ranked: §3 item 3 (the Li 2019 hydroponic anomaly —
-> blocked, needs a hydroponic rice root RCF above log Kow 3.5) and item 5 (rice
-> tissue specific surface areas). Both are blocked on data, so do not start one
-> expecting to finish it; §4 says what to ask for. Item 4 is done (§4k) and its
-> table is extracted into `data_obs/`, so it will not need the paper again. The
-> PFAS side is a separate arc — `docs/HANDOFF_BAF_twopool.md`.
+> The neutral-organic arc is merged and its papers are mined out. **Every open item
+> the last handoff listed is now closed** (§3 items 1, 2 and 4): the root lipid stays
+> at `L = 0.01` as the default of a named `lipid_source` mode, the docs quote both
+> scoring bases with every number labelled, and Briggs 1983's Table 1 gave the repo
+> its first measured stem test. The **parallel neutral implementation in PRs #54/#55
+> was also reconciled** — its weak-electrolyte capability ported, the PRs closed as
+> superseded, and what was deliberately left on their branches recorded in §1.
+>
+> Read `docs/neutral_dpu_validation.md` §5, then §2 of this handoff, before touching
+> anything — §2 lists three claims this arc made and then retracted, and re-deriving
+> any of them is going backwards. Note the failure mode that produced two of them, and
+> that it recurred in this very document a session later: **the body of a doc gets
+> corrected and its summary does not.** So whenever you change a result, re-read the
+> validation doc's §6 (Honest summary) against its §4, and this handoff's §0 against
+> its §1 — the summaries are what get read alone.
+>
+> Remaining work, honestly ranked: §3 item 3 (the Li 2019 hydroponic anomaly) and item
+> 5 (rice tissue specific surface areas). **Both are blocked on data that is not in
+> the repo**, so do not start one expecting to finish it; §4 says exactly what to ask
+> for, including the fact that the item-3 request is narrower than it looks (more RICE
+> above log Kow 3.5 from an independent lab, not more species). If you want startable
+> work instead, the pieces left on the closed #54/#55 branches (§1) are the best
+> candidates. The PFAS side is a separate arc — `docs/HANDOFF_BAF_twopool.md`.
