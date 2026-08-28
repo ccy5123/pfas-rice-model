@@ -104,10 +104,12 @@ Ranked. None is large, and none is blocking.
    whether their root measurement sits above or below the model's partition ceiling.
    Note it does NOT dissolve the discrepancy — the two readings fail on opposite
    organs — but it says which organ to chase.
-3. **A Streamlit tab for the neutral path**, now that A2 makes it reachable. Held
-   deliberately: it needs a decision about where a neutral compound belongs in the
-   Simple/Expert split, since the app is PFAS-only and Simple mode is Korean and
-   congener-driven. Ask the user before building it.
+3. ~~A Streamlit tab for the neutral path~~ ✅ **DONE** — the **EXPERT-ONLY**
+   "🧪 Neutral organics" tab (`ui/expert.py` tabs[8]). The Simple/Expert question was
+   settled the conservative way: Simple is congener-driven and symbol-free while a
+   neutral compound is a log Kow, and the neutral **grain is untested**, so putting
+   absolute numbers for it on a general-audience screen would be exactly backwards.
+   Verified with headless Streamlit + Playwright. Docs: `docs/visualization_tool.md`.
 4. **Particle deposition (`eq:Qdep`)** is still unimplemented — deliberately, as a
    separate atmospheric-deposition pathway rather than plant-air equilibrium
    exchange. Only worth doing if a use case needs airborne particulate input.

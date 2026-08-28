@@ -76,6 +76,31 @@ colour.
 
 ---
 
+## Neutral organics tab (the Briggs/Kow DPU base)
+
+The **🧪 Neutral organics** tab (Expert only) runs `model_api.simulate_neutral(log_kow, …)` —
+the framework's neutral base on the *same* 4-compartment ODE with `z = 0`, so the GHK factor
+→ 1, anion exclusion `eᴺ` falls 107 → 1, the membrane term degenerates exactly to passive
+diffusion and the carrier is off. Inputs: **log Kow** (the one required input — a neutral
+compound has no congener), compound name, in-planta half-life, the TSCF QSPR (Briggs 1982 vs
+the broader Schriever 2020 refit), an opt-in phloem toggle, and opt-in **plant–air exchange**
+(`src/plant_air.py`; needs MW and `K_AW`, identically zero at `K_AW = 0`). It reports TSCF,
+`K_PW`, the three tissue BAFs and the tissue-dynamics curve.
+
+**Expert only, on purpose.** The Simple view is congener-driven and symbol-free; a neutral
+compound is described by a log Kow, so it does not belong there — and the neutral **grain
+compartment has never been tested against data**, which is the opposite of what a
+general-audience screen should show absolute numbers for.
+
+**Nothing in it is fitted**: `K_PW` and `TSCF` both follow from log Kow via published QSPRs, so
+this is the one place in the app where the DPU *backbone* is exposed without the fitted PFAS
+transport behind it (a-priori vs measured rice: log10 RMSE **0.281** root partition, **0.783**
+per-organ TF). The tab states the standing scope limits in-UI: grain untested, tissue lipids are
+Trapp 1994's **soybean** values, the Ge leaf residual is confounded with the missing half-life,
+and for **lipophilic** compounds the root partition itself is under question (Brunetti 2021's
+`K_RW` = 13.3 vs a Briggs `K_PW` ≈ 1.0; Hwang 2017's lettuce root exceeds the ceiling 3–10× in
+the same direction). Records: `docs/neutral_dpu_validation.md`.
+
 ## Tang 2026 validation tab (out-of-sample)
 
 The **✅ Tang TF (OOS)** tab checks the root→shoot loading `f_xy` against **Tang et al. 2026**
