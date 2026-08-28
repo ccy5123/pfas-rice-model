@@ -612,8 +612,13 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   congener analogue). `half_life=` sets γ; `air=`/`phloem=` stay opt-in. **Drift guards** (`test_model_api.py`):
   bit-identical to `neutral_dpu.simulate_neutral` through BOTH the built-in forcings and `drivers=`, so the published
   a-priori numbers (Liu 0.281 / Ge 0.783) cannot silently stop describing what the API returns; plus `N=0`/`e^N=1`
-  and air opt-in ≡ zero at `K_AW=0`. **No Streamlit tab yet, deliberately** — that needs a decision about where a
-  neutral compound belongs in the Simple/Expert split. Defaults / `parameters.json` UNCHANGED.
+  and air opt-in ≡ zero at `K_AW=0`. **Streamlit: an EXPERT-ONLY "🧪 Neutral organics" tab** (`ui/expert.py` tabs[8]; About moved to
+  tabs[9]) — log Kow + name + half-life + TSCF QSPR (briggs/schriever) + opt-in phloem/air, reporting
+  TSCF/`K_PW`/three BAFs/tissue dynamics. Expert-only ON PURPOSE: Simple is congener-driven and
+  symbol-free while a neutral compound is a log Kow, and the neutral GRAIN is untested — the opposite
+  of what a general-audience screen should show absolute numbers for. No `fig_baf` (there is no observed
+  neutral series, so a "predicted vs observed" frame would mislead). Scope limits stated in-UI.
+  Defaults / `parameters.json` UNCHANGED.
 - **Hwang 2017 lettuce/chlorpyrifos (this session; handoff A3) — DIAGNOSIS, not a score**:
   `validation/hwang2017_lettuce.py` + `tests/test_hwang2017.py` (8) + §4c of `docs/neutral_dpu_validation.md`.
   The only TIME-RESOLVED PER-ORGAN neutral dataset to hand (3 samplings × 2 soil levels), LIPOPHILIC (logKow 4.01,
