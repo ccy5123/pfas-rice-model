@@ -257,14 +257,32 @@ def load_neutral_obs(path):
     return rows
 
 
-def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=False):
+def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=False,
+                   subset="apriori", group_by=None):
     """Compare the model to a measured table. `half_life` (d) overrides the
-    per-row half_life_d for a sensitivity scan; `tscf_model` selects the QSPR."""
+    per-row half_life_d for a sensitivity scan; `tscf_model` selects the QSPR.
+
+    `subset` filters an optional `subset` column, whose whole purpose is to keep
+    a table's CALIBRATION rows out of an a-priori score while still shipping them
+    in the same file (data_obs/neutral_obs_li2019_rcf.csv carries the 18 Briggs
+    1982 barley rows the RCF QSPR was fitted to). Pass subset=None to score
+    everything. Files WITHOUT the column -- liu2023, ge2017 -- are unaffected, so
+    the published 0.281 / 0.783 cannot move because of this argument.
+
+    `group_by` names a column to also report per-group RMSE for (e.g. "species").
+    """
     if not quiet:
         print("\n" + "=" * 84)
         print(f"5. MEASURED-DATA COMPARISON — {path}")
         print("=" * 84)
     obs = load_neutral_obs(path)
+    if subset is not None and obs and "subset" in obs[0]:
+        held = [r for r in obs if r.get("subset") != subset]
+        obs = [r for r in obs if r.get("subset") == subset]
+        if held and not quiet:
+            kinds = sorted({r.get("subset", "") for r in held})
+            print(f"   [scoring subset={subset!r}; {len(held)} row(s) held out "
+                  f"as {kinds} -- see the file header for why]")
     if not obs:
         if not quiet:
             print("   (no rows) — supply a measured table to turn this into validation.")
@@ -275,7 +293,7 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
     for r in obs:
         by_cmpd.setdefault((r["compound"], r["log_kow"]), []).append(r)
 
-    pairs = []
+    pairs, tagged = [], []
     if not quiet:
         print(f"{'compound':16}{'logKow':>8}{'tissue':>8}{'obs':>10}{'model':>10}{'ratio':>9}")
     for (name, lk), rs in sorted(by_cmpd.items(), key=lambda x: x[0][1]):
@@ -317,6 +335,7 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
                     wt = waters.get(tis, 0.80)
                     o = o * (1.0 - wt)
             pairs.append((pred, o))
+            tagged.append((pred, o, r))
             ratio = pred / o if o > 0 else float("inf")
             if not quiet:
                 print(f"{name:16}{lk:>8.2f}{tis:>8}{o:>10.3f}{pred:>10.3f}"
@@ -326,6 +345,17 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
     if quiet:
         return rmse
     print(f"\n   log10 RMSE (n={len(pairs)}) = {rmse:.3f}")
+    if group_by and tagged and group_by in tagged[0][2]:
+        groups = {}
+        for p, o, r in tagged:
+            groups.setdefault(r[group_by], []).append(
+                (np.log10(max(p, 1e-6)) - np.log10(max(o, 1e-6))) ** 2)
+        print(f"   by {group_by}:")
+        for g, errs in sorted(groups.items(), key=lambda kv: -len(kv[1])):
+            bias = np.mean([np.log10(max(p, 1e-6)) - np.log10(max(o, 1e-6))
+                            for p, o, r in tagged if r[group_by] == g])
+            print(f"      {g:24s} n={len(errs):3d}  RMSE {np.sqrt(np.mean(errs)):.3f}"
+                  f"   mean log10 bias {bias:+.3f}")
     print("   NOTE: zero parameters were fitted to this table -- K_PW and TSCF come")
     print("   from log Kow alone, so this is a genuine a-priori prediction, and it is")
     print("   the only such test in this repo. Interpret it against the PFAS side's")
