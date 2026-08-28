@@ -5,15 +5,20 @@
 > [#57](https://github.com/ccy5123/pfas-rice-model/pull/57),
 > [#58](https://github.com/ccy5123/pfas-rice-model/pull/58) and
 > [#59](https://github.com/ccy5123/pfas-rice-model/pull/59) are MERGED**;
-> [#60](https://github.com/ccy5123/pfas-rice-model/pull/60) (the `lipid_source` mode +
-> the §5/§6 consistency fix, closing §3 items 1–2) is the only thing still open.
+> [#60](https://github.com/ccy5123/pfas-rice-model/pull/60) (the `lipid_source` mode,
+> Briggs 1983's Table 1, the §5/§6 consistency fix and the weak-electrolyte port —
+> closing §3 items 1, 2 and 4) is the only thing still open. **[#54](https://github.com/ccy5123/pfas-rice-model/pull/54)
+> and [#55](https://github.com/ccy5123/pfas-rice-model/pull/55) are CLOSED as
+> superseded** — a parallel neutral-organic implementation; its one non-duplicated
+> capability was ported (see §1), and its branches are kept for the pieces that were
+> not.
 > Scientific record: **`docs/neutral_dpu_validation.md`** — §4a Liu, §4b Ge, §4c Hwang,
 > §4d Li 2019 hydroponic, §4e TSCF, §4f Kodešová, §4g the scoring artifact, §4h Li 2019
 > soil, §4i Kodešová's leaf, §4j Briggs 1983's stem equations, **§4k Briggs 1983's
 > Table 1 — the only measured STEM test**, §5 the synthesis. **Read §5 first.**
 > `parameters.json`, `simulate()` and `reproduce_demo` (RMSE 0.029) are **UNCHANGED**
 > throughout — everything on this arc is additive or opt-in, and no PFAS number moved.
-> Full suite on the merged tree: **287 collected, 285 pass, 2 skip** (~12 min); the two
+> Full suite on the merged tree: **300 collected, 298 pass, 2 skip** (~12 min); the two
 > skips are the optional `emcee` and `sci-adk` deps.
 
 ---
@@ -81,6 +86,24 @@ onto the mode.
 `tests/test_briggs1983_shoot.py`, giving the repo its **first measured stem test**
 (a-priori RMSE 0.299) and closing §4j's cancellation argument empirically. See §3
 item 4 for what it did *not* deliver.
+
+**Then the two parallel implementations were reconciled.** PRs #54/#55 were a
+*separate* neutral-organic effort from another session: it extends the PFAS core in
+place with an `(fn, fd)` speciation pair, where `main`'s path is a separate module
+reaching a neutral by `z=0`. They overlapped on air exchange, `simulate_neutral` and
+the Briggs lipid partition — and #54 was `dirty`, 33 commits behind, with a
+`simulate_neutral` of the same name and a different signature, so merging would have
+had one silently overwrite the other. **Only its non-duplicated capability was
+ported**: a WEAK ELECTROLYTE, which is a neutral molecule and an ion at once and so
+cannot be expressed by one valence. That is the `(fn, fd)`-weighted `root_uptake`
+(GHK on the ion term only), `Environment.N_for` (valence onto the compound, so a weak
+base is a cation), `Compound.pKa/is_acid/z/P_n`, `Compartment.pH`, the phloem pH ion
+trap, and the `literature_params` speciation helpers. Reachable as
+`simulate_neutral(logKow, pKa=…)`. Verified bit-identical (67 floats, exact `==`,
+PFAS and neutral). **NOT validated** — no measured weak-electrolyte rice dataset
+exists here. What was left on the closed branches, and is worth a focused change if
+wanted: the `f_lip` vs `f_PL` distinction (galactolipid, not phospholipid, in the
+leaf), the SMILES `compound_class` switch, and the soil `K_oc` neutral branch.
 
 **And a defect found while reading in:** §5's table and the whole of §6 still carried two
 of the three claims §2 lists as retracted — "Kodešová 0.191 is the best a-priori result"
@@ -268,7 +291,7 @@ python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.c
 python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_ge2017.csv   # 0.783
 python reproduce_demo.py                                                            # 0.029
 
-pytest -q                                          # 287 collected, 285 pass, 2 skip
+pytest -q                                          # 300 collected, 298 pass, 2 skip
 ```
 
 **Resume prompt.**
