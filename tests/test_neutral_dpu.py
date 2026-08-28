@@ -125,10 +125,15 @@ def test_phloem_is_off_by_default(drv):
 
 
 def test_volatile_compound_is_flagged():
-    """Air exchange is not implemented -- a volatile compound must not run silently."""
+    """A volatile compound must not run silently with air exchange OFF.
+
+    Air exchange is now implemented (`plant_air`, `simulate_neutral(air=True)`),
+    so the warning's job changed: it no longer says "not modelled", it names the
+    remedy. `tests/test_plant_air.py` checks that the remedy actually works.
+    """
     assert ND.k_aw_warning(ND.NeutralCompound("nonvolatile", 2.0, K_AW=1e-7)) is None
     w = ND.k_aw_warning(ND.NeutralCompound("volatile", 2.0, K_AW=0.1))
-    assert w and "NOT modelled" in w
+    assert w and "UPPER bound" in w and "air=True" in w
 
 
 def test_bad_water_content_rejected():

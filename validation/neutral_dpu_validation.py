@@ -130,22 +130,75 @@ def check_terminal_sink(drv=None):
     print("   maturity. So a recalcitrant, non-volatile neutral compound MUST run")
     print("   away: the leaf integrates the whole transpiration stream. That is")
     print("   arithmetic, not a bug -- but it means gamma=0 (fine for PFAS) is NOT a")
-    print("   safe default here, and the air terms this module omits are not optional")
-    print("   for a volatile compound. Quantifying it:")
+    print("   safe default here. The leaf has exactly TWO other sinks, and both are")
+    print("   now available: metabolism (gamma) and volatilisation (plant_air).")
     drv = drv or drivers()
+    print("\n   (a) METABOLISM — in-planta half-life")
     print(f"\n{'half-life (d)':>14}{'gamma (1/d)':>13}{'leaf BAF':>11}{'root BAF':>11}")
-    base = None
     for hl in (np.inf, 60.0, 21.0, 7.0, 2.0):
         g = 0.0 if not np.isfinite(hl) else float(np.log(2.0) / hl)
         comps = ND.rice_compartments(gammas={k: g for k in TISSUES})
         r = ND.simulate_neutral(ND.NeutralCompound("probe", 1.78), drv, comps=comps)
-        base = base if base is not None else r["baf_final"]["leaf"]
         lbl = "inf (recalcitrant)" if not np.isfinite(hl) else f"{hl:.0f}"
         print(f"{lbl:>14}{g:>13.4f}{r['baf_final']['leaf']:>11.2f}"
               f"{r['baf_final']['root']:>11.2f}")
-    print("\n   => report neutral runs WITH a measured half-life, or state the result")
-    print("      as an upper bound. `neutral_dpu.k_aw_warning` flags the volatile case.")
+    check_air_exchange(drv)
+    print("\n   => report neutral runs WITH a measured half-life, and with air exchange")
+    print("      on for a volatile compound, or state the result as an upper bound.")
+    print("      `neutral_dpu.k_aw_warning` flags the volatile case when air is off.")
     return True
+
+
+# ---------------------------------------------------------------------------
+# 3b. the second sink: volatilisation (plant_air)
+# ---------------------------------------------------------------------------
+def check_air_exchange(drv=None, log_kow=2.42, MW=131.4):
+    """The volatilisation ladder, and the constraint that it vanishes for PFAS.
+
+    Deliberately mirrors the metabolism ladder above: both sinks are reported as
+    the leaf BAF they produce, so they can be read against each other. The
+    compound is a moderately lipophilic volatile (trichloroethene-like) scanned
+    across K_AW, which is the input that decides whether air exchange matters at
+    all -- from 0 (a PFAS anion: no air pathway exists) upward.
+    """
+    drv = drv or drivers()
+    print("\n   (b) VOLATILISATION — air exchange (plant_air), K_AW ladder")
+    print(f"       log Kow {log_kow}, MW {MW} g/mol, clean air (C_air = 0)")
+    print(f"\n{'K_AW':>14}{'leaf t1/2 (d)':>15}{'leaf BAF':>11}{'grain BAF':>12}"
+          f"{'root BAF':>11}")
+    rows = []
+    for kaw in (0.0, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1):
+        c = ND.NeutralCompound("probe", log_kow, MW=MW, K_AW=kaw)
+        r = ND.simulate_neutral(c, drv, air=True)
+        hl = r["air_summary"]["leaf"]["half_life"]
+        rows.append((kaw, r["baf_final"]["leaf"], r["baf_final"]["root"]))
+        hl_txt = "inf" if not np.isfinite(hl) else f"{hl:.3g}"
+        lbl = "0 (PFAS)" if kaw == 0.0 else f"{kaw:.0e}"
+        print(f"{lbl:>14}{hl_txt:>15}{r['baf_final']['leaf']:>11.3g}"
+              f"{r['baf_final']['grain']:>12.3g}{r['baf_final']['root']:>11.3f}")
+    leaf = [r[1] for r in rows]
+    root = [r[2] for r in rows]
+    ok = (all(leaf[i] >= leaf[i + 1] for i in range(len(leaf) - 1))
+          and max(root) - min(root) < 1e-9)
+    print("\n   The K_AW = 0 row is the PFAS constraint: the air pathway is")
+    print("   STRUCTURALLY absent, not numerically small — P_air and P_S are both")
+    print("   proportional to K_AW, and the core leaves `air=None` by default, so no")
+    print("   PFAS number moves (reproduce_demo stays at log10 RMSE 0.029).")
+    print("   The root never volatilises (below ground), so it is flat across the")
+    print("   ladder while the leaf, the terminal accumulator, is bounded by it.")
+    print(f"   -> {'PASS' if ok else 'FAIL'} (leaf falls monotonically, root invariant)")
+    print("\n   The ladder also CHECKS the pre-existing warning threshold, which was a")
+    print(f"   judgement call: `k_aw_warning` flags K_AW > {ND.K_AW_VOLATILE:.0e}, and the")
+    print("   implemented physics puts the crossover just above it (leaf half-life")
+    print("   787 d at 1e-4, still negligible against a season, but 8 d at 1e-3, which")
+    print("   dominates). So the threshold errs on the side of flagging early — the")
+    print("   safe direction — rather than missing a volatile compound.")
+    print("\n   CAVEAT: the flux scales with the tissue's specific SURFACE AREA, which")
+    print("   this repo has only ever used as a leaf/grain RATIO for the xylem split.")
+    print("   Treat the absolute magnitude as order-of-magnitude until the areas are")
+    print("   measured; the K_AW/Kow dependence is the derivation's. The stem's area")
+    print("   is 0 in the shipped compartments, so its cuticular term is inert.")
+    return ok
 
 
 # ---------------------------------------------------------------------------

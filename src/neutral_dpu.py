@@ -83,10 +83,16 @@ path TSCF is not a fitted parameter but an input.
 Scope and honesty
 -----------------
 * Air exchange (volatilisation / gaseous uptake, sections 6.3-6.5 of the tex) is
-  NOT implemented -- the core ODE has no air terms.  This module is therefore
+  implemented in `plant_air` and is **opt-in**: `simulate_neutral(air=True)`.  It
+  is off by default because it needs two inputs the Kow-only a-priori run does not
+  have -- `K_AW` and a molar mass -- so switching it on silently would quietly
+  change what "a-priori from log Kow alone" means.  With it off this module is
   valid for **non-volatile** neutral organics (low `K_AW`: most pesticides,
   carbamazepine, neonicotinoids, triazoles) and `k_aw_warning()` flags a compound
-  where that assumption is likely violated.
+  where that assumption is likely violated; with it on, that warning is replaced
+  by an actual run.  The flux scales with the tissue's specific SURFACE AREA,
+  which this repo has only ever used as a leaf/grain ratio -- see the `plant_air`
+  header before trusting an absolute volatilisation magnitude.
 * Tissue lipid contents are taken from Trapp, McFarlane & Matthies 1994 (the
   canonical validation of this framework): root 1%, stem and leaf 3% of FRESH
   weight -- the same basis as the water contents, as `K_PW = W + L*a*Kow^b`
@@ -312,18 +318,39 @@ def rice_compartments(lipids: dict | None = None, waters: dict | None = None,
             for k in ("root", "stem", "leaf", "grain")]
 
 
+K_AW_VOLATILE = 1e-4      # above this, volatilisation rivals the other leaf sinks
+
+
 def k_aw_warning(c: NeutralCompound) -> str | None:
-    """Air exchange is not implemented; flag compounds where that likely matters.
+    """Flag a compound whose result is an upper bound because air exchange is OFF.
 
     K_AW above ~1e-4 puts volatilisation on a par with the other loss terms for a
-    leaf, so a run would over-predict the shoot. Returns None when the
-    non-volatile assumption is defensible.
+    leaf, so a run without air terms over-predicts the shoot. Returns None when
+    the non-volatile assumption is defensible.
+
+    This is the warning for a run with `air` disabled. Air exchange is now
+    IMPLEMENTED (`plant_air`, `simulate_neutral(air=True)`), so the remedy is to
+    run it rather than to caveat it -- which is what the message says.
     """
-    if c.K_AW and c.K_AW > 1e-4:
-        return (f"{c.name}: K_AW={c.K_AW:.2e} -- volatilisation is NOT modelled "
-                "(no air terms in the core ODE), so shoot concentrations are an "
-                "UPPER bound. See docs/dpu_model_summary_corrected.tex sections 6.3-6.5.")
+    if c.K_AW and c.K_AW > K_AW_VOLATILE:
+        return (f"{c.name}: K_AW={c.K_AW:.2e} -- volatilisation is not included in "
+                "THIS run, so shoot concentrations are an UPPER bound. Re-run with "
+                "simulate_neutral(..., air=True) to model it (needs MW); see "
+                "src/plant_air.py and docs/dpu_model_summary_corrected.tex sec:permeability.")
     return None
+
+
+def air_exchange(c: NeutralCompound, **kw):
+    """Build a `plant_air.AirExchange` for a NeutralCompound.
+
+    Pulls `K_AW`, `MW` and `log_kow` off the compound; `kw` overrides anything on
+    `AirExchange` (ambient `C_air`, `rh`, `T`, the specific areas `S`, ...).
+    Raises if the compound carries no molar mass, since every air-side equation
+    needs one -- better than silently running with a wrong permeability.
+    """
+    from plant_air import AirExchange
+    return AirExchange(K_AW=float(c.K_AW), MW=float(c.MW),
+                       log_kow=float(c.log_kow), **kw)
 
 
 # ---------------------------------------------------------------------------
@@ -331,11 +358,21 @@ def k_aw_warning(c: NeutralCompound) -> str | None:
 # ---------------------------------------------------------------------------
 def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
                      phloem=False, phi: float = 0.1, T_C_Ph: float = 10.0,
-                     L_Ph: float = 1.0, tscf_model=None, C0=None):
+                     L_Ph: float = 1.0, tscf_model=None, C0=None,
+                     air=False, air_kw=None):
     """Run the 4-compartment DPU for a NEUTRAL organic.
 
     drivers : {t, Cwo, Qtp, M} on a common grid -- the same driver contract as
         `model_api.simulate(drivers=...)`; M is (n_t, 4) organ fresh mass [kg].
+
+    air : plant-air exchange (volatilisation + gaseous uptake), OFF by default.
+        `True` builds a `plant_air.AirExchange` from the compound's `K_AW`, `MW`
+        and `log_kow` (`air_kw` passes through ambient `C_air`, `rh`, `T`, the
+        specific areas `S`, ...); an `AirExchange` instance may be given directly.
+        It is off by default because it needs `K_AW` and `MW`, which the strict
+        Kow-only a-priori run does not use -- turning it on silently would change
+        what the published RMSEs mean. With `K_AW = 0` the terms are identically
+        zero, so enabling it cannot perturb a non-volatile result (tested).
 
     phloem : OFF by default, faithfully to the neutral base -- "no dissociation,
         pH-dependent speciation, membrane electrical potential, ion-trap, or
@@ -366,9 +403,13 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
     env = neutral_environment()
     inputs = PlantInputs(t=t, Cwo=Cwo, Qtp=Qtp, M=M,
                          leaf_loss=drivers.get("leaf_loss"))
+    air_obj = None
+    if air is not False and air is not None:
+        air_obj = air_exchange(cmpd, **(air_kw or {})) if air is True else air
     model = RiceUptakeModel(env=env, cmpd=core, comps=comps, inputs=inputs,
                             phi=(phi if phloem else 0.0),
-                            T_C_Ph=(T_C_Ph if phloem else 0.0))
+                            T_C_Ph=(T_C_Ph if phloem else 0.0),
+                            air=air_obj)
     sol = model.solve(t, C0=C0)
     Y = sol.y
     K = binding_factors(comps, core)
@@ -388,7 +429,13 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
         phloem=bool(phloem),
         TSCF=float(core.f_xy), log_kow=float(cmpd.log_kow),
         rcf_briggs=briggs_rcf(cmpd.log_kow),
-        warning=k_aw_warning(cmpd),
+        # air exchange: the diagnostics (per-organ permeabilities and the implied
+        # volatilisation half-life) only when it is actually on; the "this is an
+        # upper bound" warning only when it is not.
+        air=air_obj is not None,
+        air_summary=(air_obj.summary(comps, K, M=M[-1], Qtp=float(Qtp[-1]))
+                     if air_obj is not None else None),
+        warning=(None if air_obj is not None else k_aw_warning(cmpd)),
         N=float(env.N), eN=float(np.exp(env.N)),      # 0 and 1: no exclusion
     )
 

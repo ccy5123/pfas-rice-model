@@ -857,6 +857,89 @@ def schematic_values(res, metric="conc", t_index=-1):
 
 
 # ---------------------------------------------------------------------------
+# NEUTRAL-organic (Briggs/Kow) path -- the DPU base, exposed like the other models
+#   src/neutral_dpu.py ; docs/neutral_dpu_validation.md
+# Everything else in this API is PFAS: a permanently dissociated anion for which
+# the Briggs/Kow partition core explicitly does NOT apply. A neutral compound is
+# the SAME 4-compartment ODE with z=0 (no exclusion, no carrier), K_PW from log
+# Kow and f_xy = TSCF(log Kow) -- both fixed from OUTSIDE by published QSPRs with
+# nothing to tune, which is what makes it the one setting where the DPU BACKBONE
+# is testable apart from the fitted PFAS transport.
+# ---------------------------------------------------------------------------
+def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
+                     MW=float("nan"), K_AW=0.0, kappa_d=20.0, half_life=None,
+                     tscf_model="briggs", phloem=False, L_Ph=1.0,
+                     air=False, air_kw=None, waters=None, lipids=None,
+                     biomass="oryza", measured_forcing=True, drivers=None,
+                     tscf=None):
+    """Run the 4-compartment DPU for a NEUTRAL (non-ionised) organic.
+
+    The neutral analogue of `simulate()`: same driver machinery, same result-dict
+    shape (root/stem/leaf/grain `conc`/`baf`/`baf_final`/`straw`/`tf_final`), so
+    the app, plots and validation can treat it interchangeably. It adds the
+    neutral diagnostics -- `K_PW` per tissue, the `TSCF` actually used, the Briggs
+    `rcf_briggs`, and the air-exchange summary when that is on.
+
+    NOTHING here is fitted. `K_PW` and `TSCF` both follow from `log_kow` via
+    published QSPRs, which is the whole point: pass a log Kow, get a prediction.
+
+    log_kow : the ONE required input (the PFAS path's congener name has no
+        analogue -- a neutral compound is described by its lipophilicity).
+    half_life : in-planta dissipation half-life [d] -> per-compartment gamma.
+        STRONGLY recommended: with no metabolism the leaf is an unbounded terminal
+        accumulator, so a run without it is an UPPER BOUND (docs section 3).
+    air : plant-air exchange (volatilisation + gaseous uptake), off by default.
+        `True` needs `MW` and a non-zero `K_AW`; `air_kw` passes ambient `C_air`,
+        `rh`, the specific areas `S`, ... See `src/plant_air.py`.
+    phloem : OFF by default, faithfully to the neutral base, which excludes it --
+        the phloem is an addition of the ionisable extension. Turning it on is an
+        explicit departure, not a default (it drives the small terminal grain hard).
+    tscf : override the QSPR with a MEASURED TSCF; `tscf_model` selects between the
+        Briggs 1982 bell (default) and the broader Schriever 2020 refit.
+    waters / lipids : per-tissue fresh-weight water and lipid fractions, for a
+        species other than rice (the shipped lipids are Trapp 1994's SOYBEAN
+        values -- an open gap, see the docs).
+    drivers / biomass / measured_forcing : exactly as `simulate()`.
+    """
+    import neutral_dpu as ND
+
+    if drivers is not None:
+        t = np.asarray(drivers["t"], dtype=float)
+        season = float(t[-1])
+        Cwo_series = np.asarray(drivers["Cwo"], dtype=float)
+        Qtp = np.asarray(drivers["Qtp"], dtype=float)
+        M = np.asarray(drivers["M"], dtype=float)
+        leaf_loss = drivers.get("leaf_loss")
+    else:
+        t = np.linspace(0.0, float(season), int(n_t))
+        Cwo_series, Qtp, M, leaf_loss = _default_drivers(
+            t, season, Cwo, measured_forcing, biomass)
+    drv = dict(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
+
+    gam = float(np.log(2.0) / half_life) if half_life else 0.0
+    comps = ND.rice_compartments(lipids=lipids, waters=waters,
+                                 gammas=dict.fromkeys(TISSUES, gam))
+    cmpd = ND.NeutralCompound(name=name, log_kow=float(log_kow), MW=float(MW),
+                              K_AW=float(K_AW), kappa_d=float(kappa_d),
+                              tscf=tscf, tscf_model=tscf_model)
+    res = ND.simulate_neutral(cmpd, drv, comps=comps, phloem=phloem, L_Ph=L_Ph,
+                              air=air, air_kw=air_kw)
+
+    # re-shape onto the `simulate()` contract (the neutral module normalises the
+    # BAF on the final exposure; keep that reference explicit for the caller)
+    cwo_ref = float(Cwo_series[-1]) if Cwo_series[-1] > 0 else (
+        float(np.nanmax(Cwo_series)) if np.nanmax(Cwo_series) > 0 else 1.0)
+    res.update(
+        congener=name, season=float(season), M=M, cwo_ref=cwo_ref,
+        leaf_loss=leaf_loss, half_life=(float(half_life) if half_life else None),
+        params=dict(log_kow=float(log_kow), TSCF=res["TSCF"], gamma=gam,
+                    kappa_d=float(kappa_d), K_AW=float(K_AW), MW=float(MW),
+                    tscf_model=tscf_model, phloem=bool(phloem), air=res["air"]),
+    )
+    return res
+
+
+# ---------------------------------------------------------------------------
 # Driver builders -- the three ways to feed the plant ODE
 #   (1) MODEL          : built-in measured/placeholder forcings (simulate(...))
 #   (2) HYDRUS / CSV   : drivers_from_arrays / load_driver_csv  (one-way coupling)

@@ -670,3 +670,68 @@ def test_cwo_profile_flooded_matches_hydrus_direction():
             assert hyd[-1] < 0.5 * hyd[0] and flo[-1] < 0.7 * flo[0]
         else:                                                # long chain: both ~flat
             assert hyd[-1] > 0.9 * hyd[0] and flo[-1] > 0.95 * flo[0]
+
+
+# ---------------------------------------------------------------------------
+# NEUTRAL-organic path exposed through the API (handoff A2)
+# ---------------------------------------------------------------------------
+def test_simulate_neutral_matches_the_standalone_module():
+    """The wrapper must be a pass-through, not a second implementation.
+
+    `model_api.simulate_neutral` and `neutral_dpu.simulate_neutral` have to agree
+    BIT FOR BIT on the same forcings -- otherwise the published a-priori numbers
+    (Liu 0.281, Ge 0.783) would silently stop describing what the API returns.
+    Both entry points are checked: the built-in forcings and an explicit
+    `drivers=` dict.
+    """
+    import neutral_dpu as ND
+
+    lk, season, n_t = 2.45, 120.0, 241
+    t = np.linspace(0.0, season, n_t)
+    Qtp, M = api.measured_forcing(t, season, biomass="growth_rice")
+    drv = dict(t=t, Cwo=np.ones(n_t), Qtp=Qtp, M=M)
+    ref = ND.simulate_neutral(ND.NeutralCompound("probe", lk), drv)
+
+    built_in = api.simulate_neutral(lk, name="probe", biomass="growth_rice",
+                                    season=season, n_t=n_t)
+    explicit = api.simulate_neutral(lk, name="probe", drivers=drv)
+    for k in api.TISSUES:
+        assert np.array_equal(built_in["conc"][k], ref["conc"][k])
+        assert np.array_equal(explicit["conc"][k], ref["conc"][k])
+
+
+def test_simulate_neutral_returns_the_simulate_contract():
+    """Same result-dict shape as `simulate()`, so plots/validation can treat the
+    two interchangeably -- plus the neutral diagnostics that have no PFAS analogue."""
+    import neutral_dpu as ND
+
+    r = api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0)
+    pfas = api.simulate("PFOA")
+    for k in ("t", "conc", "baf", "baf_final", "straw", "straw_baf", "cwo_ref",
+              "season", "M", "Cwo", "Qtp", "params", "success"):
+        assert k in r and k in pfas
+    assert set(r["conc"]) >= set(api.TISSUES)
+    assert set(r["tf_final"]) >= set(api.TISSUES)      # neutral/nstem_leaf endpoint
+    # nothing fitted: partitioning and loading both follow from log Kow
+    assert r["TSCF"] == pytest.approx(ND.briggs_tscf(2.45))
+    assert r["K_PW"]["root"] > 0 and r["rcf_briggs"] > 0
+    assert r["params"]["gamma"] == pytest.approx(np.log(2.0) / 7.0)
+    # z = 0: the ionic machinery is off (PFAS: N = 4.67, e^N ~ 107)
+    assert r["N"] == pytest.approx(0.0, abs=1e-12)
+    assert r["eN"] == pytest.approx(1.0, abs=1e-12)
+    assert pfas["N"] > 4.0
+
+
+def test_simulate_neutral_air_is_opt_in_and_zero_for_pfas_like_compounds():
+    """Air exchange must stay opt-in through the API too, and must be identically
+    zero at K_AW = 0 -- the property that keeps every PFAS number untouched."""
+    kw = dict(name="probe", MW=131.4, biomass="growth_rice", season=120.0, n_t=241)
+    off = api.simulate_neutral(2.42, K_AW=0.0, **kw)
+    on_zero = api.simulate_neutral(2.42, K_AW=0.0, air=True, **kw)
+    volatile = api.simulate_neutral(2.42, K_AW=0.1, air=True, **kw)
+    assert off["air"] is False and on_zero["air"] is True
+    for k in api.TISSUES:
+        assert np.array_equal(off["conc"][k], on_zero["conc"][k])
+    # a genuinely volatile compound loses the leaf; the root never volatilises
+    assert volatile["baf_final"]["leaf"] < 1e-3 * off["baf_final"]["leaf"]
+    assert volatile["baf_final"]["root"] == pytest.approx(off["baf_final"]["root"], rel=1e-9)
