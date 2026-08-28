@@ -25,7 +25,7 @@ from pfas_rice_plant_module_4pool_surf import (
 N = 4
 
 
-def _setup(retention=0.6):
+def _setup(retention=0.6, k_seq=0.0, k_rel=0.0):
     t = np.linspace(0.0, 150.0, 481)
     Qtp = 0.02 + 0.10 * np.exp(-((t - 95.0) ** 2) / (2 * 30.0 ** 2))
     stem = _logistic(t, 1e-3, 0.060, 0.11, 30.0)
@@ -43,7 +43,8 @@ def _setup(retention=0.6):
                     Vmax_in=20.0, Km_in=5.0, Vmax_out=8.0, Km_out=5.0, L_Ph=0.01, f_xy=0.04)
     tau, lam_leaf, lam_grain = split_from_stem_frac(N, 0.45, lam_grain=0.05)
     m = NStemLeafModel(env=Environment(), cmpd=cmpd, comps=comps, inputs=inputs,
-                       tau=tau, lam_leaf=lam_leaf, lam_grain=lam_grain, retention=retention)
+                       tau=tau, lam_leaf=lam_leaf, lam_grain=lam_grain, retention=retention,
+                       k_seq=k_seq, k_rel=k_rel)
     return t, m
 
 
@@ -52,8 +53,12 @@ def _mass_residual(m, t, ti=70.0):
     B = binding_factors(m.comps, m.cmpd)
     C = sol.sol(ti); dC = m.rhs(ti, C)
     M = m.inputs.M_(ti); dM = m.inputs.dM_(ti)
-    jR = root_uptake(m.inputs.Cwo_(ti), (C / B)[0], m.cmpd, m.env)
-    return float(np.sum(dM * C + M * dC)), float(M[0] * jR)
+    jR = root_uptake(m.inputs.Cwo_(ti), (C[:m.n_comp] / B)[0], m.cmpd, m.env)
+    n = m.n_comp
+    dmass = float(np.sum(dM * C[:n] + M * dC[:n]))
+    if m.two_pool:            # the sequestered pool shares the root mass
+        dmass += float(dM[0] * C[m.SEQ] + M[0] * dC[m.SEQ])
+    return dmass, float(M[0] * jR)
 
 
 @pytest.mark.parametrize("retention", [0.0, 0.6, 1.0])
@@ -101,6 +106,44 @@ def test_cures_over_translocation_vs_single_straw():
     # PFOA lands at O(1) across stalk/leaf/grain (Tang ~ 1.45/1.66/0.95)
     for k in ("stem", "leaf", "grain"):
         assert 0.3 < nl["tf_final"][k] < 3.5
+
+
+# --------------------------------------------------------------------------
+# STRUCTURAL MERGE: optional two-pool (mobile + sequestered) root
+# --------------------------------------------------------------------------
+def test_k_seq_zero_is_exactly_the_single_pool_model():
+    """The merge must be inert when off: no extra state, identical trajectory."""
+    t, m0 = _setup()
+    assert m0.two_pool is False and m0.n_states == m0.n_comp and m0.SEQ is None
+    y = m0.solve(t).y
+    assert y.shape[0] == m0.n_comp
+    np.testing.assert_allclose(m0.root_total(y), y[0])
+
+
+@pytest.mark.parametrize("k_seq,k_rel", [(0.05, 0.0), (0.30, 0.0), (0.10, 0.02)])
+def test_mass_conservation_two_pool(k_seq, k_rel):
+    """Sequestration only MOVES solute inside the root -- the sole source is still
+    the root membrane flux, so the total burden balance must still close."""
+    t, m = _setup(k_seq=k_seq, k_rel=k_rel)
+    assert m.two_pool and m.n_states == m.n_comp + 1
+    dmass, src = _mass_residual(m, t)
+    assert dmass == pytest.approx(src, rel=1e-6, abs=1e-9)
+
+
+def test_k_seq_holds_root_burden_and_starves_the_shoot():
+    """The point of the two-pool root: sequestration raises the root and lowers
+    the shoot, and the sequestered pool holds the bulk of the root burden."""
+    t, m0 = _setup()
+    _, m1 = _setup(k_seq=0.30)
+    C0 = m0.solve(t).y[:, -1]
+    C1 = m1.solve(t).y[:, -1]
+    assert m1.root_total(C1) > m0.root_total(C0)          # root holds more
+    assert C1[m1.LEAF] < C0[m0.LEAF]                      # less delivered upward
+    assert C1[m1.SEQ] > C1[m1.ROOT]                       # burden sits in the sink
+    # ... and desorption (k_rel) gives some of it back to the shoot
+    _, m2 = _setup(k_seq=0.30, k_rel=0.05)
+    C2 = m2.solve(t).y[:, -1]
+    assert C2[m2.LEAF] > C1[m1.LEAF]
 
 
 if __name__ == "__main__":

@@ -541,6 +541,54 @@ def test_twopool_simulate_organs_and_tang_passthrough_diagnosis():
     assert org["stem"] / org["root"] < 0.1          # stalk TF collapsed
 
 
+def test_simulate_twopool_nstem_fixes_both_defects_at_once():
+    """STRUCTURAL MERGE: two-pool sequestration ROOT + redistributed (N-stem+leaf)
+    SHOOT. Each half fixes what the other leaves broken, and the merge must show
+    BOTH cures simultaneously -- that is the whole point of pairing them:
+      * vs `simulate_twopool_seq` (two-pool root, pass-through stem): the stalk is
+        no longer collapsed relative to the leaf;
+      * vs `simulate_nstem_leaf` (redistributed shoot, ONE root pool): a sequestered
+        root pool now holds burden, so the root rises and the shoot is not overfed.
+    """
+    merged = api.simulate_twopool_nstem("PFOA", season=150.0)
+    shoot_only = api.simulate_nstem_leaf("PFOA", season=150.0)
+    root_only = api.simulate_twopool_seq("PFOA")
+
+    # (a) the SHOOT defect is fixed: the stalk is populated, not a pass-through
+    assert root_only["baf_final"]["stem"] < 0.1 * root_only["baf_final"]["leaf"]
+    assert merged["baf_final"]["stem"] > 0.1 * merged["baf_final"]["leaf"]
+    # (b) the ROOT mechanism is active: a sequestered pool carries the burden
+    assert merged["params"]["k_seq"] > 0.0
+    assert 0.0 < merged["seq_fraction"] < 1.0
+    assert merged["baf_final"]["root"] == pytest.approx(
+        merged["baf_final"]["root_mobile"] + merged["baf_final"]["root_seq"], rel=1e-6)
+    assert shoot_only["seq_fraction"] == 0.0            # single pool, no seq state
+    # (c) sequestration holds root burden back from the shoot
+    assert merged["baf_final"]["root"] > shoot_only["baf_final"]["root"]
+    assert merged["tf_final"]["leaf"] < shoot_only["tf_final"]["leaf"]
+    # transport params come from the cached two-pool fit; f_xy stays MONOTONE physical
+    tp = api.twopool_seq_params("PFOA")
+    assert merged["params"]["f_xy"] == api._CONG["PFOA"]["f_xy_recommended"]
+    for k in ("L_Ph", "kappa_d", "g_xy", "g_ph"):
+        assert merged["params"][k] == pytest.approx(tp[k], rel=1e-9)
+
+
+def test_simulate_nstem_leaf_k_seq_off_by_default_and_drivers_path():
+    """The merge must be inert unless asked for, and the new `drivers=` entry point
+    must reproduce the built-in forcings it mirrors."""
+    base = api.simulate_nstem_leaf("PFOA", season=150.0, n_t=241)
+    assert base["params"]["k_seq"] == 0.0 and base["seq_fraction"] == 0.0
+    assert "root_seq" not in base["conc"]
+    # feeding the same drivers back in reproduces the run
+    organ_M = np.column_stack([base["M"][:, 0], base["M"][:, 1:1 + base["N"]].sum(axis=1),
+                               base["M"][:, base["N"] + 1], base["M"][:, base["N"] + 2]])
+    drv = dict(t=base["t"], Cwo=base["Cwo"], Qtp=base["Qtp"], M=organ_M,
+               leaf_loss=base["leaf_loss"])
+    same = api.simulate_nstem_leaf("PFOA", drivers=drv)
+    for k in ("root", "stem", "leaf", "grain"):
+        assert same["baf_final"][k] == pytest.approx(base["baf_final"][k], rel=1e-6)
+
+
 # ---------------------------------------------------------------------------
 # time-varying pore-water exposure shape (cwo_profile)
 # ---------------------------------------------------------------------------

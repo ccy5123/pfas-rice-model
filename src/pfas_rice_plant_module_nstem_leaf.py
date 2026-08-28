@@ -60,6 +60,22 @@ Reuses the basis-A binding, GHK+carrier root influx and Compound/Environment of
 
 Mass balance: for gamma=0 the sole source is the root membrane flux M_root*j_R;
 every xylem deposit and phloem transfer telescopes (tests/test_nstem_leaf.py).
+
+Optional TWO-POOL root (``k_seq`` > 0) -- the structural merge
+---------------------------------------------------------------
+Setting ``k_seq`` splits the root into a MOBILE pool (state 0: the one that takes
+up from the pore water and loads the xylem) and a SEQUESTERED pool (an extra
+state APPENDED last: an irreversible apoplast/cell-wall sink that holds root
+burden without feeding the shoot), i.e. the root mechanism of
+``validation/twopool_root_exploration.py`` grafted onto this redistributed shoot.
+That combination is what a per-organ out-of-sample test needs: the two-pool root
+alone keeps the basic 4pool's PASS-THROUGH stem, so its stalk TF collapses and a
+per-organ Tang comparison is unfair (``validation/twopool_root_oos_tang.py``,
+Result 7); this module's shoot fixes exactly that.  ``k_seq=0`` (default) keeps
+the single root pool and the state vector unchanged -- the pre-merge model is
+recovered EXACTLY (no extra state is added), so every existing default,
+validation number and test is untouched.  Reported root = mobile + sequestered
+(``root_total``); ``k_rel`` is the slow seq->mobile desorption (0 = irreversible).
 """
 from __future__ import annotations
 from dataclasses import dataclass
@@ -91,9 +107,12 @@ class PlantInputsNL:
         kw = dict(kind="linear", bounds_error=False, fill_value="extrapolate")
         self._Cwo = interp1d(self.t, self.Cwo, **kw)
         self._Qtp = interp1d(self.t, self.Qtp, **kw)
-        self._M = [interp1d(self.t, self.M[:, k], **kw) for k in range(self.n_comp)]
+        # ONE vectorised interpolator per matrix (axis=0) rather than one per column:
+        # the RHS is called ~3k times per solve, so 2 scipy calls instead of 2*(N+3)
+        # cuts the solve time ~3x. Same linear interpolant, same extrapolation.
+        self._M = interp1d(self.t, self.M, axis=0, **kw)
         dM = np.gradient(self.M, self.t, axis=0)
-        self._dM = [interp1d(self.t, dM[:, k], **kw) for k in range(self.n_comp)]
+        self._dM = interp1d(self.t, dM, axis=0, **kw)
         ll = np.zeros(len(self.t)) if self.leaf_loss is None else np.asarray(self.leaf_loss, float)
         self._leaf_loss = interp1d(self.t, ll, **kw)
         # grain FORMATION gate gamma(t): 0 while the grain mass (last column) sits at its
@@ -110,8 +129,8 @@ class PlantInputsNL:
 
     def Cwo_(self, t): return float(self._Cwo(t))
     def Qtp_(self, t): return float(self._Qtp(t))
-    def M_(self, t):   return np.array([float(f(t)) for f in self._M])
-    def dM_(self, t):  return np.array([float(f(t)) for f in self._dM])
+    def M_(self, t):   return np.asarray(self._M(t), dtype=float)
+    def dM_(self, t):  return np.asarray(self._dM(t), dtype=float)
     def leaf_loss_(self, t):  return max(float(self._leaf_loss(t)), 0.0)
     def grain_gate_(self, t):  return min(1.0, max(0.0, float(self._grain_gate(t))))
 
@@ -126,6 +145,10 @@ class NStemLeafModel:
         Constraint: sum(tau) + lam_leaf + lam_grain == 1.
     retention : fraction of each organ's transpiration-deposited solute retained
         (terminal); 1-retention is carried on to the grain as residual xylem.
+    k_seq : irreversible root sequestration rate [1/day]. 0 (default) = ONE root
+        pool (state vector unchanged, pre-merge model recovered exactly); >0 adds
+        a sequestered root state (index `SEQ`, appended last) fed at k_seq*C_root.
+    k_rel : slow seq->mobile desorption rate [1/day] (0 = irreversible sink).
     """
     env: Environment
     cmpd: Compound
@@ -137,12 +160,21 @@ class NStemLeafModel:
     retention: float = 1.0
     phi: float = 0.1                  # phloem recirculation fraction to root
     T_C_Ph: float = 10.0              # phloem flux per unit grain dry-mass gain [L/kg]
+    k_seq: float = 0.0                # root mobile -> sequestered rate [1/day]
+    k_rel: float = 0.0                # sequestered -> mobile desorption [1/day]
 
     def __post_init__(self):
         self.N = len(self.comps) - 3          # number of stem segments
         self.ROOT = 0
         self.LEAF = self.N + 1
         self.GRAIN = self.N + 2
+        self.n_comp = len(self.comps)
+        # two-pool root: the sequestered state is APPENDED so the organ indices
+        # (ROOT/LEAF/GRAIN and the stem slice) are identical in both modes.
+        self.two_pool = bool(self.k_seq > 0.0 or self.k_rel > 0.0)
+        self.SEQ = self.n_comp if self.two_pool else None
+        self.n_states = self.n_comp + (1 if self.two_pool else 0)
+        assert self.k_seq >= 0.0 and self.k_rel >= 0.0
         self.tau = np.asarray(self.tau, dtype=float)
         assert len(self.tau) == self.N, "tau must have one entry per stem segment"
         tot = float(self.tau.sum()) + self.lam_leaf + self.lam_grain
@@ -150,6 +182,10 @@ class NStemLeafModel:
             f"transpiration split must sum to 1 (sum(tau)+lam_leaf+lam_grain={tot:.6f})")
         assert self.tau.min() >= 0 and self.lam_leaf >= 0 and self.lam_grain >= 0
         assert 0.0 <= self.retention <= 1.0
+        # binding + metabolism depend only on (comps, cmpd), both fixed at
+        # construction -- hoist them out of the RHS (called ~3k times per solve).
+        self._B = binding_factors(self.comps, self.cmpd)
+        self._gamma = np.array([c.gamma for c in self.comps])
 
     def rhs(self, t, C):
         Cwo = self.inputs.Cwo_(t)
@@ -157,9 +193,8 @@ class NStemLeafModel:
         M = np.maximum(self.inputs.M_(t), 1e-12)
         dM = self.inputs.dM_(t)
         mu = dM / M
-        B = binding_factors(self.comps, self.cmpd)
-        Cw = C / B
-        g = np.array([c.gamma for c in self.comps])
+        Cw = C[:self.n_comp] / self._B
+        g = self._gamma
         dC = np.zeros_like(C)
 
         leaf, grain, r = self.LEAF, self.GRAIN, self.retention
@@ -199,11 +234,27 @@ class NStemLeafModel:
         dC[grain] = (gam * residual / M[grain]
                      + gam * (Q_Phl / M[grain]) * C_Phl
                      - g[grain] * C[grain] - mu[grain] * C[grain])
+
+        # --- optional SEQUESTERED root pool: an irreversible (k_rel=0) terminal
+        #     sink fed from the mobile root, so the root can hold burden without
+        #     draining the xylem feed. Both pools share the root mass M[ROOT], so
+        #     the seq pool dilutes with root growth exactly like the mobile one.
+        if self.two_pool:
+            seq = self.k_seq * C[self.ROOT]
+            rel = self.k_rel * C[self.SEQ]
+            dC[self.ROOT] += rel - seq
+            dC[self.SEQ] = seq - rel - mu[self.ROOT] * C[self.SEQ]
         return dC
+
+    def root_total(self, C):
+        """Reported root concentration = mobile + sequestered (axis-0 indexing, so
+        it works for a state vector or a full (n_states, n_t) solution array)."""
+        C = np.asarray(C)
+        return C[self.ROOT] + (C[self.SEQ] if self.two_pool else 0.0)
 
     def solve(self, t_eval, C0=None):
         if C0 is None:
-            C0 = np.zeros(len(self.comps))
+            C0 = np.zeros(self.n_states)
         return solve_ivp(self.rhs, (float(t_eval[0]), float(t_eval[-1])), C0,
                          t_eval=t_eval, method="BDF", rtol=1e-6, atol=1e-9,
                          dense_output=True)
