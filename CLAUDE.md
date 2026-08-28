@@ -63,6 +63,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── OVERVIEW_KR.md                # ★ 종합 진입점: 기능·검증·데이터공백·필요실험·notation 표 (+모식도)
 │   ├── pfas_rice_compartmental_model.tex / dpu_model_summary_corrected.tex
 │   ├── DELIVERABLE_GAP_A_Kcw.md / DELIVERABLE_GAP_B_fxy.md / theory_anchor.tex / H8_handoff_S6_final.md / sources.csv
+│   ├── neutral_dpu_validation.md     # NEUTRAL path: anchors, a-priori results, open gaps
+│   ├── HANDOFF_neutral_next.md       # ★ NEXT SESSION: A1 air exchange -> A3 Hwang -> A2 API
 │   ├── visualization_tool.md         # app.py guide: plant/soil map, 4 modes, HYDRUS I/O, biomonitoring
 │   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
