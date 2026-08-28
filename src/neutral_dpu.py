@@ -48,8 +48,10 @@ is then loaded at `Cw_xyl = TSCF * Cw_root ~ TSCF * Cwo` -- Briggs' definition,
 recovered rather than applied twice.  (`kappa_d` therefore sets how fast the root
 equilibrates, not the level it equilibrates to.)
 
-Anchors (both already in this repo, `docs/theory_anchor.tex` eqs. briggsT/briggsR,
-from Briggs, Bromilow & Evans 1982, Pestic. Sci. 13:495-504):
+Anchors -- VERIFIED AT SOURCE (Briggs, Bromilow & Evans 1982, Pestic. Sci.
+13:495-504, eqs. 2 and 3 of that paper; they also appear in this repo's
+`docs/theory_anchor.tex` and are reproduced verbatim as eq. 4 of Schriever &
+Lamshoeft 2020, Sci. Total Environ. 713:136667):
 
     TSCF = 0.784 * exp[ -(log Kow - 1.78)^2 / 2.44 ]        (bell, peak 0.784)
     RCF  = 0.82 + 10^(0.77*log Kow - 1.52)                  (barley roots)
@@ -61,6 +63,23 @@ their product, so `a` is a convention and `L*a` is the anchored quantity.
 `briggs_root_compartment()` returns that anchor exactly, which makes the
 "does the model reproduce Briggs" check a real test rather than a tautology.
 
+Briggs derives the 0.82 floor by subtracting the fitted lipid term from the
+measured RCF of nine polar compounds, and attributes it to "equilibration of the
+chemical between the external solution and the water contained within the roots"
+-- noting that roots at 90% water would give ~0.9.  That is an independent
+confirmation that the first term of K_PW is the tissue WATER content, which is
+exactly how this module maps it onto `Compartment.theta`.
+
+Schriever & Lamshoeft 2020 refit the same Gaussian form to a larger, modern
+compilation (97 TSCF values from intact-plant hydroponic tests, 42 compounds),
+in log D rather than log Kow: A = 0.746, B = 2.160, C = 7.230 (two outliers
+removed; A = 0.713, B = 2.209, C = 7.862 with them).  The peak HEIGHT is
+essentially Briggs' (0.75 vs 0.78) but the bell is much BROADER (C 7.2 vs 2.4)
+and shifted right.  `schriever_tscf()` exposes it, and `simulate_neutral(
+tscf_model="schriever")` runs with it -- the difference between the two is a
+fair estimate of how well TSCF is actually known, which matters because on this
+path TSCF is not a fitted parameter but an input.
+
 Scope and honesty
 -----------------
 * Air exchange (volatilisation / gaseous uptake, sections 6.3-6.5 of the tex) is
@@ -68,11 +87,13 @@ Scope and honesty
   valid for **non-volatile** neutral organics (low `K_AW`: most pesticides,
   carbamazepine, neonicotinoids, triazoles) and `k_aw_warning()` flags a compound
   where that assumption is likely violated.
-* Tissue lipid contents for rice are a genuine parameter gap: `params/` carries
-  *phospholipid* fractions (`f_PL`, for membrane binding of anions), which are a
-  LOWER BOUND on the total lipid that Briggs partitioning refers to.  Defaults
-  here are explicit and citable-to-nothing; supply measured values when you have
-  them.  This is stated in the returned metadata, not hidden.
+* Tissue lipid contents are taken from Trapp, McFarlane & Matthies 1994 (the
+  canonical validation of this framework): root 1%, stem and leaf 3% dry weight.
+  Those are SOYBEAN values, not rice -- an organ-resolved total-lipid measurement
+  for rice remains a genuine gap -- but they are a cited anchor and they are what
+  the DPU base itself was exercised with.  Note `params/parameters.json` cannot
+  supply them: it carries *phospholipid* fractions (membrane binding of anions),
+  a lower bound on the total lipid Briggs partitioning refers to.
 * Metabolism `gamma` is genuinely non-zero for most neutral organics (unlike
   PFAS), so it is exposed per compartment and defaults to 0 only so that a run
   without a measured half-life is obviously an upper bound.
@@ -80,7 +101,7 @@ Scope and honesty
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
@@ -113,8 +134,38 @@ def briggs_tscf(log_kow: float) -> float:
 
 
 def briggs_rcf(log_kow: float) -> float:
-    """Root concentration factor for macerated barley roots (Briggs 1982 eq. 1)."""
+    """Root concentration factor for barley roots (Briggs 1982 eq. 2):
+    log(RCF - 0.82) = 0.77 log Kow - 1.52."""
     return RCF_FLOOR + 10.0 ** (RCF_SLOPE * log_kow + RCF_INTERCEPT)
+
+
+# Schriever & Lamshoeft 2020 (STOTEN 713:136667) Table 3, Gaussian refit of the
+# same functional form to 97 intact-plant TSCF values, in log D. Their "n=78"
+# row (two outliers removed) is the reported best fit.
+SCHRIEVER_TSCF = dict(A=0.746, B=2.160, C=7.230)
+SCHRIEVER_TSCF_ALL = dict(A=0.713, B=2.209, C=7.862)
+
+
+def schriever_tscf(log_d: float, params: dict | None = None) -> float:
+    """TSCF from the Schriever & Lamshoeft 2020 Gaussian refit.
+
+    Same form as Briggs, fitted to a larger modern compilation and expressed in
+    log D (which equals log Kow for a non-ionisable compound -- the only kind this
+    module handles, so the two descriptors coincide here). Nearly the same peak
+    height as Briggs but a much broader bell: use it to see how much of a result
+    rests on TSCF being known precisely.
+    """
+    p = params or SCHRIEVER_TSCF
+    return p["A"] * float(np.exp(-((log_d - p["B"]) ** 2) / p["C"]))
+
+
+def tscf(log_kow: float, model: str = "briggs") -> float:
+    """TSCF from the selected published QSPR ('briggs' default, or 'schriever')."""
+    if model == "briggs":
+        return briggs_tscf(log_kow)
+    if model == "schriever":
+        return schriever_tscf(log_kow)
+    raise ValueError(f"unknown TSCF model {model!r}; use 'briggs' or 'schriever'")
 
 
 def k_pw(log_kow: float, W: float, L: float, a: float = LIPID_OCTANOL_A,
@@ -151,11 +202,14 @@ class NeutralCompound:
     K_AW: float = 0.0
     kappa_d: float = 20.0
     gamma: float = 0.0
-    tscf: float | None = None         # override the Briggs bell if measured
+    tscf: float | None = None         # override the QSPR if TSCF was measured
+    tscf_model: str = "briggs"        # 'briggs' (default) or 'schriever'
 
     @property
     def TSCF(self) -> float:
-        return float(self.tscf) if self.tscf is not None else briggs_tscf(self.log_kow)
+        if self.tscf is not None:
+            return float(self.tscf)
+        return tscf(self.log_kow, self.tscf_model)
 
 
 def neutral_environment() -> Environment:
@@ -215,26 +269,39 @@ def briggs_root_compartment() -> Compartment:
     return neutral_compartment("root", W=RCF_FLOOR, L=L)
 
 
-# Rice tissue composition for NEUTRAL partitioning. PARAMETER GAP, stated openly:
-# `params/parameters.json` carries PHOSPHOLIPID fractions (membrane binding of
-# anions), which are a lower bound on the total lipid Briggs partitioning refers
-# to. These are order-of-magnitude defaults for a cereal -- water contents follow
-# the repo's measured `theta_fw`, lipid contents are placeholders. Override with
-# measured values via `rice_compartments(lipids=...)`.
+# Tissue composition for NEUTRAL partitioning.
+#   WATER: the repo's own measured rice `theta_fw` (params/parameters.json).
+#   LIPID: from Trapp, McFarlane & Matthies 1994 (Environ. Toxicol. Chem.
+#     13:413-422), the canonical validation of this very framework, which states
+#     "root lipid content l_R = 1%; stem and leaf lipid content l_St = 3%,
+#     l_L = 3%" for its soybean runs. These are the values the DPU base itself was
+#     exercised with. They are NOT rice measurements -- rice-specific total lipid
+#     resolved by organ is still a genuine gap -- but they are a cited anchor
+#     rather than the guesses that stood here before. Grain keeps a higher value
+#     (rice bran/embryo lipid); override via `rice_compartments(lipids=...)`.
+# NOTE these are DRY-weight fractions in Trapp's usage; `neutral_compartment`
+# takes FRESH-weight, so they are converted on the way in (see rice_compartments).
 RICE_WATER = {"root": 0.90, "stem": 0.83, "leaf": 0.78, "grain": 0.14}
-RICE_LIPID_FW = {"root": 0.008, "stem": 0.006, "leaf": 0.010, "grain": 0.020}
+TRAPP1994_LIPID_DW = {"root": 0.01, "stem": 0.03, "leaf": 0.03, "grain": 0.03}
 RICE_SURFACE = {"leaf": 20.0, "grain": 2.0}
+# Briggs' sorption exponent b is 0.77 for roots and stems; Trapp 1994 uses 0.95
+# for LEAVES (their eq. 1 discussion), i.e. leaf lipid is closer to octanol.
+LEAF_SORPTION_EXPONENT = 0.95
 
 
 def rice_compartments(lipids: dict | None = None, waters: dict | None = None,
                       gammas: dict | None = None) -> list[Compartment]:
-    """[root, stem, leaf, grain] with neutral (Briggs) composition."""
+    """[root, stem, leaf, grain] with neutral (Briggs) composition.
+
+    `lipids` are DRY-weight fractions (Trapp 1994's convention); they are
+    converted to the fresh-weight basis the compartments carry.
+    """
     W = dict(RICE_WATER, **(waters or {}))
-    L = dict(RICE_LIPID_FW, **(lipids or {}))
+    Ldw = dict(TRAPP1994_LIPID_DW, **(lipids or {}))
     g = dict.fromkeys(W, 0.0)
     g.update(gammas or {})
-    return [neutral_compartment(k, W=W[k], L=L[k], S=RICE_SURFACE.get(k, 0.0),
-                                gamma=g[k])
+    return [neutral_compartment(k, W=W[k], L=Ldw[k] * (1.0 - W[k]),
+                                S=RICE_SURFACE.get(k, 0.0), gamma=g[k])
             for k in ("root", "stem", "leaf", "grain")]
 
 
@@ -257,7 +324,7 @@ def k_aw_warning(c: NeutralCompound) -> str | None:
 # ---------------------------------------------------------------------------
 def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
                      phloem=False, phi: float = 0.1, T_C_Ph: float = 10.0,
-                     L_Ph: float = 1.0, C0=None):
+                     L_Ph: float = 1.0, tscf_model=None, C0=None):
     """Run the 4-compartment DPU for a NEUTRAL organic.
 
     drivers : {t, Cwo, Qtp, M} on a common grid -- the same driver contract as
@@ -284,6 +351,8 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
     M = np.asarray(drivers["M"], dtype=float)
     comps = comps if comps is not None else rice_compartments()
 
+    if tscf_model is not None:
+        cmpd = replace(cmpd, tscf_model=tscf_model)
     core = neutral_compound(cmpd)
     if phloem:
         core.L_Ph = float(L_Ph)

@@ -136,9 +136,58 @@ def test_bad_water_content_rejected():
         ND.neutral_compartment("root", W=1.0, L=0.01)
 
 
+def test_schriever_refit_is_the_same_form_and_reproduces_briggs_paper():
+    """Schriever & Lamshoeft 2020 refit the SAME Gaussian to 97 modern TSCF values
+    and reprint Briggs' equation verbatim as their eq. 4 -- so the two must agree
+    on peak height while the refit is much broader."""
+    assert ND.schriever_tscf(ND.SCHRIEVER_TSCF["B"]) == pytest.approx(0.746, rel=1e-9)
+    # near-identical maximum, far broader bell
+    assert abs(ND.SCHRIEVER_TSCF["A"] - ND.TSCF_MAX) < 0.05
+    assert ND.SCHRIEVER_TSCF["C"] > 2 * ND.TSCF_WIDTH
+    # so a lipophilic compound is predicted to translocate far more under the refit
+    assert ND.tscf(4.4, "schriever") > 5 * ND.tscf(4.4, "briggs")
+    with pytest.raises(ValueError):
+        ND.tscf(2.0, "nope")
+
+
+def test_lipid_defaults_are_the_cited_trapp1994_values():
+    """The lipid contents must stay traceable to Trapp 1994 (root 1%, stem/leaf 3%
+    dry weight), not drift back to unsourced guesses."""
+    assert ND.TRAPP1994_LIPID_DW["root"] == 0.01
+    assert ND.TRAPP1994_LIPID_DW["stem"] == ND.TRAPP1994_LIPID_DW["leaf"] == 0.03
+    comps = {c.name: c for c in ND.rice_compartments()}
+    # stored as fresh-weight: f_PL*(1-theta) == dw fraction * (1-theta)
+    fw_root = comps["root"].f_PL * (1.0 - comps["root"].theta)
+    assert fw_root == pytest.approx(0.01 * (1.0 - ND.RICE_WATER["root"]), rel=1e-9)
+
+
 # --------------------------------------------------------------------------
 # the measured-data harness
 # --------------------------------------------------------------------------
+def test_ge2017_apriori_prediction():
+    """The repo's first genuine A-PRIORI prediction: Ge et al. 2017 per-organ
+    transfer factors for three neutral pesticides spanning log Kow -0.13 to 4.4,
+    with NOTHING fitted (K_PW and TSCF both follow from log Kow alone).
+
+    Pins the headline (log10 RMSE ~1.10) and the error STRUCTURE that interprets
+    it: the stem is predicted well, the leaf is over-predicted, because the strict
+    a-priori run has no in-planta metabolism and the leaf is therefore an
+    unbounded terminal accumulator (validation section 3)."""
+    import neutral_dpu_validation as V
+    path = os.path.join(_ROOT, "data_obs", "neutral_obs_ge2017.csv")
+    drv = V.drivers()
+    rmse = V.compare_to_obs(path, drv, quiet=True)
+    assert rmse == pytest.approx(1.099, abs=0.05)
+    # the error is dominated by the MISSING half-life, not by transport structure:
+    # imposing a realistic in-planta dissipation must reduce it monotonically
+    errs = [V.compare_to_obs(path, drv, half_life=h, quiet=True)
+            for h in (None, 30.0, 14.0, 7.0, 3.0)]
+    assert errs == sorted(errs, reverse=True)
+    assert errs[-1] < 0.55
+    # and the ORIGINAL Briggs bell beats the broader modern refit on this data
+    assert V.compare_to_obs(path, drv, tscf_model="schriever", quiet=True) > rmse
+
+
 def test_obs_template_carries_no_data():
     """The shipped template must be schema-only: its placeholder rows are refused
     so the template can never be mistaken for measurements."""

@@ -1,0 +1,40 @@
+# Ge, Cui, Yan, Li, Chai, Liu, Cheng, Yu (2017)
+# "Uptake and translocation of imidacloprid, thiamethoxam and difenoconazole in rice plants"
+# Environmental Pollution 226:479-485.  doi:10.1016/j.envpol.2017.04.043
+#
+# Transcribed from the article PDF:
+#   Table 2 -- Mean translocation factors, TF_stem = C_stem/C_root and
+#              TF_leaf = C_leaf/C_root, from the 60-day exposure samples (n=3),
+#              at field rate (FR) and ten times field rate (10*FR).
+#   Table 3 -- Molecular weight, water solubility, log Kow and pKa.
+#
+# WHY TF AND NOT BCF. Ge's BCF is C_plant/C_soil (dry-weight soil basis), so using
+# it would require a soil-water partition coefficient we do not have for this
+# soil. TF is a tissue/tissue ratio, so the exposure term cancels and the model
+# can be compared to it directly with nothing fitted.
+#
+# BASIS. Concentrations are dry weight (Table 1/2 of the paper are dw), so
+# basis=dw: the loader converts onto the model's fresh-weight basis using the
+# run's own tissue water contents. (1-theta) differs by tissue and does NOT
+# cancel in a tissue/root ratio.
+#
+# SPECIATION. IMI and THX are stated in Table 3 as "no dissociation"; DFZ has
+# pKa 1.07, so it is un-ionised at any paddy pH. All three are legitimately on
+# the neutral path.
+#
+# CONDITIONS. Soil-treated pots, rice, 60-day exposure sample. Two treatment
+# levels are reported; both are entered, and the FR (lower, environmentally
+# closer) rows are the primary comparison -- the same convention used for the
+# Tang 2026 dose series elsewhere in this repo.
+#
+# HALF-LIFE. Ge report soil dissipation half-lives, not in-planta ones, so
+# half_life_d is left blank. Per validation section 3 that makes the modelled
+# leaf an UPPER bound.
+#
+compound,log_kow,tissue,value,basis,endpoint,exposure_ugL,half_life_d,K_AW,season_d,note
+imidacloprid,0.57,stem,0.2,dw,tf,,,,60,Ge2017 Table 2 FR; MW 255.7; no dissociation
+imidacloprid,0.57,leaf,7.3,dw,tf,,,,60,Ge2017 Table 2 FR
+thiamethoxam,-0.13,stem,0.2,dw,tf,,,,60,Ge2017 Table 2 FR; MW 291.7; no dissociation
+thiamethoxam,-0.13,leaf,7.2,dw,tf,,,,60,Ge2017 Table 2 FR
+difenoconazole,4.4,stem,0.02,dw,tf,,,,60,Ge2017 Table 2 FR; MW 406.3; pKa 1.07 so neutral
+difenoconazole,4.4,leaf,0.02,dw,tf,,,,60,Ge2017 Table 2 FR

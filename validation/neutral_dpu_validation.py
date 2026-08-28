@@ -202,13 +202,17 @@ def load_neutral_obs(path):
     return rows
 
 
-def compare_to_obs(path, drv=None):
-    print("\n" + "=" * 84)
-    print(f"5. MEASURED-DATA COMPARISON — {path}")
-    print("=" * 84)
+def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=False):
+    """Compare the model to a measured table. `half_life` (d) overrides the
+    per-row half_life_d for a sensitivity scan; `tscf_model` selects the QSPR."""
+    if not quiet:
+        print("\n" + "=" * 84)
+        print(f"5. MEASURED-DATA COMPARISON — {path}")
+        print("=" * 84)
     obs = load_neutral_obs(path)
     if not obs:
-        print("   (no rows) — supply a measured table to turn this into validation.")
+        if not quiet:
+            print("   (no rows) — supply a measured table to turn this into validation.")
         return None
     drv = drv or drivers()
     waters = ND.RICE_WATER
@@ -217,13 +221,16 @@ def compare_to_obs(path, drv=None):
         by_cmpd.setdefault((r["compound"], r["log_kow"]), []).append(r)
 
     pairs = []
-    print(f"{'compound':16}{'logKow':>8}{'tissue':>8}{'obs':>10}{'model':>10}{'ratio':>9}")
+    if not quiet:
+        print(f"{'compound':16}{'logKow':>8}{'tissue':>8}{'obs':>10}{'model':>10}{'ratio':>9}")
     for (name, lk), rs in sorted(by_cmpd.items(), key=lambda x: x[0][1]):
-        hl = next((float(r["half_life_d"]) for r in rs
-                   if r.get("half_life_d") not in (None, "")), None)
+        hl = half_life if half_life is not None else next(
+            (float(r["half_life_d"]) for r in rs
+             if r.get("half_life_d") not in (None, "")), None)
         gam = float(np.log(2.0) / hl) if hl else 0.0
         comps = ND.rice_compartments(gammas={k: gam for k in TISSUES})
-        m = ND.simulate_neutral(ND.NeutralCompound(name, lk), drv, comps=comps)
+        m = ND.simulate_neutral(ND.NeutralCompound(name, lk), drv, comps=comps,
+                                tscf_model=tscf_model)
         for r in rs:
             tis, ep, basis = r["tissue"], r["endpoint"], r["basis"]
             if tis == "straw":
@@ -242,16 +249,56 @@ def compare_to_obs(path, drv=None):
                     o = o * (1.0 - wt)
             pairs.append((pred, o))
             ratio = pred / o if o > 0 else float("inf")
-            print(f"{name:16}{lk:>8.2f}{tis:>8}{o:>10.3f}{pred:>10.3f}"
-                  + (f"{ratio:>9.2f}" if np.isfinite(ratio) else f"{'n/a':>9}"))
+            if not quiet:
+                print(f"{name:16}{lk:>8.2f}{tis:>8}{o:>10.3f}{pred:>10.3f}"
+                      + (f"{ratio:>9.2f}" if np.isfinite(ratio) else f"{'n/a':>9}"))
     e = [(np.log10(max(p, 1e-6)) - np.log10(max(o, 1e-6))) ** 2 for p, o in pairs]
     rmse = float(np.sqrt(np.mean(e)))
+    if quiet:
+        return rmse
     print(f"\n   log10 RMSE (n={len(pairs)}) = {rmse:.3f}")
     print("   NOTE: zero parameters were fitted to this table -- K_PW and TSCF come")
     print("   from log Kow alone, so this is a genuine a-priori prediction, and it is")
     print("   the only such test in this repo. Interpret it against the PFAS side's")
     print("   a-priori error (log10 RMSE ~0.84-0.95, CLAUDE.md section 6).")
     return rmse
+
+
+def sensitivity(path, drv=None):
+    """How much of the a-priori error rests on the two inputs we do NOT have?
+
+    The strict a-priori run uses log Kow and nothing else, so it necessarily sets
+    gamma = 0 (no in-planta metabolism) and picks one published TSCF QSPR. Both
+    are real unknowns, not free parameters: this reports how the error moves
+    across a plausible range of each, so a reader can see whether the residual is
+    a model failure or a missing measurement. NOTHING here is fitted -- the
+    half-lives are scanned, not optimised, and the value that would reconcile the
+    data is reported as a PREDICTION a measurement could test.
+    """
+    print("\n" + "=" * 84)
+    print("6. SENSITIVITY of the a-priori error to the two unmeasured inputs")
+    print("=" * 84)
+    drv = drv or drivers()
+    print(f"{'in-planta half-life':>20}{'briggs TSCF':>14}{'schriever TSCF':>16}")
+    best = None
+    for hl in (None, 60.0, 30.0, 14.0, 7.0, 3.0):
+        row = []
+        for model in ("briggs", "schriever"):
+            r = compare_to_obs(path, drv, half_life=hl, tscf_model=model, quiet=True)
+            row.append(r)
+            if best is None or r < best[0]:
+                best = (r, hl, model)
+        lbl = "none (gamma=0)" if hl is None else f"{hl:.0f} d"
+        print(f"{lbl:>20}{row[0]:>14.3f}{row[1]:>16.3f}")
+    hl_txt = "none" if best[1] is None else f"{best[1]:.0f} d"
+    print(f"\n   lowest error {best[0]:.3f} at half-life {hl_txt}, {best[2]} TSCF")
+    print("   Read this as a diagnosis, not a calibration: if the residual collapses")
+    print("   once a realistic in-planta half-life is imposed, the strict a-priori")
+    print("   error is dominated by a MISSING MEASUREMENT (the dissipation rate),")
+    print("   not by the transport structure. The half-life that does it is then a")
+    print("   testable prediction. If instead the error is flat in half-life, the")
+    print("   residual is structural and belongs to the model.")
+    return best
 
 
 def main(obs_path=None):
@@ -264,6 +311,8 @@ def main(obs_path=None):
     check_terminal_sink(drv)
     ok4 = check_neutral_switch(drv)
     rmse = compare_to_obs(obs_path, drv) if obs_path else None
+    if obs_path:
+        sensitivity(obs_path, drv)
 
     print("\n" + "=" * 84)
     print("STATUS")

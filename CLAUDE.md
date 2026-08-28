@@ -530,34 +530,41 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   SAME solve path as `simulate` — root/grain byte-identical). Guard
   `tests/test_model_api.py::test_twopool_simulate_organs_and_tang_passthrough_diagnosis`. Full record:
   `docs/twopool_root_exploration.md` §Result 7. EXPLORATORY; `parameters.json` UNCHANGED (no support for promotion).
-- **NEUTRAL-organic (Briggs/Kow) path (this session) — IMPLEMENTED + QSPR-consistent, NOT YET data-validated**:
+- **NEUTRAL-organic (Briggs/Kow) path (this session) — IMPLEMENTED + a-priori VALIDATED (RMSE 1.099)**:
   `src/neutral_dpu.py` + `validation/neutral_dpu_validation.py` + `tests/test_neutral_dpu.py` +
-  `docs/neutral_dpu_validation.md`. The neutral DPU base was DERIVED (`dpu_model_summary_corrected.tex`) but never
-  implemented — `Compound.fn` was pinned at 0.0 and used in NO equation, the neutral membrane term existed only as a
-  comment, and `data_obs/` holds only PFAS. **Why it matters**: every PFAS result is entangled with FITTED PFAS-specific
-  params (`f_xy`, `k_seq`, lipid conductances) — hence "reproduction, not prediction". A neutral compound has `K_PW` and
-  `TSCF` both fixed from OUTSIDE by log-Kow QSPRs with nothing to tune, so it is the ONLY setting where the DPU
-  **backbone** (4 compartments, xylem advection, growth dilution, terminal accumulation) is testable apart from the ionic
-  extension. **No new ODE**: a neutral compound is the SAME 4pool ODE with `z=0` (⇒ `N=0`, GHK→1, exclusion `e^N` 107→**1**,
-  so the membrane term degenerates EXACTLY to passive Fickian `κ_d(Cwo−Cw)`), `Vmax=0` (no carrier), `f_prot=f_cw=0` +
-  `K_PL=a·Kow^b` (so `binding_factors` returns the Trapp/Briggs `K_PW = W + L·a·Kow^b` term for term), `f_xy = TSCF(logKow)`
-  (Briggs bell, computed not fitted), and **phloem OFF** (the base explicitly excludes it; the phloem is an ADDITION of the
-  ionisable extension). **Results**: (1) the partition adapter reproduces Briggs `RCF = 0.82+10^(0.77logKow−1.52)` to
-  **machine precision** (1.3e-16) — it IS the published core, not a re-fit; (2) with **zero fitted parameters** the run
-  reproduces the qualitative Kow law (polar→shoot, lipophilic→root) and the **straw/root ratio peaks at exactly logKow
-  1.78 = the Briggs TSCF peak**, crossing 1 near logKow 4.5; (3) **scope quantified**: with no phloem/air/γ the leaf is an
-  unbounded terminal accumulator (leaf BAF 194 at γ=0 → 19 at a 7-d half-life, root unchanged 0.62) ⇒ for neutrals
-  metabolism is LOAD-BEARING and volatilisation is unimplemented (`k_aw_warning` refuses to run a high-K_AW compound
-  silently). **HONEST**: these are checks vs published QSPRs and vs the model's own structure — **NOT validation against
-  measured plant data**. §5 of the script is the comparison harness (dw→fw conversion on the run's own water contents,
-  since (1−θ) does NOT cancel in a tissue/root ratio — the Tang fresh/dry trap) and is **inert until a measured table is
-  supplied** (`--obs`; schema `data_obs/neutral_obs_template.csv`, which deliberately holds NO data — its placeholder rows
-  are refused by the loader). **Why no dataset**: the environment's network policy blocks ALL publisher/PMC/J-STAGE/
-  Crossref hosts at the proxy (403 on CONNECT); search worked, fetching did not, so **nothing was transcribed from a paper
-  not already in the repo**. Candidate datasets ranked in the doc (Liu 2023 STOTEN 858:159826 = only rice set with a Kow
-  series × time × per-organ; Inao 2018 J.Pestic.Sci. 43:132 = OA + measured paddy-water/soil time series ⇒ tests the HYDRUS
-  coupling; Ge 2017; Trapp 1994 bromacil; Brunetti 2021 carbamazepine). Once a table is dropped in, the reported RMSE is a
-  **genuine a-priori prediction** — the only one in the repo — to be read against the PFAS a-priori 0.84–0.95.
+  `docs/neutral_dpu_validation.md` + `data_obs/neutral_obs_ge2017.csv`. The neutral DPU base was DERIVED
+  (`dpu_model_summary_corrected.tex`) but never implemented — `Compound.fn` was pinned at 0.0 and used in NO equation,
+  the neutral membrane term existed only as a comment, and `data_obs/` held only PFAS. **Why it matters**: every PFAS
+  result is entangled with FITTED PFAS-specific params (`f_xy`, `k_seq`, lipid conductances) — hence "reproduction, not
+  prediction". A neutral compound has `K_PW` and `TSCF` both fixed from OUTSIDE by log-Kow QSPRs with nothing to tune, so
+  it is the ONLY setting where the DPU **backbone** (4 compartments, xylem advection, growth dilution, terminal
+  accumulation) is testable apart from the ionic extension. **No new ODE**: a neutral compound is the SAME 4pool ODE with
+  `z=0` (⇒ `N=0`, GHK→1, exclusion `e^N` 107→**1**, so the membrane term degenerates EXACTLY to passive Fickian
+  `κ_d(Cwo−Cw)`), `Vmax=0` (no carrier), `f_prot=f_cw=0` + `K_PL=a·Kow^b` (so `binding_factors` returns the Trapp/Briggs
+  `K_PW = W + L·a·Kow^b` term for term), `f_xy = TSCF(logKow)` (computed not fitted), and **phloem OFF** (the base
+  explicitly excludes it; the phloem is an ADDITION of the ionisable extension).
+  **ANCHORS VERIFIED AT SOURCE** (10 papers obtained by the user, `DPU4OC.zip`): Briggs 1982 eqs. 2/3 confirmed
+  character-for-character, and Briggs derives the RCF floor 0.82 by attributing it to root WATER content (~90% water →
+  ~0.9) — independently confirming the `K_PW` first term maps to `Compartment.theta`. Schriever 2020 reprints Briggs eq. 3
+  verbatim (second independent verification) AND supplies a 97-value refit (A=0.746, B=2.160, C=7.230, in log D) — wired
+  as `tscf_model="schriever"`. Tissue LIPID contents now cited from Trapp 1994 (root 1%, stem/leaf 3% dw) instead of the
+  earlier guesses. **Structural checks**: partition adapter reproduces Briggs RCF to **machine precision** (1.3e-16);
+  with zero fitted params the straw/root ratio peaks at **exactly logKow 1.78 = the Briggs TSCF peak**; leaf is an
+  unbounded terminal accumulator at γ=0 (leaf BAF 194 → 19 at a 7-d half-life, root unchanged 0.51) ⇒ for neutrals
+  metabolism is LOAD-BEARING and volatilisation is unimplemented (`k_aw_warning` refuses a high-K_AW compound silently).
+  **A-PRIORI PREDICTION (the repo's first)**: Ge 2017 (`10.1016/j.envpol.2017.04.043`, rice, 3 neutral pesticides
+  logKow −0.13→4.4, per-organ TF at 60 d, dw) → **log10 RMSE 1.099 with NOTHING fitted** (vs the PFAS a-priori 0.84–0.95,
+  which still has fitted transport behind it). **The error STRUCTURE is the finding**: stem predicted well (0.5×/1.2×/5.7×),
+  leaf over by 6–141× — exactly the γ=0 unbounded-leaf failure mode §3 predicts. Sensitivity scan (NOT a fit): error falls
+  monotonically with imposed half-life 1.099→0.848 (30 d)→0.502 (7 d)→0.409 (3 d) ⇒ the residual is a **missing
+  measurement** (in-planta dissipation), not broken transport; the reconciling half-life is a testable PREDICTION. Also:
+  the ORIGINAL Briggs bell BEATS the broader modern Schriever refit at every half-life (1.10 vs 1.55) — the narrow bell is
+  right that lipophilic compounds do not reach the leaf (difenoconazole obs leaf TF 0.044). **Open**: grain compartment
+  UNTESTED (no dataset exists — same gap as PFAS); rice organ lipid still borrowed from soybean; Liu 2023
+  (`10.1016/j.scitotenv.2022.159826`) would be the strongest rice set but its per-compound RCF/log-Kow are in the SI,
+  which was not in the upload; Inao 2018 samples WHOLE SHOOT only (no organ split) so it can only test the HYDRUS
+  coupling against a lumped shoot; **Brunetti 2021's calibrated pea root `K_RW`=13.3 vs the Briggs `K_PW`≈1.0 is an
+  order-of-magnitude disagreement with the partition core** on the framework's own reference implementation — open.
 - **Structural MERGE — two-pool seq ROOT + `nstem_leaf` redistributed SHOOT (this session) — Result 7 CONFIRMED**:
   the last in-silico item of the two-pool arc (handoff §6: "a fair per-organ Tang test needs the two-pool root merged
   with the redistributed shoot"). `NStemLeafModel` gained optional `k_seq`/`k_rel`: `k_seq>0` APPENDS a sequestered
@@ -753,8 +760,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   biomass; in-sample + Kim OOS vs fxy-doc baselines; ~3 min). Opt-in API (no re-fit; reuses the cached fit):
   `model_api.simulate_twopool_seq("PFUnDA")` → the standard `simulate()` dict + root mobile/seq split.
 - **Neutral organics (Briggs/Kow base)**: `python src/neutral_dpu.py` (per-compound TSCF/K_PW/BAF demo);
-  `python validation/neutral_dpu_validation.py` (partition anchor + Kow signature + metabolism scope + switch;
-  add `--obs data_obs/<table>.csv` for the measured comparison — see `docs/neutral_dpu_validation.md`).
+  `python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_ge2017.csv` (partition anchor + Kow
+  signature + metabolism scope + switch + the **a-priori prediction vs Ge 2017** and its half-life/TSCF sensitivity;
+  omit `--obs` for the structural checks alone — see `docs/neutral_dpu_validation.md`).
 - Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
   `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
