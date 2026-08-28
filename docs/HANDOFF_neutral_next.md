@@ -4,8 +4,9 @@
 > **PRs [#56](https://github.com/ccy5123/pfas-rice-model/pull/56),
 > [#57](https://github.com/ccy5123/pfas-rice-model/pull/57),
 > [#58](https://github.com/ccy5123/pfas-rice-model/pull/58) and
-> [#59](https://github.com/ccy5123/pfas-rice-model/pull/59) are MERGED.** Nothing is
-> left open on this arc.
+> [#59](https://github.com/ccy5123/pfas-rice-model/pull/59) are MERGED**;
+> [#60](https://github.com/ccy5123/pfas-rice-model/pull/60) (the `lipid_source` mode +
+> the §5/§6 consistency fix, closing §3 items 1–2) is the only thing still open.
 > Scientific record: **`docs/neutral_dpu_validation.md`** — §4a Liu, §4b Ge, §4c Hwang,
 > §4d Li 2019 hydroponic, §4e TSCF, §4f Kodešová, §4g the scoring artifact, §4h Li 2019
 > soil, §4i Kodešová's leaf, §4j Briggs 1983 stem, §5 the synthesis. **Read §5 first.**
