@@ -64,9 +64,10 @@ content — which is exactly how this module maps it onto `Compartment.theta`.
 
 **Tissue lipid contents** now come from Trapp, McFarlane & Matthies 1994 — the
 canonical validation of this very framework — which states root 1 %, stem and leaf
-3 % dry weight. Those are soybean values, so organ-resolved total lipid for *rice*
-is still a gap, but they are a cited anchor rather than the guesses that stood here
-before.
+3 %, on a **fresh-weight** basis (the same basis as `W`, as the `K_PW` sum
+requires; see the correction at the end of §4). Those are soybean values, so
+organ-resolved total lipid for *rice* is still a gap, but they are a cited anchor
+rather than the guesses that stood here before.
 
 **An alternative TSCF.** Schriever & Lamshoeft 2020 refit the same Gaussian to 97
 TSCF values from intact-plant hydroponic tests (42 compounds): `A = 0.746`,
