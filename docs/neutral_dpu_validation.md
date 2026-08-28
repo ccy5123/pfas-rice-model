@@ -122,8 +122,57 @@ from the PFAS case where `γ ≈ 0` is defensible:
 
 The root is exposure-buffered and barely moves; the leaf spans 40×. **Report
 neutral runs with a measured half-life, or state them as an upper bound.**
-Volatilisation is not implemented at all (the core ODE has no air terms), so
-`neutral_dpu.k_aw_warning()` refuses to let a high-`K_AW` compound run silently.
+
+**§3b Volatilisation — the second leaf sink, now implemented** (`src/plant_air.py`;
+was the largest structural gap in the neutral base). The leaf has exactly two
+sinks besides growth dilution, metabolism and volatilisation, and until now only
+the first existed — so every volatile compound was an upper bound *by
+construction*. The equation set was already written out in
+`docs/dpu_model_summary_corrected.tex` `sec:permeability` and is implemented from
+it: cuticle (`eq:Pc`), air boundary layer (`eq:Pair`) and aqueous layer
+(`eq:Paqua`) in **series** (`eq:Pctot`), in **parallel** with the transpiration-
+linked stomatal conductance (`eq:Ps`, `eq:Pp`), driving volatilisation (`eq:Qvol`)
+against gaseous uptake (`eq:Qgas`) through the plant–air partition `K_PA`
+(`eq:Kpa`). The derivation's own assumptions are kept: **no volatilisation from
+roots**, **stem via cuticle only**, **leaf and grain via cuticle + stomata**.
+
+Scanning `K_AW` at fixed log Kow 2.42, MW 131.4, clean air:
+
+| `K_AW` | leaf t½ (d) | leaf BAF | grain BAF | root BAF |
+|---|---:|---:|---:|---:|
+| **0 (PFAS)** | **∞** | 177 | 8.81 | 1.058 |
+| 1e−5 | 6.8e4 | 177 | 8.81 | 1.058 |
+| 1e−4 | 787 | 169 | 8.78 | 1.058 |
+| 1e−3 | 8.0 | 23.8 | 6.92 | 1.058 |
+| 1e−2 | 0.080 | 0.251 | 0.203 | 1.058 |
+| 1e−1 | 0.0008 | 0.0025 | 0.0021 | 1.058 |
+
+Three things to read off it. (i) The `K_AW = 0` row is the **PFAS constraint**:
+`P_air` and `P_S` are both proportional to `K_AW`, and `P_air` sits in *series*
+with the cuticle, so the air pathway is **structurally absent**, not numerically
+small — and the core keeps `air=None` as its default, so the terms are never even
+evaluated. `reproduce_demo` stays at log10 RMSE **0.029**, verified. (ii) The
+**root is invariant** across the whole ladder, as the derivation requires. (iii)
+The ladder independently **checks the pre-existing warning threshold**: the
+judgement-call `K_AW > 1e−4` in `k_aw_warning` sits just below where the physics
+puts the crossover (t½ 787 d at 1e−4, negligible against a season; 8 d at 1e−3,
+dominant), so it errs toward flagging early — the safe direction.
+
+The warning therefore changed job rather than disappearing: with air exchange off
+it still marks a volatile result as an upper bound, but it now names the remedy
+(`simulate_neutral(..., air=True)`) instead of saying the process is not modelled.
+
+**The honest limit is the surface area, not the equations.** The flux scales
+linearly with each tissue's specific surface `S` [m²/kg], and `S` entered this repo
+as a leaf/grain **ratio** for splitting the xylem stream — only the ratio was ever
+load-bearing, so the absolute values (leaf 20, grain 2) have never been calibrated
+as areas. Treat an absolute volatilisation magnitude as order-of-magnitude until
+they are measured; the `K_AW`/Kow *dependence* is the derivation's.
+`AirExchange(S=...)` overrides them. The shipped stem `S` is **0**, so the stem's
+cuticular term is inert until a real stem area is supplied — pinned by a test so it
+cannot silently become a hidden number. Particle deposition (`eq:Qdep`) remains
+unimplemented; `f_particle` only excludes the particle-bound share from the gaseous
+uptake, as `eq:Qgas` specifies.
 
 **§4 Switch — PASS.** `N = 0`, `e^N = 1`, `Vmax = 0`: the ionic machinery is
 verifiably off, and `root_uptake` is exactly `κ_d·(C_w^o − C_w,root)`.
@@ -318,7 +367,14 @@ All ten obtained papers were read; here is what each is actually good for.
   datasets: steep in half-life where the endpoint accumulates (leaf), flat where it
   equilibrates (root). The Ge leaf residual points to a specific in-planta
   half-life of ≈ 7 days — a testable prediction, not a calibration.
+- **Air exchange is implemented** (`src/plant_air.py`, §3b), closing the largest
+  structural gap in the neutral base: the leaf now has both of its non-growth
+  sinks. It is opt-in (`simulate_neutral(air=True)`) because it needs `K_AW` and a
+  molar mass, which the strict Kow-only a-priori run does not use — so the 0.281
+  and 0.783 above are unaffected, and so is every PFAS number.
 - Remaining gaps: the **grain compartment is untested** (no suitable dataset
-  exists); rice-specific organ lipid contents are still borrowed from soybean; and
-  the Brunetti `K_RW` discrepancy (13.3 vs a Briggs `K_PW` of ~1.0 for
-  carbamazepine) is an open question against the partition core itself.
+  exists); rice-specific organ lipid contents are still borrowed from soybean;
+  **tissue specific surface areas** are ratios, not measurements, which bounds how
+  far an absolute volatilisation flux can be trusted; and the Brunetti `K_RW`
+  discrepancy (13.3 vs a Briggs `K_PW` of ~1.0 for carbamazepine) is an open
+  question against the partition core itself.

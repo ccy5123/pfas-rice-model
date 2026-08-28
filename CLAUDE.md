@@ -43,6 +43,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── pfas_rice_plant_module_nstem_leaf.py  # N stem segs + explicit leaf (transpiration deposition+RETENTION; Tang over-translocation fix)
 │   ├── pfas_rice_plant_module.py             # import alias → 4pool_surf (basis-A); legacy name
 │   ├── neutral_dpu.py                        # NEUTRAL-organic (Briggs/Kow) path: same ODE with z=0 (no exclusion/carrier)
+│   ├── plant_air.py                          # plant-AIR exchange: volatilisation + gaseous uptake (opt-in; 0 at K_AW=0)
 │   ├── soil_paddy.py                         # Freundlich soil → C_w^o(t) (legacy redox sign)
 │   ├── soil_paddy_redox_corrected.py         # W3-corrected redox (dilution+leaching; USE THIS)
 │   ├── soil_hydrus.py                        # REAL HYDRUS-1D run via phydrus → Cwo(t),Qtp(t) (Method A; wired + app live mode)
@@ -553,7 +554,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   earlier guesses. **Structural checks**: partition adapter reproduces Briggs RCF to **machine precision** (1.3e-16);
   with zero fitted params the straw/root ratio peaks at **exactly logKow 1.78 = the Briggs TSCF peak**; leaf is an
   unbounded terminal accumulator at γ=0 (leaf BAF 194 → 19 at a 7-d half-life, root unchanged 0.51) ⇒ for neutrals
-  metabolism is LOAD-BEARING and volatilisation is unimplemented (`k_aw_warning` refuses a high-K_AW compound silently).
+  metabolism is LOAD-BEARING (volatilisation, the leaf's OTHER sink, is now implemented — see the plant-air bullet).
   **A-PRIORI PREDICTIONS (the repo's first), two independent rice datasets, NOTHING fitted**:
   (1) **Liu 2023** (`10.1016/j.scitotenv.2022.159826`; SI Table S1 log Kow + Tables S3xS4 reconstruction of total
   tissue conc — the fractions sum to exactly 1.00 per tissue, so it is arithmetic on published numbers, not digitising;
@@ -579,6 +580,30 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   concentrations are FIGURE-ONLY; **Brunetti 2021's calibrated pea root `K_RW`=13.3 vs the Briggs `K_PW`≈1.0 for
   carbamazepine is an order-of-magnitude disagreement with the partition core** on the framework's own reference
   implementation — open.
+- **PLANT-AIR EXCHANGE — volatilisation + gaseous uptake (this session; handoff A1) — DONE**: `src/plant_air.py`
+  + an optional `RiceUptakeModel(air=…)` hook + `simulate_neutral(air=True)` + `tests/test_plant_air.py` (13) +
+  §3b of `validation/neutral_dpu_validation.py` / `docs/neutral_dpu_validation.md`. **The gap it closes**: the core
+  ODE had NO air terms, so the neutral path's leaf — an unbounded terminal accumulator whose only sinks are
+  metabolism and volatilisation — had just ONE of the two, making every volatile compound an upper bound BY
+  CONSTRUCTION; `k_aw_warning` merely refused such a compound. Implemented straight from the derivation
+  (`dpu_model_summary_corrected.tex` §`sec:permeability`): cuticle `eq:Pc` + air boundary layer `eq:Pair` + aqueous
+  layer `eq:Paqua` in **series** (`eq:Pctot`), in **parallel** with the transpiration-linked stomatal conductance
+  (`eq:Ps`/`eq:Csat`, `eq:Pp`), driving `eq:Qvol` against `eq:Qgas` through `K_PA` (`eq:Kpa`) — keeping the tex's own
+  assumptions (**no volatilisation from roots; stem cuticle-only; leaf+grain cuticle+stomata**). Two pitfalls the
+  handoff flagged, both handled + tested: the correlations are **SI (m/s, g/mol)** so everything is converted once to
+  m/day and the `m³→L` factor is isolated (pinned by the Henry's-law equilibrium test), and `eq:Ps`'s **`1/(1−φ)`
+  pole** is capped (`RH_MAX`). **PFAS-safety is STRUCTURAL, not a special case**: `P_air` and `P_S` are both ∝ `K_AW`
+  and `P_air` sits in SERIES, so `K_AW=0` zeroes the whole pathway — and the core's default `air=None` means the term
+  is never even evaluated. `reproduce_demo` **RMSE 0.029 re-verified**; enabling air on a `K_AW=0` compound is
+  **bit-identical** to air-off. **Result** (K_AW ladder, logKow 2.42): leaf BAF **177 → 0.0025** across K_AW 0 → 0.1
+  (leaf t½ ∞ → 0.0008 d) while the **root is invariant**; it also independently CHECKS the old judgement-call warning
+  threshold (`K_AW>1e-4`: t½ 787 d at 1e-4 vs 8 d at 1e-3 ⇒ flags early, the safe direction). `k_aw_warning` now names
+  the remedy instead of refusing. **Honest limit — the SURFACE AREA, not the equations**: flux ∝ specific surface `S`
+  [m²/kg], and `S` entered this repo as a leaf/grain RATIO for the xylem split (never calibrated as an absolute area),
+  so absolute volatilisation magnitudes are order-of-magnitude until measured (`AirExchange(S=…)` overrides; the
+  shipped **stem `S`=0** leaves the stem term inert, pinned by a test). Particle deposition (`eq:Qdep`) deliberately
+  NOT implemented (separate deposition pathway; `f_particle` only excludes the particle-bound share from `eq:Qgas`).
+  Opt-in and scoped to the 4pool core + neutral path — `parameters.json`, `simulate()` and the PFAS models unchanged.
 - **Structural MERGE — two-pool seq ROOT + `nstem_leaf` redistributed SHOOT (this session) — Result 7 CONFIRMED**:
   the last in-silico item of the two-pool arc (handoff §6: "a fair per-organ Tang test needs the two-pool root merged
   with the redistributed shoot"). `NStemLeafModel` gained optional `k_seq`/`k_rel`: `k_seq>0` APPENDS a sequestered
@@ -778,6 +803,11 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   RMSE 0.281) and `--obs data_obs/neutral_obs_ge2017.csv` (per-organ TF, RMSE 0.783); both also print the partition
   anchor + Kow signature + metabolism scope + switch and the half-life/TSCF sensitivity. Omit `--obs` for the
   structural checks alone — see `docs/neutral_dpu_validation.md`.
+- **Plant-air exchange** (volatilisation + gaseous uptake; opt-in, neutral path): `python src/plant_air.py`
+  (permeabilities + volatilisation half-life across a volatility ladder). In code:
+  `neutral_dpu.simulate_neutral(cmpd, drivers, air=True, air_kw=dict(C_air=…, S=…))` — needs `NeutralCompound(MW=…,
+  K_AW=…)`. `K_AW=0` (PFAS) is identically zero and the core default `air=None` skips the term entirely, so no PFAS
+  number moves. The §3b ladder in `validation/neutral_dpu_validation.py` reports it against the metabolism ladder.
 - Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
   `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic

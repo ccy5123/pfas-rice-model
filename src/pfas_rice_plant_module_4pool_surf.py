@@ -233,6 +233,13 @@ class RiceUptakeModel:
     inputs: PlantInputs
     phi: float = 0.1                    # phloem recirculation fraction to roots [-]
     T_C_Ph: float = 10.0                # phloem flux per unit grain dry mass [L/kg]
+    # OPTIONAL plant-air exchange (volatilisation + gaseous uptake), see
+    # `plant_air.AirExchange` and docs/dpu_model_summary_corrected.tex
+    # sec:permeability. None (the default) skips the terms entirely -- they are
+    # not merely zero but never evaluated, so every PFAS result is bit-identical.
+    # PFAS have K_AW ~ 0 and no air pathway at all (CLAUDE.md section 2); this is
+    # for the NEUTRAL path, where volatilisation is a load-bearing leaf sink.
+    air: "object | None" = None
 
     def rhs(self, t: float, C: np.ndarray) -> np.ndarray:
         """RHS of dC/dt for the 4 compartments (Eqs. root, stem, leaf, fruit)."""
@@ -294,6 +301,14 @@ class RiceUptakeModel:
         dC[FRUIT] = (gam * f4 * (Qtp / M[FRUIT]) * Cw[STEM]
                      + gam * (Q_Phl / M[FRUIT]) * C_Phl
                      - g[FRUIT] * C[FRUIT] - mu[FRUIT] * C[FRUIT])
+        # plant-air exchange (gaseous uptake - volatilisation), opt-in and OFF by
+        # default: for `air=None` this branch is skipped, so the PFAS path is
+        # untouched. The stomatal pathway needs each shoot organ's share of the
+        # transpiration stream, which is the same (f3, f4) split used above, with
+        # the grain's share gated by its formation.
+        if self.air is not None:
+            dC += self.air.flux(C=C, M=M, K_PW=B, comps=self.comps, Qtp=Qtp,
+                                xyl_share=(f3, gam * f4))
         return dC
 
     def solve(self, t_eval: np.ndarray, C0: np.ndarray | None = None):

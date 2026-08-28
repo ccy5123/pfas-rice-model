@@ -68,11 +68,32 @@ assay in `docs/twopool_kseq_mechanism.md` §5.
 
 ## 3. Next tasks (in-silico, do these in order)
 
-### A1. Air exchange — volatilisation + gaseous uptake  ← start here
+### A1. Air exchange — volatilisation + gaseous uptake  ✅ **DONE**
 
-**The largest structural gap in the neutral base, and fully specified in-repo.** The
-core ODE has **no air terms at all** (verify: `grep -niE "volatil|K_AW|P_air|Q_VOL"
-src/pfas_rice_plant_module_4pool_surf.py` returns nothing). Today
+> **Implemented**: `src/plant_air.py` (the equation set), an optional `air=` field on
+> `RiceUptakeModel` (default `None` → the terms are never evaluated),
+> `simulate_neutral(air=True)`, `tests/test_plant_air.py` (13 tests), and §3b of both
+> `validation/neutral_dpu_validation.py` and `docs/neutral_dpu_validation.md`.
+> `parameters.json`, `simulate()` and `reproduce_demo` (**RMSE 0.029, re-verified**)
+> are unchanged. `k_aw_warning` now names the remedy instead of refusing.
+>
+> Results: the leaf, an unbounded terminal accumulator without metabolism, is now
+> bounded by volatilisation — leaf BAF 177 → 0.0025 across `K_AW` 0 → 0.1, while the
+> **root is invariant** (no volatilisation below ground) and `K_AW = 0` is bit-identical
+> to air-off. The ladder also *checks* the old judgement-call warning threshold
+> (`K_AW > 1e-4`): the physics puts the crossover just above it (leaf t½ 787 d at 1e-4
+> vs 8 d at 1e-3), so it errs toward flagging early.
+>
+> **The residual limit is the surface area, not the equations** — the flux scales with
+> each tissue's specific surface `S`, which this repo has only ever used as a leaf/grain
+> *ratio* for the xylem split, so absolute magnitudes are order-of-magnitude until `S`
+> is measured. `AirExchange(S=...)` overrides it; the shipped stem `S = 0` leaves the
+> stem term inert (pinned by a test). Particle deposition (`eq:Qdep`) is still not
+> implemented, deliberately — it is a separate deposition pathway, not plant–air
+> equilibrium exchange.
+
+**Original brief, for the record.** The largest structural gap in the neutral base,
+and fully specified in-repo. The core ODE had **no air terms at all**. Today
 `neutral_dpu.k_aw_warning()` merely *refuses* a high-`K_AW` compound. That is
 defensible for PFAS (`K_AW ≈ 0` — CLAUDE.md §2 turns air exchange off deliberately)
 but it truncates the neutral path, which is meant to cover volatile organics.
