@@ -700,8 +700,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   from the SOIL conc measured on the SAME pot at the SAME harvest (Tab S4) via the paper's OWN measured Freundlich
   isotherms (`c=(C_soil/K_F)^n`) — no mass balance, no pot geometry, no dissipation model. CAR is un-ionised
   everywhere (pKa 1.0/13.9) and `DT50>1000 d`, so the authors' own reason for not computing BAFs does not apply.
-  - **A-priori log10 RMSE 0.191 (n=21), nothing fitted — the BEST a-priori result in the repo** (Liu 0.281,
-    Li2019 0.598, Ge 0.783).
+  - **A-priori log10 RMSE 0.191 (n=21), nothing fitted** (Liu 0.281, Li2019 0.598, Ge 0.783) — **but that 0.191 is
+    FLATTERED by a scoring artifact, see the next bullet**; on the appropriate basis it is 0.237 and Liu (0.206) is
+    the repo's best a-priori result.
   - **VOTES AGAINST restoring the Briggs anchor**, and is well-conditioned to (at log Kow 2.25 the two compositions
     differ 1.6×): shipped/anchored = Kodešová **0.191**/0.216 · Liu **0.281**/0.288 · Li2019 0.598/**0.331**.
     ⇒ tally **2 tables against the anchor, 1 for it**, and the two against are the soil-grown / rice ones.
@@ -720,6 +721,19 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   - Limits: 4 leafy/root vegetables, **no rice**; one compound at one lipophilicity (says nothing about the high-Kow
     end where the deficit lives); roots rinsed not exhaustively cleaned (biases obs UP, i.e. against this conclusion).
   `parameters.json`, `simulate()` and `reproduce_demo` (0.029) UNCHANGED.
+- **ODE-vs-EQUILIBRIUM scoring artifact (this session) — `compare_to_obs(mode="equilibrium")`**: all three root-partition
+  tables (Liu/Li2019/Kodešová) measure an EQUILIBRIUM over 24 h–26 d, but were scored by running the **120-d rice season**
+  and reading `baf_final["root"]`. That imposes a **Kow-DEPENDENT, purely model-side discount** (ODE/K_PW = 0.91 @logKow
+  −0.5 · **0.55 @1.78** · **0.57 @2.25** · 0.99 @5.0 — the xylem drains the root hardest near the TSCF peak). Applying a
+  rice season's drain to a 24-h barley measurement is an ERROR, not a modelling choice. Rescored: **Liu 0.281→0.206 ·
+  Li2019 0.598→0.541 · Kodešová 0.191→0.237** (Ge unchanged — per-organ TF at 60 d, the season IS its endpoint).
+  ⇒ **Kodešová was flattered** (it sits at logKow 2.25, near the discount peak) so it is NOT the repo's best a-priori
+  result — **Liu 0.206 is**. The §4f anchor verdicts SURVIVE and their **margins widen** (shipped/anchored on the
+  equilibrium basis: Liu **0.206**/0.286 · Li2019 0.541/**0.295** · Kodešová **0.237**/0.410) ⇒ removing the artifact
+  **SHARPENS the dataset contradiction rather than resolving it**. `mode="ode"` stays the DEFAULT so no published number
+  moves silently; which basis should headline is a one-line decision left open with the anchor question.
+  `tests/test_li2019_schriever_tables.py` (18) pins the discount shape, the rescored ordering, and that the default is
+  unchanged.
 - **Structural MERGE — two-pool seq ROOT + `nstem_leaf` redistributed SHOOT (this session) — Result 7 CONFIRMED**:
   the last in-silico item of the two-pool arc (handoff §6: "a fair per-organ Tang test needs the two-pool root merged
   with the redistributed shoot"). `NStemLeafModel` gained optional `k_seq`/`k_rel`: `k_seq>0` APPENDS a sequestered

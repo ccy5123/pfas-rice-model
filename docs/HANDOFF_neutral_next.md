@@ -84,7 +84,8 @@ on this branch; the 2 skips are the optional `emcee` and `sci-adk` deps.
 | Liu 2023 root partition (unchanged) | 0.281 |
 | Ge 2017 per-organ TF (unchanged) | 0.783; minimum 0.210 at a 7-day half-life |
 | Hwang 2017, both basis readings | 0.610 fw / 0.726 dw — **a diagnosis, not scores** |
-| **Kodešová 2019 carbamazepine**, n=21, 4 plants × 3 soils, nothing fitted | log10 RMSE **0.191** — best a-priori in the repo; 0.216 at the anchor |
+| **Kodešová 2019 carbamazepine**, n=21, 4 plants × 3 soils, nothing fitted | log10 RMSE 0.191 on the ODE basis, **0.237** on the appropriate equilibrium basis (§4g) |
+| the repo's best a-priori root result, appropriate basis | **Liu 2023, 0.206** (not Kodešová) |
 | the same, driver-free (equilibrium `K_PW`) | measured `RCF_fw` median **1.10** vs 1.56 shipped / 2.53 anchored |
 | Brunetti's pea `K_RW` vs that measurement | 13.3 vs **1.10** — ~12× above, so **superseded** |
 | merge, Tang per-organ OOS | 0.801 (stalk 0.61, leaf 0.28) |
@@ -153,12 +154,20 @@ Ranked. The first is the only one that is both significant and unblocked.
    at low Kow where the water floor dominates. Restoring the anchor is worth +0.394 log
    against an observed −0.688 in the worst cell, so it accounts for ~57 % and the rest
    is not lipid. Pinned by a test.
-3. **Mine Briggs 1983** (`10.1002/ps.2780140506`), the shoot-distribution companion,
+3. ~~The ODE-vs-equilibrium scoring artifact~~ ✅ **DONE** —
+   `compare_to_obs(mode="equilibrium")`, §4g of the validation doc. Root tables
+   measure an equilibrium but were scored through the 120-day rice season, which
+   discounts the root by a Kow-dependent 0.01–0.26 log. Rescored: Liu
+   0.281→**0.206**, Li 2019 0.598→**0.541**, Kodešová 0.191→**0.237**. Kodešová
+   was flattered and is *not* the repo's best a-priori result; Liu is. The anchor
+   verdicts survive with **wider** margins. Default stays `"ode"`; which basis
+   should headline is a one-line decision, open with the anchor question.
+4. **Mine Briggs 1983** (`10.1002/ps.2780140506`), the shoot-distribution companion,
    already in hand and never opened. It is the only in-hand source that could constrain
    the stem/leaf split independently of Ge 2017.
-4. **Tissue specific surface areas** for rice — still the single input bounding the air
+5. **Tissue specific surface areas** for rice — still the single input bounding the air
    term, still unsourced. Note the C2 papers supplied this round do **not** help (§4).
-5. `NStemLeafModel` has no air hook; particle deposition (`eq:Qdep`) is still
+6. `NStemLeafModel` has no air hook; particle deposition (`eq:Qdep`) is still
    deliberately unimplemented. Both unchanged from the last handoff, both low value.
 
 ---

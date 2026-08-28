@@ -573,8 +573,10 @@ reading gives ~1600 everywhere. The derived pore water (0.10–0.70 mg/L) also
 lands on the scale of both the applied solution (~0.5–1.0 mg/L) and the sorption
 study's calibration range (0.5–10 mg/L).
 
-**Result: log10 RMSE 0.191 (n = 21), nothing fitted — the best a-priori result in
-this repo.** For scale, on the same path: Liu 2023 0.281, Li 2019 0.598.
+**Result: log10 RMSE 0.191 (n = 21), nothing fitted.** For scale, on the same
+path: Liu 2023 0.281, Li 2019 0.598. **But see §4g** — that 0.191 is flattered by
+a scoring artifact; on the appropriate equilibrium basis it is **0.237**, and Liu
+2023 at 0.206 is the best a-priori result here.
 
 **It votes against restoring the Briggs anchor**, and it is well-conditioned to
 do so: at log Kow 2.25 the two compositions differ by 1.6×.
@@ -612,6 +614,49 @@ Honest limits: four leafy/root vegetables and no rice; one compound at one
 lipophilicity, so it says nothing about the high-Kow end where §4d's deficit
 lives; roots were rinsed, not exhaustively cleaned, though adhering soil would
 bias the observation *up* and so works against the conclusion drawn here.
+
+### 4g. A scoring artifact that affects every root number above
+
+`compare_to_obs(..., mode="equilibrium")` · `tests/test_li2019_schriever_tables.py`
+
+All three root-partition tables (§4a, §4d, §4f) measure an **equilibrium** over
+24 h – 26 d. Until now they were all scored by running the **120-day rice
+season** and reading `baf_final["root"]`. That imposes a discount which is
+**Kow-dependent and purely model-side**: the xylem drains the root hardest near
+the TSCF peak.
+
+| log Kow | −0.5 | 1.0 | **1.78** | **2.25** | 3.72 | 5.0 |
+|---|---|---|---|---|---|---|
+| ODE root BAF ÷ `K_PW` | 0.91 | 0.61 | **0.55** | **0.57** | 0.85 | 0.99 |
+| in log units | −0.04 | −0.22 | **−0.26** | **−0.24** | −0.07 | −0.01 |
+
+Applying a rice season's drain to a 24-hour barley measurement is an error, not a
+modelling choice. Rescored on the appropriate basis:
+
+| table | ODE basis (as published) | **equilibrium basis** |
+|---|---|---|
+| Liu 2023, rice root, 72 h | 0.281 | **0.206** |
+| Li 2019, root, 6 h – 12 d | 0.598 | **0.541** |
+| Kodešová 2019, root, 20–26 d | 0.191 | **0.237** |
+| Ge 2017, per-organ TF at 60 d | 0.783 | 0.783 — *n/a, no root rows; the season IS the endpoint here* |
+
+**Two things follow.** First, **Kodešová was flattered by the artifact** — it sits
+at log Kow 2.25, almost exactly where the discount peaks — so the claim that it
+is "the best a-priori result in the repo" is wrong on the appropriate basis;
+**Liu 2023 at 0.206 is**. Second, the anchor verdicts of §4f **survive and their
+margins widen**:
+
+| root composition | Liu (rice) | Li 2019 | Kodešová |
+|---|---|---|---|
+| **shipped** `L` = 0.010 | **0.206** | 0.541 | **0.237** |
+| anchored `L` = 0.0247 | 0.286 | **0.295** | 0.410 |
+
+So removing the artifact **sharpens the contradiction rather than resolving it**,
+which is the honest outcome: the tables disagree more clearly, not less.
+
+**The default stays `mode="ode"`** so no published number moves silently, and the
+mode is reported rather than switched. Which basis should headline the neutral
+path is a one-line decision left open with the anchor question.
 
 ### What these numbers do not settle
 

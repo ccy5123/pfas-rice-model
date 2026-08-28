@@ -257,8 +257,20 @@ def load_neutral_obs(path):
     return rows
 
 
+def equilibrium_rcf(log_kow, lipids=None, waters=None, tissue="root"):
+    """The compartment's equilibrium partition K_PW -- no ODE, no drivers.
+
+    This is what a SHORT-EXPOSURE root concentration factor actually measures.
+    See `compare_to_obs(mode="equilibrium")` for why that distinction matters.
+    """
+    W = dict(ND.RICE_WATER, **(waters or {}))[tissue]
+    L = dict(ND.TRAPP1994_LIPID_FW, **(lipids or {}))[tissue]
+    b = ND.LEAF_SORPTION_EXPONENT if tissue == "leaf" else ND.RCF_SLOPE
+    return ND.k_pw(log_kow, W=W, L=L, b=b)
+
+
 def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=False,
-                   subset="apriori", group_by=None):
+                   subset="apriori", group_by=None, mode="ode"):
     """Compare the model to a measured table. `half_life` (d) overrides the
     per-row half_life_d for a sensitivity scan; `tscf_model` selects the QSPR.
 
@@ -270,7 +282,25 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
     the published 0.281 / 0.783 cannot move because of this argument.
 
     `group_by` names a column to also report per-group RMSE for (e.g. "species").
+
+    `mode` decides what the model side is:
+      "ode"          -- run the full 120-day rice season and read the tissue BAF.
+                        The default, and the right thing for a season-long
+                        endpoint (per-organ TF at harvest, Ge 2017).
+      "equilibrium"  -- compare a ROOT row against K_PW directly, with no ODE and
+                        no drivers. This is the honest comparison for a
+                        short-exposure root concentration factor, which is what
+                        Liu 2023, Li 2019 and Kodesova 2019 all measure (24 h to
+                        12 d), because the season-long ODE discounts the root by
+                        a Kow-DEPENDENT factor that has nothing to do with the
+                        partition being tested: -0.04 log at log Kow -0.5 but
+                        -0.26 at 1.78, where the xylem drains it hardest, and
+                        back to ~0 above 5. Applying a rice season's drain to a
+                        24-hour barley measurement is a model-side artifact.
+                        Non-root rows fall back to "ode".
     """
+    if mode not in ("ode", "equilibrium"):
+        raise ValueError(f"mode must be 'ode' or 'equilibrium', got {mode!r}")
     if not quiet:
         print("\n" + "=" * 84)
         print(f"5. MEASURED-DATA COMPARISON — {path}")
@@ -302,11 +332,17 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
              if r.get("half_life_d") not in (None, "")), None)
         gam = float(np.log(2.0) / hl) if hl else 0.0
         comps = ND.rice_compartments(gammas={k: gam for k in TISSUES})
-        m = ND.simulate_neutral(ND.NeutralCompound(name, lk), drv, comps=comps,
-                                tscf_model=tscf_model)
+        # in equilibrium mode a root-only compound needs no ODE solve at all
+        if mode == "equilibrium" and all(r["tissue"] == "root" for r in rs):
+            m = None
+        else:
+            m = ND.simulate_neutral(ND.NeutralCompound(name, lk), drv, comps=comps,
+                                    tscf_model=tscf_model)
         for r in rs:
             tis, ep, basis = r["tissue"], r["endpoint"], r["basis"]
-            if tis == "straw":
+            if mode == "equilibrium" and tis == "root" and ep in ("baf", "conc"):
+                pred = equilibrium_rcf(lk, tissue="root")
+            elif tis == "straw":
                 pred = m["straw_baf"] if ep != "tf" else m["straw_baf"] / m["baf_final"]["root"]
             elif ep == "tf":
                 pred = m["tf_final"][tis]

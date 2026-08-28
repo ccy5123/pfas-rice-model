@@ -301,6 +301,79 @@ def test_kodesova_votes_against_restoring_the_anchor():
     assert shipped[0] < 0.25                 # and it is the best a-priori root fit
 
 
+# --------------------------------------------------------------------------
+# the ODE-vs-equilibrium scoring artifact
+# --------------------------------------------------------------------------
+def test_the_rice_ode_discounts_the_root_in_a_kow_dependent_way():
+    """Why `mode="equilibrium"` exists. Running a 120-day rice season to score a
+    24-hour barley root measurement imposes a Kow-DEPENDENT discount that has
+    nothing to do with the partition being tested: near zero at the extremes,
+    but ~0.25 log where the xylem drains the root hardest, around the TSCF peak.
+    Kodesova sits at log Kow 2.25, close to the worst point -- so its ODE-basis
+    score is flattered. Pinned so the artifact cannot be forgotten again."""
+    import neutral_dpu_validation as V
+
+    drv = V.drivers()
+    disc = {}
+    for lk in (-0.5, 1.78, 2.25, 5.0):
+        m = ND.simulate_neutral(ND.NeutralCompound("x", lk), drv)
+        disc[lk] = m["baf_final"]["root"] / V.equilibrium_rcf(lk)
+    assert disc[-0.5] > 0.85 and disc[5.0] > 0.95      # ~no discount at the ends
+    assert disc[1.78] < 0.60                            # ~0.25 log at the peak
+    assert disc[2.25] < 0.65                            # and Kodesova sits there
+
+
+def test_equilibrium_mode_changes_the_root_tables_and_not_ge2017():
+    """The appropriate-basis numbers, pinned. Removing the artifact IMPROVES the
+    two short-exposure hydroponic tables and WORSENS Kodesova -- which is the
+    direction that matters, because it means Kodesova was not in fact the best
+    a-priori result in the repo once compared on the right basis."""
+    import neutral_dpu_validation as V
+
+    drv = V.drivers()
+    liu = os.path.join(ROOT, "data_obs", "neutral_obs_liu2023.csv")
+    kod = os.path.join(ROOT, "data_obs", "neutral_obs_kodesova2019.csv")
+    ge = os.path.join(ROOT, "data_obs", "neutral_obs_ge2017.csv")
+
+    def both(p):
+        return (V.compare_to_obs(p, drv, quiet=True),
+                V.compare_to_obs(p, drv, quiet=True, mode="equilibrium"))
+
+    liu_ode, liu_eq = both(liu)
+    li_ode, li_eq = both(LI2019)
+    kod_ode, kod_eq = both(kod)
+    assert liu_eq < liu_ode and li_eq < li_ode        # short-exposure: improves
+    assert kod_eq > kod_ode                            # Kodesova was flattered
+    assert liu_eq < kod_eq                             # Liu is the best, not Kodesova
+
+    # Ge 2017 carries only stem/leaf tf rows, so equilibrium mode cannot touch it
+    assert both(ge)[0] == both(ge)[1]
+
+    # the default must stay "ode", so no published number moves silently
+    assert V.compare_to_obs(liu, drv, quiet=True) == liu_ode
+
+
+def test_equilibrium_mode_does_not_change_the_anchor_verdicts():
+    """The anchor tally survives removing the artifact -- and the margins widen,
+    which is the useful part: Kodesova's preference for the shipped lipid goes
+    from marginal to decisive, and Li 2019's for the anchor likewise."""
+    import neutral_dpu_validation as V
+
+    drv = V.drivers()
+    kod = os.path.join(ROOT, "data_obs", "neutral_obs_kodesova2019.csv")
+    orig = ND.TRAPP1994_LIPID_FW["root"]
+    try:
+        ship = [V.compare_to_obs(p, drv, quiet=True, mode="equilibrium")
+                for p in (kod, LI2019)]
+        ND.TRAPP1994_LIPID_FW["root"] = ND.BRIGGS_ANCHORED_LIPID_FW["root"]
+        anch = [V.compare_to_obs(p, drv, quiet=True, mode="equilibrium")
+                for p in (kod, LI2019)]
+    finally:
+        ND.TRAPP1994_LIPID_FW["root"] = orig
+    assert ship[0] < anch[0] and anch[1] < ship[1]     # same opposite verdicts
+    assert anch[0] - ship[0] > 0.10                    # but a much wider margin
+
+
 def test_spearman_helper_handles_ties():
     import schriever2020_tscf as S
 
