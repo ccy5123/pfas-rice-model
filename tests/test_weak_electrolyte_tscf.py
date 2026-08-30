@@ -148,6 +148,58 @@ def test_speciation_on_orders_better_and_under_delivers(rows, is_acid):
     assert np.mean(on - obs) < -0.1                              # and under-delivers
 
 
+# ---------------------------------------------------------------------------
+# the apoplastic bypass the result motivated
+# ---------------------------------------------------------------------------
+def test_g_apo_defaults_to_zero_everywhere_it_could_leak():
+    """The bypass must be structurally absent unless asked for, on both paths."""
+    import literature_params as LP
+    import neutral_dpu as ND
+    assert LP.literature_compound("PFOA").g_apo == 0.0
+    assert ND.NeutralCompound("x", 2.45).g_apo == 0.0
+    assert ND.neutral_compound(ND.NeutralCompound("x", 2.45)).g_apo == 0.0
+    assert ND.neutral_compound(ND.NeutralCompound("x", 2.45, pKa=4.0)).g_apo == 0.0
+
+
+def test_g_apo_is_gated_by_neither_speciation_nor_the_membrane_potential():
+    """What makes it a separate term rather than a larger kappa_d. The bypass
+    contribution to j_R must be identical for a neutral and for a fully ionised
+    compound -- a route around the membrane cannot feel (fn, fd) or the GHK
+    factor. This is the property the whole repair rests on."""
+    from dataclasses import replace
+    import literature_params as LP
+    import pfas_rice_plant_module_4pool_surf as P4
+
+    env = LP.literature_environment()
+    base = LP.literature_compound("PFOA")
+    Cwo, Cw = 1.0, 0.01
+    contribs = []
+    for fn, fd in ((1.0, 0.0), (0.5, 0.5), (0.0, 1.0)):
+        off = replace(base, fn=fn, fd=fd, g_apo=0.0)
+        on = replace(base, fn=fn, fd=fd, g_apo=0.7)
+        contribs.append(P4.root_uptake(Cwo, Cw, on, env)
+                        - P4.root_uptake(Cwo, Cw, off, env))
+    assert contribs[0] == pytest.approx(contribs[1], rel=1e-12)
+    assert contribs[1] == pytest.approx(contribs[2], rel=1e-12)
+    assert contribs[0] == pytest.approx(0.7 * (Cwo - Cw), rel=1e-12)
+
+
+def test_g_apo_is_self_targeting():
+    """Why it does not simply inflate everything: uptake conductance sets how fast
+    the root equilibrates, not the level it equilibrates to, so the bypass does
+    almost nothing where the membrane is already fast (an un-ionised compound) and
+    a great deal where speciation has collapsed it. That asymmetry is what lets one
+    parameter address the ionisable rows without disturbing the 30 neutral ones."""
+    lk, pH, g = 2.28, 6.5, 2.0
+    neutral_off = WE.model_tscf(lk, 1.0, pH)
+    neutral_on = WE.model_tscf(lk, 1.0, pH, g_apo=g)
+    ion_off = WE.model_tscf(lk, 1e-4, pH)
+    ion_on = WE.model_tscf(lk, 1e-4, pH, g_apo=g)
+
+    assert neutral_on / neutral_off < 1.2, "bypass must barely move an un-ionised compound"
+    assert ion_on / ion_off > 100.0, "bypass must rescue a strongly ionised one"
+
+
 def test_the_rank_gain_is_robust_and_the_rmse_loss_is_not():
     """Pins the asymmetry itself, on synthetic arrays so it costs no ODE solves:
     `bootstrap_wins` must be able to report the two frequencies separately. The

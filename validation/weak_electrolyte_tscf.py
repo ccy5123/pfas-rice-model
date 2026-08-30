@@ -167,7 +167,8 @@ def pKa_for(fn: float, pH: float, is_acid: bool = True) -> float:
     return float(pH + off) if is_acid else float(pH - off)
 
 
-def model_tscf(log_kow: float, fn: float, pH: float, is_acid: bool = True) -> float:
+def model_tscf(log_kow: float, fn: float, pH: float, is_acid: bool = True,
+               g_apo: float = 0.0) -> float:
     """The model's effective root-to-shoot transfer factor for one row.
 
         TSCF_model = f_xy * Cw_root / Cwo
@@ -179,7 +180,7 @@ def model_tscf(log_kow: float, fn: float, pH: float, is_acid: bool = True) -> fl
     """
     kw = {} if fn >= 1.0 else dict(pKa=pKa_for(fn, pH, is_acid),
                                    is_acid=is_acid, pH=pH)
-    r = api.simulate_neutral(log_kow, **kw)
+    r = api.simulate_neutral(log_kow, g_apo=g_apo, **kw)
     return float(r["TSCF"] * r["baf_final"]["root"] / r["K_PW"]["root"])
 
 
@@ -201,6 +202,40 @@ def bootstrap_wins(off, on, obs, n=4000, seed=0):
         if rmse(on[i], obs[i]) < rmse(off[i], obs[i]):
             w_rmse += 1
     return dict(rank=w_rank / n, rmse=w_rmse / n, n=n)
+
+
+G_APO_GRID = (0.0, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 20.0)
+
+
+def scan_g_apo(ion, neu, grid=G_APO_GRID, is_acid=True):
+    """The apoplastic bypass, scored across a grid — trade-off curve, not an optimum.
+
+    `g_apo` is the one lever that can raise a strongly-ionised compound's uptake
+    without being gated by speciation, so it is the obvious repair for the
+    magnitude half of this script's verdict. It is reported as a CURVE because the
+    failure mode was pre-registered (handoff section 3 item 8): a bypass big enough
+    to fix the magnitude must eventually flatten the speciation dependence, and if
+    the fitted value drives the rank correlation back toward the speciation-OFF
+    baseline then the bypass is ABSORBING the effect rather than explaining it.
+    Both halves are therefore tracked at every grid point, on the ionisable rows
+    AND on the 30 un-ionised rows the model already fits, which the bypass must
+    not disturb.
+    """
+    obs_i = np.array([r["TSCF"] for r in ion], float)
+    obs_n = np.array([r["TSCF"] for r in neu], float)
+    out = []
+    for g in grid:
+        pi = np.array([model_tscf(r["logP"], r["fn"], r["pH"], is_acid, g_apo=g)
+                       for r in ion], float)
+        pn = np.array([model_tscf(r["logP"], 1.0, r["pH"], g_apo=g) for r in neu],
+                      float)
+        out.append(dict(
+            g_apo=g,
+            rmse=float(np.sqrt(np.mean((pi - obs_i) ** 2))),
+            bias=float(np.mean(pi - obs_i)), rho=spearman(pi, obs_i),
+            neutral_rmse=float(np.sqrt(np.mean((pn - obs_n) ** 2))),
+            neutral_bias=float(np.mean(pn - obs_n))))
+    return out
 
 
 def _stat(tag, pred, obs):
@@ -284,6 +319,23 @@ def main(fast=False):
     print("   So the RANK gain is robust and the RMSE loss is only a tendency: a")
     print("   subsample can and does flip the RMSE, never the ordering. State the")
     print("   verdict that way -- 'ON orders better, and tends to scale worse'.")
+
+    # -- 5 ------------------------------------------------------------------
+    print("\n5. THE APOPLASTIC BYPASS — does one parameter repair the magnitude?")
+    print("   `g_apo` is entry that never crosses a membrane, so it is gated by")
+    print("   NEITHER speciation nor the membrane potential. Reported as a curve, not")
+    print("   an optimum, because the failure mode was pre-registered: a bypass big")
+    print("   enough to fix the magnitude must eventually FLATTEN the ordering.")
+    print(f"   Reference points: speciation OFF rho {s_off['rho']:+.3f} / RMSE {s_off['rmse']:.3f};")
+    print(f"                     speciation ON, no bypass rho {s_acid['rho']:+.3f} / RMSE {s_acid['rmse']:.3f}.")
+    print(f"   {'g_apo':>7}  {'RMSE':>7} {'bias':>7} {'rho':>7}   | 30 un-ionised rows: {'RMSE':>6} {'bias':>7}")
+    scan = scan_g_apo(ion, neu)
+    for s in scan:
+        print(f"   {s['g_apo']:7.2f}  {s['rmse']:7.3f} {s['bias']:+7.3f} {s['rho']:+7.3f}   |"
+              f"                     {s['neutral_rmse']:6.3f} {s['neutral_bias']:+7.3f}")
+    best = min(scan, key=lambda s: s["rmse"])
+    print(f"   RMSE-optimal g_apo = {best['g_apo']:.2f}  ->  RMSE {best['rmse']:.3f}"
+          f"  bias {best['bias']:+.3f}  rho {best['rho']:+.3f}")
 
     # -- verdict ------------------------------------------------------------
     rho = spearman(fn, obs)

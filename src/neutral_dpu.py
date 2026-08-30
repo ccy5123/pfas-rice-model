@@ -264,6 +264,15 @@ class NeutralCompound:
     # published neutral number bit-identical.
     pKa: float | None = None
     is_acid: bool = True              # False -> weak BASE (its ion is a CATION)
+    # APOPLASTIC BYPASS conductance [L/(day kg)] -- entry that never crosses a
+    # membrane, so it feels neither the (fn, fd) weighting nor the GHK factor.
+    # 0 (default) removes the term identically. It exists for the weak-electrolyte
+    # case: section 4l of docs/neutral_dpu_validation.md showed the membrane-only
+    # model orders ionisable compounds well and under-delivers by orders of
+    # magnitude, and this is the one lever that can raise the floor without
+    # flattening that ordering. EXPLORATORY -- see `fit_g_apo` in
+    # validation/weak_electrolyte_tscf.py for what the data say the value is.
+    g_apo: float = 0.0
     pH: float = 6.5                   # root-zone pH setting (fn, fd); paddy pore water
 
     @property
@@ -302,6 +311,8 @@ def neutral_compound(c: NeutralCompound, a: float = LIPID_OCTANOL_A,
         # Setting fd=0 would zero the uptake entirely, which is the wrong reading.
         fd=1.0,
         fn=1.0,
+        # apoplastic bypass; 0 by default, so the term is structurally absent
+        g_apo=float(c.g_apo),
     )
     kw.update(_weak_electrolyte_kw(c))    # {} unless a pKa was supplied
     return Compound(**kw)

@@ -872,7 +872,7 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
                      air=False, air_kw=None, waters=None, lipids=None,
                      biomass="oryza", measured_forcing=True, drivers=None,
                      tscf=None, lipid_source=None,
-                     pKa=None, is_acid=True, pH=6.5):
+                     pKa=None, is_acid=True, pH=6.5, g_apo=0.0):
     """Run the 4-compartment DPU for a NEUTRAL (non-ionised) organic.
 
     The neutral analogue of `simulate()`: same driver machinery, same result-dict
@@ -947,7 +947,8 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
     cmpd = ND.NeutralCompound(name=name, log_kow=float(log_kow), MW=float(MW),
                               K_AW=float(K_AW), kappa_d=float(kappa_d),
                               tscf=tscf, tscf_model=tscf_model,
-                              pKa=pKa, is_acid=bool(is_acid), pH=float(pH))
+                              pKa=pKa, is_acid=bool(is_acid), pH=float(pH),
+                              g_apo=float(g_apo))
     res = ND.simulate_neutral(cmpd, drv, comps=comps, phloem=phloem, L_Ph=L_Ph,
                               air=air, air_kw=air_kw)
 
