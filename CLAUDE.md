@@ -73,7 +73,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (300 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (312 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1013,8 +1013,36 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (~19×) because the cation is ATTRACTED by the inside-negative membrane. The `ion_trap_factor` correction is pinned
   by a test: Λ → `10^ΔpH` = 6.31 as pKa falls, **NOT** 1, so multiplying `L_Ph` by it would hand a permanent anion a
   spurious 6.3× phloem enrichment — the trap switches off **kinetically** (`neutral_pathway_ratio` 2 → 1e-7, a 10⁷
-  collapse), never thermodynamically. **NOT VALIDATED**: no measured weak-electrolyte rice dataset exists here, so
-  this is structural capability, not a predictive claim. `parameters.json` UNCHANGED.
+  collapse), never thermodynamically. ~~**NOT VALIDATED**~~ — **superseded: it has now been tested, see the next
+  bullet.** `parameters.json` UNCHANGED.
+- **Weak electrolyte TESTED — direction SUPPORTED, magnitude REFUTED (this session)**:
+  `validation/weak_electrolyte_tscf.py` + `tests/test_weak_electrolyte_tscf.py` (13) + `docs/neutral_dpu_validation.md`
+  §4l. The port shipped labelled "no measured weak-electrolyte dataset exists here" — true of **rice** only. §4e scores
+  just the **30** rows of Schriever's Table A 3 flagged un-ionised and sets the other **67 ionisable ones** aside as
+  "outside this model's stated scope"; the port is exactly what extends the scope to them, so **the test data were
+  already in the repo before the capability was**. **`f_n` is derived from the table's OWN logD** (`f_n = 10^(logD−logP)`),
+  not its pKa: the two columns disagree by a median **1.41 log** and 20 rows have logD ABOVE logP, which no single-centre
+  acid or base can produce. That choice is load-bearing — the pKa route manufactures a **false counterexample** out of the
+  8 pKa-1.62 barley rows (TSCF 0.63–0.98, but their own logD says un-ionised and the shipped flag already classes them
+  neutral); pinned by a test so it is not rediscovered. **Result**: measured transfer DOES rise with the neutral fraction
+  (Spearman **+0.480**, n=67 — the port's first empirical support of any kind, and the sign could have come out flat), and
+  speciation ON nearly DOUBLES the model's rank correlation (**+0.284 → +0.520**) — but its influx conductance `Φ` moves
+  **~1.6e4-fold** across this table where the measurements move **~3-fold**, so it under-delivers (bias +0.023 → **−0.203**)
+  and at `f_n<1e−3` predicts nothing where the measured mean is 0.127. **The two metrics are NOT equally solid**: bootstrapped
+  (n=4000) the rank gain survives **94%** of resamples and the RMSE loss only **82%** — a subsample flips the RMSE and one
+  did, so the guard test asserts the ordering and the under-delivery but deliberately NOT the RMSE. **Cause is structural and
+  already known one directory away**: the model's only entry is transmembrane, while real ions arrive **apoplastically** and
+  the PFAS side needed a **fitted carrier** for exactly this reason (§2). ⇒ `pKa=` moves from UNVALIDATED to **BOUNDED** —
+  usable for the DIRECTION of a speciation effect, not its size, and not below `f_n≈0.1`. Limits: 16 species, none rice; no
+  compound names in Table A 3; acid/base unlabelled so both readings are reported. Opt-in; `parameters.json`, `simulate()`
+  and `reproduce_demo` (0.029) UNCHANGED.
+- **CI now runs the WHOLE suite (this session)**: `.github/workflows/tests.yml`. Until now `rigor.yml` was the only
+  workflow and it runs a SINGLE module (`test_sci_adk_rigor.py`), which is why every handoff carried "⚠️ CI does not test
+  any of this — a green check means nothing here" and why the suite count in this file was maintained by hand from
+  whatever a session happened to run locally. The two workflows stay SEPARATE on purpose (the rigor guard is cheap and
+  its signal — an empirical claim was over-stated — would be buried in a ~22-min run). RDKit/phydrus come from
+  `requirements.txt` and are NOT best-effort, since that file is what Streamlit Cloud installs; only emcee, the gfortran
+  HYDRUS-1D build and sci-adk are, and `-rs` prints skip reasons so a silently shrinking suite stays visible.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1082,6 +1110,13 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   only — the 18 Briggs barley rows are held out; pass `subset=None` in code to score everything).
 - **TSCF QSPR on its own (no plant model)**: `python validation/schriever2020_tscf.py` (97 measured TSCF values;
   Briggs bell RMSE 0.310 / bias −0.221 on the 30 un-ionised rows vs the fitted Schriever refit's in-sample 0.234).
+- **Weak-electrolyte path, tested (the OTHER 67 rows of the same table)**:
+  `python validation/weak_electrolyte_tscf.py` (~2 min; `--fast` skips the per-row ODE solves).
+  Direction SUPPORTED / magnitude REFUTED — Spearman(f_n, TSCF) +0.480, speciation ON lifts the model's
+  rank +0.284→+0.520 but under-delivers (bias +0.023→−0.203); bootstrap says the rank gain is robust
+  (94%) and the RMSE loss is not (82%). `f_n` comes from the table's own logD, NOT its pKa — the two
+  columns disagree by a median 1.41 log, and the pKa route manufactures a false counterexample out of
+  the 8 pKa-1.62 rows (pinned by a test).
 - **Kodešová 2019 carbamazepine (queue A4; the anchor vote)**: `python validation/kodesova2019_carbamazepine.py`
   (exposure from the paper's own measured isotherms + the `Koc` defence of the unit reading; a-priori 0.191;
   the shipped-vs-anchored table across all three root datasets; the Brunetti verdict; the dw→fw sensitivity).
@@ -1128,11 +1163,19 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (300 collected; 298 pass, 2 skip, all pass with the full stack — RDKit + the built
+- Tests: `pip install pytest && pytest` (**312 collected; 311 pass, 2 skip** — note the two numbers do not add up,
+  and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
+  collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~22 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
   module additionally skips unless `sci-adk` is installed, which CI's `rigor.yml` provides). On a bare
   clone the structure/SMILES tests skip without RDKit and the HYDRUS-engine tests in `test_soil_hydrus.py`
   / the `cwo_profile='hydrus'` guards skip when the engine is unbuilt.
+  **CI runs the WHOLE suite** (`.github/workflows/tests.yml`, added this session) alongside the
+  narrow `rigor.yml` over-claim guard — until now `rigor.yml` was the only workflow and it runs a
+  SINGLE module, so every handoff carried "a green check means nothing here" and the count above was
+  maintained by hand. RDKit/phydrus come from `requirements.txt` and are NOT best-effort (that file is
+  what Streamlit Cloud installs); only emcee, the gfortran HYDRUS build and sci-adk are, and `-rs`
+  prints the skip reasons so a silently shrinking suite stays visible.
 - FORTRAN (Method B): init submodule (`git submodule update --init`), then follow
   https://phydrus.readthedocs.io/en/latest/getting_started/compilation.html
   (gfortran + `makefile` / `make.bat`). NOTE: the top-level `makefile` lists the `.FOR` files

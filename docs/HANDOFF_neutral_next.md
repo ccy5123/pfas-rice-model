@@ -3,11 +3,10 @@
 > Session handoff for the next Claude/dev.
 > **PRs [#56](https://github.com/ccy5123/pfas-rice-model/pull/56),
 > [#57](https://github.com/ccy5123/pfas-rice-model/pull/57),
-> [#58](https://github.com/ccy5123/pfas-rice-model/pull/58) and
-> [#59](https://github.com/ccy5123/pfas-rice-model/pull/59) are MERGED**;
-> [#60](https://github.com/ccy5123/pfas-rice-model/pull/60) (the `lipid_source` mode,
-> Briggs 1983's Table 1, the §5/§6 consistency fix and the weak-electrolyte port —
-> closing §3 items 1, 2 and 4) is the only thing still open. **[#54](https://github.com/ccy5123/pfas-rice-model/pull/54)
+> [#58](https://github.com/ccy5123/pfas-rice-model/pull/58),
+> [#59](https://github.com/ccy5123/pfas-rice-model/pull/59) and
+> [#60](https://github.com/ccy5123/pfas-rice-model/pull/60) are MERGED**. Nothing is
+> left open on this arc. **[#54](https://github.com/ccy5123/pfas-rice-model/pull/54)
 > and [#55](https://github.com/ccy5123/pfas-rice-model/pull/55) are CLOSED as
 > superseded** — a parallel neutral-organic implementation; its one non-duplicated
 > capability was ported (see §1), and its branches are kept for the pieces that were
@@ -15,31 +14,44 @@
 > Scientific record: **`docs/neutral_dpu_validation.md`** — §4a Liu, §4b Ge, §4c Hwang,
 > §4d Li 2019 hydroponic, §4e TSCF, §4f Kodešová, §4g the scoring artifact, §4h Li 2019
 > soil, §4i Kodešová's leaf, §4j Briggs 1983's stem equations, **§4k Briggs 1983's
-> Table 1 — the only measured STEM test**, §5 the synthesis. **Read §5 first.**
+> Table 1 — the only measured STEM test**, **§4l the weak-electrolyte test**, §5 the
+> synthesis. **Read §5 first.**
 > `parameters.json`, `simulate()` and `reproduce_demo` (RMSE 0.029) are **UNCHANGED**
 > throughout — everything on this arc is additive or opt-in, and no PFAS number moved.
-> Full suite on the merged tree: **300 collected, 298 pass, 2 skip** (~12 min); the two
-> skips are the optional `emcee` and `sci-adk` deps.
+> Full suite: **312 collected, 311 pass, 2 skip** (~22 min); the two skips are the
+> optional `emcee` and `sci-adk` deps. **CI now runs it** — see §5.
 
 ---
 
 ## 0. TL;DR
 
-Three things happened, in decreasing order of how much they change what you should do
+Four things happened, in decreasing order of how much they change what you should do
 next.
 
-**(a) The model now spans the whole speciation spectrum**, not just permanent anions
-and strict neutrals. `simulate_neutral(logKow, pKa=…)` runs a **weak acid or base** —
-a molecule that is neutral and ionic at once, which no single valence can express.
-Ported from the parallel effort in PRs #54/#55, now closed as superseded (§1). It is
-**structural capability, not a validated prediction**: no measured weak-electrolyte
-rice dataset exists here.
+**(a) The weak-electrolyte path is no longer untested** (§4l). It shipped last session
+labelled *"structural capability, not a validated prediction — no measured
+weak-electrolyte dataset exists here"*. **That was true of rice only, and the test data
+were already in this repo**: §4e scores 30 of Schriever's 97 rows and holds the other
+**67 ionisable ones** back as "outside this model's stated scope" — and the port is
+exactly what extends the scope to them. Verdict: **direction SUPPORTED, magnitude
+REFUTED.** Measured transfer does rise with the neutral fraction (Spearman **+0.480**,
+n=67) and speciation nearly doubles the model's rank correlation (+0.284 → **+0.520**),
+but its influx conductance moves ~1.6e4-fold where the measurements move ~3-fold, so it
+under-delivers badly (bias +0.023 → **−0.203**). `pKa=` moves from *unvalidated* to
+**BOUNDED**: good for the direction of a speciation effect, not its size, not below
+`f_n≈0.1`. **The lesson generalises past this one result**: "no dataset exists" was a
+statement about *rice*, and a held-out subset of a table already in `data_obs/` was
+sitting under it. Before writing that phrase again, grep `data_obs/` for what previous
+scores excluded and why.
 
-**(b) The stem has a measured test for the first time** (§4k): Briggs 1983's Table 1,
+**(b) CI runs the whole suite now** (§5), so the standing warning that a green check
+means nothing is gone, and the hand-maintained test count with it.
+
+**(c) The stem has a measured test for the first time** (§4k): Briggs 1983's Table 1,
 a-priori log10 RMSE **0.299**, indistinguishable from the paper's own *fitted*
 equation. Five measured tables now ship.
 
-**(c) The acquisition queue's papers are mined out**, and the question the last
+**(d) The acquisition queue's papers are mined out**, and the question the last
 handoff was built around has **dissolved rather than been answered**.
 
 **It is not "the root partition is too low". It is "the exposure term is the weak
@@ -136,9 +148,9 @@ does not.
 
 ## 2. Things this arc got wrong and then corrected — do not reinstate them
 
-Three claims were made, written into the docs, and then retracted on re-reading. Each
-is pinned by a test now. A later session that "rediscovers" any of them is going
-backwards.
+Five claims were made, written down, and then retracted on re-reading or on a
+robustness check. Each is pinned by a test now. A later session that "rediscovers"
+any of them is going backwards.
 
 1. **"The Li 2019 bias is monotone in log Kow."** Not robust. **Namiki 2015 alone
    supplies 10 of the 29 rows, all in the top two Kow bins**, as two compounds × five
@@ -155,6 +167,20 @@ backwards.
    factor peaking at 0.55 near log Kow 1.78 — right where Kodešová sits. On the
    appropriate basis it is **0.237**, and **Liu 2023 at 0.206** is the best.
 
+4. **"The pKa-1.62 rows are a decisive counterexample to the speciation port."**
+   Written, then killed by checking the table's own logD column — see §4l. Those
+   eight barley rows have TSCF 0.63–0.98 and read as a strong acid are fully
+   dissociated, which looks devastating; but their logD sits *above* their logP, so
+   the table says they are un-ionised and the shipped flag already classes them
+   neutral. Deriving `f_n` from the pKa column instead of the logD column
+   manufactures the artefact. Pinned by a test named after it.
+5. **"Turning speciation on makes the fit worse."** Overstated as first written.
+   It is true on the full table (RMSE 0.272 → 0.304) but survives only ~82 % of
+   bootstrap resamples, and the guard test's own 12-row subsample flipped it —
+   which is how it was caught. The **rank** gain (94 %) is the robust half and the
+   load-bearing claim; the RMSE loss is a tendency. The guard asserts the ordering
+   and the under-delivery and deliberately **not** the RMSE.
+
 Also worth carrying: **`a = 1.22` has no citation anywhere in the repo.** Only the
 product `L·a` is identifiable, so "raise `L` to 0.0247" and "raise `a` to 3.02" are
 the same model — which means "don't fit the measured `L`" is *not* an argument
@@ -164,10 +190,10 @@ against the anchor.
 
 ## 3. Next tasks
 
-Ranked. **Items 1, 2 and 4 are DONE** — see §1. What remains (3, 5) is **blocked on
+Ranked. **Items 1, 2, 4 and 7 are DONE** — see §1. What remains (3, 5) is **blocked on
 data that is not in the repo** — see §4 for what to ask for. Startable without new
-data: item 6 (low value), and the pieces left on the closed #54/#55 branches (§1),
-which are the better use of a session.
+data: **item 8** (the best of them — §4l left a concrete, in-repo mechanism question),
+then item 6 (low value) and the pieces left on the closed #54/#55 branches (§1).
 
 1. ~~Put the anchor decision to rest~~ **DONE.** Default stays `lipid_source="measured"`;
    the alternative is a named mode, and the 3-vs-1 evidence is a command rather than a
@@ -205,6 +231,27 @@ which are the better use of a session.
    root morphology; the air term takes no root contribution).
 6. `NStemLeafModel` has no air hook; particle deposition (`eq:Qdep`) is deliberately
    unimplemented. Both low value.
+7. ~~Get the whole suite into CI~~ **DONE.** `.github/workflows/tests.yml` runs
+   `pytest -q -rs`; `rigor.yml` stays separate so its distinct signal is not buried.
+   Delete the "a green check means nothing here" reflex from any doc still carrying it.
+8. **An APOPLASTIC bypass for the ion — the one open mechanism §4l names, and the
+   best startable item.** §4l showed the weak-electrolyte path orders compounds well
+   and under-delivers by orders of magnitude, because the model's only route in is
+   transmembrane while real ions reach the xylem *around* the cells. That is a
+   one-parameter structural question, not a data request: an apoplastic conductance
+   `g_apo` in parallel with `root_uptake`, unaffected by `f_d` and by the GHK factor,
+   would raise the floor without touching the ordering the data support. Two things
+   make it worth a session rather than a guess. **It is already scoreable** — the 67
+   rows and the harness exist, so a fitted `g_apo` can be reported honestly as
+   in-sample and its ordering checked out-of-sample against the 30 neutral rows it
+   must not disturb. **And it is the same gap the PFAS side patched differently**: a
+   fitted *carrier* (CLAUDE.md §2). Whether one `g_apo` can serve both paths, or
+   whether the carrier is doing something the bypass cannot, is the question. Pre-register
+   the failure mode before fitting: a `g_apo` big enough to fix the magnitude will
+   flatten the speciation dependence, and if the fitted value drives the rank
+   correlation back down toward the speciation-OFF +0.284 then the bypass is
+   absorbing the effect rather than explaining it — record that outcome, do not
+   tune past it.
 
 ---
 
@@ -264,7 +311,19 @@ entirely untested compartment; every candidate this round had residues below LOD
 
 ## 5. Housekeeping
 
-- **CI only runs `tests/test_sci_adk_rigor.py`.** A green check means nothing here.
+- **CI now runs the WHOLE suite** (`.github/workflows/tests.yml`, `pytest -q -rs`), so
+  a green check finally means something. `rigor.yml` is kept separate and still runs
+  only `test_sci_adk_rigor.py`, on purpose: its signal is "an empirical claim was
+  over-stated", which would be lost inside a ~22-minute run. RDKit and phydrus come
+  from `requirements.txt` and are **not** best-effort — that file is what Streamlit
+  Cloud installs, so a resolution failure there deserves the red check. Only emcee,
+  the gfortran HYDRUS build and sci-adk are best-effort; `-rs` prints skip reasons so
+  a shrinking suite cannot pass quietly.
+- **"No measured dataset exists for X" is a claim to check, not to state.** It was
+  written about the weak-electrolyte path and was wrong — the data were 67 held-out
+  rows of a table already in `data_obs/`, excluded by an earlier script for the very
+  property the new capability added (§4l). Before writing it again: grep `data_obs/`
+  for what previous scores filtered out, and read *why*.
 - **`subset` and `mode` are load-bearing conventions.** `compare_to_obs` scores
   `subset="apriori"` and `mode="ode"` by default; files without a `subset` column are
   untouched, which is what keeps Liu 0.281 / Ge 0.783 bit-identical. Both are pinned
@@ -308,36 +367,42 @@ python -c "import sys; sys.path.insert(0,'src'); import model_api as a; \
   print([round(a.simulate_neutral(2.45, pKa=p, season=60, n_t=61)['baf_final']['root'], 4) \
          for p in (None, 12.0, 4.5, -3.0)])"      # 1.5119, 1.5119, 0.0791, 0.0001
 
+# ...and what the DATA then said about it (~2 min; --fast skips the ODE solves)
+python validation/weak_electrolyte_tscf.py        # direction +0.480, magnitude refuted
+
 # the baselines that must not move
 python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.csv  # 0.281
 python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_ge2017.csv   # 0.783
 python reproduce_demo.py                                                            # 0.029
 
-pytest -q                                          # 300 collected, 298 pass, 2 skip
+pytest -q                                          # 312 collected, 311 pass, 2 skip
 ```
 
 **Resume prompt.**
 
-> The neutral-organic arc is merged and its papers are mined out. **Every open item
-> the last handoff listed is now closed** (§3 items 1, 2 and 4): the root lipid stays
-> at `L = 0.01` as the default of a named `lipid_source` mode, the docs quote both
-> scoring bases with every number labelled, and Briggs 1983's Table 1 gave the repo
-> its first measured stem test. The **parallel neutral implementation in PRs #54/#55
-> was also reconciled** — its weak-electrolyte capability ported, the PRs closed as
-> superseded, and what was deliberately left on their branches recorded in §1.
+> The neutral-organic arc is merged, its papers are mined out, and **the
+> weak-electrolyte path that shipped "unvalidated" has now been tested** (§4l):
+> direction SUPPORTED (Spearman +0.480; speciation lifts the model's rank +0.284 →
+> +0.520), magnitude REFUTED (it under-delivers, bias +0.023 → −0.203). CI runs the
+> whole suite now, so a green check means something.
 >
-> Read `docs/neutral_dpu_validation.md` §5, then §2 of this handoff, before touching
-> anything — §2 lists three claims this arc made and then retracted, and re-deriving
-> any of them is going backwards. Note the failure mode that produced two of them, and
-> that it recurred in this very document a session later: **the body of a doc gets
-> corrected and its summary does not.** So whenever you change a result, re-read the
-> validation doc's §6 (Honest summary) against its §4, and this handoff's §0 against
-> its §1 — the summaries are what get read alone.
+> Read `docs/neutral_dpu_validation.md` §5 and §4l, then §2 of this handoff, before
+> touching anything — §2 lists **five** claims this arc made and then retracted, and
+> re-deriving any of them is going backwards. Two failure modes produced them and both
+> recurred a session after being named, so treat them as standing procedure, not
+> history. **(i) The body of a doc gets corrected and its summary does not**: whenever
+> you change a result, re-read the validation doc's §6 against its §4, and this
+> handoff's §0 against its §1 — summaries are what get read alone. **(ii) A number
+> that survives the full table need not survive a subsample**: before writing "X is
+> better than Y", bootstrap it, and pin only the half that holds (§2 items 4–5 are
+> both of this kind).
 >
-> Remaining work, honestly ranked: §3 item 3 (the Li 2019 hydroponic anomaly) and item
-> 5 (rice tissue specific surface areas). **Both are blocked on data that is not in
-> the repo**, so do not start one expecting to finish it; §4 says exactly what to ask
-> for, including the fact that the item-3 request is narrower than it looks (more RICE
-> above log Kow 3.5 from an independent lab, not more species). If you want startable
-> work instead, the pieces left on the closed #54/#55 branches (§1) are the best
-> candidates. The PFAS side is a separate arc — `docs/HANDOFF_BAF_twopool.md`.
+> Startable work, honestly ranked. **§3 item 8 is the best: an apoplastic bypass
+> `g_apo` for the ion** — the one mechanism §4l names, one parameter, already
+> scoreable against the 67 rows in `data_obs/`, and the same gap the PFAS side patched
+> with a fitted carrier. Read the pre-registered failure mode in item 8 before fitting
+> anything. After that: the pieces left on the closed #54/#55 branches (§1). §3 items
+> 3 and 5 are **blocked on data that is not in the repo** — do not start one expecting
+> to finish it; §4 says what to ask for, including that the item-3 request is narrower
+> than it looks (more RICE above log Kow 3.5 from an independent lab, not more
+> species). The PFAS side is a separate arc — `docs/HANDOFF_BAF_twopool.md`.

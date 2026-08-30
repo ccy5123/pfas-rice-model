@@ -1,0 +1,161 @@
+"""Guards for the first EMPIRICAL test of the weak-electrolyte path.
+
+`tests/test_weak_electrolyte.py` pins the port STRUCTURALLY (bit-identity,
+continuity, acid/base asymmetry). This file pins what the DATA said, in
+`validation/weak_electrolyte_tscf.py`: direction supported, magnitude refuted.
+
+The trap guard is the important one. Reading the table's pKa column instead of
+its logD column manufactures a spectacular false counterexample out of the eight
+pKa-1.62 barley rows, which are NOT ionised at the test pH. A later session that
+"discovers" it is going backwards, so it is pinned here rather than only warned
+about in a comment.
+"""
+import os
+import sys
+
+import numpy as np
+import pytest
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "src"))
+sys.path.insert(0, os.path.join(ROOT, "validation"))
+
+import weak_electrolyte_tscf as WE                             # noqa: E402
+
+
+@pytest.fixture(scope="module")
+def rows():
+    return WE.load()
+
+
+# ---------------------------------------------------------------------------
+# the data and how f_n is obtained
+# ---------------------------------------------------------------------------
+def test_the_table_splits_into_the_held_out_ionisable_rows(rows):
+    """30 un-ionised rows are what every prior score used; 67 were held out."""
+    assert len(rows) == 97
+    assert sum(r["neutral"] for r in rows) == 30
+    assert sum(not r["neutral"] for r in rows) == 67
+
+
+def test_fn_comes_from_logD_and_never_exceeds_one(rows):
+    """f_n = 10**(logD - logP), clipped. The clip absorbs the 20 rows where the
+    two source columns disagree in the impossible direction (logD > logP)."""
+    for r in rows:
+        assert 0.0 < r["fn"] <= 1.0
+        raw = 10.0 ** (r["logD"] - r["logP"])
+        assert r["fn"] == pytest.approx(min(1.0, raw), rel=1e-12)
+
+
+def test_the_pKa_162_rows_are_NOT_ionisable_the_false_counterexample(rows):
+    """THE TRAP. pKa 1.62 read as an acid is fully dissociated at any test pH,
+    and those eight barley rows have TSCF 0.63-0.98 -- which looks like a
+    devastating refutation and is not one. Their own logD sits ABOVE their logP,
+    so the table says they are un-ionised (a basic centre), and the shipped
+    `neutral_at_test_pH` flag already classes them neutral."""
+    fam = [r for r in rows if r["pKa"] == 1.62]
+    assert len(fam) == 8
+    assert all(r["neutral"] for r in fam), "pKa 1.62 rows must stay OUT of the test set"
+    assert all(r["fn"] == 1.0 for r in fam)
+    assert max(r["TSCF"] for r in fam) > 0.9        # the tempting-looking part
+
+
+def test_the_pKa_column_and_the_logD_column_disagree(rows):
+    """Why f_n is not taken from the pKa: Henderson-Hasselbalch on the pKa column
+    does not reproduce the table's own logD, so the two columns cannot both be
+    describing the same ionisation. Pinned so the derivation is not 'simplified'
+    back onto the pKa."""
+    import literature_params as LP
+    resid = []
+    for r in rows:
+        if r["pKa"] == WE.MISSING:
+            continue
+        fn = LP.speciation(r["pKa"], r["pH"], True)[0]
+        resid.append(abs(r["logD"] - (r["logP"] + np.log10(max(fn, 1e-12)))))
+    assert np.median(resid) > 1.0        # recorded as 1.41 on the acid reading
+
+
+# ---------------------------------------------------------------------------
+# what the port predicts
+# ---------------------------------------------------------------------------
+def test_influx_ratio_is_exactly_one_in_the_neutral_limit():
+    """The continuity property the whole port rests on: an un-ionised compound
+    must feel no speciation penalty at all."""
+    assert WE.influx_ratio(1.0, True) == pytest.approx(1.0, rel=1e-12)
+    assert WE.influx_ratio(1.0, False) == pytest.approx(1.0, rel=1e-12)
+
+
+def test_influx_ratio_spans_orders_of_magnitude_over_this_table(rows):
+    """The magnitude claim being tested: Phi moves ~4 orders of magnitude across
+    the f_n range these 67 rows cover."""
+    fn = [r["fn"] for r in rows if not r["neutral"]]
+    span = WE.influx_ratio(1.0) / WE.influx_ratio(min(fn))
+    assert span > 1e3
+
+
+def test_a_cation_is_less_penalised_than_an_anion():
+    """The port's asymmetry, at the level this script uses it: the inside-negative
+    membrane excludes the anion and attracts the cation."""
+    assert WE.influx_ratio(1e-4, False) > WE.influx_ratio(1e-4, True)
+
+
+def test_pKa_for_inverts_the_speciation(rows):
+    import literature_params as LP
+    for fn in (0.9, 0.1, 1e-3, 1e-5):
+        for is_acid in (True, False):
+            pKa = WE.pKa_for(fn, 6.5, is_acid)
+            assert LP.speciation(pKa, 6.5, is_acid)[0] == pytest.approx(fn, rel=1e-9)
+
+
+# ---------------------------------------------------------------------------
+# what the data said
+# ---------------------------------------------------------------------------
+def test_direction_is_supported_measured_transfer_falls_as_it_ionises(rows):
+    """The positive half of the verdict, and the port's first empirical support:
+    measured TSCF really does rise with the neutral fraction."""
+    ion = [r for r in rows if not r["neutral"]]
+    rho = WE.spearman([r["fn"] for r in ion], [r["TSCF"] for r in ion])
+    assert rho > 0.4, f"direction result lost (rho={rho:.3f})"
+
+
+def test_magnitude_is_refuted_strongly_ionised_rows_still_transfer(rows):
+    """The negative half: where the model predicts effectively nothing, the data
+    show a mean TSCF around 0.13."""
+    deep = [r for r in rows if not r["neutral"] and r["fn"] < 1e-3]
+    assert len(deep) >= 10
+    assert np.mean([r["TSCF"] for r in deep]) > 0.05
+    # the model's own influx ratio there is ~1e-3 or below
+    assert max(WE.influx_ratio(r["fn"]) for r in deep) < 1e-2
+
+
+@pytest.mark.parametrize("is_acid", [True, False])
+def test_speciation_on_orders_better_and_under_delivers(rows, is_acid):
+    """The load-bearing half of the two-metric result, pinned on a deterministic
+    subsample so the guard stays fast.
+
+    ONLY the robust claims are asserted. The RMSE degradation is deliberately NOT
+    asserted here: it holds on the full table (0.272 -> 0.304) but survives only
+    ~82% of bootstrap resamples, and this very subsample flips it. Writing it as
+    a test would pin an artefact -- see `bootstrap_wins` and section 4 of the
+    validation script, which is where that comparison belongs."""
+    ion = [r for r in rows if not r["neutral"]]
+    sub = ion[::6]                          # 12 rows, stable under row order
+    obs = np.array([r["TSCF"] for r in sub])
+    off = np.array([WE.model_tscf(r["logP"], 1.0, r["pH"]) for r in sub])
+    on = np.array([WE.model_tscf(r["logP"], r["fn"], r["pH"], is_acid) for r in sub])
+
+    assert WE.spearman(on, obs) > WE.spearman(off, obs)          # better ordering
+    assert np.mean(on - obs) < -0.1                              # and under-delivers
+
+
+def test_the_rank_gain_is_robust_and_the_rmse_loss_is_not():
+    """Pins the asymmetry itself, on synthetic arrays so it costs no ODE solves:
+    `bootstrap_wins` must be able to report the two frequencies separately. The
+    measured values (rank 0.94, RMSE 0.18) are recorded in the docs; what is
+    pinned here is that the comparison is made at all and is direction-aware."""
+    obs = np.linspace(0.05, 0.9, 40)
+    off = np.random.default_rng(7).permutation(obs)  # right scale, ordering lost
+    on = 0.01 * obs                                  # right ordering, wrong scale
+    b = WE.bootstrap_wins(off, on, obs, n=200, seed=1)
+    assert b["rank"] > 0.9                           # ON orders better
+    assert b["rmse"] < 0.1                           # ON scales worse
