@@ -18,7 +18,7 @@
 > bypass**, §5 the synthesis. **Read §5 first.**
 > `parameters.json`, `simulate()` and `reproduce_demo` (RMSE 0.029) are **UNCHANGED**
 > throughout — everything on this arc is additive or opt-in, and no PFAS number moved.
-> Full suite: **316 collected, 315 pass, 2 skip** (~25 min); the two skips are the
+> Full suite: **323 collected, 322 pass, 2 skip** (~25 min); the two skips are the
 > optional `emcee` and `sci-adk` deps. **CI now runs it** — see §5.
 
 ---
@@ -414,7 +414,7 @@ python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.c
 python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_ge2017.csv   # 0.783
 python reproduce_demo.py                                                            # 0.029
 
-pytest -q                                          # 316 collected, 315 pass, 2 skip
+pytest -q                                          # 323 collected, 322 pass, 2 skip
 ```
 
 **Resume prompt.**

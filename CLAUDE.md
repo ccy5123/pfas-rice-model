@@ -73,7 +73,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (316 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (323 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1056,6 +1056,33 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   serve both paths is the open question this leaves), model still under-delivers at its best point
   (bias −0.184), and one 67-row non-rice table cannot pin a structural conductance. `parameters.json`,
   `simulate()` and `reproduce_demo` (0.029) UNCHANGED.
+- **Is the CARRIER necessary? — the repo's one addition to Trapp, tested (this session)**:
+  `validation/carrier_vs_bypass.py` + `tests/test_carrier_vs_bypass.py` + `docs/HANDOFF_carrier_vs_bypass.md`.
+  `docs/theory_anchor.tex` states the 4-compartment DPU (Rein 2011, Brunetti 2019) is **at the membrane level
+  the Trapp (2000, 2004) ionizable-compound cell model**, and marks only `f_xy`, `η` and the **Michaelis–Menten
+  carrier** as `— (new)`; `f_xy` is a lumped stand-in for Trapp's own detailed root model and `B_k` is his
+  `K_RW` re-parameterised, so **the carrier is the single piece of physics this repo adds** — and it was FITTED
+  ("fixed during W2 fit"), never compared with an alternative. Three arms, **one global parameter each**
+  (checked, not assumed: `Vmax_in` is a single global 20.0, NOT per-congener), on Yamazaki with the a-priori
+  monotone `f_xy` fixed so only the uptake term differs: **nothing 2.640 · A carrier 1.035 · B bypass
+  (`g_apo`=20) 0.996 · C depolarisation (`E_m`=−90 mV, NO new term) 2.289** (log10 RMSE).
+  **(1) An addition IS necessary — arm C REFUTED**: pushing `E_m` to the far end of its own recorded plausible
+  range (`e^N` 107→33) barely moves 2.640→2.289, so the lever already inside Trapp's framework cannot carry
+  PFAS and the repo's extension is justified in EXISTENCE. **(2) WHICH addition is UNDECIDED**: A vs B is 0.04
+  log over 33 obs, bootstrap **P=0.749** — not a difference. **(3) The bypass's own distinguishing claim FAILS
+  (pre-registered item 1 REFUTED)**: per-congener `g_apo` trends with chain length (**corr +0.832, spread 25×**)
+  where `theory_anchor.tex` says η (which contains the apoplastic bypass ε) is "essentially independent of tail
+  length" — the **first data contradiction of that claim**. **(4) THE CONVERGENCE IS THE FINDING**: LC6's
+  per-congener Vmax multiplier (~flat to C10, 2.0× C11, 5.5× C12) and this `g_apo` (2–5 for C4–C8, 20–50 for
+  C9–C12) demand the SAME chain-length correction — a requirement common to two different entry terms is not a
+  property of entry, it belongs to `B_k`/`φ_free` (sequestration), where the two-pool work put it; pre-registered
+  item 3 CONFIRMED from the other side (A and B miss long chain about equally, 1.640 vs 1.439, so no winner read
+  there). **NOTHING ADOPTED** — the carrier keeps its place **by default, not by evidence**; `g_apo`=0 for PFAS;
+  `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029) UNCHANGED. `simulate` gained
+  `vmax_scale`/`g_apo` in the existing override idiom (defaults bit-identical). Absolute levels are
+  a-priori-limited (monotone `f_xy`) and NOT comparable to the fitted 0.029 or the documented a-priori ~0.84.
+  **Next (agreed): A1** = expose the bypass as a named mode, default carrier; **then B1** = separate the two on
+  Tang's 5-dose series (a carrier saturates, a bypass is linear; data already in `raw_si/`) — see the handoff.
 - **CI now runs the WHOLE suite (this session)**: `.github/workflows/tests.yml`. Until now `rigor.yml` was the only
   workflow and it runs a SINGLE module (`test_sci_adk_rigor.py`), which is why every handoff carried "⚠️ CI does not test
   any of this — a green check means nothing here" and why the suite count in this file was maintained by hand from
@@ -1184,7 +1211,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**316 collected; 315 pass, 2 skip** — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**323 collected; 322 pass, 2 skip** — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~22 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
