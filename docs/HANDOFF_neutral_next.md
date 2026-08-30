@@ -96,6 +96,9 @@ python validation/neutral_dpu_validation.py --lipid-source both   # add --mode e
 | `f5e5593` | `lipid_source` as a named mode + the §5/§6 consistency fix |
 | `d784b07` | Briggs 1983 **Table 1** mined: `neutral_obs_briggs1983_shoot.csv`, `briggs1983_shoot.py`, §4k |
 | `21c3942` | **the weak-electrolyte port** — PRs #54/#55 reconciled |
+| `3f27e4c` | this handoff's own §0 caught up with its §1 (the lag named in §2 (i)) |
+| `5b59320` | **CI runs the whole suite** — `.github/workflows/tests.yml`, §3 item 7 |
+| `dfe8106` | **the weak-electrolyte path TESTED** — `weak_electrolyte_tscf.py`, §4l |
 
 Earlier on the same arc: `d8e7f9a` air exchange, `97dbe75` Hwang, `50b5586`
 `model_api.simulate_neutral`, `c6e9d8a` the Expert neutral tab, `494acc4` the queue.

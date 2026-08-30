@@ -320,7 +320,13 @@ def main(fast=False):
     print("   from UNVALIDATED to BOUNDED: usable for the direction of a speciation")
     print("   effect, not for its size, and not at all below f_n ~ 0.1.")
     print("   LIMITS. 16 species, none rice; no compound names; acid/base inferred and")
-    print("   reported both ways; TSCF, not the per-organ endpoint the model targets.")
+    print("   reported both ways; TSCF, not the per-organ endpoint the model targets;")
+    print("   and these hydroponic measurements are scored through a 120-day rice")
+    print("   season, the driver mismatch section 4g and section 4c both warn about.")
+    print("   That last one does NOT undermine the verdict: every line in section 3")
+    print("   uses the SAME drivers, so the mismatch is common to speciation ON and")
+    print("   OFF and cancels in the comparison between them, which is the claim.")
+    print("   It does bound the ABSOLUTE RMSEs -- do not quote those on their own.")
     return dict(rows=ion, rho=rho, obs=obs, fn=fn,
                 off=s_off, acid=s_acid, base=s_base)
 

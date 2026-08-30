@@ -911,8 +911,13 @@ speciation effect, not its size, and not at all below `f_n ≈ 0.1`.
 
 **Limits.** 16 species, none rice; no compound names in Table A 3, so no row can
 be cross-checked or excluded on chemical grounds; acid/base inferred and
-therefore reported both ways; and TSCF is not the per-organ endpoint the model
-targets.
+therefore reported both ways; TSCF is not the per-organ endpoint the model
+targets; and these hydroponic measurements are scored through a 120-day rice
+season — the driver mismatch §4g and §4c both warn about. **That last one does
+not undermine the verdict**: every row of the table above uses the *same*
+drivers, so the mismatch is common to speciation ON and OFF and cancels in the
+comparison between them, which is the claim. It does bound the **absolute**
+RMSEs, so do not quote those on their own.
 
 ### 4g. A scoring artifact that affects every root number above
 
