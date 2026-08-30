@@ -5,6 +5,7 @@ from pfas_rice_plant_module_4pool_surf import (
     PlantInputs, Environment, Compound, Compartment, RiceUptakeModel,
     binding_factors, root_uptake, _ghk_factor, _logistic,
     ROOT, STEM, LEAF, FRUIT,
+    P_N_OVER_P_D, LEAF_CYTOSOL_PH, PHLOEM_PH,
 )
 
 # Pure re-export alias: declare the surface so `from pfas_rice_plant_module import *`
@@ -13,4 +14,5 @@ __all__ = [
     "PlantInputs", "Environment", "Compound", "Compartment", "RiceUptakeModel",
     "binding_factors", "root_uptake", "_ghk_factor", "_logistic",
     "ROOT", "STEM", "LEAF", "FRUIT",
+    "P_N_OVER_P_D", "LEAF_CYTOSOL_PH", "PHLOEM_PH",
 ]

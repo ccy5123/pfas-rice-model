@@ -52,6 +52,47 @@ R_GAS = 8.314462618       # J / (mol K)
 
 ROOT, STEM, LEAF, FRUIT = 0, 1, 2, 3   # compartment indices
 
+# ----------------------------------------------------------------------------
+# Weak-electrolyte speciation (ported from PR #54)
+# ----------------------------------------------------------------------------
+# This block is what lets ONE code path cover the whole speciation spectrum:
+#
+#     neutral (fn=1, fd=0)  <->  weak acid/base (0<fn,fd<1)  <->  PFAS (fn=0, fd=1)
+#
+# WHY IT IS NOT `z = 0`. `src/neutral_dpu.py` reaches a NEUTRAL compound by setting
+# z=0, which makes N=0, the GHK factor 1 and the membrane term degenerate exactly to
+# passive Fickian transport. That is correct for a strictly neutral molecule and is
+# how every published neutral number in this repo was produced. It cannot express a
+# WEAK ACID, which is a neutral molecule AND an anion at the same time: one global
+# valence has to be either 0 or -1, and the compound is genuinely both. The switch
+# therefore has to be the (fn, fd) PAIR, with the potential-dependent GHK factor on
+# the ion term only -- see `root_uptake`.
+#
+# Every field and constant here defaults to the PFAS limit, where its term vanishes
+# identically (not approximately), so the anion path is bit-identical to before.
+LEAF_CYTOSOL_PH = 7.2     # leaf cytosol -- the phloem loading SOURCE
+PHLOEM_PH = 8.0           # sieve-tube sap: ALKALINE, so it traps a weak acid
+# Neutral/ionic membrane permeability ratio P_n/P_d (Trapp 2000). Also re-exported by
+# literature_params.PN_OVER_PD; it lives here because the ODE itself needs it.
+P_N_OVER_P_D = 10.0 ** 3.5
+
+
+def _speciation(pKa: float, pH: float, is_acid: bool = True):
+    """(f_n, f_d) by Henderson-Hasselbalch. Mirrors `literature_params.speciation`;
+    duplicated here to keep this module free of project imports (that module imports
+    `Compound` from this one)."""
+    ex = 1.0 if is_acid else -1.0
+    fd = 1.0 / (1.0 + 10.0 ** (ex * (pKa - pH)))
+    return 1.0 - fd, fd
+
+
+def _ion_trap(pKa: float, pH_source: float, pH_sink: float, is_acid: bool = True) -> float:
+    """Equilibrium ion-trap enrichment between two compartments (see
+    `literature_params.ion_trap_factor` for the derivation and caveats)."""
+    ex = 1.0 if is_acid else -1.0
+    return ((1.0 + 10.0 ** (ex * (pH_sink - pKa)))
+            / (1.0 + 10.0 ** (ex * (pH_source - pKa))))
+
 
 # ----------------------------------------------------------------------------
 # Parameter containers (organised by the Tier scheme of the report)
@@ -67,6 +108,15 @@ class Environment:
     def N(self) -> float:
         """Dimensionless electrochemical driving force  N = zEF/(RT)."""
         return self.z * self.E * F_FARADAY / (R_GAS * self.T)
+
+    def N_for(self, cmpd=None) -> float:
+        """N for a SPECIFIC compound: valence is a property of the chemical, not of
+        the environment (a weak base is a cation, z=+1, and would feel the
+        inside-negative membrane as an ATTRACTION where an anion feels exclusion).
+        `Compound.z` wins when supplied; otherwise this falls back to
+        `Environment.z` and reproduces `N` exactly, so the PFAS path is unchanged."""
+        z = self.z if (cmpd is None or getattr(cmpd, "z", None) is None) else cmpd.z
+        return z * self.E * F_FARADAY / (R_GAS * self.T)
 
 
 @dataclass
@@ -118,6 +168,16 @@ class Compound:
     # speciation (PFAS: fully dissociated)
     fd: float = 1.0
     fn: float = 0.0
+    # --- weak-electrolyte extension (ported from PR #54) -----------------------
+    # All four default to the PFAS limit, where their terms vanish identically.
+    # `fn`/`fd` above remain the switch; these add what a weak acid needs on top.
+    pKa: float | None = None    # acid dissociation constant. None -> use fn/fd as given,
+                                # and the phloem ion trap stays off BY CONSTRUCTION.
+    is_acid: bool = True        # False for a weak base (its conjugate acid is a CATION)
+    z: int | None = None        # ion valence; None -> Environment.z (acids -1, bases +1)
+    P_n: float = 0.0            # a_R*P_n, NEUTRAL passive conductance [L/(day kg)].
+                                # Trapp: the ion is ~10^3.5 less permeable (P_N_OVER_P_D),
+                                # so P_d ~ P_n * 10^-3.5. 0 keeps the term off.
 
 
 @dataclass
@@ -130,6 +190,9 @@ class Compartment:
     f_cw: float             # cell-wall mass fraction [kg/kg]
     S: float = 0.0          # specific surface area [m^2/kg] (only leaf/fruit ratio used)
     gamma: float = 0.0      # first-order metabolism [1/day] (PFAS ~ 0)
+    pH: float | None = None  # compartment pH, for the weak-electrolyte phloem ion trap
+                             # (LEAF_CYTOSOL_PH is the usual leaf value). None -> no
+                             # speciation calculation at all, which is the PFAS path.
 
 
 @dataclass
@@ -210,19 +273,32 @@ def _ghk_factor(N: float) -> float:
 def root_uptake(Cwo: float, Cw_root: float, cmpd: Compound, env: Environment) -> float:
     """Mass-specific root membrane uptake j_R [ug/(day kg)]  (Eq. JR_pfas).
 
-    Hybrid: ionic electrodiffusion (GHK) + saturable carrier (Michaelis-Menten).
-    For PFAS the neutral term is dropped (fn ~ 0).
+    THREE PARALLEL pathways, each weighted by the species fraction that carries it:
+
+        j_R = P_n*f_n*(Cwo - Cw)              neutral passive (potential-INdependent)
+            + kappa_d*g*f_d*(Cwo - e^N*Cw)    ionic electrodiffusion (GHK)
+            + carrier (Michaelis-Menten)
+
+    The GHK factor multiplies the ION term ONLY, and that is precisely what lets one
+    code path span the whole speciation spectrum:
+      * neutral     f_d=0 kills the GHK term, so the membrane potential is irrelevant
+      * weak acid   both terms are alive simultaneously -- the case a single global
+                    valence cannot represent (see the speciation block above)
+      * PFAS        f_n=0 kills the neutral term -> identical to the previous code
+
+    `P_n` defaults to 0 and `0.0 + x == x` exactly, so the PFAS result is bit-identical.
     """
-    N = env.N
+    N = env.N_for(cmpd)
     eN = np.exp(N)
     g = _ghk_factor(N)
+    # neutral passive permeation (Fickian; carries no membrane-potential term)
+    j_n = cmpd.P_n * (cmpd.fn * Cwo - cmpd.fn * Cw_root)
     # ionic electrodiffusion (membrane + anion channel + aquaporin, lumped in kappa_d)
     j_ed = cmpd.kappa_d * g * (cmpd.fd * Cwo - cmpd.fd * eN * Cw_root)
     # carrier-mediated (active/facilitated), net influx - efflux
     j_carr = (cmpd.Vmax_in * Cwo / (cmpd.Km_in + Cwo)
               - cmpd.Vmax_out * Cw_root / (cmpd.Km_out + Cw_root))
-    # optional neutral passive term (negligible for PFAS): cmpd.fn * ...
-    return j_ed + j_carr
+    return j_n + j_ed + j_carr
 
 
 @dataclass
@@ -240,6 +316,56 @@ class RiceUptakeModel:
     # PFAS have K_AW ~ 0 and no air pathway at all (CLAUDE.md section 2); this is
     # for the NEUTRAL path, where volatilisation is a load-bearing leaf sink.
     air: "object | None" = None
+    # sieve-tube sap pH for the weak-electrolyte phloem ion trap; inert unless the
+    # compound carries a pKa AND the leaf compartment carries a pH.
+    phloem_pH: float = PHLOEM_PH
+
+    def phloem_loading_factor(self) -> float:
+        """Effective leaf->phloem loading partition [-]  (`C_Phl = L * Cw_leaf`).
+
+        Two PARALLEL routes, mirroring `root_uptake`:
+
+          carrier/channel   L_Ph     -- the fitted PFAS route (assumption A5)
+          neutral + trap    Lambda   -- the neutral species crosses the sieve-tube
+                                        membrane and re-dissociates in the alkaline
+                                        sap, so the TOTAL phloem concentration is
+                                        Lambda x the leaf's free concentration
+
+        The trap route is weighted by whether the neutral species can actually
+        DELIVER it: w = Pi/(1+Pi) with Pi = (P_n/P_d)*f_n/f_d, the permeability-
+        weighted neutral fraction. This weighting is the whole point. Multiplying
+        `L_Ph` by Lambda instead would hand a PERMANENT anion a spurious ~6.3x phloem
+        enrichment, because Lambda tends to 10^(dpH), NOT to 1, as pKa falls: Lambda
+        is an equilibrium ratio derived assuming the neutral species carries
+        transport, so what vanishes for a strong acid is the FLUX that would
+        establish it, not the ratio. The trap switches off kinetically (f_n -> 0),
+        never thermodynamically.
+
+        REQUIRES an explicit `Compound.pKa` AND a leaf `Compartment.pH`. Neither is
+        set on the PFAS path, so that path returns `L_Ph` unchanged BY CONSTRUCTION
+        -- a guarantee from the branch, not a numerical coincidence.
+
+        The gate w is phenomenological: this model has no phloem TRANSIT
+        compartment, so w represents loading at the leaf, not retention during
+        transport. The classic extra phloem mobility of weak acids comes partly from
+        that retention and is therefore only partly captured here.
+
+        Recomputed per RHS call rather than cached: `calibration.py` fits by
+        `setattr`-ing `L_Ph` onto the compound of an already-built model, and a
+        cached value would silently ignore that. The PFAS branch is one attribute
+        test, so the cost is negligible.
+        """
+        c = self.cmpd
+        pH_leaf = self.comps[LEAF].pH
+        if c.pKa is None or pH_leaf is None:
+            return c.L_Ph
+        fn, fd = _speciation(c.pKa, pH_leaf, c.is_acid)
+        if fd <= 0.0:                       # strictly neutral: nothing to trap
+            return c.L_Ph
+        lam = _ion_trap(c.pKa, pH_leaf, self.phloem_pH, c.is_acid)
+        pi = P_N_OVER_P_D * fn / fd
+        w = pi / (1.0 + pi)
+        return (1.0 - w) * c.L_Ph + w * lam
 
     def rhs(self, t: float, C: np.ndarray) -> np.ndarray:
         """RHS of dC/dt for the 4 compartments (Eqs. root, stem, leaf, fruit)."""
@@ -262,7 +388,9 @@ class RiceUptakeModel:
         # phloem flow and sap concentration (carrier loading at leaf; NOT pH trap)
         Q_Phl = dM[FRUIT] * self.T_C_Ph + self.phi * Qtp     # [L/day]
         Q_Phl = max(Q_Phl, 0.0)
-        C_Phl = self.cmpd.L_Ph * Cw[LEAF] + self.cmpd.g_ph * C[LEAF]   # free + lipid-bound [ug/L]
+        # L_Ph_eff == cmpd.L_Ph unless a weak-electrolyte pH trap is configured
+        C_Phl = (self.phloem_loading_factor() * Cw[LEAF]
+                 + self.cmpd.g_ph * C[LEAF])          # free + lipid-bound [ug/L]
 
         g = [c.gamma for c in self.comps]
         dC = np.zeros(4)

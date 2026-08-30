@@ -61,7 +61,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from pfas_rice_plant_module import Compound, Environment
+from pfas_rice_plant_module import Compound, Environment, P_N_OVER_P_D
 
 # ---------------------------------------------------------------------------
 # references (mirrors docs/literature_db Source_Shortlist; status per database)
@@ -162,6 +162,77 @@ PADDY_PH = 6.5                                                    # paddy porewa
 def f_d(pKa: float, pH: float = PADDY_PH):
     """Fraction dissociated (anion)  f_d = 1 / (1 + 10**(pKa - pH)).  [C6, verified]"""
     return 1.0 / (1.0 + np.power(10.0, np.asarray(pKa, float) - np.asarray(pH, float)))
+
+
+# --- weak-electrolyte speciation (ported from PR #54) -----------------------
+# `f_d` above covers an ACID. These three generalise it to the whole spectrum and
+# to a weak BASE, and supply the quantity that decides whether the phloem ion trap
+# is live. The plant module holds its own private copies of the first two so that
+# it stays free of project imports (this module imports Compound from it); the
+# single source of P_n/P_d is `pfas_rice_plant_module.P_N_OVER_P_D`.
+PN_OVER_PD = P_N_OVER_P_D  # neutral / ion membrane permeability ratio (Trapp 2000)
+
+
+def speciation(pKa: float, pH: float = PADDY_PH, is_acid: bool = True):
+    """Henderson-Hasselbalch -> `(f_n, f_d)`: the neutral and the IONIC fraction.
+
+    Acid  HA <-> A(-) + H(+):  f_d = 1/(1 + 10**(pKa - pH))   (the anion)
+    Base  BH(+) <-> B + H(+):  f_d = 1/(1 + 10**(pH - pKa))   (the CATION)
+
+    This is the switch that selects the compound class in the plant module: a
+    neutral gives (1, 0), PFAS gives (0, 1), a weak electrolyte anything between.
+    For an acid `f_d` is exactly the existing `f_d` above.
+    """
+    fd = (f_d(pKa, pH) if is_acid else
+          1.0 / (1.0 + np.power(10.0, np.asarray(pH, float) - np.asarray(pKa, float))))
+    return 1.0 - fd, fd
+
+
+def ion_trap_factor(pKa: float, pH_source: float, pH_sink: float,
+                    is_acid: bool = True) -> float:
+    """Weak-electrolyte ION TRAP enrichment between two compartments [-].
+
+        Lambda = (1 + 10**(pH_sink - pKa)) / (1 + 10**(pH_source - pKa))    (acid)
+
+    The neutral species crosses the membrane freely and re-dissociates on the far
+    side; the more alkaline side holds more of a weak ACID as the membrane-
+    impermeable anion, so the acid accumulates there. With the phloem (pH ~8.0) as
+    sink and the leaf cytosol (pH ~7.2) as source, a pKa-4 acid gives Lambda ~ 6.3
+    -- the textbook explanation for phloem-mobile acidic herbicides.
+
+    DO NOT read its strong-acid limit as physics. This is an EQUILIBRIUM ratio,
+    derived ASSUMING the neutral species carries the transport: as pKa -> -inf both
+    sides are fully dissociated and Lambda -> 10**(pH_sink - pH_source) = 6.3, NOT
+    1. The trap does not switch off thermodynamically for a permanent anion -- it
+    switches off KINETICALLY, because the flux that would establish the ratio is
+    carried by the neutral fraction and f_n -> 0. The quantity that decides whether
+    the pathway matters at all is `neutral_pathway_ratio`, which collapses by ~7
+    orders of magnitude between a pKa-4 acid and PFAS. That is the quantitative
+    form of assumption A5: a permanent anion has no neutral species to ferry across
+    the membrane, so its phloem loading must be carrier/channel (`L_Ph`), not a pH
+    trap (docs/theory_anchor.tex, and the report's Eq. Cphl).
+    """
+    ex = 1.0 if is_acid else -1.0
+    num = 1.0 + 10.0 ** (ex * (pH_sink - pKa))
+    den = 1.0 + 10.0 ** (ex * (pH_source - pKa))
+    return float(num / den)
+
+
+def neutral_pathway_ratio(pKa: float, pH: float, is_acid: bool = True,
+                          P_n_over_P_d: float = PN_OVER_PD) -> float:
+    """Permeability-weighted neutral/ionic membrane flux ratio `P_n f_n / P_d f_d`.
+
+    Decides whether the neutral (ion-trap) pathway is relevant at all. The neutral
+    species is a tiny fraction of a weak acid at cytosolic pH, but it is ~10**3.5
+    times more membrane-permeable, so the two effects fight; this is their product.
+
+    At leaf-cytosol pH 7.2 it is ~2 for a pKa-4 herbicide (the neutral pathway
+    carries most of the flux) and ~1e-7 for a PFSA -- the trap is off for PFAS by
+    ~7 orders of magnitude, which is the kinetic statement `ion_trap_factor`
+    deliberately does not make.
+    """
+    fn, fd = speciation(pKa, pH, is_acid)
+    return float(P_n_over_P_d * fn / fd) if fd > 0 else float("inf")
 
 
 # ===========================================================================

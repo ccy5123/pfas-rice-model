@@ -257,20 +257,22 @@ def load_neutral_obs(path):
     return rows
 
 
-def equilibrium_rcf(log_kow, lipids=None, waters=None, tissue="root"):
+def equilibrium_rcf(log_kow, lipids=None, waters=None, tissue="root",
+                    lipid_source=ND.DEFAULT_LIPID_SOURCE):
     """The compartment's equilibrium partition K_PW -- no ODE, no drivers.
 
     This is what a SHORT-EXPOSURE root concentration factor actually measures.
     See `compare_to_obs(mode="equilibrium")` for why that distinction matters.
     """
     W = dict(ND.RICE_WATER, **(waters or {}))[tissue]
-    L = dict(ND.TRAPP1994_LIPID_FW, **(lipids or {}))[tissue]
+    L = dict(ND.LIPID_SOURCES[lipid_source], **(lipids or {}))[tissue]
     b = ND.LEAF_SORPTION_EXPONENT if tissue == "leaf" else ND.RCF_SLOPE
     return ND.k_pw(log_kow, W=W, L=L, b=b)
 
 
 def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=False,
-                   subset="apriori", group_by=None, mode="ode"):
+                   subset="apriori", group_by=None, mode="ode",
+                   lipid_source=ND.DEFAULT_LIPID_SOURCE):
     """Compare the model to a measured table. `half_life` (d) overrides the
     per-row half_life_d for a sensitivity scan; `tscf_model` selects the QSPR.
 
@@ -298,6 +300,14 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
                         back to ~0 above 5. Applying a rice season's drain to a
                         24-hour barley measurement is a model-side artifact.
                         Non-root rows fall back to "ode".
+
+    `lipid_source` selects the tissue-lipid reading -- "measured" (default, and
+    what every published number here is on) or "briggs_anchor". It is a named
+    mode because the choice is unsettled: it changes a lipophilic compound's root
+    partition by up to 2.5x, improves Li 2019 hydroponic and Ge 2017, and makes
+    Liu 2023, Kodesova 2019 and Li 2019's 376-row soil table worse. Run
+    `--lipid-source both` to see that trade-off on any table instead of taking
+    the docs' word for it.
     """
     if mode not in ("ode", "equilibrium"):
         raise ValueError(f"mode must be 'ode' or 'equilibrium', got {mode!r}")
@@ -331,7 +341,8 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
             (float(r["half_life_d"]) for r in rs
              if r.get("half_life_d") not in (None, "")), None)
         gam = float(np.log(2.0) / hl) if hl else 0.0
-        comps = ND.rice_compartments(gammas={k: gam for k in TISSUES})
+        comps = ND.rice_compartments(gammas={k: gam for k in TISSUES},
+                                     lipid_source=lipid_source)
         # in equilibrium mode a root-only compound needs no ODE solve at all
         if mode == "equilibrium" and all(r["tissue"] == "root" for r in rs):
             m = None
@@ -341,7 +352,7 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
         for r in rs:
             tis, ep, basis = r["tissue"], r["endpoint"], r["basis"]
             if mode == "equilibrium" and tis == "root" and ep in ("baf", "conc"):
-                pred = equilibrium_rcf(lk, tissue="root")
+                pred = equilibrium_rcf(lk, tissue="root", lipid_source=lipid_source)
             elif tis == "straw":
                 pred = m["straw_baf"] if ep != "tf" else m["straw_baf"] / m["baf_final"]["root"]
             elif ep == "tf":
@@ -436,6 +447,77 @@ def sensitivity(path, drv=None):
     return best
 
 
+# The shipped neutral tables, in the order the docs discuss them. Used by
+# `compare_lipid_sources` so the anchor trade-off is a command rather than a
+# claim -- the failure mode this guards against is a doc number going stale
+# while the code that produced it still says something else.
+SHIPPED_OBS = [
+    ("Liu 2023 (rice)",       "data_obs/neutral_obs_liu2023.csv"),
+    ("Ge 2017 (per-organ)",   "data_obs/neutral_obs_ge2017.csv"),
+    ("Li 2019 hydroponic",    "data_obs/neutral_obs_li2019_rcf.csv"),
+    ("Kodesova 2019",         "data_obs/neutral_obs_kodesova2019.csv"),
+    ("Li 2019 soil",          "data_obs/neutral_obs_li2019_soil.csv"),
+]
+
+
+def compare_lipid_sources(paths=None, drv=None, mode="ode", **kw):
+    """Score every table under BOTH lipid readings and print them side by side.
+
+    This is the anchor decision as a reproducible command. `L_root` is 1% fw
+    under "measured" and 2.47% under "briggs_anchor"; only the PRODUCT L*a is
+    identifiable, so the two differ by 2.48x in the lipophilic term and by
+    1.02x-2.46x in K_PW itself, rising with log Kow.
+
+    Read the sign, not just the winner: restoring the anchor raises predicted
+    root uptake, and the tables that get worse are the ones where the model
+    ALREADY runs high -- so the two directions are not symmetric and the tally is
+    not a majority vote.
+
+    NOTE the basis. `mode="ode"` (default) and `mode="equilibrium"` give
+    different numbers for the same table -- Li 2019 soil is 0.549 -> 0.670 on one
+    and 0.639 -> 0.873 on the other -- and the docs quote BOTH, in different
+    sections. An RMSE from here is meaningless without its mode.
+    """
+    drv = drv or drivers()
+    rows = []
+    print("\n" + "=" * 84)
+    print(f"LIPID SOURCE — both readings, mode={mode!r}")
+    print("=" * 84)
+    print(f"{'table':26}{'n':>5}{'measured':>12}{'briggs_anchor':>16}{'better':>10}")
+    for label, path in (paths or SHIPPED_OBS):
+        # SHIPPED_OBS is repo-relative; resolve it so this works from any cwd
+        # (silently skipping every table would look like "no tables shipped")
+        if not os.path.isabs(path) and not os.path.exists(path):
+            path = os.path.join(ROOT_DIR, path)
+        if not os.path.exists(path):
+            print(f"{label:26}   -- not found, skipped")
+            continue
+        got = {}
+        for src in ("measured", "briggs_anchor"):
+            got[src] = compare_to_obs(path, drv, quiet=True, mode=mode,
+                                      lipid_source=src, **kw)
+        if got["measured"] is None:
+            continue
+        # the SCORED row count, not the file's -- these tables ship held-out
+        # calibration rows (see `subset`), and reporting the file total here
+        # would overstate what the RMSE beside it is computed on
+        rs = load_neutral_obs(path)
+        n = sum(1 for r in rs if "subset" not in r or r.get("subset") == "apriori")
+        better = "anchor" if got["briggs_anchor"] < got["measured"] else "measured"
+        print(f"{label:26}{n:>5}{got['measured']:>12.3f}"
+              f"{got['briggs_anchor']:>16.3f}{better:>10}")
+        rows.append((label, got["measured"], got["briggs_anchor"]))
+    won = sum(1 for _, m, a in rows if a < m)
+    print(f"\n   anchor better on {won}/{len(rows)} tables.")
+    print("   The vote is not a majority count: the tables it improves are")
+    print("   hydroponic, and the largest table it degrades (Li 2019 soil, n=376)")
+    print("   is the SOIL half of the same paper as the one it most improves.")
+    print("   Default is 'measured' -- because the evidence no longer supports")
+    print("   moving, NOT because 1% fw is validated for rice. See")
+    print("   docs/neutral_dpu_validation.md section 5.")
+    return rows
+
+
 def main(obs_path=None):
     drv = drivers()
     print("NEUTRAL-ORGANIC DPU PATH — validation")
@@ -467,8 +549,25 @@ def main(obs_path=None):
     return ok1 and ok2 and ok4
 
 
+def _arg(flag, default=None):
+    return sys.argv[sys.argv.index(flag) + 1] if flag in sys.argv else default
+
+
 if __name__ == "__main__":
-    p = None
-    if "--obs" in sys.argv:
-        p = sys.argv[sys.argv.index("--obs") + 1]
-    main(p)
+    p = _arg("--obs")
+    src = _arg("--lipid-source", ND.DEFAULT_LIPID_SOURCE)
+    mode = _arg("--mode", "ode")
+    if src not in ("both", *ND.LIPID_SOURCES):
+        sys.exit(f"--lipid-source must be 'both' or one of {sorted(ND.LIPID_SOURCES)}")
+    if src == "both":
+        # the anchor trade-off, on the given table or on all of them
+        compare_lipid_sources([("(--obs)", p)] if p else None, mode=mode)
+    elif src != ND.DEFAULT_LIPID_SOURCE or mode != "ode":
+        # anything non-default is a single scored run -- `main` fixes both knobs,
+        # so routing here is what keeps `--mode` from being silently ignored
+        if p is None:
+            sys.exit("--lipid-source/--mode need a table: pass --obs <csv>")
+        r = compare_to_obs(p, mode=mode, lipid_source=src)
+        print(f"\n   lipid_source={src!r}, mode={mode!r}: log10 RMSE {r:.3f}")
+    else:
+        main(p)
