@@ -45,23 +45,35 @@ import pfas_rice_plant_module_4pool_surf as P4  # noqa: E402
 # WHY THIS IS NOT EXACT `==`, WHICH IS HOW IT WAS FIRST WRITTEN. These are outputs
 # of an ADAPTIVE STIFF ODE SOLVE, and those are not reproducible across machines:
 # BLAS/LAPACK build, CPU instruction set (FMA contraction) and SciPy version all
-# move the last handful of significant digits. Putting the suite in CI proved it
-# on the first run -- commit cbbe898 was built TWICE, on two GitHub runners, and
-# the same code passed on one and failed on the other:
+# move the result. Putting the suite in CI proved it on the first run -- the same
+# commit was built on two GitHub runners and passed on one, failed on the other.
 #
-#     PFOS root   5.631003635319852  vs  5.631003583042794   (9.3e-9 relative)
-#     PFBA root   0.222150050630214  vs  0.222150052675214   (9.2e-9 relative)
+# WHERE THE TOLERANCE COMES FROM, and it is NOT from observed samples. The first
+# attempt set rel=1e-6 by measuring one pair of runners (~1e-8 apart) -- and CI
+# then produced a 4.6e-6 disagreement on the very next commit, because two samples
+# do not bound a distribution. This is the same mistake as fitting a claim to a
+# subsample; see docs/HANDOFF_neutral_next.md section 2.
 #
-# So exact `==` on an ODE output is a promise the numerics cannot keep, and
-# holding it would have made this suite permanently flaky. `rel=1e-6` is ~100x
-# above the observed cross-machine spread and still ~4 orders of magnitude below
-# any change that could matter here: a genuinely leaked speciation term moves
-# these numbers by percent, not by parts per million.
+# The principled bound is the SOLVER's own tolerance. `solve_ivp(..., method="BDF",
+# rtol=1e-6, atol=1e-9)` defines the trajectory only to ~1e-6 relative per step, so
+# two runs whose arithmetic differs may take different step sequences and land
+# anywhere within the accumulated error of a 120-day integration -- necessarily
+# LOOSER than 1e-6, not tighter. rel=1e-3 sits three orders above the solver's rtol
+# and still an order BELOW the smallest leak that could matter: a speciation term
+# that failed to vanish moves these numbers by percent, and even the smallest
+# bypass conductance on the g_apo grid (0.02) moves them by more than 1e-3.
 #
-# The distinction is between an ODE output and a closed form -- see
-# `test_neutral_path_is_unmoved`, where `K_PW` is pure arithmetic and so
-# stays an exact `==`.
-GOLDEN_REL = 1e-6
+# THE REAL BIT-EXACT GUARD IS ELSEWHERE, and that is the point. Golden constants
+# compared across machines can never be exact; an algebraic identity checked in one
+# process can. `test_root_uptake_neutral_term_is_identically_absent_by_default`
+# reconstructs j_R without the added terms and demands exact `==` -- that is what
+# actually proves nothing leaked. These constants are a coarse backstop, and the
+# tolerance is set so they cannot become a source of false alarms.
+#
+# (Other tests in this suite legitimately use rel=1e-9, because they compare two
+# results computed in the SAME process -- deterministic. The looseness here is
+# specific to a constant recorded on a different machine.)
+GOLDEN_REL = 1e-3
 
 PFAS_GOLDEN = {
     ("PFOA", "recommended"): {"root": 0.47898212697156994, "grain": 0.14758130345806664},
