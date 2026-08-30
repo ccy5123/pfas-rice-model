@@ -1,0 +1,59 @@
+name: full test suite
+
+# Runs the WHOLE pytest suite, not just the rigor guard.
+#
+# Why this exists. Until now `rigor.yml` was the only workflow, and it runs a
+# single module (tests/test_sci_adk_rigor.py). Every handoff in docs/ therefore
+# carried the warning "CI does not test any of this -- a green check means
+# nothing here", and the suite count in CLAUDE.md was maintained by hand from
+# whatever the last session happened to run locally. A green check now means the
+# suite passed.
+#
+# The two workflows stay separate on purpose: the rigor guard is cheap and has a
+# distinct signal (an empirical claim was over-stated), and folding it into a
+# ~15-minute run would bury that.
+#
+# WHAT IS ALLOWED TO FAIL, and what is not. RDKit and phydrus are in
+# requirements.txt -- that file is what Streamlit Community Cloud installs, so if
+# it stops resolving that IS worth a red check and it is not best-effort. Only
+# three things are: emcee (an opt-in cross-check), the gfortran build of the
+# HYDRUS-1D engine, and sci-adk over in rigor.yml. Tests needing those SKIP when
+# they are absent, and `-rs` prints the skip reasons, so a silently shrinking
+# suite stays visible in the log rather than passing quietly.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install the core stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: Install the optional validation extras (best-effort)
+        continue-on-error: true
+        run: pip install -r requirements-validation.txt
+
+      - name: Build the HYDRUS-1D engine (best-effort; its tests skip if absent)
+        continue-on-error: true
+        run: |
+          sudo apt-get update && sudo apt-get install -y gfortran make
+          cp external/hydrus_source/makefile external/hydrus_source/source/
+          make -C external/hydrus_source/source
+          test -x external/hydrus_source/source/hydrus
+
+      - name: Run the suite
+        run: pytest -q -rs
