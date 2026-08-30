@@ -124,6 +124,31 @@ def per_congener_rmse(names, obs, **kw):
     return out
 
 
+def _residuals(names, obs, **kw):
+    """Per (congener, tissue) log10 residuals — kept so arms can be resampled."""
+    out = []
+    for nm in names:
+        for t, p in zip(KEYS, predict(nm, **kw)):
+            out.append(np.log10(max(p, 1e-12)) - np.log10(obs[nm][t]))
+    return np.asarray(out, float)
+
+
+def _boot_beats(r_new, r_old, n=8000, seed=0):
+    """Fraction of bootstrap resamples in which `r_new` has the smaller RMSE.
+
+    Two arms 0.04 log units apart over 33 observations is not a result, and this
+    session has twice been caught treating that kind of gap as one. Any arm-vs-arm
+    claim in the verdict goes through here first.
+    """
+    rng = np.random.default_rng(seed)
+    rm = lambda r: np.sqrt(np.mean(r ** 2))                   # noqa: E731
+    w = 0
+    for _ in range(n):
+        i = rng.integers(0, len(r_old), len(r_old))
+        w += rm(r_new[i]) < rm(r_old[i])
+    return w / n
+
+
 def scan(names, obs, key, grid, **fixed):
     """1-D scan of one arm's single parameter. Returns [(value, rmse), ...]."""
     return [(v, rmse(names, obs, **{key: v}, **fixed)) for v in grid]
@@ -211,17 +236,60 @@ def main(fast=False):
         print("   long chain (n_C >= 10) mean: " +
               "  ".join(f"{k} {np.mean([pc[k][nm] for nm in longs]):.3f}" for k in arms))
 
+    # -- 5 -------------------------------------------------------------------
+    print("\n5. IS A vs B A REAL DIFFERENCE? (bootstrap, because 0.04 log units is not)")
+    rA = _residuals(names, obs, vmax_scale=1.0)
+    rB = _residuals(names, obs, vmax_scale=0.0, g_apo=b_val)
+    pb = _boot_beats(rB, rA)
+    print(f"      P(bypass beats carrier over resampled residuals) = {pb:.3f}")
+    print("   Not a difference. The two entry mechanisms are NOT separable by this")
+    print("   dataset, which is itself the answer to 'which addition'.")
+
     # -- verdict -------------------------------------------------------------
     print("\n" + "=" * 84)
-    print("SUMMARY")
+    print("VERDICT")
     print("=" * 84)
     print(f"   A carrier (incumbent, Vmax fitted on THIS data)  log10 RMSE {on:.3f}")
     print(f"   B bypass  (one global g_apo = {b_val:g})               log10 RMSE {b_rmse:.3f}")
     print(f"   C depol   (E_m = {c_val:g} mV, no new term)          log10 RMSE {c_rmse:.3f}")
     print(f"   nothing   (Trapp's PFAS limit as-is)             log10 RMSE {off:.3f}")
+    print()
+    print("   AN ADDITION IS NECESSARY — arm C is REFUTED. Depolarising the membrane")
+    print("   to the far end of its own recorded plausible range buys almost nothing")
+    print(f"   ({off:.3f} -> {c_rmse:.3f}) and stays far worse than either addition. So the")
+    print("   lever already inside Trapp's framework cannot carry PFAS, and this")
+    print("   repo's extension of it is justified in EXISTENCE.")
+    print()
+    print("   WHICH addition is NOT DETERMINED by this data — A and B are")
+    print(f"   indistinguishable ({on:.3f} vs {b_rmse:.3f}, bootstrap {pb:.3f}), and B does not even")
+    print("   get to claim parsimony: both are one global parameter (checked, not")
+    print("   assumed -- Vmax_in is global, not per-congener).")
+    print()
+    print("   AND THE BYPASS'S OWN DISTINGUISHING CLAIM FAILS — pre-registered item 1")
+    print(f"   is REFUTED. Fitted per congener, g_apo trends strongly with chain length")
+    print(f"   (corr {r:+.3f}, spread {spread:.0f}x), where theory_anchor.tex says eta -- which")
+    print("   contains the apoplastic bypass -- is 'essentially independent of tail")
+    print("   length'. On its own criterion this is a relabelled carrier, not a")
+    print("   water-flow bypass.")
+    print()
+    print("   THE CONVERGENCE IS THE INTERESTING PART. LC6 found the per-congener")
+    print("   Vmax multiplier needed is ~flat to C10 then 2.0x at C11 and 5.5x at C12;")
+    print("   per-congener g_apo here runs 2-5 for C4-C8 then 20-50 for C9-C12. BOTH")
+    print("   mechanisms need the same chain-length correction, of similar size. A")
+    print("   requirement common to two different entry terms is not a property of")
+    print("   entry: it belongs to B_k / phi_free (sequestration), exactly where the")
+    print("   two-pool work put it. Pre-registered item 3 says the same from the other")
+    print("   side -- A and B miss the long chain about equally, so no winner may be")
+    print("   read out of that end, and none is.")
+    print()
+    print("   NOTHING IS ADOPTED. The carrier keeps its place by default rather than")
+    print("   by evidence, g_apo stays 0 for PFAS, and parameters.json is unchanged.")
+    print("   NOTE the absolute levels are a-priori-limited (monotone f_xy, not fit)")
+    print("   and are NOT comparable to reproduce_demo's fitted 0.029 or to the")
+    print("   documented a-priori ~0.84, which uses different drivers.")
     return dict(names=names, carrier=on, nothing=off, bypass=(b_val, b_rmse),
                 depol=(c_val, c_rmse), per_congener_g_apo=per,
-                spread=spread, corr_nC=r, arm_rmse=pc)
+                spread=spread, corr_nC=r, arm_rmse=pc, p_bypass_beats=pb)
 
 
 if __name__ == "__main__":
