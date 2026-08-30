@@ -70,9 +70,14 @@ import pfas_rice_plant_module_4pool_surf as P4  # noqa: E402
 # actually proves nothing leaked. These constants are a coarse backstop, and the
 # tolerance is set so they cannot become a source of false alarms.
 #
-# (Other tests in this suite legitimately use rel=1e-9, because they compare two
-# results computed in the SAME process -- deterministic. The looseness here is
-# specific to a constant recorded on a different machine.)
+# NOT ALL rel=1e-9 IN THIS SUITE IS SAFE, and the first version of this comment
+# said it was ("they compare two results in the same process -- deterministic").
+# Too broad: same process is not the criterion, same SOLVE is. Two runs that build
+# the same Compound by different routes are exact; two runs that differ in one
+# state and are compared because the physics says another state cannot move are
+# not, because the coupled system takes different adaptive steps. CI failed on
+# exactly those two assertions the run after this file was fixed. The three cases
+# are set out in tests/conftest.py, which now owns that rule.
 GOLDEN_REL = 1e-3
 
 PFAS_GOLDEN = {
