@@ -265,7 +265,8 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
              lipid_loading=False, g_xy_override=None, g_ph_override=None,
              season=120.0, n_t=241, measured_forcing=True, biomass="oryza",
              drivers=None, K_surf=0.0, record=None,
-             cwo_profile="constant", cwo_kw=None):
+             cwo_profile="constant", cwo_kw=None,
+             vmax_scale=1.0, g_apo=0.0):
     """Run the 4-compartment ODE for one congener and scenario.
 
     Parameters
@@ -333,9 +334,10 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     L_Ph = float(L_Ph_override) if L_Ph_override is not None else float(L_Ph_def)
     cmpd = Compound(name=congener, K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
                     K_cw=c["K_cw_wholecw_Lkg"]["root"], kappa_d=kappa_d,
-                    Vmax_in=_CARR["Vmax_in"], Km_in=_CARR["Km_in"],
-                    Vmax_out=_CARR["Vmax_out"], Km_out=_CARR["Km_out"],
-                    L_Ph=L_Ph, f_xy=f_xy, g_xy=g_xy, g_ph=g_ph, K_surf=float(K_surf))
+                    Vmax_in=_CARR["Vmax_in"] * vmax_scale, Km_in=_CARR["Km_in"],
+                    Vmax_out=_CARR["Vmax_out"] * vmax_scale, Km_out=_CARR["Km_out"],
+                    L_Ph=L_Ph, f_xy=f_xy, g_xy=g_xy, g_ph=g_ph, K_surf=float(K_surf),
+                    g_apo=float(g_apo))
     comps = _compartments()
     env = Environment(E=E_m_mV / 1000.0)
     model = RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs)
