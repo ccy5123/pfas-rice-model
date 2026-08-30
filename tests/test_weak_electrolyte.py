@@ -11,8 +11,8 @@ was ported; the duplicated parts were dropped in favour of what is already here.
 
 The tests below are ordered by what would hurt most if it broke:
 
-  1. the PFAS path is bit-identical -- the whole change is worthless if not;
-  2. the NEUTRAL path is bit-identical, so every published a-priori number
+  1. the PFAS path is unmoved -- the whole change is worthless if not;
+  2. the NEUTRAL path is unmoved, so every published a-priori number
      (Liu 0.281, Ge 0.783, the stem 0.299) still describes what the code does;
   3. the two modes are CONTINUOUS at their boundary, which is the property that
      makes `pKa=` safe to add rather than a second, subtly different model;
@@ -38,9 +38,31 @@ import pfas_rice_plant_module_4pool_surf as P4  # noqa: E402
 # --------------------------------------------------------------------------
 # 1-2. nothing that already worked may move
 # --------------------------------------------------------------------------
-# Recorded from the pre-port tree. Exact `==`, not approx: the speciation terms are
-# written so they vanish IDENTICALLY on the PFAS path (P_n defaults to 0 and
-# `0.0 + x == x`), so anything but bit-identity means a term leaked.
+# Recorded from the pre-port tree. The speciation terms are written so they vanish
+# IDENTICALLY on the PFAS path (P_n defaults to 0 and `0.0 + x == x`), so a leaked
+# term is what this guards against.
+#
+# WHY THIS IS NOT EXACT `==`, WHICH IS HOW IT WAS FIRST WRITTEN. These are outputs
+# of an ADAPTIVE STIFF ODE SOLVE, and those are not reproducible across machines:
+# BLAS/LAPACK build, CPU instruction set (FMA contraction) and SciPy version all
+# move the last handful of significant digits. Putting the suite in CI proved it
+# on the first run -- commit cbbe898 was built TWICE, on two GitHub runners, and
+# the same code passed on one and failed on the other:
+#
+#     PFOS root   5.631003635319852  vs  5.631003583042794   (9.3e-9 relative)
+#     PFBA root   0.222150050630214  vs  0.222150052675214   (9.2e-9 relative)
+#
+# So exact `==` on an ODE output is a promise the numerics cannot keep, and
+# holding it would have made this suite permanently flaky. `rel=1e-6` is ~100x
+# above the observed cross-machine spread and still ~4 orders of magnitude below
+# any change that could matter here: a genuinely leaked speciation term moves
+# these numbers by percent, not by parts per million.
+#
+# The distinction is between an ODE output and a closed form -- see
+# `test_neutral_path_is_unmoved`, where `K_PW` is pure arithmetic and so
+# stays an exact `==`.
+GOLDEN_REL = 1e-6
+
 PFAS_GOLDEN = {
     ("PFOA", "recommended"): {"root": 0.47898212697156994, "grain": 0.14758130345806664},
     ("PFOS", "W2fit"): {"root": 5.631003583042794, "grain": 0.46877406867211824},
@@ -49,19 +71,26 @@ PFAS_GOLDEN = {
 
 
 @pytest.mark.parametrize("key,expected", list(PFAS_GOLDEN.items()))
-def test_pfas_path_is_bit_identical(key, expected):
+def test_pfas_path_is_unmoved(key, expected):
     cong, src = key
     r = api.simulate(cong, f_xy_source=src, season=120.0, n_t=121)
     for tissue, want in expected.items():
-        assert r["baf_final"][tissue] == want, tissue
+        assert r["baf_final"][tissue] == pytest.approx(want, rel=GOLDEN_REL), tissue
 
 
-def test_neutral_path_is_bit_identical():
-    """`pKa=None` must reach exactly the code that produced the published neutral
-    RMSEs -- not merely something numerically close to it."""
+def test_neutral_path_is_unmoved():
+    """`pKa=None` must reach the code that produced the published neutral RMSEs.
+
+    Note the two assertions carry DIFFERENT tolerances, on purpose: `baf_final` is
+    an ODE output and so is machine-dependent in its last digits (see the comment
+    on GOLDEN_REL), while `K_PW` is closed-form arithmetic — `W + L*a*Kow**b` —
+    with no solver in it, so it is exactly reproducible and stays an exact `==`.
+    Do not "tidy" the second one onto approx: it is the control showing the
+    tolerance above is about the solver and not about the partition core.
+    """
     r = api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0,
                              season=120.0, n_t=121)
-    assert r["baf_final"]["root"] == 1.2139709581034162
+    assert r["baf_final"]["root"] == pytest.approx(1.2139709581034162, rel=GOLDEN_REL)
     assert r["K_PW"]["root"] == 1.8394200621153844
     # the compound the neutral path builds must carry NO speciation fields
     core = ND.neutral_compound(ND.NeutralCompound("x", 2.45))
