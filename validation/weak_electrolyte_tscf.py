@@ -230,7 +230,7 @@ def scan_g_apo(ion, neu, grid=G_APO_GRID, is_acid=True):
         pn = np.array([model_tscf(r["logP"], 1.0, r["pH"], g_apo=g) for r in neu],
                       float)
         out.append(dict(
-            g_apo=g,
+            g_apo=g, pred=pi,
             rmse=float(np.sqrt(np.mean((pi - obs_i) ** 2))),
             bias=float(np.mean(pi - obs_i)), rho=spearman(pi, obs_i),
             neutral_rmse=float(np.sqrt(np.mean((pn - obs_n) ** 2))),
@@ -334,8 +334,27 @@ def main(fast=False):
         print(f"   {s['g_apo']:7.2f}  {s['rmse']:7.3f} {s['bias']:+7.3f} {s['rho']:+7.3f}   |"
               f"                     {s['neutral_rmse']:6.3f} {s['neutral_bias']:+7.3f}")
     best = min(scan, key=lambda s: s["rmse"])
-    print(f"   RMSE-optimal g_apo = {best['g_apo']:.2f}  ->  RMSE {best['rmse']:.3f}"
+    peak = max(scan, key=lambda s: s["rho"])
+    print(f"   RMSE-optimal  g_apo = {best['g_apo']:.2f}  ->  RMSE {best['rmse']:.3f}"
           f"  bias {best['bias']:+.3f}  rho {best['rho']:+.3f}")
+    print(f"   ORDERING peak g_apo = {peak['g_apo']:.2f}  ->  RMSE {peak['rmse']:.3f}"
+          f"  bias {peak['bias']:+.3f}  rho {peak['rho']:+.3f}")
+    print("   THE TWO OPTIMA ARE IN DIFFERENT PLACES, and that is the whole answer to")
+    print("   the pre-registered question. Bootstrapped, so the lesson of section 2 of")
+    print("   the handoff is not repeated:")
+    zero = next(s for s in scan if s["g_apo"] == 0.0)
+    b1 = bootstrap_wins(zero["pred"], peak["pred"], obs)
+    b2 = bootstrap_wins(peak["pred"], best["pred"], obs)
+    print(f"      P(g_apo={peak['g_apo']:.2f} beats NO bypass on rank) = {b1['rank']:.3f}"
+          f"   on RMSE = {b1['rmse']:.3f}")
+    print(f"      P(RMSE-optimal g_apo={best['g_apo']:.2f} orders WORSE than the peak) "
+          f"= {1 - b2['rank']:.3f}")
+    print("   So a SMALL bypass improves ordering AND scale together, robustly; and")
+    print("   fitting on RMSE alone overshoots past the ordering peak, which is exactly")
+    print("   the absorption that was pre-registered. Do not fit g_apo on RMSE.")
+    print("   Meanwhile the 30 un-ionised rows barely move over the useful range")
+    print(f"   ({zero['neutral_rmse']:.3f} -> {peak['neutral_rmse']:.3f}), which is the")
+    print("   self-targeting property measured rather than argued.")
 
     # -- verdict ------------------------------------------------------------
     rho = spearman(fn, obs)
@@ -368,6 +387,13 @@ def main(fast=False):
     print("   fitted precisely because passive GHK exclusion under-delivers. The weak-")
     print("   electrolyte port gives its ion passive permeability and no carrier, so it")
     print("   inherits that known deficit with no lever to absorb it.")
+    print("   THE BYPASS IS A PARTIAL REPAIR, NOT A CLOSURE (section 5). A small")
+    print("   g_apo ~ 0.5 improves BOTH the ordering and the scale over the no-bypass")
+    print("   model, robustly, and leaves the un-ionised rows alone -- so the mechanism")
+    print("   named above is doing real work. But the model still under-delivers there,")
+    print("   and the RMSE-optimal value is ~10x larger and buys its fit by degrading")
+    print("   the ordering. NO VALUE IS ADOPTED: g_apo defaults to 0, and one 67-row")
+    print("   non-rice table cannot pin a structural conductance.")
     print("   STATUS. `pKa=` stays opt-in and nothing about it changes here. It moves")
     print("   from UNVALIDATED to BOUNDED: usable for the direction of a speciation")
     print("   effect, not for its size, and not at all below f_n ~ 0.1.")

@@ -73,7 +73,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (312 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (316 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1036,6 +1036,26 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   usable for the DIRECTION of a speciation effect, not its size, and not below `f_n≈0.1`. Limits: 16 species, none rice; no
   compound names in Table A 3; acid/base unlabelled so both readings are reported. Opt-in; `parameters.json`, `simulate()`
   and `reproduce_demo` (0.029) UNCHANGED.
+- **Apoplastic bypass `g_apo` — the mechanism §4l pointed at; PARTIAL repair (this session)**:
+  `Compound.g_apo`/`NeutralCompound.g_apo` + `validation/weak_electrolyte_tscf.py` §5 +
+  `docs/neutral_dpu_validation.md` §4m. `root_uptake` gains a FOURTH parallel pathway `g_apo·(Cwo−Cw)`,
+  **defined by what it does NOT feel** — no `(f_n,f_d)` weighting, no GHK factor — because a route AROUND
+  the membrane cannot be gated by speciation or membrane potential (that is why it is a separate term, not a
+  bigger `kappa_d`). Rice is the plant apoplastic "bypass flow" is best documented in. **Self-targeting,
+  measured not argued**: conductance sets how FAST the root equilibrates, not the LEVEL, so at `g_apo=2` an
+  un-ionised compound moves **+3%** and an `f_n=1e−4` compound **750×** ⇒ one parameter can address the
+  ionisable rows without disturbing the 30 un-ionised ones (their RMSE 0.379→0.377). **Result — the two
+  optima are in DIFFERENT places, which is the whole answer to the pre-registered question**: a SMALL bypass
+  (`g_apo≈0.5`) improves ordering AND scale together (+0.520→**+0.635**, RMSE 0.304→0.291) in **99.6%** of
+  bootstrap resamples — the first structural change on this arc to improve both at once — but the
+  **RMSE-optimal `g_apo=5`** reaches RMSE **0.245** (beating speciation-OFF's 0.272) by degrading the ordering
+  to **+0.450**, worse than the peak in **96.9%** of resamples. That is exactly the **absorption** the handoff
+  pre-registered. ⇒ **do NOT fit `g_apo` on RMSE**; the defensible region `g_apo≈0.5–1` rests on a **Pareto**
+  argument, not a fit. **NOTHING ADOPTED**: `g_apo` defaults to **0** (structurally absent, not merely zero),
+  PFAS untouched (its anion deficit is carried by the fitted CARRIER `Vmax_in` — whether one mechanism should
+  serve both paths is the open question this leaves), model still under-delivers at its best point
+  (bias −0.184), and one 67-row non-rice table cannot pin a structural conductance. `parameters.json`,
+  `simulate()` and `reproduce_demo` (0.029) UNCHANGED.
 - **CI now runs the WHOLE suite (this session)**: `.github/workflows/tests.yml`. Until now `rigor.yml` was the only
   workflow and it runs a SINGLE module (`test_sci_adk_rigor.py`), which is why every handoff carried "⚠️ CI does not test
   any of this — a green check means nothing here" and why the suite count in this file was maintained by hand from
@@ -1111,7 +1131,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **TSCF QSPR on its own (no plant model)**: `python validation/schriever2020_tscf.py` (97 measured TSCF values;
   Briggs bell RMSE 0.310 / bias −0.221 on the 30 un-ionised rows vs the fitted Schriever refit's in-sample 0.234).
 - **Weak-electrolyte path, tested (the OTHER 67 rows of the same table)**:
-  `python validation/weak_electrolyte_tscf.py` (~2 min; `--fast` skips the per-row ODE solves).
+  `python validation/weak_electrolyte_tscf.py` (~35 min — §5 scans `g_apo` over 10 points × 97 rows;
+  `--fast` skips every ODE solve and prints §1–2 only, ~5 s).
   Direction SUPPORTED / magnitude REFUTED — Spearman(f_n, TSCF) +0.480, speciation ON lifts the model's
   rank +0.284→+0.520 but under-delivers (bias +0.023→−0.203); bootstrap says the rank gain is robust
   (94%) and the RMSE loss is not (82%). `f_n` comes from the table's own logD, NOT its pKa — the two
@@ -1163,7 +1184,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**312 collected; 311 pass, 2 skip** — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**316 collected; 315 pass, 2 skip** — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~22 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`

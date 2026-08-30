@@ -14,11 +14,11 @@
 > Scientific record: **`docs/neutral_dpu_validation.md`** — §4a Liu, §4b Ge, §4c Hwang,
 > §4d Li 2019 hydroponic, §4e TSCF, §4f Kodešová, §4g the scoring artifact, §4h Li 2019
 > soil, §4i Kodešová's leaf, §4j Briggs 1983's stem equations, **§4k Briggs 1983's
-> Table 1 — the only measured STEM test**, **§4l the weak-electrolyte test**, §5 the
-> synthesis. **Read §5 first.**
+> Table 1 — the only measured STEM test**, **§4l the weak-electrolyte test**, **§4m the apoplastic
+> bypass**, §5 the synthesis. **Read §5 first.**
 > `parameters.json`, `simulate()` and `reproduce_demo` (RMSE 0.029) are **UNCHANGED**
 > throughout — everything on this arc is additive or opt-in, and no PFAS number moved.
-> Full suite: **312 collected, 311 pass, 2 skip** (~22 min); the two skips are the
+> Full suite: **316 collected, 315 pass, 2 skip** (~25 min); the two skips are the
 > optional `emcee` and `sci-adk` deps. **CI now runs it** — see §5.
 
 ---
@@ -44,8 +44,25 @@ statement about *rice*, and a held-out subset of a table already in `data_obs/` 
 sitting under it. Before writing that phrase again, grep `data_obs/` for what previous
 scores excluded and why.
 
+**(a2) The mechanism §4l named was then built and half worked** (§4m). An
+**apoplastic bypass** `g_apo` — a fourth `root_uptake` pathway gated by neither
+speciation nor the membrane potential — turns out **self-targeting**: at `g_apo = 2`
+an un-ionised compound's transfer moves **+3 %** and an `f_n = 1e−4` compound's
+**750×**, because conductance sets how fast the root equilibrates and not the level.
+A **small** bypass (`≈0.5`) improves ordering *and* scale together (+0.520 →
+**+0.635**, 0.304 → 0.291) in **99.6 %** of resamples, the first structural change on
+this arc to improve both. **But the pre-registered failure mode fired**: the
+RMSE-optimal `g_apo = 5` reaches 0.245 by degrading the ordering to +0.450, worse
+than the peak in **96.9 %** of resamples. So `g_apo` **must not be fitted on RMSE**,
+nothing is adopted (default 0), and it is a **partial repair, not a closure**. Writing
+the failure mode down in advance is what made it visible instead of a nice-looking fit.
+
 **(b) CI runs the whole suite now** (§5), so the standing warning that a green check
-means nothing is gone, and the hand-maintained test count with it.
+means nothing is gone, and the hand-maintained test count with it. **It earned its
+keep on the first run**: the same commit passed on one GitHub runner and failed on
+another, because `test_weak_electrolyte.py` asserted exact `==` on adaptive-stiff-ODE
+outputs, which are not reproducible across BLAS builds and CPUs (~1e−8 relative).
+That would have made the suite permanently flaky and was invisible on one laptop.
 
 **(c) The stem has a measured test for the first time** (§4k): Briggs 1983's Table 1,
 a-priori log10 RMSE **0.299**, indistinguishable from the paper's own *fitted*
@@ -99,6 +116,8 @@ python validation/neutral_dpu_validation.py --lipid-source both   # add --mode e
 | `3f27e4c` | this handoff's own §0 caught up with its §1 (the lag named in §2 (i)) |
 | `5b59320` | **CI runs the whole suite** — `.github/workflows/tests.yml`, §3 item 7 |
 | `dfe8106` | **the weak-electrolyte path TESTED** — `weak_electrolyte_tscf.py`, §4l |
+| `fec7307` | exact `==` on ODE outputs dropped — CI caught it cross-runner, §5 |
+| `000a4e0` | **the apoplastic bypass `g_apo`** — the mechanism §4l pointed at |
 
 Earlier on the same arc: `d8e7f9a` air exchange, `97dbe75` Hwang, `50b5586`
 `model_api.simulate_neutral`, `c6e9d8a` the Expert neutral tab, `494acc4` the queue.
@@ -193,10 +212,11 @@ against the anchor.
 
 ## 3. Next tasks
 
-Ranked. **Items 1, 2, 4 and 7 are DONE** — see §1. What remains (3, 5) is **blocked on
-data that is not in the repo** — see §4 for what to ask for. Startable without new
-data: **item 8** (the best of them — §4l left a concrete, in-repo mechanism question),
-then item 6 (low value) and the pieces left on the closed #54/#55 branches (§1).
+Ranked. **Items 1, 2, 4, 7 and 8 are DONE** — see §1. What remains (3, 5) is **blocked
+on data that is not in the repo** — see §4 for what to ask for. Startable without new
+data: the **carrier-vs-bypass question item 8 exposed** (the best of them, and it
+reaches the PFAS side), then item 6 (low value) and the pieces left on the closed
+#54/#55 branches (§1).
 
 1. ~~Put the anchor decision to rest~~ **DONE.** Default stays `lipid_source="measured"`;
    the alternative is a named mode, and the 3-vs-1 evidence is a command rather than a
@@ -237,7 +257,22 @@ then item 6 (low value) and the pieces left on the closed #54/#55 branches (§1)
 7. ~~Get the whole suite into CI~~ **DONE.** `.github/workflows/tests.yml` runs
    `pytest -q -rs`; `rigor.yml` stays separate so its distinct signal is not buried.
    Delete the "a green check means nothing here" reflex from any doc still carrying it.
-8. **An APOPLASTIC bypass for the ion — the one open mechanism §4l names, and the
+8. ~~An APOPLASTIC bypass for the ion~~ **DONE, and it half worked — see §4m.**
+   `g_apo` is implemented (default 0, nothing adopted) and scored. **The
+   pre-registered failure mode fired exactly as written**: the RMSE-optimal value
+   buys its fit by flattening the ordering (+0.635 at the peak → +0.450 at the
+   optimum, worse in 96.9 % of resamples), so it was recorded rather than tuned
+   past. What survives is the **small**-bypass Pareto point (`g_apo ≈ 0.5`), which
+   improves ordering *and* scale in 99.6 % of resamples and leaves the un-ionised
+   rows alone. **The follow-up is the question it exposed, not more fitting**: the
+   PFAS path patches this same anion-entry gap with a **fitted carrier**
+   (`Vmax_in`), the neutral path now has a bypass, and *whether one mechanism
+   should serve both* is untested. That is a structural question answerable in
+   repo — run the PFAS congeners with `g_apo` in place of the carrier and see
+   whether Yamazaki survives — and it would tell you something about the PFAS side,
+   which no amount of further neutral work will.
+   Original framing, kept because the pre-registration is the point:
+   **An APOPLASTIC bypass for the ion — the one open mechanism §4l names, and the
    best startable item.** §4l showed the weak-electrolyte path orders compounds well
    and under-delivers by orders of magnitude, because the model's only route in is
    transmembrane while real ions reach the xylem *around* the cells. That is a
@@ -370,7 +405,8 @@ python -c "import sys; sys.path.insert(0,'src'); import model_api as a; \
   print([round(a.simulate_neutral(2.45, pKa=p, season=60, n_t=61)['baf_final']['root'], 4) \
          for p in (None, 12.0, 4.5, -3.0)])"      # 1.5119, 1.5119, 0.0791, 0.0001
 
-# ...and what the DATA then said about it (~2 min; --fast skips the ODE solves)
+# ...and what the DATA then said about it, plus the g_apo bypass curve (~35 min;
+# --fast skips every ODE solve and prints sections 1-2 only, ~5 s)
 python validation/weak_electrolyte_tscf.py        # direction +0.480, magnitude refuted
 
 # the baselines that must not move
@@ -378,7 +414,7 @@ python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.c
 python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_ge2017.csv   # 0.783
 python reproduce_demo.py                                                            # 0.029
 
-pytest -q                                          # 312 collected, 311 pass, 2 skip
+pytest -q                                          # 316 collected, 315 pass, 2 skip
 ```
 
 **Resume prompt.**
@@ -387,7 +423,9 @@ pytest -q                                          # 312 collected, 311 pass, 2 
 > weak-electrolyte path that shipped "unvalidated" has now been tested** (§4l):
 > direction SUPPORTED (Spearman +0.480; speciation lifts the model's rank +0.284 →
 > +0.520), magnitude REFUTED (it under-delivers, bias +0.023 → −0.203). CI runs the
-> whole suite now, so a green check means something.
+> whole suite now, so a green check means something. The bypass `g_apo` that §4l
+> pointed at is implemented and scored (§4m): a small one helps on both metrics, the
+> RMSE-optimal one absorbs the effect, nothing is adopted.
 >
 > Read `docs/neutral_dpu_validation.md` §5 and §4l, then §2 of this handoff, before
 > touching anything — §2 lists **five** claims this arc made and then retracted, and
@@ -400,11 +438,13 @@ pytest -q                                          # 312 collected, 311 pass, 2 
 > better than Y", bootstrap it, and pin only the half that holds (§2 items 4–5 are
 > both of this kind).
 >
-> Startable work, honestly ranked. **§3 item 8 is the best: an apoplastic bypass
-> `g_apo` for the ion** — the one mechanism §4l names, one parameter, already
-> scoreable against the 67 rows in `data_obs/`, and the same gap the PFAS side patched
-> with a fitted carrier. Read the pre-registered failure mode in item 8 before fitting
-> anything. After that: the pieces left on the closed #54/#55 branches (§1). §3 items
+> Startable work, honestly ranked. **The best is the question §3 item 8 exposed and
+> did not answer**: the PFAS path patches the anion-entry gap with a fitted CARRIER
+> (`Vmax_in`), the neutral path now has an apoplastic BYPASS (`g_apo`), and whether
+> one mechanism should serve both is untested. It is answerable in repo — run the
+> PFAS congeners with `g_apo` in place of the carrier and see whether Yamazaki
+> survives — and unlike more neutral work it would tell you something about the PFAS
+> side. After that: the pieces left on the closed #54/#55 branches (§1). §3 items
 > 3 and 5 are **blocked on data that is not in the repo** — do not start one expecting
 > to finish it; §4 says what to ask for, including that the item-3 request is narrower
 > than it looks (more RICE above log Kow 3.5 from an independent lab, not more

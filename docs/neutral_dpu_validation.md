@@ -919,6 +919,69 @@ drivers, so the mismatch is common to speciation ON and OFF and cancels in the
 comparison between them, which is the claim. It does bound the **absolute**
 RMSEs, so do not quote those on their own.
 
+### 4m. The apoplastic bypass — a partial repair, and the absorption it was pre-registered against
+
+`src/pfas_rice_plant_module_4pool_surf.py` (`Compound.g_apo`) ·
+`validation/weak_electrolyte_tscf.py` §5
+
+§4l localised the magnitude failure precisely: the model's only route in is
+transmembrane, so an ion that cannot cross cannot arrive, while real ions reach
+the xylem **apoplastically** — around the cells, through walls, past the
+endodermis where the Casparian band is absent or broken. Rice is the plant this
+is best documented in; "bypass flow" is the standard account of its sodium
+uptake. `root_uptake` therefore gains a fourth parallel pathway,
+`g_apo·(Cwo − Cw)`, **defined by what it does not feel**: no `(f_n, f_d)`
+weighting and no GHK factor, because a route *around* the membrane cannot be
+gated by speciation or by the membrane potential. That is why it is a separate
+term and not a larger `kappa_d`.
+
+**Self-targeting, and this is measured rather than argued.** Uptake conductance
+sets how *fast* the root equilibrates, not the *level* it equilibrates to — so
+the bypass does almost nothing where the membrane is already fast and a great
+deal where speciation has collapsed it. At `g_apo = 2` an un-ionised compound's
+transfer moves **+3 %** and an `f_n = 1e−4` compound's moves **750×**.
+
+| `g_apo` | RMSE | bias | Spearman | | 30 un-ionised rows: RMSE |
+|---|---|---|---|---|---|
+| 0 (no bypass) | 0.304 | −0.203 | +0.520 | | 0.379 |
+| 0.2 | 0.298 | −0.195 | +0.590 | | 0.378 |
+| **0.5** | **0.291** | −0.184 | **+0.635** ← ordering peak | | **0.377** |
+| 1.0 | 0.281 | −0.167 | +0.623 | | 0.376 |
+| 2.0 | 0.265 | −0.139 | +0.484 | | 0.373 |
+| **5.0** | **0.245** ← RMSE optimum | −0.081 | +0.450 | | 0.366 |
+| 20.0 | 0.266 | +0.033 | +0.374 | | 0.345 |
+
+**The two optima are in different places, and that is the entire answer to the
+pre-registered question.** Both halves are bootstrapped, so the §2 lesson is not
+repeated:
+
+- A **small** bypass improves the ordering *and* the scale together —
+  `g_apo = 0.5` beats no-bypass on **both** metrics in **99.6 %** of resamples.
+  This is the first structural change on this arc to improve both at once.
+- The **RMSE-optimal** `g_apo = 5` reaches RMSE **0.245**, better than
+  speciation-OFF's 0.272 — but its ordering has fallen to +0.450, **worse than
+  the peak in 96.9 %** of resamples. That is exactly the absorption the handoff
+  pre-registered: a bypass big enough to buy the fit does it by flattening the
+  speciation dependence it was supposed to preserve.
+  (Stated instead against *no bypass*, the degradation is only 71.6 % — weak.
+  The robust form of the claim is the one against the peak; use that one.)
+- The **30 un-ionised rows barely move** across the useful range (0.379 → 0.377),
+  confirming self-targeting quantitatively: one parameter can address the
+  ionisable rows without disturbing the ones the model already fits.
+
+**So: do not fit `g_apo` on RMSE.** If a value is ever quoted the defensible
+region is `g_apo ≈ 0.5–1`, and it rests on a *Pareto* argument — both metrics
+improve — not on a fit.
+
+**Nothing is adopted.** `g_apo` defaults to **0** on both `Compound` and
+`NeutralCompound`, so the term is structurally absent rather than merely zero;
+`parameters.json`, `simulate()` and `reproduce_demo` (0.029) are unchanged, and
+PFAS is untouched — its own anion-uptake deficit is carried by the **fitted
+carrier** (`Vmax_in`) instead. Whether one mechanism should serve both paths is
+open, and is the interesting question this leaves. One 67-row non-rice table
+cannot pin a structural conductance, and even at its best point the model still
+under-delivers (bias −0.184): the bypass is a **partial repair, not a closure**.
+
 ### 4g. A scoring artifact that affects every root number above
 
 `compare_to_obs(..., mode="equilibrium")` · `tests/test_li2019_schriever_tables.py`
@@ -1166,6 +1229,23 @@ log Kow 3.5.
   model's only entry is transmembrane, while real ions arrive apoplastically and
   the PFAS side needed a **fitted carrier** for the same reason. Usable for the
   direction of a speciation effect, not its size, and not below `f_n ≈ 0.1`.
+- **That diagnosis was then acted on, and it half worked** (§4m). An
+  **apoplastic bypass** `g_apo` — a fourth `root_uptake` pathway gated by neither
+  speciation nor the membrane potential — is **self-targeting**, because
+  conductance sets how fast the root equilibrates and not the level it reaches:
+  at `g_apo = 2` an un-ionised compound moves **+3 %** and an `f_n = 1e−4`
+  compound **750×**. A **small** bypass (`g_apo ≈ 0.5`) improves the ordering
+  *and* the scale together (+0.520 → **+0.635**, RMSE 0.304 → 0.291) in **99.6 %**
+  of bootstrap resamples — the first structural change on this arc to improve
+  both at once — and leaves the 30 un-ionised rows alone (0.379 → 0.377). But the
+  **RMSE-optimal** `g_apo = 5` reaches 0.245 by degrading the ordering to +0.450,
+  **worse than the peak in 96.9 %** of resamples: precisely the absorption the
+  handoff pre-registered. **So `g_apo` must not be fitted on RMSE**, and none of
+  it is adopted — it defaults to 0, the model still under-delivers at its best
+  point (bias −0.184), and one 67-row non-rice table cannot pin a structural
+  conductance. A **partial repair, not a closure**. The open question it leaves
+  is the interesting one: the PFAS path patches this same gap with a **fitted
+  carrier**, and whether one mechanism should serve both is untested.
 - The error structure is interpretable and cross-validated between the two
   datasets: steep in half-life where the endpoint accumulates (leaf), flat where it
   equilibrates (root). The Ge leaf residual points to a specific in-planta

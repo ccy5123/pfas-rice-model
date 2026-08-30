@@ -200,6 +200,34 @@ def test_g_apo_is_self_targeting():
     assert ion_on / ion_off > 100.0, "bypass must rescue a strongly ionised one"
 
 
+def test_a_small_bypass_helps_and_a_large_one_absorbs(rows):
+    """The shape of the g_apo curve IS the result (docs section 4m), so it is the
+    thing to pin: the ordering peaks at a SMALL bypass and the RMSE optimum lies
+    past that peak. A later session that fits g_apo on RMSE and reports the 0.245
+    without the +0.450 beside it has reintroduced exactly the absorption this was
+    pre-registered against.
+
+    Run on a deterministic subsample to stay fast; the full-table curve is in the
+    docs and reproduced by validation/weak_electrolyte_tscf.py section 5.
+    """
+    ion = [r for r in rows if not r["neutral"]][::5]        # 14 rows
+    obs = np.array([r["TSCF"] for r in ion])
+
+    def preds(g):
+        return np.array([WE.model_tscf(r["logP"], r["fn"], r["pH"], True, g_apo=g)
+                         for r in ion])
+
+    p0, p_small, p_big = preds(0.0), preds(0.5), preds(5.0)
+    rmse = lambda p: float(np.sqrt(np.mean((p - obs) ** 2)))    # noqa: E731
+
+    # a small bypass helps BOTH ways -- the Pareto point the docs quote
+    assert WE.spearman(p_small, obs) > WE.spearman(p0, obs)
+    assert rmse(p_small) < rmse(p0)
+    # the large one buys RMSE by giving up the ordering
+    assert rmse(p_big) < rmse(p_small)
+    assert WE.spearman(p_big, obs) < WE.spearman(p_small, obs)
+
+
 def test_the_rank_gain_is_robust_and_the_rmse_loss_is_not():
     """Pins the asymmetry itself, on synthetic arrays so it costs no ODE solves:
     `bootstrap_wins` must be able to report the two frequencies separately. The
