@@ -20,6 +20,8 @@ import sys
 import numpy as np
 import pytest
 
+from conftest import SOLVE_INVARIANCE_REL
+
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(_ROOT, "src"))
 sys.path.insert(0, os.path.join(_ROOT, "validation"))
@@ -193,8 +195,13 @@ def test_volatilisation_bounds_the_leaf(drv):
     leaf = [run(k)["baf_final"]["leaf"] for k in (0.0, 1e-5, 1e-3, 1e-1)]
     assert leaf[0] > leaf[1] > leaf[2] > leaf[3]
     assert leaf[3] < 1e-3 * leaf[0]             # a truly volatile compound is stripped
+    # The root carries no air term, so the equations say it cannot move. The
+    # NUMERICS can: the leaf state differs between these two runs, so solve_ivp
+    # picks a different step sequence for the coupled system and re-integrates the
+    # root along it. Case 3 in tests/conftest.py -- tolerance from the solver's
+    # rtol, not from an observed difference.
     roots = [run(k)["baf_final"]["root"] for k in (0.0, 1e-1)]
-    assert roots[0] == pytest.approx(roots[1], rel=1e-9)
+    assert roots[0] == pytest.approx(roots[1], rel=SOLVE_INVARIANCE_REL)
 
 
 def test_gaseous_uptake_loads_the_shoot_from_clean_soil(drv):

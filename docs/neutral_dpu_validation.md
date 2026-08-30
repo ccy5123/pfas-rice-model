@@ -836,6 +836,152 @@ a rice culm. Deliberately **not** wired into the `--obs` harness, for the Hwang
 2017 reason (§4c): these are sections of a 48-hour barley seedling and the shared
 harness would run them against a 120-day rice season.
 
+### 4l. The weak-electrolyte path, tested — direction supported, magnitude refuted
+
+`validation/weak_electrolyte_tscf.py` · `tests/test_weak_electrolyte_tscf.py`
+
+The speciation port (`simulate_neutral(pKa=…)`) landed labelled *"structural
+capability, not a predictive claim — no measured weak-electrolyte **rice**
+dataset exists here"*. True of rice, and it was read as though no measured
+weak-electrolyte data existed at all. It did: §4e scores only the **30** rows of
+Table A 3 flagged un-ionised at the test pH and explicitly sets the other **67**
+aside as *"outside this model's stated scope"*. The port is the thing that
+extends the scope to them, so **the held-out rows were in the repo before the
+capability was**, and they are its first empirical test.
+
+**How `f_n` is obtained, and why not from the pKa.** From the table's own logD:
+`f_n = 10^(logD_test − logP)`, clipped at 1 — the definition of the distribution
+coefficient when only the neutral species partitions. This needs no pKa and no
+acid/base label, which matters because the table has neither reliable. Its pKa
+column and its logD column **disagree about how ionised these compounds are**:
+Henderson–Hasselbalch on the pKa misses the reported logD by a median **1.41 log**
+(acid reading; 1.82 as a base), and 20 rows have logD *above* logP, which no
+single-centre acid or base can produce. The logD route is also what the shipped
+`neutral_at_test_pH` flag is built from, so script and flag stay consistent.
+
+> **A false counterexample, named so it is not rediscovered.** The eight barley
+> rows at **pKa 1.62** have TSCF 0.63–0.98. Read as a strong acid they are fully
+> dissociated at any test pH and look like a spectacular refutation. They are
+> not: their own logD sits 0.01–0.02 *above* logP, so the table says they are
+> un-ionised (the pKa is a basic centre) and the flag already classes them
+> neutral. Deriving `f_n` from the pKa column manufactures this artefact.
+> Pinned by `test_the_pKa_162_rows_are_NOT_ionisable_the_false_counterexample`.
+
+**What the port predicts.** Read straight off `root_uptake` with `Vmax = 0` and
+`P_n = kappa_d`, the membrane influx conductance relative to the same molecule
+un-ionised is `Φ = f_n + g(N)·f_d / 10^3.5` — nothing fitted, just the shipped
+Trapp ratio and the GHK factor. Over this table's `f_n` range (4.7e−5 → 1, 4.3
+orders of magnitude) **Φ moves ~1.6e4-fold**.
+
+**What the data say.** Measured TSCF over the same rows moves about **3-fold**.
+
+| | n | RMSE | bias | Spearman |
+|---|---|---|---|---|
+| speciation **OFF** (un-ionised) | 67 | **0.272** | +0.023 | +0.284 |
+| weak electrolyte, read as an **acid** | 67 | 0.304 | −0.203 | **+0.520** |
+| weak electrolyte, read as a **base** | 67 | 0.303 | −0.202 | +0.516 |
+
+Measured transfer really does rise with the neutral fraction —
+**Spearman(f_n, TSCF) = +0.480** over 67 rows — and that is the port's first
+empirical support of any kind; the sign could have come out flat or backwards.
+But the size fails: at `f_n < 1e−3` (13 rows) the model predicts effectively no
+transfer and the measured mean is **0.127**.
+
+**The two metrics disagree, and they are not equally solid.** Bootstrap
+(n = 4000): the **rank gain holds in 94% of resamples**, the RMSE loss in only
+**82%** — a small subsample flips the RMSE, and one did, which is why the guard
+test asserts the ordering and the under-delivery but *not* the RMSE. So the
+load-bearing claim is the **ordering** gain; *"speciation makes the fit worse"*
+is a tendency, not a finding. Rank is also the half the plant model consumes
+(§4e's own argument), so this is a real gain wrapped around an unusable
+calibration, not a flat failure.
+
+**Why, and it is already known one directory away.** The model's only route into
+the plant is across the root membrane, so an ion that cannot cross cannot arrive.
+Real ions reach the xylem **apoplastically** — around the cells, not through them
+— and on the PFAS side of this same codebase the passive GHK route had to be
+supplemented by a **fitted carrier** for exactly this reason (CLAUDE.md §2: net
+uptake requires the carrier to overcome electrostatic exclusion). The weak
+electrolyte gets passive ionic permeability and no carrier, so it inherits that
+known deficit with no lever to absorb it.
+
+**Status.** `pKa=` stays opt-in and nothing about the model changed here. It
+moves from **unvalidated** to **bounded**: usable for the *direction* of a
+speciation effect, not its size, and not at all below `f_n ≈ 0.1`.
+
+**Limits.** 16 species, none rice; no compound names in Table A 3, so no row can
+be cross-checked or excluded on chemical grounds; acid/base inferred and
+therefore reported both ways; TSCF is not the per-organ endpoint the model
+targets; and these hydroponic measurements are scored through a 120-day rice
+season — the driver mismatch §4g and §4c both warn about. **That last one does
+not undermine the verdict**: every row of the table above uses the *same*
+drivers, so the mismatch is common to speciation ON and OFF and cancels in the
+comparison between them, which is the claim. It does bound the **absolute**
+RMSEs, so do not quote those on their own.
+
+### 4m. The apoplastic bypass — a partial repair, and the absorption it was pre-registered against
+
+`src/pfas_rice_plant_module_4pool_surf.py` (`Compound.g_apo`) ·
+`validation/weak_electrolyte_tscf.py` §5
+
+§4l localised the magnitude failure precisely: the model's only route in is
+transmembrane, so an ion that cannot cross cannot arrive, while real ions reach
+the xylem **apoplastically** — around the cells, through walls, past the
+endodermis where the Casparian band is absent or broken. Rice is the plant this
+is best documented in; "bypass flow" is the standard account of its sodium
+uptake. `root_uptake` therefore gains a fourth parallel pathway,
+`g_apo·(Cwo − Cw)`, **defined by what it does not feel**: no `(f_n, f_d)`
+weighting and no GHK factor, because a route *around* the membrane cannot be
+gated by speciation or by the membrane potential. That is why it is a separate
+term and not a larger `kappa_d`.
+
+**Self-targeting, and this is measured rather than argued.** Uptake conductance
+sets how *fast* the root equilibrates, not the *level* it equilibrates to — so
+the bypass does almost nothing where the membrane is already fast and a great
+deal where speciation has collapsed it. At `g_apo = 2` an un-ionised compound's
+transfer moves **+3 %** and an `f_n = 1e−4` compound's moves **750×**.
+
+| `g_apo` | RMSE | bias | Spearman | | 30 un-ionised rows: RMSE |
+|---|---|---|---|---|---|
+| 0 (no bypass) | 0.304 | −0.203 | +0.520 | | 0.379 |
+| 0.2 | 0.298 | −0.195 | +0.590 | | 0.378 |
+| **0.5** | **0.291** | −0.184 | **+0.635** ← ordering peak | | **0.377** |
+| 1.0 | 0.281 | −0.167 | +0.623 | | 0.376 |
+| 2.0 | 0.265 | −0.139 | +0.484 | | 0.373 |
+| **5.0** | **0.245** ← RMSE optimum | −0.081 | +0.450 | | 0.366 |
+| 20.0 | 0.266 | +0.033 | +0.374 | | 0.345 |
+
+**The two optima are in different places, and that is the entire answer to the
+pre-registered question.** Both halves are bootstrapped, so the §2 lesson is not
+repeated:
+
+- A **small** bypass improves the ordering *and* the scale together —
+  `g_apo = 0.5` beats no-bypass on **both** metrics in **99.6 %** of resamples.
+  This is the first structural change on this arc to improve both at once.
+- The **RMSE-optimal** `g_apo = 5` reaches RMSE **0.245**, better than
+  speciation-OFF's 0.272 — but its ordering has fallen to +0.450, **worse than
+  the peak in 96.9 %** of resamples. That is exactly the absorption the handoff
+  pre-registered: a bypass big enough to buy the fit does it by flattening the
+  speciation dependence it was supposed to preserve.
+  (Stated instead against *no bypass*, the degradation is only 71.6 % — weak.
+  The robust form of the claim is the one against the peak; use that one.)
+- The **30 un-ionised rows barely move** across the useful range (0.379 → 0.377),
+  confirming self-targeting quantitatively: one parameter can address the
+  ionisable rows without disturbing the ones the model already fits.
+
+**So: do not fit `g_apo` on RMSE.** If a value is ever quoted the defensible
+region is `g_apo ≈ 0.5–1`, and it rests on a *Pareto* argument — both metrics
+improve — not on a fit.
+
+**Nothing is adopted.** `g_apo` defaults to **0** on both `Compound` and
+`NeutralCompound`, so the term is structurally absent rather than merely zero;
+`parameters.json`, `simulate()` and `reproduce_demo` (0.029) are unchanged, and
+PFAS is untouched — its own anion-uptake deficit is carried by the **fitted
+carrier** (`Vmax_in`) instead. Whether one mechanism should serve both paths is
+open, and is the interesting question this leaves. One 67-row non-rice table
+cannot pin a structural conductance, and even at its best point the model still
+under-delivers (bias −0.184): the bypass is a **partial repair, not a closure**.
+
 ### 4g. A scoring artifact that affects every root number above
 
 `compare_to_obs(..., mode="equilibrium")` · `tests/test_li2019_schriever_tables.py`
@@ -1064,6 +1210,42 @@ log Kow 3.5.
 - Both a-priori inputs are now measured directly and **both are biased low**:
   the partition by the offset above, and TSCF by **−0.221** on a 0–1 scale
   (§4e, the first test of TSCF in this repo without the plant model in between).
+- **The weak-electrolyte path has been tested, and it is no longer merely
+  "unvalidated" — it is BOUNDED** (§4l). It shipped labelled *structural
+  capability, no measured dataset exists*; that was true of **rice** only. §4e
+  scores 30 of Table A 3's 97 rows and holds the other **67 ionisable ones** back
+  as out of scope — and the port is precisely what extends the scope to them, so
+  the test data were already in the repo. Verdict: **direction supported,
+  magnitude refuted.** Measured transfer does rise with the neutral fraction
+  (Spearman +0.480, n=67, the port's first empirical support of any kind), and
+  switching speciation on nearly doubles the model's rank correlation
+  (+0.284 → +0.520) — but its influx conductance `Φ` moves ~1.6e4-fold across
+  this table where the measurements move ~3-fold, so it under-delivers badly
+  (bias +0.023 → −0.203) and at `f_n < 1e−3` predicts nothing where the measured
+  mean is 0.127. **The two metrics are not equally solid**: bootstrapped, the
+  rank gain survives 94 % of resamples and the RMSE loss only 82 %, so the
+  ordering gain is the claim and *"speciation makes the fit worse"* is a
+  tendency. The cause is structural and already known one directory away — the
+  model's only entry is transmembrane, while real ions arrive apoplastically and
+  the PFAS side needed a **fitted carrier** for the same reason. Usable for the
+  direction of a speciation effect, not its size, and not below `f_n ≈ 0.1`.
+- **That diagnosis was then acted on, and it half worked** (§4m). An
+  **apoplastic bypass** `g_apo` — a fourth `root_uptake` pathway gated by neither
+  speciation nor the membrane potential — is **self-targeting**, because
+  conductance sets how fast the root equilibrates and not the level it reaches:
+  at `g_apo = 2` an un-ionised compound moves **+3 %** and an `f_n = 1e−4`
+  compound **750×**. A **small** bypass (`g_apo ≈ 0.5`) improves the ordering
+  *and* the scale together (+0.520 → **+0.635**, RMSE 0.304 → 0.291) in **99.6 %**
+  of bootstrap resamples — the first structural change on this arc to improve
+  both at once — and leaves the 30 un-ionised rows alone (0.379 → 0.377). But the
+  **RMSE-optimal** `g_apo = 5` reaches 0.245 by degrading the ordering to +0.450,
+  **worse than the peak in 96.9 %** of resamples: precisely the absorption the
+  handoff pre-registered. **So `g_apo` must not be fitted on RMSE**, and none of
+  it is adopted — it defaults to 0, the model still under-delivers at its best
+  point (bias −0.184), and one 67-row non-rice table cannot pin a structural
+  conductance. A **partial repair, not a closure**. The open question it leaves
+  is the interesting one: the PFAS path patches this same gap with a **fitted
+  carrier**, and whether one mechanism should serve both is untested.
 - The error structure is interpretable and cross-validated between the two
   datasets: steep in half-life where the endpoint accumulates (leaf), flat where it
   equilibrates (root). The Ge leaf residual points to a specific in-planta

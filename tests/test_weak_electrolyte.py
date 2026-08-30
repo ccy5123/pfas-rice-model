@@ -11,8 +11,8 @@ was ported; the duplicated parts were dropped in favour of what is already here.
 
 The tests below are ordered by what would hurt most if it broke:
 
-  1. the PFAS path is bit-identical -- the whole change is worthless if not;
-  2. the NEUTRAL path is bit-identical, so every published a-priori number
+  1. the PFAS path is unmoved -- the whole change is worthless if not;
+  2. the NEUTRAL path is unmoved, so every published a-priori number
      (Liu 0.281, Ge 0.783, the stem 0.299) still describes what the code does;
   3. the two modes are CONTINUOUS at their boundary, which is the property that
      makes `pKa=` safe to add rather than a second, subtly different model;
@@ -38,9 +38,48 @@ import pfas_rice_plant_module_4pool_surf as P4  # noqa: E402
 # --------------------------------------------------------------------------
 # 1-2. nothing that already worked may move
 # --------------------------------------------------------------------------
-# Recorded from the pre-port tree. Exact `==`, not approx: the speciation terms are
-# written so they vanish IDENTICALLY on the PFAS path (P_n defaults to 0 and
-# `0.0 + x == x`), so anything but bit-identity means a term leaked.
+# Recorded from the pre-port tree. The speciation terms are written so they vanish
+# IDENTICALLY on the PFAS path (P_n defaults to 0 and `0.0 + x == x`), so a leaked
+# term is what this guards against.
+#
+# WHY THIS IS NOT EXACT `==`, WHICH IS HOW IT WAS FIRST WRITTEN. These are outputs
+# of an ADAPTIVE STIFF ODE SOLVE, and those are not reproducible across machines:
+# BLAS/LAPACK build, CPU instruction set (FMA contraction) and SciPy version all
+# move the result. Putting the suite in CI proved it on the first run -- the same
+# commit was built on two GitHub runners and passed on one, failed on the other.
+#
+# WHERE THE TOLERANCE COMES FROM, and it is NOT from observed samples. The first
+# attempt set rel=1e-6 by measuring one pair of runners (~1e-8 apart) -- and CI
+# then produced a 4.6e-6 disagreement on the very next commit, because two samples
+# do not bound a distribution. This is the same mistake as fitting a claim to a
+# subsample; see docs/HANDOFF_neutral_next.md section 2.
+#
+# The principled bound is the SOLVER's own tolerance. `solve_ivp(..., method="BDF",
+# rtol=1e-6, atol=1e-9)` defines the trajectory only to ~1e-6 relative per step, so
+# two runs whose arithmetic differs may take different step sequences and land
+# anywhere within the accumulated error of a 120-day integration -- necessarily
+# LOOSER than 1e-6, not tighter. rel=1e-3 sits three orders above the solver's rtol
+# and still an order BELOW the smallest leak that could matter: a speciation term
+# that failed to vanish moves these numbers by percent, and even the smallest
+# bypass conductance on the g_apo grid (0.02) moves them by more than 1e-3.
+#
+# THE REAL BIT-EXACT GUARD IS ELSEWHERE, and that is the point. Golden constants
+# compared across machines can never be exact; an algebraic identity checked in one
+# process can. `test_root_uptake_neutral_term_is_identically_absent_by_default`
+# reconstructs j_R without the added terms and demands exact `==` -- that is what
+# actually proves nothing leaked. These constants are a coarse backstop, and the
+# tolerance is set so they cannot become a source of false alarms.
+#
+# NOT ALL rel=1e-9 IN THIS SUITE IS SAFE, and the first version of this comment
+# said it was ("they compare two results in the same process -- deterministic").
+# Too broad: same process is not the criterion, same SOLVE is. Two runs that build
+# the same Compound by different routes are exact; two runs that differ in one
+# state and are compared because the physics says another state cannot move are
+# not, because the coupled system takes different adaptive steps. CI failed on
+# exactly those two assertions the run after this file was fixed. The three cases
+# are set out in tests/conftest.py, which now owns that rule.
+GOLDEN_REL = 1e-3
+
 PFAS_GOLDEN = {
     ("PFOA", "recommended"): {"root": 0.47898212697156994, "grain": 0.14758130345806664},
     ("PFOS", "W2fit"): {"root": 5.631003583042794, "grain": 0.46877406867211824},
@@ -49,19 +88,26 @@ PFAS_GOLDEN = {
 
 
 @pytest.mark.parametrize("key,expected", list(PFAS_GOLDEN.items()))
-def test_pfas_path_is_bit_identical(key, expected):
+def test_pfas_path_is_unmoved(key, expected):
     cong, src = key
     r = api.simulate(cong, f_xy_source=src, season=120.0, n_t=121)
     for tissue, want in expected.items():
-        assert r["baf_final"][tissue] == want, tissue
+        assert r["baf_final"][tissue] == pytest.approx(want, rel=GOLDEN_REL), tissue
 
 
-def test_neutral_path_is_bit_identical():
-    """`pKa=None` must reach exactly the code that produced the published neutral
-    RMSEs -- not merely something numerically close to it."""
+def test_neutral_path_is_unmoved():
+    """`pKa=None` must reach the code that produced the published neutral RMSEs.
+
+    Note the two assertions carry DIFFERENT tolerances, on purpose: `baf_final` is
+    an ODE output and so is machine-dependent in its last digits (see the comment
+    on GOLDEN_REL), while `K_PW` is closed-form arithmetic — `W + L*a*Kow**b` —
+    with no solver in it, so it is exactly reproducible and stays an exact `==`.
+    Do not "tidy" the second one onto approx: it is the control showing the
+    tolerance above is about the solver and not about the partition core.
+    """
     r = api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0,
                              season=120.0, n_t=121)
-    assert r["baf_final"]["root"] == 1.2139709581034162
+    assert r["baf_final"]["root"] == pytest.approx(1.2139709581034162, rel=GOLDEN_REL)
     assert r["K_PW"]["root"] == 1.8394200621153844
     # the compound the neutral path builds must carry NO speciation fields
     core = ND.neutral_compound(ND.NeutralCompound("x", 2.45))

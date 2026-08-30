@@ -178,6 +178,24 @@ class Compound:
     P_n: float = 0.0            # a_R*P_n, NEUTRAL passive conductance [L/(day kg)].
                                 # Trapp: the ion is ~10^3.5 less permeable (P_N_OVER_P_D),
                                 # so P_d ~ P_n * 10^-3.5. 0 keeps the term off.
+    # APOPLASTIC BYPASS conductance [L/(day kg)]: entry that never crosses a
+    # membrane -- solute carried in the water stream through the cell walls and
+    # past the endodermis where the Casparian band is absent or broken (root tips,
+    # lateral-root emergence points). Rice is the plant this is best documented in;
+    # "bypass flow" is the standard explanation for its sodium uptake.
+    #
+    # It is defined by what it does NOT feel, which is exactly why it is a separate
+    # term rather than a bigger kappa_d: no (fn, fd) weighting and no GHK factor,
+    # because a route around the membrane cannot be gated by speciation or by the
+    # membrane potential. That makes it the one structural lever able to raise a
+    # strongly-ionised compound's uptake WITHOUT flattening the speciation ordering
+    # the data support -- see docs/neutral_dpu_validation.md section 4l.
+    #
+    # EXPLORATORY / opt-in: 0 (the default) removes the term identically, so every
+    # PFAS and strictly-neutral number is bit-identical. NOT set for PFAS, whose
+    # own anion-uptake deficit is carried by the fitted CARRIER (Vmax_in) instead;
+    # whether one mechanism should serve both is open.
+    g_apo: float = 0.0
 
 
 @dataclass
@@ -273,11 +291,17 @@ def _ghk_factor(N: float) -> float:
 def root_uptake(Cwo: float, Cw_root: float, cmpd: Compound, env: Environment) -> float:
     """Mass-specific root membrane uptake j_R [ug/(day kg)]  (Eq. JR_pfas).
 
-    THREE PARALLEL pathways, each weighted by the species fraction that carries it:
+    FOUR PARALLEL pathways, each weighted by the species fraction that carries it:
 
         j_R = P_n*f_n*(Cwo - Cw)              neutral passive (potential-INdependent)
             + kappa_d*g*f_d*(Cwo - e^N*Cw)    ionic electrodiffusion (GHK)
             + carrier (Michaelis-Menten)
+            + g_apo*(Cwo - Cw)                apoplastic bypass (membrane-INdependent)
+
+    The fourth term is the odd one out and deliberately so: it carries NO (fn, fd)
+    weight and NO GHK factor, because a route around the membrane cannot be gated
+    by speciation or by the membrane potential. `g_apo` defaults to 0, so it is not
+    merely zero but structurally absent for PFAS and for the strict neutral path.
 
     The GHK factor multiplies the ION term ONLY, and that is precisely what lets one
     code path span the whole speciation spectrum:
@@ -298,7 +322,10 @@ def root_uptake(Cwo: float, Cw_root: float, cmpd: Compound, env: Environment) ->
     # carrier-mediated (active/facilitated), net influx - efflux
     j_carr = (cmpd.Vmax_in * Cwo / (cmpd.Km_in + Cwo)
               - cmpd.Vmax_out * Cw_root / (cmpd.Km_out + Cw_root))
-    return j_n + j_ed + j_carr
+    # apoplastic bypass: around the membrane, so neither speciation- nor
+    # potential-gated. `g_apo` defaults to 0 and `x + 0.0 == x` exactly.
+    j_apo = cmpd.g_apo * (Cwo - Cw_root)
+    return j_n + j_ed + j_carr + j_apo
 
 
 @dataclass

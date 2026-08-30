@@ -7,6 +7,8 @@ import os
 import numpy as np
 import pytest
 
+from conftest import SOLVE_INVARIANCE_REL
+
 import model_api as api
 
 _ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
@@ -734,4 +736,8 @@ def test_simulate_neutral_air_is_opt_in_and_zero_for_pfas_like_compounds():
         assert np.array_equal(off["conc"][k], on_zero["conc"][k])
     # a genuinely volatile compound loses the leaf; the root never volatilises
     assert volatile["baf_final"]["leaf"] < 1e-3 * off["baf_final"]["leaf"]
-    assert volatile["baf_final"]["root"] == pytest.approx(off["baf_final"]["root"], rel=1e-9)
+    # Two DISTINCT solves agreeing by physics, not by construction -- case 3 in
+    # tests/conftest.py. The exact np.array_equal above is the strong guard here;
+    # this one can only hold to the solver's accuracy.
+    assert volatile["baf_final"]["root"] == pytest.approx(
+        off["baf_final"]["root"], rel=SOLVE_INVARIANCE_REL)
