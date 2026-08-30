@@ -166,11 +166,11 @@ def pore_water(name, dose_ugg, **kw):
 # ---------------------------------------------------------------------------
 # model
 # ---------------------------------------------------------------------------
-def whole_plant_baf(name, Cwo, uptake="carrier"):
+def whole_plant_baf(name, Cwo, uptake="carrier", km_scale=1.0):
     """Mass-weighted whole-plant BAF -- Tang's BCF endpoint (C_rice/C_soil) up to
     the dose-independent factor 1/Kd, which cancels in every shape used here."""
     r = api.simulate(name, Cwo=Cwo, uptake=uptake, f_xy_source="recommended",
-                     season=SEASON, n_t=N_T)
+                     season=SEASON, n_t=N_T, km_scale=km_scale)
     Mf = r["M"][-1]
     C = np.array([r["conc"][k][-1] for k in api.TISSUES])
     return float((C * Mf).sum() / Mf.sum() / r["cwo_ref"])
@@ -315,12 +315,98 @@ def main(fast=False):
                     cells.append(f"{dc:8.2f}/{decline(obs[nm][0]):6.2f}")
                 print(f"   {f_oc:6.2f}{ks:7.1f}   " + "".join(f"{c:>16s}" for c in cells))
 
+    # -- 7 -------------------------------------------------------------------
+    # POST-HOC — NOT pre-registered. Added after seeing that the pre-registered
+    # rule returns a non-answer for two of three congeners, because a bound is
+    # more useful than a binary verdict the data cannot supply. Labelled as
+    # post-hoc so it is never quoted as a passed pre-registered test.
+    print("\n7. POST-HOC (NOT pre-registered) — the bound this series DOES supply")
+    print("   The carrier survives only if it never saturates over the span, i.e.")
+    print("   if Km is large. That is a testable lower bound on Km, and it is what")
+    print("   the data can say even where the verdict cannot.")
+    km_grid = [1.0, 3.0, 10.0, 30.0, 100.0, 300.0, 1000.0]
+    print(f"   {'Km [ug/L]':>10s}   " + "".join(f"{nm:>10s}" for nm in CONGENERS)
+          + "     (predicted BCF decline)")
+    kmin = {}
+    for ks in km_grid:
+        row = {}
+        for nm in CONGENERS:
+            row[nm] = decline([whole_plant_baf(nm, c, "carrier", km_scale=ks)
+                               for c in cw[nm]])
+            if row[nm] <= decline(obs[nm][0]) and nm not in kmin:
+                kmin[nm] = api._CARR["Km_in"] * ks
+        print(f"   {api._CARR['Km_in'] * ks:10.0f}   " +
+              "".join(f"{row[nm]:10.2f}" for nm in CONGENERS))
+    for nm in CONGENERS:
+        if nm in kmin:
+            print(f"      {nm}: needs Km >= {kmin[nm]:.0f} ug/L to be as flat as measured "
+                  f"({kmin[nm] / api._CARR['Km_in']:.0f}x the fitted {api._CARR['Km_in']:g})")
+        elif decline(obs[nm][0]) < 1.0:
+            print(f"      {nm}: measured decline is {decline(obs[nm][0]):.2f}x, i.e. the BCF "
+                  f"RISES with dose — no carrier of any Km can produce that, and no")
+            print(f"            bound follows (a saturating term is monotone). Non-informative.")
+        else:
+            print(f"      {nm}: no Km on this grid reproduces the measured flatness")
+    print("   A carrier pushed that far above its exposure range is LINEAR in Cwo")
+    print("   over the whole measured span -- mathematically the bypass term, with")
+    print("   Vmax/Km as its conductance. So the dose series does not choose between")
+    print("   the two mechanisms so much as it bounds the carrier into the bypass's")
+    print("   own functional form.")
+
     # -- verdict -------------------------------------------------------------
     print("\n" + "=" * 84)
     print("VERDICT")
     print("=" * 84)
-    print("   (filled in by the results commit — the pre-registration ships first)")
-    return dict(cw=cw, pred=pred, obs=obs, gate=gate, votes=votes)
+    print(f"   THE PRE-REGISTERED RULE IS NOT MET: {votes}/3 congeners, not 2/3.")
+    print("   The carrier is NOT refuted on the rule as written, and this is")
+    print("   reported first because it is what was agreed in advance.")
+    print()
+    print("   BUT ONLY ONE CONGENER IS ACTUALLY WELL-CONDITIONED, and the gate")
+    print("   should have been PER CONGENER rather than across them — a flaw in")
+    print("   this file's own pre-registration, exposed by running it:")
+    print("      GenX  NON-INFORMATIVE. Cwo/Km = 465 at the LOWEST dose, so the")
+    print("            carrier is saturated at every dose and the two arms differ")
+    print("            by 7% (1.07 vs 1.00). This is failure mode G1 for GenX")
+    print("            alone. Its 'not below' is NOT evidence for the carrier.")
+    print("      PFOA  INCONCLUSIVE. Observed 1.33 IS below the 1.48 midpoint, but")
+    print("            the bootstrap over Tang's SDs is 0.671, under the 0.90 bar.")
+    print("            Also Kd-limited: at f_oc 0.01 x Koc/10 the carrier predicts")
+    print("            1.05, i.e. below the observation, so the sign can flip.")
+    print("      PFOS  WELL-CONDITIONED AND IT REFUTES. Lowest pore water of the")
+    print("            three (Cwo/Km 1.7 at the bottom dose, 1729 at the top), so")
+    print("            it is the one compound that actually crosses Km inside the")
+    print("            series. Carrier predicts a 6.28x decline; measured is 1.17x;")
+    print("            bootstrap 1.000; and it holds in 8 of 9 Kd combinations")
+    print("            (only f_oc 0.01 x Koc/10 softens it to 1.38).")
+    print()
+    print("   THE ENDPOINT TEST POINTS THE SAME WAY, and it is independent of Kd.")
+    print("   The model confirms entry magnitude divides out of TF (dose-invariant")
+    print("   to 3 decimals in BOTH arms), so a carrier CANNOT produce a TF trend.")
+    print("   Yet PFOA's TF falls 2.1-2.3x across the span while its BCF falls only")
+    print("   1.33x: the dose response sits in TRANSLOCATION, where entry cannot")
+    print("   put it, and is LARGER than the whole uptake signal. Something other")
+    print("   than the entry term is operating — the documented toxicity is the")
+    print("   candidate — and per pre-registered item (b) that makes PFOA's BCF")
+    print("   decline unattributable, which is how it is scored above.")
+    print()
+    print("   AND THE BOUND IS THE SAME FOR BOTH INFORMATIVE CONGENERS: PFOA and")
+    print("   PFOS each need Km >= 500 ug/L — 100x the fitted 5 — for the carrier to")
+    print("   be as flat as measured. Two compounds with a ~6x difference in pore")
+    print("   water landing on the same bound is what a real constraint looks like.")
+    print()
+    print("   NET. The dose series was the right instrument and it did separate the")
+    print("   mechanisms where it could: on the single congener whose exposure")
+    print("   crosses Km, the saturating carrier predicts a decline five times")
+    print("   larger than the measurement. That is one congener, so it does not")
+    print("   carry the pre-registered 2/3 bar, and the honest statement is that")
+    print("   the carrier is DISFAVOURED here rather than refuted. Section 7's")
+    print("   bound is the durable result: to survive the series the carrier must")
+    print("   be linear across it, which is the bypass's functional form.")
+    print()
+    print("   NOTHING IS ADOPTED. parameters.json, simulate() defaults and")
+    print("   reproduce_demo (0.029) are unchanged; Km is not re-fitted on the back")
+    print("   of a bound derived from three congeners in one soil.")
+    return dict(cw=cw, pred=pred, obs=obs, gate=gate, votes=votes, km_min=kmin)
 
 
 if __name__ == "__main__":

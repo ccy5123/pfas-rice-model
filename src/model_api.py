@@ -302,7 +302,7 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
              season=120.0, n_t=241, measured_forcing=True, biomass="oryza",
              drivers=None, K_surf=0.0, record=None,
              cwo_profile="constant", cwo_kw=None,
-             uptake=DEFAULT_UPTAKE, vmax_scale=None, g_apo=None):
+             uptake=DEFAULT_UPTAKE, vmax_scale=None, g_apo=None, km_scale=1.0):
     """Run the 4-compartment ODE for one congener and scenario.
 
     Parameters
@@ -345,6 +345,10 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     vmax_scale, g_apo : explicit overrides of the carrier capacity multiplier /
         apoplastic conductance. Either one given wins over `uptake`, so a scan
         can move one term while the mode sets the other.
+    km_scale : multiplier on the carrier half-saturation Km (both influx and
+        efflux). 1.0 (default) is the shipped Km. This is the knob a DOSE series
+        acts on -- Km is what decides WHERE the carrier stops being linear, and
+        `validation/dose_series_carrier.py` uses it to bound Km from below.
 
     Returns a dict with t, per-compartment conc & BAF time series, finals, straw,
     the driver series actually used (Cwo, Qtp, M), B_k, and the effective params.
@@ -385,8 +389,10 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     L_Ph = float(L_Ph_override) if L_Ph_override is not None else float(L_Ph_def)
     cmpd = Compound(name=congener, K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
                     K_cw=c["K_cw_wholecw_Lkg"]["root"], kappa_d=kappa_d,
-                    Vmax_in=_CARR["Vmax_in"] * vmax_scale, Km_in=_CARR["Km_in"],
-                    Vmax_out=_CARR["Vmax_out"] * vmax_scale, Km_out=_CARR["Km_out"],
+                    Vmax_in=_CARR["Vmax_in"] * vmax_scale,
+                    Km_in=_CARR["Km_in"] * float(km_scale),
+                    Vmax_out=_CARR["Vmax_out"] * vmax_scale,
+                    Km_out=_CARR["Km_out"] * float(km_scale),
                     L_Ph=L_Ph, f_xy=f_xy, g_xy=g_xy, g_ph=g_ph, K_surf=float(K_surf),
                     g_apo=float(g_apo))
     comps = _compartments()
@@ -419,7 +425,8 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
                     K_PL=c["K_PL_Lkg"], K_prot=c["K_prot_Lkg"],
                     K_cw=c["K_cw_wholecw_Lkg"]["root"], K_surf=float(K_surf),
                     n_C=c["n_C"], group=c["group"],
-                    uptake=uptake, vmax_scale=float(vmax_scale), g_apo=float(g_apo)),
+                    uptake=uptake, vmax_scale=float(vmax_scale), g_apo=float(g_apo),
+                    Km_in=float(_CARR["Km_in"] * km_scale)),
     )
 
 
