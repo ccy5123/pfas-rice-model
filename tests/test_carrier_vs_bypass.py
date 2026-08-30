@@ -48,6 +48,48 @@ def test_pfas_keeps_no_bypass():
 
 
 # ---------------------------------------------------------------------------
+# A1 -- the bypass as a named mode (the `lipid_source` idiom)
+# ---------------------------------------------------------------------------
+def test_uptake_mode_default_is_the_shipped_carrier():
+    """The whole safety property of A1: naming the mode must not move anything.
+    `uptake='carrier'` is the default AND is exactly the shipped solve, so every
+    published PFAS number still describes what simulate() returns."""
+    assert api.DEFAULT_UPTAKE == "carrier"
+    assert api.UPTAKE_MODES["carrier"] == dict(vmax_scale=1.0, g_apo=0.0)
+    a = api.simulate("PFOA", season=120.0, n_t=121)
+    b = api.simulate("PFOA", season=120.0, n_t=121, uptake="carrier")
+    for k in api.TISSUES:
+        assert a["baf_final"][k] == b["baf_final"][k], k
+    assert a["params"]["uptake"] == "carrier"
+
+
+def test_uptake_bypass_mode_turns_the_carrier_off_and_the_conductance_on():
+    """The mode has to BE the arm it names -- carrier off, one global g_apo --
+    or the runnable alternative is not the thing that was scored."""
+    r = api.simulate("PFOA", season=120.0, n_t=121, uptake="bypass")
+    assert r["params"]["vmax_scale"] == 0.0
+    assert r["params"]["g_apo"] == api.UPTAKE_MODES["bypass"]["g_apo"] > 0.0
+    explicit = api.simulate("PFOA", season=120.0, n_t=121, vmax_scale=0.0,
+                            g_apo=api.UPTAKE_MODES["bypass"]["g_apo"])
+    for k in api.TISSUES:
+        assert r["baf_final"][k] == explicit["baf_final"][k], k
+
+
+def test_explicit_overrides_still_win_over_the_named_mode():
+    """A scan must be able to move one term while the mode sets the other --
+    otherwise naming the mode would take the scan away from carrier_vs_bypass."""
+    r = api.simulate("PFOA", season=120.0, n_t=121, uptake="bypass", g_apo=5.0)
+    assert (r["params"]["g_apo"], r["params"]["vmax_scale"]) == (5.0, 0.0)
+    r2 = api.simulate("PFOA", season=120.0, n_t=121, uptake="carrier", vmax_scale=0.0)
+    assert (r2["params"]["vmax_scale"], r2["params"]["g_apo"]) == (0.0, 0.0)
+
+
+def test_unknown_uptake_mode_is_refused():
+    with pytest.raises(ValueError):
+        api.simulate("PFOA", uptake="apoplast")
+
+
+# ---------------------------------------------------------------------------
 # the findings
 # ---------------------------------------------------------------------------
 def test_the_carrier_has_one_global_parameter_not_one_per_congener():

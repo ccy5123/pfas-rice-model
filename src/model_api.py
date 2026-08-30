@@ -33,6 +33,42 @@ _CONG = {c["name"]: c for c in PARAMS["congeners"]}
 CONGENERS = [c["name"] for c in PARAMS["congeners"]]            # 12, ordered
 TISSUES = ("root", "stem", "leaf", "grain")
 
+# ---------------------------------------------------------------------------
+# ROOT-ENTRY MECHANISM -- a named mode, because the choice is NOT settled.
+#
+# docs/theory_anchor.tex marks the Michaelis-Menten CARRIER as one of only three
+# things this repo adds to the Trapp (2000, 2004) ionizable-compound cell model,
+# and it was FITTED (parameters.json: "fixed during W2 fit"). validation/
+# carrier_vs_bypass.py compared it, on identical everything else, with a passive
+# APOPLASTIC BYPASS of the DPU base's own Fickian form -- one global parameter
+# each -- and with membrane depolarisation, which adds no term at all:
+#
+#     nothing (Trapp's PFAS limit)      log10 RMSE 2.640
+#     carrier  (incumbent)                        1.035
+#     bypass   (one global g_apo = 20)            0.996
+#     depolarisation (E_m = -90 mV)               2.289
+#
+# So an addition IS necessary (depolarisation is REFUTED), but WHICH addition is
+# not decided by that data: 0.04 log units over 33 observations, bootstrap
+# P(bypass beats carrier) = 0.749, and the bypass cannot claim parsimony either
+# (Vmax_in is a single global 20.0, not per-congener -- checked, not assumed).
+#
+# THE CARRIER IS THE DEFAULT BY DEFAULT, NOT BY EVIDENCE. It is the incumbent and
+# every published number runs on it; the bypass is kept RUNNABLE rather than
+# buried in a validation script, in the repo's idiom for an open question
+# (`lipid_source`, `f_xy_source`, `cwo_profile`, `biomass`, `tscf_model`).
+#
+# Against the bypass specifically: fitted per congener, g_apo trends with chain
+# length (corr +0.832, spread 25x) where theory_anchor.tex says eta -- which
+# contains the apoplastic bypass -- is "essentially independent of tail length".
+# On its own criterion that is a relabelled carrier. The bypass value below is
+# the single global optimum from that scan, NOT a calibrated parameter.
+UPTAKE_MODES = {
+    "carrier": dict(vmax_scale=1.0, g_apo=0.0),                 # incumbent = shipped
+    "bypass":  dict(vmax_scale=0.0, g_apo=20.0),                # carrier off, one global g_apo
+}
+DEFAULT_UPTAKE = "carrier"
+
 # Per-congener flooded-profile leaching rate k_leach, calibrated to a real HYDRUS-1D
 # run (validation/cwo_kleach_calibration.py -> params/cwo_kleach.csv). Short chains
 # leach faster (larger k_leach); long chains stay buffered (k_leach -> 0). Loaded once.
@@ -266,7 +302,7 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
              season=120.0, n_t=241, measured_forcing=True, biomass="oryza",
              drivers=None, K_surf=0.0, record=None,
              cwo_profile="constant", cwo_kw=None,
-             vmax_scale=1.0, g_apo=0.0):
+             uptake=DEFAULT_UPTAKE, vmax_scale=None, g_apo=None):
     """Run the 4-compartment ODE for one congener and scenario.
 
     Parameters
@@ -299,10 +335,25 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         Cwo stays the AVERAGE exposure. `cwo_kw` passes extra options to
         `cwo_profile_series` (flood_fraction, k_leach, C_total, ...). Ignored when
         `drivers` are given (those carry their own Cwo).
+    uptake : which ROOT-ENTRY mechanism carries the anion past GHK exclusion --
+        'carrier' (default; the fitted Michaelis-Menten carrier, the incumbent
+        every published number runs on) or 'bypass' (carrier off, one global
+        passive apoplastic conductance g_apo). The two are INDISTINGUISHABLE on
+        the only dataset that has been asked (1.035 vs 0.996 log10 RMSE,
+        bootstrap 0.749), so the carrier is the default by default, not by
+        evidence -- see UPTAKE_MODES and validation/carrier_vs_bypass.py.
+    vmax_scale, g_apo : explicit overrides of the carrier capacity multiplier /
+        apoplastic conductance. Either one given wins over `uptake`, so a scan
+        can move one term while the mode sets the other.
 
     Returns a dict with t, per-compartment conc & BAF time series, finals, straw,
     the driver series actually used (Cwo, Qtp, M), B_k, and the effective params.
     """
+    if uptake not in UPTAKE_MODES:
+        raise ValueError(f"unknown uptake {uptake!r}; expected one of {sorted(UPTAKE_MODES)}")
+    _up = UPTAKE_MODES[uptake]
+    vmax_scale = _up["vmax_scale"] if vmax_scale is None else float(vmax_scale)
+    g_apo = _up["g_apo"] if g_apo is None else float(g_apo)
     if record is not None:
         c = record                       # custom (e.g. SMILES-derived) congener record
     elif congener not in _CONG:
@@ -367,7 +418,8 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         params=dict(f_xy=f_xy, L_Ph=L_Ph, kappa_d=kappa_d, g_xy=g_xy, g_ph=g_ph,
                     K_PL=c["K_PL_Lkg"], K_prot=c["K_prot_Lkg"],
                     K_cw=c["K_cw_wholecw_Lkg"]["root"], K_surf=float(K_surf),
-                    n_C=c["n_C"], group=c["group"]),
+                    n_C=c["n_C"], group=c["group"],
+                    uptake=uptake, vmax_scale=float(vmax_scale), g_apo=float(g_apo)),
     )
 
 

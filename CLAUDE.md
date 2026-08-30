@@ -1083,6 +1083,16 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   a-priori-limited (monotone `f_xy`) and NOT comparable to the fitted 0.029 or the documented a-priori ~0.84.
   **Next (agreed): A1** = expose the bypass as a named mode, default carrier; **then B1** = separate the two on
   Tang's 5-dose series (a carrier saturates, a bypass is linear; data already in `raw_si/`) — see the handoff.
+- **A1 DONE — the bypass is a named mode, `simulate(uptake="carrier"|"bypass")` (this session)**:
+  `model_api.UPTAKE_MODES` + `DEFAULT_UPTAKE="carrier"`. The repo's idiom for a question that is open rather
+  than settled (`lipid_source`, `f_xy_source`, `cwo_profile`, `biomass`, `tscf_model`): **the default does not
+  move and the alternative is kept RUNNABLE instead of buried in a validation script**. `"bypass"` = the scored
+  arm exactly (carrier off, one global `g_apo`=20); explicit `vmax_scale=`/`g_apo=` still win over the mode so
+  the scans keep working; the effective mode is reported in `params`. Recorded in code, not just in docs: **the
+  carrier keeps its place by DEFAULT, NOT BY EVIDENCE** — A and B are indistinguishable (1.035 vs 0.996,
+  bootstrap 0.749) on the only dataset asked, and the bypass does not win parsimony either. `uptake="carrier"`
+  is **bit-identical** to the shipped solve (pinned by a test), so `parameters.json`, `simulate()` defaults and
+  `reproduce_demo` (0.029, re-verified) are UNCHANGED.
 - **CI now runs the WHOLE suite (this session)**: `.github/workflows/tests.yml`. Until now `rigor.yml` was the only
   workflow and it runs a SINGLE module (`test_sci_adk_rigor.py`), which is why every handoff carried "⚠️ CI does not test
   any of this — a green check means nothing here" and why the suite count in this file was maintained by hand from
@@ -1165,6 +1175,11 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (94%) and the RMSE loss is not (82%). `f_n` comes from the table's own logD, NOT its pKa — the two
   columns disagree by a median 1.41 log, and the pKa route manufactures a false counterexample out of
   the 8 pKa-1.62 rows (pinned by a test).
+- **Is the carrier necessary? (the repo's one addition to Trapp)**: `python validation/carrier_vs_bypass.py`
+  (~12 min; `--fast` coarser grids, ~4 min). Read the header (the PRE-REGISTRATION) before the VERDICT.
+  An addition IS necessary (depolarisation REFUTED) but WHICH is undecided (bootstrap 0.749). The alternative
+  is runnable, not buried: **`model_api.simulate(uptake="bypass")`** (default `"carrier"` = the shipped model,
+  bit-identical) — see `model_api.UPTAKE_MODES`; explicit `vmax_scale=`/`g_apo=` still override the mode.
 - **Kodešová 2019 carbamazepine (queue A4; the anchor vote)**: `python validation/kodesova2019_carbamazepine.py`
   (exposure from the paper's own measured isotherms + the `Koc` defence of the unit reading; a-priori 0.191;
   the shipped-vs-anchored table across all three root datasets; the Brunetti verdict; the dw→fw sensitivity).

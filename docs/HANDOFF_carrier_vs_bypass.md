@@ -95,7 +95,17 @@ Upstream on the same thread: `000a4e0` added `g_apo` itself (the mechanism
 
 ## 3. The two jobs left, as decided with the user
 
-### A1 — keep the carrier as default, add the bypass as a named mode
+### A1 — keep the carrier as default, add the bypass as a named mode — **DONE**
+
+Shipped as `model_api.UPTAKE_MODES` / `simulate(uptake="carrier"|"bypass")`,
+default `"carrier"` and bit-identical to the shipped solve (pinned by
+`tests/test_carrier_vs_bypass.py::test_uptake_mode_default_is_the_shipped_carrier`);
+explicit `vmax_scale=`/`g_apo=` still win over the mode, so the scans in
+`validation/carrier_vs_bypass.py` keep working unchanged. The reason the carrier
+stays default — **by default, not by evidence** — is recorded in the code beside
+the modes, not only here. Original brief below.
+
+
 
 The repo's own idiom for an unsettled question (`lipid_source`, `f_xy_source`,
 `cwo_profile`, `biomass`, `tscf_model`, `mode`): the default does not move, and
