@@ -71,27 +71,61 @@ def test_derived_pka_were_superseded_by_sourced_ones(rows):
         assert abs(BC.pka_from_fraction(pct / 100.0) - pka) < 0.05, name
 
 
-def test_the_unresolved_row_is_run_both_ways(rows, screened):
-    """Tebuconazole's export row gives is_acid=TRUE but ionisation_class=base and
-    no percentage to arbitrate, and the two readings give OPPOSITE scope verdicts.
-    Neither is asserted: both are rows, and they must land on opposite sides."""
-    v = {o["substance"]: o["verdict"] for o in screened}
-    assert v["Tebuconazole"] == "inside"
-    assert v["Tebuconazole (base reading)"].startswith("EXCLUDED")
-    note = [r for r in rows if r["substance"] == "Tebuconazole"][0]["note"]
-    assert "UNRESOLVED" in note
+def test_tebuconazole_pairs_its_pka_with_the_right_charge(rows, screened):
+    """This row was briefly run BOTH ways, because the export gave is_acid=TRUE
+    beside ionisation_class=base with no percentage to arbitrate. The BAT project
+    resolved it: BAT entered it as an ACID at pKa 12.6205, and the base reading is
+    a DIFFERENT pKa (3.516), not the same number re-labelled. Both are >99.9%
+    neutral at pH 7, so the readings cannot diverge -- and pairing is_acid=FALSE
+    with 12.6205, which the two-row treatment did, is the one combination that is
+    simply wrong: it reads as 100% ionised. One row, acid, and the note keeps the
+    resolution so nobody re-splits it."""
+    assert not [r for r in rows if "base reading" in r["substance"]]
+    teb = [r for r in rows if r["substance"] == "Tebuconazole"][0]
+    assert teb["is_acid"].strip().upper() == "TRUE"
+    assert BC._f(teb, "pKa") == pytest.approx(12.6205)
+    assert BC._f(teb, "pct_ionised_pH7") < 0.001
+    assert "RESOLVED" in teb["note"] and "3.516" in teb["note"]
+    assert {o["verdict"] for o in screened if o["substance"] == "Tebuconazole"} == {"inside"}
 
 
-def test_bat_entered_substances_carry_no_comparison(rows):
-    """The 21 substances BAT entered but the report never named individually are
-    predictions with nothing to compare against: no BPC class, no fish BCF. If one
-    ever acquired a bat_A_fish it would silently enter the rank correlation."""
+def test_the_rank_correlation_excludes_what_cannot_be_ranked(rows):
+    """Two exclusions, both stated in the script rather than silent: a substance
+    carrying a second log Kow row would otherwise be weighted twice against one
+    BAT value, and the triamine's BAT output is marked uninterpretable by the
+    project that produced it (three charges against a tool taking one pKa)."""
+    src = open(os.path.join(_ROOT, "validation", "bat_census_biocides.py")).read()
+    assert "not interpretable" in src and "alt log Kow" in src
+    caveated = [r for r in rows if "not interpretable" in (r.get("bat_caveat") or "")]
+    assert len(caveated) == 1
+    assert "diamine" in caveated[0]["substance"].lower()
+    # and the variant rows really do share a BAT value with their parent
+    for stem in ("Permethrin", "Cyphenothrin"):
+        fam = [r for r in rows if r["substance"].startswith(stem)]
+        assert len(fam) == 2, stem
+        assert len({r["cas"] for r in fam}) == 1, stem
+
+
+def test_bat_entered_substances_now_carry_their_comparison(rows):
+    """The 21 substances BAT entered but the report never named individually
+    arrived without a BPC class or a fish BCF, so they were predictions with
+    nothing to compare against. The BAT project then supplied both for all 61 it
+    ran, which is what took the rank correlation from 20 substances to ~59. Two of
+    the 61 still have no class because no opinion was ever issued for them -- that
+    is a fact about the regulator, not a gap, and it is carried in the caveat."""
     extra = [r for r in rows if r["section"] == "EXPORT_entered_into_BAT"]
     assert len(extra) >= 20
     for r in extra:
-        assert not r["bpc_class"].strip(), r["substance"]
-        assert not r["bat_A_fish"].strip(), r["substance"]
         assert r["cas"].strip(), r["substance"]
+        assert r["bat_A_fish"].strip(), r["substance"]
+        if not r["bpc_class"].strip():
+            assert "NO BPC OPINION" in r["bat_caveat"], r["substance"]
+    # the class distribution has to match what the report itself states
+    cls = [r["bpc_class"].strip() for r in rows if r["bpc_class"].strip()]
+    assert cls.count("B") + cls.count("vB") >= 7        # the seven the opinions call B/vB
+    noscen_b = [r for r in rows if r["bat_A_fish"].strip() and not r["bat_B_fish"].strip()
+                and "no Scenario B run" in (r["bat_caveat"] or "")]
+    assert len(noscen_b) >= 14   # empty Scenario B is the fact, not a missing value
 
 
 def test_hh_helpers_are_inverses():

@@ -274,7 +274,8 @@ def run_all(screened, quiet=False):
         pKa = o["pKa"] if o["f_n"] >= F_N_FLOOR else None   # neutral form for the excluded
         rec = dict(substance=o["substance"], log_kow=o["log_kow"], verdict=o["verdict"],
                    f_n=o["f_n"], pKa_used=pKa, km_half_life_d=km,
-                   bpc=r["bpc_class"], bat_A=_f(r, "bat_A_fish"), bat_B=_f(r, "bat_B_fish"))
+                   bpc=r["bpc_class"], bat_A=_f(r, "bat_A_fish"), bat_B=_f(r, "bat_B_fish"),
+                   bat_caveat=(r.get("bat_caveat") or "").strip())
         p = run_one(o["log_kow"], o["substance"], pKa=pKa, is_acid=o["is_acid"])
         rec.update({f"P_{k}": p[k] for k in
                     ("TSCF", "K_PW_root", "root", "stem", "leaf", "grain", "straw")})
@@ -449,7 +450,20 @@ def cross_model(runs, fast=False, quiet=False):
                             kpw=np.array([ND.k_pw(float(l), **_root_wl()) for l in grid]))
 
     # (e) does a fish BCF rank these substances the way a rice model does?
-    pairs = [(r["bat_A"], r["P_root"], r["P_straw"]) for r in runs if r["bat_A"]]
+    #     Two exclusions, both stated rather than silent. A SUBSTANCE may appear
+    #     twice here (permethrin and cyphenothrin each carry a second row for their
+    #     assessment report's other measured log Kow); the two rows share one BAT
+    #     value, so counting both would weight that substance twice. And the BAT
+    #     project marks the triamine's own output uninterpretable -- three charges
+    #     at environmental pH against a tool that takes one pKa -- and drops it from
+    #     every tally in its report; a number nobody can read is not a rank.
+    def _pairable(r):
+        if not r["bat_A"]:
+            return False
+        if "alt log Kow" in r["substance"] or "AR measured" in r["substance"]:
+            return False
+        return "not interpretable" not in r.get("bat_caveat", "")
+    pairs = [(r["bat_A"], r["P_root"], r["P_straw"]) for r in runs if _pairable(r)]
     if len(pairs) >= 4:
         from scipy.stats import spearmanr
         a = np.array(pairs, float)
