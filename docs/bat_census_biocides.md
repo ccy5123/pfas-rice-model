@@ -230,34 +230,38 @@ maturity. The quantity the report identifies as its least defensible input is th
 one the edible compartment is most sensitive to, and for a plant nobody has
 measured it at all.
 
-## The other 106 substances in that export — not usable as delivered
+## The other 106 substances — and a correction to what this file said about them
 
-The same export carries **106 substances that were never entered into BAT** (no
-BPC opinion, so that study could not score them). This model has no such
-restriction, and on log Kow alone **82 of them would fall inside** the
-measured-data span — which would take the screen from 24 substances to over a
-hundred. It is not being done, for two reasons that are properties of the file
-rather than judgements:
+The first export carried **106 substances never entered into BAT**, and this file
+recorded that none of them could be used because the file had **zero pKa and zero
+source rank** for any row. That description of *the file* was accurate. The
+**inference drawn from it was not**: this file said that with those two columns
+they would run "on the same footing as the 43". The BAT project's reply
+establishes that they would not, and the reason is worth keeping.
 
-* **No pKa on any of the 106.** The column is populated for 28 of the 61
-  BAT-entered rows and for **zero** of the collection-sheet-only rows. Running
-  them would silently treat every ionisable substance as neutral — which is
-  exactly the failure the report records against its own screen in §3.0a, and
-  the failure this file's ionisation gate exists to prevent. The gate cannot
-  fire on a blank.
-* **No source rank on any of the 106.** Rank is present for 59 of the 61 entered
-  rows and none of the others, so a measured value and a model output are
-  indistinguishable. That is the §7.9 trap — permethrin's 6.5 arrived tagged
-  "experimental" from a prediction model — with no way to check for it.
+* **The pKa were never missing at the source.** Their collection sheet holds pKa
+  for **80** substances with acid/base and a citation; the first export read only
+  from the audited provenance table, which covers the entered substances. So the
+  gap was in the extract, not the data.
+* **64 of the 106 carry a log Kow that is a computed median absent from its own
+  candidate list** — the exact practice the report's §8.14 forbids and audited out
+  of its own inputs. Ten more are tagged `experimental` while naming a prediction
+  model as the source: the §7.9 trap that put permethrin's 6.5 into the study.
+* **The missing rank is not an omission, it is the finding.** The §8.14 audit ran
+  over the 59 substances BAT entered. The rest of the collection sheet never went
+  through it, so there is no rank to send.
 
-The data itself shows why that matters: allyl isothiocyanate carries a log Kow of
-**34.675** in the unaudited half. Its real value is near 2. One such row inside a
-screen of 106 would discredit the whole table.
+**Allyl isothiocyanate's log Kow of 34.675 now has a cause**, and it is worse than
+a typo: it is the median of the candidates `2.11 · 2.15 · 67.2 · 130.23` — two
+log-scale values averaged together with two linear Kow values — and the row is
+tagged `experimental`. It never entered BAT, so no result in this file is touched
+by it; it is kept here as the concrete illustration of what an unaudited row can
+be.
 
-**So the ask is specific**: pKa (with acid/base) and a source rank for those 106,
-or a subset of them chosen by use — the wood-preservative and paddy-relevant
-actives first. With those two columns they become runnable on the same footing as
-the 43.
+**The runnable subset is 29, not 106.** Forty of the never-entered rows carry no
+quality flag, and 29 of those also have a pKa. Those 29 are the ones that could
+join the census on equal terms; the rest need the §8.14 audit run over them first,
+which is a decision for that project rather than a column to request.
 
 ## What this does not establish — and cannot
 

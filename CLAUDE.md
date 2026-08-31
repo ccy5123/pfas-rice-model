@@ -1154,9 +1154,15 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   deliberately left OPEN — their provenance says the AR's measured 5.79–6.09 supersedes the entered 6.29 and they declined
   to pick one (their §8.14 rule applied to themselves), so both ends are run and neither is called canonical.
   **The export's other 106 substances (never entered into BAT) are NOT usable as delivered**: 82 would fall inside on
-  log Kow alone, but the file carries **zero pKa and zero source rank** for any of them, so the ionisation gate cannot fire
-  (the §3.0a failure) and a measurement is indistinguishable from a model output (the §7.9 trap) — and one row carries
-  log Kow **34.675** (allyl isothiocyanate, real value ~2). The follow-up ask is those two columns. The exclusion rule is the
+  log Kow alone, but the file carries zero pKa and zero source rank for any of them, so the ionisation gate cannot fire
+  (the §3.0a failure) and a measurement is indistinguishable from a model output (the §7.9 trap). **CORRECTION (their
+  reply, recorded)**: the inference that "those two columns would make them equal to the 43" was WRONG — the pKa were
+  never missing at the source (their sheet has 80), and the real blocker is quality: **64 of the 106 carry a log Kow that
+  is a computed median absent from its own candidate list** (the §8.14 violation) and 10 more are tagged `experimental`
+  while naming a prediction model (the §7.9 trap). The rank is absent because the §8.14 audit only ever ran over the 59
+  entered substances. **The runnable subset is 29** (40 unflagged, 29 of those with pKa). Allyl isothiocyanate's log Kow
+  34.675 now has a cause: it is the median of `2.11 · 2.15 · 67.2 · 130.23` — two log values averaged with two LINEAR Kow
+  values — tagged `experimental`; it never entered BAT so no result here is touched by it. The exclusion rule is the
   report's OWN §3.0a rule (">90% ionised at environmental pH") which it records as written-down-and-never-implemented;
   it is implemented here at the same threshold, and the pH-7 basis is pinned by round-tripping the six stated pKa to
   **0.002 pp**. **Result**: everything the opinions call bioaccumulative loads the ROOT and does not reach the grain

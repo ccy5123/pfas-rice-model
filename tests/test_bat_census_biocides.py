@@ -52,14 +52,46 @@ def test_report_percent_ionised_is_on_ph7(rows):
     assert st["worst_derived"] < 1e-3
 
 
-def test_derived_pka_is_the_inversion_and_nothing_else(rows):
-    for r in rows:
-        if (r.get("pka_basis") or "").strip() != "derived":
-            continue
-        pct = BC._f(r, "pct_ionised_pH7")
-        assert pct is not None, r["substance"]
-        assert BC._f(r, "pKa") == pytest.approx(
-            BC.pka_from_fraction(pct / 100.0), abs=1e-3), r["substance"]
+def test_derived_pka_were_superseded_by_sourced_ones(rows):
+    """The four anticoagulant pKa were originally RECOVERED from the report's
+    percent-ionised column, because that was all the report printed. The BAT
+    project later sent the audited provenance and all four are now sourced
+    (three of them measured, all rank 1). The recovered values had been within
+    0.03 log -- a check on the inversion that is worth keeping recorded -- but a
+    sourced number supersedes a derived one, so nothing derived may remain."""
+    assert not [r for r in rows if (r.get("pka_basis") or "").strip() == "derived"]
+    sourced = {"Bromadiolone": 4.5, "Brodifacoum": 4.5,
+               "Difenacoum": 4.84, "Flocoumafen": 4.95}
+    by_name = {r["substance"]: r for r in rows}
+    for name, pka in sourced.items():
+        assert BC._f(by_name[name], "pKa") == pytest.approx(pka, abs=1e-9), name
+        # and the recovered value it replaced was close, which is why the
+        # inversion is still trusted where nothing better exists
+        pct = BC._f(by_name[name], "pct_ionised_pH7")
+        assert abs(BC.pka_from_fraction(pct / 100.0) - pka) < 0.05, name
+
+
+def test_the_unresolved_row_is_run_both_ways(rows, screened):
+    """Tebuconazole's export row gives is_acid=TRUE but ionisation_class=base and
+    no percentage to arbitrate, and the two readings give OPPOSITE scope verdicts.
+    Neither is asserted: both are rows, and they must land on opposite sides."""
+    v = {o["substance"]: o["verdict"] for o in screened}
+    assert v["Tebuconazole"] == "inside"
+    assert v["Tebuconazole (base reading)"].startswith("EXCLUDED")
+    note = [r for r in rows if r["substance"] == "Tebuconazole"][0]["note"]
+    assert "UNRESOLVED" in note
+
+
+def test_bat_entered_substances_carry_no_comparison(rows):
+    """The 21 substances BAT entered but the report never named individually are
+    predictions with nothing to compare against: no BPC class, no fish BCF. If one
+    ever acquired a bat_A_fish it would silently enter the rank correlation."""
+    extra = [r for r in rows if r["section"] == "EXPORT_entered_into_BAT"]
+    assert len(extra) >= 20
+    for r in extra:
+        assert not r["bpc_class"].strip(), r["substance"]
+        assert not r["bat_A_fish"].strip(), r["substance"]
+        assert r["cas"].strip(), r["substance"]
 
 
 def test_hh_helpers_are_inverses():
