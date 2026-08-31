@@ -614,8 +614,10 @@ def write_csv(runs, path=OUT_CSV):
 
 
 def verdict(rows, screened, runs, ov, fig_path=None):
-    n_named = len(rows)
-    n_stated = len([r for r in rows if r["status"] == "run"])
+    n_named = len([r for r in rows if "AR measured" not in r["substance"]])
+    n_report = len([r for r in rows if r["status"] == "run"
+                    and "EXPORT_logkow" not in r["section"]])
+    n_export = len([r for r in rows if "EXPORT_logkow" in r["section"]])
     inside = [o for o in screened if o["verdict"] == "inside"]
     excl = [o for o in screened if o["verdict"].startswith("EXCLUDED")]
     rootonly = [o for o in screened if o["verdict"] == "root only"]
@@ -626,10 +628,13 @@ def verdict(rows, screened, runs, ov, fig_path=None):
     print("=" * 78)
     print("VERDICT")
     print("=" * 78)
-    print(f"  {n_named} substances are named in the report and {n_stated} of them carry a")
-    print(f"  log Kow it states, so {len(screened)} can be put through this model at all")
-    print("  (the extra one is propiconazole, whose log Kow comes from this repo's own")
-    print(f"  Liu 2023 row). Of those, {len(inside)} sit inside the span where this repo")
+    print(f"  {n_named} substances are named in the report. {n_report} carry a log Kow the")
+    print(f"  report itself states; {n_export} more were supplied from the BAT project's own")
+    print("  collection sheet on request (they were never printed in the report, and were")
+    print("  never filled in from elsewhere until that source existed); propiconazole comes")
+    print("  from this repo's own Liu 2023 row, and cyphenothrin carries a second row for")
+    print(f"  the assessment report's measured lower end. {len(screened)} rows run in all.")
+    print(f"  Of those, {len(inside)} sit inside the span where this repo")
     print(f"  holds measured plant data, {len(rootonly)} are past the TSCF anchor so only")
     print(f"  their root is quotable, {len(extrap)} are beyond every anchor in either model,")
     print(f"  and {len(excl)} are excluded for ionisation. The report's own coverage")

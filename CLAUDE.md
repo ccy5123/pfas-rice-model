@@ -1141,9 +1141,22 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   organism/endpoint/regulation, so exactly ONE thing transfers — an **audited log Kow of the UNCHARGED form**, which is
   the one input the neutral path needs (`K_PW` and `TSCF` are both functions of it, nothing fitted) and whose corruption
   is the report's own headline correction (a distribution ratio D entered where log Kow belongs; §7.5 — an error this
-  model would inherit identically). **Census**: 44 substances named, **23 carry a report-stated log Kow** (+propiconazole
-  from this repo's own Liu 2023 row) ⇒ 24 runnable; **11 inside** the span where this repo holds measured plant data,
-  6 root-only (past the TSCF anchor), 2 beyond every anchor, **5 EXCLUDED for ionisation**. The exclusion rule is the
+  model would inherit identically). **Census (UPDATED 2026-09-06)**: 44 substances named, 23 with a report-stated log Kow;
+  the other 20 were left BLANK rather than filled in from elsewhere, and on request the BAT project then supplied **18 of
+  them from its own collection sheet** (`EXPORT_logkow_full_20260906.csv`, 167 rows, with CAS + source + rank) ⇒ **43 rows
+  run** (+propiconazole from this repo's Liu 2023 row, + a second cyphenothrin row at the AR's measured lower end);
+  **24 inside** the span where this repo holds measured plant data, 9 root-only, 2 beyond every anchor, **8 EXCLUDED for
+  ionisation**. Only 2 stay unrunnable and neither for want of a number (the triamine has 3 charges; creosote has no
+  structure). Three checks before accepting the export: every stated pKa/%ionised pair round-trips at pH 7 to **<0.005 pp**;
+  the pKa this file had RECOVERED from the report's percentages (coumatetralyl 4.781, warfarin 5.183) match the sourced
+  values (4.75, 5.19) to 0.03/0.007 log — a check on the inversion, now replaced by the sourced ones; and provenance is
+  uneven and recorded per row (IPBC is **rank 3 = a model prediction**; tebuconazole/DCOIT carry no rank). Cyphenothrin is
+  deliberately left OPEN — their provenance says the AR's measured 5.79–6.09 supersedes the entered 6.29 and they declined
+  to pick one (their §8.14 rule applied to themselves), so both ends are run and neither is called canonical.
+  **The export's other 106 substances (never entered into BAT) are NOT usable as delivered**: 82 would fall inside on
+  log Kow alone, but the file carries **zero pKa and zero source rank** for any of them, so the ionisation gate cannot fire
+  (the §3.0a failure) and a measurement is indistinguishable from a model output (the §7.9 trap) — and one row carries
+  log Kow **34.675** (allyl isothiocyanate, real value ~2). The follow-up ask is those two columns. The exclusion rule is the
   report's OWN §3.0a rule (">90% ionised at environmental pH") which it records as written-down-and-never-implemented;
   it is implemented here at the same threshold, and the pH-7 basis is pinned by round-tripping the six stated pKa to
   **0.002 pp**. **Result**: everything the opinions call bioaccumulative loads the ROOT and does not reach the grain
@@ -1159,7 +1172,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   equilibration and not its level — which is WHY the strongly-ionised group is excluded rather than caveated;
   (d) BAT's fish BCF peaks near log Kow 6.3 and turns over, this model's straw peaks at **1.75** and its root never
   turns over but **saturates kinetically** (K_PW/root 0.92 @4 → 0.001 @10.5: above ~7 the root number stops being a
-  partition and becomes a rate); (e) Spearman(BAT fish BCF, rice root) **+0.467** vs (·, rice straw) **−0.466** — a fish
+  partition and becomes a rate); (e) Spearman(BAT fish BCF, rice root) **+0.725** vs (·, rice straw) **−0.725** on 35 substances (+0.467/−0.466 on the first 20 — nearly doubling the sample STRENGTHENED it) — a fish
   bioaccumulation class is NOT a statement about grain; (f) the report's largest finding is AMPLIFIED — its metabolic
   input moved fish BCF ≤82×, the same fish kM half-lives move this model's **grain ≤5,573×** (terminal accumulator),
   i.e. the least defensible input is the one the edible compartment is most sensitive to. **Honest limits**: no measured

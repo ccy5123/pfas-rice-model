@@ -42,9 +42,22 @@
 #
 # `status`:
 #   run                 -- the report states a log Kow, so the model can run it
-#   no_logkow_in_report -- named in the report, but no log Kow is stated there.
-#                          NOT filled in from elsewhere: inventing an input is the
-#                          defect the report's own section 8.14 is about.
+#   no_logkow_in_report -- named in the report, but no log Kow anywhere. Only two
+#                          remain, and both are unrunnable for a structural reason
+#                          rather than a missing number (see below).
+#
+# UPDATE 2026-09-06. Twenty rows carried `no_logkow_in_report` because the REPORT
+# does not print a log Kow for them. They were never filled in from elsewhere --
+# inventing an input is the defect that report's own section 8.14 is about. Asked
+# for instead, the BAT project supplied its own collection sheet
+# (EXPORT_logkow_full_20260906.csv, 167 substances), and 18 of the 20 are now
+# entered from it with the CAS, the source string and the SOURCE RANK in `note`
+# (rank 1 = assessment/CLH report, 2 = cited literature, 3 = model prediction).
+# Every stated pKa/percent-ionised pair in that export round-trips at pH 7 to
+# better than 0.005 percentage points, i.e. on the same basis this file already
+# used. The two that stay unrunnable were deliberately NOT requested: the
+# triamine carries three charges (this model takes one valence, as BAT does), and
+# creosote has no single defined structure.
 #   repo_logkow         -- one substance: the report names it but states no log Kow,
 #                          and this repo already carries a measured plant row for it
 #                          under a cited log Kow. Flagged so it is never counted as
@@ -52,46 +65,47 @@
 #
 substance,status,log_kow,pKa,pka_basis,is_acid,pct_ionised_pH7,MW,water_sol_mgL,henry_Pa_m3_mol,km_half_life_d,km_kind,tanimoto,bpc_class,bat_A_fish,bat_B_fish,measured_fish_bcf,section,note
 Permethrin,run,4.6,,,,,391,,,2.360399,measured,1.000,nB,3830,796,570;2800,7.9;8.12;8.15,"wood-preservative AR p.53, pH 4/7/9 23C; the same report also gives 6.1 at 20C and declines to choose"
-Permethrin (alt log Kow),run,6.1,,,,,391,,,2.360399,measured,1.000,nB,,,570;2800,7.9,"the second measured value in the same assessment report; run as the report ran both"
+Permethrin (alt log Kow),run,6.1,,,,,391,,,2.360399,measured,1.000,nB,,,570;2800,7.9,the second measured value in the same assessment report; run as the report ran both
 (13Z)-Hexadec-13-en-11-yn-1-yl acetate,run,3.74,,,,,,,,,predicted,,nB,557,,,7.9,"assessment report p.27, standard shake-flask"
-Empenthrin,run,6.30,,,,,274.4,0.111,34.65,,predicted,,nB,42400,811,,7.9;8.11,"assessment report p.39 (20C); the most volatile substance in the set"
+Empenthrin,run,6.30,,,,,274.4,0.111,34.65,,predicted,,nB,42400,811,,7.9;8.11,assessment report p.39 (20C); the most volatile substance in the set
 Epsilon-metofluthrin,run,5.0,,,,,376.4,,,,predicted,,nB,8770,2310,,7.9;8.11,"classification report p.14, both isomers"
-Tralopyril,run,4.08,7.08,stated,TRUE,45.41,,,,,predicted,,nB,748,,,7.9,"uncharged-form value fitted to the measured pH series (4.4/3.5/2.4 at pH 4/7/9); pH-4 point reads 4.40 directly"
+Tralopyril,run,4.08,7.08,stated,TRUE,45.41,,,,,predicted,,nB,748,,,7.9,uncharged-form value fitted to the measured pH series (4.4/3.5/2.4 at pH 4/7/9); pH-4 point reads 4.40 directly
 Difethialone,run,6.29,,,,,539.5,0.3906,0.101,1.47,predicted,0.226,vB,42300,516,,7.5;8.11;8.16,"renewal AR: not ionisable, pH effect need not be assessed"
-Cyphenothrin,run,6.29,,,,,375.5,0.01,0.0022,,predicted,0.852,nB,42300,986,894.9;618,8.11;8.12;8.13,"entered 6.29 from a compilation; the AR gives 5.79-6.09 measured. Opinion is silent on the parent; the AR carries the nB"
+Cyphenothrin,run,6.29,,,,,375.5,0.01,0.0022,,predicted,0.852,nB,42300,986,894.9;618,8.11;8.12;8.13,"entered 6.29 from a compilation; the PT18 AR p34 gives 5.79-6.09 MEASURED and their provenance records it as superseding 6.29. They declined to pick one (that is the §8.14 rule), so both ends are run and neither is called canonical"
+"Cyphenothrin (AR measured, lower end)",run,5.79,,,,,375.5,0.01,0.0022,,predicted,0.852,nB,,,894.9;618,8.11;8.12;8.13,the lower endpoint of the assessment report's MEASURED range 5.79-6.09 (PT18 AR p34). Run to bound the effect; the upper end 6.09 lands in the same scope class
 Cyfluthrin,run,5.95,,,,,434.3,,,,predicted,,nB,35700,3780,,8.11,
-Cholecalciferol,run,10.24,,,,,384.6,,,,,,nB,72,,,8.11,"far outside every QSPR anchor in either model"
-Cis-tricos-9-ene (muscalure),run,10.607,,,,,322.6,,,,,,nB,31,,,8.11,"far outside every QSPR anchor in either model"
-Brodifacoum,run,6.67,4.4784,derived,TRUE,99.7,,0.0038,,1.70,predicted,0.231,B,30800,661,,7.5;8.9;8.16a,"audited from a calculated 8.5; the lowest water solubility in the set"
+Cholecalciferol,run,10.24,,,,,384.6,,,,,,nB,72,,,8.11,far outside every QSPR anchor in either model
+Cis-tricos-9-ene (muscalure),run,10.607,,,,,322.6,,,,,,nB,31,,,8.11,far outside every QSPR anchor in either model
+Brodifacoum,run,6.67,4.4784,derived,TRUE,99.7,,0.0038,,1.70,predicted,0.231,B,30800,661,,7.5;8.9;8.16a,audited from a calculated 8.5; the lowest water solubility in the set
 Difenacoum,run,7.22,4.8481,derived,TRUE,99.3,,,,1.89,predicted,0.245,B,50100,722,,7.5;8.9;8.16,"audited: the 6.11 entered before was a distribution ratio D, not log Kow"
 Bromadiolone,run,6.31,4.4784,derived,TRUE,99.7,,,,1.88,predicted,0.255,B,18100,683,,7.5;8.9;8.16,"graded UPPER BOUND by the report: one usable point, the pH series unfittable"
-Flocoumafen,run,8.13,4.9582,derived,TRUE,99.1,,,,12.10,predicted,0.188,vB,45000,2650,,7.5;8.9;8.16,"graded conditional: two measurements against two fitted parameters"
-Triclosan,run,4.76,7.9,stated,TRUE,11.18,,,,5.73,predicted,0.750,vB,4900,1630,,7.8;8.16,"pKa 7.9 from two curated toxicology databases; the 8.2305 it replaced was a midpoint of two predictions"
+Flocoumafen,run,8.13,4.9582,derived,TRUE,99.1,,,,12.10,predicted,0.188,vB,45000,2650,,7.5;8.9;8.16,graded conditional: two measurements against two fitted parameters
+Triclosan,run,4.76,7.9,stated,TRUE,11.18,,,,5.73,predicted,0.750,vB,4900,1630,,7.8;8.16,pKa 7.9 from two curated toxicology databases; the 8.2305 it replaced was a midpoint of two predictions
 Hexaflumuron,run,5.68,,,,,,,,19.20,predicted,0.277,vB,27000,6070,,8.16,
-Triflumuron,run,4.91,10.126,stated,TRUE,0.075,359,,,,predicted,,nB,7320,2190,,8.15,"99.93% neutral at pH 7"
-DCPP,run,4.60,8.065,stated,TRUE,7.927,,,,,predicted,,nB,3590,823,,8.15;10,"pKa is a named model prediction; no measurement exists and the report shows it cannot matter there"
+Triflumuron,run,4.91,10.126,stated,TRUE,0.075,359,,,,predicted,,nB,7320,2190,,8.15,99.93% neutral at pH 7
+DCPP,run,4.60,8.065,stated,TRUE,7.927,,,,,predicted,,nB,3590,823,,8.15;10,pKa is a named model prediction; no measurement exists and the report shows it cannot matter there
 Chlorophacinone,run,2.46,8.0,stated,TRUE,9.091,,,,,predicted,0.444,nB,,,,3;3.0a;7.5,"pKa DISPUTED and left unresolved by the report: 8.0 from the AR, 3.40 from a handbook, ~4.3-4.5 implied by the AR's own solubility series"
-Dazomet,run,1.4,,,,,,,,,,,nB,8.22,,,2.1;8.9,"entered 1.4 (median of 0.63-1.4); the literature gives 0.62 and CTX's own predicted record echoes 0.63"
+Dazomet,run,1.4,,,,,,,,,,,nB,8.22,,,2.1;8.9,entered 1.4 (median of 0.63-1.4); the literature gives 0.62 and CTX's own predicted record echoes 0.63
 Benzoic acid,run,1.87,4.18,stated,TRUE,99.849,,3398,,,,,,,,,2,"unit-conversion QC substance, not an assessed biocide; literature 1.87 / pKa 4.20 / 3400 mg/L"
 Benzyl alcohol,run,1.10,,,,,,43002,,,,,,,,,2,"unit-conversion QC substance, not an assessed biocide; literature 1.10 / 42900 mg/L"
 Propiconazole,repo_logkow,3.72,,,,,,,,,measured,,nB,533,426,,8.8,"the report states no log Kow. 3.72 is this repo's own cited value (data_obs/neutral_obs_liu2023.csv, Liu 2023 SI Table S1), which is why this substance is the one overlap with a MEASURED RICE endpoint"
-Cypermethrin,no_logkow_in_report,,,,,,,,,,predicted,,nB,42400,1710,,8.14,"the 6.175 entered was a median of six candidates (6.0 6.04 6.05 6.3 6.6 6.6) and was replaced by a tie-break whose result the report does not print"
-Alpha-cypermethrin,no_logkow_in_report,,,,,,,,,,measured,,nB,33600,1090,,7.1;8.4,
-Chlorocresol,no_logkow_in_report,,,,,,,,,,measured,,,,,,7.1,"one of the five substances with a MEASURED fish kM"
-Tolylfluanid,no_logkow_in_report,,,,,,,,,,predicted,,nB,801,165,,8.8,
-Dichlofluanid,no_logkow_in_report,,,,,,,,,,predicted,,nB,509,194,,8.8,
-Tebuconazole,no_logkow_in_report,,,,,,,,,,measured,,,509,424,,8.8,"approved, complete properties, in range -- but no opinion exists, so the report cannot score it"
-DCOIT,no_logkow_in_report,,,,,,,,,,predicted,,,454,120,,8.8,"as tebuconazole: no opinion"
-IPBC,no_logkow_in_report,,,,,,,,,,predicted,,nB,81.8,25.6,,8.8,
-Penflufen,no_logkow_in_report,,,,,,,,,,predicted,,nB,912,267,,8.8a,
-OIT,no_logkow_in_report,,,,,,,,,,predicted,,nB,33.9,7.42,,8.8a,
-Cybutryne,no_logkow_in_report,,,,,,,,,,predicted,,nB,244,79,,8.14,
-Piperonyl butoxide,no_logkow_in_report,,,,,,,,,,predicted,,nB,5260,138,,8.4,
-2-methyl-4-oxo-3-(prop-2-ynyl)cyclopent-2-enyl,no_logkow_in_report,,,,,,,,,,predicted,,nB,3010,128,,8.2;8.4,
-Salicylic acid,no_logkow_in_report,,,derived,TRUE,100.0,,,,,,,nB,4,,,8.9,"100.0% ionised bounds the pKa from above but does not determine it"
-Coumatetralyl,no_logkow_in_report,,4.7808,derived,TRUE,99.4,,,,,,,nB,47,,,8.9,
-Warfarin,no_logkow_in_report,,5.1827,derived,TRUE,98.5,,,,,,,nB,11,,,8.9,
-Chlorophene,no_logkow_in_report,,,,,,,,,,,,nB,,,,11.6,
-Folpet,no_logkow_in_report,,,,,,,,,,,,,,,,3.0a,"turned out not to ionise; re-entered as uncharged"
-"N-(3-aminopropyl)-N-dodecylpropane-1,3-diamine",no_logkow_in_report,,,,,,,,,,predicted,,nB,38.8,0.328,,7.7,"THREE positive charges at environmental pH; the report calls it unrepresentable and drops it from every tally. This model has one valence too"
-Creosote,no_logkow_in_report,,,,,,,,,,,,vB,,,,3.2;9,"no single defined structure -- the one bioaccumulative substance no structure-based tool can take"
+Cypermethrin,run,6.3,,,,,416.3,,0.01114806498906909,,predicted,,nB,42400,1710,,8.14;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 52315-07-8, rank 2) | ILO-WHO ICSC via PubChem — 6.3, replacing a median (provenance re-run, 2026-08-28) | the §8.14 tie-break result, which the report never printed | EARLIER: the 6.175 entered was a median of six candidates (6.0 6.04 6.05 6.3 6.6 6.6) and"
+Alpha-cypermethrin,run,6.94,,,,,416.3,,0.06897895526964339,,measured,,nB,33600,1090,,7.1;8.4;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 67375-30-8, rank 2) | CTX DTXSID7041201; AqSolDB (median of 8); OChem_2024_04_03; OPERA2.8; PubChem_2024_11_27; derived from Henry's"
+Chlorocresol,run,3.1,9.4,stated,TRUE,0.3965,142.58,,0.2469512195121949,,measured,,,,,,7.1;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 59-50-7, rank 2) | CTX DTXSID4021717; Bradley; OChem_2024_04_03 (median of 16); OPERA2.8; Sander_v5 (median of 2); derived from H | EARLIER: one of the five substances with a MEASURED fish kM"
+Tolylfluanid,run,3.9,-5.453,stated,FALSE,3.524e-11,347.24,,0.07692307692307684,,predicted,,nB,801,165,,8.8;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 731-27-1, rank 2) | CTX DTXSID8042478; OPERA2.8; OPERA2.8 (median of 8); PubChem_2024_11_27; Sander_v5 (median of 4); derived from | pKa is NEGATIVE (base) -> ~0% ionised at environmental pH; effectively neutral"
+Dichlofluanid,run,3.7,-5.964,stated,FALSE,1.086e-11,333.22,,0.003724794090777048,,predicted,,nB,509,194,,8.8;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 1085-98-9, rank 2) | CTX DTXSID5041851; OChem_2024_04_03; OChem_2024_04_03 (median of 8); OPERA2.8; Sander_v5 (median of 4); derive | pKa is NEGATIVE (base) -> ~0% ionised at environmental pH; effectively neutral"
+Tebuconazole,run,3.7,12.6205,stated,TRUE,0.00023961,307.82,,9.901856141334756e-06,,measured,,,509,424,,8.8;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 107534-96-3, rank unranked) | woodpres_extra_inputs.csv — entered value, no BPC opinion | no BPC opinion (run but not scored); ion% computed here from their pKa 12.6205 | EARLIER: approved, complete properties, in range -- but no opinion exists, so the report "
+DCOIT,run,3.65,,,,,282.22,,1.218194438376094,,predicted,,,454,120,,8.8;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 64359-81-5, rank unranked) | woodpres_extra_inputs.csv — entered value, no BPC opinion | no BPC opinion (run but not scored) | EARLIER: as tebuconazole: no opinion"
+IPBC,run,2.88,,,,,281.093,,0.0121951219512195,,predicted,,nB,81.8,25.6,,8.8;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 55406-53-6, rank 3) | CTX DTXSID0028038; OPERA2.8; Sander_v5; derived from Henry's Law constant; eChemPortalAPI; eChemPortalAPI (med | log Kow rank 3 = a MODEL PREDICTION, the weakest source in their scheme"
+Penflufen,run,3.9595,9.194,stated,TRUE,0.6357,317.408,,1.048857800387847e-05,,predicted,,nB,912,267,,8.8a;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 494793-67-8, rank 2) | CTX DTXSID9058107; OChem_2024_04_03; OPERA2.8; Percepta2023.1.2 (median of 2); derived from Henry's Law consta"
+OIT,run,2.45,,,,,213.34,,0.002085633296477081,,predicted,,nB,33.9,7.42,,8.8a;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 26530-20-1, rank 2) | CTX DTXSID1025805; AqSolDB; OChem_2024_04_03; OChem_2024_04_03 (median of 2); OPERA2.8; derived from Henry's L"
+Cybutryne,run,3.375,4.126,stated,FALSE,0.1335,253.37,,0.002268384193654368,,predicted,,nB,244,79,,8.14;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 28159-98-0, rank 2) | CTX DTXSID3032416; OPERA2.8; PubChem_2024_11_27; PubChem_2024_11_27 (median of 2); derived from Henry's Law co"
+Piperonyl butoxide,run,4.75,,,,,338.444,,2.321221649166943e-06,,predicted,,nB,5260,138,,8.4;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 51-03-6, rank 2) | CTX DTXSID1021166; Kovdienko et al. 2010 (median of 10); OChem_2024_04_03; OPERA2.8; derived from Henry's Law "
+2-methyl-4-oxo-3-(prop-2-ynyl)cyclopent-2-enyl,run,4.49,,,,,300.398,,0.08564189973440173,,predicted,,nB,3010,128,,8.2;8.4;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 23031-36-9, rank 2) | CTX DTXSID0032572; OChem_2024_04_03; OChem_2024_04_03 (median of 12); OPERA2.8; Sander_v5 (median of 2); deriv"
+Salicylic acid,run,2.26,2.99,stated,TRUE,99.99,138.122,,0.00134963768115942,,,,nB,4,,,8.9;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 69-72-7, rank 2) | CTX DTXSID7026368; OChem_2024_04_03 (median of 20); OChem_2024_04_03 (median of 30); OPERA2.8; Sander_v5 (medi | EARLIER: 100.0% ionised bounds the pKa from above but does not determine it"
+Coumatetralyl,run,3.46,4.75,stated,TRUE,99.44,292.334,,5.882352941176477e-09,,,,nB,47,,,8.9;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 5836-29-3, rank 2) | RUN_CONFIG_2026-08-27 Rules 1/3/4; see Provenance rows dated 2026-08-27 | PPDB report 182 code L3"
+Warfarin,run,2.7,5.19,stated,TRUE,98.47,308.333,,0.002777777777777779,,,,nB,11,,,8.9;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 81-81-2, rank 2) | RUN_CONFIG_2026-08-27 Rules 1/3/4; see Provenance rows dated 2026-08-27 | PPDB report 681 code A5 (EFSA)"
+Chlorophene,run,3.6,9.813,stated,TRUE,0.1536,218.68,,0.0002702702702702707,,,,nB,,,,11.6;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 120-32-1, rank 2) | CTX DTXSID5020154; OChem_2024_04_03; OPERA2.8; PubChem_2024_11_27; Sander_v5 (median of 2); derived from Henry"
+Folpet,run,2.85,,,,,296.55,,0.007842716417038854,,,,,,,,3.0a;EXPORT_logkow_full_20260906,"log Kow from the BAT collection sheet (CAS 133-07-3, rank 2) | CTX DTXSID0021385; AqSolDB (median of 10); OChem_2024_04_03; OChem_2024_04_03 (median of 4); OPERA2.8; derived | their export notes the SCREEN recorded 99.9% ionised but it was ENTERED as neutral (§3.0a); entered value used | EARLIER: turned out not to ionise; re-entered as uncharged"
+"N-(3-aminopropyl)-N-dodecylpropane-1,3-diamine",no_logkow_in_report,,,,,,,,,,predicted,,nB,38.8,0.328,,7.7,THREE positive charges at environmental pH; the report calls it unrepresentable and drops it from every tally. This model has one valence too
+Creosote,no_logkow_in_report,,,,,,,,,,,,vB,,,,3.2;9,no single defined structure -- the one bioaccumulative substance no structure-based tool can take

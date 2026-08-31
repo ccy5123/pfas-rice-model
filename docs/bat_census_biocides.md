@@ -5,9 +5,10 @@ Run it (`python validation/bat_census_biocides.py`, ~3 min; `--fast` skips the l
 sweep) rather than quoting this file — every number below is printed by that script.*
 
 **한 줄 요약.** BAT 보고서에 나오는 물질들을 이 저장소의 **중성 유기물 경로**
-(`model_api.simulate_neutral`)에 넣어 벼 뿌리/짚/낟알 축적을 계산했다. 24개 물질이
-돌아가지만, 그중 11개만 이 저장소가 측정 데이터를 가진 log Kow 구간 안에 있고,
-5개는 이온화 때문에 제외되며, 검증 가능한 물질은 **단 2개**(프로피코나졸·트리클로산)다.
+(`model_api.simulate_neutral`)에 넣어 벼 뿌리/짚/낟알 축적을 계산했다. **43개 물질이**
+돌아가고(초판 24개 → BAT 측이 자기 물성 시트에서 18종을 보내와 확장), 그중 **24개**가
+이 저장소가 측정 데이터를 가진 log Kow 구간 안에 있으며, **8개**는 이온화 때문에 제외되고,
+검증 가능한 물질은 여전히 **단 2개**(프로피코나졸·트리클로산)다.
 **예측이지 검증이 아니다.**
 
 ---
@@ -55,15 +56,61 @@ a measured table widens the scope automatically.
 |---|---|
 | substances named in the report | 44 |
 | — carrying a log Kow the report states | **23** |
-| — plus propiconazole, whose log Kow comes from this repo's own Liu 2023 row | 24 |
-| inside the measured-data span | **11** |
-| past the TSCF anchor → **root only** is quotable | 6 |
+| — supplied on request from the BAT project's own collection sheet (2026-09-06) | **+18** |
+| — plus propiconazole (this repo's Liu 2023 row) and a second cyphenothrin row | +2 |
+| **rows that run** | **43** |
+| inside the measured-data span | **24** |
+| past the TSCF anchor → **root only** is quotable | 9 |
 | beyond every anchor in either model (cholecalciferol 10.24, muscalure 10.61) | 2 |
-| **excluded, >90% ionised at pH 7** | 5 |
+| **excluded, >90% ionised at pH 7** | 8 |
 
-The 20 substances with no report-stated log Kow are kept in the table with
-`status=no_logkow_in_report` and **not filled in from elsewhere** — inventing an
-input is the defect the report's own §8.14 is about.
+Only **two** substances are still unrunnable, and neither for want of a number:
+the triamine carries three charges (this model takes one valence, exactly as BAT
+does — its §7.7) and creosote has no single defined structure.
+
+### 2026-09-06 — the 18 missing values arrived, and what they cost to accept
+
+The first version of this file ran 24 of the 44 substances. The other 20 had no
+log Kow **printed in the report**, and were left blank rather than filled in from
+elsewhere — inventing an input is the defect that report's own §8.14 is about.
+Asked for them instead, the BAT project sent its own collection sheet
+(`EXPORT_logkow_full_20260906.csv`, 167 substances) and answered four questions.
+Each value is now entered with its CAS, source string and **source rank**
+(1 = assessment/CLH report, 2 = cited literature, 3 = model prediction).
+
+Three things were checked before any of it was used:
+
+* **Basis.** Every stated pKa / percent-ionised pair in the export round-trips at
+  pH 7 to better than **0.005 percentage points** — the same basis this file
+  already ran on, so the ionisation screen did not have to be re-derived.
+* **The inversion this file had been using was right.** For coumatetralyl and
+  warfarin the report gave only a percent ionised, and pKa had been recovered
+  from it (4.781, 5.183). The sourced values are **4.75 and 5.19** — 0.03 and
+  0.007 log away. The recovered values are now replaced by the sourced ones, but
+  the agreement is a check on the method that was worth having.
+* **Provenance is uneven and is recorded per row.** IPBC is **rank 3** — a model
+  prediction, the weakest source in their scheme. Tebuconazole and DCOIT carry no
+  rank at all (no BPC opinion, so they sit outside the audited provenance table).
+  Those three are runnable but their inputs are not the equal of the rest.
+
+Two answers changed nothing and are recorded because they closed a question:
+tolylfluanid and dichlofluanid have **negative** pKa (−5.453, −5.964) as bases,
+i.e. ~0 % ionised at environmental pH, so they run as neutrals; and folpet's
+export note says the *screen* recorded 99.9 % ionised while the *entered* value
+was neutral (§3.0a) — the entered value is used, and the disagreement is kept on
+the row rather than smoothed away.
+
+**Cyphenothrin was left open on purpose.** Their provenance row records the PT18
+assessment report's measured **5.79–6.09** as superseding the entered 6.29, and
+they declined to pick one — which is their §8.14 rule applied to themselves. Both
+ends are run here (6.29 stays as the row BAT actually ran, because §5(a)'s
+identity demonstration needs the same entered value as difethialone), and neither
+is called canonical. Both land in the same scope class and neither moves the
+conclusion.
+
+**What it bought.** Runnable rows 24 → **43**, inside the measured-data span
+11 → **24**. The rank correlation against BAT's fish BCF was recomputed on 35
+substances instead of 20 and got *stronger*, not weaker (§(e) below).
 
 ### The transcription is checked before it is used
 
@@ -167,8 +214,9 @@ the model's root number stops being a partition coefficient and becomes a rate.
 That is a limit of this model, stated here rather than discovered later.
 
 **(e) A fish BCF does not rank these substances the way a rice model does.**
-Spearman against BAT's Scenario A fish BCF over the 20 substances that have one:
-**root +0.467, straw −0.466**. The root agrees because both rise with
+Spearman against BAT's Scenario A fish BCF over the 35 substances that have one:
+**root +0.725, straw −0.725** (on the first 20, before the collection sheet arrived,
++0.467 / −0.466 — nearly doubling the sample *strengthened* it). The root agrees because both rise with
 lipophilicity; the shoot *anti*-correlates, and cannot do otherwise, because what
 reaches a rice shoot is gated by a bell that has already collapsed by log Kow 5.
 "Bioaccumulative in fish" is not a statement about grain.
@@ -181,6 +229,35 @@ accumulators whose only other sink is growth dilution, which goes to zero at
 maturity. The quantity the report identifies as its least defensible input is the
 one the edible compartment is most sensitive to, and for a plant nobody has
 measured it at all.
+
+## The other 106 substances in that export — not usable as delivered
+
+The same export carries **106 substances that were never entered into BAT** (no
+BPC opinion, so that study could not score them). This model has no such
+restriction, and on log Kow alone **82 of them would fall inside** the
+measured-data span — which would take the screen from 24 substances to over a
+hundred. It is not being done, for two reasons that are properties of the file
+rather than judgements:
+
+* **No pKa on any of the 106.** The column is populated for 28 of the 61
+  BAT-entered rows and for **zero** of the collection-sheet-only rows. Running
+  them would silently treat every ionisable substance as neutral — which is
+  exactly the failure the report records against its own screen in §3.0a, and
+  the failure this file's ionisation gate exists to prevent. The gate cannot
+  fire on a blank.
+* **No source rank on any of the 106.** Rank is present for 59 of the 61 entered
+  rows and none of the others, so a measured value and a model output are
+  indistinguishable. That is the §7.9 trap — permethrin's 6.5 arrived tagged
+  "experimental" from a prediction model — with no way to check for it.
+
+The data itself shows why that matters: allyl isothiocyanate carries a log Kow of
+**34.675** in the unaudited half. Its real value is near 2. One such row inside a
+screen of 106 would discredit the whole table.
+
+**So the ask is specific**: pKa (with acid/base) and a source rank for those 106,
+or a subset of them chosen by use — the wood-preservative and paddy-relevant
+actives first. With those two columns they become runnable on the same footing as
+the 43.
 
 ## What this does not establish — and cannot
 
