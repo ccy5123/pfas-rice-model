@@ -61,6 +61,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── data_obs/                         # observed BAF/TF (Yamazaki, Li2025) + yamazaki_stem_height.csv
 │                                     #  + NEUTRAL: liu2023/ge2017 (rice) · li2019_rcf (48 hydroponic RCF, 11 spp,
 │                                     #    `subset` col holds Briggs' own rows out) · tscf_obs_schriever2020 (97 TSCF)
+│                                     #  + biocides_bat_census (EU biocide INPUTS from the BAT report — NOT observations)
 ├── validation/                       # S6 + nstem + hydrus_coupled_run reproduction scripts + figures
 ├── docs/
 │   ├── OVERVIEW_KR.md                # ★ 종합 진입점: 기능·검증·데이터공백·필요실험·notation 표 (+모식도)
@@ -1133,6 +1134,40 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   its signal — an empirical claim was over-stated — would be buried in a ~22-min run). RDKit/phydrus come from
   `requirements.txt` and are NOT best-effort, since that file is what Streamlit Cloud installs; only emcee, the gfortran
   HYDRUS-1D build and sci-adk are, and `-rs` prints skip reasons so a silently shrinking suite stays visible.
+- **EU biocides from the BAT census run through the neutral path (this session) — PREDICTION, not validation**:
+  `data_obs/biocides_bat_census.csv` + `validation/bat_census_biocides.py` + `tests/test_bat_census_biocides.py` (14)
+  + `docs/bat_census_biocides.md`. A user-supplied report (`REPORT_bat_census.md`) records a regulatory screening tool
+  (BAT) run over every EU biocidal active with a published bioaccumulation opinion, scored on a **fish** BCF. Different
+  organism/endpoint/regulation, so exactly ONE thing transfers — an **audited log Kow of the UNCHARGED form**, which is
+  the one input the neutral path needs (`K_PW` and `TSCF` are both functions of it, nothing fitted) and whose corruption
+  is the report's own headline correction (a distribution ratio D entered where log Kow belongs; §7.5 — an error this
+  model would inherit identically). **Census**: 44 substances named, **23 carry a report-stated log Kow** (+propiconazole
+  from this repo's own Liu 2023 row) ⇒ 24 runnable; **11 inside** the span where this repo holds measured plant data,
+  6 root-only (past the TSCF anchor), 2 beyond every anchor, **5 EXCLUDED for ionisation**. The exclusion rule is the
+  report's OWN §3.0a rule (">90% ionised at environmental pH") which it records as written-down-and-never-implemented;
+  it is implemented here at the same threshold, and the pH-7 basis is pinned by round-tripping the six stated pKa to
+  **0.002 pp**. **Result**: everything the opinions call bioaccumulative loads the ROOT and does not reach the grain
+  (TSCF < 1e-3 for all of them). **The two scoreable substances** (a-priori, equilibrium basis): propiconazole vs the Liu
+  2023 **rice** root RCF **+0.023 log (1.05×)**; triclosan vs the Li 2019 soil table (14 radish/carrot rows) +0.625 log —
+  same sign as, and larger than, that table's documented +0.260 (§4h), part of it the speciation `K_PW` cannot see. Free
+  cross-check: Li 2019's triclosan log Kow 4.8 vs the report's audited 4.76, **0.04 log apart**. **Cross-model**: (a) the
+  report needed 217 runs to establish BAT is a one-input model; here it is STRUCTURAL and cyphenothrin/difethialone at
+  log Kow 6.29 come back bit-identical; (b) the one property BAT proved inert — Henry — is the one that DOES reach this
+  answer, through the opt-in air term (empenthrin K_AW 1.4e-2 loses ~47% of its leaf burden, cyphenothrin 9e-7 none);
+  (c) the report's own DCPP pKa sweep re-run on identical inputs shows **this model damps ionisation HARDER than BAT**
+  (at 91% ionised: chemistry 0.091, BAT 0.245, rice root **0.768**) because the membrane term sets the RATE of root
+  equilibration and not its level — which is WHY the strongly-ionised group is excluded rather than caveated;
+  (d) BAT's fish BCF peaks near log Kow 6.3 and turns over, this model's straw peaks at **1.75** and its root never
+  turns over but **saturates kinetically** (K_PW/root 0.92 @4 → 0.001 @10.5: above ~7 the root number stops being a
+  partition and becomes a rate); (e) Spearman(BAT fish BCF, rice root) **+0.467** vs (·, rice straw) **−0.466** — a fish
+  bioaccumulation class is NOT a statement about grain; (f) the report's largest finding is AMPLIFIED — its metabolic
+  input moved fish BCF ≤82×, the same fish kM half-lives move this model's **grain ≤5,573×** (terminal accumulator),
+  i.e. the least defensible input is the one the edible compartment is most sensitive to. **Honest limits**: no measured
+  rice value exists for any of these substances; of the 7 the opinions call bioaccumulative, 4 are excluded for
+  ionisation and only triclosan is inside the TSCF anchor — mirroring the report's §7.3 kM-QSAR Tanimoto 0.19–0.28
+  finding from the other side (two independent models weakest exactly where the answer matters). The fish kM are run
+  ONCE as a labelled sensitivity, never as a parameterisation; γ=0 makes leaf/grain upper bounds. `parameters.json`,
+  `simulate()` defaults, `reproduce_demo` (0.029) and the neutral a-priori numbers (Liu 0.281 / Ge 0.783) UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1220,6 +1255,13 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   refutes** (carrier 6.28× vs measured 1.17×, bootstrap 1.000, 8/9 Kd combos). Durable result = the POST-HOC
   bound: the carrier must have **`Km` ≥ 500 µg/L (100× the fitted 5)** to be this flat — i.e. linear over the
   whole span, which is the bypass's own form. `simulate(km_scale=…)` is the knob.
+- **EU biocides from the BAT census (PREDICTION, not validation)**: `python validation/bat_census_biocides.py`
+  (~3 min; `--fast` skips the log Kow sweep, ~1 min). Read the VERDICT block: 24 of the report's 44 substances are
+  runnable, 11 are inside the measured-data span and 5 are excluded for ionisation (the report's own never-implemented
+  §3.0a rule, applied here). Only propiconazole (rice root, +0.023 log) and triclosan (soil radish/carrot, +0.625) can
+  be scored at all. Writes `validation/bat_census_biocides.csv`; the input table is
+  `data_obs/biocides_bat_census.csv` (NOT an `--obs` observation file — it has no measured plant value in it).
+  Full record: `docs/bat_census_biocides.md`.
 - **Kodešová 2019 carbamazepine (queue A4; the anchor vote)**: `python validation/kodesova2019_carbamazepine.py`
   (exposure from the paper's own measured isotherms + the `Koc` defence of the unit reading; a-priori 0.191;
   the shipped-vs-anchored table across all three root datasets; the Brunetti verdict; the dw→fw sensitivity).
