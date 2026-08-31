@@ -5,10 +5,10 @@ Run it (`python validation/bat_census_biocides.py`, ~3 min; `--fast` skips the l
 sweep) rather than quoting this file — every number below is printed by that script.*
 
 **한 줄 요약.** BAT 보고서에 나오는 물질들을 이 저장소의 **중성 유기물 경로**
-(`model_api.simulate_neutral`)에 넣어 벼 뿌리/짚/낟알 축적을 계산했다. **43개 물질이**
-돌아가고(초판 24개 → BAT 측이 자기 물성 시트에서 18종을 보내와 확장), 그중 **24개**가
-이 저장소가 측정 데이터를 가진 log Kow 구간 안에 있으며, **8개**는 이온화 때문에 제외되고,
-검증 가능한 물질은 여전히 **단 2개**(프로피코나졸·트리클로산)다.
+(`model_api.simulate_neutral`)에 넣어 벼 뿌리/짚/낟알 축적을 계산했다. **66행이 돌아간다**
+(초판 24 → 요청으로 받은 값 19종 추가 → BAT가 실제로 입력한 감사본 61종 전체를 받아 21종 더).
+그중 **45개**가 이 저장소가 측정 데이터를 가진 log Kow 구간 안에 있고, **10개**는 이온화 때문에
+제외되며, 검증 가능한 물질은 여전히 **단 2개**(프로피코나졸·트리클로산)다.
 **예측이지 검증이 아니다.**
 
 ---
@@ -54,19 +54,27 @@ a measured table widens the scope automatically.
 
 | | n |
 |---|---|
-| substances named in the report | 44 |
-| — carrying a log Kow the report states | **23** |
-| — supplied on request from the BAT project's own collection sheet (2026-09-06) | **+18** |
-| — plus propiconazole (this repo's Liu 2023 row) and a second cyphenothrin row | +2 |
-| **rows that run** | **43** |
-| inside the measured-data span | **24** |
-| past the TSCF anchor → **root only** is quotable | 9 |
-| beyond every anchor in either model (cholecalciferol 10.24, muscalure 10.61) | 2 |
-| **excluded, >90% ionised at pH 7** | 8 |
+| log Kow 출처 | n |
+|---|---|
+| 보고서가 직접 인쇄한 값 | **22** |
+| 요청 후 BAT 측 감사본에서 받은 값 | **19** |
+| BAT가 입력했으나 보고서가 개별 호명하지 않은 물질 | **21** |
+| 이 저장소 자체 값 (프로피코나졸, Liu 2023) | 1 |
+| 같은 입력의 «두 번째 해석» — 어느 쪽도 단정하지 않음 | 3 |
+| **돌아가는 행** | **66** |
 
-Only **two** substances are still unrunnable, and neither for want of a number:
-the triamine carries three charges (this model takes one valence, exactly as BAT
-does — its §7.7) and creosote has no single defined structure.
+| 적용범위 판정 | n |
+|---|---|
+| inside — 측정 데이터가 있는 구간 안 | **45** |
+| root only — TSCF 앵커 밖, 뿌리만 인용 가능 | 9 |
+| extrapolation — 두 모델 어느 쪽 앵커도 벗어남 | 2 |
+| **EXCLUDED — pH 7에서 90% 이상 이온화** | **10** |
+
+**One** row is still unrunnable: creosote, which has no single defined structure.
+The triamine now runs — its log Kow (4.771) and pKa (10.55) arrived with the
+audited export, and the ionisation gate refuses it at 99.97 % on a **computed**
+criterion rather than on this file's assertion that three charges cannot be
+represented. That is a strictly better reason for the same answer.
 
 ### 2026-09-06 — the 18 missing values arrived, and what they cost to accept
 
@@ -214,9 +222,10 @@ the model's root number stops being a partition coefficient and becomes a rate.
 That is a limit of this model, stated here rather than discovered later.
 
 **(e) A fish BCF does not rank these substances the way a rice model does.**
-Spearman against BAT's Scenario A fish BCF over the 35 substances that have one:
-**root +0.725, straw −0.725** (on the first 20, before the collection sheet arrived,
-+0.467 / −0.466 — nearly doubling the sample *strengthened* it). The root agrees because both rise with
+Spearman against BAT's Scenario A fish BCF over the 37 substances that have one:
+**root +0.705, straw −0.704**. It has now been recomputed three times as the sample
+grew — 20 substances (+0.467 / −0.466), 35 (+0.725 / −0.725), 37 (+0.705 / −0.704).
+Nearly doubling the data moved it up, not away. The root agrees because both rise with
 lipophilicity; the shoot *anti*-correlates, and cannot do otherwise, because what
 reaches a rice shoot is gated by a bell that has already collapsed by log Kow 5.
 "Bioaccumulative in fish" is not a statement about grain.

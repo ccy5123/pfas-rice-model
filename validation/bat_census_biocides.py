@@ -614,10 +614,9 @@ def write_csv(runs, path=OUT_CSV):
 
 
 def verdict(rows, screened, runs, ov, fig_path=None):
-    n_named = len([r for r in rows if "AR measured" not in r["substance"]])
-    n_report = len([r for r in rows if r["status"] == "run"
-                    and "EXPORT_logkow" not in r["section"]])
-    n_export = len([r for r in rows if "EXPORT_logkow" in r["section"]])
+    prov = lambda k: len([r for r in rows if r["logkow_provenance"] == k])   # noqa: E731
+    n_report, n_filled = prov("report"), prov("export_on_request")
+    n_extra, n_variant = prov("export_bat_entered"), prov("variant")
     inside = [o for o in screened if o["verdict"] == "inside"]
     excl = [o for o in screened if o["verdict"].startswith("EXCLUDED")]
     rootonly = [o for o in screened if o["verdict"] == "root only"]
@@ -628,12 +627,15 @@ def verdict(rows, screened, runs, ov, fig_path=None):
     print("=" * 78)
     print("VERDICT")
     print("=" * 78)
-    print(f"  {n_named} substances are named in the report. {n_report} carry a log Kow the")
-    print(f"  report itself states; {n_export} more were supplied from the BAT project's own")
-    print("  collection sheet on request (they were never printed in the report, and were")
-    print("  never filled in from elsewhere until that source existed); propiconazole comes")
-    print("  from this repo's own Liu 2023 row, and cyphenothrin carries a second row for")
-    print(f"  the assessment report's measured lower end. {len(screened)} rows run in all.")
+    print(f"  Where each log Kow came from: {n_report} printed in the report itself, {n_filled}")
+    print("  supplied by the BAT project on request from its audited provenance (never printed")
+    print("  in the report, and never filled in from elsewhere until that source existed),")
+    print(f"  {n_extra} from substances BAT entered but the report never named individually")
+    print("  (no BPC class, no fish BCF -- predictions with nothing to compare against), 1 from")
+    print(f"  this repo's own Liu 2023 row, and {n_variant} second readings of an input this")
+    print("  study will not pick between (permethrin's two measured values, cyphenothrin's")
+    print("  assessment-report range, tebuconazole's unresolved acid/base flag).")
+    print(f"  {len(screened)} rows run in all.")
     print(f"  Of those, {len(inside)} sit inside the span where this repo")
     print(f"  holds measured plant data, {len(rootonly)} are past the TSCF anchor so only")
     print(f"  their root is quotable, {len(extrap)} are beyond every anchor in either model,")

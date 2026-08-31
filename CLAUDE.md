@@ -74,7 +74,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (361 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge, BAT-census biocides
+└── tests/                            # pytest (363 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge, BAT-census biocides
 
 ```
 
@@ -1143,11 +1143,20 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   is the report's own headline correction (a distribution ratio D entered where log Kow belongs; §7.5 — an error this
   model would inherit identically). **Census (UPDATED 2026-09-06)**: 44 substances named, 23 with a report-stated log Kow;
   the other 20 were left BLANK rather than filled in from elsewhere, and on request the BAT project then supplied **18 of
-  them from its own collection sheet** (`EXPORT_logkow_full_20260906.csv`, 167 rows, with CAS + source + rank) ⇒ **43 rows
-  run** (+propiconazole from this repo's Liu 2023 row, + a second cyphenothrin row at the AR's measured lower end);
-  **24 inside** the span where this repo holds measured plant data, 9 root-only, 2 beyond every anchor, **8 EXCLUDED for
-  ionisation**. Only 2 stay unrunnable and neither for want of a number (the triamine has 3 charges; creosote has no
-  structure). Three checks before accepting the export: every stated pKa/%ionised pair round-trips at pH 7 to **<0.005 pp**;
+  them from its own collection sheet** (`EXPORT_logkow_full_20260906.csv`, 167 rows, with CAS + source + rank) ⇒ then the AUDITED
+  provenance for all **61 substances BAT actually entered** (`EXPORT_logkow_entered_into_BAT_20260906.csv`) ⇒ **66 rows
+  run**: 22 log Kow printed in the report, 19 supplied on request, 21 from substances BAT entered but the report never
+  named (no BPC class/fish BCF ⇒ prediction only, pinned out of the rank correlation), 1 from this repo's Liu 2023 row,
+  3 second readings this study will not choose between. **45 inside** the measured-data span, 9 root-only, 2 beyond every
+  anchor, **10 EXCLUDED for ionisation**. The audited export also replaced the four anticoagulant pKa this file had
+  RECOVERED from the report's percentages with SOURCED rank-1 values (bromadiolone 4.5, brodifacoum 4.5, difenacoum 4.84,
+  flocoumafen 4.95; three measured) — the recovered values were within 0.03 log, a check on the inversion, but sourced
+  supersedes derived and nothing carries `pka_basis=derived` now. **Only creosote stays unrunnable** (no structure); the
+  triamine now runs and the ionisation gate refuses it at 99.97% on a COMPUTED criterion instead of this file's assertion.
+  **One row is UNRESOLVED and is run BOTH ways**: tebuconazole's export row gives `is_acid=TRUE` but
+  `ionisation_class=base` with no percentage to arbitrate, and the two readings land on opposite sides (acid ⇒ 0.0002%
+  ionised, inside; base ⇒ ~100%, excluded). Seven other rows disagree the same way but their percentage settles it
+  (`is_acid` is the column that round-trips). Neither tebuconazole reading is asserted. Three checks before accepting the export: every stated pKa/%ionised pair round-trips at pH 7 to **<0.005 pp**;
   the pKa this file had RECOVERED from the report's percentages (coumatetralyl 4.781, warfarin 5.183) match the sourced
   values (4.75, 5.19) to 0.03/0.007 log — a check on the inversion, now replaced by the sourced ones; and provenance is
   uneven and recorded per row (IPBC is **rank 3 = a model prediction**; tebuconazole/DCOIT carry no rank). Cyphenothrin is
@@ -1178,7 +1187,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   equilibration and not its level — which is WHY the strongly-ionised group is excluded rather than caveated;
   (d) BAT's fish BCF peaks near log Kow 6.3 and turns over, this model's straw peaks at **1.75** and its root never
   turns over but **saturates kinetically** (K_PW/root 0.92 @4 → 0.001 @10.5: above ~7 the root number stops being a
-  partition and becomes a rate); (e) Spearman(BAT fish BCF, rice root) **+0.725** vs (·, rice straw) **−0.725** on 35 substances (+0.467/−0.466 on the first 20 — nearly doubling the sample STRENGTHENED it) — a fish
+  partition and becomes a rate); (e) Spearman(BAT fish BCF, rice root) **+0.705** vs (·, rice straw) **−0.704** on 37 substances (recomputed three times as the sample grew: +0.467/−0.466 at n=20, +0.725/−0.725 at n=35 — nearly doubling the data moved it UP, not away) — a fish
   bioaccumulation class is NOT a statement about grain; (f) the report's largest finding is AMPLIFIED — its metabolic
   input moved fish BCF ≤82×, the same fish kM half-lives move this model's **grain ≤5,573×** (terminal accumulator),
   i.e. the least defensible input is the one the edible compartment is most sensitive to. **Honest limits**: no measured
@@ -1356,7 +1365,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**361 collected; 360 pass, 2 skip** — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**363 collected; 362 pass, 2 skip** — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
