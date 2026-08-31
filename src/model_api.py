@@ -739,7 +739,8 @@ def _twopool_seq_rhs(t_grid, Cwo_s, Qtp_s, M_s, dM_s, cmpd, comps, B, env,
 
 def simulate_twopool_seq(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, season=120.0,
                          n_t=481, measured_forcing=False, biomass="growth_rice",
-                         drivers=None, k_rel=0.0, kseq_override=None):
+                         drivers=None, k_rel=0.0, kseq_override=None,
+                         uptake=DEFAULT_UPTAKE, vmax_scale=None, g_apo=None):
     """Sequestration two-pool root run (mobile + sequestered root pools) -- EXPLORATORY, opt-in.
 
     Mirrors `simulate()` / `simulate_nstem_leaf()` for the I/O so the app and other
@@ -763,9 +764,20 @@ def simulate_twopool_seq(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, season=120.0,
 
     k_rel : slow seq->mobile desorption rate [1/day]; 0 (default) = irreversible seq
         sink. kseq_override : bypass the U-shaped descriptor with a fixed k_seq [1/day].
+    uptake / vmax_scale / g_apo : the root-ENTRY term, exactly as in `simulate()`
+        (see UPTAKE_MODES). Defaults reproduce the cached fit, which was made with
+        the carrier on. These exist so the entry term can be varied against a
+        RESOLVED sequestration term -- handoff item B2, which asks whether the
+        chain-length dependence both entry terms need is really a property of
+        entry or of B_k/phi_free; see validation/entry_vs_sequestration.py.
     """
     if congener not in _CONG:
         raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
+    if uptake not in UPTAKE_MODES:
+        raise ValueError(f"unknown uptake {uptake!r}; expected one of {sorted(UPTAKE_MODES)}")
+    _up = UPTAKE_MODES[uptake]
+    vmax_scale = _up["vmax_scale"] if vmax_scale is None else float(vmax_scale)
+    g_apo = _up["g_apo"] if g_apo is None else float(g_apo)
     (p, q), TP = _twopool_seq()
     c = _CONG[congener]
 
@@ -783,9 +795,9 @@ def simulate_twopool_seq(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, season=120.0,
     env = Environment(E=E_m_mV / 1000.0)
     cmpd = Compound(name=congener, K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
                     K_cw=c["K_cw_wholecw_Lkg"]["root"], kappa_d=p["kappa_d"],
-                    Vmax_in=_CARR["Vmax_in"], Km_in=_CARR["Km_in"],
-                    Vmax_out=_CARR["Vmax_out"], Km_out=_CARR["Km_out"],
-                    L_Ph=p["L_Ph"], f_xy=c["f_xy_recommended"])
+                    Vmax_in=_CARR["Vmax_in"] * vmax_scale, Km_in=_CARR["Km_in"],
+                    Vmax_out=_CARR["Vmax_out"] * vmax_scale, Km_out=_CARR["Km_out"],
+                    L_Ph=p["L_Ph"], f_xy=c["f_xy_recommended"], g_apo=g_apo)
     B = binding_factors(comps, cmpd)
     gxy, gph = TP.lipid_g(c["K_PL_Lkg"], c["group"], p["gxy"], p["gph"], p["K_half"], p["pfsa_ln"])
     kseq = float(kseq_override) if kseq_override is not None else \
