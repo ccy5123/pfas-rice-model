@@ -128,6 +128,27 @@ def test_bat_entered_substances_now_carry_their_comparison(rows):
     assert len(noscen_b) >= 14   # empty Scenario B is the fact, not a missing value
 
 
+def test_the_collection_sheet_tier_is_kept_separate(rows):
+    """The 52 substances BAT never entered are run, but they are NOT the equal of
+    the audited 61 and the table has to say so in a field, not only in prose: the
+    §8.14 source audit never ran over them, so no source rank exists, and no BPC
+    class or fish BCF was ever issued -- which is why they cannot enter the rank
+    correlation. Their pKa is what makes them runnable at all: without it the
+    strongly-ionised ones would have screened as neutrals, the exact failure the
+    report records against its own §3.0a."""
+    sheet = [r for r in rows if r["section"] == "COLLECTION_SHEET_not_entered"]
+    assert len(sheet) == 52
+    for r in sheet:
+        # the tier is named in the row, never left blank to be inferred
+        assert r["logkow_provenance"] == "collection_sheet", r["substance"]
+        assert r["pKa"].strip(), r["substance"]
+        # nothing on the other axis, so nothing to rank against
+        assert not r["bat_A_fish"].strip(), r["substance"]
+        assert not r["bpc_class"].strip(), r["substance"]
+    strongly = [r for r in sheet if float(r["pct_ionised_pH7"]) > 90.0]
+    assert len(strongly) == 22
+
+
 def test_hh_helpers_are_inverses():
     for pka in (2.0, 4.5, 7.0, 8.065, 11.0):
         for acid in (True, False):
@@ -190,8 +211,16 @@ def test_screen_spans_come_from_the_shipped_tables(screened):
 
 
 def test_muscalure_and_cholecalciferol_are_flagged_extrapolation(screened):
-    far = {o["substance"] for o in screened if o["verdict"] == "extrapolation"}
-    assert far == {"Cholecalciferol", "Cis-tricos-9-ene (muscalure)"}
+    # the screen has TWO ends and both must fire. The high end is the pair the
+    # report reaches only on a curve it measured; the low end arrived with the
+    # collection-sheet tier (formaldehyde-releasers, cyanamide, hydrogen
+    # peroxide) and sits below every measured row in data_obs/.
+    far = {o["substance"]: o["log_kow"] for o in screened
+           if o["verdict"] == "extrapolation"}
+    assert {"Cholecalciferol", "Cis-tricos-9-ene (muscalure)"} <= set(far)
+    lo, hi, _ = BC.measured_spans()["partition"]
+    assert all(v > hi or v < lo for v in far.values())
+    assert any(v < lo for v in far.values()), "the low end of the screen must fire too"
 
 
 # --------------------------------------------------------------------------

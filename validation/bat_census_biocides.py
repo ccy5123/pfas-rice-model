@@ -631,6 +631,7 @@ def verdict(rows, screened, runs, ov, fig_path=None):
     prov = lambda k: len([r for r in rows if r["logkow_provenance"] == k])   # noqa: E731
     n_report, n_filled = prov("report"), prov("export_on_request")
     n_extra, n_variant = prov("export_bat_entered"), prov("variant")
+    n_sheet = prov("collection_sheet")
     inside = [o for o in screened if o["verdict"] == "inside"]
     excl = [o for o in screened if o["verdict"].startswith("EXCLUDED")]
     rootonly = [o for o in screened if o["verdict"] == "root only"]
@@ -650,6 +651,12 @@ def verdict(rows, screened, runs, ov, fig_path=None):
     print(f"  this repo's own Liu 2023 row, and {n_variant} second readings of an input this")
     print("  study will not pick between (permethrin's two measured values and")
     print("  cyphenothrin's assessment-report range).")
+    print(f"  A further {n_sheet} come from the project's collection sheet -- substances it")
+    print("  never entered into BAT, so its section 8.14 source audit never ran over them.")
+    print("  They are the subset that survives the file's own quality flags AND carries a")
+    print("  pKa (the ionisation gate needs one); the rest of that sheet is not runnable")
+    print("  here. They are kept in a SEPARATE tier for that reason: no BPC class and no")
+    print("  fish BCF exist for any of them, so none enters the rank correlation below.")
     print(f"  {len(screened)} rows run in all.")
     print(f"  Of those, {len(inside)} sit inside the span where this repo")
     print(f"  holds measured plant data, {len(rootonly)} are past the TSCF anchor so only")

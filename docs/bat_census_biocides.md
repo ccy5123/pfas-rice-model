@@ -5,11 +5,13 @@ Run it (`python validation/bat_census_biocides.py`, ~3 min; `--fast` skips the l
 sweep) rather than quoting this file — every number below is printed by that script.*
 
 **한 줄 요약.** BAT 보고서에 나오는 물질들을 이 저장소의 **중성 유기물 경로**
-(`model_api.simulate_neutral`)에 넣어 벼 뿌리/짚/낟알 축적을 계산했다. **65행이 돌아간다**
-(초판 24 → 요청으로 받은 값 19종 추가 → BAT가 실제로 입력한 감사본 61종 전체를 받아 21종 더).
-그중 **45개**가 이 저장소가 측정 데이터를 가진 log Kow 구간 안에 있고, **9개**는 이온화 때문에
+(`model_api.simulate_neutral`)에 넣어 벼 뿌리/짚/낟알 축적을 계산했다. **117행이 돌아간다**
+(초판 24 → 요청으로 받은 값 19종 추가 → BAT가 실제로 입력한 감사본 61종 전체를 받아 21종 더
+→ BAT에 **입력된 적 없는** 수집시트에서 품질 플래그를 통과하고 pKa까지 가진 52종). 그중
+**69개**가 이 저장소가 측정 데이터를 가진 log Kow 구간 안에 있고, **31개**는 이온화 때문에
 제외되며, 검증 가능한 물질은 여전히 **단 2개**(프로피코나졸·트리클로산)다.
-**예측이지 검증이 아니다.**
+마지막 52종은 **별도 등급**이다 — BPC 분류도 BAT 어류 BCF도 없어서 비교 대상이 없고,
+아래 순위상관(n=60)에 들어가지 않는다. **예측이지 검증이 아니다.**
 
 ---
 
@@ -60,15 +62,20 @@ a measured table widens the scope automatically.
 | 요청 후 BAT 측 감사본에서 받은 값 | **19** |
 | BAT가 입력했으나 보고서가 개별 호명하지 않은 물질 | **21** |
 | 이 저장소 자체 값 (프로피코나졸, Liu 2023) | 1 |
-| 같은 입력의 «두 번째 해석» — 어느 쪽도 단정하지 않음 | 3 |
-| **돌아가는 행** | **66** |
+| 같은 입력의 «두 번째 해석» — 어느 쪽도 단정하지 않음 | 2 |
+| 수집시트 — BAT에 **입력된 적 없음**, §8.14 감사 미적용 (별도 등급) | **52** |
+| **돌아가는 행** | **117** |
 
 | 적용범위 판정 | n |
 |---|---|
-| inside — 측정 데이터가 있는 구간 안 | **45** |
-| root only — TSCF 앵커 밖, 뿌리만 인용 가능 | 9 |
-| extrapolation — 두 모델 어느 쪽 앵커도 벗어남 | 2 |
-| **EXCLUDED — pH 7에서 90% 이상 이온화** | **10** |
+| inside — 측정 데이터가 있는 구간 안 | **69** |
+| root only — TSCF 앵커 밖, 뿌리만 인용 가능 | 10 |
+| extrapolation — 두 모델 어느 쪽 앵커도 벗어남 | 7 |
+| **EXCLUDED — pH 7에서 90% 이상 이온화** | **31** |
+
+마지막 52종은 **비교 대상이 없다** — BPC 분류도 BAT 어류 BCF도 붙어 있지 않아
+§(e)의 순위상관(n=60)에 들어가지 않고, 이 저장소가 단독으로 내놓는 예측일 뿐이다.
+이온화 제외가 10 → **31**로 뛴 것도 대부분 이 등급에서 온다(수집시트에 유기산이 많다).
 
 **One** row is still unrunnable: creosote, which has no single defined structure.
 The triamine now runs — its log Kow (4.771) and pKa (10.55) arrived with the
@@ -237,7 +244,11 @@ Spearman against BAT's Scenario A fish BCF over the **60** substances that have 
 rather than silent: the triamine, whose BAT output its own producers call
 uninterpretable (three charges against a tool that takes one pKa), and the
 second-log-Kow rows for permethrin and cyphenothrin, which would otherwise weight
-one substance twice against a single BAT value.
+one substance twice against a single BAT value. The 52 collection-sheet rows added
+afterwards do **not** enlarge it and were never expected to: no BPC class and no
+BAT fish BCF exist for any of them, so there is nothing on the other axis to rank
+them against. The correlation stands at n=60 for that reason, not by a filter
+chosen here.
 
 **(f) The report's largest finding is amplified here, not damped.** Entering a
 metabolic rate moved BAT's fish BCF by up to 82× (its §8.4). Those same fish kM
@@ -248,38 +259,62 @@ maturity. The quantity the report identifies as its least defensible input is th
 one the edible compartment is most sensitive to, and for a plant nobody has
 measured it at all.
 
-## The other 106 substances — and a correction to what this file said about them
+## The other 106 substances — settled, and 52 of them now run
 
-The first export carried **106 substances never entered into BAT**, and this file
-recorded that none of them could be used because the file had **zero pKa and zero
-source rank** for any row. That description of *the file* was accurate. The
-**inference drawn from it was not**: this file said that with those two columns
-they would run "on the same footing as the 43". The BAT project's reply
-establishes that they would not, and the reason is worth keeping.
+This section has been wrong twice, in both directions, and the record of how it
+was settled is more useful than the final number.
 
-* **The pKa were never missing at the source.** Their collection sheet holds pKa
-  for **80** substances with acid/base and a citation; the first export read only
-  from the audited provenance table, which covers the entered substances. So the
-  gap was in the extract, not the data.
-* **64 of the 106 carry a log Kow that is a computed median absent from its own
-  candidate list** — the exact practice the report's §8.14 forbids and audited out
-  of its own inputs. Ten more are tagged `experimental` while naming a prediction
-  model as the source: the §7.9 trap that put permethrin's 6.5 into the study.
-* **The missing rank is not an omission, it is the finding.** The §8.14 audit ran
-  over the 59 substances BAT entered. The rest of the collection sheet never went
-  through it, so there is no rank to send.
+**Round 1.** The first export carried 106 substances never entered into BAT with
+**zero pKa and zero source rank**, so none could be run: the ionisation gate
+cannot fire on a blank, and a measurement is indistinguishable from a model
+output. That was accurate about the file. The *inference* — that supplying those
+two columns would put them "on the same footing as the 43" — was not.
 
-**Allyl isothiocyanate's log Kow of 34.675 now has a cause**, and it is worse than
-a typo: it is the median of the candidates `2.11 · 2.15 · 67.2 · 130.23` — two
-log-scale values averaged together with two linear Kow values — and the row is
-tagged `experimental`. It never entered BAT, so no result in this file is touched
-by it; it is kept here as the concrete illustration of what an unaudited row can
-be.
+**Round 2.** The BAT project replied that the pKa were never missing at source
+(their sheet holds 80) and that the real blocker was quality, giving 64 rows whose
+log Kow is a computed median, 40 clean and **29** clean-with-pKa. This file
+adopted those numbers.
 
-**The runnable subset is 29, not 106.** Forty of the never-entered rows carry no
-quality flag, and 29 of those also have a pKa. Those 29 are the ones that could
-join the census on equal terms; the rest need the §8.14 audit run over them first,
-which is a decision for that project rather than a column to request.
+**Round 3 — the file settled it, and the note was the thing that was wrong.**
+Counting the delivered `quality_flag` column gives **28 / 10 / 68 / 52**, not
+64 / 10 / 40 / 29. Both counts describe the same data under different rules, and
+the file shows which is which:
+
+* **64** is exactly the number of rows whose `logkow_source_model` contains the
+  *string* `"median of N"`.
+* **28** is exactly the number the flag marks *"not among the candidates it was
+  derived from"* — and the flagged set is a **strict subset** of the
+  string-matched one. Thirty-six string matches are not flagged, every one a
+  median that IS among its candidates.
+* Substituting the string rule reproduces 64 / 40 / 29 to the unit; the criterion
+  reproduces 28 / 68 / 52 to the unit.
+
+The criterion is the report's own §8.14 test — *a value no source reports* — and
+this is the **same over-detection that project had already caught and corrected on
+its entered set** (it is what turned cypermethrin's median 6.175 into the sourced
+6.3). The covering note was one generation behind its own regenerated file. The
+project has since confirmed all four numbers and identified a second defect on its
+side: the flags were joined with `"; "` while the informational flag text itself
+contained a semicolon, so splitting on the documented separator fragments every
+row. The count here was immune to that only because it matched on substrings
+rather than splitting — which is luck, not method, and is recorded as such.
+
+**52 rows are therefore added**, marked `section=COLLECTION_SHEET_not_entered`.
+They are **not** on the same footing as the audited 61 and the table says so:
+no source rank exists for any of them (the §8.14 audit only ever ran over the
+entered set), they carry no BPC class and no BAT fish BCF — so they are
+predictions with nothing to compare against and are **excluded from the rank
+correlation** — and their percent ionised is computed here from their pKa rather
+than supplied.
+
+**The pKa is what makes them runnable at all.** Twenty-two of the 52 are more than
+90 % ionised at pH 7. Without that column they would have been screened as
+neutrals — precisely the failure the report records against its own §3.0a screen.
+
+**Allyl isothiocyanate stays out**, and its log Kow of 34.675 now has a cause: it
+is the median of the candidates `2.11 · 2.15 · 67.2 · 130.23` — two log-scale
+values averaged with two linear Kow values — tagged `experimental`. It falls in
+both defect groups and never entered BAT, so no result here is touched by it.
 
 ## What this does not establish — and cannot
 

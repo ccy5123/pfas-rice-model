@@ -126,6 +126,6 @@ section,key,value,unit,note
 5_smiles,PFPeS.provisional,1.0,-,
 5_smiles,ADONA형 에터.grain,2.2604437843727165,L/kg,에터 결합 신규 구조 — QSPR 추정(잠정)
 5_smiles,ADONA형 에터.provisional,1.0,-,
-6_biocides,n_runnable,65,종,
-6_biocides,n_inside_scope,45,종,
-6_biocides,n_excluded_ionisation,9,종,
+6_biocides,n_runnable,117,종,
+6_biocides,n_inside_scope,69,종,
+6_biocides,n_excluded_ionisation,31,종,
