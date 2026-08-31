@@ -73,7 +73,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (336 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (344 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1118,6 +1118,37 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   form**. Limits: 3 congeners, one soil, harvest only; SHAPES only (normalised to the lowest dose), never levels.
   **NOTHING ADOPTED** — `Km` is not re-fitted; `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029)
   UNCHANGED. `simulate` gained `km_scale` (default 1.0, bit-identical) as the dose knob.
+- **B2 — where does the chain-length dependence actually live? (this session) — the CONTROL overturns the
+  expected answer**: `validation/entry_vs_sequestration.py` (pre-registration `4626a11` committed BEFORE the
+  results) + `tests/test_entry_vs_sequestration.py` (8). Two independent fits of DIFFERENT entry terms each
+  needed the same chain-length correction (bypass corr **+0.832**/25×; LC6's carrier 2.0×/5.5× at C11/C12), and
+  B3 recorded the natural reading — that `f_xy = η·φ_free` is mis-partitioned and the signal belongs in
+  **`φ_free`/`B_k`** (sequestration), where the two-pool work put it. B2 tests that by fitting the entry
+  conductance per congener against four root models on MATCHED demo forcings (carrier off, monotone physical
+  `f_xy`, so only the ROOT model differs): **S** single pool · **S+L** single pool + lipid loading · **T**
+  two-pool `k_seq` + lipid · **C** two-pool with `k_seq`=0 + lipid (the CONTROL). **(1) GATE PASSES** — on
+  matched forcings the single pool needs the trend even MORE strongly than published (corr **+0.890** over a
+  **1000×** spread). **(2) R1 is met on its own terms** — against the two-pool the trend flattens to corr
+  **+0.171** (0.19× of S) and the penalty for one global conductance instead of eleven falls **0.252→0.095**,
+  i.e. sequestration appears to remove most of the need. **(3) BUT THE PRE-REGISTERED CONTROL REFUTES THE
+  ATTRIBUTION (R3)** — the two-pool differs from S by TWO changes, and removing `k_seq` while KEEPING lipid
+  loading flattens it just as far (**C** corr +0.119, penalty 0.054), as does lipid loading alone in the plain
+  single pool with no second root pool at all (**S+L** corr +0.045, penalty 0.052). ⇒ **the chain-length
+  dependence is absorbed by the B-INDEPENDENT LIPID LOADING term (`g_xy·C`/`g_ph·C`), NOT by sequestration.**
+  **(4) So B3's reading is REVISED, not confirmed**: the misplaced dependence belongs to a **THIRD** place —
+  neither the membrane factor η nor the binding factor `φ_free` — and `f_xy = η·φ_free` has **no slot** for a
+  loading pathway whose rate does not scale with the free fraction, so the factorisation is not merely
+  mis-partitioned between its two factors, it is **missing a term** (`docs/theory_anchor.tex` updated).
+  **Honest limits**: the freedom is REDUCED, never eliminated (per-congener still beats global in every arm,
+  bootstrap ~1.000) — "lipid loading explains the chain-length trend" is an over-reading, pinned by a test; on a
+  POST-HOC *relative* penalty the two-pool needs that freedom MORE than any arm (0.58 of its own RMSE vs S 0.43,
+  S+L 0.10), which cuts against reading T as the resolution; RMSE LEVELS are not comparable across arms by
+  construction (`k_seq` was fitted on the data that scores it) and the two lipid parameterisations are different
+  fits; in-sample, one dataset, 11 congeners. **A grid-robustness pass was added after the first run asserted an
+  ORDERING among the three lipid arms that a coarser grid reverses** — both grids are now run and only what
+  survives both is claimed. **NOTHING ADOPTED** — lipid loading stays opt-in, `k_seq` stays unpromoted (gate =
+  the §5 wet-lab assay); `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029) UNCHANGED.
+  `simulate_twopool_seq` gained the same `uptake`/`vmax_scale`/`g_apo` knobs (defaults bit-identical).
 - **B3 DONE — the η contradiction recorded in `docs/theory_anchor.tex`**: the derivation's parenthetical that η
   (which collects the apoplastic bypass ε and the carrier) is "essentially independent of tail length" is an
   ASSUMPTION of the `f_xy = η·φ_free` factorisation, and both halves of η are now measured to need a chain-length
@@ -1125,7 +1156,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   **left as written on purpose** — a requirement common to two DIFFERENT entry terms is unlikely to be a property of
   entry, so the natural reading is that eq. (factor) is **mis-partitioned** and what the fits absorb into η belongs
   in `φ_free`/`B_k` (where the two-pool work independently put it). No replacement factorisation is asserted; that
-  is gated on the same wet-lab assay as the `k_seq` promotion decision.
+  is gated on the same wet-lab assay as the `k_seq` promotion decision. **SUPERSEDED IN ITS SPECIFICS by B2
+  (above)**: the dependence is absorbed by the B-independent LOADING term, not by `φ_free`/`B_k`, so eq. (factor)
+  is missing a term rather than mis-apportioning between the two it has. The contradiction itself stands.
 - **CI now runs the WHOLE suite (this session)**: `.github/workflows/tests.yml`. Until now `rigor.yml` was the only
   workflow and it runs a SINGLE module (`test_sci_adk_rigor.py`), which is why every handoff carried "⚠️ CI does not test
   any of this — a green check means nothing here" and why the suite count in this file was maintained by hand from
@@ -1213,6 +1246,12 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   An addition IS necessary (depolarisation REFUTED) but WHICH is undecided (bootstrap 0.749). The alternative
   is runnable, not buried: **`model_api.simulate(uptake="bypass")`** (default `"carrier"` = the shipped model,
   bit-identical) — see `model_api.UPTAKE_MODES`; explicit `vmax_scale=`/`g_apo=` still override the mode.
+- **Entry or sequestration? (B2)**: `python validation/entry_vs_sequestration.py` (~9 min, two grids;
+  `--fast` ~4 min). Read the header (the PRE-REGISTRATION) before the VERDICT. Fits the entry conductance
+  per congener against 4 root models: the trend flattens against the two-pool (corr +0.890→+0.171) but the
+  **pre-registered control refutes the attribution** — removing `k_seq` and keeping lipid loading flattens it
+  just as far, so it is the **B-independent lipid LOADING term** that absorbs the chain-length dependence,
+  not sequestration. Reduced, NOT eliminated (per-congener still beats global everywhere).
 - **Dose series — can concentration separate them? (B1)**: `python validation/dose_series_carrier.py`
   (~6 min; `--fast` skips the Kd sweep, ~2 min). Read the header (the PRE-REGISTRATION) before the VERDICT.
   Pre-registered rule NOT met (1/3, needed 2/3) ⇒ carrier **DISFAVOURED, not refuted**: GenX is non-informative
@@ -1266,9 +1305,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**336 collected; 335 pass, 2 skip** — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**344 collected; 343 pass, 2 skip** — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
-  collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
+  collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~17 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
   module additionally skips unless `sci-adk` is installed, which CI's `rigor.yml` provides). On a bare
   clone the structure/SMILES tests skip without RDKit and the HYDRUS-engine tests in `test_soil_hydrus.py`

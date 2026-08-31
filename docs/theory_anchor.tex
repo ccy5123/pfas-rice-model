@@ -215,12 +215,29 @@ rising from $\sim2$--$5$ at C4--C8 to $20$--$50$ at C9--C12. Independently,
 therefore require a chain--length term of similar size.
 
 The equation is left as written, deliberately: a requirement common to two \emph{different} entry
-terms is unlikely to be a property of entry at all, and the natural reading is that
-Eq.~\eqref{eq:factor} is mis-partitioned --- what the fits are absorbing into $\eta$ belongs in
-$\ffree$ (i.e.\ in $\Bk$/sequestration), which is where the two--pool root work
-(\texttt{docs/twopool\_root\_exploration.md}) independently put it. Re-deriving the split is open
-work and is gated on the same wet--lab assay as the $k_{\mathrm{seq}}$ promotion decision, so no
-replacement factorisation is asserted here.
+terms is unlikely to be a property of entry at all, so Eq.~\eqref{eq:factor} is presumably
+mis-partitioned. \emph{Where} the misplaced dependence belongs has since been measured, and the
+first reading recorded here was wrong.
+
+\paragraph{Where it actually goes (\texttt{validation/entry\_vs\_sequestration.py}).} The natural
+reading was that what the fits absorb into $\eta$ belongs in $\ffree$ (i.e.\ in $\Bk$ /
+sequestration), which is where the two--pool root work
+(\texttt{docs/twopool\_root\_exploration.md}) independently put it. Fitting the entry conductance
+per congener against a model whose sequestration term is \emph{resolved} does flatten the trend
+(corr $+0.89 \to +0.17$; the penalty for one global conductance instead of eleven falls by more
+than half), which appears to confirm it --- but a pre-registered control refutes the attribution:
+\textbf{removing the sequestration term while keeping lipid--facilitated loading flattens the trend
+just as far}, and the plain single pool with lipid loading and no second root pool at all flattens
+it too. What absorbs the chain--length dependence is therefore the \emph{$\Bk$--independent bound
+loading} term ($g_{xy}C$, $g_{ph}C$; see \texttt{docs/fxy\_longchain\_lipid\_exploration.md}), which
+is neither the membrane factor $\eta$ nor the binding factor $\ffree$.
+
+That is a stronger statement than mis-partitioning: Eq.~\eqref{eq:factor} has \emph{no slot} for a
+loading pathway whose rate does not scale with the free fraction, so the factorisation is not
+merely apportioning the dependence between its two factors incorrectly --- it is \textbf{missing a
+term}. The dependence is also reduced rather than removed (a per-congener conductance still beats a
+global one in every arm), so no replacement factorisation is asserted here; that remains open work,
+gated on the same wet--lab assay as the $k_{\mathrm{seq}}$ promotion decision.
 
 \subsection{The mobile free fraction $\Rightarrow$ a logistic in $n$}
 Of the total PFAS held in the root tissue, the mobile aqueous fraction is
