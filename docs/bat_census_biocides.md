@@ -170,7 +170,15 @@ The triclosan bias is the same sign as, and larger than, that whole soil table's
 documented +0.260 (§4h) — and triclosan is an **acid**, so part of the excess is
 speciation the equilibrium `K_PW` cannot see (next section).
 
-A free by-product: Li 2019's own log Kow for triclosan is **4.8** against the
+**Both scoreable substances now have their log Kow confirmed from outside.**
+Propiconazole's 3.72 is simultaneously this repo's cited value (Liu 2023 SI Table
+S1 — the row that carries the measured rice root RCF) and BAT's audited entry
+(rank 2, PPDB report 551 code A5, EFSA): two independent sourcings agreeing to the
+digit. That matters more here than anywhere else, because the a-priori score above
+is one of only two this census can produce, and it does not rest on a contested
+input.
+
+A second by-product: Li 2019's own log Kow for triclosan is **4.8** against the
 report's audited **4.76** — two independent sourcings 0.04 log apart, which is the
 one place the report's property audit can be checked against something already
 here.
