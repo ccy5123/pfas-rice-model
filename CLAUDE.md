@@ -74,7 +74,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (365 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge, BAT-census biocides
+└── tests/                            # pytest (375 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge, BAT-census biocides
 
 ```
 
@@ -1202,6 +1202,27 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   ONCE as a labelled sensitivity, never as a parameterisation; γ=0 makes leaf/grain upper bounds. `parameters.json`,
   `simulate()` defaults, `reproduce_demo` (0.029) and the neutral a-priori numbers (Liu 0.281 / Ge 0.783) UNCHANGED.
 
+- **정책활용협의회 브리핑 ② — 적용범위(AD)를 발표 자료로 (this session)**: `docs/POLICY_BRIEF_BIOCIDES_KR.md`
+  + `validation/policy_biocides_figures.py` + `docs/policy_biocides_results.csv` +
+  `tests/test_policy_biocides_figures.py` (10) + 4 figures. Extends slide 8 of `POLICY_BRIEF_KR.md` into its own
+  6-slide deck, on the same conventions (핵심 메시지 / ⚠ 반드시 남길 것 / 금지 표현표). **The headline is the AD
+  itself**: it is NOT one interval but **two nested bands + a gate** — root partition log Kow **−0.66…8.70**
+  (560 measured rows), shoot/TSCF **−1.52…5.46** (30 rows), ionisation `f_n ≥ 0.10` — all three read off `data_obs/`
+  BEFORE any substance was screened. So `5.46 < log Kow ≤ 8.70` is **root-quotable only**, which is the operative
+  one-liner for a policy audience ("먹는 부위 숫자는 5.46까지"). On the 117 rows: 69 inside / 10 root-only /
+  7 beyond both anchors / **31 refused for ionisation**, and the refusal is pitched as a FEATURE (the rule is the
+  report's own never-implemented §3.0a, not one invented here). **New result the deck forced out**: the nominal
+  and the EFFECTIVE domain diverge — a 120-d season cannot equilibrate a very lipophilic root, so root BAF ÷ K_PW
+  falls 0.91 @4 → **0.50 @ log Kow 6.83** → 0.07 @8.25, i.e. **above 6.83 the root number is a RATE, not a
+  partition coefficient**. Defined as the half-equilibrium point and computed (`half_meaning_edge`), never rounded
+  to "7"; **not yet reflected in `screen()`**, which still passes everything to 8.70 as "root only" — said plainly
+  in the deck rather than quietly fixed. Two count corrections the file forced: **117 rows = 113 substances**
+  (2 deliberate second-readings + benzoic acid / benzyl alcohol duplicated ACROSS the two tiers at identical
+  log Kow), and the rank correlation stays **n=60 substances with no duplicate** (verified). `--fast` used to
+  silently delete the `5_meaning` rows the brief quotes; it now carries them over and labels them. Figure labels
+  are **English on purpose** (a Hangul-capable CJK font exists in this container but not everywhere — a test pins
+  the labels ASCII so the PNGs are reproducible). Reads the model only: `parameters.json`, `simulate()` defaults
+  and `reproduce_demo` (0.029) UNCHANGED.
 - **정책활용협의회 브리핑 (this session) — a slide-ready report, and an honest headline it refuses to make**:
   `docs/POLICY_BRIEF_KR.md` + `validation/policy_brief_runs.py` + `docs/policy_brief_results.csv` +
   `tests/test_policy_brief.py` (11) + two figures. The user is presenting to a Korean policy council and
@@ -1325,6 +1346,11 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   be scored at all. Writes `validation/bat_census_biocides.csv`; the input table is
   `data_obs/biocides_bat_census.csv` (NOT an `--obs` observation file — it has no measured plant value in it).
   Full record: `docs/bat_census_biocides.md`.
+- **정책 브리핑 ② — 적용범위(AD) + 살생물질 census**: `python validation/policy_biocides_figures.py`
+  (~4분; `--fast` 는 log Kow 스윕/그림 4 생략, ~1분). `docs/POLICY_BRIEF_BIOCIDES_KR.md` 가 인용하는
+  그림 4장 + `docs/policy_biocides_results.csv`. census 를 다시 돌리지 않고
+  `validation/bat_census_biocides.csv` 를 **읽어서** 그리는 층이라, 그 CSV 가 먼저 있어야 한다.
+  그림 라벨은 영어(폰트 이식성). Guards: `tests/test_policy_biocides_figures.py`.
 - **Kodešová 2019 carbamazepine (queue A4; the anchor vote)**: `python validation/kodesova2019_carbamazepine.py`
   (exposure from the paper's own measured isotherms + the `Koc` defence of the unit reading; a-priori 0.191;
   the shipped-vs-anchored table across all three root datasets; the Brunetti verdict; the dw→fw sensitivity).
@@ -1371,7 +1397,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**365 collected; 364 pass, 2 skip** — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**375 collected; 374 pass, 2 skip** — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
