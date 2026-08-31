@@ -18,7 +18,7 @@
 > bypass**, §5 the synthesis. **Read §5 first.**
 > `parameters.json`, `simulate()` and `reproduce_demo` (RMSE 0.029) are **UNCHANGED**
 > throughout — everything on this arc is additive or opt-in, and no PFAS number moved.
-> Full suite: **316 collected, 315 pass, 2 skip** (~25 min); the two skips are the
+> Full suite: **323 collected, 322 pass, 2 skip** (~25 min); the two skips are the
 > optional `emcee` and `sci-adk` deps. **CI now runs it** — see §5.
 
 ---
@@ -214,9 +214,9 @@ against the anchor.
 
 Ranked. **Items 1, 2, 4, 7 and 8 are DONE** — see §1. What remains (3, 5) is **blocked
 on data that is not in the repo** — see §4 for what to ask for. Startable without new
-data: the **carrier-vs-bypass question item 8 exposed** (the best of them, and it
-reaches the PFAS side), then item 6 (low value) and the pieces left on the closed
-#54/#55 branches (§1).
+data: **item 6** (low value) and the pieces left on the closed #54/#55 branches (§1).
+The carrier-vs-bypass question item 8 exposed has since been **RUN** — it has its own
+handoff, `docs/HANDOFF_carrier_vs_bypass.md`; do not start it again from here.
 
 1. ~~Put the anchor decision to rest~~ **DONE.** Default stays `lipid_source="measured"`;
    the alternative is a named mode, and the 3-vs-1 evidence is a command rather than a
@@ -264,13 +264,12 @@ reaches the PFAS side), then item 6 (low value) and the pieces left on the close
    optimum, worse in 96.9 % of resamples), so it was recorded rather than tuned
    past. What survives is the **small**-bypass Pareto point (`g_apo ≈ 0.5`), which
    improves ordering *and* scale in 99.6 % of resamples and leaves the un-ionised
-   rows alone. **The follow-up is the question it exposed, not more fitting**: the
-   PFAS path patches this same anion-entry gap with a **fitted carrier**
-   (`Vmax_in`), the neutral path now has a bypass, and *whether one mechanism
-   should serve both* is untested. That is a structural question answerable in
-   repo — run the PFAS congeners with `g_apo` in place of the carrier and see
-   whether Yamazaki survives — and it would tell you something about the PFAS side,
-   which no amount of further neutral work will.
+   rows alone. **The follow-up it exposed has since been RUN — see
+   `docs/HANDOFF_carrier_vs_bypass.md`, not this file.** Outcome: an addition to
+   Trapp's ionizable cell model IS necessary (depolarisation alone refuted), WHICH
+   addition is undecided (carrier vs bypass, bootstrap 0.749), and the bypass's
+   chain-length-independence claim — asserted by `theory_anchor.tex` — was refuted
+   at corr +0.832. Nothing adopted. Do not restart it from here.
    Original framing, kept because the pre-registration is the point:
    **An APOPLASTIC bypass for the ion — the one open mechanism §4l names, and the
    best startable item.** §4l showed the weak-electrolyte path orders compounds well
@@ -414,7 +413,7 @@ python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.c
 python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_ge2017.csv   # 0.783
 python reproduce_demo.py                                                            # 0.029
 
-pytest -q                                          # 316 collected, 315 pass, 2 skip
+pytest -q                                          # 323 collected, 322 pass, 2 skip
 ```
 
 **Resume prompt.**
@@ -438,13 +437,14 @@ pytest -q                                          # 316 collected, 315 pass, 2 
 > better than Y", bootstrap it, and pin only the half that holds (§2 items 4–5 are
 > both of this kind).
 >
-> Startable work, honestly ranked. **The best is the question §3 item 8 exposed and
-> did not answer**: the PFAS path patches the anion-entry gap with a fitted CARRIER
-> (`Vmax_in`), the neutral path now has an apoplastic BYPASS (`g_apo`), and whether
-> one mechanism should serve both is untested. It is answerable in repo — run the
-> PFAS congeners with `g_apo` in place of the carrier and see whether Yamazaki
-> survives — and unlike more neutral work it would tell you something about the PFAS
-> side. After that: the pieces left on the closed #54/#55 branches (§1). §3 items
+> The carrier-vs-bypass question that §3 item 8 exposed has since been **RUN** and has
+> its own handoff — `docs/HANDOFF_carrier_vs_bypass.md`. Short version: an addition to
+> Trapp's ionizable cell model IS necessary (depolarisation alone refuted), but WHICH
+> addition is undecided (bootstrap 0.749), and the bypass's own chain-length-independence
+> claim was refuted. Do not restart it from here.
+>
+> Startable work on THIS arc, honestly ranked: the pieces left on the closed #54/#55
+> branches (§1), then §3 item 6 (low value). §3 items
 > 3 and 5 are **blocked on data that is not in the repo** — do not start one expecting
 > to finish it; §4 says what to ask for, including that the item-3 request is narrower
 > than it looks (more RICE above log Kow 3.5 from an independent lab, not more
