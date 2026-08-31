@@ -1,0 +1,25 @@
+section,key,value,unit,note
+1_ad,root_span_lo,-0.66,log Kow,측정 뿌리분배 자료의 하한
+1_ad,root_span_hi,8.7,log Kow,측정 뿌리분배 자료의 상한
+1_ad,root_span_n,560,행,data_obs/ 중성 테이블 6종 합계
+1_ad,shoot_span_lo,-1.52,log Kow,비이온화 TSCF 측정 하한
+1_ad,shoot_span_hi,5.46,log Kow,비이온화 TSCF 측정 상한 — 실질 한계
+1_ad,shoot_span_n,30,행,Schriever 2020 비이온화 행
+1_ad,ionisation_gate_fn,0.1,-,중성분율 하한 (보고서 §3.0a 기준)
+1_ad,n_inside,69,행,inside
+1_ad,n_root,10,행,root only
+1_ad,n_extrapolation,7,행,extrapolation
+1_ad,n_excluded,31,행,EXCLUDED (ionisation)
+1_ad,n_total,117,행,돌아간 전체 행
+2_edges,n_below_low_edge,5,종,저 log Kow 이탈 — 이번에 새로 생긴 이탈 방향
+2_edges,n_above_high_edge,2,종,고 log Kow 이탈
+3_rank,n,60,종,어류 BCF 가 존재하는 물질만
+3_rank,rho_root,0.875,-,
+3_rank,rho_straw,-0.769,-,
+4_bioacc,n_classified,7,종,규제기관 생물축적성 분류
+4_bioacc,max_tscf,0.02059196237382389,-,이들 중 최대 TSCF — 낟알 도달 여부의 척도
+5_meaning,half_equilibrium_logkow,6.83,log Kow,뿌리 BAF 가 K_PW 의 절반으로 떨어지는 지점
+5_meaning,ratio_at_logkow_4,0.9116,-,뿌리 BAF / K_PW (1 = 평형)
+5_meaning,ratio_at_logkow_6.25,0.8259,-,뿌리 BAF / K_PW (1 = 평형)
+5_meaning,ratio_at_logkow_8.25,0.0708,-,뿌리 BAF / K_PW (1 = 평형)
+5_meaning,ratio_at_logkow_10.5,0.001,-,뿌리 BAF / K_PW (1 = 평형)

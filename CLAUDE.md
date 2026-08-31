@@ -61,6 +61,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── data_obs/                         # observed BAF/TF (Yamazaki, Li2025) + yamazaki_stem_height.csv
 │                                     #  + NEUTRAL: liu2023/ge2017 (rice) · li2019_rcf (48 hydroponic RCF, 11 spp,
 │                                     #    `subset` col holds Briggs' own rows out) · tscf_obs_schriever2020 (97 TSCF)
+│                                     #  + biocides_bat_census (EU biocide INPUTS from the BAT report — NOT observations)
 ├── validation/                       # S6 + nstem + hydrus_coupled_run reproduction scripts + figures
 ├── docs/
 │   ├── OVERVIEW_KR.md                # ★ 종합 진입점: 기능·검증·데이터공백·필요실험·notation 표 (+모식도)
@@ -73,7 +74,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (336 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (375 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge, BAT-census biocides
 
 ```
 
@@ -1133,6 +1134,118 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   its signal — an empirical claim was over-stated — would be buried in a ~22-min run). RDKit/phydrus come from
   `requirements.txt` and are NOT best-effort, since that file is what Streamlit Cloud installs; only emcee, the gfortran
   HYDRUS-1D build and sci-adk are, and `-rs` prints skip reasons so a silently shrinking suite stays visible.
+- **EU biocides from the BAT census run through the neutral path (this session) — PREDICTION, not validation**:
+  `data_obs/biocides_bat_census.csv` + `validation/bat_census_biocides.py` + `tests/test_bat_census_biocides.py` (18)
+  + `docs/bat_census_biocides.md`. A user-supplied report (`REPORT_bat_census.md`) records a regulatory screening tool
+  (BAT) run over every EU biocidal active with a published bioaccumulation opinion, scored on a **fish** BCF. Different
+  organism/endpoint/regulation, so exactly ONE thing transfers — an **audited log Kow of the UNCHARGED form**, which is
+  the one input the neutral path needs (`K_PW` and `TSCF` are both functions of it, nothing fitted) and whose corruption
+  is the report's own headline correction (a distribution ratio D entered where log Kow belongs; §7.5 — an error this
+  model would inherit identically). **Census (UPDATED 2026-09-06)**: 44 substances named, 23 with a report-stated log Kow;
+  the other 20 were left BLANK rather than filled in from elsewhere, and on request the BAT project then supplied **18 of
+  them from its own collection sheet** (`EXPORT_logkow_full_20260906.csv`, 167 rows, with CAS + source + rank) ⇒ then the AUDITED
+  provenance for all **61 substances BAT actually entered** (`EXPORT_logkow_entered_into_BAT_20260906.csv`) ⇒ then the
+  **52 collection-sheet substances BAT never entered** that survive the file's own quality flags AND carry a pKa
+  (`section=COLLECTION_SHEET_not_entered`, a SEPARATE tier — see below) ⇒ **117 rows run**: 22 log Kow printed in the
+  report, 19 supplied on request, 21 from substances BAT entered but the report never named individually, 1 from this
+  repo's Liu 2023 row, 2 second readings this study will not choose between, 52 collection sheet. **69 inside**
+  the measured-data span, 10 root-only, 7 beyond every anchor, **31 EXCLUDED for ionisation** (the jump from 9 is mostly
+  the sheet — 22 of its 52 are >90% ionised at pH 7, and the pKa column is exactly what lets the gate fire on them at all;
+  without it they would have screened as neutrals, the failure the report records against its own §3.0a). A THIRD file then supplied the
+  **BPC class + Scenario A/B fish BCF for all 61**, which is what makes the rank correlation an n=60 statement; the
+  transcription this file already held was verified against it at **100 of 101 values** (the one difference: salicylic acid
+  Scenario A, report-printed 4 vs export 4.35 — faithful transcription, more precise source). Their four caveats are kept
+  per row in a `bat_caveat` column (15 empty Scenario B cells are the FACT — those substances are outside BAT's range so no
+  kM was entered; tebuconazole/DCOIT have no opinion; cyphenothrin's nB came from its opinion's METABOLITE table; the
+  triamine's BAT output is uninterpretable). **Tebuconazole's acid/base flag is RESOLVED and it caught an error here**: BAT
+  entered it as an ACID at pKa 12.6205 and the base reading is a DIFFERENT pKa (3.516), so the two-row treatment that paired
+  `is_acid=FALSE` with 12.6205 was the one wrong pairing (reads as 100% ionised); collapsed to one row, both readings >99.9%
+  neutral so they cannot diverge. The audited export also replaced the four anticoagulant pKa this file had
+  RECOVERED from the report's percentages with SOURCED rank-1 values (bromadiolone 4.5, brodifacoum 4.5, difenacoum 4.84,
+  flocoumafen 4.95; three measured) — the recovered values were within 0.03 log, a check on the inversion, but sourced
+  supersedes derived and nothing carries `pka_basis=derived` now. **Only creosote stays unrunnable** (no structure); the
+  triamine now runs and the ionisation gate refuses it at 99.97% on a COMPUTED criterion instead of this file's assertion.
+  Tebuconazole was briefly run BOTH ways (its export row gives `is_acid=TRUE` but `ionisation_class=base` with no
+  percentage to arbitrate) until the project resolved it — see above; seven other rows disagree the same way but their
+  percentage settles it (`is_acid` is the column that round-trips). Three checks before accepting the export: every stated pKa/%ionised pair round-trips at pH 7 to **<0.005 pp**;
+  the pKa this file had RECOVERED from the report's percentages (coumatetralyl 4.781, warfarin 5.183) match the sourced
+  values (4.75, 5.19) to 0.03/0.007 log — a check on the inversion, now replaced by the sourced ones; and provenance is
+  uneven and recorded per row (IPBC is **rank 3 = a model prediction**; tebuconazole/DCOIT carry no rank). Cyphenothrin is
+  deliberately left OPEN — their provenance says the AR's measured 5.79–6.09 supersedes the entered 6.29 and they declined
+  to pick one (their §8.14 rule applied to themselves), so both ends are run and neither is called canonical.
+  **The export's other 106 substances (never entered into BAT) — 52 of them now run, in a separate tier.** Round 1 read
+  the first export as unusable as delivered (82 would fall inside on log Kow alone, but it carried zero pKa and zero
+  source rank, so the ionisation gate cannot fire — the §3.0a failure — and a measurement is indistinguishable from a
+  model output, the §7.9 trap). **SETTLED over three rounds, and the count that stood was the file's**: the first export genuinely had zero pKa and zero rank for the 106 (accurate about the file), but the inference "those two columns would make them equal to the 43" was WRONG — their sheet has 80 pKa and the real blocker is quality. Their covering note then gave 64 computed medians / 40 clean / 29 clean-with-pKa; counting the delivered `quality_flag` gives **28 / 10 / 68 / 52**. Both are right about different rules and the file shows which: **64 = rows whose `logkow_source_model` contains the STRING "median of N"; 28 = rows the flag marks "not among the candidates", a STRICT SUBSET (36 string matches are medians that ARE among their candidates)**. The string rule reproduces 64/40/29 to the unit, the criterion 28/68/52 — and the criterion is the report's own §8.14 test, the same over-detection that project had already corrected on its entered set (it is what replaced cypermethrin's median 6.175 with the sourced 6.3). They have CONFIRMED all four numbers and found a second defect their side: the flags were joined with `"; "` while the informational flag text contains a semicolon, so the documented split fragments every row — this count survived only because it matched substrings, which is luck and is recorded as such. **⇒ the runnable subset is 52, not 29**, and those 52 are now rows here (`section=COLLECTION_SHEET_not_entered`) marked as a LOWER tier: no source rank exists for any of them, no BPC class or fish BCF so they are excluded from the rank correlation, and their %ionised is computed here. Their pKa is what makes them runnable at all — **22 of the 52 are >90% ionised at pH 7**, so without it they would have been screened as neutrals, exactly the §3.0a failure. Allyl isothiocyanate's log Kow 34.675 is the median of `2.11 · 2.15 · 67.2 · 130.23` — two log values averaged with two LINEAR Kow values — tagged `experimental`; it is in both defect groups and never entered BAT so no result here is touched by it. The exclusion rule is the
+  report's OWN §3.0a rule (">90% ionised at environmental pH") which it records as written-down-and-never-implemented;
+  it is implemented here at the same threshold, and the pH-7 basis is pinned by round-tripping the six stated pKa to
+  **0.002 pp**. **Result**: everything the opinions call bioaccumulative loads the ROOT and does not reach the grain
+  (TSCF < 1e-3 for all of them). **The two scoreable substances** (a-priori, equilibrium basis): propiconazole vs the Liu
+  2023 **rice** root RCF **+0.023 log (1.05×)**; triclosan vs the Li 2019 soil table (14 radish/carrot rows) +0.625 log —
+  same sign as, and larger than, that table's documented +0.260 (§4h), part of it the speciation `K_PW` cannot see. Free
+  cross-check: Li 2019's triclosan log Kow 4.8 vs the report's audited 4.76, **0.04 log apart**. **Cross-model**: (a) the
+  report needed 217 runs to establish BAT is a one-input model; here it is STRUCTURAL and cyphenothrin/difethialone at
+  log Kow 6.29 come back bit-identical; (b) the one property BAT proved inert — Henry — is the one that DOES reach this
+  answer, through the opt-in air term (empenthrin K_AW 1.4e-2 loses ~47% of its leaf burden, cyphenothrin 9e-7 none);
+  (c) the report's own DCPP pKa sweep re-run on identical inputs shows **this model damps ionisation HARDER than BAT**
+  (at 91% ionised: chemistry 0.091, BAT 0.245, rice root **0.768**) because the membrane term sets the RATE of root
+  equilibration and not its level — which is WHY the strongly-ionised group is excluded rather than caveated;
+  (d) BAT's fish BCF peaks near log Kow 6.3 and turns over, this model's straw peaks at **1.75** and its root never
+  turns over but **saturates kinetically** (K_PW/root 0.92 @4 → 0.001 @10.5: above ~7 the root number stops being a
+  partition and becomes a rate); (e) Spearman(BAT fish BCF, rice root) **+0.875** vs (·, rice straw) **−0.769** on **60** substances (recomputed as the sample tripled: +0.467/−0.466 at n=20, +0.725/−0.725 at n=35, +0.875/−0.769 at n=60 — every enlargement STRENGTHENED it; two exclusions stated in code, the triamine's uninterpretable BAT output and the two second-log-Kow rows that would weight one substance twice) — a fish
+  bioaccumulation class is NOT a statement about grain; (f) the report's largest finding is AMPLIFIED — its metabolic
+  input moved fish BCF ≤82×, the same fish kM half-lives move this model's **grain ≤5,573×** (terminal accumulator),
+  i.e. the least defensible input is the one the edible compartment is most sensitive to. **Honest limits**: no measured
+  rice value exists for any of these substances; of the 7 the opinions call bioaccumulative, 4 are excluded for
+  ionisation and only triclosan is inside the TSCF anchor — mirroring the report's §7.3 kM-QSAR Tanimoto 0.19–0.28
+  finding from the other side (two independent models weakest exactly where the answer matters). The fish kM are run
+  ONCE as a labelled sensitivity, never as a parameterisation; γ=0 makes leaf/grain upper bounds. `parameters.json`,
+  `simulate()` defaults, `reproduce_demo` (0.029) and the neutral a-priori numbers (Liu 0.281 / Ge 0.783) UNCHANGED.
+
+- **정책활용협의회 브리핑 ② — 적용범위(AD)를 발표 자료로 (this session)**: `docs/POLICY_BRIEF_BIOCIDES_KR.md`
+  + `validation/policy_biocides_figures.py` + `docs/policy_biocides_results.csv` +
+  `tests/test_policy_biocides_figures.py` (10) + 4 figures. Extends slide 8 of `POLICY_BRIEF_KR.md` into its own
+  6-slide deck, on the same conventions (핵심 메시지 / ⚠ 반드시 남길 것 / 금지 표현표). **The headline is the AD
+  itself**: it is NOT one interval but **two nested bands + a gate** — root partition log Kow **−0.66…8.70**
+  (560 measured rows), shoot/TSCF **−1.52…5.46** (30 rows), ionisation `f_n ≥ 0.10` — all three read off `data_obs/`
+  BEFORE any substance was screened. So `5.46 < log Kow ≤ 8.70` is **root-quotable only**, which is the operative
+  one-liner for a policy audience ("먹는 부위 숫자는 5.46까지"). On the 117 rows: 69 inside / 10 root-only /
+  7 beyond both anchors / **31 refused for ionisation**, and the refusal is pitched as a FEATURE (the rule is the
+  report's own never-implemented §3.0a, not one invented here). **New result the deck forced out**: the nominal
+  and the EFFECTIVE domain diverge — a 120-d season cannot equilibrate a very lipophilic root, so root BAF ÷ K_PW
+  falls 0.91 @4 → **0.50 @ log Kow 6.83** → 0.07 @8.25, i.e. **above 6.83 the root number is a RATE, not a
+  partition coefficient**. Defined as the half-equilibrium point and computed (`half_meaning_edge`), never rounded
+  to "7"; **not yet reflected in `screen()`**, which still passes everything to 8.70 as "root only" — said plainly
+  in the deck rather than quietly fixed. Two count corrections the file forced: **117 rows = 113 substances**
+  (2 deliberate second-readings + benzoic acid / benzyl alcohol duplicated ACROSS the two tiers at identical
+  log Kow), and the rank correlation stays **n=60 substances with no duplicate** (verified). `--fast` used to
+  silently delete the `5_meaning` rows the brief quotes; it now carries them over and labels them. Figure labels
+  are **English on purpose** (a Hangul-capable CJK font exists in this container but not everywhere — a test pins
+  the labels ASCII so the PNGs are reproducible). Reads the model only: `parameters.json`, `simulate()` defaults
+  and `reproduce_demo` (0.029) UNCHANGED.
+- **정책활용협의회 브리핑 (this session) — a slide-ready report, and an honest headline it refuses to make**:
+  `docs/POLICY_BRIEF_KR.md` + `validation/policy_brief_runs.py` + `docs/policy_brief_results.csv` +
+  `tests/test_policy_brief.py` (11) + two figures. The user is presenting to a Korean policy council and
+  wanted the *material*, written so a slide-building agent can build the deck without re-deriving anything:
+  every number carries a CSV key, every slide carries a `⚠ 반드시 남길 것` block, and Appendix A is a
+  FORBIDDEN-PHRASE table ("모델이 검증되었다" → "한국 현장 자료 1건에 대한 외부 검증"; "기준치를 초과한다" →
+  there IS no rice PFAS limit in either jurisdiction). **The headline the run refused to give**: the a-priori
+  model says short chains reach the grain and long chains do not (C4–C6 mean 2.15 vs C9–C12 0.052, 41x), but
+  BOTH measured datasets say the opposite at the long end — Yamazaki PFDoDA grain BAF **45.5** and Kim 2019
+  Korean field **35.2** against the base model's 0.101 (**451x under**), and the base model's grain error runs
+  monotonically from ~6x OVER at C5 to 451x UNDER at C12. So the congener ordering is a *mechanism* choice,
+  not a result, and the brief says so in the slide, in the caveat block and in the forbidden-phrase table.
+  **The evidence slide is Kim 2019** (the only Korean paddy set with paired pore water + brown rice, 6
+  congeners): base model log10 RMSE **1.97** (bias −1.69) vs `lipid_loading=True` **0.53** (excl PFOA 2.06 →
+  **0.48**) — and the lipid constants were fit on Yamazaki, so it is genuine OOS, reproducing the documented
+  §multi-dataset figure exactly. **The inverse demo is deliberately two-sided**: synthetic truth 0.0787 →
+  0.0788 µg/L (95% 0.053–0.117, the method works) but the Kim brown-rice measurement 0.349 µg/kg → **3.19
+  µg/L against a measured 0.0787 = 40x over**, which is the same grain bias inverted — so the brief states
+  the feature is NOT field-ready. Also run: PFOA end-to-end at the measured 78.7 ng/L (grain 0.0136 µg/kg,
+  ±7.1x band, **5.4% of the EFSA group TWI**, xylem 78% / phloem 22% via `apportionment`), the saturable-uptake
+  non-linearity (effective grain BAF 0.172 at 78.7 ng/L vs 0.148 at 1 µg/L — "농도 × 계수" is wrong), SMILES
+  input flagging novels provisional, and the EU biocide census from the earlier PR. `parameters.json`,
+  `simulate()` defaults and `reproduce_demo` (0.029) UNCHANGED — this session only reads the model.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1220,6 +1333,24 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   refutes** (carrier 6.28× vs measured 1.17×, bootstrap 1.000, 8/9 Kd combos). Durable result = the POST-HOC
   bound: the carrier must have **`Km` ≥ 500 µg/L (100× the fitted 5)** to be this flat — i.e. linear over the
   whole span, which is the bypass's own form. `simulate(km_scale=…)` is the knob.
+- **정책 브리핑 수치 재현**: `python validation/policy_brief_runs.py` (~7분; `--fast` 는 그림 생략).
+  `docs/POLICY_BRIEF_KR.md` 의 모든 수치 + `docs/policy_brief_results.csv` +
+  `validation/figures/policy_grain_by_chain.png` · `policy_kim2019_grain.png`. Read the doc's
+  "슬라이드를 만드는 분께" block first — it is written for a downstream slide-building agent, and its
+  caveat blocks and forbidden-phrase table are load-bearing (guarded by `tests/test_policy_brief.py`).
+- **EU biocides from the BAT census (PREDICTION, not validation)**: `python validation/bat_census_biocides.py`
+  (~5 min; `--fast` skips the log Kow sweep, ~2 min). Read the VERDICT block: **117 rows run** (65 from the report + the
+  audited entered set, + 52 from the collection sheet BAT never entered — a SEPARATE tier with no fish BCF to compare
+  against), 69 inside the measured-data span, 10 root-only, 7 beyond every anchor and **31 excluded for ionisation** (the
+  report's own never-implemented §3.0a rule, applied here). Only propiconazole (rice root, +0.023 log) and triclosan (soil radish/carrot, +0.625) can
+  be scored at all. Writes `validation/bat_census_biocides.csv`; the input table is
+  `data_obs/biocides_bat_census.csv` (NOT an `--obs` observation file — it has no measured plant value in it).
+  Full record: `docs/bat_census_biocides.md`.
+- **정책 브리핑 ② — 적용범위(AD) + 살생물질 census**: `python validation/policy_biocides_figures.py`
+  (~4분; `--fast` 는 log Kow 스윕/그림 4 생략, ~1분). `docs/POLICY_BRIEF_BIOCIDES_KR.md` 가 인용하는
+  그림 4장 + `docs/policy_biocides_results.csv`. census 를 다시 돌리지 않고
+  `validation/bat_census_biocides.csv` 를 **읽어서** 그리는 층이라, 그 CSV 가 먼저 있어야 한다.
+  그림 라벨은 영어(폰트 이식성). Guards: `tests/test_policy_biocides_figures.py`.
 - **Kodešová 2019 carbamazepine (queue A4; the anchor vote)**: `python validation/kodesova2019_carbamazepine.py`
   (exposure from the paper's own measured isotherms + the `Koc` defence of the unit reading; a-priori 0.191;
   the shipped-vs-anchored table across all three root datasets; the Brunetti verdict; the dw→fw sensitivity).
@@ -1266,7 +1397,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**336 collected; 335 pass, 2 skip** — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**375 collected; 374 pass, 2 skip** — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
