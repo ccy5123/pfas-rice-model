@@ -73,7 +73,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (323 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (336 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1083,6 +1083,49 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   a-priori-limited (monotone `f_xy`) and NOT comparable to the fitted 0.029 or the documented a-priori ~0.84.
   **Next (agreed): A1** = expose the bypass as a named mode, default carrier; **then B1** = separate the two on
   Tang's 5-dose series (a carrier saturates, a bypass is linear; data already in `raw_si/`) — see the handoff.
+- **A1 DONE — the bypass is a named mode, `simulate(uptake="carrier"|"bypass")` (this session)**:
+  `model_api.UPTAKE_MODES` + `DEFAULT_UPTAKE="carrier"`. The repo's idiom for a question that is open rather
+  than settled (`lipid_source`, `f_xy_source`, `cwo_profile`, `biomass`, `tscf_model`): **the default does not
+  move and the alternative is kept RUNNABLE instead of buried in a validation script**. `"bypass"` = the scored
+  arm exactly (carrier off, one global `g_apo`=20); explicit `vmax_scale=`/`g_apo=` still win over the mode so
+  the scans keep working; the effective mode is reported in `params`. Recorded in code, not just in docs: **the
+  carrier keeps its place by DEFAULT, NOT BY EVIDENCE** — A and B are indistinguishable (1.035 vs 0.996,
+  bootstrap 0.749) on the only dataset asked, and the bypass does not win parsimony either. `uptake="carrier"`
+  is **bit-identical** to the shipped solve (pinned by a test), so `parameters.json`, `simulate()` defaults and
+  `reproduce_demo` (0.029, re-verified) are UNCHANGED.
+- **B1 — the DOSE SERIES: can concentration separate carrier from bypass? (this session) — the pre-registered
+  rule is NOT met; the carrier is DISFAVOURED, not refuted**: `validation/dose_series_carrier.py` (pre-registration
+  `f705de3` committed BEFORE the results) + `tests/test_dose_series_carrier.py` (9). The two entry mechanisms tied
+  on Yamazaki because Yamazaki is **one exposure level**; they differ exactly in the response to CONCENTRATION
+  (carrier saturates ⇒ BCF falls with dose; bypass is linear ⇒ flat), and the **carrier is the model's ONLY
+  nonlinearity in exposure** (pinned by a test), so Tang's 5 soil doses over **1000×** are a structural
+  discriminator. **Result**: only **1 of 3** congeners clears the pre-registered bar (needed 2), so **the carrier
+  is not refuted on the rule as written** — but the tally is misleading and the run says why. **(a) GenX is
+  NON-INFORMATIVE**: `Cwo/Km`=465 at the LOWEST dose ⇒ saturated throughout, carrier and bypass predict within 7%
+  (this is failure mode G1 for GenX alone — **the gate should have been PER CONGENER**, a flaw in this file's own
+  pre-registration that running it exposed). **(b) PFOA is INCONCLUSIVE**: observed 1.33× IS below the 1.48×
+  midpoint but bootstrap 0.671 < 0.90, and it is Kd-limited (at `f_oc` 0.01 × Koc/10 the carrier predicts 1.05×).
+  **(c) PFOS is the WELL-CONDITIONED case and it REFUTES**: lowest pore water of the three, the only compound that
+  actually crosses `Km` inside the series (`Cwo/Km` 1.7 → 1729) — carrier predicts a **6.28×** decline, measured is
+  **1.17×**, bootstrap **1.000**, robust in **8 of 9** Kd combinations. **The endpoint test agrees and is Kd-independent**:
+  the model confirms entry magnitude **divides out of TF** (dose-invariant to 3 dp in BOTH arms) so a carrier cannot
+  produce a TF trend — yet PFOA's TF falls **2.1–2.3×** while its BCF falls only 1.33×, i.e. the dose response sits in
+  **translocation** (the documented toxicity), *larger than the whole uptake signal*, which is why (b) scores as
+  unattributable. **THE DURABLE RESULT is a BOUND (§7, POST-HOC and labelled as such)**: to be as flat as measured the
+  carrier needs **`Km` ≥ 500 µg/L — 100× the fitted 5** — and PFOA and PFOS land on the SAME bound despite ~6× different
+  pore water. A carrier that linear across its whole exposure range **is** the bypass term (`Vmax/Km` as conductance)
+  ⇒ the series does not so much choose between the mechanisms as **bound the carrier into the bypass's functional
+  form**. Limits: 3 congeners, one soil, harvest only; SHAPES only (normalised to the lowest dose), never levels.
+  **NOTHING ADOPTED** — `Km` is not re-fitted; `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029)
+  UNCHANGED. `simulate` gained `km_scale` (default 1.0, bit-identical) as the dose knob.
+- **B3 DONE — the η contradiction recorded in `docs/theory_anchor.tex`**: the derivation's parenthetical that η
+  (which collects the apoplastic bypass ε and the carrier) is "essentially independent of tail length" is an
+  ASSUMPTION of the `f_xy = η·φ_free` factorisation, and both halves of η are now measured to need a chain-length
+  term (bypass corr **+0.832**/25× spread; LC6's carrier ~flat to C10 then 2.0×/5.5× at C11/C12). The equation is
+  **left as written on purpose** — a requirement common to two DIFFERENT entry terms is unlikely to be a property of
+  entry, so the natural reading is that eq. (factor) is **mis-partitioned** and what the fits absorb into η belongs
+  in `φ_free`/`B_k` (where the two-pool work independently put it). No replacement factorisation is asserted; that
+  is gated on the same wet-lab assay as the `k_seq` promotion decision.
 - **CI now runs the WHOLE suite (this session)**: `.github/workflows/tests.yml`. Until now `rigor.yml` was the only
   workflow and it runs a SINGLE module (`test_sci_adk_rigor.py`), which is why every handoff carried "⚠️ CI does not test
   any of this — a green check means nothing here" and why the suite count in this file was maintained by hand from
@@ -1165,6 +1208,18 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (94%) and the RMSE loss is not (82%). `f_n` comes from the table's own logD, NOT its pKa — the two
   columns disagree by a median 1.41 log, and the pKa route manufactures a false counterexample out of
   the 8 pKa-1.62 rows (pinned by a test).
+- **Is the carrier necessary? (the repo's one addition to Trapp)**: `python validation/carrier_vs_bypass.py`
+  (~12 min; `--fast` coarser grids, ~4 min). Read the header (the PRE-REGISTRATION) before the VERDICT.
+  An addition IS necessary (depolarisation REFUTED) but WHICH is undecided (bootstrap 0.749). The alternative
+  is runnable, not buried: **`model_api.simulate(uptake="bypass")`** (default `"carrier"` = the shipped model,
+  bit-identical) — see `model_api.UPTAKE_MODES`; explicit `vmax_scale=`/`g_apo=` still override the mode.
+- **Dose series — can concentration separate them? (B1)**: `python validation/dose_series_carrier.py`
+  (~6 min; `--fast` skips the Kd sweep, ~2 min). Read the header (the PRE-REGISTRATION) before the VERDICT.
+  Pre-registered rule NOT met (1/3, needed 2/3) ⇒ carrier **DISFAVOURED, not refuted**: GenX is non-informative
+  (saturated at every dose), PFOA inconclusive (bootstrap 0.671, Kd-limited), **PFOS well-conditioned and it
+  refutes** (carrier 6.28× vs measured 1.17×, bootstrap 1.000, 8/9 Kd combos). Durable result = the POST-HOC
+  bound: the carrier must have **`Km` ≥ 500 µg/L (100× the fitted 5)** to be this flat — i.e. linear over the
+  whole span, which is the bypass's own form. `simulate(km_scale=…)` is the knob.
 - **Kodešová 2019 carbamazepine (queue A4; the anchor vote)**: `python validation/kodesova2019_carbamazepine.py`
   (exposure from the paper's own measured isotherms + the `Koc` defence of the unit reading; a-priori 0.191;
   the shipped-vs-anchored table across all three root datasets; the Brunetti verdict; the dw→fw sensitivity).
@@ -1211,9 +1266,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**323 collected; 322 pass, 2 skip** — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**336 collected; 335 pass, 2 skip** — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
-  collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~22 min with the full stack — RDKit + the built
+  collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
   module additionally skips unless `sci-adk` is installed, which CI's `rigor.yml` provides). On a bare
   clone the structure/SMILES tests skip without RDKit and the HYDRUS-engine tests in `test_soil_hydrus.py`

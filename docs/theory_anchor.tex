@@ -204,6 +204,24 @@ transfer net of back-diffusion (set by charge / $\Em$, hence essentially indepen
 length), and $\ffree$ is the fraction of root-internal PFAS that remains in the mobile aqueous
 phase available for xylem loading.
 
+\paragraph{Empirical status of the chain--length independence of $\eta$ (added after the
+derivation; NOT a correction to it).} The parenthetical above is an \emph{assumption} of this
+factorisation, and it has since been contradicted by data. \texttt{validation/carrier\_vs\_bypass.py}
+fits the apoplastic conductance per congener against Yamazaki and finds it trends strongly with
+chain length --- $\mathrm{corr}(n_C,\log_{10} g_{\mathrm{apo}}) = +0.832$ over a $25\times$ spread,
+rising from $\sim2$--$5$ at C4--C8 to $20$--$50$ at C9--C12. Independently,
+\texttt{runs/pfas-rice-carrier} (LC6) finds the \emph{carrier} needs the same correction
+($\sim$flat to C10, then $2.0\times$ at C11 and $5.5\times$ at C12). Both halves of $\eta$
+therefore require a chain--length term of similar size.
+
+The equation is left as written, deliberately: a requirement common to two \emph{different} entry
+terms is unlikely to be a property of entry at all, and the natural reading is that
+Eq.~\eqref{eq:factor} is mis-partitioned --- what the fits are absorbing into $\eta$ belongs in
+$\ffree$ (i.e.\ in $\Bk$/sequestration), which is where the two--pool root work
+(\texttt{docs/twopool\_root\_exploration.md}) independently put it. Re-deriving the split is open
+work and is gated on the same wet--lab assay as the $k_{\mathrm{seq}}$ promotion decision, so no
+replacement factorisation is asserted here.
+
 \subsection{The mobile free fraction $\Rightarrow$ a logistic in $n$}
 Of the total PFAS held in the root tissue, the mobile aqueous fraction is
 \begin{equation}\label{eq:phifree}
