@@ -74,7 +74,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (350 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge, BAT-census biocides
+└── tests/                            # pytest (361 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge, BAT-census biocides
 
 ```
 
@@ -1169,6 +1169,30 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   ONCE as a labelled sensitivity, never as a parameterisation; γ=0 makes leaf/grain upper bounds. `parameters.json`,
   `simulate()` defaults, `reproduce_demo` (0.029) and the neutral a-priori numbers (Liu 0.281 / Ge 0.783) UNCHANGED.
 
+- **정책활용협의회 브리핑 (this session) — a slide-ready report, and an honest headline it refuses to make**:
+  `docs/POLICY_BRIEF_KR.md` + `validation/policy_brief_runs.py` + `docs/policy_brief_results.csv` +
+  `tests/test_policy_brief.py` (11) + two figures. The user is presenting to a Korean policy council and
+  wanted the *material*, written so a slide-building agent can build the deck without re-deriving anything:
+  every number carries a CSV key, every slide carries a `⚠ 반드시 남길 것` block, and Appendix A is a
+  FORBIDDEN-PHRASE table ("모델이 검증되었다" → "한국 현장 자료 1건에 대한 외부 검증"; "기준치를 초과한다" →
+  there IS no rice PFAS limit in either jurisdiction). **The headline the run refused to give**: the a-priori
+  model says short chains reach the grain and long chains do not (C4–C6 mean 2.15 vs C9–C12 0.052, 41x), but
+  BOTH measured datasets say the opposite at the long end — Yamazaki PFDoDA grain BAF **45.5** and Kim 2019
+  Korean field **35.2** against the base model's 0.101 (**451x under**), and the base model's grain error runs
+  monotonically from ~6x OVER at C5 to 451x UNDER at C12. So the congener ordering is a *mechanism* choice,
+  not a result, and the brief says so in the slide, in the caveat block and in the forbidden-phrase table.
+  **The evidence slide is Kim 2019** (the only Korean paddy set with paired pore water + brown rice, 6
+  congeners): base model log10 RMSE **1.97** (bias −1.69) vs `lipid_loading=True` **0.53** (excl PFOA 2.06 →
+  **0.48**) — and the lipid constants were fit on Yamazaki, so it is genuine OOS, reproducing the documented
+  §multi-dataset figure exactly. **The inverse demo is deliberately two-sided**: synthetic truth 0.0787 →
+  0.0788 µg/L (95% 0.053–0.117, the method works) but the Kim brown-rice measurement 0.349 µg/kg → **3.19
+  µg/L against a measured 0.0787 = 40x over**, which is the same grain bias inverted — so the brief states
+  the feature is NOT field-ready. Also run: PFOA end-to-end at the measured 78.7 ng/L (grain 0.0136 µg/kg,
+  ±7.1x band, **5.4% of the EFSA group TWI**, xylem 78% / phloem 22% via `apportionment`), the saturable-uptake
+  non-linearity (effective grain BAF 0.172 at 78.7 ng/L vs 0.148 at 1 µg/L — "농도 × 계수" is wrong), SMILES
+  input flagging novels provisional, and the EU biocide census from the earlier PR. `parameters.json`,
+  `simulate()` defaults and `reproduce_demo` (0.029) UNCHANGED — this session only reads the model.
+
 ## 7. Build & run
 - `pip install -r requirements.txt`
 - **Main reproduction**: `python reproduce_demo.py` (Yamazaki BAF, W2 fit, RMSE≈0.029);
@@ -1255,6 +1279,11 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   refutes** (carrier 6.28× vs measured 1.17×, bootstrap 1.000, 8/9 Kd combos). Durable result = the POST-HOC
   bound: the carrier must have **`Km` ≥ 500 µg/L (100× the fitted 5)** to be this flat — i.e. linear over the
   whole span, which is the bypass's own form. `simulate(km_scale=…)` is the knob.
+- **정책 브리핑 수치 재현**: `python validation/policy_brief_runs.py` (~7분; `--fast` 는 그림 생략).
+  `docs/POLICY_BRIEF_KR.md` 의 모든 수치 + `docs/policy_brief_results.csv` +
+  `validation/figures/policy_grain_by_chain.png` · `policy_kim2019_grain.png`. Read the doc's
+  "슬라이드를 만드는 분께" block first — it is written for a downstream slide-building agent, and its
+  caveat blocks and forbidden-phrase table are load-bearing (guarded by `tests/test_policy_brief.py`).
 - **EU biocides from the BAT census (PREDICTION, not validation)**: `python validation/bat_census_biocides.py`
   (~3 min; `--fast` skips the log Kow sweep, ~1 min). Read the VERDICT block: 24 of the report's 44 substances are
   runnable, 11 are inside the measured-data span and 5 are excluded for ionisation (the report's own never-implemented
@@ -1308,7 +1337,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**350 collected; 349 pass, 2 skip** — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**361 collected; 360 pass, 2 skip** — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
