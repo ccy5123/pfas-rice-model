@@ -1144,11 +1144,19 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   model would inherit identically). **Census (UPDATED 2026-09-06)**: 44 substances named, 23 with a report-stated log Kow;
   the other 20 were left BLANK rather than filled in from elsewhere, and on request the BAT project then supplied **18 of
   them from its own collection sheet** (`EXPORT_logkow_full_20260906.csv`, 167 rows, with CAS + source + rank) ⇒ then the AUDITED
-  provenance for all **61 substances BAT actually entered** (`EXPORT_logkow_entered_into_BAT_20260906.csv`) ⇒ **66 rows
+  provenance for all **61 substances BAT actually entered** (`EXPORT_logkow_entered_into_BAT_20260906.csv`) ⇒ **65 rows
   run**: 22 log Kow printed in the report, 19 supplied on request, 21 from substances BAT entered but the report never
-  named (no BPC class/fish BCF ⇒ prediction only, pinned out of the rank correlation), 1 from this repo's Liu 2023 row,
-  3 second readings this study will not choose between. **45 inside** the measured-data span, 9 root-only, 2 beyond every
-  anchor, **10 EXCLUDED for ionisation**. The audited export also replaced the four anticoagulant pKa this file had
+  named individually, 1 from this repo's Liu 2023 row, 2 second readings this study will not choose between. **45 inside**
+  the measured-data span, 9 root-only, 2 beyond every anchor, **9 EXCLUDED for ionisation**. A THIRD file then supplied the
+  **BPC class + Scenario A/B fish BCF for all 61**, which is what makes the rank correlation an n=60 statement; the
+  transcription this file already held was verified against it at **100 of 101 values** (the one difference: salicylic acid
+  Scenario A, report-printed 4 vs export 4.35 — faithful transcription, more precise source). Their four caveats are kept
+  per row in a `bat_caveat` column (15 empty Scenario B cells are the FACT — those substances are outside BAT's range so no
+  kM was entered; tebuconazole/DCOIT have no opinion; cyphenothrin's nB came from its opinion's METABOLITE table; the
+  triamine's BAT output is uninterpretable). **Tebuconazole's acid/base flag is RESOLVED and it caught an error here**: BAT
+  entered it as an ACID at pKa 12.6205 and the base reading is a DIFFERENT pKa (3.516), so the two-row treatment that paired
+  `is_acid=FALSE` with 12.6205 was the one wrong pairing (reads as 100% ionised); collapsed to one row, both readings >99.9%
+  neutral so they cannot diverge. The audited export also replaced the four anticoagulant pKa this file had
   RECOVERED from the report's percentages with SOURCED rank-1 values (bromadiolone 4.5, brodifacoum 4.5, difenacoum 4.84,
   flocoumafen 4.95; three measured) — the recovered values were within 0.03 log, a check on the inversion, but sourced
   supersedes derived and nothing carries `pka_basis=derived` now. **Only creosote stays unrunnable** (no structure); the
@@ -1187,7 +1195,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   equilibration and not its level — which is WHY the strongly-ionised group is excluded rather than caveated;
   (d) BAT's fish BCF peaks near log Kow 6.3 and turns over, this model's straw peaks at **1.75** and its root never
   turns over but **saturates kinetically** (K_PW/root 0.92 @4 → 0.001 @10.5: above ~7 the root number stops being a
-  partition and becomes a rate); (e) Spearman(BAT fish BCF, rice root) **+0.705** vs (·, rice straw) **−0.704** on 37 substances (recomputed three times as the sample grew: +0.467/−0.466 at n=20, +0.725/−0.725 at n=35 — nearly doubling the data moved it UP, not away) — a fish
+  partition and becomes a rate); (e) Spearman(BAT fish BCF, rice root) **+0.875** vs (·, rice straw) **−0.769** on **60** substances (recomputed as the sample tripled: +0.467/−0.466 at n=20, +0.725/−0.725 at n=35, +0.875/−0.769 at n=60 — every enlargement STRENGTHENED it; two exclusions stated in code, the triamine's uninterpretable BAT output and the two second-log-Kow rows that would weight one substance twice) — a fish
   bioaccumulation class is NOT a statement about grain; (f) the report's largest finding is AMPLIFIED — its metabolic
   input moved fish BCF ≤82×, the same fish kM half-lives move this model's **grain ≤5,573×** (terminal accumulator),
   i.e. the least defensible input is the one the edible compartment is most sensitive to. **Honest limits**: no measured

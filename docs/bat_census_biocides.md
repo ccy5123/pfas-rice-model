@@ -5,9 +5,9 @@ Run it (`python validation/bat_census_biocides.py`, ~3 min; `--fast` skips the l
 sweep) rather than quoting this file — every number below is printed by that script.*
 
 **한 줄 요약.** BAT 보고서에 나오는 물질들을 이 저장소의 **중성 유기물 경로**
-(`model_api.simulate_neutral`)에 넣어 벼 뿌리/짚/낟알 축적을 계산했다. **66행이 돌아간다**
+(`model_api.simulate_neutral`)에 넣어 벼 뿌리/짚/낟알 축적을 계산했다. **65행이 돌아간다**
 (초판 24 → 요청으로 받은 값 19종 추가 → BAT가 실제로 입력한 감사본 61종 전체를 받아 21종 더).
-그중 **45개**가 이 저장소가 측정 데이터를 가진 log Kow 구간 안에 있고, **10개**는 이온화 때문에
+그중 **45개**가 이 저장소가 측정 데이터를 가진 log Kow 구간 안에 있고, **9개**는 이온화 때문에
 제외되며, 검증 가능한 물질은 여전히 **단 2개**(프로피코나졸·트리클로산)다.
 **예측이지 검증이 아니다.**
 
@@ -230,13 +230,14 @@ the model's root number stops being a partition coefficient and becomes a rate.
 That is a limit of this model, stated here rather than discovered later.
 
 **(e) A fish BCF does not rank these substances the way a rice model does.**
-Spearman against BAT's Scenario A fish BCF over the 37 substances that have one:
-**root +0.705, straw −0.704**. It has now been recomputed three times as the sample
-grew — 20 substances (+0.467 / −0.466), 35 (+0.725 / −0.725), 37 (+0.705 / −0.704).
-Nearly doubling the data moved it up, not away. The root agrees because both rise with
-lipophilicity; the shoot *anti*-correlates, and cannot do otherwise, because what
-reaches a rice shoot is gated by a bell that has already collapsed by log Kow 5.
-"Bioaccumulative in fish" is not a statement about grain.
+Spearman against BAT's Scenario A fish BCF over the **60** substances that have one:
+**root +0.875, straw −0.769**. The sample tripled across two rounds of data exchange
+(20 → 35 → 60) and the relationship got *stronger* each time (+0.467 → +0.725 →
++0.875) — the opposite of what an artefact does. Two exclusions are in the code
+rather than silent: the triamine, whose BAT output its own producers call
+uninterpretable (three charges against a tool that takes one pKa), and the
+second-log-Kow rows for permethrin and cyphenothrin, which would otherwise weight
+one substance twice against a single BAT value.
 
 **(f) The report's largest finding is amplified here, not damped.** Entering a
 metabolic rate moved BAT's fish BCF by up to 82× (its §8.4). Those same fish kM
