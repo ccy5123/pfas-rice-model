@@ -220,20 +220,27 @@ def main(fast=False):
 
     arms = {"S": "single pool", "S+L": "single pool + lipid",
             "T": "two-pool k_seq + lipid", "C": "two-pool k_seq=0 + lipid (CONTROL)"}
-    res = {}
+
+    def run_grid(g):
+        out = {}
+        for arm in arms:
+            gv, rg = fit_global(arm, names, obs, g)
+            per = fit_per_congener(arm, names, obs, g)
+            rp = rmse(arm, names, obs, per)
+            corr, spread = trend(per, n_C, names)
+            out[arm] = dict(g_global=gv, rmse_global=rg, per=per, rmse_per=rp,
+                            corr=corr, spread=spread, penalty=rg - rp)
+        return out
+
+    res = run_grid(grid)
     for arm, label in arms.items():
-        gv, rg = fit_global(arm, names, obs, grid)
-        per = fit_per_congener(arm, names, obs, grid)
-        rp = rmse(arm, names, obs, per)
-        corr, spread = trend(per, n_C, names)
-        res[arm] = dict(g_global=gv, rmse_global=rg, per=per, rmse_per=rp,
-                        corr=corr, spread=spread, penalty=rg - rp)
+        a = res[arm]
         print(f"\n{arm:4s} — {label}")
         print("      per-congener g_apo: " +
-              "  ".join(f"{nm}:{per[nm]:g}" for nm in names))
-        print(f"      corr(n_C, log10 g_apo) = {corr:+.3f}   spread = {spread:.1f}x")
-        print(f"      one global g_apo = {gv:g} -> RMSE {rg:.3f}; "
-              f"per-congener -> {rp:.3f}; penalty {rg - rp:+.3f}")
+              "  ".join(f"{nm}:{a['per'][nm]:g}" for nm in names))
+        print(f"      corr(n_C, log10 g_apo) = {a['corr']:+.3f}   spread = {a['spread']:.1f}x")
+        print(f"      one global g_apo = {a['g_global']:g} -> RMSE {a['rmse_global']:.3f}; "
+              f"per-congener -> {a['rmse_per']:.3f}; penalty {a['penalty']:+.3f}")
 
     # -- gate ----------------------------------------------------------------
     print("\n" + "-" * 84)
@@ -261,11 +268,87 @@ def main(fast=False):
         print(f"      {arm:5s} P(per-congener beats global) = "
               f"{_boot_smaller(rp, rg):.3f}")
 
+    # -- grid robustness -----------------------------------------------------
+    # NOT pre-registered, and it changed what may be claimed. g_apo is fitted on
+    # a discrete grid, so a fitted value can only move in grid steps; the first
+    # run of this file asserted an ORDERING among the three lipid arms that a
+    # coarser grid reverses. Both grids are therefore run and only what survives
+    # both is stated in the verdict.
+    coarse = [0.5, 2.0, 5.0, 20.0, 50.0, 200.0]
+    alt = run_grid(coarse if not fast else
+                   [0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 500.0])
+    print("\nGRID ROBUSTNESS — the same table on a second g_apo grid")
+    print(f"    {'arm':5s}{'corr (main)':>13s}{'corr (alt)':>12s}"
+          f"{'penalty (main)':>16s}{'penalty (alt)':>15s}")
+    for arm in arms:
+        print(f"    {arm:5s}{res[arm]['corr']:+13.3f}{alt[arm]['corr']:+12.3f}"
+              f"{res[arm]['penalty']:+16.3f}{alt[arm]['penalty']:+15.3f}")
+    band = max(max(res[a]["corr"], alt[a]["corr"]) for a in ("S+L", "T", "C"))
+    print(f"    S stays at corr ~{min(res['S']['corr'], alt['S']['corr']):+.2f} on both grids; every lipid-carrying")
+    print(f"    arm stays at or below {band:+.2f} on both. The ORDERING among those three")
+    print("    is NOT resolved by this grid and is not claimed.")
+
+    # -- post-hoc ------------------------------------------------------------
+    # NOT pre-registered. "Penalty" was fixed as an absolute RMSE difference and
+    # is scored that way above; but the arms sit at very different RMSE levels,
+    # so the same absolute penalty means different things. Reported because it
+    # cuts AGAINST the arm this file was expected to favour, and suppressing it
+    # would be choosing the flattering metric after the fact.
+    print("\nPOST-HOC (NOT pre-registered) — penalty relative to each arm's own fit")
+    for arm in arms:
+        a = res[arm]
+        print(f"    {arm:5s} penalty {a['penalty']:+.3f} on a per-congener RMSE of "
+              f"{a['rmse_per']:.3f}  ->  {a['penalty'] / a['rmse_per']:5.2f} relative")
+
     # -- verdict -------------------------------------------------------------
+    t, sl, c = res["T"], res["S+L"], res["C"]
     print("\n" + "=" * 84)
     print("VERDICT")
     print("=" * 84)
-    print("   (filled in by the results commit — the pre-registration ships first)")
+    print(f"   G0 GATE PASSES. On matched forcings the single pool shows the trend")
+    print(f"   MORE strongly than the published measured-forcing figure (corr")
+    print(f"   {s['corr']:+.3f} over a {s['spread']:.0f}x spread, vs +0.832 / 25x), so there is")
+    print("   a real chain-length requirement here for sequestration to remove.")
+    print()
+    print("   R1 IS MET ON ITS OWN TERMS. Against the two-pool the fitted entry")
+    print(f"   conductance flattens to corr {t['corr']:+.3f} ({t['corr'] / s['corr']:.2f}x of S) over")
+    print(f"   {t['spread']:.0f}x ({np.log10(t['spread']) / np.log10(s['spread']):.2f}x of S in logs), and the penalty for using one")
+    print(f"   global value instead of eleven falls {s['penalty']:+.3f} -> {t['penalty']:+.3f}. Both halves")
+    print("   of R1 pass, so sequestration DOES remove most of the apparent need.")
+    print()
+    print("   BUT R3 FIRES AND OVERRIDES THE ATTRIBUTION — this is the finding.")
+    print("   The control says sequestration is not what did it:")
+    print(f"      C   (k_seq REMOVED, lipid kept)  corr {c['corr']:+.3f}, penalty {c['penalty']:+.3f}")
+    print(f"      S+L (single pool, lipid only)    corr {sl['corr']:+.3f}, penalty {sl['penalty']:+.3f}")
+    print(f"      T   (k_seq AND lipid)            corr {t['corr']:+.3f}, penalty {t['penalty']:+.3f}")
+    print("   REMOVING sequestration while KEEPING lipid loading flattens the trend")
+    print("   just as far — and the plain single pool with lipid loading and no")
+    print("   second root pool at all flattens it too. That holds on both grids;")
+    print("   the ordering among the three does not, and is not claimed. So the")
+    print("   chain-length dependence that two different entry terms each needed is")
+    print("   absorbed by LIPID-FACILITATED LOADING, not by sequestration.")
+    print()
+    print("   THAT REVISES THE THEORY READING RATHER THAN CONFIRMING IT. B3 recorded")
+    print("   the natural reading that what the fits absorb into eta belongs in")
+    print("   phi_free / B_k. It does not: it belongs in the B-INDEPENDENT LOADING")
+    print("   term (g_xy*C, g_ph*C), which is a THIRD place — neither the membrane")
+    print("   factor eta nor the binding factor phi_free. f_xy = eta x phi_free has")
+    print("   no slot for it at all, so the factorisation is not merely")
+    print("   mis-partitioned between its two factors; it is missing a term.")
+    print()
+    print("   HONEST LIMITS. The freedom is never eliminated: per-congener still")
+    print("   beats global in every arm at bootstrap ~1.000, so this reduces the")
+    print("   chain-length requirement rather than explaining it away. And on the")
+    print("   post-hoc relative measure the two-pool needs that freedom MORE than")
+    print(f"   any other arm ({t['penalty'] / t['rmse_per']:.2f} of its own RMSE, against {s['penalty'] / s['rmse_per']:.2f} for S and")
+    print(f"   {sl['penalty'] / sl['rmse_per']:.2f} for S+L), which cuts against reading T as the resolution.")
+    print("   RMSE levels are not comparable across arms by construction (k_seq was")
+    print("   fitted on the data that scores it), and the two lipid parameterisations")
+    print("   are not the same fit. In-sample, one dataset, 11 congeners.")
+    print()
+    print("   NOTHING IS ADOPTED. parameters.json, simulate() defaults and")
+    print("   reproduce_demo (0.029) are unchanged; lipid loading stays opt-in and")
+    print("   k_seq stays unpromoted — its gate is still the wet-lab assay.")
     return res
 
 

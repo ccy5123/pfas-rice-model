@@ -94,6 +94,13 @@ Upstream on the same thread: `000a4e0` added `g_apo` itself (the mechanism
 5. **The gate in `dose_series_carrier.py` was written across congeners.** It
    should have been per congener; running it exposed that. GenX passes the global
    gate on PFOS's back while being individually non-informative.
+6. **"Sequestration absorbs the chain-length dependence."** This is what the
+   two-pool arm looks like on its own, and it is wrong — B2's control shows
+   lipid-facilitated *loading* does it, with sequestration removed. Do not
+   re-derive the confirmation without the control.
+7. **"Lipid loading explains the chain-length trend."** Also an over-reading in
+   the other direction: per-congener still beats a global conductance in every
+   arm at bootstrap ~1.000. It is reduced, not eliminated.
 6. The absolute levels here are **a-priori-limited** (monotone `f_xy`, not fit)
    and are NOT comparable to `reproduce_demo`'s fitted 0.029, nor to the
    documented a-priori ~0.84 which runs on different drivers.
@@ -194,6 +201,45 @@ is worth doing rather than assuming.
 - Bootstrap any close comparison. Twice this session a gap that looked real did
   not survive resampling.
 
+**B2 — DONE, and the answer is not the one this brief expected.**
+`validation/entry_vs_sequestration.py` (pre-registration `4626a11` before the
+results). The brief below assumed the chain-length dependence lives in
+`B_k`/`φ_free`. It does not.
+
+- **The gate passes and the baseline is real**: on matched forcings the single
+  pool needs the trend even more strongly than the published figure — corr
+  **+0.890** over a **1000×** spread.
+- **Sequestration appears to resolve it**: against the two-pool the fitted entry
+  conductance flattens to corr **+0.171**, and the penalty for one global value
+  instead of eleven falls **0.252 → 0.095**. Both halves of the pre-registered
+  rule pass.
+- **The pre-registered control refutes the attribution.** The two-pool differs
+  from the single pool by *two* changes, not one. Remove `k_seq` and keep
+  lipid-facilitated loading and the trend flattens just as far (corr +0.119,
+  penalty 0.054); lipid loading alone in the plain single pool, with no second
+  root pool at all, flattens it too (corr +0.045, penalty 0.052). **It is the
+  B-independent LOADING term (`g_xy·C`, `g_ph·C`) that absorbs the chain-length
+  dependence, not sequestration.**
+- **So B3's reading is revised, not confirmed.** The dependence belongs to a
+  *third* place — neither the membrane factor η nor the binding factor `φ_free`
+  — and `f_xy = η·φ_free` has **no slot** for a loading pathway whose rate does
+  not scale with the free fraction. The factorisation is **missing a term**, not
+  merely mis-apportioning between the two it has. `theory_anchor.tex` now says
+  this; the η contradiction itself stands.
+- **Reduced, not eliminated.** Per-congener still beats global in *every* arm
+  (bootstrap ~1.000), so "lipid loading explains the chain-length trend" is an
+  over-reading — pinned by a test. On a post-hoc *relative* penalty the two-pool
+  needs that freedom more than any other arm (0.58 of its own RMSE vs 0.43 for
+  the single pool), which cuts against reading the two-pool as the resolution.
+
+Two method notes worth carrying forward. The control is what saved this from the
+wrong answer — the full two-pool arm on its own looks like a clean confirmation.
+And a **grid-robustness pass had to be added**: the first run asserted an
+*ordering* among the three lipid arms that a coarser `g_apo` grid reverses, so
+both grids are now run and only what survives both is claimed.
+
+**Original B2 brief, kept for the record:**
+
 **B2. Chase the convergence.** Both entry terms need the same chain-length
 correction ⇒ it lives in `B_k`/`φ_free`, not at the membrane. Test whether fixing
 the sequestration term removes the need for a chain-length-dependent entry term
@@ -214,18 +260,29 @@ pip install -r requirements.txt
 
 python validation/carrier_vs_bypass.py --fast    # ~8 min; drop --fast for finer grids
 python validation/dose_series_carrier.py         # ~6 min; --fast skips the Kd sweep
+python validation/entry_vs_sequestration.py      # ~9 min (two grids); --fast ~4 min
 python reproduce_demo.py                         # 0.029, must not move
 pytest -q                                        # CI runs this too now
 ```
 
-**What is left after this session: B2 only** (plus the wet-lab gate it shares
-with `k_seq`). A1, B1 and B3 are done. B2 is the one the two independent results
-now point at from opposite sides — the bypass fit and the carrier fit need the
-*same* chain-length correction, and the dose series says the entry term is not
-where the concentration response lives either. Test whether fixing the
-sequestration term (`B_k`/`φ_free`) removes the need for a chain-length-dependent
-entry term at all. It cannot be closed in-repo: its gate is the §5 rice-root
-cell-wall / Fe-Mn-plaque batch-sorption and desorption assay.
+**A1, B1, B2 and B3 are all DONE — this arc is closed in-repo.** What it leaves
+is not another computational test but a **structural question the derivation has
+to answer**: `f_xy = η·φ_free` has no slot for the B-independent loading term
+that B2 shows is carrying the chain-length dependence, so the factorisation needs
+re-deriving with that term in it. That is theory work, not a fit, and the
+empirical side of it is gated on the same **§5 rice-root cell-wall / Fe-Mn-plaque
+batch-sorption and desorption assay** as the `k_seq` promotion decision — which
+B2 does nothing to move, since it found *against* sequestration as the carrier of
+this particular signal.
+
+Two things a next session could usefully do without new data:
+1. **Re-derive eq. (factor) with a loading term.** B2 says what is missing; it
+   does not say what the corrected factorisation is, and nothing here asserts
+   one.
+2. **Test the lipid-loading result out of sample.** Everything in B2 is Yamazaki
+   in-sample with `k_seq` fitted on the data that scores it. The lipid mechanism
+   already has two clean OOS successes (Tang, Kim — see CLAUDE.md); whether the
+   *chain-length-absorbing* property survives OOS is untested.
 
 
 **Resume prompt.**
@@ -250,13 +307,15 @@ cell-wall / Fe-Mn-plaque batch-sorption and desorption assay.
 > POST-HOC bound `Km` ≥ 500 µg/L (100× the fitted value), at which the carrier is
 > linear across the whole span and is therefore the bypass term in disguise.
 >
-> **What is left is B2**, and both of this arc's results now point at it from
-> opposite sides: the two entry terms need the *same* chain-length correction
-> (so it is not a property of entry), and the dose series says the concentration
-> response is not in the entry term either. Test whether fixing the sequestration
-> term (`B_k`/`φ_free`) removes the need for a chain-length-dependent entry term.
-> It cannot be closed in-repo — its gate is the §5 wet-lab assay it shares with
-> the `k_seq` promotion decision.
+> **B2 is DONE too, and it overturned its own brief.** The chain-length
+> dependence that both entry terms needed is absorbed by the B-independent
+> **lipid LOADING** term, NOT by sequestration — established by a pre-registered
+> control that removes `k_seq` and keeps lipid loading, which flattens the trend
+> just as far. So `f_xy = η·φ_free` is not mis-apportioned between its two
+> factors; it is **missing a term**. Reduced, not eliminated (per-congener still
+> beats global everywhere). What is left is theory work — re-deriving eq. (factor)
+> with a loading term — plus an untested question: whether the
+> chain-length-absorbing property of lipid loading survives out of sample.
 >
 > §2 of this file lists things already checked that must not be re-derived; add
 > to them that **the pre-registered gate in `dose_series_carrier.py` was written
