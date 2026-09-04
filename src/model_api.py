@@ -97,18 +97,25 @@ def _load_cwo_kleach():
 _CWO_KLEACH, _CWO_KLEACH_FALLBACK = _load_cwo_kleach()
 
 
-def default_k_leach(congener=None, n_C=None, group=None):
+def default_k_leach(congener=None, n_C=None, group=None, Koc=None):
     """Per-congener default leaching rate for `cwo_profile='flooded'`, calibrated to
     HYDRUS-1D. Known congeners use the calibrated table; a novel/SMILES compound falls
-    back to k_leach(log10 Koc) (short chains leach faster, long chains -> ~0)."""
+    back to k_leach(log10 Koc) (short chains leach faster, long chains -> ~0).
+
+    `Koc` [L/kg] takes that same fallback without a congener at all -- the route for a
+    NEUTRAL organic, whose Koc comes from log Kow (`literature_params.koc_neutral`) or
+    a measurement, not from the PFAS chain-length QSPR. The fit itself is a property of
+    the paddy leaching model rather than of PFAS, so it transfers; what does not
+    transfer is the per-congener table, which is why a neutral never reads it."""
     if congener and congener in _CWO_KLEACH:
         return _CWO_KLEACH[congener]
-    if n_C is not None:
+    if Koc is None and n_C is not None:
         import literature_params as lp
         Koc = lp.koc(n_C, {"PFCA": "carboxylate", "PFSA": "sulfonate",
                            "ether": "ether"}.get(group, "carboxylate"))
+    if Koc is not None:
         a, b = _CWO_KLEACH_FALLBACK
-        return float(np.clip(a + b * np.log10(Koc), 0.0, _KLEACH_MAX))
+        return float(np.clip(a + b * np.log10(float(Koc)), 0.0, _KLEACH_MAX))
     return 0.02
 # tissue keys that compose "straw" (the bulk shoot reported in agronomy)
 STRAW_PARTS = ("stem", "leaf")
@@ -933,7 +940,8 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
                      air=False, air_kw=None, waters=None, lipids=None,
                      biomass="oryza", measured_forcing=True, drivers=None,
                      tscf=None, lipid_source=None,
-                     pKa=None, is_acid=True, pH=6.5, g_apo=0.0):
+                     pKa=None, is_acid=True, pH=6.5, g_apo=0.0,
+                     cwo_profile="constant", cwo_kw=None, Koc=None):
     """Run the 4-compartment DPU for a NEUTRAL (non-ionised) organic.
 
     The neutral analogue of `simulate()`: same driver machinery, same result-dict
@@ -981,8 +989,20 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
         is ATTRACTED by the inside-negative membrane rather than excluded. Turning
         `phloem=True` on as well activates the leaf->sieve-tube pH ion trap, the
         textbook mechanism for phloem-mobile acidic herbicides.
-        NOT VALIDATED: no measured weak-electrolyte rice dataset exists in this
-        repo, so this is structural capability, not a predictive claim.
+        TESTED, and BOUNDED by that test (validation/weak_electrolyte_tscf.py, docs
+        section 4l): on Schriever 2020's 67 ionisable TSCF rows the DIRECTION is
+        supported -- measured transfer rises with f_n (Spearman +0.480) and turning
+        speciation on nearly doubles the model's rank correlation (+0.284 -> +0.520)
+        -- but the MAGNITUDE is refuted: the influx conductance moves ~1.6e4-fold
+        where the measurements move ~3-fold, so it under-delivers (bias -0.203) and
+        predicts ~nothing below f_n ~ 1e-3. Use it for the direction of a speciation
+        effect, not its size. Still no measured weak-electrolyte RICE dataset (that
+        table is 16 species, none of them rice).
+    cwo_profile / cwo_kw / Koc : the pore-water time SHAPE, exactly as `simulate()`
+        ("constant" default, "flooded", "hydrus"). Sorption is the one compound-specific
+        input the shapes need, and the PFAS chain-length Koc QSPR does not apply to a
+        neutral, so it comes from `log_kow` via the PROVISIONAL Karickhoff QSPR unless
+        an explicit measured `Koc` [L/kg] is given -- prefer the measurement.
     drivers / biomass / measured_forcing : exactly as `simulate()`.
     """
     import neutral_dpu as ND
@@ -998,6 +1018,10 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
         t = np.linspace(0.0, float(season), int(n_t))
         Cwo_series, Qtp, M, leaf_loss = _default_drivers(
             t, season, Cwo, measured_forcing, biomass)
+        if cwo_profile != "constant":
+            Cwo_series = cwo_profile_series(
+                t, level=Cwo, profile=cwo_profile, log_kow=float(log_kow), Koc=Koc,
+                **(cwo_kw or {}))
     drv = dict(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
 
     gam = float(np.log(2.0) / half_life) if half_life else 0.0
@@ -1225,8 +1249,8 @@ def build_hydrus_engine():
     return sh.build_hydrus_engine()
 
 
-def hydrus_drivers(congener, season=120.0, Cwo_ref=1.0, f_oc=0.02, n_t=241,
-                   qtp_from_hydrus=True, biomass="oryza", **run_kw):
+def hydrus_drivers(congener=None, season=120.0, Cwo_ref=1.0, f_oc=0.02, n_t=241,
+                   qtp_from_hydrus=True, biomass="oryza", Kd=None, log_kow=None, **run_kw):
     """Run a real HYDRUS-1D paddy soil model for `congener` and return a `drivers`
     dict (+ the raw PaddyResult) for `simulate(drivers=…)`.
 
@@ -1235,13 +1259,23 @@ def hydrus_drivers(congener, season=120.0, Cwo_ref=1.0, f_oc=0.02, n_t=241,
     `Q_TP(t)`; `M(t)` is the selected `biomass` driver (ORYZA2000 by default).
     `Cwᵒ(t)` is normalised to season-mean `Cwo_ref` so the average exposure matches a
     constant-Cwo run. Extra `run_kw` (flood_until, percolation, …) pass through to
-    `soil_hydrus.run_paddy_hydrus`."""
+    `soil_hydrus.run_paddy_hydrus`.
+
+    For a NEUTRAL organic there is no congener: pass `log_kow` (Kd = Koc(log Kow)·f_oc
+    via the PROVISIONAL Karickhoff QSPR, `literature_params.koc_neutral`) or, better,
+    an explicit measured `Kd` [L/kg], which overrides everything else."""
     import soil_hydrus as sh
-    if congener not in _CONG:
-        raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
-    c = _CONG[congener]
-    pin, res = sh.inputs_from_hydrus(c["n_C"], c["group"], season=season,
-                                     Cwo_ref=Cwo_ref, f_oc=f_oc, n_t=n_t,
+    n_C, group = None, "PFCA"
+    if Kd is None and log_kow is not None:
+        import literature_params as lp
+        Kd = float(lp.koc_neutral(float(log_kow))) * float(f_oc)
+    if Kd is None:
+        if congener not in _CONG:
+            raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}. "
+                           "For a neutral organic pass log_kow= or Kd= instead.")
+        n_C, group = _CONG[congener]["n_C"], _CONG[congener]["group"]
+    pin, res = sh.inputs_from_hydrus(n_C, group, season=season,
+                                     Cwo_ref=Cwo_ref, f_oc=f_oc, n_t=n_t, Kd=Kd,
                                      qtp_from_hydrus=qtp_from_hydrus, biomass=biomass, **run_kw)
     drivers = dict(t=np.asarray(pin.t, float), Cwo=np.asarray(pin.Cwo, float),
                    Qtp=np.asarray(pin.Qtp, float), M=np.asarray(pin.M, float))
@@ -1267,7 +1301,7 @@ _HEADGROUP = {"PFCA": "carboxylate", "PFSA": "sulfonate", "ether": "ether"}
 def cwo_profile_series(t, level=1.0, profile="constant", *, n_C=8, group="PFCA",
                        congener=None, flood_fraction=1.0, k_leach=None, f_oc=0.02,
                        C_total=5.0, theta_g_drained=0.35, theta_g_flooded=0.60,
-                       **hydrus_kw):
+                       log_kow=None, Koc=None, **hydrus_kw):
     """Time-resolved pore-water C_w^o(t) on grid `t`, normalised to mean == `level`.
 
     profile:
@@ -1287,24 +1321,35 @@ def cwo_profile_series(t, level=1.0, profile="constant", *, n_C=8, group="PFCA",
     `flood_fraction` of the season is flooded (remainder drained -> terminal
     concentration). Defaults give continuous flooding (=1.0): a monotone leaching
     decline for short chains, ~flat for long chains.
+
+    NEUTRAL organics take the same shapes through `log_kow` (Koc from the PROVISIONAL
+    Karickhoff QSPR) or an explicit measured `Koc` [L/kg], either of which replaces the
+    PFAS chain-length QSPR. Sorption is the only compound-specific input here, so the
+    shape logic itself is unchanged.
     """
     t = np.asarray(t, float)
     if profile == "constant":
         return np.full_like(t, float(level))
     season = float(t[-1]) if t[-1] > 0 else 1.0
+    import literature_params as lp
+    if Koc is None and log_kow is not None:
+        Koc = float(lp.koc_neutral(float(log_kow)))
 
     if profile == "hydrus":
-        if congener is None:
-            raise ValueError("cwo_profile='hydrus' needs the congener name")
+        if congener is None and Koc is None:
+            raise ValueError("cwo_profile='hydrus' needs the congener name, "
+                             "or log_kow=/Koc= for a neutral organic")
         hd, _ = hydrus_drivers(congener, season=season, Cwo_ref=float(level),
-                               f_oc=f_oc, n_t=len(t), **hydrus_kw)
+                               f_oc=f_oc, n_t=len(t),
+                               Kd=(None if Koc is None else float(Koc) * float(f_oc)),
+                               **hydrus_kw)
         return np.interp(t, hd["t"], hd["Cwo"])
 
     if profile == "flooded":
-        import literature_params as lp
+        if Koc is None:
+            Koc = lp.koc(n_C, _HEADGROUP.get(group, "carboxylate"))
         if k_leach is None:                              # per-congener HYDRUS-calibrated default
-            k_leach = default_k_leach(congener, n_C, group)
-        Koc = lp.koc(n_C, _HEADGROUP.get(group, "carboxylate"))
+            k_leach = default_k_leach(congener, n_C, group, Koc=Koc)
         K_F = lp.koc_to_KF(Koc, f_oc, n=1.0)             # linear Kd (stable; n=1)
         flooded = t < (flood_fraction * season)
         Cwo, _ = pore_water_from_inventory(
@@ -1342,10 +1387,10 @@ def baf_from_measurement(conc_by_tissue, Cwo):
 _ESTIMATE_MAX_SOLVES = 8
 
 
-def estimate_exposure_bayesian(congener, measured_conc, *, sigma_log10=0.15,
+def estimate_exposure_bayesian(congener=None, measured_conc=None, *, sigma_log10=0.15,
                                season=120.0, E_m_mV=-120.0, f_xy_source="recommended",
                                biomass="oryza", measured_forcing=True, n_plot=121,
-                               progress=None):
+                               progress=None, log_kow=None, neutral_kw=None, **sim_kw):
     """Bayesian estimate of the soil-water contamination level Cwᵒ [µg/L] that best
     explains measured rice tissue concentrations.
 
@@ -1361,6 +1406,18 @@ def estimate_exposure_bayesian(congener, measured_conc, *, sigma_log10=0.15,
     log-likelihood at the MAP. Only the EXPOSURE level is estimated; transport is
     held at the model defaults (this is the well-posed direction -- separating
     water-uptake vs root->shoot loading needs an independent measurement).
+
+    Extra keyword args (`uptake`, `lipid_loading`, `km_scale`, ...) pass straight to
+    `simulate`, so the inverse is run under the SAME mechanism as the forward model
+    rather than silently falling back to the shipped one.
+
+    `log_kow` switches the forward model to the NEUTRAL path (`simulate_neutral`), with
+    `neutral_kw` carrying its own arguments (half_life, tscf_model, pKa, air, ...) --
+    the same inverse question for a non-PFAS compound. `congener` is then only a label.
+    The identifiability caveat is unchanged and arguably sharper there: the neutral
+    forward model has no fitted transport at all, so what the posterior width reports is
+    the exposure's own conditioning, and for a compound with a short in-planta half-life
+    it will be wide unless `neutral_kw["half_life"]` is set to something defensible.
 
     `progress`, if given, is called as progress(done, total) after each ODE solve
     (done = solves so far, total = `_ESTIMATE_MAX_SOLVES`) so a UI can show a live
@@ -1382,9 +1439,15 @@ def estimate_exposure_bayesian(congener, measured_conc, *, sigma_log10=0.15,
 
     def conc_at(Cwo):
         n_eval[0] += 1
-        r = simulate(congener, Cwo=float(Cwo), season=season, E_m_mV=E_m_mV,
-                     f_xy_source=f_xy_source, biomass=biomass,
-                     measured_forcing=measured_forcing)
+        if log_kow is not None:                # NEUTRAL organic: no congener to name
+            r = simulate_neutral(float(log_kow), name=(congener or "neutral"),
+                                 Cwo=float(Cwo), season=season, biomass=biomass,
+                                 measured_forcing=measured_forcing,
+                                 **{**(neutral_kw or {}), **sim_kw})
+        else:
+            r = simulate(congener, Cwo=float(Cwo), season=season, E_m_mV=E_m_mV,
+                         f_xy_source=f_xy_source, biomass=biomass,
+                         measured_forcing=measured_forcing, **sim_kw)
         if progress is not None:
             try:
                 progress(min(n_eval[0], _ESTIMATE_MAX_SOLVES), _ESTIMATE_MAX_SOLVES)

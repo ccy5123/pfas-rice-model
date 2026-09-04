@@ -107,11 +107,12 @@ culms, long leaves and drooping grain panicles, each organ filled on a shared co
 its concentration (or BAF). A day slider (or ▶ animate) shows *where and when* PFAS builds
 up — leaf is xylem-terminal, grain is phloem-fed, the root retains the anion.
 
-**Five input modes** (sidebar “Data source”) cover the whole exposure space:
+**Six input modes** (sidebar “Data source”) cover the whole exposure space:
 
 | Mode | Pore-water `Cwᵒ(t)` from | When |
 |---|---|---|
-| **Model (parametric)** | a constant you set | quick what-ifs / teaching |
+| **Model (parametric)** | a constant you set (flat, or the analytic flooded shape) | quick what-ifs / teaching |
+| **Custom tables** | a `Cwᵒ(t)` table you type or paste (+ your own growth table) | field numbers, no soil model |
 | **HYDRUS / CSV drivers** | a HYDRUS-1D/Phydrus run (`t,Cwo,Qtp,M_*` CSV) | you have a calibrated soil model |
 | **Run HYDRUS-1D (live)** | the real HYDRUS engine, executed in-app | you want HYDRUS to run here (needs it built) |
 | **Soil inventory** | inverting a total soil load (Freundlich) | you know soil PFAS, not pore water |
@@ -123,9 +124,20 @@ chains buffer); it auto-detects the engine and shows build steps if absent. See
 `src/soil_hydrus.py` and `docs/visualization_tool.md`.
 
 Other tabs: tissue dynamics, **soil & drivers** (`Cwᵒ(t)`, `Q_TP(t)`, `M(t)`, Freundlich
-isotherm, depth profile), BAF vs observed/measured, chain-length trends, compare congeners,
-and an **About** tab documenting the HYDRUS-1D input/output mapping and the biomonitoring
-path. Compute is in `src/model_api.py` (`simulate(...)`, soil/driver/biomonitoring helpers);
+isotherm, depth profile), BAF vs observed/measured (with the exploratory two-pool and merged
+root+shoot overlays), chain-length trends, compare congeners, the **Tang TF (OOS)** check (with
+the out-of-sample lipid-loading series), the **Bayesian inverse**, the **neutral / weak-electrolyte**
+path, and an **About** tab documenting the HYDRUS-1D input/output mapping and the biomonitoring
+path. A sidebar **⚙️ Mechanism** expander switches the open mechanism questions — root entry
+(`uptake`: carrier, the shipped default, vs apoplastic bypass) and lipid-facilitated loading —
+both default to the shipped model and neither touches `parameters.json`.
+
+**Not PFAS?** The sidebar's `2 · Compound` chooses the compound **class**: a curated PFAS
+congener, any PFAS structure by SMILES, or a **neutral organic given by its log Kow** — the
+Briggs/Kow base on the same ODE with `z = 0` (no anion exclusion, no carrier, nothing fitted;
+`pKa` turns it into a weak acid/base). The neutral class drives the whole app — map, dynamics,
+all six exposure modes incl. live HYDRUS-1D, the Bayesian inverse, downloads — while the
+PFAS-only levers and tabs are dropped rather than shown inert. See `docs/visualization_tool.md`. Compute is in `src/model_api.py` (`simulate(...)`, soil/driver/biomonitoring helpers);
 the Plotly figures in `src/plots.py` (`fig_plant_schematic`, …) — both UI-agnostic and
 covered by the tests. Ready-to-load examples are in `examples/`. Full guide:
 `docs/visualization_tool.md`.
@@ -257,8 +269,9 @@ them, so a PFSA-specific transport term is still needed.
   (rebuild: `python sci_adk_review/build_consolidation.py`; KR narrative: `sci_adk_review/FINDINGS.md`).
 - **Tier-1 fit** — `src/literature_params.py` fits `L_Ph` to the Kim 2019 PFOA grain BAF (matches 4.43 L/kg).
 - **Visualization tool** — `app.py` (+ `src/model_api.py`, `src/plots.py`): plant/soil accumulation
-  colormap + five exposure modes (model / HYDRUS CSV / **live HYDRUS-1D** / soil inventory /
-  biomonitoring). `docs/visualization_tool.md`.
+  colormap + six exposure modes (model / custom tables / HYDRUS CSV / **live HYDRUS-1D** / soil
+  inventory / biomonitoring), the opt-in mechanism switches, and the neutral / weak-electrolyte
+  path. `docs/visualization_tool.md`.
 - **Soil side (Method A) — real HYDRUS-1D** (`src/soil_hydrus.py`): the engine is compiled and wired
   (built from `external/hydrus_source` via `phydrus`); per-congener `C_w^o(t)` from the soil transport
   solve drives the plant ODE (and the app's live mode). Short chains leach → the constant-`Cwo`

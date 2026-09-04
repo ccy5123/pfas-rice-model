@@ -73,7 +73,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (336 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (341 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1133,13 +1133,67 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   its signal — an empirical claim was over-stated — would be buried in a ~22-min run). RDKit/phydrus come from
   `requirements.txt` and are NOT best-effort, since that file is what Streamlit Cloud installs; only emcee, the gfortran
   HYDRUS-1D build and sci-adk are, and `-rs` prints skip reasons so a silently shrinking suite stays visible.
+- **App↔science parity audit + the four PRs the UI had missed (this session)**: an audit against the app found the last
+  UI-touching commit was `f5e5593`, so **everything in PR #60–#63 was reachable only from the API** — and one of those,
+  the K_PL-gated **lipid loading**, is the repo's single strongest cross-dataset result. Surfaced, all as opt-in named
+  modes with the shipped model as the default (`parameters.json`, `simulate()` defaults and `reproduce_demo` 0.029
+  UNCHANGED): (a) a sidebar **⚙️ Mechanism** expander carrying `uptake="carrier"|"bypass"` (with the "by default, NOT by
+  evidence" verdict in its own help text), `lipid_loading`, and the `Vmax ×`/`Km ×`/`g_apo` entry-constant overrides —
+  all threaded through `run_model`'s `sim_kw`, so they reach every tab, the congener comparison AND the Bayesian
+  inverse; a **banner next to the headline metrics** whenever one is on, since the expander is collapsed and the run
+  would otherwise read as the shipped one. (b) the **Tang tab's `lipid loading (OOS)` series** (`plots.fig_tang_tf`
+  gained `val_extra`) — the honest counterpart to the refit bar: the green refit was calibrated ON those measurements,
+  the purple lipid run was calibrated on Yamazaki and transferred untouched, and lands in the same place (0.516 vs
+  0.519; PFOS stalk 0.013 → 0.620 vs Tang 0.571). (c) **weak electrolytes** in the neutral tab (`pKa`/`is_acid`/`pH`,
+  printing `f_n` and which way the ion is pushed) plus **`g_apo`**, both carrying the tested BOUNDS in-UI (direction
+  supported, magnitude refuted). (d) the **merged two-pool root + redistributed shoot** as a second BAF overlay
+  (`simulate_twopool_nstem`). `estimate_exposure_bayesian` gained a `**sim_kw` pass-through so the inverse can never
+  silently run a different model than the forward tabs. **Doc-truth fixes the audit turned up**, in the app text and
+  the docs: the neutral tab still called Brunetti 2021's `K_RW`=13.3 an open question against the partition core
+  (superseded — Kodešová 2019 measures the same compound at 1.10, so Brunetti is ~12× above a direct measurement and
+  the deficit is confined to log Kow ≳ 3), still called the root lipid a soybean value (the ROOT is now corroborated by
+  measured cereal roots; stem/leaf remain Trapp's soybean), said "five ways to drive the model" when there are six, and
+  told users to `git submodule update --init` a source tree that is now VENDORED. Guards: `test_plots.py::
+  test_fig_tang_tf_lipid_extra_series`, `test_model_api.py::test_estimate_exposure_bayesian_runs_under_the_selected_mechanism`.
+  Verified in a headless Streamlit + Playwright drive of both views. `ui/` itself remains untested (no UI test layer).
+
+- **Neutral organics promoted to a COMPOUND CLASS in the app (this session; user request)**: the neutral path was
+  reachable only as an Expert-only *tab*, which made it a mini-app — no plant map, no exposure modes, no drivers, no
+  inverse, no downloads. That was a UI-architecture mistake, not a model limit: "which compound" is a **scenario input**.
+  The sidebar's `2 · Compound` now chooses the CLASS — curated congener · SMILES (both PFAS) · **Neutral organic
+  (log Kow)** — and `run_model` dispatches to `simulate_neutral`, so every downstream view works on a neutral compound.
+  This was cheap because `simulate_neutral` already returns the `simulate()` contract (`t/conc/baf/baf_final/straw/
+  straw_baf/Cwo/Qtp/M/season/cwo_ref`); only `B_k` (→ `K_PW`) and the PFAS-only `params` keys needed guarding.
+  What was ADDED to reach parity: (a) **`literature_params.koc_neutral`** — Karickhoff 1981 `log Koc = 0.989·log Kow
+  − 0.346`, the soil sorption a neutral needs (the PFAS chain-length Koc QSPR is a per-CF2 group contribution and does
+  not apply), wired into `cwo_profile_series(log_kow=|Koc=)`, `default_k_leach(Koc=)`, `hydrus_drivers(log_kow=|Kd=)`
+  and `soil_hydrus.inputs_from_hydrus(Kd=)`, and exposed as an EDITABLE `soil Koc` field. Flagged **PROVISIONAL** on a
+  specific ground: no table here scores a *predicted* Koc (the neutral tables either supply the exposure directly or
+  carry the paper's own isotherm), and Li 2019's soil half shows the stakes — bias +0.033 with an experimental `K_om`
+  vs +0.291 with an estimated one. (b) `simulate_neutral(cwo_profile=, cwo_kw=, Koc=)`, so the flooded/HYDRUS exposure
+  shapes work there. (c) `estimate_exposure_bayesian(log_kow=, neutral_kw=)` — the inverse with the neutral forward
+  model (recovers a known Cwᵒ to <1%). What is deliberately ABSENT for a neutral, rather than shown and ignored: `E_m`
+  and the `f_xy` source (at z=0 a membrane potential has nothing to act on and `f_xy` IS the computed TSCF), the PFAS
+  mechanism switches (the carrier exists to overcome anion exclusion; the lipid term is K_PL-gated on PFAS binding),
+  and the four PFAS-only tabs (Yamazaki bars, chain length, congener compare, Tang TF) — dropped, not blanked. The
+  headline swaps `eᴺ` (1 by construction) for **TSCF**, and a scope panel states in-UI: nothing fitted, a-priori 0.281
+  (Liu)/0.783 (Ge) — 0.206 for Liu on the equilibrium basis — grain UNTESTED, stem/leaf lipid still soybean, γ=0 makes
+  the leaf an upper bound (warning), and that this is a RICE model (another crop needs its own composition + drivers).
+  The old `🧪 Neutral organics` tab is REMOVED (its content is now the class + the scope panel). PFAS defaults are
+  untouched (`simulate("PFOA")` 0.478982/0.432189/0.147641; `default_k_leach("PFOA")` 0.05). Guards in
+  `test_li2019_schriever_tables.py` (Karickhoff coefficients + that it is not the PFAS QSPR; the soil-side plumbing +
+  a measured-Koc override; the neutral inverse). Verified end-to-end in a headless Streamlit + Playwright drive:
+  parametric, flooded, custom tables, soil inventory and a REAL live HYDRUS-1D run for a neutral (Kd = 2.39 L/kg from
+  its own Koc), plus the inverse.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
 - **Main reproduction**: `python reproduce_demo.py` (Yamazaki BAF, W2 fit, RMSE≈0.029);
   `--rec` uses the monotone f_xy. Rebuild params: `python build_parameters.py`.
 - **Visualization tool**: `pip install -r requirements-app.txt && streamlit run app.py`
-  (plant/soil accumulation colormap + HYDRUS/soil/biomonitoring modes; see `docs/visualization_tool.md`).
+  (plant/soil accumulation colormap + HYDRUS/soil/biomonitoring modes; the Expert sidebar's **⚙️ Mechanism**
+  expander switches `uptake` carrier/bypass + `lipid_loading`; `2 · Compound` switches the COMPOUND CLASS —
+  curated congener / SMILES / **neutral organic (log Kow)**; see `docs/visualization_tool.md`).
 - **Live HYDRUS-1D** (optional, for the "Run HYDRUS-1D (live)" mode): the FORTRAN source is now
   **VENDORED** under `external/hydrus_source/` (de-submoduled — the upstream `phydrus/source_code`
   submodule is unreachable behind restrictive network policies, and the compiled binary is not in
@@ -1176,12 +1230,18 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   structural checks alone — see `docs/neutral_dpu_validation.md`. In code:
   `model_api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0)` → the standard `simulate()` dict
   + `K_PW`/`TSCF`/`rcf_briggs` (first arg is a **log Kow**, not a congener; `drivers=`/`biomass=` as usual).
+  Soil-side for a neutral: `cwo_profile="flooded"` + `log_kow=`/`Koc=` (Koc from `literature_params.koc_neutral`,
+  Karickhoff 1981, PROVISIONAL — prefer a measured value), `hydrus_drivers(log_kow=…)` or `Kd=` for the live engine,
+  and `estimate_exposure_bayesian(log_kow=…, neutral_kw=…)` for the inverse. In the app: sidebar `2 · Compound` →
+  **Neutral organic (log Kow)** (all six exposure modes, map/dynamics/drivers, inverse and downloads follow).
 - **Weak electrolytes (acids/bases, not just strict neutrals)**: `model_api.simulate_neutral(2.45, pKa=4.5)` —
   `pKa=None` (default) is the strictly-neutral path and is bit-identical to before; a pKa routes through the
   `(f_n, f_d)` speciation pair instead (`is_acid=False` for a base, whose ion is a CATION and is ATTRACTED not
   excluded; `pH=` sets the root-zone split; add `phloem=True` for the leaf→sieve-tube pH ion trap). Helpers:
-  `literature_params.speciation` / `ion_trap_factor` / `neutral_pathway_ratio`. NOT validated against data —
-  no measured weak-electrolyte rice dataset exists here.
+  `literature_params.speciation` / `ion_trap_factor` / `neutral_pathway_ratio`. BOUNDED by its own test (§6,
+  `validation/weak_electrolyte_tscf.py`): direction SUPPORTED, magnitude REFUTED — use it for the direction of a
+  speciation effect, not its size, and not below `f_n≈0.1`. Still no measured weak-electrolyte RICE dataset (the
+  67-row test table is 16 species, none of them rice). In the app: the Neutral tab's ⚗️ expander (with `g_apo`).
 - **Root-lipid anchor, both readings side by side**: `python validation/neutral_dpu_validation.py --lipid-source both`
   (all 5 shipped tables under `"measured"` vs `"briggs_anchor"`; add `--mode equilibrium` for the appropriate basis on
   the root tables, `--obs <table>` to restrict it to one). Single alternative run: `--lipid-source briggs_anchor --obs …`.
@@ -1266,7 +1326,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**336 collected; 335 pass, 2 skip** — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**341 collected; 340 pass, 2 skip** — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`

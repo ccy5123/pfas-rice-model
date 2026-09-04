@@ -98,24 +98,33 @@ streamlit run app.py
 농도(또는 BAF)에 따라 칠합니다. 날짜 슬라이더(또는 ▶)로 *언제 어디서* PFAS가 쌓이는지 봅니다 — 잎은 물관-종단,
 낟알은 phloem-fed, 뿌리는 음이온을 가둠.
 
-**5가지 입력 모드**(사이드바 "Data source")가 노출 공간 전체를 다룹니다:
+**6가지 입력 모드**(사이드바 "Data source")가 노출 공간 전체를 다룹니다:
 
 | 모드 | 공극수 `Cwᵒ(t)` 출처 | 언제 |
 |---|---|---|
-| **Model (parametric)** | 직접 지정한 상수 | 빠른 what-if / 교육 |
+| **Model (parametric)** | 직접 지정한 상수(평탄 또는 해석적 flooded 형상) | 빠른 what-if / 교육 |
+| **Custom tables** | 직접 입력·붙여넣은 `Cwᵒ(t)` 표(+ 자체 성장 표) | 현장 수치는 있으나 토양 모델이 없을 때 |
 | **HYDRUS / CSV drivers** | HYDRUS-1D/Phydrus 결과(`t,Cwo,Qtp,M_*` CSV) | 보정된 토양 모델이 있을 때 |
 | **Run HYDRUS-1D (live)** | 앱에서 실행한 실제 HYDRUS 엔진 | 앱에서 HYDRUS를 돌리고 싶을 때(빌드 필요) |
 | **Soil inventory** | 총 토양 적재량 역산(Freundlich) | 토양 PFAS는 알지만 공극수는 모를 때 |
 | **Biomonitoring** | 측정 공극수 값(HYDRUS 불필요) | 현장 조직+물 농도가 있을 때 |
-
-(앱에는 위 5개 + **Custom tables(Cwᵒ + 성장)** 모드가 있어 성장·오염 시계열을 직접 표로 넣을 수 있습니다 — 매뉴얼 §6.2.)
 
 **live HYDRUS-1D** 모드는 실제 엔진(`external/hydrus_source`에서 `phydrus`로 빌드)을 한 철 논 모델로 돌려
 congener별 `Cwᵒ(t)`를 만듭니다(단쇄 leach, 장쇄 완충). 엔진을 자동 감지하고 없으면 빌드 단계를 안내합니다.
 참조: `src/soil_hydrus.py`, `docs/visualization_tool.md`.
 
 기타 탭: 조직 동역학, **토양 & 드라이버**(`Cwᵒ(t)`, `Q_TP(t)`, `M(t)`, Freundlich 등온선, 깊이 프로파일),
-BAF vs 관측/측정, 사슬 길이 추세, congener 비교, 그리고 HYDRUS-1D 입출력 매핑·바이오모니터링 경로를 설명하는 **About** 탭.
+BAF vs 관측/측정(탐색적 two-pool 및 뿌리+지상부 병합 모델 오버레이 포함), 사슬 길이 추세, congener 비교,
+**Tang TF (OOS)** 검증(out-of-sample 지질 적재 계열 포함), **베이지안 역추정**, **중성/약전해질** 경로,
+그리고 HYDRUS-1D 입출력 매핑·바이오모니터링 경로를 설명하는 **About** 탭. 사이드바 **⚙️ Mechanism** 확장에서
+열린 메커니즘 질문(뿌리 유입 `uptake`: carrier(기본, 배포 모델) vs 아포플라스트 우회, 그리고 지질 매개 적재)을
+켤 수 있습니다 — 둘 다 기본값은 배포 모델이며 `parameters.json`은 건드리지 않습니다.
+
+**PFAS가 아닌 물질은?** 사이드바 `2 · Compound`에서 **화합물 종류**를 고릅니다: 큐레이션된 PFAS congener ·
+SMILES로 주는 임의의 PFAS 구조 · **log Kow로 주는 중성(비이온성) 유기물**(같은 ODE를 `z=0`으로 푸는 Briggs/Kow
+기저 — 음이온 배제 없음, carrier 없음, 아무것도 적합되지 않음; `pKa`를 주면 약산/약염기). 중성 종류를 고르면
+지도·동역학·6개 노출 모드(실제 HYDRUS-1D 포함)·베이지안 역추정·다운로드가 모두 그 물질로 동작하고, PFAS 전용
+레버와 탭은 무시가 아니라 사라집니다. 자세히는 `docs/visualization_tool.md`.
 계산은 `src/model_api.py`(`simulate(...)`, 토양/드라이버/바이오모니터링 헬퍼), Plotly 그림은 `src/plots.py`
 (`fig_plant_schematic` …) — 둘 다 UI 비의존이며 테스트로 커버됩니다. 바로 불러올 예시는 `examples/`에 있습니다.
 전체 가이드: `docs/visualization_tool.md`.
@@ -209,8 +218,8 @@ f_xy 스케일은 **측정 `Q_TP(t)`/`M_s(t)`**가 필요(placeholder 증산이 
   지질 매개 적재 메커니즘**. 통합 합성 논문: `sci_adk_review/runs/pfas-rice-consolidation/paper/draft.tex`
   (재빌드: `python sci_adk_review/build_consolidation.py`; 국문 서술: `sci_adk_review/FINDINGS.md`).
 - **Tier-1 fit** — `src/literature_params.py`가 Kim 2019 PFOA 낟알 BAF에 `L_Ph`를 fit(4.43 L/kg 일치).
-- **시각화 도구** — `app.py`(+ `src/model_api.py`, `src/plots.py`): 식물/토양 축적 colormap + 5(+1)개 노출 모드.
-  일반인 한국어 / 전문가 영어. `docs/visualization_tool.md`, `docs/MANUAL_KR.md`.
+- **시각화 도구** — `app.py`(+ `src/model_api.py`, `src/plots.py`): 식물/토양 축적 colormap + 6개 노출 모드,
+  선택형 메커니즘 스위치, 중성/약전해질 경로. 일반인 한국어 / 전문가 영어. `docs/visualization_tool.md`, `docs/MANUAL_KR.md`.
 - **토양 측(Method A) — 실제 HYDRUS-1D**(`src/soil_hydrus.py`): 엔진 컴파일·연결됨. congener별 `C_w^o(t)`가 식물 ODE
   (및 앱 live 모드)를 구동. 단쇄 leach → 상수-`Cwo`가 낟알/짚 BAF ~2–4배 과대예측; 장쇄 완충. 미빌드 시 테스트 skip.
 - **선택형 지질 매개 적재** — `simulate(lipid_loading=True)`가 K_PL-게이트, B-독립 물관/체관 항(`g_xy`/`g_ph`; 기본 0)을

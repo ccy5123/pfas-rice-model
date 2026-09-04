@@ -297,11 +297,15 @@ def fig_intake_gauge(info, lang="en"):
     return fig
 
 
-def fig_tang_tf(val, val_refit=None):
+def fig_tang_tf(val, val_refit=None, val_extra=None, extra_label="model · lipid loading (OOS)"):
     """Tang 2026 per-organ TF (DRY weight): measured vs model, optional refit-f_xy bar.
 
-    `val` (and optional `val_refit`) come from `model_api.tang_tf_validation`. Log-y
-    grouped bars over stalk/leaf/endosperm.
+    `val` (and the optional `val_refit` / `val_extra`) come from
+    `model_api.tang_tf_validation`. Log-y grouped bars over stalk/leaf/endosperm.
+
+    `val_extra` is a third model series under its own label -- used for the lipid-loading
+    run, whose constants were fit on Yamazaki and NOT on Tang, so unlike `val_refit` it is
+    an out-of-sample prediction rather than a fit to the bars it is drawn against.
     """
     organs = val["organs"]
     fig = go.Figure()
@@ -316,6 +320,11 @@ def fig_tang_tf(val, val_refit=None):
                     name=f"model · Tang-refit f_xy={val_refit['f_xy']:.3g}", marker_color="#2ca02c",
                     marker_line=dict(width=0.5, color="#333"),
                     hovertemplate="refit %{x}: %{y:.3g}<extra></extra>")
+    if val_extra is not None:
+        fig.add_bar(x=organs, y=[val_extra["model_tf"][o] for o in organs],
+                    name=extra_label, marker_color="#9467bd",
+                    marker_line=dict(width=0.5, color="#333"),
+                    hovertemplate=extra_label + " %{x}: %{y:.3g}<extra></extra>")
     fig.update_layout(barmode="group", yaxis_type="log",
                       title=f"{val['congener']} — per-organ TF (dry weight) vs Tang 2026 (OOS)",
                       yaxis_title="TF = C_organ / C_root  [dry wt]",

@@ -110,7 +110,11 @@ default `"carrier"` and bit-identical to the shipped solve (pinned by
 explicit `vmax_scale=`/`g_apo=` still win over the mode, so the scans in
 `validation/carrier_vs_bypass.py` keep working unchanged. The reason the carrier
 stays default — **by default, not by evidence** — is recorded in the code beside
-the modes, not only here. Original brief below.
+the modes, not only here. It is now also **in the app**: the Expert sidebar's
+**⚙️ Mechanism** expander switches `uptake` (and `lipid_loading`, and the
+`Vmax ×`/`Km ×`/`g_apo` overrides B1 needed), carries that verdict in its own
+help text, and raises a banner beside the headline metrics whenever a
+non-default mechanism is on. Original brief below.
 
 
 
