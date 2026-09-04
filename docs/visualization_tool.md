@@ -41,8 +41,9 @@ table is fresh-weight **mass** (the model's M unit) and the transport ODE is mas
 Either table can be left at its default to fall back to the built-in value.
 
 Flip the sidebar **🔬 Expert / advanced controls** toggle to restore the full research
-interface documented below — the six exposure modes, SMILES structure input, the opt-in
-mechanism switches, every model parameter, and all ten tabs. Nothing is removed; it is
+interface documented below — the six exposure modes, the three **compound classes** (curated
+PFAS congener · any PFAS structure by SMILES · **neutral organic by log Kow**), the opt-in
+mechanism switches, every model parameter, and the nine tabs. Nothing is removed; it is
 layered behind the toggle.
 
 The compute is UI-agnostic and unit-tested head-less:
@@ -105,51 +106,58 @@ colour.
 
 ---
 
-## Neutral organics tab (the Briggs/Kow DPU base)
+## Neutral organics — a compound CLASS, not a tab
 
-The **🧪 Neutral organics** tab (Expert only) runs `model_api.simulate_neutral(log_kow, …)` —
-the framework's neutral base on the *same* 4-compartment ODE with `z = 0`, so the GHK factor
-→ 1, anion exclusion `eᴺ` falls 107 → 1, the membrane term degenerates exactly to passive
-diffusion and the carrier is off. Inputs: **log Kow** (the one required input — a neutral
-compound has no congener), compound name, in-planta half-life, the TSCF QSPR (Briggs 1982 vs
-the broader Schriever 2020 refit), the **root-lipid reading** (`lipid_source`: `measured` vs
-`briggs_anchor`), an opt-in phloem toggle, and opt-in **plant–air exchange**
-(`src/plant_air.py`; needs MW and `K_AW`, identically zero at `K_AW = 0`). It reports TSCF,
-`K_PW`, the three tissue BAFs and the tissue-dynamics curve.
+The sidebar's **`2 · Compound`** section chooses the compound **class**, because that is a
+scenario input and not a result view:
 
-**Weak electrolytes and the apoplastic bypass** (⚗️ expander). A `pKa` turns the compound into
-one that is a neutral molecule *and* an ion at once — which the `z = 0` trick cannot express,
-since one valence must be either 0 or −1 — so it routes through the `(f_n, f_d)` speciation
-pair instead (`simulate_neutral(pKa=, is_acid=, pH=)`); the panel prints the resulting `f_n`
-and says which way the ion is pushed (an anion is excluded by the inside-negative membrane, a
-cation is *attracted* — the same pKa gives a ~19× higher root BAF as a base than as an acid).
-`g_apo` adds the apoplastic bypass, a route *around* the membrane that feels neither
-speciation nor GHK. How far this is tested is stated in-UI: on Schriever 2020's 67 ionisable
-rows the **direction is supported** (Spearman(f_n, TSCF) +0.480; speciation lifts the model's
-rank correlation +0.284 → +0.520) and the **magnitude is refuted** (bias −0.203; ~nothing
-predicted below `f_n ≈ 1e−3`), and a small `g_apo ≈ 0.5–1` improves rank *and* scale while the
-RMSE-optimal 5 wrecks the ordering — so it must not be fitted on RMSE. Nothing is adopted:
-`pKa=None` and `g_apo=0` are the defaults and are bit-identical to the strictly neutral path.
+| class | what it runs | entry point |
+|---|---|---|
+| **Curated congener** | one of the 13 PFAS | `simulate(congener, …)` |
+| **SMILES (structure)** | any PFAS structure (RDKit read-across / QSPR) | `simulate_from_smiles(…)` |
+| **Neutral organic (log Kow)** | the Briggs/Kow base on the *same* ODE with `z = 0` | `simulate_neutral(log_kow, …)` |
 
-**Expert only, on purpose.** The Simple view is congener-driven and symbol-free; a neutral
-compound is described by a log Kow, so it does not belong there — and the neutral **grain
-compartment has never been tested against data**, which is the opposite of what a
-general-audience screen should show absolute numbers for.
+Picking the neutral class re-points **everything downstream** — the plant/soil map, tissue
+dynamics and burden, the drivers panel, all six exposure modes (parametric flat or flooded,
+custom tables, HYDRUS/CSV, **live HYDRUS-1D**, soil inventory, biomonitoring), the Bayesian
+inverse and the downloads. That is possible because `simulate_neutral` returns the same
+result-dict contract as `simulate()`; it was an Expert-only *tab* until this was wired, which
+left a neutral compound unable to use any of the above.
 
-**Nothing in it is fitted**: `K_PW` and `TSCF` both follow from log Kow via published QSPRs, so
-this is the one place in the app where the DPU *backbone* is exposed without the fitted PFAS
-transport behind it (a-priori vs measured rice: log10 RMSE **0.281** root partition, **0.783**
-per-organ TF, on the season-ODE basis; on the equilibrium basis appropriate to a root-partition
-measurement Liu is **0.206**, the repo's best a-priori result). The tab states the standing scope
-limits in-UI: grain untested; the **root** lipid (1 % fw) corroborated by measured *cereal* roots
-(Li 2019) but **stem/leaf still Trapp 1994's soybean 3 %**; the Ge leaf residual confounded with
-the missing half-life; and, for **lipophilic** compounds, a root-partition question that is now
-narrower than it was — Kodešová 2019 measures carbamazepine's root partition directly (n=21,
-median `RCF_fw` 1.10), Briggs lands within ~1.5× of it and **Brunetti 2021's calibrated pea
-`K_RW` = 13.3 sits ~12× above the same compound's measurement**, so that disagreement is in the
-calibration, not the partition core. What survives is confined to log Kow ≳ 3, where the
-measurements contradict each other (propiconazole RCF 43.65 in lettuce vs 9.32 in *rice*).
-Records: `docs/neutral_dpu_validation.md`.
+Inputs (sidebar): **log Kow** — the one required value, driving both `K_PW` and `TSCF` —
+plus name, in-planta half-life, the TSCF QSPR (Briggs 1982 vs the broader Schriever 2020
+refit), and two expanders: *Composition, phloem, air* (`lipid_source`, the phloem departure,
+opt-in `plant_air` with MW/`K_AW`) and *Weak electrolyte (pKa) + apoplastic bypass*
+(`pKa`/`is_acid`/`pH`, printing the resulting `f_n` and which way the ion is pushed; `g_apo`).
+A **soil Koc** field feeds the soil-side modes.
+
+**What is deliberately absent for a neutral compound**, rather than shown and ignored:
+`E_m` and the `f_xy` source (at `z = 0` a membrane potential has nothing to act on and `f_xy`
+*is* the computed TSCF), the PFAS mechanism switches (the carrier exists to overcome anion
+exclusion; the lipid term is K_PL-gated on PFAS binding), and the four PFAS-only tabs
+(Yamazaki BAF bars, chain-length trends, congener comparison, Tang per-organ TF). The
+headline's `eᴺ` metric is replaced by **TSCF**, since `eᴺ` is 1 by construction there.
+
+The scope panel above the tabs states, in-UI, what the run is and is not: nothing is fitted;
+a-priori log10 RMSE **0.281** (Liu 2023 root partition) and **0.783** (Ge 2017 per-organ TF)
+on the season-ODE basis, **0.206** for Liu on the equilibrium basis proper to a root-partition
+measurement; the **grain compartment is UNTESTED** for neutrals; stem/leaf lipid are still
+Trapp 1994's soybean values; and with `half_life = 0` the leaf is an unbounded terminal
+accumulator, so the run is an upper bound (a warning fires in that case).
+
+### Soil sorption for a neutral compound
+
+The soil modes need a Kd, and the PFAS chain-length `Koc` QSPR is a per-CF2 group contribution
+with no meaning for a neutral. `literature_params.koc_neutral` supplies the standard
+hydrophobic QSPR instead — **Karickhoff 1981**, `log Koc = 0.989·log Kow − 0.346` — as the
+editable default of the sidebar's `soil Koc` field, and it drives the flooded `Cwᵒ(t)` shape
+(`cwo_profile_series(log_kow=…)`), that shape's `k_leach` default (`default_k_leach(Koc=…)`)
+and the live HYDRUS run (`hydrus_drivers(log_kow=…)` or `Kd=`, via `soil_hydrus.inputs_from_hydrus(Kd=…)`).
+It is flagged **PROVISIONAL** for a specific reason: no table in this repo scores a *predicted*
+Koc (the neutral tables either supply the exposure directly or carry the paper's own measured
+isotherm), and Li 2019's soil half shows exactly what is at stake — root bias **+0.033** with an
+experimental `K_om` against **+0.291** with an estimated one. Type a measured value whenever
+you have one.
 
 ## Tang 2026 validation tab (out-of-sample)
 

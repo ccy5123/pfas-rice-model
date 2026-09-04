@@ -40,10 +40,14 @@ def render(cfg):
     # ---------------------------------------------------------------- headline metrics
     # A non-default mechanism has to be visible next to the numbers it moved -- the
     # sidebar expander is collapsed, so the run would otherwise look like the shipped one.
+    neutral = getattr(cfg, "neutral", None)
     _mech = ([] if uptake == api.DEFAULT_UPTAKE else [f"uptake: **{uptake}**"]) + \
             (["**lipid loading ON**"] if lipid_loading else [])
-    st.subheader(f"{congener}  (C{p['n_C']} {p['group']})  ·  source: {mode}")
-    if _mech:
+    if neutral:
+        st.subheader(f"{congener}  (neutral organic · log Kow {p['log_kow']:.2f})  ·  source: {mode}")
+    else:
+        st.subheader(f"{congener}  (C{p['n_C']} {p['group']})  ·  source: {mode}")
+    if _mech and not neutral:
         st.warning("Non-default mechanism — " + " · ".join(_mech) +
                    ". These are EXPLORATORY switches (sidebar → ⚙️ Mechanism); every number "
                    "on this screen moves with them, and neither is the shipped calibration.")
@@ -54,7 +58,55 @@ def render(cfg):
         if bio_baf and tis in bio_baf:
             sub = f"measured {bio_baf[tis]:.2f}"
         col.metric(f"{tis} BAF [L/kg]", f"{pred:.2f}", sub, delta_color="off")
-    c4.metric("anion exclusion eᴺ", f"{res['eN']:.0f}", f"N={res['N']:.2f}", delta_color="off")
+    if neutral:
+        # eᴺ is 1 by construction here, so it carries no information; TSCF is the
+        # quantity that actually drives this run and it is COMPUTED, not fitted.
+        c4.metric("TSCF", f"{res['TSCF']:.3f}", f"K_PW root {res['K_PW']['root']:.2f}",
+                  delta_color="off")
+    else:
+        c4.metric("anion exclusion eᴺ", f"{res['eN']:.0f}", f"N={res['N']:.2f}", delta_color="off")
+
+    # ---- neutral scope panel (what this path is, and what it is not) --------
+    if neutral:
+        with st.expander("🧪 Neutral organic — what this run is, and its scope", expanded=True):
+            st.markdown(
+                "The framework's **Briggs/Kow base**, run on the *same* 4-compartment ODE with "
+                "`z = 0`: the GHK factor → 1, anion exclusion `eᴺ` falls 107 → **1**, the membrane "
+                "term degenerates exactly to passive diffusion, and the carrier is off. "
+                "**Nothing here is fitted** — `K_PW` and `TSCF` both follow from log Kow via "
+                "published QSPRs, so this is the one setting where the DPU *backbone* is exposed "
+                "without the fitted PFAS transport behind it.")
+            st.markdown(
+                f"- a-priori vs measured rice: **log10 RMSE 0.281** root partition (Liu 2023) and "
+                f"**0.783** per-organ TF (Ge 2017) — on the season-ODE basis this run uses; on the "
+                f"equilibrium basis proper to a root-partition measurement Liu is **0.206**. "
+                f"Expect roughly a **2–6× error**, with the ordering far more reliable than the level.\n"
+                f"- `TSCF` = **{res['TSCF']:.3f}** ({p['tscf_model']} QSPR) · `K_PW` root "
+                f"**{res['K_PW']['root']:.2f}** / stem {res['K_PW']['stem']:.2f} / leaf "
+                f"{res['K_PW']['leaf']:.2f} L/kg · Briggs barley RCF at this log Kow "
+                f"**{res['rcf_briggs']:.2f}** · lipid reading `{p['lipid_source']}`"
+                + (f" · half-life **{res['half_life']:.3g} d**" if res.get("half_life")
+                   else " · **no metabolism** (γ=0)"))
+            if not res.get("half_life"):
+                st.warning("γ = 0: the leaf is an **unbounded terminal accumulator**, so the leaf "
+                           "and straw numbers are an UPPER BOUND, not a prediction. Set an "
+                           "in-planta half-life in the sidebar.")
+            st.caption("Scope: the **grain compartment is UNTESTED** for neutrals (no dataset "
+                       "reports a neutral Kow series in grain under root-only exposure) — read it "
+                       "as a structural output. Stem/leaf lipid are still Trapp 1994's soybean "
+                       "values (the root is corroborated by measured cereal roots). This is a "
+                       "RICE model: 120-day season, measured rice transpiration, ORYZA biomass — "
+                       "another crop needs its own composition and drivers, not just a log Kow.")
+        if res.get("warning"):
+            st.warning(res["warning"])
+        if res.get("air_summary"):
+            hl = res["air_summary"]["leaf"]["half_life"]
+            st.caption(
+                f"Air exchange ON — leaf volatilisation half-life "
+                f"**{'∞' if not np.isfinite(hl) else f'{hl:.3g} d'}** (snapshot at final "
+                f"mass/transpiration), leaf P_plant {res['air_summary']['leaf']['P_plant']:.3g} m/d. "
+                "The flux scales with each tissue's specific SURFACE AREA, which this repo has only "
+                "ever used as a leaf/grain *ratio* — treat absolute magnitudes as order-of-magnitude.")
 
     # ---- structure → parameters panel (SMILES mode) -------------------------
     if desc is not None:
@@ -87,10 +139,23 @@ def render(cfg):
     _biomon_note = ("⚠ This chart shows a **model reference run** (Cwᵒ=1), **not** your measured "
                     "biomonitoring data. Your measured values are on the **map** and **BAF** tabs.")
 
-    tabs = st.tabs(["🗺️ Plant & soil map", "📈 Tissue dynamics", "🟫 Soil & drivers",
-                    "📊 BAF vs observed", "🔗 Chain-length trends", "⚖️ Compare congeners",
-                    "✅ Tang TF (OOS)", "🔎 Inverse (Bayesian)", "🧪 Neutral organics",
-                    "ℹ️ About / coupling"])
+    # The PFAS-only tabs are DROPPED rather than shown empty for a neutral compound:
+    # chain length, congener comparison, the Tang per-organ check and the Yamazaki bars
+    # are all statements about the PFAS series and have no neutral counterpart.
+    _PFAS_ONLY = ("📊 BAF vs observed", "🔗 Chain-length trends", "⚖️ Compare congeners",
+                  "✅ Tang TF (OOS)")
+    _names = ["🗺️ Plant & soil map", "📈 Tissue dynamics", "🟫 Soil & drivers",
+              "📊 BAF vs observed", "🔗 Chain-length trends", "⚖️ Compare congeners",
+              "✅ Tang TF (OOS)", "🔎 Inverse (Bayesian)", "ℹ️ About / coupling"]
+    if neutral:
+        _names = [n for n in _names if n not in _PFAS_ONLY]
+    _t = dict(zip(_names, st.tabs(_names)))
+
+    tabs = [_t.get(n) for n in
+            ["🗺️ Plant & soil map", "📈 Tissue dynamics", "🟫 Soil & drivers",
+             "📊 BAF vs observed", "🔗 Chain-length trends", "⚖️ Compare congeners",
+             "✅ Tang TF (OOS)", "🔎 Inverse (Bayesian)", "ℹ️ About / coupling"]]
+    # index-aligned: a dropped tab is None and its block is skipped below
 
     # ---- Tab 1: the plant + soil accumulation map ---------------------------
     with tabs[0]:
@@ -125,8 +190,16 @@ def render(cfg):
             st.warning(_biomon_note)
         st.plotly_chart(plots.fig_tissue(res), width="stretch")
         st.plotly_chart(plots.fig_burden(res), width="stretch")
-        st.markdown("**B_k [L/kg fw]** — " + ", ".join(f"{k}: {v:.2f}" for k, v in res["B_k"].items())
-                    + f"  ·  f_xy={p['f_xy']:.4g}, L_Ph={p['L_Ph']:.4g}, κ_d={p['kappa_d']:.3g}")
+        if neutral:
+            # the neutral partition IS K_PW (= W + L·a·Kow^b), the same B_k slot with
+            # protein and cell-wall zeroed; f_xy is the computed TSCF, not a fitted one
+            st.markdown("**K_PW [L/kg fw]** — "
+                        + ", ".join(f"{k}: {v:.2f}" for k, v in res["K_PW"].items())
+                        + f"  ·  TSCF={res['TSCF']:.4g} (computed, not fitted), "
+                        f"κ_d={p['kappa_d']:.3g}, γ={p['gamma']:.4g} 1/d")
+        else:
+            st.markdown("**B_k [L/kg fw]** — " + ", ".join(f"{k}: {v:.2f}" for k, v in res["B_k"].items())
+                        + f"  ·  f_xy={p['f_xy']:.4g}, L_Ph={p['L_Ph']:.4g}, κ_d={p['kappa_d']:.3g}")
         st.caption("Top: tissue **concentration** C_k(t) [µg/kg] (intensive). Bottom: **PFAS mass** "
                    "(burden) = C_k(t)·M_k(t) [µg/hill] (extensive) — where the chemical actually ends up. "
                    "A tissue can be high-concentration yet low-mass (small organ), so the two views differ; "
@@ -147,169 +220,173 @@ def render(cfg):
         st.caption("Cwᵒ(t) is the only PFAS-specific driver; Q_TP(t) and M(t) are crop physiology "
                    "(measured FAO-56 transpiration + the selected biomass driver) reused across modes.")
 
-    # ---- Tab 4: BAF vs observed ---------------------------------------------
-    with tabs[3]:
-        if bio_baf:
-            model_b = {"root": res["baf_final"]["root"], "straw": res["straw_baf"],
-                       "grain": res["baf_final"]["grain"]}
-            st.plotly_chart(plots.fig_biomon_compare(bio_baf, model_b), width="stretch")
-            st.caption("Measured biomonitoring BAF (tissue conc ÷ pore water) vs the model prediction.")
-        else:
-            extra = None
-            if spec == "Curated congener" and congener is not None:
-                ov1, ov2 = st.columns(2)
-                show_tp = ov1.checkbox(
-                    "Overlay the two-pool (seq) model — EXPLORATORY", value=True,
-                    help="The sequestration two-pool root model (model_api.simulate_twopool_seq; "
-                         "docs/twopool_root_exploration.md): a mobile pool + an irreversible non-K_PL "
-                         "k_seq sink. Shown at its calibrated operating point (Cwo=1, season≈120, demo "
-                         "forcings) so it is comparable to the fixed Yamazaki bars. In-sample / opt-in; "
-                         "parameters.json and the canonical core are unchanged.")
-                show_mg = ov2.checkbox(
-                    "…and the MERGED root+shoot model", value=False,
-                    help="The structural merge (model_api.simulate_twopool_nstem): the same two-pool "
-                         "sequestration ROOT driving the redistributed N-stem+leaf SHOOT, instead of "
-                         "the 4-pool pass-through stem. Swapping the whole shoot costs only ~0.04 log "
-                         "on Yamazaki (root RMSE unchanged) — the root mechanism is separable — and it "
-                         "fixes the two-pool's Tang stalk collapse (per-organ OOS 1.398→0.801). "
-                         "EXPLORATORY, same calibrated operating point.")
-                over = {}
-                if show_tp:
-                    tp = _simulate_twopool_seq(congener)
-                    if tp is not None:
-                        over["two-pool (seq, exploratory)"] = tp
-                if show_mg:
-                    mg = _simulate_twopool_nstem(congener)
-                    if mg is not None:
-                        over["two-pool + redistributed shoot (merged)"] = mg
-                extra = over or None
-            if lipid_loading:
-                st.info("**Lipid-facilitated loading is ON**, so the blue 'core' bar is the "
-                        "K_PL-gated mechanism, not the shipped free-anion model. It is the repo's "
-                        "strongest out-of-sample result elsewhere (Tang, Kim), but against these "
-                        "Yamazaki bars it is *in-sample* — its constants were fit on them.")
-            # The overlay is an optional EXPLORATORY nicety -- never let it crash the BAF
-            # tab (e.g. a stale/old plots.py without the `extra` param right after a deploy,
-            # before the module cache refreshes). Fall back to the plain core-vs-observed plot.
-            try:
-                fig = plots.fig_baf(res, obs, extra=extra)
-            except Exception:                                       # noqa: BLE001
-                fig = plots.fig_baf(res, obs)
+    # PFAS-only tabs: dropped (not blanked) for a neutral compound -- the Yamazaki
+    # bars, the chain-length series, the congener comparison and the Tang per-organ
+    # check are all statements about the PFAS series with no neutral counterpart.
+    if not neutral:
+        # ---- Tab 4: BAF vs observed ---------------------------------------------
+        with tabs[3]:
+            if bio_baf:
+                model_b = {"root": res["baf_final"]["root"], "straw": res["straw_baf"],
+                           "grain": res["baf_final"]["grain"]}
+                st.plotly_chart(plots.fig_biomon_compare(bio_baf, model_b), width="stretch")
+                st.caption("Measured biomonitoring BAF (tissue conc ÷ pore water) vs the model prediction.")
+            else:
                 extra = None
-            st.plotly_chart(fig, width="stretch")
-            if extra is not None:
-                st.caption("🧪 **two-pool (seq)** is EXPLORATORY / in-sample (Yamazaki fit): it captures the "
-                           "long-chain **root** BAF and the PFOS/PFUnDA split the single-pool core misses, while "
-                           "keeping the monotone physical f_xy — overall log10 RMSE 0.251. Run at its calibrated "
-                           "point, so it does **not** track the sidebar f_xy/Cwᵒ/biomass (unlike the 4-pool core "
-                           "bar). The **merged** overlay is that same root driving the redistributed shoot "
-                           "instead of the pass-through stem (Yamazaki 0.301 vs 0.278 — the shoot swap costs "
-                           "~0.04 log, so the root mechanism is separable). The *carrier* two-pool "
-                           "(`close_longchain_2pool`, saturated DOF-0 closure) is API-only — it reproduces the "
-                           "observed bars by construction and is too slow (~1 min) to render live.")
-            if not obs:
-                st.info("No Yamazaki BAF for this congener (model prediction only).")
+                if spec == "Curated congener" and congener is not None:
+                    ov1, ov2 = st.columns(2)
+                    show_tp = ov1.checkbox(
+                        "Overlay the two-pool (seq) model — EXPLORATORY", value=True,
+                        help="The sequestration two-pool root model (model_api.simulate_twopool_seq; "
+                             "docs/twopool_root_exploration.md): a mobile pool + an irreversible non-K_PL "
+                             "k_seq sink. Shown at its calibrated operating point (Cwo=1, season≈120, demo "
+                             "forcings) so it is comparable to the fixed Yamazaki bars. In-sample / opt-in; "
+                             "parameters.json and the canonical core are unchanged.")
+                    show_mg = ov2.checkbox(
+                        "…and the MERGED root+shoot model", value=False,
+                        help="The structural merge (model_api.simulate_twopool_nstem): the same two-pool "
+                             "sequestration ROOT driving the redistributed N-stem+leaf SHOOT, instead of "
+                             "the 4-pool pass-through stem. Swapping the whole shoot costs only ~0.04 log "
+                             "on Yamazaki (root RMSE unchanged) — the root mechanism is separable — and it "
+                             "fixes the two-pool's Tang stalk collapse (per-organ OOS 1.398→0.801). "
+                             "EXPLORATORY, same calibrated operating point.")
+                    over = {}
+                    if show_tp:
+                        tp = _simulate_twopool_seq(congener)
+                        if tp is not None:
+                            over["two-pool (seq, exploratory)"] = tp
+                    if show_mg:
+                        mg = _simulate_twopool_nstem(congener)
+                        if mg is not None:
+                            over["two-pool + redistributed shoot (merged)"] = mg
+                    extra = over or None
+                if lipid_loading:
+                    st.info("**Lipid-facilitated loading is ON**, so the blue 'core' bar is the "
+                            "K_PL-gated mechanism, not the shipped free-anion model. It is the repo's "
+                            "strongest out-of-sample result elsewhere (Tang, Kim), but against these "
+                            "Yamazaki bars it is *in-sample* — its constants were fit on them.")
+                # The overlay is an optional EXPLORATORY nicety -- never let it crash the BAF
+                # tab (e.g. a stale/old plots.py without the `extra` param right after a deploy,
+                # before the module cache refreshes). Fall back to the plain core-vs-observed plot.
+                try:
+                    fig = plots.fig_baf(res, obs, extra=extra)
+                except Exception:                                       # noqa: BLE001
+                    fig = plots.fig_baf(res, obs)
+                    extra = None
+                st.plotly_chart(fig, width="stretch")
+                if extra is not None:
+                    st.caption("🧪 **two-pool (seq)** is EXPLORATORY / in-sample (Yamazaki fit): it captures the "
+                               "long-chain **root** BAF and the PFOS/PFUnDA split the single-pool core misses, while "
+                               "keeping the monotone physical f_xy — overall log10 RMSE 0.251. Run at its calibrated "
+                               "point, so it does **not** track the sidebar f_xy/Cwᵒ/biomass (unlike the 4-pool core "
+                               "bar). The **merged** overlay is that same root driving the redistributed shoot "
+                               "instead of the pass-through stem (Yamazaki 0.301 vs 0.278 — the shoot swap costs "
+                               "~0.04 log, so the root mechanism is separable). The *carrier* two-pool "
+                               "(`close_longchain_2pool`, saturated DOF-0 closure) is API-only — it reproduces the "
+                               "observed bars by construction and is too slow (~1 min) to render live.")
+                if not obs:
+                    st.info("No Yamazaki BAF for this congener (model prediction only).")
+                else:
+                    with st.expander("ℹ️ What are the Yamazaki 2023 conditions? (and how to match them)"):
+                        st.markdown(
+                            "**Yamazaki et al. 2023**, *Environ. Sci. Technol.* **57** "
+                            "([doi:10.1021/acs.est.2c08767](https://doi.org/10.1021/acs.est.2c08767)).\n\n"
+                            "- **Design**: greenhouse **pot** study, Japanese **Andosol** soil; each congener "
+                            "spiked **individually** with clean irrigation water; grown a **full cycle** to maturity.\n"
+                            "- **Cultivars**: the plotted observed BAFs are the **geomean of Indica + Japonica** "
+                            "(SI tables S16/S18/S19), fresh-weight.\n"
+                            "- **BAF definition**: **tissue conc ÷ pore-water (soil-solution) conc** [L/kg], for "
+                            "**root / straw (stem+leaf) / grain (brown rice)** — the same definition the model reports.\n\n"
+                            "**These observed points are fixed measurements** — they do **not** move when you change "
+                            "the sidebar. The model was calibrated to reproduce them at one operating point, so the "
+                            "overlay is a like-for-like comparison **only at those settings**:")
+                        st.markdown(
+                            "| sidebar control | match-Yamazaki value |\n|---|---|\n"
+                            "| Data source | **Model (parametric)**, *Measured forcings* on |\n"
+                            "| Pore-water Cwᵒ | **1.0 µg/L** (so tissue conc = BAF) |\n"
+                            "| Root→shoot f_xy | **W2 fit (reproduces Yamazaki)** |\n"
+                            "| E_m | **−120 mV** (default) · Season ~**120 d** |")
+                        st.caption("Changing E_m / f_xy / Cwᵒ / season, or a non-parametric source (HYDRUS, soil "
+                                   "inventory…), moves the model AWAY from the Yamazaki experiment — then the overlay "
+                                   "is a reference trend, not a calibrated match. (Yamazaki = clean per-congener Andosol "
+                                   "pot study; your scenario may differ in soil, exposure and crop.)")
+
+        # ---- Tab 5: chain-length trends -----------------------------------------
+        with tabs[4]:
+            key = st.selectbox("Parameter", ["K_PL", "K_prot", "K_cw_root",
+                                             "f_xy_recommended", "B_root", "B_grain"], index=0)
+            # a novel SMILES compound is not in the curated chain series -> ring a reference instead
+            chain_cong = congener if congener in api.CONGENERS else (
+                desc.matched_name if desc and desc.matched_name in api.CONGENERS else "PFOA")
+            st.plotly_chart(plots.fig_chain(api.chain_table(), chain_cong, key), width="stretch")
+            if congener not in api.CONGENERS:
+                st.caption(f"'{congener}' is a novel structure (not in the curated 13); the ring marks "
+                           f"**{chain_cong}** for reference. Its own parameters are in the 🧬 panel above.")
+
+        # ---- Tab 6: compare congeners -------------------------------------------
+        with tabs[5]:
+            tissue = st.radio("Tissue", ["root", "straw", "grain"], index=1, horizontal=True)
+            if compare:
+                if drivers is not None:
+                    dt = _drivers_tuple(drivers)
+                    results = {nm: _simulate(nm, drivers_tuple=dt, **sim_kw) for nm in compare}
+                else:
+                    results = {nm: _simulate(nm, Cwo=Cwo_const, season=season,
+                                             measured_forcing=measured, **sim_kw) for nm in compare}
+                st.plotly_chart(plots.fig_compare(results, tissue), width="stretch")
             else:
-                with st.expander("ℹ️ What are the Yamazaki 2023 conditions? (and how to match them)"):
-                    st.markdown(
-                        "**Yamazaki et al. 2023**, *Environ. Sci. Technol.* **57** "
-                        "([doi:10.1021/acs.est.2c08767](https://doi.org/10.1021/acs.est.2c08767)).\n\n"
-                        "- **Design**: greenhouse **pot** study, Japanese **Andosol** soil; each congener "
-                        "spiked **individually** with clean irrigation water; grown a **full cycle** to maturity.\n"
-                        "- **Cultivars**: the plotted observed BAFs are the **geomean of Indica + Japonica** "
-                        "(SI tables S16/S18/S19), fresh-weight.\n"
-                        "- **BAF definition**: **tissue conc ÷ pore-water (soil-solution) conc** [L/kg], for "
-                        "**root / straw (stem+leaf) / grain (brown rice)** — the same definition the model reports.\n\n"
-                        "**These observed points are fixed measurements** — they do **not** move when you change "
-                        "the sidebar. The model was calibrated to reproduce them at one operating point, so the "
-                        "overlay is a like-for-like comparison **only at those settings**:")
-                    st.markdown(
-                        "| sidebar control | match-Yamazaki value |\n|---|---|\n"
-                        "| Data source | **Model (parametric)**, *Measured forcings* on |\n"
-                        "| Pore-water Cwᵒ | **1.0 µg/L** (so tissue conc = BAF) |\n"
-                        "| Root→shoot f_xy | **W2 fit (reproduces Yamazaki)** |\n"
-                        "| E_m | **−120 mV** (default) · Season ~**120 d** |")
-                    st.caption("Changing E_m / f_xy / Cwᵒ / season, or a non-parametric source (HYDRUS, soil "
-                               "inventory…), moves the model AWAY from the Yamazaki experiment — then the overlay "
-                               "is a reference trend, not a calibrated match. (Yamazaki = clean per-congener Andosol "
-                               "pot study; your scenario may differ in soil, exposure and crop.)")
+                st.info("Select congeners in the sidebar to compare.")
 
-    # ---- Tab 5: chain-length trends -----------------------------------------
-    with tabs[4]:
-        key = st.selectbox("Parameter", ["K_PL", "K_prot", "K_cw_root",
-                                         "f_xy_recommended", "B_root", "B_grain"], index=0)
-        # a novel SMILES compound is not in the curated chain series -> ring a reference instead
-        chain_cong = congener if congener in api.CONGENERS else (
-            desc.matched_name if desc and desc.matched_name in api.CONGENERS else "PFOA")
-        st.plotly_chart(plots.fig_chain(api.chain_table(), chain_cong, key), width="stretch")
-        if congener not in api.CONGENERS:
-            st.caption(f"'{congener}' is a novel structure (not in the curated 13); the ring marks "
-                       f"**{chain_cong}** for reference. Its own parameters are in the 🧬 panel above.")
-
-    # ---- Tab 6: compare congeners -------------------------------------------
-    with tabs[5]:
-        tissue = st.radio("Tissue", ["root", "straw", "grain"], index=1, horizontal=True)
-        if compare:
-            if drivers is not None:
-                dt = _drivers_tuple(drivers)
-                results = {nm: _simulate(nm, drivers_tuple=dt, **sim_kw) for nm in compare}
+        # ---- Tab 7: Tang TF (OOS) -----------------------------------------------
+        with tabs[6]:
+            st.markdown("**Tang 2026** (flooded paddy, Nipponbare, 150 d; PFOA/PFOS/GenX) — per-organ "
+                        "transfer factor **TF = C_organ/C_root**, an *out-of-sample* check of the root→shoot "
+                        "loading `f_xy` (only Tang's head-group *sign* went into the model build).")
+            if smiles or congener not in api.TANG_CONGENERS:
+                st.info(f"Tang 2026 covers **{', '.join(api.TANG_CONGENERS)}** only — "
+                        "pick one of these curated congeners (sidebar) to see the comparison.")
             else:
-                results = {nm: _simulate(nm, Cwo=Cwo_const, season=season,
-                                         measured_forcing=measured, **sim_kw) for nm in compare}
-            st.plotly_chart(plots.fig_compare(results, tissue), width="stretch")
-        else:
-            st.info("Select congeners in the sidebar to compare.")
-
-    # ---- Tab 7: Tang TF (OOS) -----------------------------------------------
-    with tabs[6]:
-        st.markdown("**Tang 2026** (flooded paddy, Nipponbare, 150 d; PFOA/PFOS/GenX) — per-organ "
-                    "transfer factor **TF = C_organ/C_root**, an *out-of-sample* check of the root→shoot "
-                    "loading `f_xy` (only Tang's head-group *sign* went into the model build).")
-        if smiles or congener not in api.TANG_CONGENERS:
-            st.info(f"Tang 2026 covers **{', '.join(api.TANG_CONGENERS)}** only — "
-                    "pick one of these curated congeners (sidebar) to see the comparison.")
-        else:
-            c1, c2, c3 = st.columns([2, 1, 1])
-            dose = ("low" if c1.radio("Tang dose", ["across-dose mean", "0.1 µg/g (env-closest)"],
-                                      horizontal=True).startswith("0.1") else "mean")
-            bm = ("oryza" if c2.checkbox("ORYZA biomass driver", value=False,
-                                         help="Drive the shoot model with the mechanistic ORYZA2000 "
-                                              "biomass instead of the logistic (slower).") else "growth_rice")
-            show_lipid = c3.checkbox(
-                "lipid loading (OOS)", value=False,
-                help="Turn on the K_PL-gated lipid-facilitated loading. Its constants were fit on "
-                     "YAMAZAKI and nothing here is re-fit to Tang, so this is a genuine "
-                     "out-of-sample prediction — and it is the one that works: Tang per-organ "
-                     "log10 RMSE 1.232 (free anion) → 0.516, matching the in-sample Tang refit "
-                     "(0.519). See validation/oos_tang_lipid.py.")
-            val = api.tang_tf_validation(congener, dose=dose, biomass=bm)
-            valr = api.tang_tf_validation(congener, dose=dose, biomass=bm, use_refit=True)
-            vall = (api.tang_tf_validation(congener, dose=dose, biomass=bm, lipid_loading=True)
-                    if show_lipid else None)
-            st.plotly_chart(plots.fig_tang_tf(val, valr, vall), width="stretch")
-            if vall is not None:
-                st.success(
-                    "**The purple bars are a prediction, not a fit.** The green refit bars were "
-                    "calibrated ON these measurements; the lipid mechanism was calibrated on "
-                    "Yamazaki and transferred here untouched, yet lands in the same place "
-                    "(0.516 vs 0.519 across Tang's three congeners). The dominant free-anion "
-                    "failure — PFOS, the high-K_PL sulfonate, ~40–200× under — is fixed at the "
-                    "mechanism level "
-                    "(stalk 0.013 → 0.620 vs Tang 0.571). Residuals it does NOT fix: GenX "
-                    "(provisional ether f_xy) and the PFOS endosperm (~5× under).")
-            _verdict = {"GenX": "GenX over-predicted ~12× by the provisional 0.233; the refit ≈ the documented 0.013.",
-                        "PFOS": "PFOS is **dataset-dependent** — Yamazaki W2 0.142 vs Tang ~0.32; report the **range with conditions**, not one value.",
-                        "PFOA": "PFOA f_xy is dose-sensitive (0.064 across-dose mean → 0.097 at 0.1 µg/g)."}[congener]
-            st.markdown(
-                f"- **f_xy**: recommended **{val['f_xy']:.3g}** → Tang-refit **{valr['f_xy']:.3g}**. {_verdict}\n"
-                f"- **Dry-weight basis** — `TF_dw = TF_fw·(1−θ_root)/(1−θ_tissue)`; comparing the model's "
-                f"fresh-weight TF to Tang's dry-weight TF (without this factor) is a units error that "
-                f"flatters the grain ~8×.\n"
-                f"- **Grain/endosperm is structurally under-predicted ~3–8×** and is **not** closable by "
-                f"`L_Ph`/lipid — a phloem-delivery + dry-weight limit, not a calibration gap.")
-        st.caption("Source: docs/literature_db/raw_si/tang2026_doseresponse.csv (SI S7/S8). Model: "
-                   "redistributed-shoot `simulate_nstem_leaf`; the f_xy refit is OVERRIDE-only (parameters.json "
-                   "unchanged). Details: docs/VALIDATION_TANG2026_NSTEM_KR.md · docs/tang2026_grain_units_exploration.md.")
+                c1, c2, c3 = st.columns([2, 1, 1])
+                dose = ("low" if c1.radio("Tang dose", ["across-dose mean", "0.1 µg/g (env-closest)"],
+                                          horizontal=True).startswith("0.1") else "mean")
+                bm = ("oryza" if c2.checkbox("ORYZA biomass driver", value=False,
+                                             help="Drive the shoot model with the mechanistic ORYZA2000 "
+                                                  "biomass instead of the logistic (slower).") else "growth_rice")
+                show_lipid = c3.checkbox(
+                    "lipid loading (OOS)", value=False,
+                    help="Turn on the K_PL-gated lipid-facilitated loading. Its constants were fit on "
+                         "YAMAZAKI and nothing here is re-fit to Tang, so this is a genuine "
+                         "out-of-sample prediction — and it is the one that works: Tang per-organ "
+                         "log10 RMSE 1.232 (free anion) → 0.516, matching the in-sample Tang refit "
+                         "(0.519). See validation/oos_tang_lipid.py.")
+                val = api.tang_tf_validation(congener, dose=dose, biomass=bm)
+                valr = api.tang_tf_validation(congener, dose=dose, biomass=bm, use_refit=True)
+                vall = (api.tang_tf_validation(congener, dose=dose, biomass=bm, lipid_loading=True)
+                        if show_lipid else None)
+                st.plotly_chart(plots.fig_tang_tf(val, valr, vall), width="stretch")
+                if vall is not None:
+                    st.success(
+                        "**The purple bars are a prediction, not a fit.** The green refit bars were "
+                        "calibrated ON these measurements; the lipid mechanism was calibrated on "
+                        "Yamazaki and transferred here untouched, yet lands in the same place "
+                        "(0.516 vs 0.519 across Tang's three congeners). The dominant free-anion "
+                        "failure — PFOS, the high-K_PL sulfonate, ~40–200× under — is fixed at the "
+                        "mechanism level "
+                        "(stalk 0.013 → 0.620 vs Tang 0.571). Residuals it does NOT fix: GenX "
+                        "(provisional ether f_xy) and the PFOS endosperm (~5× under).")
+                _verdict = {"GenX": "GenX over-predicted ~12× by the provisional 0.233; the refit ≈ the documented 0.013.",
+                            "PFOS": "PFOS is **dataset-dependent** — Yamazaki W2 0.142 vs Tang ~0.32; report the **range with conditions**, not one value.",
+                            "PFOA": "PFOA f_xy is dose-sensitive (0.064 across-dose mean → 0.097 at 0.1 µg/g)."}[congener]
+                st.markdown(
+                    f"- **f_xy**: recommended **{val['f_xy']:.3g}** → Tang-refit **{valr['f_xy']:.3g}**. {_verdict}\n"
+                    f"- **Dry-weight basis** — `TF_dw = TF_fw·(1−θ_root)/(1−θ_tissue)`; comparing the model's "
+                    f"fresh-weight TF to Tang's dry-weight TF (without this factor) is a units error that "
+                    f"flatters the grain ~8×.\n"
+                    f"- **Grain/endosperm is structurally under-predicted ~3–8×** and is **not** closable by "
+                    f"`L_Ph`/lipid — a phloem-delivery + dry-weight limit, not a calibration gap.")
+            st.caption("Source: docs/literature_db/raw_si/tang2026_doseresponse.csv (SI S7/S8). Model: "
+                       "redistributed-shoot `simulate_nstem_leaf`; the f_xy refit is OVERRIDE-only (parameters.json "
+                       "unchanged). Details: docs/VALIDATION_TANG2026_NSTEM_KR.md · docs/tang2026_grain_units_exploration.md.")
 
     # ---- Tab 8: Inverse (Bayesian exposure estimate) ------------------------
     with tabs[7]:
@@ -317,193 +394,29 @@ def render(cfg):
                     "tissue concentrations (Laplace posterior in log Cwᵒ; the well-posed "
                     "direction of `validation/bayesian_inverse_demo.py`). Transport is held at "
                     "the sidebar defaults.")
-        _render_inverse_estimator(
-            congener, E_m_mV=E_m, f_xy_source=fxy_source, biomass=biomass,
-            key="inv_expert", simple=False,
-            # run the inverse under the SAME mechanism as every forward tab
-            mech={k: v for k, v in sim_kw.items()
-                  if k not in ("E_m_mV", "f_xy_source", "biomass")})
+        if neutral:
+            # Same inverse question, neutral forward model: the compound is a log Kow,
+            # so `congener` is only a label and every neutral setting rides along.
+            _render_inverse_estimator(
+                congener, E_m_mV=E_m, f_xy_source=fxy_source, biomass=biomass,
+                key="inv_expert_neutral", simple=False, curated_only=False,
+                mech=dict(log_kow=float(neutral["log_kow"]),
+                          neutral_kw={k: v for k, v in neutral.items()
+                                      if k not in ("Koc", "log_kow", "name")}))
+        else:
+            _render_inverse_estimator(
+                congener, E_m_mV=E_m, f_xy_source=fxy_source, biomass=biomass,
+                key="inv_expert", simple=False,
+                # run the inverse under the SAME mechanism as every forward tab
+                mech={k: v for k, v in sim_kw.items()
+                      if k not in ("E_m_mV", "f_xy_source", "biomass")})
         st.caption("Identifiability: only the EXPOSURE level is estimated here. From tissue data "
                    "alone Q_TP·f_xy is a product ridge and Cwᵒ vs root-uptake conductance is "
                    "degenerate, so pinning transport absolutely needs an independent measurement "
                    "(xylem sap / pore-water probe). See docs + validation/bayesian_inverse_demo.py.")
 
-    # ---- Tab 9: Neutral organics (the Briggs/Kow DPU base) ------------------
-    # EXPERT-ONLY on purpose. The Simple view is congener-driven and symbol-free;
-    # a neutral compound has no congener and is described by a log Kow, so it does
-    # not belong there. It is also the one path whose grain compartment has never
-    # been tested against data, which is the opposite of what a general-audience
-    # screen should show absolute numbers for.
+    # ---- Tab 9: About / coupling --------------------------------------------
     with tabs[8]:
-        st.markdown(
-            "**Neutral (non-ionised) organics** — the framework's Briggs/Kow base, run on the "
-            "*same* 4-compartment ODE with `z = 0`: the GHK factor → 1, anion exclusion `eᴺ` "
-            "falls 107 → **1**, the membrane term degenerates exactly to passive diffusion, and "
-            "the carrier is off. Everything else in this app is PFAS, a permanently dissociated "
-            "anion for which this partition core explicitly does **not** apply.")
-        st.info(
-            "**Nothing here is fitted.** `K_PW` and `TSCF` both follow from log Kow via published "
-            "QSPRs, so this is the one setting where the DPU *backbone* is exposed without the "
-            "fitted PFAS transport (`f_xy`, `k_seq`, the lipid conductances) behind it. "
-            "A-priori vs measured rice: **log10 RMSE 0.281** root partition (Liu 2023, 14 compounds) "
-            "and **0.783** per-organ TF (Ge 2017) — see `docs/neutral_dpu_validation.md`. "
-            "(Both are on the season-ODE basis this tab runs. The root tables measure an "
-            "*equilibrium*, and scoring them as one puts Liu at **0.206** — the repo's best "
-            "a-priori result — and Kodešová 2019 at 0.237.)")
-
-        n1, n2, n3 = st.columns(3)
-        n_logkow = n1.number_input("log Kow", value=2.45, min_value=-2.0, max_value=8.0, step=0.05,
-                                   help="The ONE required input. Drives both K_PW and TSCF.")
-        n_name = n2.text_input("compound name", value="carbamazepine")
-        n_hl = n3.number_input("in-planta half-life [d] (0 = none)", value=7.0,
-                               min_value=0.0, max_value=365.0, step=1.0,
-                               help="Sets gamma per compartment. STRONGLY recommended: with no "
-                                    "metabolism the leaf is an unbounded terminal accumulator, so "
-                                    "a run without it is an UPPER BOUND.")
-        n4, n5 = st.columns(2)
-        n_tscf = n4.radio("TSCF QSPR", ["briggs", "schriever"], horizontal=True,
-                          help="Briggs 1982 (narrow bell, peak 0.784 @ logKow 1.78) vs the "
-                               "Schriever 2020 refit (97 values, ~3x broader). TSCF is an INPUT "
-                               "here, not a fitted parameter, so the gap between them is a fair "
-                               "measure of how well it is actually known.")
-        n_phloem = n5.checkbox("phloem ON (departs from the base)", value=False,
-                               help="The neutral base explicitly excludes phloem transport — it is "
-                                    "an addition of the ionisable extension. Turning it on drives "
-                                    "the small terminal grain hard; it is a statement about "
-                                    "assuming unrestricted loading, not a prediction.")
-
-        n_lipid = st.radio(
-            "root lipid reading", ["measured", "briggs_anchor"], horizontal=True,
-            help="An OPEN question, so it is a switch rather than a constant. "
-                 "'measured' = 1% fresh weight, from measured cereal roots (the default, and "
-                 "what every published number here is on). 'briggs_anchor' = 2.47%, the lipid "
-                 "term Briggs' 1982 regression implies — he measured no lipid at all. They are "
-                 "2.5x apart for lipophilic compounds and ~equal below log Kow 1. Evidence is "
-                 "3 measured tables to 1 against the anchor; see docs/neutral_dpu_validation.md "
-                 "section 5.")
-
-        n_air = st.checkbox("plant–air exchange (volatilisation + gaseous uptake)", value=False,
-                            help="Off by default: it needs K_AW and a molar mass, which the strict "
-                                 "Kow-only a-priori run does not use. Identically zero at K_AW = 0.")
-        air_kw, n_mw, n_kaw = None, float("nan"), 0.0
-        if n_air:
-            a1, a2, a3 = st.columns(3)
-            n_mw = a1.number_input("MW [g/mol]", value=236.3, min_value=1.0, step=1.0)
-            n_kaw = a2.number_input("K_AW [-]", value=1e-3, min_value=0.0, max_value=10.0,
-                                    step=1e-4, format="%.2e",
-                                    help="Dimensionless Henry's-law constant. 0 = PFAS-like: the "
-                                         "air pathway is structurally absent, not just small.")
-            c_air = a3.number_input("ambient C_air [µg/m³]", value=0.0, min_value=0.0, step=0.1,
-                                    help="0 = clean air, i.e. volatilisation only.")
-            air_kw = dict(C_air=float(c_air))
-
-        # ---- weak electrolyte: neither strictly neutral nor a permanent anion ----
-        # A pKa cannot be expressed by the z=0 trick (one valence must be 0 or -1),
-        # so it routes through the (f_n, f_d) speciation pair instead.
-        n_pka, n_acid, n_ph, n_gapo = None, True, 6.5, 0.0
-        with st.expander("⚗️ Weak electrolyte (pKa) + apoplastic bypass"):
-            we = st.checkbox("this compound is an acid / base (has a pKa)", value=False,
-                             help="OFF = the strictly neutral path (bit-identical to before). ON = "
-                                  "the compound is a neutral molecule AND an ion at once, weighted "
-                                  "by the Henderson–Hasselbalch split; the ion feels the GHK "
-                                  "membrane term, the neutral species does not.")
-            if we:
-                w1, w2, w3 = st.columns(3)
-                n_pka = w1.number_input("pKa", -5.0, 14.0, 4.5, 0.1)
-                n_acid = w2.radio("class", ["acid", "base"], horizontal=True) == "acid"
-                n_ph = w3.number_input("root-zone pH", 3.0, 10.0, 6.5, 0.1)
-                import literature_params as LP
-                f_n, f_d = LP.speciation(float(n_pka), float(n_ph), bool(n_acid))
-                st.caption(
-                    f"→ neutral fraction **f_n = {f_n:.3g}**, ionic **f_d = {f_d:.3g}**. "
-                    + ("The ion is an ANION: excluded by the inside-negative membrane (the PFAS "
-                       "case at f_n→0)." if n_acid else
-                       "The ion is a CATION: ATTRACTED by the inside-negative membrane, not "
-                       "excluded — at pKa 4.5 / pH 6.5 / log Kow 2.45 the base's root BAF is "
-                       "1.51 against the acid's 0.079 (~19×), and the gap widens as the pKa "
-                       "falls (the acid ionises further, the base does not)."))
-            n_gapo = st.number_input(
-                "apoplastic bypass g_apo  [L/kg/d]", 0.0, 50.0, 0.0, 0.5,
-                help="A route AROUND the membrane, so it feels neither speciation nor GHK. "
-                     "0 = structurally absent (the default — NOTHING is adopted).")
-            st.markdown(
-                "**How far this is tested.** Direction **supported**, magnitude **refuted**: on "
-                "Schriever 2020's 67 ionisable TSCF rows the measured transfer does rise with "
-                "`f_n` (Spearman +0.480) and speciation nearly doubles the model's rank "
-                "correlation (+0.284 → +0.520), but its influx conductance moves ~1.6e4-fold "
-                "where the measurements move ~3-fold, so it under-delivers (bias −0.203) and "
-                "predicts ~nothing below `f_n ≈ 1e−3`. Use it for the DIRECTION of a speciation "
-                "effect, not its size. A SMALL bypass (`g_apo ≈ 0.5–1`) improves rank *and* scale "
-                "together (+0.635 / RMSE 0.291) — but the RMSE-optimal `g_apo = 5` buys scale by "
-                "wrecking the ordering, so do not fit it on RMSE. "
-                "`validation/weak_electrolyte_tscf.py` §4l–4m.")
-
-        try:
-            nres = api.simulate_neutral(
-                float(n_logkow), name=(n_name or "neutral"), Cwo=Cwo_const, season=season,
-                MW=n_mw, K_AW=float(n_kaw), half_life=(float(n_hl) or None),
-                tscf_model=n_tscf, phloem=n_phloem, air=n_air, air_kw=air_kw,
-                lipid_source=n_lipid, pKa=n_pka, is_acid=n_acid, pH=float(n_ph),
-                g_apo=float(n_gapo), biomass=biomass, measured_forcing=measured)
-        except ValueError as e:                       # e.g. air enabled without a molar mass
-            st.error(str(e))
-            nres = None
-
-        if nres is not None:
-            m1, m2, m3, m4, m5 = st.columns(5)
-            m1.metric("TSCF", f"{nres['TSCF']:.3f}",
-                      help="Briggs 1982 bell, computed from log Kow — not fitted.")
-            m2.metric("K_PW root [L/kg]", f"{nres['K_PW']['root']:.2f}",
-                      help=f"Rice-composition K_PW. Briggs' own barley RCF at this log Kow is "
-                           f"{nres['rcf_briggs']:.2f} — they differ because the water and lipid "
-                           f"contents differ, not because the QSPR does.")
-            m3.metric("root BAF", f"{nres['baf_final']['root']:.3g}")
-            m4.metric("straw BAF", f"{nres['straw_baf']:.3g}")
-            m5.metric("grain BAF", f"{nres['baf_final']['grain']:.3g}",
-                      help="UNTESTED compartment — no measured neutral grain series exists.")
-            # tissue dynamics only -- there is NO observed neutral series to plot
-            # against, so the PFAS `fig_baf` ("predicted vs observed") would be a
-            # misleading frame here. The a-priori comparisons live in the docs.
-            st.plotly_chart(plots.fig_tissue(nres), width="stretch")
-            if nres.get("warning"):
-                st.warning(nres["warning"])
-            if nres.get("air_summary"):
-                hl = nres["air_summary"]["leaf"]["half_life"]
-                st.caption(
-                    f"Air exchange ON — leaf volatilisation half-life "
-                    f"**{'∞' if not np.isfinite(hl) else f'{hl:.3g} d'}** (snapshot at final "
-                    f"mass/transpiration), leaf P_plant "
-                    f"{nres['air_summary']['leaf']['P_plant']:.3g} m/d. The flux scales with each "
-                    "tissue's specific SURFACE AREA, which this repo has only ever used as a "
-                    "leaf/grain *ratio* — treat absolute magnitudes as order-of-magnitude.")
-
-        st.markdown(
-            "**Scope, in full.** The **grain compartment is UNTESTED** — no dataset reports a "
-            "neutral Kow series in grain under root-only exposure, the same gap as on the PFAS "
-            "side, so read the grain number as a structural output, not a prediction. The "
-            "**root** lipid (1 % fresh weight) is corroborated by *measured cereal roots* (Li "
-            "2019: barley 1.00, wheat 1.10–1.14, maize 0.53 %), but **stem and leaf are still "
-            "Trapp 1994's soybean 3 %** — an open gap, and `K_PW` is linear in them. The Ge 2017 "
-            "leaf residual is confounded with the missing half-life, so 0.783 is an *upper bound* "
-            "on transport error. For **lipophilic** compounds the root partition is still open, "
-            "but narrower than it used to look: Kodešová 2019 measures carbamazepine root "
-            "partition directly (n=21, median `RCF_fw` 1.10) — Briggs lands within ~1.5× of it "
-            "while **Brunetti 2021's calibrated pea `K_RW` = 13.3 sits ~12× ABOVE the same "
-            "compound's measurement**, so that disagreement is in the calibration, not the "
-            "partition core. What survives is confined to **log Kow ≳ 3**, and even there the "
-            "measurements contradict each other: on propiconazole (log Kow 3.72) Li 2019 reports "
-            "RCF 43.65 in lettuce and Liu 2023 9.32 in *rice* — a 4.7× spread between "
-            "measurements, wider than the anchor question itself. Li 2019's own 376-row SOIL "
-            "table even flips the sign (model **high** +0.260 where its hydroponic half is low "
-            "−0.432), and most of that is soil-side exposure, not the plant: with *experimental* "
-            "`K_om` the bias is +0.033.")
-        st.caption("API: `model_api.simulate_neutral(log_kow, …)` — same result-dict contract as "
-                   "`simulate()`, guarded bit-identical to `neutral_dpu`. Records: "
-                   "docs/neutral_dpu_validation.md (§3b air, §4c Hwang) · src/neutral_dpu.py · "
-                   "src/plant_air.py · validation/hwang2017_lettuce.py.")
-
-    # ---- Tab 10: About / coupling -------------------------------------------
-    with tabs[9]:
         st.markdown(
             """
 ### Six ways to drive the plant model

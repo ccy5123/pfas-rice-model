@@ -279,6 +279,38 @@ def koc(n_perfluoroC: float, head_group: str = "carboxylate", *,
     return logK if log10 else np.power(10.0, logK)
 
 
+# --- NEUTRAL organics: Koc from log Kow -------------------------------------
+# The PFAS `koc` above is a chain-length group contribution and says nothing about
+# a neutral molecule. For the neutral path the standard hydrophobic sorption QSPR
+# is Karickhoff (1981), Chemosphere 10:833-846, doi:10.1016/0045-6535(81)90083-7:
+#
+#     log Koc = 0.989 * log Kow - 0.346          (n=45 sorbates, r2 0.997)
+#
+# PROVISIONAL HERE, and the reason is specific: this repo has never scored it. The
+# neutral tables it ships either supply the exposure directly (hydroponic: Liu 2023,
+# Li 2019 RCF) or carry the paper's OWN measured isotherm (Kodesova 2019, Hwang
+# 2017), so nothing in `data_obs/` tests a predicted Koc. Li 2019's soil table does
+# say what is at stake: with EXPERIMENTAL K_om the model's root bias is +0.033, with
+# an ESTIMATED one +0.291 -- i.e. the estimated sorption term carries most of the
+# error. Use a measured Kd whenever one exists; treat this as a seed value.
+KOC_NEUTRAL_SLOPE = 0.989      # per log Kow   [karickhoff1981, provisional here]
+KOC_NEUTRAL_INTERCEPT = -0.346  # log10 L/kg   [karickhoff1981, provisional here]
+
+
+def koc_neutral(log_kow: float, *, log10: bool = False):
+    """Soil Koc [L/kg] of a NEUTRAL organic from log Kow (Karickhoff 1981).  [C3]
+
+    The neutral-path counterpart of `koc`, for the soil side only (pore-water
+    exposure: the HYDRUS Kd and the analytic flooded shape). PROVISIONAL -- see the
+    note above the constants: no table in this repo scores a predicted Koc, and Li
+    2019's soil half shows an estimated sorption term is where the error collects.
+    Prefer a measured Kd; this exists so the soil modes have a defensible default
+    instead of silently reusing the PFAS chain-length QSPR, which does not apply.
+    """
+    logK = KOC_NEUTRAL_INTERCEPT + KOC_NEUTRAL_SLOPE * np.asarray(log_kow, float)
+    return logK if log10 else np.power(10.0, logK)
+
+
 def koc_to_KF(Koc_LkG: float, f_oc: float, n: float = 1.0) -> float:
     """Freundlich capacity K_F from Koc and organic-carbon fraction f_oc.
 

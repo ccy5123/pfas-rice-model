@@ -278,10 +278,11 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, depth: float = 100.0,
 # ---------------------------------------------------------------------------
 # coupling: HYDRUS soil -> PlantInputs
 # ---------------------------------------------------------------------------
-def inputs_from_hydrus(congener_n_C: int, group: str = "PFCA", *, season: float = 120.0,
+def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season: float = 120.0,
                        Cwo_ref: float = 1.0, f_oc: float = 0.02,
                        qtp_from_hydrus: bool = True, area_per_hill_m2: float | None = None,
-                       n_t: int = 241, biomass: str = "oryza", **run_kw):
+                       n_t: int = 241, biomass: str = "oryza", Kd: float | None = None,
+                       **run_kw):
     """Build a :class:`PlantInputs` whose ``Cwo`` AND ``Q_TP`` come from a real
     HYDRUS-1D paddy run for the congener, with growth ``M`` from the selected
     ``biomass`` driver (ORYZA2000 by default; ``"growth_rice"`` for the logistic).
@@ -297,6 +298,11 @@ def inputs_from_hydrus(congener_n_C: int, group: str = "PFCA", *, season: float 
         paddy is unstressed and only diverges under soil-water limitation. If
         False, the measured ``forcing_rice.Q_TP`` is used directly (soil run uses
         the default gaussian potential transpiration).
+    Kd : pass a linear sorption coefficient [L/kg] directly instead of deriving it
+        from the PFAS chain-length Koc QSPR. This is what a NEUTRAL organic needs --
+        `paddy_kd` is a per-CF2 group contribution and has no meaning for one -- and
+        it is also the way in for a measured Kd. When given, ``congener_n_C``/``group``
+        are unused (and ``congener_n_C`` may be None).
     Returns (PlantInputs, PaddyResult).
     """
     from pfas_rice_plant_module_4pool_surf import PlantInputs
@@ -305,7 +311,11 @@ def inputs_from_hydrus(congener_n_C: int, group: str = "PFCA", *, season: float 
     if area_per_hill_m2 is None:
         area_per_hill_m2 = fr.AREA_PER_HILL_M2
 
-    Kd = paddy_kd(congener_n_C, group, f_oc)
+    if Kd is None:
+        if congener_n_C is None:
+            raise ValueError("give either congener_n_C (PFAS) or an explicit Kd [L/kg]")
+        Kd = paddy_kd(congener_n_C, group, f_oc)
+    Kd = float(Kd)
     # drive the soil run with the measured transpiration shape (mm/day -> cm/day)
     tpot_fn = (lambda d: fr.transpiration_mm_d(d, season) / 10.0) if qtp_from_hydrus else None
     res = run_paddy_hydrus(Kd, season=season, tpot_fn=tpot_fn, **run_kw)

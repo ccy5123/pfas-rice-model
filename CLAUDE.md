@@ -1157,13 +1157,43 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   test_fig_tang_tf_lipid_extra_series`, `test_model_api.py::test_estimate_exposure_bayesian_runs_under_the_selected_mechanism`.
   Verified in a headless Streamlit + Playwright drive of both views. `ui/` itself remains untested (no UI test layer).
 
+- **Neutral organics promoted to a COMPOUND CLASS in the app (this session; user request)**: the neutral path was
+  reachable only as an Expert-only *tab*, which made it a mini-app — no plant map, no exposure modes, no drivers, no
+  inverse, no downloads. That was a UI-architecture mistake, not a model limit: "which compound" is a **scenario input**.
+  The sidebar's `2 · Compound` now chooses the CLASS — curated congener · SMILES (both PFAS) · **Neutral organic
+  (log Kow)** — and `run_model` dispatches to `simulate_neutral`, so every downstream view works on a neutral compound.
+  This was cheap because `simulate_neutral` already returns the `simulate()` contract (`t/conc/baf/baf_final/straw/
+  straw_baf/Cwo/Qtp/M/season/cwo_ref`); only `B_k` (→ `K_PW`) and the PFAS-only `params` keys needed guarding.
+  What was ADDED to reach parity: (a) **`literature_params.koc_neutral`** — Karickhoff 1981 `log Koc = 0.989·log Kow
+  − 0.346`, the soil sorption a neutral needs (the PFAS chain-length Koc QSPR is a per-CF2 group contribution and does
+  not apply), wired into `cwo_profile_series(log_kow=|Koc=)`, `default_k_leach(Koc=)`, `hydrus_drivers(log_kow=|Kd=)`
+  and `soil_hydrus.inputs_from_hydrus(Kd=)`, and exposed as an EDITABLE `soil Koc` field. Flagged **PROVISIONAL** on a
+  specific ground: no table here scores a *predicted* Koc (the neutral tables either supply the exposure directly or
+  carry the paper's own isotherm), and Li 2019's soil half shows the stakes — bias +0.033 with an experimental `K_om`
+  vs +0.291 with an estimated one. (b) `simulate_neutral(cwo_profile=, cwo_kw=, Koc=)`, so the flooded/HYDRUS exposure
+  shapes work there. (c) `estimate_exposure_bayesian(log_kow=, neutral_kw=)` — the inverse with the neutral forward
+  model (recovers a known Cwᵒ to <1%). What is deliberately ABSENT for a neutral, rather than shown and ignored: `E_m`
+  and the `f_xy` source (at z=0 a membrane potential has nothing to act on and `f_xy` IS the computed TSCF), the PFAS
+  mechanism switches (the carrier exists to overcome anion exclusion; the lipid term is K_PL-gated on PFAS binding),
+  and the four PFAS-only tabs (Yamazaki bars, chain length, congener compare, Tang TF) — dropped, not blanked. The
+  headline swaps `eᴺ` (1 by construction) for **TSCF**, and a scope panel states in-UI: nothing fitted, a-priori 0.281
+  (Liu)/0.783 (Ge) — 0.206 for Liu on the equilibrium basis — grain UNTESTED, stem/leaf lipid still soybean, γ=0 makes
+  the leaf an upper bound (warning), and that this is a RICE model (another crop needs its own composition + drivers).
+  The old `🧪 Neutral organics` tab is REMOVED (its content is now the class + the scope panel). PFAS defaults are
+  untouched (`simulate("PFOA")` 0.478982/0.432189/0.147641; `default_k_leach("PFOA")` 0.05). Guards in
+  `test_li2019_schriever_tables.py` (Karickhoff coefficients + that it is not the PFAS QSPR; the soil-side plumbing +
+  a measured-Koc override; the neutral inverse). Verified end-to-end in a headless Streamlit + Playwright drive:
+  parametric, flooded, custom tables, soil inventory and a REAL live HYDRUS-1D run for a neutral (Kd = 2.39 L/kg from
+  its own Koc), plus the inverse.
+
 ## 7. Build & run
 - `pip install -r requirements.txt`
 - **Main reproduction**: `python reproduce_demo.py` (Yamazaki BAF, W2 fit, RMSE≈0.029);
   `--rec` uses the monotone f_xy. Rebuild params: `python build_parameters.py`.
 - **Visualization tool**: `pip install -r requirements-app.txt && streamlit run app.py`
   (plant/soil accumulation colormap + HYDRUS/soil/biomonitoring modes; the Expert sidebar's **⚙️ Mechanism**
-  expander switches `uptake` carrier/bypass + `lipid_loading`; see `docs/visualization_tool.md`).
+  expander switches `uptake` carrier/bypass + `lipid_loading`; `2 · Compound` switches the COMPOUND CLASS —
+  curated congener / SMILES / **neutral organic (log Kow)**; see `docs/visualization_tool.md`).
 - **Live HYDRUS-1D** (optional, for the "Run HYDRUS-1D (live)" mode): the FORTRAN source is now
   **VENDORED** under `external/hydrus_source/` (de-submoduled — the upstream `phydrus/source_code`
   submodule is unreachable behind restrictive network policies, and the compiled binary is not in
@@ -1200,6 +1230,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   structural checks alone — see `docs/neutral_dpu_validation.md`. In code:
   `model_api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0)` → the standard `simulate()` dict
   + `K_PW`/`TSCF`/`rcf_briggs` (first arg is a **log Kow**, not a congener; `drivers=`/`biomass=` as usual).
+  Soil-side for a neutral: `cwo_profile="flooded"` + `log_kow=`/`Koc=` (Koc from `literature_params.koc_neutral`,
+  Karickhoff 1981, PROVISIONAL — prefer a measured value), `hydrus_drivers(log_kow=…)` or `Kd=` for the live engine,
+  and `estimate_exposure_bayesian(log_kow=…, neutral_kw=…)` for the inverse. In the app: sidebar `2 · Compound` →
+  **Neutral organic (log Kow)** (all six exposure modes, map/dynamics/drivers, inverse and downloads follow).
 - **Weak electrolytes (acids/bases, not just strict neutrals)**: `model_api.simulate_neutral(2.45, pKa=4.5)` —
   `pKa=None` (default) is the strictly-neutral path and is bit-identical to before; a pKa routes through the
   `(f_n, f_d)` speciation pair instead (`is_acid=False` for a base, whose ion is a CATION and is ATTRACTED not

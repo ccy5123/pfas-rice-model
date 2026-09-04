@@ -119,6 +119,12 @@ BAF vs 관측/측정(탐색적 two-pool 및 뿌리+지상부 병합 모델 오�
 그리고 HYDRUS-1D 입출력 매핑·바이오모니터링 경로를 설명하는 **About** 탭. 사이드바 **⚙️ Mechanism** 확장에서
 열린 메커니즘 질문(뿌리 유입 `uptake`: carrier(기본, 배포 모델) vs 아포플라스트 우회, 그리고 지질 매개 적재)을
 켤 수 있습니다 — 둘 다 기본값은 배포 모델이며 `parameters.json`은 건드리지 않습니다.
+
+**PFAS가 아닌 물질은?** 사이드바 `2 · Compound`에서 **화합물 종류**를 고릅니다: 큐레이션된 PFAS congener ·
+SMILES로 주는 임의의 PFAS 구조 · **log Kow로 주는 중성(비이온성) 유기물**(같은 ODE를 `z=0`으로 푸는 Briggs/Kow
+기저 — 음이온 배제 없음, carrier 없음, 아무것도 적합되지 않음; `pKa`를 주면 약산/약염기). 중성 종류를 고르면
+지도·동역학·6개 노출 모드(실제 HYDRUS-1D 포함)·베이지안 역추정·다운로드가 모두 그 물질로 동작하고, PFAS 전용
+레버와 탭은 무시가 아니라 사라집니다. 자세히는 `docs/visualization_tool.md`.
 계산은 `src/model_api.py`(`simulate(...)`, 토양/드라이버/바이오모니터링 헬퍼), Plotly 그림은 `src/plots.py`
 (`fig_plant_schematic` …) — 둘 다 UI 비의존이며 테스트로 커버됩니다. 바로 불러올 예시는 `examples/`에 있습니다.
 전체 가이드: `docs/visualization_tool.md`.

@@ -130,7 +130,14 @@ the out-of-sample lipid-loading series), the **Bayesian inverse**, the **neutral
 path, and an **About** tab documenting the HYDRUS-1D input/output mapping and the biomonitoring
 path. A sidebar **⚙️ Mechanism** expander switches the open mechanism questions — root entry
 (`uptake`: carrier, the shipped default, vs apoplastic bypass) and lipid-facilitated loading —
-both default to the shipped model and neither touches `parameters.json`. Compute is in `src/model_api.py` (`simulate(...)`, soil/driver/biomonitoring helpers);
+both default to the shipped model and neither touches `parameters.json`.
+
+**Not PFAS?** The sidebar's `2 · Compound` chooses the compound **class**: a curated PFAS
+congener, any PFAS structure by SMILES, or a **neutral organic given by its log Kow** — the
+Briggs/Kow base on the same ODE with `z = 0` (no anion exclusion, no carrier, nothing fitted;
+`pKa` turns it into a weak acid/base). The neutral class drives the whole app — map, dynamics,
+all six exposure modes incl. live HYDRUS-1D, the Bayesian inverse, downloads — while the
+PFAS-only levers and tabs are dropped rather than shown inert. See `docs/visualization_tool.md`. Compute is in `src/model_api.py` (`simulate(...)`, soil/driver/biomonitoring helpers);
 the Plotly figures in `src/plots.py` (`fig_plant_schematic`, …) — both UI-agnostic and
 covered by the tests. Ready-to-load examples are in `examples/`. Full guide:
 `docs/visualization_tool.md`.

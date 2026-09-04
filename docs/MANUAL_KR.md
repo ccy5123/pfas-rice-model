@@ -138,9 +138,11 @@ PFSA C4/C6/C8: PFBS·PFHxS·PFOS, 에터 PFAS: GenX)이며, 전문가 모드에�
 | **Soil inventory → pore water** | 총 토양 적재량을 Freundlich로 역산 | 측정 | 총 토양 PFAS만 알 때 |
 | **Biomonitoring (measured tissue)** | 측정 토양수 값 | 불필요 | 현장 조직+물 농도가 있을 때 |
 
-### 5.2 화합물 지정 (2 · PFAS compound)
-- **Curated congener**: 13종 중 선택(보정된 측정·문헌 파라미터 사용).
+### 5.2 화합물 종류 (2 · Compound)
+"어떤 물질이냐"는 결과 화면이 아니라 **시나리오 입력**이므로 사이드바에서 고릅니다. 세 종류:
+- **Curated congener**: PFAS 13종 중 선택(보정된 측정·문헌 파라미터 사용).
 - **SMILES (structure)**: 임의의 PFAS 구조를 붙여넣기 → RDKit이 구조 기술자 추출 → (1) 선별 congener와 일치하면 **read-across**, (2) 신규 구조면 **QSPR**(provisional)로 파라미터화. 2-D 구조도 미리보기. (`docs/structure_input.md`)
+- **Neutral organic (log Kow)**: **PFAS가 아닌 중성(비이온성) 물질** — 같은 4구획 ODE를 `z=0`으로 푸는 Briggs/Kow 기저(GHK→1, `eᴺ` 107→1, carrier 꺼짐, **아무것도 적합되지 않음**). 필수 입력은 **log Kow 하나**이고, 이어서 이름·체내 반감기·TSCF QSPR과 두 개의 확장(*Composition, phloem, air*: `lipid_source`·phloem·대기 교환(MW/`K_AW`), *Weak electrolyte + apoplastic bypass*: `pKa`/산·염기/pH → `f_n` 표시, `g_apo`), 그리고 토양 모드용 **soil Koc**(Karickhoff 기본값, PROVISIONAL, 수정 가능)를 받습니다. 지도·동역학·드라이버·6개 노출 모드·역추정·다운로드가 전부 동작하며, PFAS 전용 레버(`E_m`, `f_xy` 선택, 메커니즘 스위치)와 PFAS 전용 4개 탭은 **무시가 아니라 아예 표시되지 않고**, 헤드라인은 `eᴺ` 대신 **TSCF**를 보여줍니다.
 
 ### 5.3 모델 파라미터(사이드바)
 - **E_m [mV]** (root membrane potential): GHK 음이온 배제 레버(벼 −116…−140 mV). 음전위가 셀수록 음이온 흡수가 억제됨.
@@ -160,7 +162,7 @@ PFSA C4/C6/C8: PFBS·PFHxS·PFOS, 에터 PFAS: GenX)이며, 전문가 모드에�
 - **Soil inventory**: `Total soil inventory [µg/kg dry]`, Freundlich `K_F`/`n`/`θ_g`, flooded 여부, `k_leach`.
 - **Biomonitoring**: 수동 입력(root/straw/grain conc + Cwᵒ) 또는 CSV.
 
-### 5.5 전문가 탭(10개)
+### 5.5 전문가 탭(PFAS 9개 · 중성 물질 5개)
 1. **🗺️ Plant & soil map** — 축적 지도(concentration/BAF 토글, day 슬라이더/animate).
 2. **📈 Tissue dynamics** — 조직 농도 C_k(t) + **PFAS 질량(burden) C_k·M_k**. B_k/f_xy/L_Ph/κ_d 표시. 낟알 formation-gate 설명.
 3. **🟫 Soil & drivers** — 실제 사용된 Cwᵒ(t)·Q_TP(t)·M(t) 드라이버, (소일-인벤토리면) 등온선, 토양 프로파일.
@@ -169,8 +171,9 @@ PFSA C4/C6/C8: PFBS·PFHxS·PFOS, 에터 PFAS: GenX)이며, 전문가 모드에�
 6. **⚖️ Compare congeners** — 사이드바에서 고른 여러 congener의 조직별 BAF 비교.
 7. **✅ Tang TF (OOS)** — Tang 2026 per-organ TF(out-of-sample) 검증(PFOA/PFOS/GenX, dw 기준, f_xy refit 비교). **lipid loading (OOS)** 체크박스로 세 번째 계열 추가 — 초록(refit)은 이 측정에 맞춘 것이고 보라(지질)는 Yamazaki에서 적합한 상수를 그대로 옮긴 **예측**인데 같은 자리에 떨어집니다(0.516 vs 0.519).
 8. **🔎 Inverse (Bayesian)** — 조직 농도 → 노출 Cwᵒ 역추정(식별성 caveat 포함) → [6.1](#61-거꾸로-추정-베이지안-역추정).
-9. **🧪 Neutral organics** — 중성 유기물(Briggs/Kow) 경로: `z=0`인 동일 ODE(GHK→1, eᴺ 107→1, carrier off). 입력은 congener가 아니라 **log Kow** + 반감기 + TSCF QSPR + 뿌리 지질 기준(`lipid_source`) + 선택형 phloem/대기 교환. **아무것도 적합되지 않음**(a-priori). ⚗️ 확장에서 **약전해질(pKa)** — 중성 분자이면서 동시에 이온인 경우(`(f_n, f_d)` 화학종 분배; 염기의 이온은 **양이온이라 배제가 아니라 끌려 들어옴**) — 과 **아포플라스트 우회 `g_apo`**를 켤 수 있습니다. 검증 상태는 UI에 명시: **방향은 지지, 크기는 반증**(Schriever 67행; Spearman +0.480, 순위상관 +0.284→+0.520, 편향 −0.203).
-10. **ℹ️ About / coupling** — 6개 모드 설명, HYDRUS-1D 입출력 매핑, 용어집.
+9. **ℹ️ About / coupling** — 6개 모드 설명, HYDRUS-1D 입출력 매핑, 용어집.
+
+탭 **4–7**(BAF vs observed · 사슬 길이 추세 · congener 비교 · Tang TF)은 PFAS 전용이라 중성 물질에서는 **표시되지 않습니다** — Yamazaki 막대·사슬 길이 계열·congener 비교·Tang 기관별 검증은 모두 PFAS 계열에 대한 진술이고 중성 물질에는 대응물이 없습니다. 따라서 중성 물질 실행은 지도·조직 동역학·토양&드라이버·역추정·About의 5개 탭이 됩니다.
 
 ---
 
