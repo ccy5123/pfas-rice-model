@@ -17,9 +17,11 @@ Two audiences, one app
 ----------------------
 * **Simple mode** (default) — plain language, one chemical + one contamination
   level → a clear picture of where the PFAS goes. No jargon, no expert sliders.
-* **Expert / advanced** (sidebar toggle) — restores the full research UI: five
-  exposure modes (parametric, HYDRUS/CSV, live HYDRUS-1D, soil inventory,
-  biomonitoring), SMILES structure input, and every model parameter.
+* **Expert / advanced** (sidebar toggle) — restores the full research UI: six
+  exposure modes (parametric, custom tables, HYDRUS/CSV, live HYDRUS-1D, soil
+  inventory, biomonitoring), SMILES structure input, the opt-in mechanism
+  switches (carrier vs apoplastic bypass, lipid-facilitated loading), the
+  neutral / weak-electrolyte path, and every model parameter.
 
 Compute lives in src/model_api.py; the Plotly builders in src/plots.py (both
 UI-agnostic and unit-tested head-less).  See docs/visualization_tool.md.

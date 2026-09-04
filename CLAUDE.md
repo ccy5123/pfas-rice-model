@@ -1133,13 +1133,37 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   its signal — an empirical claim was over-stated — would be buried in a ~22-min run). RDKit/phydrus come from
   `requirements.txt` and are NOT best-effort, since that file is what Streamlit Cloud installs; only emcee, the gfortran
   HYDRUS-1D build and sci-adk are, and `-rs` prints skip reasons so a silently shrinking suite stays visible.
+- **App↔science parity audit + the four PRs the UI had missed (this session)**: an audit against the app found the last
+  UI-touching commit was `f5e5593`, so **everything in PR #60–#63 was reachable only from the API** — and one of those,
+  the K_PL-gated **lipid loading**, is the repo's single strongest cross-dataset result. Surfaced, all as opt-in named
+  modes with the shipped model as the default (`parameters.json`, `simulate()` defaults and `reproduce_demo` 0.029
+  UNCHANGED): (a) a sidebar **⚙️ Mechanism** expander carrying `uptake="carrier"|"bypass"` (with the "by default, NOT by
+  evidence" verdict in its own help text), `lipid_loading`, and the `Vmax ×`/`Km ×`/`g_apo` entry-constant overrides —
+  all threaded through `run_model`'s `sim_kw`, so they reach every tab, the congener comparison AND the Bayesian
+  inverse; a **banner next to the headline metrics** whenever one is on, since the expander is collapsed and the run
+  would otherwise read as the shipped one. (b) the **Tang tab's `lipid loading (OOS)` series** (`plots.fig_tang_tf`
+  gained `val_extra`) — the honest counterpart to the refit bar: the green refit was calibrated ON those measurements,
+  the purple lipid run was calibrated on Yamazaki and transferred untouched, and lands in the same place (0.516 vs
+  0.519; PFOS stalk 0.013 → 0.620 vs Tang 0.571). (c) **weak electrolytes** in the neutral tab (`pKa`/`is_acid`/`pH`,
+  printing `f_n` and which way the ion is pushed) plus **`g_apo`**, both carrying the tested BOUNDS in-UI (direction
+  supported, magnitude refuted). (d) the **merged two-pool root + redistributed shoot** as a second BAF overlay
+  (`simulate_twopool_nstem`). `estimate_exposure_bayesian` gained a `**sim_kw` pass-through so the inverse can never
+  silently run a different model than the forward tabs. **Doc-truth fixes the audit turned up**, in the app text and
+  the docs: the neutral tab still called Brunetti 2021's `K_RW`=13.3 an open question against the partition core
+  (superseded — Kodešová 2019 measures the same compound at 1.10, so Brunetti is ~12× above a direct measurement and
+  the deficit is confined to log Kow ≳ 3), still called the root lipid a soybean value (the ROOT is now corroborated by
+  measured cereal roots; stem/leaf remain Trapp's soybean), said "five ways to drive the model" when there are six, and
+  told users to `git submodule update --init` a source tree that is now VENDORED. Guards: `test_plots.py::
+  test_fig_tang_tf_lipid_extra_series`, `test_model_api.py::test_estimate_exposure_bayesian_runs_under_the_selected_mechanism`.
+  Verified in a headless Streamlit + Playwright drive of both views. `ui/` itself remains untested (no UI test layer).
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
 - **Main reproduction**: `python reproduce_demo.py` (Yamazaki BAF, W2 fit, RMSE≈0.029);
   `--rec` uses the monotone f_xy. Rebuild params: `python build_parameters.py`.
 - **Visualization tool**: `pip install -r requirements-app.txt && streamlit run app.py`
-  (plant/soil accumulation colormap + HYDRUS/soil/biomonitoring modes; see `docs/visualization_tool.md`).
+  (plant/soil accumulation colormap + HYDRUS/soil/biomonitoring modes; the Expert sidebar's **⚙️ Mechanism**
+  expander switches `uptake` carrier/bypass + `lipid_loading`; see `docs/visualization_tool.md`).
 - **Live HYDRUS-1D** (optional, for the "Run HYDRUS-1D (live)" mode): the FORTRAN source is now
   **VENDORED** under `external/hydrus_source/` (de-submoduled — the upstream `phydrus/source_code`
   submodule is unreachable behind restrictive network policies, and the compiled binary is not in
@@ -1180,8 +1204,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `pKa=None` (default) is the strictly-neutral path and is bit-identical to before; a pKa routes through the
   `(f_n, f_d)` speciation pair instead (`is_acid=False` for a base, whose ion is a CATION and is ATTRACTED not
   excluded; `pH=` sets the root-zone split; add `phloem=True` for the leaf→sieve-tube pH ion trap). Helpers:
-  `literature_params.speciation` / `ion_trap_factor` / `neutral_pathway_ratio`. NOT validated against data —
-  no measured weak-electrolyte rice dataset exists here.
+  `literature_params.speciation` / `ion_trap_factor` / `neutral_pathway_ratio`. BOUNDED by its own test (§6,
+  `validation/weak_electrolyte_tscf.py`): direction SUPPORTED, magnitude REFUTED — use it for the direction of a
+  speciation effect, not its size, and not below `f_n≈0.1`. Still no measured weak-electrolyte RICE dataset (the
+  67-row test table is 16 species, none of them rice). In the app: the Neutral tab's ⚗️ expander (with `g_apo`).
 - **Root-lipid anchor, both readings side by side**: `python validation/neutral_dpu_validation.py --lipid-source both`
   (all 5 shipped tables under `"measured"` vs `"briggs_anchor"`; add `--mode equilibrium` for the appropriate basis on
   the root tables, `--obs <table>` to restrict it to one). Single alternative run: `--lipid-source briggs_anchor --obs …`.

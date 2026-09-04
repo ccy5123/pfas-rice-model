@@ -150,8 +150,10 @@ cannot be expressed by one valence. That is the `(fn, fd)`-weighted `root_uptake
 base is a cation), `Compound.pKa/is_acid/z/P_n`, `Compartment.pH`, the phloem pH ion
 trap, and the `literature_params` speciation helpers. Reachable as
 `simulate_neutral(logKow, pKa=…)`. Verified bit-identical (67 floats, exact `==`,
-PFAS and neutral). **NOT validated** — no measured weak-electrolyte rice dataset
-exists here. What was left on the closed branches, and is worth a focused change if
+PFAS and neutral). ~~**NOT validated**~~ — **superseded: it has since been tested**
+(`validation/weak_electrolyte_tscf.py`, docs §4l) and is now **BOUNDED** — direction
+supported, magnitude refuted — and reachable in the app (Neutral tab → ⚗️ expander).
+Still no measured weak-electrolyte *rice* dataset; the 67-row test table is 16 other species. What was left on the closed branches, and is worth a focused change if
 wanted: the `f_lip` vs `f_PL` distinction (galactolipid, not phospholipid, in the
 leaf), the SMILES `compound_class` switch, and the soil `K_oc` neutral branch.
 

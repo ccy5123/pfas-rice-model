@@ -981,8 +981,15 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
         is ATTRACTED by the inside-negative membrane rather than excluded. Turning
         `phloem=True` on as well activates the leaf->sieve-tube pH ion trap, the
         textbook mechanism for phloem-mobile acidic herbicides.
-        NOT VALIDATED: no measured weak-electrolyte rice dataset exists in this
-        repo, so this is structural capability, not a predictive claim.
+        TESTED, and BOUNDED by that test (validation/weak_electrolyte_tscf.py, docs
+        section 4l): on Schriever 2020's 67 ionisable TSCF rows the DIRECTION is
+        supported -- measured transfer rises with f_n (Spearman +0.480) and turning
+        speciation on nearly doubles the model's rank correlation (+0.284 -> +0.520)
+        -- but the MAGNITUDE is refuted: the influx conductance moves ~1.6e4-fold
+        where the measurements move ~3-fold, so it under-delivers (bias -0.203) and
+        predicts ~nothing below f_n ~ 1e-3. Use it for the direction of a speciation
+        effect, not its size. Still no measured weak-electrolyte RICE dataset (that
+        table is 16 species, none of them rice).
     drivers / biomass / measured_forcing : exactly as `simulate()`.
     """
     import neutral_dpu as ND
@@ -1345,7 +1352,7 @@ _ESTIMATE_MAX_SOLVES = 8
 def estimate_exposure_bayesian(congener, measured_conc, *, sigma_log10=0.15,
                                season=120.0, E_m_mV=-120.0, f_xy_source="recommended",
                                biomass="oryza", measured_forcing=True, n_plot=121,
-                               progress=None):
+                               progress=None, **sim_kw):
     """Bayesian estimate of the soil-water contamination level Cwᵒ [µg/L] that best
     explains measured rice tissue concentrations.
 
@@ -1361,6 +1368,10 @@ def estimate_exposure_bayesian(congener, measured_conc, *, sigma_log10=0.15,
     log-likelihood at the MAP. Only the EXPOSURE level is estimated; transport is
     held at the model defaults (this is the well-posed direction -- separating
     water-uptake vs root->shoot loading needs an independent measurement).
+
+    Extra keyword args (`uptake`, `lipid_loading`, `km_scale`, ...) pass straight to
+    `simulate`, so the inverse is run under the SAME mechanism as the forward model
+    rather than silently falling back to the shipped one.
 
     `progress`, if given, is called as progress(done, total) after each ODE solve
     (done = solves so far, total = `_ESTIMATE_MAX_SOLVES`) so a UI can show a live
@@ -1384,7 +1395,7 @@ def estimate_exposure_bayesian(congener, measured_conc, *, sigma_log10=0.15,
         n_eval[0] += 1
         r = simulate(congener, Cwo=float(Cwo), season=season, E_m_mV=E_m_mV,
                      f_xy_source=f_xy_source, biomass=biomass,
-                     measured_forcing=measured_forcing)
+                     measured_forcing=measured_forcing, **sim_kw)
         if progress is not None:
             try:
                 progress(min(n_eval[0], _ESTIMATE_MAX_SOLVES), _ESTIMATE_MAX_SOLVES)

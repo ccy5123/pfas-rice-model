@@ -20,7 +20,7 @@ def build():
         expert = st.toggle(
             "🔬 전문가/고급 모드 (Expert / advanced)", value=False,
             help="끄면(기본): 쉬운 한국어 화면 (화학물질 + 오염 수준만 선택). "
-                 "켜면: 전체 연구용 인터페이스(영어) — 5가지 노출 모드, SMILES 구조 입력, 모든 모델 파라미터.")
+                 "켜면: 전체 연구용 인터페이스(영어) — 6가지 노출 모드, SMILES 구조 입력, 메커니즘 스위치, 모든 모델 파라미터.")
 
         # ---- shared scenario defaults (Simple mode uses these as-is) ----
         drivers = None
@@ -37,6 +37,11 @@ def build():
         E_m = -120
         fxy_source = "recommended"
         biomass = "oryza"
+        uptake = api.DEFAULT_UPTAKE
+        lipid_loading = False
+        vmax_scale = None
+        g_apo = None
+        km_scale = 1.0
         compare = []
         preset_label = None
         preset_word = None
@@ -134,6 +139,55 @@ def build():
                                      "when the scenario uses built-in forcings (ignored if a driver CSV supplies M).")
             biomass = "oryza" if bm_label.startswith("ORYZA2000") else "growth_rice"
 
+            # ---- mechanism switches: both are OPEN questions, so they are named
+            # modes with the shipped model as the default, never silent constants.
+            with st.expander("⚙️ Mechanism (advanced)"):
+                up_label = st.radio(
+                    "Root entry", ["carrier (default — shipped)", "bypass (apoplastic)"],
+                    help="How the anion gets past the inside-negative membrane. The "
+                         "Michaelis–Menten CARRIER is this repo's one addition to the Trapp "
+                         "cell model — and it keeps its place by DEFAULT, NOT BY EVIDENCE: "
+                         "on Yamazaki the carrier (1.035) and a single global apoplastic "
+                         "bypass g_apo=20 (0.996) are indistinguishable (bootstrap 0.749), "
+                         "while adding nothing at all fails (2.640). See "
+                         "validation/carrier_vs_bypass.py.")
+                uptake = "carrier" if up_label.startswith("carrier") else "bypass"
+                lipid_loading = st.checkbox(
+                    "Lipid-facilitated loading (K_PL-gated)", value=False,
+                    help="Adds the B-independent bound-loading term g_xy·C / g_ph·C: the free "
+                         "anion Cw=C/B starves high-binding long chains, but the membrane-lipid-"
+                         "bound pool still rides the transpiration stream. Constants were fit on "
+                         "YAMAZAKI, so transferring them is genuine out-of-sample — and it is the "
+                         "repo's strongest cross-dataset result (Tang per-organ 1.232→0.516; best "
+                         "on Kim 2019 grain too). EXPLORATORY, default off. NOTE it supplies its "
+                         "own f_xy, so the 'Root→shoot f_xy' choice above is ignored while it is on.")
+                st.caption("Both default to the shipped model; turning either on changes every "
+                           "tab (map, dynamics, BAF), never `parameters.json`.")
+                adv = st.checkbox("Override the entry constants", value=False,
+                                  help="Scan levers from validation/carrier_vs_bypass.py and "
+                                       "validation/dose_series_carrier.py. Leave off to use the "
+                                       "mode's own values.")
+                if adv:
+                    vmax_scale = st.number_input(
+                        "Vmax ×", 0.0, 100.0, float(api.UPTAKE_MODES[uptake]["vmax_scale"]), 0.5,
+                        # key includes the mode so switching carrier<->bypass RESEEDS the
+                        # override with that mode's own value instead of keeping a stale one
+                        key=f"vmax_scale_{uptake}",
+                        help="Carrier capacity multiplier (0 = carrier off). The long-chain work "
+                             "needed ~5× for PFDoDA and that enhancement is NOT QSPR-able (LC6).")
+                    km_scale = st.number_input(
+                        "Km ×", 0.01, 1000.0, 1.0, 1.0,
+                        help="Half-saturation multiplier — the model's ONLY nonlinearity in "
+                             "exposure. Tang's 5-dose series needs Km ≥ 500 µg/L (100× the fitted "
+                             "5) to be as flat as measured, i.e. linear over the whole span, which "
+                             "IS the bypass's functional form (validation/dose_series_carrier.py).")
+                    g_apo = st.number_input(
+                        "g_apo  [L/kg/d]", 0.0, 100.0, float(api.UPTAKE_MODES[uptake]["g_apo"]), 0.5,
+                        key=f"g_apo_{uptake}",
+                        help="Apoplastic bypass: a route AROUND the membrane, so it feels neither "
+                             "speciation nor the GHK factor. 0 = structurally absent (the default; "
+                             "nothing is adopted).")
+
             st.header("3 · Scenario")
             if mode == "Model (parametric)":
                 Cwo_const = st.number_input("Pore-water Cwᵒ  [µg/L]", min_value=0.0, value=1.0, step=0.1,
@@ -213,8 +267,9 @@ def build():
                             st.error("Build failed — details below.")
                             st.code("\n".join(blog))
                     st.caption("On **Streamlit Cloud** the build uses `packages.txt` (gfortran/make, bundled) + "
-                               "`phydrus` (requirements.txt). Locally: `git submodule update --init "
-                               "external/hydrus_source`, `make` in `source/`, `pip install phydrus`. "
+                               "`phydrus` (requirements.txt). Locally the FORTRAN source is VENDORED in the "
+                               "repo (no submodule to init): copy `external/hydrus_source/makefile` into "
+                               "`source/`, run `make` there (gfortran), `pip install phydrus`. "
                                "Until built, the tool falls back to the parametric model.")
                 elif smiles and soil_cong is None:
                     st.error("Could not parse the SMILES for the HYDRUS soil run — check the structure "
@@ -306,6 +361,11 @@ def build():
     cfg.E_m = E_m
     cfg.fxy_source = fxy_source
     cfg.biomass = biomass
+    cfg.uptake = uptake
+    cfg.lipid_loading = lipid_loading
+    cfg.vmax_scale = vmax_scale
+    cfg.g_apo = g_apo
+    cfg.km_scale = km_scale
     cfg.compare = compare
     cfg.preset_label = preset_label
     cfg.preset_word = preset_word

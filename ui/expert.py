@@ -7,7 +7,8 @@ import plots
 import plot_svg
 
 from ui.common import (_nearest_index, _simulate, _drivers_tuple, _simulate_twopool_seq,
-                       _render_inverse_estimator, _glossary_md, _png_bytes, _html_bytes)
+                       _simulate_twopool_nstem, _render_inverse_estimator, _glossary_md,
+                       _png_bytes, _html_bytes)
 
 
 def render(cfg):
@@ -34,8 +35,18 @@ def render(cfg):
     fxy_source = cfg.fxy_source
     biomass = cfg.biomass
     measured_bio = cfg.measured_bio
+    uptake = getattr(cfg, "uptake", api.DEFAULT_UPTAKE)
+    lipid_loading = bool(getattr(cfg, "lipid_loading", False))
     # ---------------------------------------------------------------- headline metrics
+    # A non-default mechanism has to be visible next to the numbers it moved -- the
+    # sidebar expander is collapsed, so the run would otherwise look like the shipped one.
+    _mech = ([] if uptake == api.DEFAULT_UPTAKE else [f"uptake: **{uptake}**"]) + \
+            (["**lipid loading ON**"] if lipid_loading else [])
     st.subheader(f"{congener}  (C{p['n_C']} {p['group']})  ·  source: {mode}")
+    if _mech:
+        st.warning("Non-default mechanism — " + " · ".join(_mech) +
+                   ". These are EXPLORATORY switches (sidebar → ⚙️ Mechanism); every number "
+                   "on this screen moves with them, and neither is the shipped calibration.")
     c1, c2, c3, c4 = st.columns(4)
     for col, tis in zip((c1, c2, c3), ("root", "straw", "grain")):
         pred = res["straw_baf"] if tis == "straw" else res["baf_final"][tis]
@@ -146,17 +157,37 @@ def render(cfg):
         else:
             extra = None
             if spec == "Curated congener" and congener is not None:
-                show_tp = st.checkbox(
+                ov1, ov2 = st.columns(2)
+                show_tp = ov1.checkbox(
                     "Overlay the two-pool (seq) model — EXPLORATORY", value=True,
                     help="The sequestration two-pool root model (model_api.simulate_twopool_seq; "
                          "docs/twopool_root_exploration.md): a mobile pool + an irreversible non-K_PL "
                          "k_seq sink. Shown at its calibrated operating point (Cwo=1, season≈120, demo "
                          "forcings) so it is comparable to the fixed Yamazaki bars. In-sample / opt-in; "
                          "parameters.json and the canonical core are unchanged.")
+                show_mg = ov2.checkbox(
+                    "…and the MERGED root+shoot model", value=False,
+                    help="The structural merge (model_api.simulate_twopool_nstem): the same two-pool "
+                         "sequestration ROOT driving the redistributed N-stem+leaf SHOOT, instead of "
+                         "the 4-pool pass-through stem. Swapping the whole shoot costs only ~0.04 log "
+                         "on Yamazaki (root RMSE unchanged) — the root mechanism is separable — and it "
+                         "fixes the two-pool's Tang stalk collapse (per-organ OOS 1.398→0.801). "
+                         "EXPLORATORY, same calibrated operating point.")
+                over = {}
                 if show_tp:
                     tp = _simulate_twopool_seq(congener)
                     if tp is not None:
-                        extra = {"two-pool (seq, exploratory)": tp}
+                        over["two-pool (seq, exploratory)"] = tp
+                if show_mg:
+                    mg = _simulate_twopool_nstem(congener)
+                    if mg is not None:
+                        over["two-pool + redistributed shoot (merged)"] = mg
+                extra = over or None
+            if lipid_loading:
+                st.info("**Lipid-facilitated loading is ON**, so the blue 'core' bar is the "
+                        "K_PL-gated mechanism, not the shipped free-anion model. It is the repo's "
+                        "strongest out-of-sample result elsewhere (Tang, Kim), but against these "
+                        "Yamazaki bars it is *in-sample* — its constants were fit on them.")
             # The overlay is an optional EXPLORATORY nicety -- never let it crash the BAF
             # tab (e.g. a stale/old plots.py without the `extra` param right after a deploy,
             # before the module cache refreshes). Fall back to the plain core-vs-observed plot.
@@ -171,9 +202,11 @@ def render(cfg):
                            "long-chain **root** BAF and the PFOS/PFUnDA split the single-pool core misses, while "
                            "keeping the monotone physical f_xy — overall log10 RMSE 0.251. Run at its calibrated "
                            "point, so it does **not** track the sidebar f_xy/Cwᵒ/biomass (unlike the 4-pool core "
-                           "bar). The *carrier* two-pool (`close_longchain_2pool`, saturated DOF-0 closure) is "
-                           "API-only — it reproduces the observed bars by construction and is too slow (~1 min) to "
-                           "render live.")
+                           "bar). The **merged** overlay is that same root driving the redistributed shoot "
+                           "instead of the pass-through stem (Yamazaki 0.301 vs 0.278 — the shoot swap costs "
+                           "~0.04 log, so the root mechanism is separable). The *carrier* two-pool "
+                           "(`close_longchain_2pool`, saturated DOF-0 closure) is API-only — it reproduces the "
+                           "observed bars by construction and is too slow (~1 min) to render live.")
             if not obs:
                 st.info("No Yamazaki BAF for this congener (model prediction only).")
             else:
@@ -236,15 +269,34 @@ def render(cfg):
             st.info(f"Tang 2026 covers **{', '.join(api.TANG_CONGENERS)}** only — "
                     "pick one of these curated congeners (sidebar) to see the comparison.")
         else:
-            c1, c2 = st.columns(2)
+            c1, c2, c3 = st.columns([2, 1, 1])
             dose = ("low" if c1.radio("Tang dose", ["across-dose mean", "0.1 µg/g (env-closest)"],
                                       horizontal=True).startswith("0.1") else "mean")
             bm = ("oryza" if c2.checkbox("ORYZA biomass driver", value=False,
                                          help="Drive the shoot model with the mechanistic ORYZA2000 "
                                               "biomass instead of the logistic (slower).") else "growth_rice")
+            show_lipid = c3.checkbox(
+                "lipid loading (OOS)", value=False,
+                help="Turn on the K_PL-gated lipid-facilitated loading. Its constants were fit on "
+                     "YAMAZAKI and nothing here is re-fit to Tang, so this is a genuine "
+                     "out-of-sample prediction — and it is the one that works: Tang per-organ "
+                     "log10 RMSE 1.232 (free anion) → 0.516, matching the in-sample Tang refit "
+                     "(0.519). See validation/oos_tang_lipid.py.")
             val = api.tang_tf_validation(congener, dose=dose, biomass=bm)
             valr = api.tang_tf_validation(congener, dose=dose, biomass=bm, use_refit=True)
-            st.plotly_chart(plots.fig_tang_tf(val, valr), width="stretch")
+            vall = (api.tang_tf_validation(congener, dose=dose, biomass=bm, lipid_loading=True)
+                    if show_lipid else None)
+            st.plotly_chart(plots.fig_tang_tf(val, valr, vall), width="stretch")
+            if vall is not None:
+                st.success(
+                    "**The purple bars are a prediction, not a fit.** The green refit bars were "
+                    "calibrated ON these measurements; the lipid mechanism was calibrated on "
+                    "Yamazaki and transferred here untouched, yet lands in the same place "
+                    "(0.516 vs 0.519 across Tang's three congeners). The dominant free-anion "
+                    "failure — PFOS, the high-K_PL sulfonate, ~40–200× under — is fixed at the "
+                    "mechanism level "
+                    "(stalk 0.013 → 0.620 vs Tang 0.571). Residuals it does NOT fix: GenX "
+                    "(provisional ether f_xy) and the PFOS endosperm (~5× under).")
             _verdict = {"GenX": "GenX over-predicted ~12× by the provisional 0.233; the refit ≈ the documented 0.013.",
                         "PFOS": "PFOS is **dataset-dependent** — Yamazaki W2 0.142 vs Tang ~0.32; report the **range with conditions**, not one value.",
                         "PFOA": "PFOA f_xy is dose-sensitive (0.064 across-dose mean → 0.097 at 0.1 µg/g)."}[congener]
@@ -265,8 +317,12 @@ def render(cfg):
                     "tissue concentrations (Laplace posterior in log Cwᵒ; the well-posed "
                     "direction of `validation/bayesian_inverse_demo.py`). Transport is held at "
                     "the sidebar defaults.")
-        _render_inverse_estimator(congener, E_m_mV=E_m, f_xy_source=fxy_source,
-                                  biomass=biomass, key="inv_expert", simple=False)
+        _render_inverse_estimator(
+            congener, E_m_mV=E_m, f_xy_source=fxy_source, biomass=biomass,
+            key="inv_expert", simple=False,
+            # run the inverse under the SAME mechanism as every forward tab
+            mech={k: v for k, v in sim_kw.items()
+                  if k not in ("E_m_mV", "f_xy_source", "biomass")})
         st.caption("Identifiability: only the EXPOSURE level is estimated here. From tissue data "
                    "alone Q_TP·f_xy is a product ridge and Cwᵒ vs root-uptake conductance is "
                    "degenerate, so pinning transport absolutely needs an independent measurement "
@@ -290,7 +346,10 @@ def render(cfg):
             "QSPRs, so this is the one setting where the DPU *backbone* is exposed without the "
             "fitted PFAS transport (`f_xy`, `k_seq`, the lipid conductances) behind it. "
             "A-priori vs measured rice: **log10 RMSE 0.281** root partition (Liu 2023, 14 compounds) "
-            "and **0.783** per-organ TF (Ge 2017) — see `docs/neutral_dpu_validation.md`.")
+            "and **0.783** per-organ TF (Ge 2017) — see `docs/neutral_dpu_validation.md`. "
+            "(Both are on the season-ODE basis this tab runs. The root tables measure an "
+            "*equilibrium*, and scoring them as one puts Liu at **0.206** — the repo's best "
+            "a-priori result — and Kodešová 2019 at 0.237.)")
 
         n1, n2, n3 = st.columns(3)
         n_logkow = n1.number_input("log Kow", value=2.45, min_value=-2.0, max_value=8.0, step=0.05,
@@ -338,12 +397,54 @@ def render(cfg):
                                     help="0 = clean air, i.e. volatilisation only.")
             air_kw = dict(C_air=float(c_air))
 
+        # ---- weak electrolyte: neither strictly neutral nor a permanent anion ----
+        # A pKa cannot be expressed by the z=0 trick (one valence must be 0 or -1),
+        # so it routes through the (f_n, f_d) speciation pair instead.
+        n_pka, n_acid, n_ph, n_gapo = None, True, 6.5, 0.0
+        with st.expander("⚗️ Weak electrolyte (pKa) + apoplastic bypass"):
+            we = st.checkbox("this compound is an acid / base (has a pKa)", value=False,
+                             help="OFF = the strictly neutral path (bit-identical to before). ON = "
+                                  "the compound is a neutral molecule AND an ion at once, weighted "
+                                  "by the Henderson–Hasselbalch split; the ion feels the GHK "
+                                  "membrane term, the neutral species does not.")
+            if we:
+                w1, w2, w3 = st.columns(3)
+                n_pka = w1.number_input("pKa", -5.0, 14.0, 4.5, 0.1)
+                n_acid = w2.radio("class", ["acid", "base"], horizontal=True) == "acid"
+                n_ph = w3.number_input("root-zone pH", 3.0, 10.0, 6.5, 0.1)
+                import literature_params as LP
+                f_n, f_d = LP.speciation(float(n_pka), float(n_ph), bool(n_acid))
+                st.caption(
+                    f"→ neutral fraction **f_n = {f_n:.3g}**, ionic **f_d = {f_d:.3g}**. "
+                    + ("The ion is an ANION: excluded by the inside-negative membrane (the PFAS "
+                       "case at f_n→0)." if n_acid else
+                       "The ion is a CATION: ATTRACTED by the inside-negative membrane, not "
+                       "excluded — at pKa 4.5 / pH 6.5 / log Kow 2.45 the base's root BAF is "
+                       "1.51 against the acid's 0.079 (~19×), and the gap widens as the pKa "
+                       "falls (the acid ionises further, the base does not)."))
+            n_gapo = st.number_input(
+                "apoplastic bypass g_apo  [L/kg/d]", 0.0, 50.0, 0.0, 0.5,
+                help="A route AROUND the membrane, so it feels neither speciation nor GHK. "
+                     "0 = structurally absent (the default — NOTHING is adopted).")
+            st.markdown(
+                "**How far this is tested.** Direction **supported**, magnitude **refuted**: on "
+                "Schriever 2020's 67 ionisable TSCF rows the measured transfer does rise with "
+                "`f_n` (Spearman +0.480) and speciation nearly doubles the model's rank "
+                "correlation (+0.284 → +0.520), but its influx conductance moves ~1.6e4-fold "
+                "where the measurements move ~3-fold, so it under-delivers (bias −0.203) and "
+                "predicts ~nothing below `f_n ≈ 1e−3`. Use it for the DIRECTION of a speciation "
+                "effect, not its size. A SMALL bypass (`g_apo ≈ 0.5–1`) improves rank *and* scale "
+                "together (+0.635 / RMSE 0.291) — but the RMSE-optimal `g_apo = 5` buys scale by "
+                "wrecking the ordering, so do not fit it on RMSE. "
+                "`validation/weak_electrolyte_tscf.py` §4l–4m.")
+
         try:
             nres = api.simulate_neutral(
                 float(n_logkow), name=(n_name or "neutral"), Cwo=Cwo_const, season=season,
                 MW=n_mw, K_AW=float(n_kaw), half_life=(float(n_hl) or None),
                 tscf_model=n_tscf, phloem=n_phloem, air=n_air, air_kw=air_kw,
-                lipid_source=n_lipid, biomass=biomass, measured_forcing=measured)
+                lipid_source=n_lipid, pKa=n_pka, is_acid=n_acid, pH=float(n_ph),
+                g_apo=float(n_gapo), biomass=biomass, measured_forcing=measured)
         except ValueError as e:                       # e.g. air enabled without a molar mass
             st.error(str(e))
             nres = None
@@ -379,13 +480,23 @@ def render(cfg):
         st.markdown(
             "**Scope, in full.** The **grain compartment is UNTESTED** — no dataset reports a "
             "neutral Kow series in grain under root-only exposure, the same gap as on the PFAS "
-            "side, so read the grain number as a structural output, not a prediction. Tissue "
-            "**lipid contents are Trapp 1994's SOYBEAN values** (root 1 %, stem/leaf 3 % fresh "
-            "weight) — an open gap, and `K_PW` is linear in them. The Ge 2017 leaf residual is "
-            "confounded with the missing half-life, so 0.783 is an *upper bound* on transport "
-            "error. And for **lipophilic** compounds the root partition itself is under question: "
-            "Brunetti 2021's calibrated pea root `K_RW` = 13.3 sits ~10× above the Briggs `K_PW`, "
-            "and Hwang 2017's lettuce root exceeds the ceiling 3–10× in the same direction.")
+            "side, so read the grain number as a structural output, not a prediction. The "
+            "**root** lipid (1 % fresh weight) is corroborated by *measured cereal roots* (Li "
+            "2019: barley 1.00, wheat 1.10–1.14, maize 0.53 %), but **stem and leaf are still "
+            "Trapp 1994's soybean 3 %** — an open gap, and `K_PW` is linear in them. The Ge 2017 "
+            "leaf residual is confounded with the missing half-life, so 0.783 is an *upper bound* "
+            "on transport error. For **lipophilic** compounds the root partition is still open, "
+            "but narrower than it used to look: Kodešová 2019 measures carbamazepine root "
+            "partition directly (n=21, median `RCF_fw` 1.10) — Briggs lands within ~1.5× of it "
+            "while **Brunetti 2021's calibrated pea `K_RW` = 13.3 sits ~12× ABOVE the same "
+            "compound's measurement**, so that disagreement is in the calibration, not the "
+            "partition core. What survives is confined to **log Kow ≳ 3**, and even there the "
+            "measurements contradict each other: on propiconazole (log Kow 3.72) Li 2019 reports "
+            "RCF 43.65 in lettuce and Liu 2023 9.32 in *rice* — a 4.7× spread between "
+            "measurements, wider than the anchor question itself. Li 2019's own 376-row SOIL "
+            "table even flips the sign (model **high** +0.260 where its hydroponic half is low "
+            "−0.432), and most of that is soil-side exposure, not the plant: with *experimental* "
+            "`K_om` the bias is +0.033.")
         st.caption("API: `model_api.simulate_neutral(log_kow, …)` — same result-dict contract as "
                    "`simulate()`, guarded bit-identical to `neutral_dpu`. Records: "
                    "docs/neutral_dpu_validation.md (§3b air, §4c Hwang) · src/neutral_dpu.py · "
@@ -395,11 +506,12 @@ def render(cfg):
     with tabs[9]:
         st.markdown(
             """
-### Five ways to drive the plant model
+### Six ways to drive the plant model
 
 | Mode | PFAS driver Cwᵒ(t) comes from | Q_TP, M(t) | When to use |
 |---|---|---|---|
-| **Model (parametric)** | a constant you set | measured FAO-56 / ORYZA | quick what-ifs, teaching |
+| **Model (parametric)** | a constant you set (flat, or the analytic flooded shape) | measured FAO-56 / ORYZA | quick what-ifs, teaching |
+| **Custom tables** | a Cwᵒ(t) table you type or paste | your own growth table, or measured | you have field numbers but no soil model |
 | **HYDRUS / CSV drivers** | a HYDRUS-1D / Phydrus run (CSV) | from the same CSV, or measured | you have a calibrated soil-water-solute model |
 | **Run HYDRUS-1D (live)** | a real HYDRUS-1D run executed here | HYDRUS root uptake + ORYZA | you want the engine to run in-app (needs it built) |
 | **Soil inventory** | inverting a soil load with a Freundlich isotherm | measured | you know total soil PFAS but not pore water |
@@ -409,8 +521,9 @@ def render(cfg):
 a one-season paddy model (Richards flow + advection–dispersion + linear Kd sorption + root
 water uptake) gives the **congener-dependent** pore water — weakly-sorbed short chains leach
 under flooding (Cwᵒ falls), strongly-sorbed long chains stay buffered (flat). Kd comes from the
-Koc(chain-length) QSPR. Build it with `git submodule update --init external/hydrus_source`,
-`make` in `source/` (needs gfortran), and `pip install phydrus`; the mode auto-detects the engine.
+Koc(chain-length) QSPR. The FORTRAN source is **vendored in the repo** (no submodule to
+initialise): copy `external/hydrus_source/makefile` into `source/`, run `make` there (needs
+gfortran), and `pip install phydrus`; the mode auto-detects the engine.
 
 ### HYDRUS-1D coupling (Method A, one-way) — inputs & outputs
 

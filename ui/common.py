@@ -90,6 +90,22 @@ def _simulate_twopool_seq(congener):
         return None
 
 
+@st.cache_data(show_spinner=False)
+def _simulate_twopool_nstem(congener):
+    """Cache the MERGED model: two-pool sequestration root + redistributed shoot.
+
+    The structural merge the Tang per-organ OOS asked for (docs/twopool_root_exploration.md
+    Result 8). Run at the two-pool's calibrated point like `_simulate_twopool_seq`, so the
+    two overlays are comparable with each other and with the fixed observed bars. Returns
+    the root/straw/grain BAF, or None if the run fails."""
+    try:
+        r = api.simulate_twopool_nstem(congener)
+        return {"root": r["baf_final"]["root"], "straw": r["straw_baf"],
+                "grain": r["baf_final"]["grain"]}
+    except Exception:                                        # noqa: BLE001
+        return None
+
+
 @st.cache_data(show_spinner="Parameterising structure (RDKit)…")
 def _simulate_smiles(smiles, **kw):
     """Cache a SMILES (structure) run: RDKit → descriptors → Compound → full ODE."""
@@ -255,10 +271,16 @@ def _glossary_md(ko=False):
 _UNC = {"Typical (±~40%)": 0.15, "High precision (±~20%)": 0.10, "Rough (±~2×)": 0.30}
 
 
-def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, simple=True):
+def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, simple=True,
+                              mech=None):
     """Shared 'work backwards' panel: Bayesian estimate of the soil-water contamination
     level Cwᵒ from measured tissue concentrations, with a credible interval. Used by
-    both the Simple (Korean) and Expert (English) tabs. `key` namespaces the widgets."""
+    both the Simple (Korean) and Expert (English) tabs. `key` namespaces the widgets.
+
+    `mech` carries the sidebar's mechanism switches (uptake / lipid_loading / ...) into
+    the inverse, so it is run under the SAME model as the forward tabs; it is part of the
+    cache signature, so flipping a switch re-estimates rather than serving a stale run."""
+    mech = dict(mech or {})
     lang = "ko" if simple else "en"
     if congener not in api.CONGENERS:
         st.info(_t("inv.not_curated", lang))
@@ -273,7 +295,8 @@ def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, si
     sigma = _UNC[unc_label]
     have = any(v > 0 for v in (root, straw, grain))
     run = st.button(_t("inv.estimate_btn", lang), key=f"{key}_btn", disabled=not have, type="primary")
-    sig = (congener, root, straw, grain, sigma, E_m_mV, f_xy_source, biomass)
+    sig = (congener, root, straw, grain, sigma, E_m_mV, f_xy_source, biomass,
+           tuple(sorted(mech.items())))
     if run:
         st.session_state[f"{key}_sig"] = sig
     if not have:
@@ -299,7 +322,7 @@ def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, si
         try:
             est = api.estimate_exposure_bayesian(
                 congener, meas, sigma_log10=sigma, E_m_mV=E_m_mV,
-                f_xy_source=f_xy_source, biomass=biomass, progress=_cb)
+                f_xy_source=f_xy_source, biomass=biomass, progress=_cb, **mech)
         except Exception as e:                               # noqa: BLE001
             prog.empty()
             st.error(_t("inv.error", lang, e=e))
@@ -647,7 +670,16 @@ def run_model(cfg):
     fxy_source = cfg.fxy_source
     biomass = cfg.biomass
     measured_bio = cfg.measured_bio
-    sim_kw = dict(E_m_mV=E_m, f_xy_source=fxy_source, biomass=biomass)
+    sim_kw = dict(E_m_mV=E_m, f_xy_source=fxy_source, biomass=biomass,
+                  uptake=getattr(cfg, "uptake", api.DEFAULT_UPTAKE),
+                  lipid_loading=bool(getattr(cfg, "lipid_loading", False)),
+                  km_scale=float(getattr(cfg, "km_scale", 1.0) or 1.0))
+    # Only send the entry-constant overrides when the user actually set them --
+    # None means "use the uptake mode's own value" (model_api.UPTAKE_MODES).
+    for _k in ("vmax_scale", "g_apo"):
+        _v = getattr(cfg, _k, None)
+        if _v is not None:
+            sim_kw[_k] = float(_v)
     desc = None
     provisional = False
     if smiles:                                              # compound specified by structure

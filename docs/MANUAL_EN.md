@@ -91,8 +91,8 @@ PFSA C4/C6/C8: PFBS·PFHxS·PFOS; ether-PFAS: GenX); in Expert mode **any PFAS c
 |---|---|---|
 | Language | **Korean** | **English** |
 | Audience | policy / students / public | environmental science / research |
-| Input | chemical + level (low/medium/high) | 5+1 exposure modes, SMILES, all parameters |
-| Tabs | 5 (plain language) | 9 (technical) |
+| Input | chemical + level (low/medium/high) | 6 exposure modes, SMILES, mechanism switches, all parameters |
+| Tabs | 5 (plain language) | 10 (technical) |
 | Symbols | none (BAF/Cwᵒ/f_xy/eᴺ hidden) | all exposed |
 
 **How to switch:** the toggle at the top of the sidebar — **🔬 전문가/고급 모드 (Expert / advanced)**.
@@ -147,6 +147,11 @@ Turning the toggle on switches to the English UI; the sidebar becomes **1 · Dat
 - **E_m [mV]** (root membrane potential): the GHK anion-exclusion lever (rice −116…−140 mV). More negative → more anion exclusion.
 - **f_xy source**: `recommended` (monotone, physical TSCF) / `W2 fit` (reproduces Yamazaki).
 - **Biomass driver M(t)**: `ORYZA2000` (mechanistic carbon balance, default) / `growth_rice` (IR72 partitioning × logistic).
+- **⚙️ Mechanism (advanced)** — two questions that are still *open* are exposed as modes rather than buried constants (both default to the shipped model; `parameters.json` untouched). A banner appears next to the headline metrics whenever one is on.
+  - **Root entry**: `carrier` (default) vs `bypass` (apoplastic). The Michaelis–Menten carrier is the **one piece of physics this repo adds** to the Trapp cell model — yet on Yamazaki the carrier (1.035) and a single global `g_apo`=20 (0.996) are **indistinguishable** (bootstrap 0.749) while adding nothing at all fails (2.640): *an* addition is necessary, *which* is undecided, so the carrier keeps its place **by default, not by evidence** (`validation/carrier_vs_bypass.py`).
+  - **Lipid-facilitated loading**: the K_PL-gated, B-independent loading term (`g_xy·C`/`g_ph·C`). With **nothing re-fit to Tang** it moves the per-organ OOS 1.232 → 0.516 — the repo's strongest cross-dataset result. It supplies its own `f_xy`, so the f_xy choice above is ignored while it is on. Exploratory, default off.
+  - **Override the entry constants**: `Vmax ×`, `Km ×`, `g_apo` — the levers of that scan and of the dose series (whose result is the post-hoc bound `Km ≥ 500 µg/L`, 100× the fitted value).
+  - The switches propagate to every tab, the congener comparison and the **Bayesian inverse**, so the inverse is never run under a different model than the forward tabs.
 
 ### 5.4 Scenario (3 · Scenario) — per-mode controls
 - **Model (parametric)**: `Pore-water Cwᵒ [µg/L]`, `Season length [days]`, `Cwᵒ(t) shape` (constant / flooded(dilution+leaching), per-congener HYDRUS-calibrated `k_leach`), `Measured forcings` toggle.
@@ -156,16 +161,17 @@ Turning the toggle on switches to the English UI; the sidebar becomes **1 · Dat
 - **Soil inventory**: `Total soil inventory [µg/kg dry]`, Freundlich `K_F`/`n`/`θ_g`, flooded flag, `k_leach`.
 - **Biomonitoring**: manual input (root/straw/grain conc + Cwᵒ) or CSV.
 
-### 5.5 Expert tabs (9)
+### 5.5 Expert tabs (10)
 1. **🗺️ Plant & soil map** — accumulation map (concentration/BAF toggle, day slider/animate).
 2. **📈 Tissue dynamics** — tissue concentration C_k(t) + **PFAS mass (burden) C_k·M_k**. Shows B_k/f_xy/L_Ph/κ_d. Explains the grain formation gate.
 3. **🟫 Soil & drivers** — the actual Cwᵒ(t)·Q_TP(t)·M(t) drivers, the (soil-inventory) isotherm, and the soil profile.
-4. **📊 BAF vs observed** — model vs Yamazaki 2023 bars. Optional **two-pool (seq)** exploratory overlay. Yamazaki conditions/matching explained.
+4. **📊 BAF vs observed** — model vs Yamazaki 2023 bars. Optional **two-pool (seq)** and **merged root+shoot** (`simulate_twopool_nstem`) exploratory overlays. Yamazaki conditions/matching explained.
 5. **🔗 Chain-length trends** — chain length vs a parameter (K_PL/K_prot/K_cw/f_xy/B_root/B_grain).
 6. **⚖️ Compare congeners** — per-tissue BAF across the congeners selected in the sidebar.
-7. **✅ Tang TF (OOS)** — Tang 2026 per-organ TF (out-of-sample) check (PFOA/PFOS/GenX, dry-weight, with the f_xy refit).
+7. **✅ Tang TF (OOS)** — Tang 2026 per-organ TF (out-of-sample) check (PFOA/PFOS/GenX, dry-weight, with the f_xy refit). A **lipid loading (OOS)** checkbox adds a third series: the green refit was calibrated *on* these measurements, the purple lipid run was calibrated on Yamazaki and transferred untouched — and lands in the same place (0.516 vs 0.519).
 8. **🔎 Inverse (Bayesian)** — tissue concentrations → exposure Cwᵒ, with the identifiability caveat → [6.1](#61-work-backwards-bayesian-inverse).
-9. **ℹ️ About / coupling** — the modes, the HYDRUS-1D input/output mapping, and the glossary.
+9. **🧪 Neutral organics** — the Briggs/Kow neutral path: the same ODE with `z=0` (GHK→1, eᴺ 107→1, carrier off). The input is a **log Kow**, not a congener, plus half-life, the TSCF QSPR, the root-lipid reading (`lipid_source`) and opt-in phloem/air exchange. **Nothing in it is fitted** (a-priori). The ⚗️ expander adds **weak electrolytes (pKa)** — a compound that is a neutral molecule *and* an ion at once (`(f_n, f_d)` speciation; a base's ion is a **cation, so it is attracted rather than excluded**) — and the **apoplastic bypass `g_apo`**. How far it is tested is stated in-UI: **direction supported, magnitude refuted** (Schriever's 67 ionisable rows; Spearman +0.480, rank +0.284→+0.520, bias −0.203).
+10. **ℹ️ About / coupling** — the six modes, the HYDRUS-1D input/output mapping, and the glossary.
 
 ---
 
