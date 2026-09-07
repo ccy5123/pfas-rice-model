@@ -20,3 +20,9 @@ external/hydrus_source/HYDRUS1D-4.08.pdf
 .claude/scheduled_tasks.lock
 .claude/scheduled_tasks.json
 
+# Streamlit secrets -- where the EPA CompTox (CTX) API key lives for the app
+# (`ctx_api_key`). `.streamlit/config.toml` IS tracked, so without this line the
+# directory is already visible to git and one `git add -A` would commit the key.
+.streamlit/secrets.toml
+secrets.toml
+

@@ -145,6 +145,115 @@ measurement; the **grain compartment is UNTESTED** for neutrals; stem/leaf lipid
 Trapp 1994's soybean values; and with `half_life = 0` the leaf is an unbounded terminal
 accumulator, so the run is an upper bound (a warning fires in that case).
 
+### Looking the compound up (EPA CompTox / CTX)
+
+Typing `log Kow`, `MW`, `K_AW`, `pKa` and `Koc` by hand is where a user's error
+enters, so the neutral panel has a **🔎 Look up the compound** box that takes a
+**name, CAS-RN or SMILES** and fills them from the EPA CompTox Chemicals Dashboard
+(`src/chem_lookup.py`; CTX API). A SMILES is resolved through its InChIKey (RDKit),
+since the CTX chemical search has no structure route.
+
+Three rules the module enforces, all for the same reason — this path's whole claim
+is that **nothing in it is fitted**, and its published a-priori errors (Liu
+0.206/0.281, Ge 0.783, Briggs stem 0.299) are on *measured* log Kow:
+
+1. **Experimental beats predicted.** CompTox serves measured values and OPERA
+   predictions side by side; when both exist the measured one is used.
+2. **Provenance is shown, never dropped.** Each filled field carries an
+   `experimental` / `predicted (OPERA)` badge, and a prediction standing in for a
+   measurement raises a warning naming which fields it affects. Every field stays
+   editable — a lookup seeds a default, it does not commit the run to a value.
+3. **The in-planta half-life is never filled.** No dashboard property corresponds
+   to it, and Kodešová 2019 measured the surviving parent fraction varying **4.8×
+   between species** for one compound (§4i), so it is not a compound constant to
+   look up. It stays a deliberate user input.
+
+A returned pKa switches the run onto the weak-electrolyte path, which is the one
+model change a lookup can make, so it gets its own reporting rather than sharing the
+generic provenance badge: the panel prints `f_n` at the default root-zone pH 6.5 (the
+⚗️ panel prints the live one once you set the pH) and raises **two independent
+warnings**.
+
+1. **`f_n` below ≈0.1** — a statement about the *model*, true however good the pKa is.
+   Under that floor the weak-electrolyte path is direction-supported but
+   magnitude-REFUTED (§4l): it predicts almost nothing where the measured transfer is
+   still ~0.13, because its only entry is transmembrane while a real ion also arrives
+   apoplastically. **Benzoic acid trips this on its own measured pKa 4.18** (f_n 0.005)
+   — the run is a lower bound on uptake, not a prediction.
+2. **The pKa is predicted** — a statement about the *source*, and **carbamazepine is
+   the in-repo counterexample**: CompTox's OPERA returns an acidic pKa of **5.07**
+   (→ f_n 0.036, 96% ionised at pH 6.5) while the measured value this repo's own
+   best-conditioned table is built on — Kodešová 2019 (§4f), whose a-priori 0.191/0.237
+   assumes CAR is **un-ionised everywhere** — is **13.9** (f_n 1.00). Nine log units
+   apart, on the very compound the neutral path is validated with, and only the
+   measured one reproduces the published result.
+
+Because of (2), **only a MEASURED pKa switches the model by itself**. A predicted one is
+filled into the ⚗️ panel and reported, but the weak-electrolyte checkbox is **left off** —
+the run stays on the strictly neutral path until you tick it deliberately. Every other
+looked-up field is a value that may be wrong; a pKa decides *which model runs*, so turning
+it on is one click and noticing it was turned on for you is not. (In code the lookup still
+returns `pKa` in `neutral_kwargs()` — drop it to stay strictly neutral; the CLI note says
+so.) The tested-floor warning (1) is raised in the ⚗️ panel itself, where the path is
+actually on, so it covers a hand-typed pKa too.
+
+**Endpoints and the five silent traps.** Base URL `https://comptox.epa.gov/ctx-api`
+(the older `api-ccte.epa.gov` no longer resolves). The client reads
+`/chemical/search/equal/…`, `/chemical/detail/search/by-dtxsid/…`, the SPLIT
+`/chemical/property/{experimental,predicted}/search/by-dtxsid/…`, and
+`/chemical/fate/search/by-dtxsid/…` (where Koc lives). Each of the following fails
+*silently* — wrong or empty columns, never an exception — so each is handled and
+guarded by a test:
+
+1. **Provenance is the URL, not the payload.** A property record says nothing about
+   being measured or modelled; only the endpoint does. The bucket is therefore tagged
+   at call time and never inferred from a field. (The fate endpoint is the exception:
+   it mixes both and carries `propType`.)
+2. **`"NaN"`, `"null"`, `"N/A"` arrive as strings** and `float("NaN")` succeeds — so a
+   blank measurement would rank first (experimental beats predicted) and blank out a
+   perfectly good prediction. String nulls are rejected before conversion.
+3. **Field naming differs between endpoints** — camelCase (`propName`/`propValue`) on
+   the property paths, snake_case (`prop_name`/`prop_value`) inside the fate records.
+   Every reader takes an alias list.
+4. **Units are not what you expect.** Henry's law comes as atm·m³/mol; reading
+   Pa·m³/mol as atm·m³/mol is a clean **5.006 log-unit** offset that still looks
+   plausible, so the conversion is explicit and an unrecognised unit returns nothing.
+   The sharpest form of the same trap is **log vs linear**, and it is the one the live
+   API actually sprang: `LogKow` arrives as `2.45 [Log10 unitless]` but **`Koc` arrives
+   as `549.541 [L/kg]` — linear** — even though Koc is normally written "log Koc", so
+   assuming log10 is `10**549` (an outright overflow; a smaller value would have passed
+   silently). The scale is read off each row's unit, then its name, and normalised at
+   parse time; an implausible Koc is refused rather than handed to the soil model.
+5. **The OPERA applicability domain** is reported only in the `…Global` fields. A
+   prediction its own model places *outside* its domain is out of scope, not merely
+   uncertain: it loses the tie to an in-domain candidate and the panel raises a
+   separate error naming it.
+
+A sixth, learned from the live API rather than the notes: a property can come back
+under a **name none of the patterns match** — OPERA labels its two ionisation centres
+`pKa_a`/`pKa_b`, but a plain `pKa` row exists as well — and that shows up as an *empty
+column*, not an error. A `pKa` row with no stated centre is therefore still used (as an
+acid by default, with the acid/base radio left to the user), and `--raw` prints an
+**inventory of every returned property name** before the JSON: that list is what to read
+when a field comes back blank.
+
+**Key and network.** The CTX API needs a free EPA key, read from `CTX_API_KEY` or
+the Streamlit secret `ctx_api_key` — never committed. Without a key, without
+network, or for an unknown compound the panel shows why and everything stays
+manual; the lookup is a convenience, never a dependency. Transient statuses
+(429/502/503/504) retry with backoff; anything else is fatal for that record.
+`CTX_BASE_URL` points the client at a mirror or a local stub. Results are cached for
+a day per query so a rerun does not re-hit EPA. The CLI is the way to check a
+compound (or a schema change) outside the app — probe one chemical and read the raw
+JSON before trusting a batch, and sanity-check the pipeline on a well-characterised
+compound (benzoic acid, benzyl alcohol) first:
+
+```bash
+python src/chem_lookup.py carbamazepine        # resolved values + provenance
+python src/chem_lookup.py 298-46-4
+python src/chem_lookup.py carbamazepine --raw  # property inventory + raw JSON, when a field is empty
+```
+
 ### Soil sorption for a neutral compound
 
 The soil modes need a Kd, and the PFAS chain-length `Koc` QSPR is a per-CF2 group contribution
@@ -157,7 +266,9 @@ It is flagged **PROVISIONAL** for a specific reason: no table in this repo score
 Koc (the neutral tables either supply the exposure directly or carry the paper's own measured
 isotherm), and Li 2019's soil half shows exactly what is at stake — root bias **+0.033** with an
 experimental `K_om` against **+0.291** with an estimated one. Type a measured value whenever
-you have one.
+you have one — or let the CompTox lookup above supply the dashboard's OPERA `Koc`
+(returned **linear, in L/kg**), which then replaces the Karickhoff default and is
+labelled as predicted.
 
 ## Tang 2026 validation tab (out-of-sample)
 

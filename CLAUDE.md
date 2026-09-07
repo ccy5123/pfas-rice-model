@@ -73,7 +73,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (341 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (349 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1186,6 +1186,82 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   parametric, flooded, custom tables, soil inventory and a REAL live HYDRUS-1D run for a neutral (Kd = 2.39 L/kg from
   its own Koc), plus the inverse.
 
+- **Compound lookup from a name / CAS-RN / SMILES — EPA CompTox (CTX) (this session; user request)**:
+  `src/chem_lookup.py` + `tests/test_chem_lookup.py` (8) + the neutral panel's **🔎 Look up the compound**
+  box. The neutral path's inputs (`log Kow`, `MW`, `K_AW`, `pKa`, soil `Koc`) are properties of the COMPOUND,
+  not of this model, and typing them by hand is where a user's error enters. A name/CAS/SMILES now resolves to a
+  DTXSID (a SMILES via its InChIKey — the CTX chemical search has no structure route) and fills those fields.
+  **The design constraint is provenance, not convenience**: CompTox serves EXPERIMENTAL and OPERA-PREDICTED
+  values side by side, while every a-priori number this path advertises (Liu 0.206/0.281, Ge 0.783, Briggs stem
+  0.299) is on a MEASURED log Kow — so a prediction silently standing in for a measurement would leave those
+  numbers describing something the app no longer does. Hence: experimental WINS when both exist, every filled
+  field carries an `experimental`/`predicted (OPERA)` badge, a predicted fill raises a warning naming the
+  fields, and each field stays editable (a lookup seeds a DEFAULT, it does not commit the run). Two things are
+  deliberately never auto-filled: the **in-planta half-life** (no dashboard property corresponds to it, and
+  §4i measured the parent fraction varying 4.8× BETWEEN SPECIES for one compound, so it is not a compound
+  constant) and any value whose UNIT is unrecognised — `henry_to_kaw` converts atm-m3/mol (`H/RT`) and Pa-m3/mol
+  and otherwise returns None, because a wrong `K_AW` silently switches the leaf's volatilisation sink on or off.
+  A returned pKa is the one model-PATH change a lookup can make (strictly neutral → weak electrolyte, which is
+  TESTED-but-BOUNDED), so it is reported SEPARATELY from the provenance badge — `speciation_note` prints `f_n` at
+  the root-zone pH and raises **two INDEPENDENT warnings**, a distinction the first live run made concrete:
+  (i) **`f_n` below ≈0.1** is about the MODEL and fires however good the pKa is — **benzoic acid trips it on its own
+  MEASURED pKa 4.18** (f_n 0.005), where §4l says the path is direction-supported but magnitude-REFUTED, so the run
+  is a lower bound; (ii) **the pKa is PREDICTED** is about the SOURCE, and **carbamazepine is the in-repo
+  counterexample**: OPERA returns acidic pKa **5.07** (f_n 0.036, 96% ionised at pH 6.5) while the MEASURED value
+  this repo's own best-conditioned table is built on — Kodešová 2019 §4f, whose a-priori 0.191/0.237 assumes CAR is
+  **un-ionised everywhere** — is **13.9** (f_n 1.00). Nine log units apart, on the very compound the neutral path is
+  validated with, and only the measured one reproduces the published number. Hence the DEFAULT, decided with the user:
+  **only a MEASURED pKa switches the model by itself** — a predicted one is filled into the ⚗️ panel and reported but
+  the weak-electrolyte checkbox is LEFT OFF (the run stays strictly neutral until the user ticks it), because every
+  other looked-up field is a value that may be wrong while a pKa decides WHICH MODEL RUNS. In code `neutral_kwargs()`
+  still returns `pKa` (drop it to stay strictly neutral; the CLI note says so), and the tested-floor warning is raised
+  in the ⚗️ panel where the path is actually on, so it covers a hand-typed pKa too. **Optional by
+  construction**: needs a free EPA key (`CTX_API_KEY` env or the Streamlit secret `ctx_api_key`, never
+  committed) and outbound network; with neither the panel says which is missing and everything stays manual.
+  Cached a day per query; `CTX_BASE_URL` repoints the client (mirror or stub); 429/502/503/504 retry with
+  backoff and anything else is fatal for that record. **CORRECTED against the live API (user-supplied working
+  notes) — the first cut had the wrong host and the wrong provenance model**: the base URL is
+  `https://comptox.epa.gov/ctx-api` (the older `api-ccte.epa.gov` NO LONGER RESOLVES; the offline tests could
+  not catch that, so the constant is now pinned by one), and the property endpoints are SPLIT
+  experimental/predicted with `/chemical/fate/…` carrying Koc. Five documented traps, every one of which fails
+  SILENTLY (wrong or empty columns, never an exception), are handled and each has a test: (1) **provenance is
+  the URL, not the payload** — a property record says nothing about being measured or modelled, so the bucket
+  is tagged AT CALL TIME from the endpoint and never inferred from a field (the fate endpoint is the exception:
+  it mixes both and carries `propType`); (2) `"NaN"`/`"null"`/`"N/A"` arrive as STRINGS and `float("NaN")`
+  SUCCEEDS, so a blank measurement would rank first (experimental beats predicted) and blank out a usable
+  prediction — string nulls are rejected before conversion; (3) field naming differs BETWEEN endpoints
+  (camelCase `propName`/`propValue` vs snake_case `prop_name`/`prop_value` inside the fate records), so every
+  reader takes an alias list; (4) units — Henry's law is atm-m3/mol and reading Pa-m3/mol as atm-m3/mol is a
+  clean **5.006 log-unit** offset that still looks plausible, so the conversion is explicit and an unrecognised
+  unit returns nothing — and the SHARPEST form of the same trap, **log vs linear**, is the one a LIVE run
+  actually sprang: `LogKow` comes as `2.45 [Log10 unitless]` but **`Koc` comes as `549.541 [L/kg]`, LINEAR**,
+  though Koc is normally written "log Koc", so assuming log10 is `10**549` (an OverflowError — the lucky case;
+  a smaller value passes silently, and benzoic acid did reach `Koc=4.2e+31` before the fix). The scale is now
+  read off each row's unit then its name (`is_log_scale`/`to_linear`/`to_log10`) and normalised at parse time,
+  with an implausible Koc (>`KOC_MAX_LKG`) refused rather than handed to the soil model; (5) the **OPERA
+  applicability domain** is populated only in the `…Global` fields — a
+  prediction its own model puts OUTSIDE its domain is out of scope, not merely uncertain, so it loses the tie
+  to an in-domain candidate, reaches the badge, and raises its own error in the panel. Parsing stays
+  deliberately tolerant (name-substring matching, bare-list or `{"data": …}` envelope) so a schema change
+  degrades to a MISSING property rather than a wrong one — and a **SIXTH trap the live run exposed that the
+  notes did not list**: a property can come back under a name NONE of the patterns match (OPERA labels its two
+  ionisation centres `pKa_a`/`pKa_b`, but a plain `pKa` row exists too — which is why the first live run
+  returned no pKa for carbamazepine OR benzoic acid), and that shows as an EMPTY COLUMN, not an error. So a
+  `pKa` row with no stated centre is now still used (acid by default, the acid/base radio left to the user),
+  the reverse risk is closed too (`"log p"` is a substring of `"log pvap"` — a vapour-pressure row is now
+  excluded from the log Kow slot), and `python src/chem_lookup.py <compound> --raw` prints an **INVENTORY of
+  every returned property name/value/unit** before the JSON, which is the list to read when a field is blank
+  (the JSON dump alone truncates before the interesting rows). The working notes' first rule (probe one
+  chemical, read the raw output, then sanity-check on benzoic acid / benzyl alcohol) is in the CLI output.
+  Tests are 100% offline fixtures (CI has no key and no network) written against the REAL shapes, pinning the
+  base URL, the identifier classification, provenance-from-the-endpoint, that a string `"NaN"` cannot displace
+  a prediction, the snake_case fate path, the 5.006-log Henry check, **the linear-Koc reading + the refusal of
+  an implausible one + the vapour-pressure exclusion + the unlabelled-pKa fallback**, the AD tie-break, the
+  `simulate_neutral` kwarg mapping (and that `half_life` is absent from it), and the no-key/no-network
+  degradation. Verified end-to-end against a stub reproducing the LIVE shapes: experimental log Kow 2.45 chosen
+  over the OPERA 3.39, the `"NaN"` row dropped rather than displacing it, `Koc 549.541 L/kg` read from the
+  nested snake_case fate record as a LINEAR value, and the out-of-domain pKa labelled.
+
 ## 7. Build & run
 - `pip install -r requirements.txt`
 - **Main reproduction**: `python reproduce_demo.py` (Yamazaki BAF, W2 fit, RMSE≈0.029);
@@ -1194,6 +1270,14 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (plant/soil accumulation colormap + HYDRUS/soil/biomonitoring modes; the Expert sidebar's **⚙️ Mechanism**
   expander switches `uptake` carrier/bypass + `lipid_loading`; `2 · Compound` switches the COMPOUND CLASS —
   curated congener / SMILES / **neutral organic (log Kow)**; see `docs/visualization_tool.md`).
+- **Compound lookup (EPA CompTox / CTX)**: `python src/chem_lookup.py carbamazepine` (or a CAS-RN,
+  or a SMILES) prints log Kow / MW / K_AW / pKa / Koc **with their provenance**; `--raw` dumps every
+  endpoint's payload when a field comes back empty. Base URL `https://comptox.epa.gov/ctx-api`
+  (`api-ccte.epa.gov` is dead). Needs a free EPA key: `export CTX_API_KEY='…'` (CLI) or the
+  Streamlit secret `ctx_api_key` in `.streamlit/secrets.toml` (app; keep it out of git). `CTX_BASE_URL`
+  points at a mirror/stub. In the app: the neutral compound panel's **🔎 Look up the compound** box —
+  experimental values beat predicted ones, everything is badged and editable, and the in-planta
+  half-life is never auto-filled.
 - **Live HYDRUS-1D** (optional, for the "Run HYDRUS-1D (live)" mode): the FORTRAN source is now
   **VENDORED** under `external/hydrus_source/` (de-submoduled — the upstream `phydrus/source_code`
   submodule is unreachable behind restrictive network policies, and the compiled binary is not in
@@ -1326,7 +1410,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**341 collected; 340 pass, 2 skip** — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**349 collected; 348 pass, 2 skip** — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`

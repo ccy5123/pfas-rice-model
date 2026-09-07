@@ -14,6 +14,115 @@ from ui.common import (_EX, _cong_label, _cong_label_ko, _PRESETS_KO, _SCENARIOS
 
 
 
+@st.cache_data(show_spinner="Looking the compound up on CompTox…", ttl=24 * 3600)
+def _ctx_lookup(query):
+    """Cached CompTox (CTX) lookup -> the plain dict `_ctx_lookup_panel` renders.
+
+    Cached for a day and keyed on the query so a rerun (every widget touch in
+    Streamlit is one) does not re-hit EPA. Returns a dict rather than the dataclass
+    so it stays hashable/serialisable for the cache."""
+    import chem_lookup as cx
+    r = cx.lookup(query)
+    return dict(ok=r.ok, note=r.note, dtxsid=r.dtxsid, name=r.preferred_name,
+                casrn=r.casrn, smiles=r.smiles, kwargs=r.neutral_kwargs(),
+                badges={k: v.badge() for k, v in r.props.items()},
+                sources={k: v.source for k, v in r.props.items()},
+                outside_ad={k: v.outside_ad for k, v in r.props.items()})
+
+
+def _ctx_lookup_panel():
+    """'Look it up' box: name / CAS-RN / SMILES -> EPA CompTox properties.
+
+    Returns the values to SEED the inputs below with ({} when nothing was looked
+    up). Two things it deliberately does not do:
+
+    * it does not fill the in-planta HALF-LIFE — no dashboard property corresponds
+      to it, and Kodesova measured it varying 4.8x between species for one compound;
+    * it does not hide PROVENANCE. CompTox serves experimental and OPERA-PREDICTED
+      values side by side, and every a-priori number this path advertises (Liu
+      0.206/0.281, Ge 0.783) was computed on a MEASURED log Kow. Experimental wins
+      when both exist, and each filled field is shown with its badge, because a
+      prediction quietly standing in for a measurement would make those numbers
+      describe something the app is no longer doing.
+    """
+    with st.expander("🔎 Look up the compound (EPA CompTox)"):
+        q = st.text_input("name · CAS-RN · SMILES", value="", key="ctx_query",
+                          placeholder="carbamazepine  ·  298-46-4  ·  NC(=O)N1c2ccccc2…",
+                          help="Resolves through the EPA CompTox (CTX) API and fills log Kow, "
+                               "MW, K_AW, pKa and soil Koc below. Needs a free EPA API key in "
+                               "CTX_API_KEY or the Streamlit secret `ctx_api_key`; without one "
+                               "(or without network) everything here stays manual.")
+        if not q.strip():
+            return {}
+        r = _ctx_lookup(q.strip())
+        if not r["ok"]:
+            st.warning(f"No fill: {r['note']}")
+            return {}
+        kw = dict(r["kwargs"])
+        st.success(f"**{r['name'] or q}** · {r['dtxsid']}" + (f" · CAS {r['casrn']}" if r["casrn"] else ""))
+        rows, predicted, out_ad = [], [], []
+        _LABEL = {"log_kow": "log Kow", "K_AW": "K_AW", "koc": "soil Koc", "pka_acidic":
+                  "pKa (acidic)", "pka_basic": "pKa (basic)",
+                  "pka_unlabelled": "pKa (centre not stated — check acid/base)"}
+        for pk, badge in r["badges"].items():
+            if pk in ("henry", "water_solubility", "melting_point"):
+                continue
+            rows.append(f"- **{_LABEL.get(pk, pk)}** — {badge}")
+            if r["sources"].get(pk) != "experimental":
+                predicted.append(_LABEL.get(pk, pk))
+            if r.get("outside_ad", {}).get(pk):
+                out_ad.append(_LABEL.get(pk, pk))
+        if kw.get("MW"):
+            rows.append(f"- **MW** {kw['MW']:.2f} g/mol")
+        st.markdown("\n".join(rows) if rows else "_no physicochemical rows returned_")
+        if out_ad:
+            st.error("**Outside its own applicability domain: " + ", ".join(out_ad) + ".** OPERA "
+                     "reports these as beyond the chemical space the model was trained on — that "
+                     "is not 'uncertain', it is out of scope. Replace them by hand or leave the "
+                     "corresponding term off.")
+        if predicted:
+            st.warning("**Predicted (not measured): " + ", ".join(predicted) + ".** Filled in "
+                       "anyway and marked — but this path's published a-priori errors (Liu 0.281, "
+                       "Ge 0.783) are on MEASURED log Kow, so replace it with a measured value "
+                       "when you have one before quoting them for this run.")
+        if "pKa" in kw:
+            import literature_params as LP
+            # pKa is the ONE field that changes the model PATH, so it gets its own
+            # reporting rather than sharing the generic "predicted" line above. f_n is
+            # shown at the panel's DEFAULT root-zone pH 6.5; the ⚗️ panel prints the
+            # live one once you set the pH, and carries the tested-floor warning.
+            pka_measured = any(r["sources"].get(k) == "experimental"
+                               for k in ("pka_acidic", "pka_basic", "pka_unlabelled"))
+            f_n, _ = LP.speciation(float(kw["pKa"]), 6.5, bool(kw.get("is_acid", True)))
+            head = (f"A pKa ({kw['pKa']:g}, {'acid' if kw.get('is_acid', True) else 'base'}) came "
+                    f"back — at the default root-zone pH 6.5 that is **f_n = {f_n:.3g}**.")
+            if pka_measured:
+                st.info(head + " It is MEASURED, so the run is now on the **weak-electrolyte** "
+                        "path rather than the strictly neutral one. Untick the ⚗️ box to force "
+                        "the strictly neutral path.")
+            else:
+                st.warning(head + " It is **PREDICTED**, and a pKa is the one field that changes "
+                           "WHICH MODEL RUNS — so it is filled in but **left switched off**: the "
+                           "run stays on the strictly neutral path until you tick the ⚗️ box "
+                           "yourself. **Carbamazepine is why**: CompTox's OPERA gives an acidic "
+                           "pKa of **5.07** (→ f_n 0.036, 96% ionised) while the measured value "
+                           "this repo's own best-conditioned table (Kodešová 2019, §4f) is built "
+                           "on is **13.9** — un-ionised everywhere (f_n = 1.00). Nine log units "
+                           "apart, and only the measured one reproduces the published a-priori "
+                           "result. Check it against a source, then switch it on.")
+        st.caption("The **in-planta half-life is never filled** — it is not a dashboard property, "
+                   "and Kodesova 2019 measured the surviving parent fraction varying 4.8× BETWEEN "
+                   "SPECIES for one compound, so it is not a compound constant. Set it yourself.")
+        if kw.get("name") is None and r["name"]:
+            kw["name"] = r["name"]
+        # Whether the pKa itself was MEASURED decides, below, if the weak-electrolyte
+        # path is switched on for the user or merely offered (see `_neutral_panel`).
+        # Read with `.get`, never passed to the model.
+        measured_pka = any(r["sources"].get(k) == "experimental"
+                           for k in ("pka_acidic", "pka_basic", "pka_unlabelled"))
+        return {**kw, "name": r["name"] or q.strip(), "_pka_measured": measured_pka}
+
+
 def _neutral_panel():
     """Sidebar inputs for a NEUTRAL organic -> the kwargs of `model_api.simulate_neutral`.
 
@@ -23,11 +132,18 @@ def _neutral_panel():
     mechanism, and each carries how far it is actually tested.
     """
     n = {}
-    n["log_kow"] = st.number_input("log Kow", value=2.45, min_value=-2.0, max_value=8.0, step=0.05,
+    found = _ctx_lookup_panel()          # CompTox: name / CAS-RN / SMILES -> properties
+    # The looked-up values are DEFAULTS, not commitments: each widget's key carries
+    # the value it was seeded with, so a new lookup reseeds the field while a manual
+    # edit survives every rerun in between.
+    _kow = float(found.get("log_kow", 2.45))
+    n["log_kow"] = st.number_input("log Kow", value=_kow, min_value=-2.0, max_value=8.0, step=0.05,
+                                   key=f"n_logkow_{_kow:.4f}",
                                    help="The one required input. Drives K_PW and TSCF. The "
                                         "measured tables behind this path span about -0.7 to 5.4; "
                                         "outside that you are extrapolating.")
-    n["name"] = st.text_input("compound name", value="carbamazepine") or "neutral"
+    _nm = str(found.get("name", "carbamazepine"))
+    n["name"] = st.text_input("compound name", value=_nm, key=f"n_name_{_nm}") or "neutral"
     hl = st.number_input("in-planta half-life [d]  (0 = none)", value=7.0, min_value=0.0,
                          max_value=365.0, step=1.0,
                          help="STRONGLY recommended. With no metabolism the leaf is an "
@@ -61,26 +177,48 @@ def _neutral_panel():
                  "for a volatile compound makes the leaf an upper bound BY CONSTRUCTION.")
         if n["air"]:
             a1, a2 = st.columns(2)
-            n["MW"] = a1.number_input("MW [g/mol]", value=236.3, min_value=1.0, step=1.0)
-            n["K_AW"] = a2.number_input("K_AW [-]", value=1e-3, min_value=0.0, max_value=10.0,
-                                        step=1e-4, format="%.2e",
-                                        help="Dimensionless Henry's-law constant. 0 = the air "
+            _mw = float(found.get("MW", 236.3))
+            _kaw = float(found.get("K_AW", 1e-3))
+            n["MW"] = a1.number_input("MW [g/mol]", value=_mw, min_value=1.0, step=1.0,
+                                      key=f"n_mw_{_mw:.4f}")
+            n["K_AW"] = a2.number_input("K_AW [-]", value=_kaw, min_value=0.0, max_value=10.0,
+                                        step=1e-4, format="%.2e", key=f"n_kaw_{_kaw:.6g}",
+                                        help="Dimensionless Henry's-law constant (converted from "
+                                             "the Henry constant when looked up). 0 = the air "
                                              "pathway is structurally absent, not just small.")
             n["air_kw"] = dict(C_air=float(st.number_input(
                 "ambient C_air [µg/m³]", value=0.0, min_value=0.0, step=0.1,
                 help="0 = clean air, i.e. volatilisation only.")))
     with st.expander("⚗️ Weak electrolyte (pKa) + apoplastic bypass"):
-        we = st.checkbox("this compound is an acid / base (has a pKa)", value=False,
+        # A looked-up pKa switches the MODEL, so only a MEASURED one does that by
+        # itself. A predicted pKa is filled in below but left switched OFF: OPERA
+        # puts carbamazepine's acidic pKa at 5.07 where the measured value behind
+        # this repo's own best-conditioned table is 13.9 -- nine log units, and the
+        # difference between "un-ionised everywhere" and "96% ionised". Turning it
+        # on is one click; noticing it was turned on for you is not.
+        _pka_found, _pka_measured = "pKa" in found, bool(found.get("_pka_measured"))
+        we = st.checkbox("this compound is an acid / base (has a pKa)",
+                         value=bool(_pka_found and _pka_measured),
+                         key=f"n_we_{_pka_found}_{_pka_measured}",
                          help="OFF = the strictly neutral path. ON = the compound is a neutral "
                               "molecule AND an ion at once, weighted by Henderson-Hasselbalch; "
-                              "the ion feels the GHK membrane term, the neutral species does not.")
+                              "the ion feels the GHK membrane term, the neutral species does not. "
+                              "A lookup fills the pKa either way, but only a MEASURED one turns "
+                              "this on for you — a predicted pKa is left for you to switch on "
+                              "deliberately, because it decides which model runs.")
+        if _pka_found and not _pka_measured and not we:
+            st.caption(f"↑ a **predicted** pKa {found['pKa']:g} is filled in below and ready — "
+                       "tick the box if you want the weak-electrolyte path.")
         if we:
             # two columns, not three: the sidebar is narrow enough that a third
             # squeezes the acid/base radio into one letter per line
             w1, w2 = st.columns(2)
-            n["pKa"] = w1.number_input("pKa", -5.0, 14.0, 4.5, 0.1)
+            _pka = float(found.get("pKa", 4.5))
+            n["pKa"] = w1.number_input("pKa", -5.0, 14.0, _pka, 0.1, key=f"n_pka_{_pka:.3f}")
             n["pH"] = w2.number_input("root-zone pH", 3.0, 10.0, 6.5, 0.1)
-            n["is_acid"] = st.radio("acid or base", ["acid", "base"], horizontal=True) == "acid"
+            _ab = 0 if found.get("is_acid", True) else 1
+            n["is_acid"] = st.radio("acid or base", ["acid", "base"], index=_ab, horizontal=True,
+                                    key=f"n_ab_{_ab}") == "acid"
             import literature_params as LP
             f_n, f_d = LP.speciation(float(n["pKa"]), float(n["pH"]), bool(n["is_acid"]))
             st.caption(
@@ -90,6 +228,17 @@ def _neutral_panel():
                    "The ion is a CATION: ATTRACTED by the inside-negative membrane, not "
                    "excluded — at pKa 4.5 / pH 6.5 / log Kow 2.45 the base's root BAF is "
                    "1.51 against the acid's 0.079 (~19×)."))
+            # The tested-floor warning lives HERE, where the path is actually switched
+            # on, so it also covers a hand-typed pKa and a predicted one the user chose
+            # to enable -- not only the ones a lookup turned on.
+            import chem_lookup as _cx
+            if f_n < _cx.F_N_TESTED_FLOOR:
+                st.error(f"**f_n = {f_n:.3g} is BELOW the ≈{_cx.F_N_TESTED_FLOOR:g} floor where "
+                         "this path was tested** (§4l: direction supported, magnitude REFUTED — "
+                         "under it the model predicts almost nothing where the measured transfer "
+                         "is still ~0.13, because its only entry is transmembrane while a real "
+                         "ion also arrives apoplastically). Read this run as a lower bound on "
+                         "uptake, not a prediction.")
         n["g_apo"] = st.number_input(
             "apoplastic bypass g_apo  [L/kg/d]", 0.0, 50.0, 0.0, 0.5,
             help="A route AROUND the membrane, so it feels neither speciation nor GHK. "
@@ -103,12 +252,14 @@ def _neutral_panel():
     # chain-length Koc QSPR does not apply, so it comes from log Kow (Karickhoff 1981,
     # PROVISIONAL -- nothing in this repo scores a predicted Koc) and is editable.
     import literature_params as LP
-    koc_default = float(LP.koc_neutral(float(n["log_kow"])))
+    karickhoff = float(LP.koc_neutral(float(n["log_kow"])))
+    koc_default = float(found.get("Koc", karickhoff))
+    _src = ("CompTox" if "Koc" in found else "Karickhoff")
     n["Koc"] = st.number_input(
         "soil Koc  [L/kg]", 0.1, 1e6, koc_default, koc_default / 10.0, format="%.1f",
-        key=f"koc_neutral_{n['log_kow']:.2f}",
+        key=f"koc_neutral_{n['log_kow']:.2f}_{koc_default:.3f}",
         help=f"Used by the flooded Cwᵒ(t) shape and the live HYDRUS run (Kd = Koc·f_oc). "
-             f"Default {koc_default:.1f} = Karickhoff 1981 (log Koc = 0.989·log Kow − 0.346) — "
+             f"Default {koc_default:.1f} from {_src} (Karickhoff would give {karickhoff:.1f}) — "
              f"PROVISIONAL: no table in this repo scores a predicted Koc, and Li 2019's soil "
              f"half shows the estimated sorption term is where the error collects (bias +0.033 "
              f"with a measured K_om vs +0.291 with an estimated one). Type a MEASURED Kd/f_oc "
