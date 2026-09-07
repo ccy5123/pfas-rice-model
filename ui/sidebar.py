@@ -86,11 +86,34 @@ def _ctx_lookup_panel():
                        "Ge 0.783) are on MEASURED log Kow, so replace it with a measured value "
                        "when you have one before quoting them for this run.")
         if "pKa" in kw:
-            st.info("A pKa came back, so the run is now on the **weak-electrolyte** path rather "
-                    "than the strictly neutral one. That path is TESTED but BOUNDED (direction "
-                    "supported, magnitude refuted) — read the `f_n` the ⚗️ panel prints: far from "
-                    "the root-zone pH it is ≈1 and the run matches the neutral one, near it the "
-                    "speciation dominates. Untick the box to force the strictly neutral path.")
+            import literature_params as LP
+            # pKa is the ONE field that changes the model PATH, so it gets its own
+            # warning rather than sharing the generic "predicted" line above. f_n is
+            # shown at the panel's DEFAULT root-zone pH 6.5; the ⚗️ panel prints the
+            # live one once you set the pH.
+            f_n, _ = LP.speciation(float(kw["pKa"]), 6.5, bool(kw.get("is_acid", True)))
+            st.info(f"A pKa ({kw['pKa']:g}, {'acid' if kw.get('is_acid', True) else 'base'}) came "
+                    f"back, so the run is now on the **weak-electrolyte** path rather than the "
+                    f"strictly neutral one — at the default root-zone pH 6.5 that is **f_n = "
+                    f"{f_n:.3g}**. Untick the ⚗️ box to force the strictly neutral path.")
+            if f_n < 0.1:
+                st.error(f"**f_n = {f_n:.3g} is BELOW the ≈0.1 floor where this path was tested.** "
+                         "The weak-electrolyte extension is direction-SUPPORTED but "
+                         "magnitude-REFUTED (§4l): under f_n≈0.1 it predicts almost nothing where "
+                         "the measured transfer is still ~0.13, because its only entry is "
+                         "transmembrane while a real ion also arrives apoplastically. Read this "
+                         "run as a lower bound on uptake, not a prediction.")
+            if r["sources"].get("pka_acidic") != "experimental" \
+                    and r["sources"].get("pka_basic") != "experimental" \
+                    and r["sources"].get("pka_unlabelled") != "experimental":
+                st.warning("**That pKa is PREDICTED, and it is the one field that changes which "
+                           "model runs.** Carbamazepine is the in-repo counterexample: CompTox's "
+                           "OPERA gives an acidic pKa of **5.07** (→ f_n 0.036, 96% ionised), "
+                           "while the measured value this repo's own best-conditioned table "
+                           "(Kodešová 2019, §4f) is built on is **13.9** — un-ionised everywhere "
+                           "(f_n = 1.00). Nine log units apart, and only the measured one "
+                           "reproduces the published a-priori result. Check a predicted pKa "
+                           "against a source before trusting the run.")
         st.caption("The **in-planta half-life is never filled** — it is not a dashboard property, "
                    "and Kodesova 2019 measured the surviving parent fraction varying 4.8× BETWEEN "
                    "SPECIES for one compound, so it is not a compound constant. Set it yourself.")

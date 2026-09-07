@@ -676,6 +676,52 @@ def lookup(query, key=None, base=None, _get_fn=None):
 
 
 # ---------------------------------------------------------------------------
+# The tested floor of the weak-electrolyte path: below this neutral fraction the
+# model is direction-supported but magnitude-REFUTED (docs/neutral_dpu_validation
+# .md section 4l), so a pKa that lands here is reported as a bound, not a result.
+F_N_TESTED_FLOOR = 0.1
+PH_ROOT_ZONE = 6.5              # the app's default root-zone pH, for the report only
+
+
+def speciation_note(pKa, is_acid=True, pH=PH_ROOT_ZONE, predicted=False):
+    """Plain-text warning for a filled pKa -> (f_n, lines).
+
+    A pKa is the ONE looked-up field that changes WHICH MODEL RUNS (strictly
+    neutral -> weak electrolyte), so it is reported separately from the generic
+    provenance badge. Two distinct problems are flagged:
+
+    * `f_n` below the tested floor -- a MODEL-scope statement, true however good
+      the pKa is (benzoic acid's own MEASURED 4.18 lands at f_n 0.005);
+    * a PREDICTED pKa -- carbamazepine is the in-repo counterexample, where
+      OPERA's 5.07 and the measured 13.9 are nine log units apart and only the
+      measured one reproduces this repo's published a-priori result.
+    """
+    import math
+    d = (pH - pKa) if is_acid else (pKa - pH)
+    f_n = 1.0 / (1.0 + 10.0 ** d) if d < 300 else 0.0
+    lines = [f"  pKa {pKa:g} ({'acid' if is_acid else 'base'}) at root-zone pH {pH:g}"
+             f"  ->  f_n = {f_n:.3g}  (weak-electrolyte path, not the strictly neutral one)"]
+    if f_n < F_N_TESTED_FLOOR:
+        lines.append(f"  WARNING: f_n < {F_N_TESTED_FLOOR} is BELOW where this path was tested -- "
+                     "direction supported,\n           magnitude REFUTED (docs section 4l). Read "
+                     "the run as a lower bound on uptake.")
+    if predicted:
+        lines.append("  WARNING: that pKa is PREDICTED, and it is the field that decides which "
+                     "model runs.\n           Carbamazepine: OPERA gives acidic pKa 5.07 (f_n "
+                     "0.036) where the MEASURED 13.9\n           this repo's Kodesova 2019 table "
+                     "uses is un-ionised everywhere (f_n 1.00) --\n           nine log units "
+                     "apart. Check a predicted pKa against a source.")
+    return f_n, "\n".join(lines)
+
+
+def _pka_note(lookup_result, nk):
+    src = [lookup_result.props[k].source for k in ("pka_acidic", "pka_basic", "pka_unlabelled")
+           if k in lookup_result.props]
+    _, txt = speciation_note(float(nk["pKa"]), bool(nk.get("is_acid", True)),
+                             predicted="experimental" not in src)
+    return txt
+
+
 def _cli(argv):
     args = [a for a in argv if not a.startswith("--")]
     raw = "--raw" in argv
@@ -738,6 +784,8 @@ def _cli(argv):
         print(f"  {name:16} {p.value:<14.6g}{unit:14} {p.badge()}")
     nk = r.neutral_kwargs()
     print("\n  -> simulate_neutral(" + ", ".join(f"{k_}={v!r}" for k_, v in nk.items()) + ")")
+    if "pKa" in nk:
+        print(_pka_note(r, nk))
     print("  NOTE: the in-planta half-life is NOT a dashboard property — set it yourself.")
     print("  Sanity-check the pipeline on a well-characterised compound before trusting a")
     print("  batch: 'benzoic acid' and 'benzyl alcohol' both have solid measured values.")

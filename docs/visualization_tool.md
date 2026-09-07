@@ -169,9 +169,25 @@ is that **nothing in it is fitted**, and its published a-priori errors (Liu
    look up. It stays a deliberate user input.
 
 A returned pKa switches the run onto the weak-electrolyte path, which is the one
-model change a lookup can make; the panel says so and the ⚗️ panel prints the
-resulting `f_n` (far from the root-zone pH it is ≈1 and the run matches the
-strictly neutral one).
+model change a lookup can make, so it gets its own reporting rather than sharing the
+generic provenance badge: the panel prints `f_n` at the default root-zone pH 6.5 (the
+⚗️ panel prints the live one once you set the pH) and raises **two independent
+warnings**.
+
+1. **`f_n` below ≈0.1** — a statement about the *model*, true however good the pKa is.
+   Under that floor the weak-electrolyte path is direction-supported but
+   magnitude-REFUTED (§4l): it predicts almost nothing where the measured transfer is
+   still ~0.13, because its only entry is transmembrane while a real ion also arrives
+   apoplastically. **Benzoic acid trips this on its own measured pKa 4.18** (f_n 0.005)
+   — the run is a lower bound on uptake, not a prediction.
+2. **The pKa is predicted** — a statement about the *source*, and **carbamazepine is
+   the in-repo counterexample**: CompTox's OPERA returns an acidic pKa of **5.07**
+   (→ f_n 0.036, 96% ionised at pH 6.5) while the measured value this repo's own
+   best-conditioned table is built on — Kodešová 2019 (§4f), whose a-priori 0.191/0.237
+   assumes CAR is **un-ionised everywhere** — is **13.9** (f_n 1.00). Nine log units
+   apart, on the very compound the neutral path is validated with, and only the
+   measured one reproduces the published result. Check a predicted pKa at source, or
+   untick the ⚗️ box to force the strictly neutral path.
 
 **Endpoints and the five silent traps.** Base URL `https://comptox.epa.gov/ctx-api`
 (the older `api-ccte.epa.gov` no longer resolves). The client reads

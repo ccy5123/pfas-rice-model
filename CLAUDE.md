@@ -1202,7 +1202,16 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   constant) and any value whose UNIT is unrecognised — `henry_to_kaw` converts atm-m3/mol (`H/RT`) and Pa-m3/mol
   and otherwise returns None, because a wrong `K_AW` silently switches the leaf's volatilisation sink on or off.
   A returned pKa is the one model-PATH change a lookup can make (strictly neutral → weak electrolyte, which is
-  TESTED-but-BOUNDED), so the panel says so and the ⚗️ panel prints the resulting `f_n`. **Optional by
+  TESTED-but-BOUNDED), so it is reported SEPARATELY from the provenance badge — `speciation_note` prints `f_n` at
+  the root-zone pH and raises **two INDEPENDENT warnings**, a distinction the first live run made concrete:
+  (i) **`f_n` below ≈0.1** is about the MODEL and fires however good the pKa is — **benzoic acid trips it on its own
+  MEASURED pKa 4.18** (f_n 0.005), where §4l says the path is direction-supported but magnitude-REFUTED, so the run
+  is a lower bound; (ii) **the pKa is PREDICTED** is about the SOURCE, and **carbamazepine is the in-repo
+  counterexample**: OPERA returns acidic pKa **5.07** (f_n 0.036, 96% ionised at pH 6.5) while the MEASURED value
+  this repo's own best-conditioned table is built on — Kodešová 2019 §4f, whose a-priori 0.191/0.237 assumes CAR is
+  **un-ionised everywhere** — is **13.9** (f_n 1.00). Nine log units apart, on the very compound the neutral path is
+  validated with, and only the measured one reproduces the published number. So a predicted pKa is filled, flagged,
+  and left editable — never quietly trusted. **Optional by
   construction**: needs a free EPA key (`CTX_API_KEY` env or the Streamlit secret `ctx_api_key`, never
   committed) and outbound network; with neither the panel says which is missing and everything stays manual.
   Cached a day per query; `CTX_BASE_URL` repoints the client (mirror or stub); 429/502/503/504 retry with

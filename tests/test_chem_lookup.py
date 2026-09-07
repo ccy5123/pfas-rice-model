@@ -278,6 +278,54 @@ def test_pka_is_absent_when_none_was_found():
     assert "pKa" not in r.neutral_kwargs()
 
 
+# --- the pKa is the one field that changes WHICH MODEL RUNS ----------------
+def test_speciation_note_agrees_with_the_model_and_separates_its_two_warnings():
+    """A filled pKa reroutes the run onto the weak-electrolyte path, so it is
+    reported apart from the generic provenance badge — and the two things that can
+    be wrong are INDEPENDENT:
+
+    * `f_n` below the tested floor is a MODEL-scope statement, true however good the
+      pKa is — benzoic acid's own MEASURED 4.18 lands at f_n 0.005;
+    * a PREDICTED pKa is a provenance problem — carbamazepine is the in-repo
+      counterexample, where OPERA's 5.07 and the measured 13.9 that this repo's
+      Kodešová 2019 table is built on are nine log units apart.
+    """
+    LP = pytest.importorskip("literature_params")
+    for pka, acid in ((5.07, True), (13.9, True), (4.18, True), (9.0, False)):
+        f_n, _ = cl.speciation_note(pka, acid)
+        assert f_n == pytest.approx(LP.speciation(pka, cl.PH_ROOT_ZONE, acid)[0], abs=1e-12)
+
+    car_opera, txt_pred = cl.speciation_note(5.07, True, predicted=True)
+    car_meas, _ = cl.speciation_note(13.9, True, predicted=True)
+    assert car_opera == pytest.approx(0.0358, abs=1e-3) and car_meas == pytest.approx(1.0)
+    assert "PREDICTED" in txt_pred and "BELOW" in txt_pred        # both fire here
+
+    # a MEASURED pKa still trips the floor (it is about the model, not the source)
+    benzoic, txt_meas = cl.speciation_note(4.18, True, predicted=False)
+    assert benzoic < cl.F_N_TESTED_FLOOR
+    assert "BELOW" in txt_meas and "PREDICTED" not in txt_meas
+
+    # ...and a well-inside pKa from a measurement gets neither warning
+    _, quiet = cl.speciation_note(13.9, True, predicted=False)
+    assert "WARNING" not in quiet
+
+
+def test_the_cli_note_reads_the_pka_provenance_from_the_lookup():
+    """The predicted-pKa warning must key on where the pKa came from, not on
+    whether anything else in the record was predicted."""
+    r = cl.lookup("carbamazepine", key="k", _get_fn=fake_get())   # pKa_a is OPERA
+    assert r.props["pka_acidic"].source == "predicted"
+    assert "PREDICTED" in cl._pka_note(r, r.neutral_kwargs())
+
+    exp_pka = [{"propName": "pKa_a", "propValue": 4.18, "sourceName": "OPERA"}]
+    r2 = cl.lookup("benzoic acid", key="k",
+                   _get_fn=fake_get({"/chemical/search/": SEARCH, "/chemical/detail/": [DETAIL],
+                                     "/chemical/property/experimental/": exp_pka}))
+    assert r2.props["pka_acidic"].source == "experimental"
+    note = cl._pka_note(r2, r2.neutral_kwargs())
+    assert "PREDICTED" not in note and "BELOW" in note
+
+
 # --- degradation -----------------------------------------------------------
 def test_no_key_and_no_network_degrade_to_a_note_not_an_exception():
     """The app must stay usable with manual entry when the lookup cannot run."""
