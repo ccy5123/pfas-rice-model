@@ -1186,6 +1186,34 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   parametric, flooded, custom tables, soil inventory and a REAL live HYDRUS-1D run for a neutral (Kd = 2.39 L/kg from
   its own Koc), plus the inverse.
 
+- **Compound lookup from a name / CAS-RN / SMILES — EPA CompTox (CTX) (this session; user request)**:
+  `src/chem_lookup.py` + `tests/test_chem_lookup.py` (8) + the neutral panel's **🔎 Look up the compound**
+  box. The neutral path's inputs (`log Kow`, `MW`, `K_AW`, `pKa`, soil `Koc`) are properties of the COMPOUND,
+  not of this model, and typing them by hand is where a user's error enters. A name/CAS/SMILES now resolves to a
+  DTXSID (a SMILES via its InChIKey — the CTX chemical search has no structure route) and fills those fields.
+  **The design constraint is provenance, not convenience**: CompTox serves EXPERIMENTAL and OPERA-PREDICTED
+  values side by side, while every a-priori number this path advertises (Liu 0.206/0.281, Ge 0.783, Briggs stem
+  0.299) is on a MEASURED log Kow — so a prediction silently standing in for a measurement would leave those
+  numbers describing something the app no longer does. Hence: experimental WINS when both exist, every filled
+  field carries an `experimental`/`predicted (OPERA)` badge, a predicted fill raises a warning naming the
+  fields, and each field stays editable (a lookup seeds a DEFAULT, it does not commit the run). Two things are
+  deliberately never auto-filled: the **in-planta half-life** (no dashboard property corresponds to it, and
+  §4i measured the parent fraction varying 4.8× BETWEEN SPECIES for one compound, so it is not a compound
+  constant) and any value whose UNIT is unrecognised — `henry_to_kaw` converts atm-m3/mol (`H/RT`) and Pa-m3/mol
+  and otherwise returns None, because a wrong `K_AW` silently switches the leaf's volatilisation sink on or off.
+  A returned pKa is the one model-PATH change a lookup can make (strictly neutral → weak electrolyte, which is
+  TESTED-but-BOUNDED), so the panel says so and the ⚗️ panel prints the resulting `f_n`. **Optional by
+  construction**: needs a free EPA key (`CTX_API_KEY` env or the Streamlit secret `ctx_api_key`, never
+  committed) and outbound network; with neither the panel says which is missing and everything stays manual.
+  Cached a day per query; `CTX_BASE_URL` repoints the client (mirror or stub). Parsing is deliberately tolerant
+  (name-substring matching, bare-list or `{"data": …}` envelope) so an EPA schema change degrades to a MISSING
+  property rather than a wrong one — `python src/chem_lookup.py <compound> --raw` dumps what actually arrived.
+  Tests are 100% offline fixtures (CI has no key and no network) and pin the identifier classification, the
+  experimental-over-predicted preference, the Henry conversion, the `simulate_neutral` kwarg mapping (and that
+  `half_life` is absent from it), and the no-key/no-network degradation. Verified end-to-end against a local
+  CTX stub: experimental log Kow 2.45 chosen over the OPERA 3.39, MW/K_AW/pKa/Koc seeded (Koc 251.2 from the
+  dashboard replacing Karickhoff's 119.4), and the no-key path warning instead of crashing.
+
 ## 7. Build & run
 - `pip install -r requirements.txt`
 - **Main reproduction**: `python reproduce_demo.py` (Yamazaki BAF, W2 fit, RMSE≈0.029);
@@ -1194,6 +1222,13 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (plant/soil accumulation colormap + HYDRUS/soil/biomonitoring modes; the Expert sidebar's **⚙️ Mechanism**
   expander switches `uptake` carrier/bypass + `lipid_loading`; `2 · Compound` switches the COMPOUND CLASS —
   curated congener / SMILES / **neutral organic (log Kow)**; see `docs/visualization_tool.md`).
+- **Compound lookup (EPA CompTox / CTX)**: `python src/chem_lookup.py carbamazepine` (or a CAS-RN,
+  or a SMILES) prints log Kow / MW / K_AW / pKa / Koc **with their provenance**; `--raw` dumps the raw
+  JSON when a field comes back empty. Needs a free EPA key: `export CTX_API_KEY='…'` (CLI) or the
+  Streamlit secret `ctx_api_key` in `.streamlit/secrets.toml` (app; keep it out of git). `CTX_BASE_URL`
+  points at a mirror/stub. In the app: the neutral compound panel's **🔎 Look up the compound** box —
+  experimental values beat predicted ones, everything is badged and editable, and the in-planta
+  half-life is never auto-filled.
 - **Live HYDRUS-1D** (optional, for the "Run HYDRUS-1D (live)" mode): the FORTRAN source is now
   **VENDORED** under `external/hydrus_source/` (de-submoduled — the upstream `phydrus/source_code`
   submodule is unreachable behind restrictive network policies, and the compiled binary is not in

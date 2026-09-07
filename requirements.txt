@@ -12,3 +12,8 @@ pandas>=1.5
 rdkit>=2023.9
 # live "Run HYDRUS-1D" mode: drives the engine (built in-app via gfortran; see packages.txt):
 phydrus>=0.2
+# EPA CompTox (CTX) property lookup in the app (src/chem_lookup.py). The lookup is
+# OPTIONAL -- it needs a free EPA API key and outbound network, and degrades to
+# manual entry without either -- but requests ships anyway since it is tiny and
+# Streamlit already pulls it in transitively:
+requests>=2.28

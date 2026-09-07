@@ -137,7 +137,15 @@ congener, any PFAS structure by SMILES, or a **neutral organic given by its log 
 Briggs/Kow base on the same ODE with `z = 0` (no anion exclusion, no carrier, nothing fitted;
 `pKa` turns it into a weak acid/base). The neutral class drives the whole app — map, dynamics,
 all six exposure modes incl. live HYDRUS-1D, the Bayesian inverse, downloads — while the
-PFAS-only levers and tabs are dropped rather than shown inert. See `docs/visualization_tool.md`. Compute is in `src/model_api.py` (`simulate(...)`, soil/driver/biomonitoring helpers);
+PFAS-only levers and tabs are dropped rather than shown inert.
+
+Don't want to type physicochemical properties by hand? The neutral panel's **🔎 Look up the
+compound** box takes a **name, CAS-RN or SMILES** and fills log Kow / MW / K_AW / pKa / Koc from
+the **EPA CompTox** dashboard (`src/chem_lookup.py`) — experimental values beating predicted ones,
+each field badged with its provenance and still editable, and the in-planta half-life never
+auto-filled (it is not a compound constant). Optional: it needs a free EPA API key in `CTX_API_KEY`
+or the Streamlit secret `ctx_api_key`, and degrades to manual entry without one. See
+`docs/visualization_tool.md`. Compute is in `src/model_api.py` (`simulate(...)`, soil/driver/biomonitoring helpers);
 the Plotly figures in `src/plots.py` (`fig_plant_schematic`, …) — both UI-agnostic and
 covered by the tests. Ready-to-load examples are in `examples/`. Full guide:
 `docs/visualization_tool.md`.

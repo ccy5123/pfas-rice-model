@@ -145,6 +145,48 @@ measurement; the **grain compartment is UNTESTED** for neutrals; stem/leaf lipid
 Trapp 1994's soybean values; and with `half_life = 0` the leaf is an unbounded terminal
 accumulator, so the run is an upper bound (a warning fires in that case).
 
+### Looking the compound up (EPA CompTox / CTX)
+
+Typing `log Kow`, `MW`, `K_AW`, `pKa` and `Koc` by hand is where a user's error
+enters, so the neutral panel has a **🔎 Look up the compound** box that takes a
+**name, CAS-RN or SMILES** and fills them from the EPA CompTox Chemicals Dashboard
+(`src/chem_lookup.py`; CTX API). A SMILES is resolved through its InChIKey (RDKit),
+since the CTX chemical search has no structure route.
+
+Three rules the module enforces, all for the same reason — this path's whole claim
+is that **nothing in it is fitted**, and its published a-priori errors (Liu
+0.206/0.281, Ge 0.783, Briggs stem 0.299) are on *measured* log Kow:
+
+1. **Experimental beats predicted.** CompTox serves measured values and OPERA
+   predictions side by side; when both exist the measured one is used.
+2. **Provenance is shown, never dropped.** Each filled field carries an
+   `experimental` / `predicted (OPERA)` badge, and a prediction standing in for a
+   measurement raises a warning naming which fields it affects. Every field stays
+   editable — a lookup seeds a default, it does not commit the run to a value.
+3. **The in-planta half-life is never filled.** No dashboard property corresponds
+   to it, and Kodešová 2019 measured the surviving parent fraction varying **4.8×
+   between species** for one compound (§4i), so it is not a compound constant to
+   look up. It stays a deliberate user input.
+
+A returned pKa switches the run onto the weak-electrolyte path, which is the one
+model change a lookup can make; the panel says so and the ⚗️ panel prints the
+resulting `f_n` (far from the root-zone pH it is ≈1 and the run matches the
+strictly neutral one).
+
+**Key and network.** The CTX API needs a free EPA key, read from `CTX_API_KEY` or
+the Streamlit secret `ctx_api_key` — never committed. Without a key, without
+network, or for an unknown compound the panel shows why and everything stays
+manual; the lookup is a convenience, never a dependency. `CTX_BASE_URL` points the
+client at a mirror or a local stub. Results are cached for a day per query so a
+rerun does not re-hit EPA. The CLI is the way to check a compound (or a schema
+change) outside the app:
+
+```bash
+python src/chem_lookup.py carbamazepine        # resolved values + provenance
+python src/chem_lookup.py 298-46-4
+python src/chem_lookup.py carbamazepine --raw  # raw JSON, when a field comes back empty
+```
+
 ### Soil sorption for a neutral compound
 
 The soil modes need a Kd, and the PFAS chain-length `Koc` QSPR is a per-CF2 group contribution
@@ -157,7 +199,8 @@ It is flagged **PROVISIONAL** for a specific reason: no table in this repo score
 Koc (the neutral tables either supply the exposure directly or carry the paper's own measured
 isotherm), and Li 2019's soil half shows exactly what is at stake — root bias **+0.033** with an
 experimental `K_om` against **+0.291** with an estimated one. Type a measured value whenever
-you have one.
+you have one — or let the CompTox lookup above supply the dashboard's OPERA `logKoc`,
+which then replaces the Karickhoff default and is labelled as predicted.
 
 ## Tang 2026 validation tab (out-of-sample)
 
