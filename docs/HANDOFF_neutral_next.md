@@ -18,7 +18,7 @@
 > bypass**, §5 the synthesis. **Read §5 first.**
 > `parameters.json`, `simulate()` and `reproduce_demo` (RMSE 0.029) are **UNCHANGED**
 > throughout — everything on this arc is additive or opt-in, and no PFAS number moved.
-> Full suite: **336 collected, 335 pass, 2 skip** (~25 min); the two skips are the
+> Full suite: **341 collected, 340 pass, 2 skip** (~25 min); the two skips are the
 > optional `emcee` and `sci-adk` deps. **CI now runs it** — see §5.
 
 ---
@@ -150,8 +150,10 @@ cannot be expressed by one valence. That is the `(fn, fd)`-weighted `root_uptake
 base is a cation), `Compound.pKa/is_acid/z/P_n`, `Compartment.pH`, the phloem pH ion
 trap, and the `literature_params` speciation helpers. Reachable as
 `simulate_neutral(logKow, pKa=…)`. Verified bit-identical (67 floats, exact `==`,
-PFAS and neutral). **NOT validated** — no measured weak-electrolyte rice dataset
-exists here. What was left on the closed branches, and is worth a focused change if
+PFAS and neutral). ~~**NOT validated**~~ — **superseded: it has since been tested**
+(`validation/weak_electrolyte_tscf.py`, docs §4l) and is now **BOUNDED** — direction
+supported, magnitude refuted — and reachable in the app (Neutral tab → ⚗️ expander).
+Still no measured weak-electrolyte *rice* dataset; the 67-row test table is 16 other species. What was left on the closed branches, and is worth a focused change if
 wanted: the `f_lip` vs `f_PL` distinction (galactolipid, not phospholipid, in the
 leaf), the SMILES `compound_class` switch, and the soil `K_oc` neutral branch.
 
@@ -413,7 +415,7 @@ python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.c
 python validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_ge2017.csv   # 0.783
 python reproduce_demo.py                                                            # 0.029
 
-pytest -q                                          # 336 collected, 335 pass, 2 skip
+pytest -q                                          # 341 collected, 340 pass, 2 skip
 ```
 
 **Resume prompt.**

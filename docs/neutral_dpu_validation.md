@@ -1043,6 +1043,34 @@ season-long growing run the model drives; only its root partition transfers. And
 the Ge leaf result stays confounded with the missing half-life, so 0.783 is an
 upper bound on the transport error rather than a measurement of it.
 
+### 4n. The path is now a compound CLASS in the app, and what that required
+
+Reachability, not science: the neutral path shipped as an Expert-only *tab*, which
+made it a mini-app — no plant map, no exposure modes, no drivers, no inverse, no
+downloads. "Which compound" is a **scenario input**, so it moved to the sidebar
+(`2 · Compound`: curated congener · SMILES · **neutral organic (log Kow)**), and
+`simulate_neutral` already returning the `simulate()` contract is what made that
+cheap. Two things had to be added, and one of them is a genuine (small) science
+addition that belongs in this record:
+
+- **`literature_params.koc_neutral`** — Karickhoff 1981, `log Koc = 0.989·log Kow
+  − 0.346`. The soil-side modes need a Kd and the PFAS chain-length `Koc` QSPR is a
+  per-CF2 group contribution with no meaning for a neutral. It is flagged
+  **PROVISIONAL** on the evidence in §4h: **nothing in `data_obs/` scores a
+  predicted Koc** (these tables either supply the exposure directly or carry the
+  paper's own measured isotherm), and Li 2019's soil half is precisely the warning —
+  root bias **+0.033** with an experimental `K_om` against **+0.291** with an
+  estimated one. It is therefore an editable default in the UI, not a fixed constant,
+  and a measured Kd should replace it whenever one exists.
+- **`estimate_exposure_bayesian(log_kow=, neutral_kw=)`** — the inverse with the
+  neutral forward model. Its identifiability caveat is if anything sharper here:
+  the neutral forward model has no fitted transport at all, so the posterior width
+  reports the exposure's own conditioning, and it will be wide for a compound whose
+  in-planta half-life is short and unknown (§4i: metabolism is species-dependent).
+
+Nothing about §4a–§4m moved: `simulate_neutral`'s defaults, and every number in this
+document, are unchanged (pinned by the tests).
+
 ## 5. The other papers, and what each can and cannot do
 
 Here is what each obtained paper is actually good for. The second block is the

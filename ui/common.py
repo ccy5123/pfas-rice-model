@@ -75,6 +75,23 @@ def _drivers_tuple(d):
 
 
 @st.cache_data(show_spinner=False)
+def _simulate_neutral(**kw):
+    """Cache a NEUTRAL-organic run. Same driver plumbing as `_simulate` (drivers come in
+    as a hashable tuple), so every view that consumes a `simulate()` result — the map,
+    tissue dynamics, drivers, downloads — works on a neutral compound unchanged."""
+    drv = kw.pop("drivers_tuple", None)
+    if drv is not None:
+        t, Cwo, Qtp, Mflat, ncol = drv
+        kw["drivers"] = dict(t=np.array(t), Cwo=np.array(Cwo), Qtp=np.array(Qtp),
+                             M=np.array(Mflat).reshape(-1, ncol))
+    kl = kw.pop("cwo_k_leach", None)
+    if kl is not None and kw.get("cwo_profile", "constant") != "constant":
+        kw["cwo_kw"] = {"k_leach": float(kl)}
+    log_kow = kw.pop("log_kow")
+    return api.simulate_neutral(log_kow, **kw)
+
+
+@st.cache_data(show_spinner=False)
 def _simulate_twopool_seq(congener):
     """Cache the EXPLORATORY sequestration two-pool run (curated congener only).
 
@@ -84,6 +101,22 @@ def _simulate_twopool_seq(congener):
     root/straw/grain BAF, or None if the run fails."""
     try:
         r = api.simulate_twopool_seq(congener)
+        return {"root": r["baf_final"]["root"], "straw": r["straw_baf"],
+                "grain": r["baf_final"]["grain"]}
+    except Exception:                                        # noqa: BLE001
+        return None
+
+
+@st.cache_data(show_spinner=False)
+def _simulate_twopool_nstem(congener):
+    """Cache the MERGED model: two-pool sequestration root + redistributed shoot.
+
+    The structural merge the Tang per-organ OOS asked for (docs/twopool_root_exploration.md
+    Result 8). Run at the two-pool's calibrated point like `_simulate_twopool_seq`, so the
+    two overlays are comparable with each other and with the fixed observed bars. Returns
+    the root/straw/grain BAF, or None if the run fails."""
+    try:
+        r = api.simulate_twopool_nstem(congener)
         return {"root": r["baf_final"]["root"], "straw": r["straw_baf"],
                 "grain": r["baf_final"]["grain"]}
     except Exception:                                        # noqa: BLE001
@@ -127,9 +160,13 @@ def _mol_svg(smiles, w=290, h=170):
 
 
 @st.cache_data(show_spinner="Running HYDRUS-1D…")
-def _hydrus_drivers_cached(congener, season, f_oc, flood_until, percolation, biomass="oryza"):
-    """Cache a real HYDRUS-1D paddy run (a few seconds) per parameter set."""
-    drv, _ = api.hydrus_drivers(congener, season=season, f_oc=f_oc, biomass=biomass,
+def _hydrus_drivers_cached(congener, season, f_oc, flood_until, percolation, biomass="oryza",
+                           Kd=None):
+    """Cache a real HYDRUS-1D paddy run (a few seconds) per parameter set.
+
+    `Kd` [L/kg] bypasses the PFAS chain-length Koc QSPR — the route a NEUTRAL organic
+    takes (congener is then None) and the way in for a measured sorption value."""
+    drv, _ = api.hydrus_drivers(congener, season=season, f_oc=f_oc, biomass=biomass, Kd=Kd,
                                 flood_until=float(flood_until), percolation=float(percolation))
     return drv
 
@@ -255,12 +292,20 @@ def _glossary_md(ko=False):
 _UNC = {"Typical (±~40%)": 0.15, "High precision (±~20%)": 0.10, "Rough (±~2×)": 0.30}
 
 
-def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, simple=True):
+def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, simple=True,
+                              mech=None, curated_only=True):
     """Shared 'work backwards' panel: Bayesian estimate of the soil-water contamination
     level Cwᵒ from measured tissue concentrations, with a credible interval. Used by
-    both the Simple (Korean) and Expert (English) tabs. `key` namespaces the widgets."""
+    both the Simple (Korean) and Expert (English) tabs. `key` namespaces the widgets.
+
+    `mech` carries the sidebar's mechanism switches (uptake / lipid_loading / ...) into
+    the inverse, so it is run under the SAME model as the forward tabs; it is part of the
+    cache signature, so flipping a switch re-estimates rather than serving a stale run.
+    `curated_only=False` lifts the congener check for the NEUTRAL path, where the compound
+    is a log Kow (carried in `mech`) and the name is only a label."""
+    mech = dict(mech or {})
     lang = "ko" if simple else "en"
-    if congener not in api.CONGENERS:
+    if curated_only and congener not in api.CONGENERS:
         st.info(_t("inv.not_curated", lang))
         return
     st.markdown(_t("inv.intro", lang))
@@ -273,7 +318,10 @@ def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, si
     sigma = _UNC[unc_label]
     have = any(v > 0 for v in (root, straw, grain))
     run = st.button(_t("inv.estimate_btn", lang), key=f"{key}_btn", disabled=not have, type="primary")
-    sig = (congener, root, straw, grain, sigma, E_m_mV, f_xy_source, biomass)
+    # repr() rather than the items themselves: `mech` may carry a nested dict
+    # (the neutral kwargs), which is unhashable inside a tuple.
+    sig = (congener, root, straw, grain, sigma, E_m_mV, f_xy_source, biomass,
+           repr(sorted(mech.items(), key=lambda kv: kv[0])))
     if run:
         st.session_state[f"{key}_sig"] = sig
     if not have:
@@ -299,7 +347,7 @@ def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, si
         try:
             est = api.estimate_exposure_bayesian(
                 congener, meas, sigma_log10=sigma, E_m_mV=E_m_mV,
-                f_xy_source=f_xy_source, biomass=biomass, progress=_cb)
+                f_xy_source=f_xy_source, biomass=biomass, progress=_cb, **mech)
         except Exception as e:                               # noqa: BLE001
             prog.empty()
             st.error(_t("inv.error", lang, e=e))
@@ -597,7 +645,15 @@ def render_header(cfg):
     if expert:
         st.title("🌾 PFAS in Rice — Uptake Explorer")
         st.warning(_DISCLAIMER)
-        st.caption(_t("header.expert_caption", "en"))
+        if getattr(cfg, "neutral", None):
+            # The standing caption describes the PFAS model; saying it over a neutral
+            # run would misstate what is being solved (z=0, no exclusion, no carrier).
+            st.caption("**Neutral-organic mode** — the same 4-compartment dynamic plant-uptake "
+                       "model run as the Briggs/Kow base (`z = 0`: no anion exclusion, no "
+                       "carrier, nothing fitted; `K_PW` and `TSCF` follow from log Kow). Switch "
+                       "the compound class in the sidebar to return to PFAS.")
+        else:
+            st.caption(_t("header.expert_caption", "en"))
         return
     # --- Simple (Korean): a compact hero, then a slim (not heavy) disclaimer ---
     st.markdown(
@@ -647,10 +703,35 @@ def run_model(cfg):
     fxy_source = cfg.fxy_source
     biomass = cfg.biomass
     measured_bio = cfg.measured_bio
-    sim_kw = dict(E_m_mV=E_m, f_xy_source=fxy_source, biomass=biomass)
+    sim_kw = dict(E_m_mV=E_m, f_xy_source=fxy_source, biomass=biomass,
+                  uptake=getattr(cfg, "uptake", api.DEFAULT_UPTAKE),
+                  lipid_loading=bool(getattr(cfg, "lipid_loading", False)),
+                  km_scale=float(getattr(cfg, "km_scale", 1.0) or 1.0))
+    # Only send the entry-constant overrides when the user actually set them --
+    # None means "use the uptake mode's own value" (model_api.UPTAKE_MODES).
+    for _k in ("vmax_scale", "g_apo"):
+        _v = getattr(cfg, _k, None)
+        if _v is not None:
+            sim_kw[_k] = float(_v)
     desc = None
     provisional = False
-    if smiles:                                              # compound specified by structure
+    neutral = getattr(cfg, "neutral", None)
+    if neutral:
+        # NEUTRAL organic: a different compound CLASS, not a different molecule. The
+        # PFAS levers (E_m, f_xy source, carrier/lipid) have no meaning at z=0, so they
+        # are not passed; everything else -- drivers, biomass, Cwᵒ shape -- is shared,
+        # and the result dict follows the same contract as `simulate()`.
+        nk = {k: v for k, v in neutral.items() if k != "Koc"}
+        with st.spinner("Running the model…"):
+            if drivers is not None:
+                res = _simulate_neutral(drivers_tuple=_drivers_tuple(drivers),
+                                        biomass=biomass, **nk)
+            else:
+                res = _simulate_neutral(Cwo=Cwo_const, season=season, biomass=biomass,
+                                        measured_forcing=measured, cwo_profile=cwo_profile,
+                                        cwo_k_leach=cwo_kleach, Koc=neutral.get("Koc"), **nk)
+        congener = res["congener"]
+    elif smiles:                                            # compound specified by structure
         if not api.rdkit_available():
             st.error("RDKit not installed — cannot parameterise a SMILES structure. "
                      "`pip install rdkit`, or switch to **Curated congener** in the sidebar.")
@@ -675,7 +756,10 @@ def run_model(cfg):
         with st.spinner("🌾 벼 한 철 축적을 계산하는 중…" if not cfg.expert else "Running the model…"):
             res = _simulate(congener, Cwo=Cwo_const, season=season, measured_forcing=measured,
                             cwo_profile=cwo_profile, cwo_k_leach=cwo_kleach, **sim_kw)
-    obs = api.observed_baf(congener)
+    # No observed neutral series exists (the a-priori tables are other compounds and
+    # other exposures), so a neutral run has nothing to plot against -- an empty obs
+    # keeps every "predicted vs observed" frame honest instead of drawing a blank bar.
+    obs = {} if neutral else api.observed_baf(congener)
     p = res["params"]
 
     # biomonitoring-derived BAFs (measured side)

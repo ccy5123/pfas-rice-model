@@ -91,8 +91,8 @@ PFSA C4/C6/C8: PFBS·PFHxS·PFOS; ether-PFAS: GenX); in Expert mode **any PFAS c
 |---|---|---|
 | Language | **Korean** | **English** |
 | Audience | policy / students / public | environmental science / research |
-| Input | chemical + level (low/medium/high) | 5+1 exposure modes, SMILES, all parameters |
-| Tabs | 5 (plain language) | 9 (technical) |
+| Input | chemical + level (low/medium/high) | 6 exposure modes, SMILES, mechanism switches, all parameters |
+| Tabs | 5 (plain language) | 10 (technical) |
 | Symbols | none (BAF/Cwᵒ/f_xy/eᴺ hidden) | all exposed |
 
 **How to switch:** the toggle at the top of the sidebar — **🔬 전문가/고급 모드 (Expert / advanced)**.
@@ -139,14 +139,21 @@ Turning the toggle on switches to the English UI; the sidebar becomes **1 · Dat
 | **Soil inventory → pore water** | inverting a total soil load (Freundlich) | measured | you know total soil PFAS, not pore water |
 | **Biomonitoring (measured tissue)** | a measured soil-water value | not needed | you have field tissue + water concentrations |
 
-### 5.2 Compound (2 · PFAS compound)
-- **Curated congener**: one of 13 (measured/cited calibrated parameters).
+### 5.2 Compound class (2 · Compound)
+Three classes, chosen in the sidebar because the compound is a scenario input, not a result view:
+- **Curated congener**: one of 13 PFAS (measured/cited calibrated parameters).
 - **SMILES (structure)**: paste any PFAS structure → RDKit extracts descriptors → (1) **read-across** if it matches a curated congener, or (2) a **QSPR** (provisional) for a novel structure. A 2-D structure preview is shown. (`docs/structure_input.md`)
+- **Neutral organic (log Kow)**: a NON-PFAS, non-ionised compound — the Briggs/Kow base on the *same* ODE with `z = 0` (GHK → 1, `eᴺ` 107 → 1, carrier off, **nothing fitted**). The one required input is a **log Kow**; then name, in-planta half-life, TSCF QSPR (briggs/schriever), and two expanders — *Composition, phloem, air* (`lipid_source`, phloem departure, opt-in air exchange with MW/`K_AW`) and *Weak electrolyte (pKa) + apoplastic bypass* (`pKa`/acid-base/pH → prints `f_n`; `g_apo`) — plus an editable **soil Koc** (Karickhoff default, PROVISIONAL) for the soil-side modes. Every exposure mode, the map/dynamics/drivers, the inverse and the downloads work on it; the PFAS-only levers (`E_m`, `f_xy` source, the mechanism switches) and the four PFAS-only tabs are absent rather than ignored, and the headline shows **TSCF** instead of `eᴺ`.
 
 ### 5.3 Model parameters (sidebar)
 - **E_m [mV]** (root membrane potential): the GHK anion-exclusion lever (rice −116…−140 mV). More negative → more anion exclusion.
 - **f_xy source**: `recommended` (monotone, physical TSCF) / `W2 fit` (reproduces Yamazaki).
 - **Biomass driver M(t)**: `ORYZA2000` (mechanistic carbon balance, default) / `growth_rice` (IR72 partitioning × logistic).
+- **⚙️ Mechanism (advanced)** — two questions that are still *open* are exposed as modes rather than buried constants (both default to the shipped model; `parameters.json` untouched). A banner appears next to the headline metrics whenever one is on.
+  - **Root entry**: `carrier` (default) vs `bypass` (apoplastic). The Michaelis–Menten carrier is the **one piece of physics this repo adds** to the Trapp cell model — yet on Yamazaki the carrier (1.035) and a single global `g_apo`=20 (0.996) are **indistinguishable** (bootstrap 0.749) while adding nothing at all fails (2.640): *an* addition is necessary, *which* is undecided, so the carrier keeps its place **by default, not by evidence** (`validation/carrier_vs_bypass.py`).
+  - **Lipid-facilitated loading**: the K_PL-gated, B-independent loading term (`g_xy·C`/`g_ph·C`). With **nothing re-fit to Tang** it moves the per-organ OOS 1.232 → 0.516 — the repo's strongest cross-dataset result. It supplies its own `f_xy`, so the f_xy choice above is ignored while it is on. Exploratory, default off.
+  - **Override the entry constants**: `Vmax ×`, `Km ×`, `g_apo` — the levers of that scan and of the dose series (whose result is the post-hoc bound `Km ≥ 500 µg/L`, 100× the fitted value).
+  - The switches propagate to every tab, the congener comparison and the **Bayesian inverse**, so the inverse is never run under a different model than the forward tabs.
 
 ### 5.4 Scenario (3 · Scenario) — per-mode controls
 - **Model (parametric)**: `Pore-water Cwᵒ [µg/L]`, `Season length [days]`, `Cwᵒ(t) shape` (constant / flooded(dilution+leaching), per-congener HYDRUS-calibrated `k_leach`), `Measured forcings` toggle.
@@ -156,16 +163,18 @@ Turning the toggle on switches to the English UI; the sidebar becomes **1 · Dat
 - **Soil inventory**: `Total soil inventory [µg/kg dry]`, Freundlich `K_F`/`n`/`θ_g`, flooded flag, `k_leach`.
 - **Biomonitoring**: manual input (root/straw/grain conc + Cwᵒ) or CSV.
 
-### 5.5 Expert tabs (9)
+### 5.5 Expert tabs (9 for PFAS, 5 for a neutral organic)
 1. **🗺️ Plant & soil map** — accumulation map (concentration/BAF toggle, day slider/animate).
 2. **📈 Tissue dynamics** — tissue concentration C_k(t) + **PFAS mass (burden) C_k·M_k**. Shows B_k/f_xy/L_Ph/κ_d. Explains the grain formation gate.
 3. **🟫 Soil & drivers** — the actual Cwᵒ(t)·Q_TP(t)·M(t) drivers, the (soil-inventory) isotherm, and the soil profile.
-4. **📊 BAF vs observed** — model vs Yamazaki 2023 bars. Optional **two-pool (seq)** exploratory overlay. Yamazaki conditions/matching explained.
+4. **📊 BAF vs observed** — model vs Yamazaki 2023 bars. Optional **two-pool (seq)** and **merged root+shoot** (`simulate_twopool_nstem`) exploratory overlays. Yamazaki conditions/matching explained.
 5. **🔗 Chain-length trends** — chain length vs a parameter (K_PL/K_prot/K_cw/f_xy/B_root/B_grain).
 6. **⚖️ Compare congeners** — per-tissue BAF across the congeners selected in the sidebar.
-7. **✅ Tang TF (OOS)** — Tang 2026 per-organ TF (out-of-sample) check (PFOA/PFOS/GenX, dry-weight, with the f_xy refit).
+7. **✅ Tang TF (OOS)** — Tang 2026 per-organ TF (out-of-sample) check (PFOA/PFOS/GenX, dry-weight, with the f_xy refit). A **lipid loading (OOS)** checkbox adds a third series: the green refit was calibrated *on* these measurements, the purple lipid run was calibrated on Yamazaki and transferred untouched — and lands in the same place (0.516 vs 0.519).
 8. **🔎 Inverse (Bayesian)** — tissue concentrations → exposure Cwᵒ, with the identifiability caveat → [6.1](#61-work-backwards-bayesian-inverse).
-9. **ℹ️ About / coupling** — the modes, the HYDRUS-1D input/output mapping, and the glossary.
+9. **ℹ️ About / coupling** — the six modes, the HYDRUS-1D input/output mapping, and the glossary.
+
+Tabs **4–7** (BAF vs observed, chain-length trends, compare congeners, Tang TF) are PFAS-only and are **dropped** for a neutral organic — the Yamazaki bars, the chain series, the congener comparison and the Tang per-organ check are all statements about the PFAS series with no neutral counterpart. A neutral run therefore shows five tabs: map, tissue dynamics, soil & drivers, inverse, about.
 
 ---
 

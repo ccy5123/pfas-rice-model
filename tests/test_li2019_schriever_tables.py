@@ -603,3 +603,64 @@ def test_root_and_stem_anchors_are_missed_in_opposite_directions():
     root_ratio = (ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A) / 10 ** ND.RCF_INTERCEPT
     stem_ratio = (ND.TRAPP1994_LIPID_FW["stem"] * ND.LIPID_OCTANOL_A) / 10 ** ND.STEM_INTERCEPT
     assert root_ratio < 1.0 < stem_ratio
+
+
+# --------------------------------------------------------------------------
+# Neutral organics through the SOIL side: the Karickhoff Koc route
+# --------------------------------------------------------------------------
+def test_koc_neutral_is_karickhoff_and_separate_from_the_pfas_qspr():
+    """A neutral compound's soil sorption cannot come from the PFAS chain-length
+    Koc QSPR (a per-CF2 group contribution with no meaning for a neutral), so the
+    neutral path has its own: Karickhoff 1981, log Koc = 0.989*log Kow - 0.346."""
+    import literature_params as lp
+    assert lp.koc_neutral(0.0) == pytest.approx(10 ** -0.346, rel=1e-9)
+    assert lp.koc_neutral(2.45, log10=True) == pytest.approx(-0.346 + 0.989 * 2.45, rel=1e-9)
+    # monotone in log Kow, and a decade of log Kow is ~a decade of Koc (slope ~1)
+    assert lp.koc_neutral(5.0) / lp.koc_neutral(4.0) == pytest.approx(10 ** 0.989, rel=1e-9)
+    # carbamazepine (log Kow 2.45) lands in the literature band for it, ~100-250 L/kg
+    assert 100.0 < float(lp.koc_neutral(2.45)) < 250.0
+    # and it is NOT the PFAS QSPR: same numeric argument, different meaning/value
+    assert not np.isclose(float(lp.koc_neutral(2.45)), float(lp.koc(2.45)))
+
+
+def test_neutral_soil_side_plumbing_is_koc_driven_and_pfas_defaults_are_untouched():
+    """The neutral compound reaches every soil-side entry point through its own Koc:
+    the flooded Cwᵒ(t) shape, its k_leach default and the HYDRUS Kd. The PFAS table
+    must not answer for a neutral, and the PFAS defaults must not move."""
+    import model_api as api
+    import literature_params as lp
+    Koc = float(lp.koc_neutral(2.45))
+    # k_leach: the HYDRUS-calibrated per-congener TABLE is PFAS-only; a neutral takes
+    # the log10(Koc) fallback fit, which is a property of the leaching model, not of PFAS
+    assert api.default_k_leach("PFOA") == pytest.approx(0.05)          # unchanged
+    kn = api.default_k_leach(Koc=Koc)
+    assert 0.0 <= kn <= 0.15 and kn != pytest.approx(0.02)             # not the flat placeholder
+    # the flooded shape runs off log_kow with no congener at all, and is mean-normalised
+    t = np.linspace(0.0, 120.0, 241)
+    flooded = api.cwo_profile_series(t, level=1.0, profile="flooded", log_kow=2.45)
+    assert float(np.mean(flooded)) == pytest.approx(1.0, rel=1e-6)
+    assert flooded[-1] < flooded[0]                                    # it leaches
+    # a measured Koc overrides the QSPR, and a stronger sorber leaches less
+    strong = api.cwo_profile_series(t, level=1.0, profile="flooded", Koc=Koc * 100)
+    assert strong[-1] / strong[0] > flooded[-1] / flooded[0]
+    # and the whole ODE accepts the shape on the neutral path
+    r = api.simulate_neutral(2.45, half_life=7.0, cwo_profile="flooded")
+    assert np.isfinite(r["baf_final"]["root"]) and r["baf_final"]["root"] > 0
+
+
+def test_neutral_bayesian_inverse_recovers_a_known_exposure():
+    """The inverse must work for a non-PFAS compound too: same Laplace posterior in
+    log10(Cwᵒ), with `simulate_neutral` as the forward model instead of `simulate`."""
+    import model_api as api
+    truth = 3.0
+    fwd = api.simulate_neutral(2.45, half_life=7.0, Cwo=truth)
+    meas = {"root": fwd["conc"]["root"][-1], "grain": fwd["conc"]["grain"][-1]}
+    est = api.estimate_exposure_bayesian(log_kow=2.45, measured_conc=meas,
+                                         neutral_kw=dict(half_life=7.0))
+    assert est["median"] == pytest.approx(truth, rel=0.10)
+    lo, hi = est["ci95"]
+    assert lo < truth < hi
+    # the PFAS entry point is unchanged (congener positional, no log_kow)
+    pf = api.simulate("PFOA", Cwo=2.0)
+    epf = api.estimate_exposure_bayesian("PFOA", {"grain": pf["conc"]["grain"][-1]})
+    assert epf["median"] == pytest.approx(2.0, rel=0.10)

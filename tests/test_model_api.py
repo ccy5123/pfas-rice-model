@@ -237,6 +237,21 @@ def test_estimate_exposure_bayesian_recovers_and_brackets():
         api.estimate_exposure_bayesian("PFOA", {"root": 0.0})
 
 
+def test_estimate_exposure_bayesian_runs_under_the_selected_mechanism():
+    """The inverse must use the SAME model as the forward run, not silently fall back
+    to the shipped one: the app passes the sidebar's mechanism switches straight
+    through. The bypass takes up more anion per unit exposure, so explaining the same
+    measured tissue needs a LOWER Cwᵒ than the carrier does."""
+    meas = {"grain": api.simulate("PFOA", Cwo=2.0)["conc"]["grain"][-1]}
+    carrier = api.estimate_exposure_bayesian("PFOA", meas, uptake="carrier")
+    bypass = api.estimate_exposure_bayesian("PFOA", meas, uptake="bypass")
+    assert carrier["median"] == pytest.approx(2.0, rel=0.10)       # default is unchanged
+    assert bypass["median"] < carrier["median"]
+    # lipid loading is likewise honoured (it moves the grain hard, so the level moves)
+    lipid = api.estimate_exposure_bayesian("PFOA", meas, lipid_loading=True)
+    assert lipid["median"] != pytest.approx(carrier["median"], rel=0.05)
+
+
 def test_estimate_exposure_progress_callback():
     """The optional progress callback (for the app's live bar) fires once per ODE
     solve with monotone done<=total, and a throwing callback never breaks the fit."""

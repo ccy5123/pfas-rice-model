@@ -41,8 +41,10 @@ table is fresh-weight **mass** (the model's M unit) and the transport ODE is mas
 Either table can be left at its default to fall back to the built-in value.
 
 Flip the sidebar **🔬 Expert / advanced controls** toggle to restore the full research
-interface documented below — the five exposure modes, SMILES structure input, every model
-parameter, and all eight tabs. Nothing is removed; it is layered behind the toggle.
+interface documented below — the six exposure modes, the three **compound classes** (curated
+PFAS congener · any PFAS structure by SMILES · **neutral organic by log Kow**), the opt-in
+mechanism switches, every model parameter, and the nine tabs. Nothing is removed; it is
+layered behind the toggle.
 
 The compute is UI-agnostic and unit-tested head-less:
 
@@ -51,6 +53,34 @@ The compute is UI-agnostic and unit-tested head-less:
 | Model API | `src/model_api.py` | `simulate(...)`, driver/soil/biomonitoring helpers, colormap series |
 | Plotly figures | `src/plots.py` | `fig_plant_schematic`, `fig_schematic_*`, `fig_soil_profile`, `fig_drivers`, `fig_isotherm`, … |
 | UI | `app.py` | Streamlit widgets + tabs (no science) |
+
+---
+
+## Mechanism switches (sidebar → ⚙️ Mechanism, Expert only)
+
+Two of the model's open questions are *named modes*, not buried constants — the repo's idiom
+(`lipid_source`, `f_xy_source`, `cwo_profile`, `biomass`, `uptake`). Both default to the
+shipped model and, when either is on, a banner sits next to the headline metrics, because the
+sidebar expander is collapsed and the run would otherwise look like the shipped one.
+
+- **Root entry — carrier (default) vs apoplastic bypass** (`simulate(uptake=…)`,
+  `model_api.UPTAKE_MODES`). The Michaelis–Menten carrier is this repo's one addition to the
+  Trapp cell model, and it keeps its place **by default, not by evidence**: on Yamazaki the
+  carrier (log10 RMSE 1.035) and one global bypass `g_apo`=20 (0.996) are indistinguishable
+  (bootstrap 0.749), while adding nothing at all fails (2.640) — so *an* addition is necessary
+  and *which* is undecided (`validation/carrier_vs_bypass.py`). An "Override the entry
+  constants" checkbox exposes `Vmax ×`, `Km ×` and `g_apo` — the levers of that scan and of
+  the dose series (whose durable result is a POST-HOC bound: the carrier must have
+  `Km ≥ 500 µg/L`, 100× the fitted 5, to be as flat as Tang's 5 doses measure).
+- **Lipid-facilitated loading** (`simulate(lipid_loading=True)`) — the K_PL-gated,
+  B-independent `g_xy·C` / `g_ph·C` term. It is the repo's strongest cross-dataset result
+  (Tang per-organ 1.232 → 0.516 with **nothing re-fit to Tang**; best of the variants on Kim
+  2019 grain), but it supplies its own `f_xy`, so the sidebar's `f_xy` choice is ignored while
+  it is on, and against the *Yamazaki* bars it is in-sample. EXPLORATORY, default off.
+
+Both switches propagate to every tab, the congener comparison **and** the Bayesian inverse
+(`estimate_exposure_bayesian(**sim_kw)`), so the inverse is never run under a different model
+than the forward tabs. Neither touches `parameters.json`.
 
 ---
 
@@ -76,30 +106,58 @@ colour.
 
 ---
 
-## Neutral organics tab (the Briggs/Kow DPU base)
+## Neutral organics — a compound CLASS, not a tab
 
-The **🧪 Neutral organics** tab (Expert only) runs `model_api.simulate_neutral(log_kow, …)` —
-the framework's neutral base on the *same* 4-compartment ODE with `z = 0`, so the GHK factor
-→ 1, anion exclusion `eᴺ` falls 107 → 1, the membrane term degenerates exactly to passive
-diffusion and the carrier is off. Inputs: **log Kow** (the one required input — a neutral
-compound has no congener), compound name, in-planta half-life, the TSCF QSPR (Briggs 1982 vs
-the broader Schriever 2020 refit), an opt-in phloem toggle, and opt-in **plant–air exchange**
-(`src/plant_air.py`; needs MW and `K_AW`, identically zero at `K_AW = 0`). It reports TSCF,
-`K_PW`, the three tissue BAFs and the tissue-dynamics curve.
+The sidebar's **`2 · Compound`** section chooses the compound **class**, because that is a
+scenario input and not a result view:
 
-**Expert only, on purpose.** The Simple view is congener-driven and symbol-free; a neutral
-compound is described by a log Kow, so it does not belong there — and the neutral **grain
-compartment has never been tested against data**, which is the opposite of what a
-general-audience screen should show absolute numbers for.
+| class | what it runs | entry point |
+|---|---|---|
+| **Curated congener** | one of the 13 PFAS | `simulate(congener, …)` |
+| **SMILES (structure)** | any PFAS structure (RDKit read-across / QSPR) | `simulate_from_smiles(…)` |
+| **Neutral organic (log Kow)** | the Briggs/Kow base on the *same* ODE with `z = 0` | `simulate_neutral(log_kow, …)` |
 
-**Nothing in it is fitted**: `K_PW` and `TSCF` both follow from log Kow via published QSPRs, so
-this is the one place in the app where the DPU *backbone* is exposed without the fitted PFAS
-transport behind it (a-priori vs measured rice: log10 RMSE **0.281** root partition, **0.783**
-per-organ TF). The tab states the standing scope limits in-UI: grain untested, tissue lipids are
-Trapp 1994's **soybean** values, the Ge leaf residual is confounded with the missing half-life,
-and for **lipophilic** compounds the root partition itself is under question (Brunetti 2021's
-`K_RW` = 13.3 vs a Briggs `K_PW` ≈ 1.0; Hwang 2017's lettuce root exceeds the ceiling 3–10× in
-the same direction). Records: `docs/neutral_dpu_validation.md`.
+Picking the neutral class re-points **everything downstream** — the plant/soil map, tissue
+dynamics and burden, the drivers panel, all six exposure modes (parametric flat or flooded,
+custom tables, HYDRUS/CSV, **live HYDRUS-1D**, soil inventory, biomonitoring), the Bayesian
+inverse and the downloads. That is possible because `simulate_neutral` returns the same
+result-dict contract as `simulate()`; it was an Expert-only *tab* until this was wired, which
+left a neutral compound unable to use any of the above.
+
+Inputs (sidebar): **log Kow** — the one required value, driving both `K_PW` and `TSCF` —
+plus name, in-planta half-life, the TSCF QSPR (Briggs 1982 vs the broader Schriever 2020
+refit), and two expanders: *Composition, phloem, air* (`lipid_source`, the phloem departure,
+opt-in `plant_air` with MW/`K_AW`) and *Weak electrolyte (pKa) + apoplastic bypass*
+(`pKa`/`is_acid`/`pH`, printing the resulting `f_n` and which way the ion is pushed; `g_apo`).
+A **soil Koc** field feeds the soil-side modes.
+
+**What is deliberately absent for a neutral compound**, rather than shown and ignored:
+`E_m` and the `f_xy` source (at `z = 0` a membrane potential has nothing to act on and `f_xy`
+*is* the computed TSCF), the PFAS mechanism switches (the carrier exists to overcome anion
+exclusion; the lipid term is K_PL-gated on PFAS binding), and the four PFAS-only tabs
+(Yamazaki BAF bars, chain-length trends, congener comparison, Tang per-organ TF). The
+headline's `eᴺ` metric is replaced by **TSCF**, since `eᴺ` is 1 by construction there.
+
+The scope panel above the tabs states, in-UI, what the run is and is not: nothing is fitted;
+a-priori log10 RMSE **0.281** (Liu 2023 root partition) and **0.783** (Ge 2017 per-organ TF)
+on the season-ODE basis, **0.206** for Liu on the equilibrium basis proper to a root-partition
+measurement; the **grain compartment is UNTESTED** for neutrals; stem/leaf lipid are still
+Trapp 1994's soybean values; and with `half_life = 0` the leaf is an unbounded terminal
+accumulator, so the run is an upper bound (a warning fires in that case).
+
+### Soil sorption for a neutral compound
+
+The soil modes need a Kd, and the PFAS chain-length `Koc` QSPR is a per-CF2 group contribution
+with no meaning for a neutral. `literature_params.koc_neutral` supplies the standard
+hydrophobic QSPR instead — **Karickhoff 1981**, `log Koc = 0.989·log Kow − 0.346` — as the
+editable default of the sidebar's `soil Koc` field, and it drives the flooded `Cwᵒ(t)` shape
+(`cwo_profile_series(log_kow=…)`), that shape's `k_leach` default (`default_k_leach(Koc=…)`)
+and the live HYDRUS run (`hydrus_drivers(log_kow=…)` or `Kd=`, via `soil_hydrus.inputs_from_hydrus(Kd=…)`).
+It is flagged **PROVISIONAL** for a specific reason: no table in this repo scores a *predicted*
+Koc (the neutral tables either supply the exposure directly or carry the paper's own measured
+isotherm), and Li 2019's soil half shows exactly what is at stake — root bias **+0.033** with an
+experimental `K_om` against **+0.291** with an estimated one. Type a measured value whenever
+you have one.
 
 ## Tang 2026 validation tab (out-of-sample)
 
@@ -120,9 +178,18 @@ Three things the tab makes explicit (the rigor points from this work):
 - **Grain is structurally under-predicted** ~3–8× and is *not* closable by `L_Ph`/lipid
   (`docs/tang2026_grain_units_exploration.md`).
 
+A **lipid loading (OOS)** checkbox adds a third model series
+(`tang_tf_validation(lipid_loading=True)` → `plots.fig_tang_tf(val, val_refit, val_extra)`).
+It is the honest counterpart of the refit bar: the green refit was calibrated *on* these
+measurements, while the lipid mechanism's constants were fit on **Yamazaki** and transferred
+untouched — yet it lands in the same place (0.516 vs 0.519 across Tang's three congeners) and
+fixes the dominant free-anion failure at the mechanism level (PFOS stalk 0.013 → 0.620 vs Tang
+0.571). Residuals it does not fix: GenX (provisional ether `f_xy`) and the PFOS endosperm
+(~5× under). See `validation/oos_tang_lipid.py`.
+
 ---
 
-## BAF vs observed — two-pool (seq) overlay
+## BAF vs observed — two-pool overlays
 
 The **📊 BAF vs observed** tab compares the model's root/straw/grain BAF to the fixed Yamazaki
 2023 bars. For a **curated congener** it can additionally overlay the EXPLORATORY **sequestration
@@ -130,6 +197,13 @@ two-pool** model (checkbox, on by default) — `model_api.simulate_twopool_seq` 
 The two-pool seq model adds an irreversible non-K_PL `k_seq` root sink (mobile + sequestered pools)
 that captures the long-chain **root** BAF and the **PFOS/PFUnDA** split the single-pool 4-pool core
 misses, while keeping the monotone physical `f_xy` (overall log10 RMSE 0.251; `docs/twopool_root_exploration.md`).
+
+A second checkbox overlays the **structural merge** (`model_api.simulate_twopool_nstem`): the same
+two-pool sequestration root driving the *redistributed* N-stem+leaf shoot instead of the 4-pool
+pass-through stem. Swapping the whole shoot costs only ~0.04 log on Yamazaki (0.301 vs 0.278) with
+the root RMSE unchanged — the root mechanism is separable from the shoot model — and it is what makes
+a per-organ Tang test fair (that OOS moves 1.398 → 0.801, the recovery carried by the diagnosed
+stalk; `docs/twopool_root_exploration.md` Result 8).
 
 Caveats made explicit in the tab:
 - **EXPLORATORY / in-sample** (Yamazaki fit); opt-in. `parameters.json` and the canonical 4-pool core
@@ -156,12 +230,13 @@ the per-tissue **PFAS mass / burden** `C_k(t)·M_k(t)` [µg/hill] (bottom, `plot
 the chemical actually ends up* (a tissue can be high-concentration yet low-mass). The organ **biomass** `M_k(t)`
 itself is in the *Soil & drivers* tab (`fig_drivers`). **Caveat (biomass driver):** the
 `f_xy` calibration was done on `growth_rice`, so switching to ORYZA2000 shifts BAFs (short-chain straw/grain
-~+40–70%); the code-level `simulate(biomass=)` default stays `growth_rice` for reproducibility, while the app
-leads with ORYZA2000.
+~+40–70%); pass `biomass="growth_rice"` to reproduce the legacy artifacts (`reproduce_demo.py` and
+`calibration.py` use their own drivers and are unaffected). Both the app and the code-level
+`simulate(biomass=)` default are **ORYZA2000**.
 
 ---
 
-## Four ways to drive the model
+## Six ways to drive the model
 
 Only the pore-water free-anion concentration `Cwᵒ(t)` is PFAS-specific. The transpiration
 stream `Q_TP(t)` and organ masses `M(t)` are crop physiology (measured FAO-56 transpiration +
@@ -169,7 +244,8 @@ ORYZA IR72 biomass) and are reused across modes unless you supply your own.
 
 | Mode | `Cwᵒ(t)` source | `Q_TP`, `M(t)` | API entry |
 |---|---|---|---|
-| **Model (parametric)** | a constant you set | measured / placeholder | `simulate(congener, Cwo=…)` |
+| **Model (parametric)** | a constant you set (flat, or the analytic flooded shape) | measured / placeholder | `simulate(congener, Cwo=…, cwo_profile=…)` |
+| **Custom tables** | a `Cwᵒ(t)` table you type or paste | your own growth table, or measured | `drivers_from_tables(growth, cwo)` → `simulate(drivers=…)` |
 | **HYDRUS / CSV drivers** | a HYDRUS-1D / Phydrus run | from the CSV, or measured | `simulate(congener, drivers=load_driver_csv(...))` |
 | **Run HYDRUS-1D (live)** | a real HYDRUS-1D run executed in-app | HYDRUS root uptake + ORYZA | `hydrus_drivers(congener, …)` → `simulate(drivers=…)` |
 | **Soil inventory** | inverting a soil load (Freundlich) | measured | `pore_water_from_inventory(...)` → `drivers_from_arrays` |
@@ -177,7 +253,7 @@ ORYZA IR72 biomass) and are reused across modes unless you supply your own.
 
 ### Live HYDRUS-1D run (`src/soil_hydrus.py`)
 The "Run HYDRUS-1D (live)" mode executes the **genuine HYDRUS-1D engine** (built from the
-`external/hydrus_source` submodule) through `phydrus`: a one-season paddy model — Richards
+`external/hydrus_source`, **vendored in the repo** — no submodule to initialise) through `phydrus`: a one-season paddy model — Richards
 flow + advection–dispersion + **linear Kd** sorption + root water uptake — returns the
 **congener-dependent** pore water `Cwᵒ(t)` and the actual root water uptake `Q_TP(t)`. Kd comes
 from the Koc(chain-length) QSPR (`literature_params.koc`), so weakly-sorbed short chains leach
@@ -190,7 +266,6 @@ shape and congener-to-congener contrast differ.
 steps and stays usable. To enable it:
 
 ```bash
-git submodule update --init external/hydrus_source
 cp external/hydrus_source/makefile external/hydrus_source/source/
 (cd external/hydrus_source/source && make)      # needs gfortran
 pip install phydrus

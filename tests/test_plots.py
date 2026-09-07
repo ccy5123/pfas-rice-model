@@ -109,6 +109,20 @@ def test_fig_tang_tf_builds():
     assert len(plots.fig_tang_tf(val).data) == 2
 
 
+def test_fig_tang_tf_lipid_extra_series():
+    """The app's third Tang bar: the lipid-loading run, which is OOS here (its
+    constants were fit on Yamazaki, not on Tang) and so is drawn as its own series
+    rather than replacing the Tang-refit bar."""
+    import model_api as api, plots
+    val = api.tang_tf_validation("PFOS", dose="low")
+    vall = api.tang_tf_validation("PFOS", dose="low", lipid_loading=True)
+    fig = plots.fig_tang_tf(val, None, vall)
+    assert len(fig.data) == 3                       # Tang + model + lipid (no refit bar)
+    assert any("lipid" in (tr.name or "") for tr in fig.data)
+    # the documented mechanism-level fix: PFOS stalk 0.013 (free anion) -> ~0.62 vs Tang 0.571
+    assert val["model_tf"]["stalk"] < 0.1 < vall["model_tf"]["stalk"]
+
+
 def test_fig_burden_builds():
     import model_api as api, plots
     fig = plots.fig_burden(api.simulate("PFOA", biomass="oryza"))
