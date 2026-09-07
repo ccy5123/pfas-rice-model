@@ -26,7 +26,8 @@ def _ctx_lookup(query):
     return dict(ok=r.ok, note=r.note, dtxsid=r.dtxsid, name=r.preferred_name,
                 casrn=r.casrn, smiles=r.smiles, kwargs=r.neutral_kwargs(),
                 badges={k: v.badge() for k, v in r.props.items()},
-                sources={k: v.source for k, v in r.props.items()})
+                sources={k: v.source for k, v in r.props.items()},
+                outside_ad={k: v.outside_ad for k, v in r.props.items()})
 
 
 def _ctx_lookup_panel():
@@ -59,7 +60,7 @@ def _ctx_lookup_panel():
             return {}
         kw = dict(r["kwargs"])
         st.success(f"**{r['name'] or q}** · {r['dtxsid']}" + (f" · CAS {r['casrn']}" if r["casrn"] else ""))
-        rows, predicted = [], []
+        rows, predicted, out_ad = [], [], []
         _LABEL = {"log_kow": "log Kow", "K_AW": "K_AW", "log_koc": "soil Koc", "pka_acidic":
                   "pKa (acidic)", "pka_basic": "pKa (basic)"}
         for pk, badge in r["badges"].items():
@@ -68,9 +69,16 @@ def _ctx_lookup_panel():
             rows.append(f"- **{_LABEL.get(pk, pk)}** — {badge}")
             if r["sources"].get(pk) != "experimental":
                 predicted.append(_LABEL.get(pk, pk))
+            if r.get("outside_ad", {}).get(pk):
+                out_ad.append(_LABEL.get(pk, pk))
         if kw.get("MW"):
             rows.append(f"- **MW** {kw['MW']:.2f} g/mol")
         st.markdown("\n".join(rows) if rows else "_no physicochemical rows returned_")
+        if out_ad:
+            st.error("**Outside its own applicability domain: " + ", ".join(out_ad) + ".** OPERA "
+                     "reports these as beyond the chemical space the model was trained on — that "
+                     "is not 'uncertain', it is out of scope. Replace them by hand or leave the "
+                     "corresponding term off.")
         if predicted:
             st.warning("**Predicted (not measured): " + ", ".join(predicted) + ".** Filled in "
                        "anyway and marked — but this path's published a-priori errors (Liu 0.281, "

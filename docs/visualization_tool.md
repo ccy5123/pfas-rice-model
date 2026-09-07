@@ -173,13 +173,42 @@ model change a lookup can make; the panel says so and the ⚗️ panel prints th
 resulting `f_n` (far from the root-zone pH it is ≈1 and the run matches the
 strictly neutral one).
 
+**Endpoints and the five silent traps.** Base URL `https://comptox.epa.gov/ctx-api`
+(the older `api-ccte.epa.gov` no longer resolves). The client reads
+`/chemical/search/equal/…`, `/chemical/detail/search/by-dtxsid/…`, the SPLIT
+`/chemical/property/{experimental,predicted}/search/by-dtxsid/…`, and
+`/chemical/fate/search/by-dtxsid/…` (where Koc lives). Each of the following fails
+*silently* — wrong or empty columns, never an exception — so each is handled and
+guarded by a test:
+
+1. **Provenance is the URL, not the payload.** A property record says nothing about
+   being measured or modelled; only the endpoint does. The bucket is therefore tagged
+   at call time and never inferred from a field. (The fate endpoint is the exception:
+   it mixes both and carries `propType`.)
+2. **`"NaN"`, `"null"`, `"N/A"` arrive as strings** and `float("NaN")` succeeds — so a
+   blank measurement would rank first (experimental beats predicted) and blank out a
+   perfectly good prediction. String nulls are rejected before conversion.
+3. **Field naming differs between endpoints** — camelCase (`propName`/`propValue`) on
+   the property paths, snake_case (`prop_name`/`prop_value`) inside the fate records.
+   Every reader takes an alias list.
+4. **Units are not what you expect.** Henry's law comes as atm·m³/mol; reading
+   Pa·m³/mol as atm·m³/mol is a clean **5.006 log-unit** offset that still looks
+   plausible, so the conversion is explicit and an unrecognised unit returns nothing.
+5. **The OPERA applicability domain** is reported only in the `…Global` fields. A
+   prediction its own model places *outside* its domain is out of scope, not merely
+   uncertain: it loses the tie to an in-domain candidate and the panel raises a
+   separate error naming it.
+
 **Key and network.** The CTX API needs a free EPA key, read from `CTX_API_KEY` or
 the Streamlit secret `ctx_api_key` — never committed. Without a key, without
 network, or for an unknown compound the panel shows why and everything stays
-manual; the lookup is a convenience, never a dependency. `CTX_BASE_URL` points the
-client at a mirror or a local stub. Results are cached for a day per query so a
-rerun does not re-hit EPA. The CLI is the way to check a compound (or a schema
-change) outside the app:
+manual; the lookup is a convenience, never a dependency. Transient statuses
+(429/502/503/504) retry with backoff; anything else is fatal for that record.
+`CTX_BASE_URL` points the client at a mirror or a local stub. Results are cached for
+a day per query so a rerun does not re-hit EPA. The CLI is the way to check a
+compound (or a schema change) outside the app — probe one chemical and read the raw
+JSON before trusting a batch, and sanity-check the pipeline on a well-characterised
+compound (benzoic acid, benzyl alcohol) first:
 
 ```bash
 python src/chem_lookup.py carbamazepine        # resolved values + provenance

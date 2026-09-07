@@ -1,14 +1,18 @@
-"""CompTox (CTX) lookup — offline tests.
+"""CompTox (CTX) lookup — offline tests, written against the REAL API's shape.
 
-Every test here injects a fake transport (`_get_fn`), so nothing touches the
-network and nothing needs an API key: CI has neither. What is pinned is the part
-that would silently corrupt a run if it broke — the identifier classification, the
-EXPERIMENTAL-over-predicted preference, the Henry -> K_AW conversion, the
-mapping onto `simulate_neutral` kwargs, and the no-key / no-network degradation.
+Every test injects a fake transport (`_get_fn`), so nothing touches the network and
+nothing needs an API key: CI has neither. The fixtures reproduce the response shapes
+and the five silent-failure traps recorded in the working notes (see the header of
+`src/chem_lookup.py`), because those are exactly the failures that produce empty or
+WRONG columns rather than an exception:
 
-The response SHAPES below are the ones the parser is written against; if EPA's
-change, `python src/chem_lookup.py <compound> --raw` on a machine with the key
-shows what actually arrives.
+  2. string `"NaN"` in an experimental row — must not displace a good prediction;
+  3. camelCase on the property endpoints vs snake_case inside the fate endpoint;
+  4. provenance comes from the ENDPOINT, never from a payload field;
+  5. Henry's-law units — the wrong reading is a clean 5.006 log-unit offset.
+
+Trap 1 (batch bodies are newline-separated text) is not covered because this module
+makes single lookups only.
 """
 import sys
 import os
@@ -20,31 +24,41 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 import chem_lookup as cl  # noqa: E402
 
 
-# --- fake transport --------------------------------------------------------
 SEARCH = [{"dtxsid": "DTXSID3022125", "preferredName": "Carbamazepine",
            "casrn": "298-46-4", "smiles": "NC(=O)N1c2ccccc2C=Cc2ccccc21",
            "inchikey": "FFGPTBGBLSHEPO-UHFFFAOYSA-N"}]
 DETAIL = {"dtxsid": "DTXSID3022125", "averageMass": 236.269,
           "smiles": "NC(=O)N1c2ccccc2C=Cc2ccccc21"}
-PROPS = [
-    # the same property twice, experimental and predicted, deliberately with the
-    # PREDICTED row first so the ordering cannot pass by accident
-    {"propertyId": "logP", "propType": "predicted", "value": 3.39, "modelName": "OPERA"},
-    {"propertyId": "LogKow: Octanol-Water", "propType": "experimental", "value": 2.45,
-     "source": "PHYSPROP", "unit": ""},
-    {"propertyId": "Henry's Law constant", "propType": "predicted", "value": 1.08e-10,
-     "unit": "atm-m3/mol", "modelName": "OPERA"},
-    {"propertyId": "logKoc", "propType": "predicted", "value": 2.4, "modelName": "OPERA"},
-    {"propertyId": "Melting Point", "propType": "experimental", "value": 190.0, "unit": "°C"},
+# camelCase, and NOTHING in the rows says "experimental" — the URL does (trap 3, 4)
+EXPERIMENTAL = [
+    {"propName": "LogKow: Octanol-Water", "propValue": 2.45, "propUnit": "",
+     "sourceName": "PHYSPROP"},
+    {"propName": "Melting Point", "propValue": 190.0, "propUnit": "°C", "sourceName": "PHYSPROP"},
 ]
+PREDICTED = [
+    {"propName": "LogP: Octanol-Water", "propValue": 3.39, "propUnit": "",
+     "sourceName": "OPERA", "adConclusionGlobal": "Inside", "adValueGlobal": 0.83},
+    {"propName": "Henry's Law Constant", "propValue": 1.08e-10, "propUnit": "atm-m3/mol",
+     "sourceName": "OPERA", "adConclusionGlobal": "Inside"},
+    {"propName": "pKa_a", "propValue": 13.9, "propUnit": "", "sourceName": "OPERA",
+     "adConclusionGlobal": "Inside"},
+]
+# the fate endpoint NESTS its records and uses snake_case, mixing both types (trap 3)
+FATE = {"dtxsid": "DTXSID3022125",
+        "predictedFateData": [
+            {"prop_name": "Soil Adsorption Coefficient (Koc)", "prop_value": 2.4,
+             "prop_unit": "log10 L/kg", "prop_type": "predicted", "source_name": "OPERA",
+             "ad_conclusion_global": "Inside"}]}
 
 
 def fake_get(payloads=None, fail=None):
-    """Build a `_get_fn` returning canned payloads keyed by a path fragment."""
+    """`_get_fn` returning canned payloads keyed by a path fragment."""
     payloads = payloads if payloads is not None else {
         "/chemical/search/": SEARCH,
         "/chemical/detail/": [DETAIL],
-        "/chemical/property/search": PROPS,
+        "/chemical/property/experimental/": EXPERIMENTAL,
+        "/chemical/property/predicted/": PREDICTED,
+        "/chemical/fate/": [FATE],
     }
 
     def _get(path, key, base_url=cl.DEFAULT_BASE_URL, params=None):
@@ -57,18 +71,26 @@ def fake_get(payloads=None, fail=None):
     return _get
 
 
+# --- base URL --------------------------------------------------------------
+def test_base_url_is_the_live_host_not_the_retired_one():
+    """`api-ccte.epa.gov` no longer resolves; a default pointing there fails with a
+    DNS error that no offline test can catch, so the constant itself is pinned."""
+    assert cl.DEFAULT_BASE_URL == "https://comptox.epa.gov/ctx-api"
+    assert "api-ccte" not in cl.DEFAULT_BASE_URL
+    assert cl.base_url() == cl.DEFAULT_BASE_URL
+    assert cl.base_url("https://example.test/x/") == "https://example.test/x"
+
+
 # --- identifiers -----------------------------------------------------------
 def test_identifier_kind_distinguishes_name_cas_and_structure():
-    """A NAME must never be read as a structure: 'carbamazepine' is a valid SMILES
-    string to a permissive parser, and mis-classifying it would send the wrong
-    query to the API."""
+    """A NAME must never be read as a structure: 'carbamazepine' parses as a valid
+    SMILES to a permissive parser, and mis-classifying it sends the wrong query."""
     assert cl.identifier_kind("carbamazepine") == "name"
     assert cl.identifier_kind("Perfluorooctanoic acid") == "name"
     assert cl.identifier_kind("298-46-4") == "casrn"
     assert cl.identifier_kind("DTXSID3022125") == "dtxsid"
     assert cl.identifier_kind("FFGPTBGBLSHEPO-UHFFFAOYSA-N") == "inchikey"
-    rdkit = pytest.importorskip("rdkit", reason="SMILES detection needs RDKit")
-    assert rdkit is not None
+    pytest.importorskip("rdkit", reason="SMILES detection needs RDKit")
     assert cl.identifier_kind("NC(=O)N1c2ccccc2C=Cc2ccccc21") == "smiles"
     assert cl.identifier_kind("OC(=O)C(F)(F)C(F)(F)F") == "smiles"
 
@@ -80,31 +102,81 @@ def test_smiles_is_resolved_through_its_inchikey():
     assert cl.smiles_to_inchikey("not a molecule") == ""
 
 
-# --- provenance ------------------------------------------------------------
-def test_experimental_value_beats_the_predicted_one():
-    """The neutral path's a-priori numbers are on MEASURED log Kow, so when both
-    exist the experimental value must win — and say so."""
+# --- trap 4: provenance is the endpoint, not the payload -------------------
+def test_provenance_comes_from_the_endpoint_and_experimental_wins():
+    """Neither fixture row says "experimental" anywhere — the only thing that knows
+    is which URL returned it. The measured log Kow (2.45) must win over the OPERA
+    prediction (3.39), and both must be labelled correctly."""
     r = cl.lookup("carbamazepine", key="k", _get_fn=fake_get())
     assert r.ok and r.dtxsid == "DTXSID3022125"
     p = r.props["log_kow"]
-    assert p.value == pytest.approx(2.45)          # NOT the OPERA 3.39
-    assert p.is_experimental and "predicted" not in p.badge()
-    # a property with only a predicted row is still returned, but labelled
-    assert r.props["log_koc"].source == "predicted"
-    assert "OPERA" in r.props["log_koc"].badge()
+    assert p.value == pytest.approx(2.45) and p.is_experimental
+    assert "PHYSPROP" in p.badge() and "predicted" not in p.badge()
+    # a property only the predicted endpoint has is still returned, and labelled
+    assert r.props["henry"].source == "predicted"
+    assert "OPERA" in r.props["henry"].badge()
 
 
+def test_fate_endpoint_is_read_with_snake_case_and_its_own_type_field():
+    """The fate payload NESTS its records and names fields snake_case — and it is
+    the one endpoint that carries the type itself. Koc lives there."""
+    r = cl.lookup("carbamazepine", key="k", _get_fn=fake_get())
+    koc = r.props["log_koc"]
+    assert koc.value == pytest.approx(2.4) and koc.source == "predicted"
+    assert r.neutral_kwargs()["Koc"] == pytest.approx(10 ** 2.4, rel=1e-6)
+
+
+# --- trap 2: string nulls ---------------------------------------------------
+def test_a_string_nan_measurement_never_displaces_a_usable_prediction():
+    """float("NaN") SUCCEEDS, so an experimental row of "NaN" would otherwise rank
+    first (experimental beats predicted) and blank out the property."""
+    for null in ("NaN", "null", "N/A", "-Infinity", ""):
+        exp = [{"propName": "LogKow: Octanol-Water", "propValue": null, "sourceName": "PHYSPROP"}]
+        r = cl.lookup("carbamazepine", key="k",
+                      _get_fn=fake_get({"/chemical/search/": SEARCH,
+                                        "/chemical/detail/": [DETAIL],
+                                        "/chemical/property/experimental/": exp,
+                                        "/chemical/property/predicted/": PREDICTED}))
+        p = r.props["log_kow"]
+        assert p.value == pytest.approx(3.39), f"{null!r} displaced the prediction"
+        assert p.source == "predicted"
+    assert cl._num("NaN") is None and cl._num("inf") is None and cl._num(float("nan")) is None
+    assert cl._num("2.45") == pytest.approx(2.45)
+
+
+# --- trap 5: units ----------------------------------------------------------
 def test_henry_becomes_a_dimensionless_kaw_or_nothing():
-    """K_AW switches the leaf's volatilisation sink on; a wrong unit conversion is
-    worse than a missing value, so an unrecognised unit returns None."""
+    """Reading Pa-m3/mol as atm-m3/mol is a clean 5.006 log-unit error that still
+    looks plausible, so each unit is converted explicitly and an unrecognised one
+    returns None — a wrong K_AW silently switches the leaf's volatilisation sink."""
+    import math
     assert cl.henry_to_kaw(1.0, "atm-m3/mol") == pytest.approx(1.0 / 0.024465, rel=1e-3)
-    assert cl.henry_to_kaw(101325.0, "Pa-m3/mol") == pytest.approx(1.0 / 0.024465, rel=1e-3)
+    pa = cl.henry_to_kaw(1.0, "Pa-m3/mol")
+    assert math.log10(cl.henry_to_kaw(1.0, "atm-m3/mol") / pa) == pytest.approx(5.006, abs=1e-3)
     assert cl.henry_to_kaw(0.5, "dimensionless") == pytest.approx(0.5)
     assert cl.henry_to_kaw(1.0, "mmHg") is None
     r = cl.lookup("carbamazepine", key="k", _get_fn=fake_get())
     assert r.props["K_AW"].value == pytest.approx(1.08e-10 / 0.024465, rel=1e-3)
 
 
+# --- the OPERA applicability domain ----------------------------------------
+def test_outside_the_applicability_domain_reaches_the_badge_and_loses_the_tie():
+    """A prediction its own model calls out-of-domain is not merely uncertain, so it
+    is labelled — and an in-domain candidate for the same property outranks it."""
+    pred = [{"propName": "LogP", "propValue": 9.9, "sourceName": "OPERA",
+             "adConclusionGlobal": "Outside the global applicability domain"},
+            {"propName": "LogP: Octanol-Water", "propValue": 3.39, "sourceName": "OPERA",
+             "adConclusionGlobal": "Inside"}]
+    r = cl.lookup("carbamazepine", key="k",
+                  _get_fn=fake_get({"/chemical/search/": SEARCH, "/chemical/detail/": [DETAIL],
+                                    "/chemical/property/predicted/": pred}))
+    p = r.props["log_kow"]
+    assert p.value == pytest.approx(3.39) and not p.outside_ad
+    bad = cl.Prop(value=9.9, source="predicted", origin="OPERA", ad="Outside the domain")
+    assert bad.outside_ad and "OUTSIDE" in bad.badge()
+
+
+# --- the model-facing contract ---------------------------------------------
 def test_neutral_kwargs_maps_onto_simulate_neutral_and_omits_half_life():
     """What the lookup hands the model — and what it must NOT: the in-planta
     half-life is not a dashboard property (and per Kodesova not even a compound
@@ -113,27 +185,21 @@ def test_neutral_kwargs_maps_onto_simulate_neutral_and_omits_half_life():
     nk = r.neutral_kwargs()
     assert nk["log_kow"] == pytest.approx(2.45)
     assert nk["MW"] == pytest.approx(236.269, rel=1e-4)
-    assert nk["Koc"] == pytest.approx(10 ** 2.4, rel=1e-6)
+    assert nk["pKa"] == pytest.approx(13.9) and nk["is_acid"] is True
     assert "half_life" not in nk
-    assert "pKa" not in nk                        # none in the fixture -> strictly neutral
-    # and the kwargs are accepted by the real entry point
     api = pytest.importorskip("model_api")
     res = api.simulate_neutral(nk["log_kow"], MW=nk["MW"], K_AW=nk["K_AW"],
                                air=False, half_life=7.0, season=60.0, n_t=61)
     assert res["baf_final"]["root"] > 0
 
 
-def test_pka_is_only_filled_when_one_was_found():
+def test_pka_is_absent_when_none_was_found():
     """`pKa=None` is the strictly-neutral, bit-identical path — a missing pKa must
-    stay missing rather than defaulting to some number."""
-    props = list(PROPS) + [{"propertyId": "pKa_a", "propType": "predicted",
-                            "value": 13.9, "modelName": "OPERA"}]
+    stay missing rather than defaulting to a number."""
     r = cl.lookup("carbamazepine", key="k",
-                  _get_fn=fake_get({"/chemical/search/": SEARCH,
-                                    "/chemical/detail/": [DETAIL],
-                                    "/chemical/property/search": props}))
-    nk = r.neutral_kwargs()
-    assert nk["pKa"] == pytest.approx(13.9) and nk["is_acid"] is True
+                  _get_fn=fake_get({"/chemical/search/": SEARCH, "/chemical/detail/": [DETAIL],
+                                    "/chemical/property/experimental/": EXPERIMENTAL}))
+    assert "pKa" not in r.neutral_kwargs()
 
 
 # --- degradation -----------------------------------------------------------
@@ -152,18 +218,15 @@ def test_no_key_and_no_network_degrade_to_a_note_not_an_exception():
 
 def test_response_envelope_and_vocabulary_changes_degrade_safely():
     """A wrapped payload is still read; a property this module does not know about
-    yields a MISSING property, never a wrong one attached to the right slot.
-
-    Matching is by name SUBSTRING on purpose — the CTX property vocabulary is not
-    stable enough to hard-code ids — so the guarantee is one-directional: an
-    unrelated name is ignored, but a renamed logP that still contains "logp" WILL
-    be picked up (which is the intent, not a defect)."""
-    wrapped = {"data": SEARCH}
-    renamed = [{"propertyId": "Bioconcentration factor", "propType": "experimental", "value": 9.9}]
+    yields a MISSING property, never a wrong one in the right slot. Matching is by
+    name substring on purpose — the vocabulary is not stable enough to hard-code —
+    so the guarantee is one-directional: an unrelated name is ignored."""
     r = cl.lookup("carbamazepine", key="k",
-                  _get_fn=fake_get({"/chemical/search/": wrapped,
+                  _get_fn=fake_get({"/chemical/search/": {"data": SEARCH},
                                     "/chemical/detail/": {"data": [DETAIL]},
-                                    "/chemical/property/search": renamed}))
+                                    "/chemical/property/experimental/":
+                                        [{"propName": "Bioconcentration factor",
+                                          "propValue": 9.9}]}))
     assert r.ok and r.mol_weight == pytest.approx(236.269, rel=1e-4)
     assert "log_kow" not in r.props and r.neutral_kwargs().get("log_kow") is None
 

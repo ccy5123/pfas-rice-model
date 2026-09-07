@@ -1205,14 +1205,34 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   TESTED-but-BOUNDED), so the panel says so and the ⚗️ panel prints the resulting `f_n`. **Optional by
   construction**: needs a free EPA key (`CTX_API_KEY` env or the Streamlit secret `ctx_api_key`, never
   committed) and outbound network; with neither the panel says which is missing and everything stays manual.
-  Cached a day per query; `CTX_BASE_URL` repoints the client (mirror or stub). Parsing is deliberately tolerant
-  (name-substring matching, bare-list or `{"data": …}` envelope) so an EPA schema change degrades to a MISSING
-  property rather than a wrong one — `python src/chem_lookup.py <compound> --raw` dumps what actually arrived.
-  Tests are 100% offline fixtures (CI has no key and no network) and pin the identifier classification, the
-  experimental-over-predicted preference, the Henry conversion, the `simulate_neutral` kwarg mapping (and that
-  `half_life` is absent from it), and the no-key/no-network degradation. Verified end-to-end against a local
-  CTX stub: experimental log Kow 2.45 chosen over the OPERA 3.39, MW/K_AW/pKa/Koc seeded (Koc 251.2 from the
-  dashboard replacing Karickhoff's 119.4), and the no-key path warning instead of crashing.
+  Cached a day per query; `CTX_BASE_URL` repoints the client (mirror or stub); 429/502/503/504 retry with
+  backoff and anything else is fatal for that record. **CORRECTED against the live API (user-supplied working
+  notes) — the first cut had the wrong host and the wrong provenance model**: the base URL is
+  `https://comptox.epa.gov/ctx-api` (the older `api-ccte.epa.gov` NO LONGER RESOLVES; the offline tests could
+  not catch that, so the constant is now pinned by one), and the property endpoints are SPLIT
+  experimental/predicted with `/chemical/fate/…` carrying Koc. Five documented traps, every one of which fails
+  SILENTLY (wrong or empty columns, never an exception), are handled and each has a test: (1) **provenance is
+  the URL, not the payload** — a property record says nothing about being measured or modelled, so the bucket
+  is tagged AT CALL TIME from the endpoint and never inferred from a field (the fate endpoint is the exception:
+  it mixes both and carries `propType`); (2) `"NaN"`/`"null"`/`"N/A"` arrive as STRINGS and `float("NaN")`
+  SUCCEEDS, so a blank measurement would rank first (experimental beats predicted) and blank out a usable
+  prediction — string nulls are rejected before conversion; (3) field naming differs BETWEEN endpoints
+  (camelCase `propName`/`propValue` vs snake_case `prop_name`/`prop_value` inside the fate records), so every
+  reader takes an alias list; (4) units — Henry's law is atm-m3/mol and reading Pa-m3/mol as atm-m3/mol is a
+  clean **5.006 log-unit** offset that still looks plausible, so the conversion is explicit and an unrecognised
+  unit returns nothing; (5) the **OPERA applicability domain** is populated only in the `…Global` fields — a
+  prediction its own model puts OUTSIDE its domain is out of scope, not merely uncertain, so it loses the tie
+  to an in-domain candidate, reaches the badge, and raises its own error in the panel. Parsing stays
+  deliberately tolerant (name-substring matching, bare-list or `{"data": …}` envelope) so a schema change
+  degrades to a MISSING property rather than a wrong one — `python src/chem_lookup.py <compound> --raw` dumps
+  every endpoint's payload, and the working notes' first rule (probe one chemical, read the raw JSON, then
+  sanity-check on benzoic acid / benzyl alcohol) is in the CLI output. Tests are 100% offline fixtures (CI has
+  no key and no network) written against the REAL shapes, pinning the base URL, the identifier classification,
+  provenance-from-the-endpoint, that a string `"NaN"` cannot displace a prediction, the snake_case fate path,
+  the 5.006-log Henry check, the AD tie-break, the `simulate_neutral` kwarg mapping (and that `half_life` is
+  absent from it), and the no-key/no-network degradation. Verified end-to-end against a stub reproducing those
+  shapes: experimental log Kow 2.45 chosen over the OPERA 3.39, the `"NaN"` row dropped rather than displacing
+  it, Koc 251.2 read from the nested snake_case fate record, and the out-of-domain pKa labelled.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1223,8 +1243,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   expander switches `uptake` carrier/bypass + `lipid_loading`; `2 · Compound` switches the COMPOUND CLASS —
   curated congener / SMILES / **neutral organic (log Kow)**; see `docs/visualization_tool.md`).
 - **Compound lookup (EPA CompTox / CTX)**: `python src/chem_lookup.py carbamazepine` (or a CAS-RN,
-  or a SMILES) prints log Kow / MW / K_AW / pKa / Koc **with their provenance**; `--raw` dumps the raw
-  JSON when a field comes back empty. Needs a free EPA key: `export CTX_API_KEY='…'` (CLI) or the
+  or a SMILES) prints log Kow / MW / K_AW / pKa / Koc **with their provenance**; `--raw` dumps every
+  endpoint's payload when a field comes back empty. Base URL `https://comptox.epa.gov/ctx-api`
+  (`api-ccte.epa.gov` is dead). Needs a free EPA key: `export CTX_API_KEY='…'` (CLI) or the
   Streamlit secret `ctx_api_key` in `.streamlit/secrets.toml` (app; keep it out of git). `CTX_BASE_URL`
   points at a mirror/stub. In the app: the neutral compound panel's **🔎 Look up the compound** box —
   experimental values beat predicted ones, everything is badged and editable, and the in-planta

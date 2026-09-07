@@ -39,11 +39,18 @@ CLI (run it on a machine that has the key and outbound HTTPS):
     python src/chem_lookup.py "NC(=O)N1c2ccccc2C=Cc2ccccc21"     # SMILES (needs RDKit)
     python src/chem_lookup.py carbamazepine --raw                # dump raw JSON
 
-`--raw` exists because EPA's response SHAPE is what this module has to guess at:
-the parsers below match property names case-insensitively and accept both a bare
-list and a `{"data": [...]}` envelope, so a schema change degrades to "not found"
-rather than a crash. If a lookup comes back empty for a compound you know is in
-the dashboard, `--raw` shows what actually arrived.
+`--raw` dumps every endpoint's payload, because EPA revises paths and field names
+and a mismatch produces EMPTY COLUMNS, not an error: probe one chemical and read
+the raw JSON before trusting a batch (the working notes' first rule). The parsers
+match property names case-insensitively, take alias lists for every field, and
+accept a bare list or a `{"data": [...]}` envelope, so a schema change degrades to
+a MISSING property rather than a wrong one.
+
+Verify the whole pipeline on a compound with well-established properties before
+trusting it -- benzoic acid and benzyl alcohol are the working notes' suggestions.
+
+BASE URL: `https://comptox.epa.gov/ctx-api`. The older `api-ccte.epa.gov` no
+longer resolves -- do not use it. `CTX_BASE_URL` overrides.
 """
 from __future__ import annotations
 
@@ -53,14 +60,52 @@ import re
 import sys
 from dataclasses import dataclass, field, asdict
 
-DEFAULT_BASE_URL = "https://api-ccte.epa.gov"
+DEFAULT_BASE_URL = "https://comptox.epa.gov/ctx-api"
 TIMEOUT_S = 20.0
+RETRY_STATUS = (429, 502, 503, 504)      # transient; anything else is fatal for the record
+RETRIES = 3
+
+# The five CTX traps this module is written against (working notes, verified
+# against the live API by the repo owner -- every one of them fails SILENTLY):
+#  1. Batch bodies are newline-separated PLAIN TEXT, not JSON arrays (a JSON array
+#     returns HTTP 200 with every field null). Not used here -- single lookups only.
+#  2. "NaN"/"inf"/"null"/"N/A" arrive as STRINGS, and float("NaN") SUCCEEDS, so a
+#     missing experimental value would outrank and displace a good prediction.
+#     `_num` rejects them by name before converting (`_NULL_STRINGS`).
+#  3. Field naming differs BETWEEN endpoints: the property endpoints are camelCase
+#     (`propName`/`propValue`/`propUnit`/`sourceName`), records nested in the fate
+#     endpoint are snake_case (`prop_name`/`prop_value`/...). Every reader below
+#     takes an ALIAS LIST rather than one spelling.
+#  4. NOTHING in a property payload says whether a value is measured or predicted
+#     -- only the URL you called does. So provenance is tagged AT CALL TIME from
+#     the endpoint, never inferred from a field that may be absent. (The fate
+#     endpoint is the one exception: it mixes both and carries `propType`.)
+#  5. Units are not what you expect -- Henry's law comes as atm-m3/mol. Reading
+#     Pa-m3/mol as atm-m3/mol is a clean log10(101325) = 5.006 log-unit offset that
+#     still looks like a plausible number, so `henry_to_kaw` converts explicitly and
+#     REFUSES an unrecognised unit.
 
 # Henry's law: the dashboard reports H in atm-m3/mol; the model wants the
 # DIMENSIONLESS air-water partition K_AW = H / (R*T)  (R in atm-m3/(mol*K)).
 R_ATM_M3 = 8.20573660809596e-5
 T_REF_K = 298.15
 _RT = R_ATM_M3 * T_REF_K                       # 0.024465 atm-m3/mol at 25 C
+
+# Values that must never become numbers even though float() would accept them
+# (trap 2). Compared lower-cased against the raw string.
+_NULL_STRINGS = {"nan", "inf", "-inf", "infinity", "-infinity", "none", "null", "n/a", "na", ""}
+
+# Field-name ALIASES (trap 3): camelCase on the property endpoints, snake_case
+# inside the fate endpoint's nested records.
+_NAME_KEYS = ("propName", "prop_name", "propertyId", "propertyName", "name", "property")
+_VALUE_KEYS = ("propValue", "prop_value", "value", "resultValue", "medianValue", "meanValue")
+_UNIT_KEYS = ("propUnit", "prop_unit", "unit", "units")
+_SOURCE_KEYS = ("sourceName", "source_name", "source", "modelName", "model_name", "dataSource")
+_TYPE_KEYS = ("propType", "prop_type", "propertyType", "type")
+# OPERA applicability domain: the per-model fields come back null in practice; the
+# populated ones are the Global variants. Outside the AD a prediction is not just
+# uncertain, it is out of scope -- so it reaches the badge.
+_AD_KEYS = ("adConclusionGlobal", "ad_conclusion_global", "adConclusion", "ad_conclusion")
 
 # What each model input is called on the dashboard. Matched case-insensitively as
 # SUBSTRINGS of the returned property name, most specific first, because the CTX
@@ -89,15 +134,25 @@ class Prop:
     origin: str = ""
     raw_value: float | None = None
     raw_unit: str = ""
+    ad: str = ""                    # OPERA applicability domain (Global conclusion)
 
     @property
     def is_experimental(self) -> bool:
         return self.source == "experimental"
 
+    @property
+    def outside_ad(self) -> bool:
+        """A prediction the model itself says is outside its applicability domain."""
+        a = (self.ad or "").strip().lower()
+        return bool(a) and ("outside" in a or a.startswith("no"))
+
     def badge(self) -> str:
-        """Short provenance label for a UI ('experimental' / 'predicted (OPERA)')."""
+        """Short provenance label for a UI ('experimental (PHYSPROP)',
+        'predicted (OPERA)', 'predicted (OPERA, OUTSIDE the applicability domain)')."""
         s = self.source if self.source != "unknown" else "source unknown"
-        return f"{s} ({self.origin})" if self.origin else s
+        bits = [b for b in (self.origin,
+                            "OUTSIDE the applicability domain" if self.outside_ad else "") if b]
+        return f"{s} ({', '.join(bits)})" if bits else s
 
 
 @dataclass
@@ -185,24 +240,39 @@ def base_url(explicit=None):
 
 
 def _get(path, key, base_url=DEFAULT_BASE_URL, params=None):
-    """One GET. Returns (parsed_json, error_string); never raises."""
+    """One GET, with a short retry on TRANSIENT statuses. Returns (json, error);
+    never raises. 429/502/503/504 are retried with exponential backoff; any other
+    non-200 is fatal for this record rather than retried."""
+    import time
     import requests
     url = f"{base_url.rstrip('/')}{path}"
-    try:
-        r = requests.get(url, headers={"x-api-key": key, "accept": "application/json"},
-                         params=params, timeout=TIMEOUT_S)
-    except Exception as e:                              # noqa: BLE001 (network is optional)
-        return None, f"{type(e).__name__}: {e}"
-    if r.status_code == 401 or r.status_code == 403:
-        return None, f"HTTP {r.status_code} — the CTX API rejected the key"
-    if r.status_code == 404:
-        return None, "not found (HTTP 404)"
-    if r.status_code >= 400:
-        return None, f"HTTP {r.status_code}"
-    try:
-        return r.json(), None
-    except Exception as e:                              # noqa: BLE001
-        return None, f"unparseable response: {type(e).__name__}: {e}"
+    headers = {"x-api-key": key, "accept": "application/json",
+               "content-type": "application/json"}
+    last = "unknown error"
+    for attempt in range(RETRIES):
+        try:
+            r = requests.get(url, headers=headers, params=params, timeout=TIMEOUT_S)
+        except Exception as e:                          # noqa: BLE001 (network is optional)
+            last = f"{type(e).__name__}: {e}"
+            if attempt + 1 < RETRIES:
+                time.sleep(2.0 ** attempt)
+                continue
+            return None, last
+        if r.status_code in RETRY_STATUS and attempt + 1 < RETRIES:
+            time.sleep(2.0 ** attempt)
+            last = f"HTTP {r.status_code}"
+            continue
+        if r.status_code in (401, 403):
+            return None, f"HTTP {r.status_code} — the CTX API rejected the key"
+        if r.status_code == 404:
+            return None, "not found (HTTP 404)"
+        if r.status_code >= 400:
+            return None, f"HTTP {r.status_code}"
+        try:
+            return r.json(), None
+        except Exception as e:                          # noqa: BLE001
+            return None, f"unparseable response: {type(e).__name__}: {e}"
+    return None, last
 
 
 def _rows(payload):
@@ -325,52 +395,70 @@ def resolve(query, key=None, base=None, _get_fn=None):
 # properties
 # ---------------------------------------------------------------------------
 def _num(x):
+    """Float, or None -- rejecting the STRING nulls first (trap 2).
+
+    `float("NaN")` and `float("inf")` both SUCCEED, so a `propValue` of "NaN" would
+    otherwise become a real number and, being on the experimental endpoint, would
+    outrank and displace a perfectly good prediction."""
+    if x is None:
+        return None
+    if isinstance(x, str) and x.strip().lower() in _NULL_STRINGS:
+        return None
     try:
         v = float(x)
     except (TypeError, ValueError):
         return None
-    return v if v == v and abs(v) != float("inf") else None
+    return v if v == v and abs(v) != float("inf") else None      # belt and braces
 
 
-def _classify(row):
-    """(source, origin) for a property row: experimental vs predicted, and by whom."""
-    blob = " ".join(str(row.get(k, "")) for k in
-                    ("propType", "propertyType", "type", "source", "modelName", "dataSource")).lower()
-    if "exp" in blob:
-        return "experimental", str(row.get("source") or row.get("dataSource") or "")
-    if "pred" in blob or "opera" in blob or "model" in blob:
-        return "predicted", str(row.get("modelName") or row.get("source") or
-                                ("OPERA" if "opera" in blob else ""))
-    return "unknown", str(row.get("source") or "")
-
-
-def _match_property(row, patterns):
-    name = " ".join(str(row.get(k, "")) for k in
-                    ("propertyId", "name", "propertyName", "property")).lower()
-    return any(p in name for p in patterns)
-
-
-def _pick(rows, patterns):
-    """Best row for a property: EXPERIMENTAL wins over predicted, else first found."""
-    hits = [r for r in rows if _match_property(r, patterns) and _num(_value_of(r)) is not None]
-    if not hits:
-        return None
-    hits.sort(key=lambda r: 0 if _classify(r)[0] == "experimental" else 1)
-    return hits[0]
-
-
-def _value_of(row):
-    for k in ("value", "propValue", "resultValue", "medianValue", "meanValue"):
-        if k in row:
+def _first(row, keys):
+    for k in keys:
+        if row.get(k) not in (None, ""):
             return row[k]
     return None
 
 
+def _row_source(row, default=""):
+    """Provenance from the PAYLOAD -- only valid for the fate endpoint (trap 4).
+
+    Everywhere else the payload says nothing about measured-vs-predicted and the
+    caller must pass the bucket the ENDPOINT implies; `default` is that bucket."""
+    t = str(_first(row, _TYPE_KEYS) or "").lower()
+    if "exp" in t:
+        return "experimental"
+    if "pred" in t or "opera" in t:
+        return "predicted"
+    return default
+
+
+def _match_property(row, patterns):
+    name = " ".join(str(row.get(k, "")) for k in _NAME_KEYS).lower()
+    return any(p in name for p in patterns)
+
+
+def _pick(tagged, patterns):
+    """Best (row, source) for a property. EXPERIMENTAL wins over predicted; a row
+    whose value is missing or a string null is not a candidate at all (trap 2), so a
+    blank measurement can never displace a usable prediction. Among predictions, one
+    INSIDE its applicability domain beats one outside."""
+    hits = [(r, src) for r, src in tagged
+            if _match_property(r, patterns) and _num(_first(r, _VALUE_KEYS)) is not None]
+    if not hits:
+        return None, ""
+    def rank(item):
+        r, src = item
+        ad_bad = 1 if str(_first(r, _AD_KEYS) or "").lower().startswith(("outside", "no")) else 0
+        return (0 if src == "experimental" else 1, ad_bad)
+    hits.sort(key=rank)
+    return hits[0]
+
+
+def _value_of(row):
+    return _first(row, _VALUE_KEYS)
+
+
 def _unit_of(row):
-    for k in ("unit", "units", "propUnit"):
-        if row.get(k):
-            return str(row[k])
-    return ""
+    return str(_first(row, _UNIT_KEYS) or "")
 
 
 def henry_to_kaw(value, unit=""):
@@ -395,11 +483,17 @@ def henry_to_kaw(value, unit=""):
 
 
 def properties(dtxsid, key=None, base=None, _get_fn=None):
-    """Physicochemical properties for a DTXSID -> {name: Prop} (+ 'K_AW' derived).
+    """Physicochemical properties for a DTXSID -> ({name: Prop}, note).
 
-    Both the experimental and the predicted endpoints are read (the combined one
-    first); whichever answers, the rows are matched by NAME, so a vocabulary change
-    degrades to a missing property instead of a wrong one.
+    PROVENANCE COMES FROM THE ENDPOINT, NOT THE PAYLOAD (trap 4). A property record
+    carries nothing that says whether it was measured or modelled, so this calls the
+    experimental and predicted paths SEPARATELY and tags each batch of rows with the
+    bucket its URL implies. The fate endpoint is the one exception -- it mixes both
+    and does carry `propType`/`prop_type` -- so its rows are read with that field and
+    fall back to the endpoint tag only when it is absent.
+
+    `K_AW` is derived from the Henry's-law row (see `henry_to_kaw`); everything else
+    is passed through with its unit recorded.
     """
     get = _get_fn or _get
     url = base_url(base)
@@ -407,30 +501,47 @@ def properties(dtxsid, key=None, base=None, _get_fn=None):
     if not k or not dtxsid:
         return {}, ("no CTX API key" if not k else "no DTXSID")
 
-    rows, errs = [], []
-    for path in (f"/chemical/property/search/by-dtxsid/{dtxsid}",
-                 f"/chemical/property/experimental/search/by-dtxsid/{dtxsid}",
-                 f"/chemical/property/predicted/search/by-dtxsid/{dtxsid}"):
+    tagged, errs = [], []                      # [(row, source_from_the_url), ...]
+    for path, tag in (
+            (f"/chemical/property/experimental/search/by-dtxsid/{dtxsid}", "experimental"),
+            (f"/chemical/property/predicted/search/by-dtxsid/{dtxsid}", "predicted"),
+            (f"/chemical/fate/search/by-dtxsid/{dtxsid}", "")):
         payload, err = get(path, k, url)
         if err:
-            errs.append(err)
-        rows.extend(_rows(payload))                     # all three; _pick prefers experimental
+            errs.append(f"{path.rsplit('/', 2)[0].rsplit('/', 1)[-1]}: {err}")
+            continue
+        for row in _rows(payload):
+            # the fate payload nests its records under experimental/predicted keys
+            nested = False
+            for nk, ntag in (("experimentalFateData", "experimental"),
+                             ("experimental_fate_data", "experimental"),
+                             ("predictedFateData", "predicted"),
+                             ("predicted_fate_data", "predicted")):
+                inner = row.get(nk)
+                if isinstance(inner, list):
+                    nested = True
+                    tagged += [(r, _row_source(r, ntag)) for r in inner if isinstance(r, dict)]
+            if not nested:
+                tagged.append((row, _row_source(row, tag)))
 
     props = {}
     for name, patterns in _PROPERTY_PATTERNS.items():
-        row = _pick(rows, patterns)
+        row, src = _pick(tagged, patterns)
         if row is None:
             continue
-        src, origin = _classify(row)
-        props[name] = Prop(value=_num(_value_of(row)), source=src, origin=origin,
-                           raw_value=_num(_value_of(row)), raw_unit=_unit_of(row))
+        v = _num(_first(row, _VALUE_KEYS))
+        origin = str(_first(row, _SOURCE_KEYS) or ("OPERA" if src == "predicted" else ""))
+        props[name] = Prop(value=v, source=src or "unknown", origin=origin,
+                           raw_value=v, raw_unit=_unit_of(row),
+                           ad=str(_first(row, _AD_KEYS) or ""))
 
     h = props.get("henry")
     if h is not None:
         kaw = henry_to_kaw(h.raw_value, h.raw_unit)
         if kaw is not None:
             props["K_AW"] = Prop(value=kaw, source=h.source, origin=h.origin,
-                                 raw_value=h.raw_value, raw_unit=h.raw_unit or "atm-m3/mol")
+                                 raw_value=h.raw_value, raw_unit=h.raw_unit or "atm-m3/mol",
+                                 ad=h.ad)
     note = "" if props else ("; ".join(errs) or "no properties returned")
     return props, note
 
@@ -470,15 +581,19 @@ def _cli(argv):
               "A free key is issued by EPA for the CompTox (CTX) APIs.")
         return 1
     if raw:
-        payload, err = _get(f"/chemical/search/equal/{q}", k)
-        print(f"--- search/equal/{q}\n{err or json.dumps(payload, indent=2)[:4000]}")
+        base = base_url()
+        print(f"# base {base}")
+        payload, err = _get(f"/chemical/search/equal/{q}", k, base)
+        print(f"--- /chemical/search/equal/{q}\n{err or json.dumps(payload, indent=2)[:3000]}")
         rows = _rows(payload)
         if rows:
-            sid = rows[0].get("dtxsid")
+            sid = rows[0].get("dtxsid") or rows[0].get("dtxsId")
             for path in (f"/chemical/detail/search/by-dtxsid/{sid}",
-                         f"/chemical/property/search/by-dtxsid/{sid}"):
-                p, e = _get(path, k)
-                print(f"\n--- {path}\n{e or json.dumps(p, indent=2)[:6000]}")
+                         f"/chemical/property/experimental/search/by-dtxsid/{sid}",
+                         f"/chemical/property/predicted/search/by-dtxsid/{sid}",
+                         f"/chemical/fate/search/by-dtxsid/{sid}"):
+                pl, e = _get(path, k, base)
+                print(f"\n--- {path}\n{e or json.dumps(pl, indent=2)[:4000]}")
         return 0
     r = lookup(q)
     if not r.ok:
@@ -493,6 +608,8 @@ def _cli(argv):
     nk = r.neutral_kwargs()
     print("\n  -> simulate_neutral(" + ", ".join(f"{k_}={v!r}" for k_, v in nk.items()) + ")")
     print("  NOTE: the in-planta half-life is NOT a dashboard property — set it yourself.")
+    print("  Sanity-check the pipeline on a well-characterised compound before trusting a")
+    print("  batch: 'benzoic acid' and 'benzyl alcohol' both have solid measured values.")
     if r.note:
         print(f"  note: {r.note}")
     return 0
