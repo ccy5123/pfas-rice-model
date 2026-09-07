@@ -186,8 +186,16 @@ warnings**.
    best-conditioned table is built on — Kodešová 2019 (§4f), whose a-priori 0.191/0.237
    assumes CAR is **un-ionised everywhere** — is **13.9** (f_n 1.00). Nine log units
    apart, on the very compound the neutral path is validated with, and only the
-   measured one reproduces the published result. Check a predicted pKa at source, or
-   untick the ⚗️ box to force the strictly neutral path.
+   measured one reproduces the published result.
+
+Because of (2), **only a MEASURED pKa switches the model by itself**. A predicted one is
+filled into the ⚗️ panel and reported, but the weak-electrolyte checkbox is **left off** —
+the run stays on the strictly neutral path until you tick it deliberately. Every other
+looked-up field is a value that may be wrong; a pKa decides *which model runs*, so turning
+it on is one click and noticing it was turned on for you is not. (In code the lookup still
+returns `pKa` in `neutral_kwargs()` — drop it to stay strictly neutral; the CLI note says
+so.) The tested-floor warning (1) is raised in the ⚗️ panel itself, where the path is
+actually on, so it covers a hand-typed pKa too.
 
 **Endpoints and the five silent traps.** Base URL `https://comptox.epa.gov/ctx-api`
 (the older `api-ccte.epa.gov` no longer resolves). The client reads

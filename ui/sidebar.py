@@ -88,38 +88,39 @@ def _ctx_lookup_panel():
         if "pKa" in kw:
             import literature_params as LP
             # pKa is the ONE field that changes the model PATH, so it gets its own
-            # warning rather than sharing the generic "predicted" line above. f_n is
+            # reporting rather than sharing the generic "predicted" line above. f_n is
             # shown at the panel's DEFAULT root-zone pH 6.5; the ⚗️ panel prints the
-            # live one once you set the pH.
+            # live one once you set the pH, and carries the tested-floor warning.
+            pka_measured = any(r["sources"].get(k) == "experimental"
+                               for k in ("pka_acidic", "pka_basic", "pka_unlabelled"))
             f_n, _ = LP.speciation(float(kw["pKa"]), 6.5, bool(kw.get("is_acid", True)))
-            st.info(f"A pKa ({kw['pKa']:g}, {'acid' if kw.get('is_acid', True) else 'base'}) came "
-                    f"back, so the run is now on the **weak-electrolyte** path rather than the "
-                    f"strictly neutral one — at the default root-zone pH 6.5 that is **f_n = "
-                    f"{f_n:.3g}**. Untick the ⚗️ box to force the strictly neutral path.")
-            if f_n < 0.1:
-                st.error(f"**f_n = {f_n:.3g} is BELOW the ≈0.1 floor where this path was tested.** "
-                         "The weak-electrolyte extension is direction-SUPPORTED but "
-                         "magnitude-REFUTED (§4l): under f_n≈0.1 it predicts almost nothing where "
-                         "the measured transfer is still ~0.13, because its only entry is "
-                         "transmembrane while a real ion also arrives apoplastically. Read this "
-                         "run as a lower bound on uptake, not a prediction.")
-            if r["sources"].get("pka_acidic") != "experimental" \
-                    and r["sources"].get("pka_basic") != "experimental" \
-                    and r["sources"].get("pka_unlabelled") != "experimental":
-                st.warning("**That pKa is PREDICTED, and it is the one field that changes which "
-                           "model runs.** Carbamazepine is the in-repo counterexample: CompTox's "
-                           "OPERA gives an acidic pKa of **5.07** (→ f_n 0.036, 96% ionised), "
-                           "while the measured value this repo's own best-conditioned table "
-                           "(Kodešová 2019, §4f) is built on is **13.9** — un-ionised everywhere "
-                           "(f_n = 1.00). Nine log units apart, and only the measured one "
-                           "reproduces the published a-priori result. Check a predicted pKa "
-                           "against a source before trusting the run.")
+            head = (f"A pKa ({kw['pKa']:g}, {'acid' if kw.get('is_acid', True) else 'base'}) came "
+                    f"back — at the default root-zone pH 6.5 that is **f_n = {f_n:.3g}**.")
+            if pka_measured:
+                st.info(head + " It is MEASURED, so the run is now on the **weak-electrolyte** "
+                        "path rather than the strictly neutral one. Untick the ⚗️ box to force "
+                        "the strictly neutral path.")
+            else:
+                st.warning(head + " It is **PREDICTED**, and a pKa is the one field that changes "
+                           "WHICH MODEL RUNS — so it is filled in but **left switched off**: the "
+                           "run stays on the strictly neutral path until you tick the ⚗️ box "
+                           "yourself. **Carbamazepine is why**: CompTox's OPERA gives an acidic "
+                           "pKa of **5.07** (→ f_n 0.036, 96% ionised) while the measured value "
+                           "this repo's own best-conditioned table (Kodešová 2019, §4f) is built "
+                           "on is **13.9** — un-ionised everywhere (f_n = 1.00). Nine log units "
+                           "apart, and only the measured one reproduces the published a-priori "
+                           "result. Check it against a source, then switch it on.")
         st.caption("The **in-planta half-life is never filled** — it is not a dashboard property, "
                    "and Kodesova 2019 measured the surviving parent fraction varying 4.8× BETWEEN "
                    "SPECIES for one compound, so it is not a compound constant. Set it yourself.")
         if kw.get("name") is None and r["name"]:
             kw["name"] = r["name"]
-        return {**kw, "name": r["name"] or q.strip()}
+        # Whether the pKa itself was MEASURED decides, below, if the weak-electrolyte
+        # path is switched on for the user or merely offered (see `_neutral_panel`).
+        # Read with `.get`, never passed to the model.
+        measured_pka = any(r["sources"].get(k) == "experimental"
+                           for k in ("pka_acidic", "pka_basic", "pka_unlabelled"))
+        return {**kw, "name": r["name"] or q.strip(), "_pka_measured": measured_pka}
 
 
 def _neutral_panel():
@@ -189,14 +190,25 @@ def _neutral_panel():
                 "ambient C_air [µg/m³]", value=0.0, min_value=0.0, step=0.1,
                 help="0 = clean air, i.e. volatilisation only.")))
     with st.expander("⚗️ Weak electrolyte (pKa) + apoplastic bypass"):
+        # A looked-up pKa switches the MODEL, so only a MEASURED one does that by
+        # itself. A predicted pKa is filled in below but left switched OFF: OPERA
+        # puts carbamazepine's acidic pKa at 5.07 where the measured value behind
+        # this repo's own best-conditioned table is 13.9 -- nine log units, and the
+        # difference between "un-ionised everywhere" and "96% ionised". Turning it
+        # on is one click; noticing it was turned on for you is not.
+        _pka_found, _pka_measured = "pKa" in found, bool(found.get("_pka_measured"))
         we = st.checkbox("this compound is an acid / base (has a pKa)",
-                         value=bool("pKa" in found), key=f"n_we_{'pKa' in found}",
+                         value=bool(_pka_found and _pka_measured),
+                         key=f"n_we_{_pka_found}_{_pka_measured}",
                          help="OFF = the strictly neutral path. ON = the compound is a neutral "
                               "molecule AND an ion at once, weighted by Henderson-Hasselbalch; "
                               "the ion feels the GHK membrane term, the neutral species does not. "
-                              "A lookup that returns a pKa turns this on for you — check it: a "
-                              "predicted pKa far from the root-zone pH changes nothing, one near "
-                              "it changes everything.")
+                              "A lookup fills the pKa either way, but only a MEASURED one turns "
+                              "this on for you — a predicted pKa is left for you to switch on "
+                              "deliberately, because it decides which model runs.")
+        if _pka_found and not _pka_measured and not we:
+            st.caption(f"↑ a **predicted** pKa {found['pKa']:g} is filled in below and ready — "
+                       "tick the box if you want the weak-electrolyte path.")
         if we:
             # two columns, not three: the sidebar is narrow enough that a third
             # squeezes the acid/base radio into one letter per line
@@ -216,6 +228,17 @@ def _neutral_panel():
                    "The ion is a CATION: ATTRACTED by the inside-negative membrane, not "
                    "excluded — at pKa 4.5 / pH 6.5 / log Kow 2.45 the base's root BAF is "
                    "1.51 against the acid's 0.079 (~19×)."))
+            # The tested-floor warning lives HERE, where the path is actually switched
+            # on, so it also covers a hand-typed pKa and a predicted one the user chose
+            # to enable -- not only the ones a lookup turned on.
+            import chem_lookup as _cx
+            if f_n < _cx.F_N_TESTED_FLOOR:
+                st.error(f"**f_n = {f_n:.3g} is BELOW the ≈{_cx.F_N_TESTED_FLOOR:g} floor where "
+                         "this path was tested** (§4l: direction supported, magnitude REFUTED — "
+                         "under it the model predicts almost nothing where the measured transfer "
+                         "is still ~0.13, because its only entry is transmembrane while a real "
+                         "ion also arrives apoplastically). Read this run as a lower bound on "
+                         "uptake, not a prediction.")
         n["g_apo"] = st.number_input(
             "apoplastic bypass g_apo  [L/kg/d]", 0.0, 50.0, 0.0, 0.5,
             help="A route AROUND the membrane, so it feels neither speciation nor GHK. "

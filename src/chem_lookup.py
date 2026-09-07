@@ -710,7 +710,9 @@ def speciation_note(pKa, is_acid=True, pH=PH_ROOT_ZONE, predicted=False):
                      "model runs.\n           Carbamazepine: OPERA gives acidic pKa 5.07 (f_n "
                      "0.036) where the MEASURED 13.9\n           this repo's Kodesova 2019 table "
                      "uses is un-ionised everywhere (f_n 1.00) --\n           nine log units "
-                     "apart. Check a predicted pKa against a source.")
+                     "apart. Check it against a source; DROP `pKa=` to stay on the\n           "
+                     "strictly neutral path (which is what the app does with a predicted pKa --\n"
+                     "           it fills the field but leaves the weak-electrolyte box OFF).")
     return f_n, "\n".join(lines)
 
 

@@ -1210,8 +1210,12 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   counterexample**: OPERA returns acidic pKa **5.07** (f_n 0.036, 96% ionised at pH 6.5) while the MEASURED value
   this repo's own best-conditioned table is built on — Kodešová 2019 §4f, whose a-priori 0.191/0.237 assumes CAR is
   **un-ionised everywhere** — is **13.9** (f_n 1.00). Nine log units apart, on the very compound the neutral path is
-  validated with, and only the measured one reproduces the published number. So a predicted pKa is filled, flagged,
-  and left editable — never quietly trusted. **Optional by
+  validated with, and only the measured one reproduces the published number. Hence the DEFAULT, decided with the user:
+  **only a MEASURED pKa switches the model by itself** — a predicted one is filled into the ⚗️ panel and reported but
+  the weak-electrolyte checkbox is LEFT OFF (the run stays strictly neutral until the user ticks it), because every
+  other looked-up field is a value that may be wrong while a pKa decides WHICH MODEL RUNS. In code `neutral_kwargs()`
+  still returns `pKa` (drop it to stay strictly neutral; the CLI note says so), and the tested-floor warning is raised
+  in the ⚗️ panel where the path is actually on, so it covers a hand-typed pKa too. **Optional by
   construction**: needs a free EPA key (`CTX_API_KEY` env or the Streamlit secret `ctx_api_key`, never
   committed) and outbound network; with neither the panel says which is missing and everything stays manual.
   Cached a day per query; `CTX_BASE_URL` repoints the client (mirror or stub); 429/502/503/504 retry with
