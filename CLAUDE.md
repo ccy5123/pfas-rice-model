@@ -1262,6 +1262,26 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   over the OPERA 3.39, the `"NaN"` row dropped rather than displacing it, `Koc 549.541 L/kg` read from the
   nested snake_case fate record as a LINEAR value, and the out-of-domain pKa labelled.
 
+- **Sidebar widget ranges — a live crash, and the class it belongs to (this session)**: a user typed a
+  compound into the CompTox box and the **whole app died** with a redacted
+  `StreamlitValueBelowMinError`. Cause: **water** (log Kow −1.38) → Karickhoff `Koc` **0.019 L/kg**, below the
+  soil-Koc field's `min_value=0.1`. Streamlit RAISES when a widget's `value` is outside its bounds, and
+  `app.py` builds the sidebar at the TOP of the script, so one out-of-range value aborts the page **before
+  anything renders** — the user cannot even edit the field that broke it. The bug was NOT the one input: the
+  field's range has to cover what the panel ITSELF produces, and `koc_neutral` over the log Kow field's own
+  span (−2 … 8) gives **0.0047 … 3.7e7**, so [0.1, 1e6] broke at **BOTH** ends — the upper one reachable by
+  dragging log Kow to 8 with **no lookup at all**. FIX: the Koc field now spans `[0, KOC_MAX_LKG=1e9]`
+  (matching the ceiling the lookup itself will return) with `format="%.4g"` so a small value reads `0.01946`
+  instead of `0.0`, and a guarded step; and **every** looked-up seed (log Kow, MW, K_AW, pKa, Koc) goes
+  through the new pure `ui.common.clamp_seed`, which clamps into range and **reports it** — never raising
+  (which kills the page) and never silent (which would change a scientific input without saying so).
+  `tests/test_ui_helpers.py` (4) is the repo's **first `ui/` test layer**, closing part of the documented "no
+  UI test layer" gap: it pins the Koc range against `koc_neutral` over the whole log Kow span (the assertion
+  that would have caught this), the lookup-ceiling match, `clamp_seed`'s contract, and — as a guard on the
+  PATTERN rather than one field — that every seeded widget passes through the clamp. Verified in a headless
+  drive: water renders `Koc 0.01946` with no exception, log Kow 8 → `3.681e+07`, −2 → `0.004742`, default 2.45
+  → 119.4 unchanged. UI-only; `parameters.json`, the model math and `reproduce_demo` (0.029) UNCHANGED.
+
 ## 7. Build & run
 - `pip install -r requirements.txt`
 - **Main reproduction**: `python reproduce_demo.py` (Yamazaki BAF, W2 fit, RMSE≈0.029);

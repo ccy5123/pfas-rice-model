@@ -270,6 +270,19 @@ you have one — or let the CompTox lookup above supply the dashboard's OPERA `K
 (returned **linear, in L/kg**), which then replaces the Karickhoff default and is
 labelled as predicted.
 
+**The field's range covers what the panel itself can produce**, which is not a detail:
+Karickhoff over the log Kow field's own span (−2 … 8) gives Koc **0.0047 … 3.7e7**, and
+the field originally accepted only [0.1, 1e6] — so it crashed at *both* ends. Looking up
+**water** (log Kow −1.38 → Koc 0.019) took the whole page down with a redacted
+`StreamlitValueBelowMinError`, and dragging log Kow to 8 did the same from above with no
+lookup involved. Streamlit raises when a widget's `value` is outside its bounds, and the
+sidebar is built at the top of `app.py`, so one such value aborts the page *before
+anything renders* — leaving no way to edit the field that broke it. Every looked-up seed
+(log Kow, MW, K_AW, pKa, Koc) therefore passes through `ui.common.clamp_seed`, which
+clamps into range and **says so** rather than raising or silently altering a scientific
+input. `tests/test_ui_helpers.py` pins the Koc range against `koc_neutral` over the log
+Kow span, so the mismatch cannot come back.
+
 ## Tang 2026 validation tab (out-of-sample)
 
 The **✅ Tang TF (OOS)** tab checks the root→shoot loading `f_xy` against **Tang et al. 2026**

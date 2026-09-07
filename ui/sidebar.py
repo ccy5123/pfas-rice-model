@@ -11,6 +11,15 @@ import plots
 
 from ui.common import (_EX, _cong_label, _cong_label_ko, _PRESETS_KO, _SCENARIOS_KO, _mol_svg,
                        _hydrus_drivers_cached, _hydrus_soil_congener)
+import ui.common as _CM
+
+# Ceiling for the soil Koc field, shared with the lookup so a value it is willing to
+# return can always be displayed (`chem_lookup` refuses anything above this as a
+# unit/scale misread).
+try:
+    from chem_lookup import KOC_MAX_LKG as _KOC_MAX
+except Exception:                                   # noqa: BLE001 -- optional module
+    _KOC_MAX = 1e9
 
 
 
@@ -136,7 +145,12 @@ def _neutral_panel():
     # The looked-up values are DEFAULTS, not commitments: each widget's key carries
     # the value it was seeded with, so a new lookup reseeds the field while a manual
     # edit survives every rerun in between.
-    _kow = float(found.get("log_kow", 2.45))
+    # EVERY looked-up seed goes through `clamp_seed`: a value outside a widget's range
+    # raises before the page renders, so it would abort the whole app and leave the user
+    # unable to edit the very field that broke it. Clamping is visible, never silent.
+    _kow, _note = _CM.clamp_seed(found.get("log_kow", 2.45), -2.0, 8.0)
+    if _note:
+        st.warning(f"**log Kow** {_note} — clamped to {_kow:g}.")
     n["log_kow"] = st.number_input("log Kow", value=_kow, min_value=-2.0, max_value=8.0, step=0.05,
                                    key=f"n_logkow_{_kow:.4f}",
                                    help="The one required input. Drives K_PW and TSCF. The "
@@ -177,10 +191,13 @@ def _neutral_panel():
                  "for a volatile compound makes the leaf an upper bound BY CONSTRUCTION.")
         if n["air"]:
             a1, a2 = st.columns(2)
-            _mw = float(found.get("MW", 236.3))
-            _kaw = float(found.get("K_AW", 1e-3))
-            n["MW"] = a1.number_input("MW [g/mol]", value=_mw, min_value=1.0, step=1.0,
-                                      key=f"n_mw_{_mw:.4f}")
+            _mw, _nmw = _CM.clamp_seed(found.get("MW", 236.3), 1.0, 1e5)
+            _kaw, _nkaw = _CM.clamp_seed(found.get("K_AW", 1e-3), 0.0, 10.0)
+            for _lbl, _nt in (("MW", _nmw), ("K_AW", _nkaw)):
+                if _nt:
+                    st.warning(f"**{_lbl}** {_nt} — clamped.")
+            n["MW"] = a1.number_input("MW [g/mol]", value=_mw, min_value=1.0, max_value=1e5,
+                                      step=1.0, key=f"n_mw_{_mw:.4f}")
             n["K_AW"] = a2.number_input("K_AW [-]", value=_kaw, min_value=0.0, max_value=10.0,
                                         step=1e-4, format="%.2e", key=f"n_kaw_{_kaw:.6g}",
                                         help="Dimensionless Henry's-law constant (converted from "
@@ -213,7 +230,9 @@ def _neutral_panel():
             # two columns, not three: the sidebar is narrow enough that a third
             # squeezes the acid/base radio into one letter per line
             w1, w2 = st.columns(2)
-            _pka = float(found.get("pKa", 4.5))
+            _pka, _npka = _CM.clamp_seed(found.get("pKa", 4.5), -5.0, 14.0)
+            if _npka:
+                st.warning(f"**pKa** {_npka} — clamped to {_pka:g}.")
             n["pKa"] = w1.number_input("pKa", -5.0, 14.0, _pka, 0.1, key=f"n_pka_{_pka:.3f}")
             n["pH"] = w2.number_input("root-zone pH", 3.0, 10.0, 6.5, 0.1)
             _ab = 0 if found.get("is_acid", True) else 1
@@ -253,11 +272,19 @@ def _neutral_panel():
     # PROVISIONAL -- nothing in this repo scores a predicted Koc) and is editable.
     import literature_params as LP
     karickhoff = float(LP.koc_neutral(float(n["log_kow"])))
-    koc_default = float(found.get("Koc", karickhoff))
+    koc_default, _koc_note = _CM.clamp_seed(found.get("Koc", karickhoff), 0.0, _KOC_MAX)
     _src = ("CompTox" if "Koc" in found else "Karickhoff")
+    if _koc_note:
+        st.warning(f"**soil Koc** {_koc_note} — clamped to {koc_default:g} L/kg.")
+    # The range below must cover what THIS PANEL can produce, or a legitimate compound
+    # crashes the page. Karickhoff over the log Kow field's own span (-2 .. 8) gives
+    # 0.0047 .. 3.7e7, and the lookup allows up to `KOC_MAX_LKG` -- so the old
+    # [0.1, 1e6] broke at BOTH ends: water (log Kow -1.38 -> Koc 0.019) below it, and
+    # log Kow 8 above it with no lookup involved at all.
     n["Koc"] = st.number_input(
-        "soil Koc  [L/kg]", 0.1, 1e6, koc_default, koc_default / 10.0, format="%.1f",
-        key=f"koc_neutral_{n['log_kow']:.2f}_{koc_default:.3f}",
+        "soil Koc  [L/kg]", 0.0, _KOC_MAX, koc_default,
+        max(koc_default / 10.0, 1e-6), format="%.4g",
+        key=f"koc_neutral_{n['log_kow']:.2f}_{koc_default:.6g}",
         help=f"Used by the flooded Cwᵒ(t) shape and the live HYDRUS run (Kd = Koc·f_oc). "
              f"Default {koc_default:.1f} from {_src} (Karickhoff would give {karickhoff:.1f}) — "
              f"PROVISIONAL: no table in this repo scores a predicted Koc, and Li 2019's soil "

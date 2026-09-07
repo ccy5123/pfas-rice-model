@@ -786,3 +786,25 @@ def render_footer(cfg):
     fc1.caption(f"**PFAS–Rice Uptake Model** · v{APP_VERSION}")
     fc2.caption(_t("footer.links", lang, repo=REPO_URL, docs=DOCS_URL))
     fc3.caption(_t("footer.cite", lang))
+
+
+def clamp_seed(value, lo, hi):
+    """Fit a looked-up DEFAULT into a widget's range -> (value, note or None).
+
+    Streamlit raises `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` when
+    a widget's `value` sits outside `min_value`/`max_value`, and the sidebar is built at
+    the TOP of `app.py` -- so one out-of-range looked-up property aborts the WHOLE page
+    before anything renders, and the user cannot even edit the offending field to
+    recover. A seeded default must therefore never be able to leave the range.
+
+    Clamping changes a scientific input, so it is never silent: the caller shows the
+    returned note. Pure (no Streamlit) so it can be tested.
+    """
+    v = float(value)
+    if v != v:                                    # NaN: no sensible clamp
+        return float(lo), "came back as NaN"
+    if v < lo:
+        return float(lo), f"came back as {v:g}, below this field's minimum {lo:g}"
+    if v > hi:
+        return float(hi), f"came back as {v:g}, above this field's maximum {hi:g}"
+    return v, None
