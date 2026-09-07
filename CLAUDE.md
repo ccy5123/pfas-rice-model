@@ -1220,19 +1220,34 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (camelCase `propName`/`propValue` vs snake_case `prop_name`/`prop_value` inside the fate records), so every
   reader takes an alias list; (4) units — Henry's law is atm-m3/mol and reading Pa-m3/mol as atm-m3/mol is a
   clean **5.006 log-unit** offset that still looks plausible, so the conversion is explicit and an unrecognised
-  unit returns nothing; (5) the **OPERA applicability domain** is populated only in the `…Global` fields — a
+  unit returns nothing — and the SHARPEST form of the same trap, **log vs linear**, is the one a LIVE run
+  actually sprang: `LogKow` comes as `2.45 [Log10 unitless]` but **`Koc` comes as `549.541 [L/kg]`, LINEAR**,
+  though Koc is normally written "log Koc", so assuming log10 is `10**549` (an OverflowError — the lucky case;
+  a smaller value passes silently, and benzoic acid did reach `Koc=4.2e+31` before the fix). The scale is now
+  read off each row's unit then its name (`is_log_scale`/`to_linear`/`to_log10`) and normalised at parse time,
+  with an implausible Koc (>`KOC_MAX_LKG`) refused rather than handed to the soil model; (5) the **OPERA
+  applicability domain** is populated only in the `…Global` fields — a
   prediction its own model puts OUTSIDE its domain is out of scope, not merely uncertain, so it loses the tie
   to an in-domain candidate, reaches the badge, and raises its own error in the panel. Parsing stays
   deliberately tolerant (name-substring matching, bare-list or `{"data": …}` envelope) so a schema change
-  degrades to a MISSING property rather than a wrong one — `python src/chem_lookup.py <compound> --raw` dumps
-  every endpoint's payload, and the working notes' first rule (probe one chemical, read the raw JSON, then
-  sanity-check on benzoic acid / benzyl alcohol) is in the CLI output. Tests are 100% offline fixtures (CI has
-  no key and no network) written against the REAL shapes, pinning the base URL, the identifier classification,
-  provenance-from-the-endpoint, that a string `"NaN"` cannot displace a prediction, the snake_case fate path,
-  the 5.006-log Henry check, the AD tie-break, the `simulate_neutral` kwarg mapping (and that `half_life` is
-  absent from it), and the no-key/no-network degradation. Verified end-to-end against a stub reproducing those
-  shapes: experimental log Kow 2.45 chosen over the OPERA 3.39, the `"NaN"` row dropped rather than displacing
-  it, Koc 251.2 read from the nested snake_case fate record, and the out-of-domain pKa labelled.
+  degrades to a MISSING property rather than a wrong one — and a **SIXTH trap the live run exposed that the
+  notes did not list**: a property can come back under a name NONE of the patterns match (OPERA labels its two
+  ionisation centres `pKa_a`/`pKa_b`, but a plain `pKa` row exists too — which is why the first live run
+  returned no pKa for carbamazepine OR benzoic acid), and that shows as an EMPTY COLUMN, not an error. So a
+  `pKa` row with no stated centre is now still used (acid by default, the acid/base radio left to the user),
+  the reverse risk is closed too (`"log p"` is a substring of `"log pvap"` — a vapour-pressure row is now
+  excluded from the log Kow slot), and `python src/chem_lookup.py <compound> --raw` prints an **INVENTORY of
+  every returned property name/value/unit** before the JSON, which is the list to read when a field is blank
+  (the JSON dump alone truncates before the interesting rows). The working notes' first rule (probe one
+  chemical, read the raw output, then sanity-check on benzoic acid / benzyl alcohol) is in the CLI output.
+  Tests are 100% offline fixtures (CI has no key and no network) written against the REAL shapes, pinning the
+  base URL, the identifier classification, provenance-from-the-endpoint, that a string `"NaN"` cannot displace
+  a prediction, the snake_case fate path, the 5.006-log Henry check, **the linear-Koc reading + the refusal of
+  an implausible one + the vapour-pressure exclusion + the unlabelled-pKa fallback**, the AD tie-break, the
+  `simulate_neutral` kwarg mapping (and that `half_life` is absent from it), and the no-key/no-network
+  degradation. Verified end-to-end against a stub reproducing the LIVE shapes: experimental log Kow 2.45 chosen
+  over the OPERA 3.39, the `"NaN"` row dropped rather than displacing it, `Koc 549.541 L/kg` read from the
+  nested snake_case fate record as a LINEAR value, and the out-of-domain pKa labelled.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`

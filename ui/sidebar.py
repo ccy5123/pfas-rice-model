@@ -61,8 +61,9 @@ def _ctx_lookup_panel():
         kw = dict(r["kwargs"])
         st.success(f"**{r['name'] or q}** · {r['dtxsid']}" + (f" · CAS {r['casrn']}" if r["casrn"] else ""))
         rows, predicted, out_ad = [], [], []
-        _LABEL = {"log_kow": "log Kow", "K_AW": "K_AW", "log_koc": "soil Koc", "pka_acidic":
-                  "pKa (acidic)", "pka_basic": "pKa (basic)"}
+        _LABEL = {"log_kow": "log Kow", "K_AW": "K_AW", "koc": "soil Koc", "pka_acidic":
+                  "pKa (acidic)", "pka_basic": "pKa (basic)",
+                  "pka_unlabelled": "pKa (centre not stated — check acid/base)"}
         for pk, badge in r["badges"].items():
             if pk in ("henry", "water_solubility", "melting_point"):
                 continue

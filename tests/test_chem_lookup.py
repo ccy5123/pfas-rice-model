@@ -43,11 +43,13 @@ PREDICTED = [
     {"propName": "pKa_a", "propValue": 13.9, "propUnit": "", "sourceName": "OPERA",
      "adConclusionGlobal": "Inside"},
 ]
-# the fate endpoint NESTS its records and uses snake_case, mixing both types (trap 3)
+# the fate endpoint NESTS its records and uses snake_case, mixing both types (trap 3).
+# The VALUE here is the real one the live API returns for carbamazepine: 549.541
+# **L/kg**, i.e. LINEAR — not the log10 the property is usually written in.
 FATE = {"dtxsid": "DTXSID3022125",
         "predictedFateData": [
-            {"prop_name": "Soil Adsorption Coefficient (Koc)", "prop_value": 2.4,
-             "prop_unit": "log10 L/kg", "prop_type": "predicted", "source_name": "OPERA",
+            {"prop_name": "Soil Adsorption Coefficient (Koc)", "prop_value": 549.541,
+             "prop_unit": "L/kg", "prop_type": "predicted", "source_name": "OPERA",
              "ad_conclusion_global": "Inside"}]}
 
 
@@ -121,9 +123,83 @@ def test_fate_endpoint_is_read_with_snake_case_and_its_own_type_field():
     """The fate payload NESTS its records and names fields snake_case — and it is
     the one endpoint that carries the type itself. Koc lives there."""
     r = cl.lookup("carbamazepine", key="k", _get_fn=fake_get())
-    koc = r.props["log_koc"]
-    assert koc.value == pytest.approx(2.4) and koc.source == "predicted"
-    assert r.neutral_kwargs()["Koc"] == pytest.approx(10 ** 2.4, rel=1e-6)
+    koc = r.props["koc"]
+    assert koc.value == pytest.approx(549.541) and koc.source == "predicted"
+    assert r.neutral_kwargs()["Koc"] == pytest.approx(549.541)
+
+
+# --- trap 5 again: the LOG-vs-LINEAR scale ----------------------------------
+def test_koc_is_taken_as_linear_unless_the_row_says_log():
+    """The sharpest form of the unit trap, and the one the live API actually sprang:
+    CTX sends Koc LINEAR (549.541 L/kg) while the property is normally written
+    "log Koc", so assuming log10 is a 10**549 overflow. The scale is read off the
+    row (unit first, then the name); a genuinely log-valued row is converted."""
+    assert not cl.is_log_scale("L/kg", "Soil Adsorption Coefficient (Koc)")
+    assert cl.is_log_scale("Log10 unitless", "LogKow")
+    assert cl.to_linear(549.541, "L/kg", "koc") == pytest.approx(549.541)
+    assert cl.to_linear(2.4, "log10 L/kg", "koc") == pytest.approx(10 ** 2.4)
+    assert cl.to_log10(2.45, "Log10 unitless", "LogKow") == pytest.approx(2.45)
+    assert cl.to_log10(282.0, "", "Octanol-Water Partition Coefficient") == pytest.approx(2.45,
+                                                                                         abs=1e-2)
+    # ...and the REVERSE misread is guarded: a row that merely omits the word "log"
+    # must not have its already-log 2.45 turned into 0.389.
+    m = cl.LOGKOW_PLAUSIBLE_MAX
+    assert cl.to_log10(2.45, "", "Octanol-Water Partition Coefficient", m) == pytest.approx(2.45)
+    assert cl.to_log10(282.0, "", "Octanol-Water Partition Coefficient", m) == pytest.approx(
+        2.45, abs=1e-2)
+    unlogged = [{"propName": "Octanol-Water Partition Coefficient", "propValue": 2.45,
+                 "sourceName": "PHYSPROP"}]
+    r0 = cl.lookup("carbamazepine", key="k",
+                   _get_fn=fake_get({"/chemical/search/": SEARCH, "/chemical/detail/": [DETAIL],
+                                     "/chemical/property/experimental/": unlogged}))
+    assert r0.props["log_kow"].value == pytest.approx(2.45)
+    # end to end: a log-valued fate row lands as the same LINEAR L/kg the model wants
+    logged = {"dtxsid": "DTXSID3022125", "predictedFateData": [
+        {"prop_name": "log Koc", "prop_value": 2.74, "prop_unit": "log10 L/kg",
+         "prop_type": "predicted"}]}
+    r = cl.lookup("carbamazepine", key="k",
+                  _get_fn=fake_get({"/chemical/search/": SEARCH, "/chemical/detail/": [DETAIL],
+                                    "/chemical/fate/": [logged]}))
+    assert r.neutral_kwargs()["Koc"] == pytest.approx(10 ** 2.74, rel=1e-6)
+
+
+def test_an_implausible_koc_is_refused_rather_than_passed_on():
+    """A Koc that could only come from a scale misread must not reach the soil model
+    (the crash this replaced produced Koc = 4.2e+31 for benzoic acid)."""
+    huge = {"dtxsid": "DTXSID3022125", "predictedFateData": [
+        {"prop_name": "Soil Adsorption Coefficient (Koc)", "prop_value": 1e30,
+         "prop_unit": "L/kg", "prop_type": "predicted"}]}
+    r = cl.lookup("carbamazepine", key="k",
+                  _get_fn=fake_get({"/chemical/search/": SEARCH, "/chemical/detail/": [DETAIL],
+                                    "/chemical/fate/": [huge]}))
+    assert "koc" in r.props and "Koc" not in r.neutral_kwargs()
+
+
+def test_a_vapour_pressure_row_is_not_served_as_the_log_kow():
+    """'log p' is a substring of 'log pvap', so a permissive substring match would
+    hand the soil/plant model a vapour pressure in the log Kow slot."""
+    exp = [{"propName": "LogPvap: Vapor Pressure", "propValue": -7.6, "sourceName": "PHYSPROP"}]
+    r = cl.lookup("carbamazepine", key="k",
+                  _get_fn=fake_get({"/chemical/search/": SEARCH, "/chemical/detail/": [DETAIL],
+                                    "/chemical/property/experimental/": exp,
+                                    "/chemical/property/predicted/": PREDICTED}))
+    assert r.props["log_kow"].value == pytest.approx(3.39)      # the real prediction, not -7.6
+
+
+def test_a_pka_row_with_no_stated_centre_is_still_used_but_flagged():
+    """OPERA labels its two centres (pKa_a / pKa_b), but a row named just "pKa" is
+    a real value whose centre the payload does not state — use it and leave the
+    acid/base choice to the caller rather than dropping the compound's ionisation."""
+    pred = [{"propName": "pKa", "propValue": 4.2, "sourceName": "OPERA"}]
+    r = cl.lookup("benzoic acid", key="k",
+                  _get_fn=fake_get({"/chemical/search/": SEARCH, "/chemical/detail/": [DETAIL],
+                                    "/chemical/property/predicted/": pred}))
+    assert "pka_unlabelled" in r.props
+    nk = r.neutral_kwargs()
+    assert nk["pKa"] == pytest.approx(4.2) and nk["is_acid"] is True
+    # a LABELLED centre wins and the unlabelled fallback stays out of the way
+    r2 = cl.lookup("carbamazepine", key="k", _get_fn=fake_get())
+    assert "pka_unlabelled" not in r2.props and r2.props["pka_acidic"].value == pytest.approx(13.9)
 
 
 # --- trap 2: string nulls ---------------------------------------------------

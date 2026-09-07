@@ -37,11 +37,14 @@ CLI (run it on a machine that has the key and outbound HTTPS):
     python src/chem_lookup.py carbamazepine
     python src/chem_lookup.py 298-46-4
     python src/chem_lookup.py "NC(=O)N1c2ccccc2C=Cc2ccccc21"     # SMILES (needs RDKit)
-    python src/chem_lookup.py carbamazepine --raw                # dump raw JSON
+    python src/chem_lookup.py carbamazepine --raw                # property inventory + raw JSON
 
-`--raw` dumps every endpoint's payload, because EPA revises paths and field names
-and a mismatch produces EMPTY COLUMNS, not an error: probe one chemical and read
-the raw JSON before trusting a batch (the working notes' first rule). The parsers
+`--raw` lists every property NAME each endpoint returned (with its value and unit)
+and then dumps the payloads, because EPA revises paths and field names and a
+mismatch produces EMPTY COLUMNS, not an error: probe one chemical and read the raw
+output before trusting a batch (the working notes' first rule). A field that comes
+back blank is almost always a name this module's patterns do not match -- the
+inventory is where you see the real one. The parsers
 match property names case-insensitively, take alias lists for every field, and
 accept a bare list or a `{"data": [...]}` envelope, so a schema change degrades to
 a MISSING property rather than a wrong one.
@@ -83,7 +86,18 @@ RETRIES = 3
 #  5. Units are not what you expect -- Henry's law comes as atm-m3/mol. Reading
 #     Pa-m3/mol as atm-m3/mol is a clean log10(101325) = 5.006 log-unit offset that
 #     still looks like a plausible number, so `henry_to_kaw` converts explicitly and
-#     REFUSES an unrecognised unit.
+#     REFUSES an unrecognised unit. The same trap in its sharpest form is the LOG-vs-
+#     LINEAR scale: `LogKow` arrives as 2.45 [Log10 unitless] but `Koc` arrives as
+#     549.541 [L/kg], i.e. LINEAR, even though Koc is normally written "log Koc" --
+#     assuming log10 there is 10**549 (an outright OverflowError, which is the lucky
+#     case; a smaller value would pass silently). `is_log_scale`/`to_linear`/`to_log10`
+#     read the scale off the row and normalise at parse time, and an implausible Koc
+#     (> `KOC_MAX_LKG`) is refused rather than handed to the soil model.
+# A SIXTH, learned from the live API rather than the notes: a property can come back
+# under a name none of `_PROPERTY_PATTERNS` matches (OPERA labels its two ionisation
+# centres pKa_a/pKa_b, but a plain "pKa" row exists too) -- which shows up as an EMPTY
+# column, not an error. `--raw` therefore prints an INVENTORY of every returned
+# property name before the JSON: that list is what to read when a field is missing.
 
 # Henry's law: the dashboard reports H in atm-m3/mol; the model wants the
 # DIMENSIONLESS air-water partition K_AW = H / (R*T)  (R in atm-m3/(mol*K)).
@@ -113,12 +127,24 @@ _AD_KEYS = ("adConclusionGlobal", "ad_conclusion_global", "adConclusion", "ad_co
 _PROPERTY_PATTERNS = {
     "log_kow": ("octanol-water partition", "logkow", "log kow", "logp", "log p"),
     "henry": ("henry",),
-    "pka_acidic": ("pka_a", "acidic pka", "pka (acidic", "strongest acidic"),
-    "pka_basic": ("pka_b", "basic pka", "pka (basic", "strongest basic"),
-    "log_koc": ("koc",),
+    "pka_acidic": ("pka_a", "acidic pka", "pka (acidic", "pka acidic", "strongest acidic",
+                   "acid dissociation"),
+    "pka_basic": ("pka_b", "basic pka", "pka (basic", "pka basic", "strongest basic"),
+    # LAST RESORT for a row named just "pKa": which centre it is cannot be read off
+    # the name, so it fills `pKa` only when neither of the two above matched, and the
+    # acid/base choice stays the caller's (the app keeps that radio editable).
+    "pka_unlabelled": ("pka", "dissociation constant"),
+    "koc": ("koc", "soil adsorption"),
     "water_solubility": ("water solubility",),
     "melting_point": ("melting point",),
 }
+
+# The SCALE each model input is expected in, applied at parse time so `Prop.value`
+# is always the model's scale and `raw_value`/`raw_unit` keep what the API sent.
+# CTX mixes the two within one payload -- `LogKow` arrives as 2.45 [Log10 unitless]
+# while `Koc` arrives as 549.541 [L/kg], i.e. LINEAR -- and reading a linear Koc as
+# a log one is a 10^549 overflow (the lucky case; a smaller value passes silently).
+_SCALE_OF = {"log_kow": "log10", "koc": "linear"}
 
 
 @dataclass
@@ -198,15 +224,22 @@ class Lookup:
             out["MW"] = float(self.mol_weight)
         if "K_AW" in self.props:
             out["K_AW"] = self.props["K_AW"].value
-        if "log_koc" in self.props:
-            out["Koc"] = float(10.0 ** self.props["log_koc"].value)
+        koc = self.props.get("koc")
+        if koc is not None and 0 < koc.value <= KOC_MAX_LKG:
+            out["Koc"] = float(koc.value)          # LINEAR L/kg -- see `to_linear`
         acid, base = self.props.get("pka_acidic"), self.props.get("pka_basic")
+        loose = self.props.get("pka_unlabelled")
         if acid is not None or base is not None:
             # Which centre governs is a judgement the DATA cannot make: report the
             # one that is defined, and prefer the ACIDIC one when both are, since
             # that is the case the ionisable-organic extension was built for.
             out["pKa"] = (acid or base).value
             out["is_acid"] = acid is not None
+        elif loose is not None:
+            # The row was named just "pKa": the value is real but the centre is not
+            # stated. Default to ACID (as above) and leave the caller to flip it.
+            out["pKa"] = loose.value
+            out["is_acid"] = True
         return out
 
 
@@ -431,18 +464,32 @@ def _row_source(row, default=""):
     return default
 
 
-def _match_property(row, patterns):
-    name = " ".join(str(row.get(k, "")) for k in _NAME_KEYS).lower()
+def _name_of(row):
+    return " ".join(str(row.get(k, "")) for k in _NAME_KEYS).lower()
+
+
+# Names a pattern would match but must NOT: "log p" is a substring of "log pvap", so
+# without this a vapour-pressure row could be served as the log Kow.
+_PROPERTY_EXCLUDE = {
+    "log_kow": ("vapor", "vapour", "pressure", "octanol-air", "koa", "octanol air"),
+}
+
+
+def _match_property(row, patterns, exclude=()):
+    name = _name_of(row)
+    if any(x in name for x in exclude):
+        return False
     return any(p in name for p in patterns)
 
 
-def _pick(tagged, patterns):
+def _pick(tagged, patterns, exclude=()):
     """Best (row, source) for a property. EXPERIMENTAL wins over predicted; a row
     whose value is missing or a string null is not a candidate at all (trap 2), so a
     blank measurement can never displace a usable prediction. Among predictions, one
     INSIDE its applicability domain beats one outside."""
     hits = [(r, src) for r, src in tagged
-            if _match_property(r, patterns) and _num(_first(r, _VALUE_KEYS)) is not None]
+            if _match_property(r, patterns, exclude)
+            and _num(_first(r, _VALUE_KEYS)) is not None]
     if not hits:
         return None, ""
     def rank(item):
@@ -459,6 +506,60 @@ def _value_of(row):
 
 def _unit_of(row):
     return str(_first(row, _UNIT_KEYS) or "")
+
+
+# Physical ceiling for a soil sorption coefficient. A Koc above this is not a
+# measurement, it is a unit/scale misread -- refuse it rather than pass it on.
+KOC_MAX_LKG = 1e9
+
+
+def is_log_scale(unit="", name=""):
+    """Does this row carry a LOG10 value? Read it from the unit, then the name.
+
+    Trap 5 in its sharpest form: CTX sends `Koc` as **549.541 [L/kg]** (linear) but
+    `LogKow` as **2.45 [Log10 unitless]**, and both properties are commonly written
+    "log …" in the literature. Assuming the wrong one is a 10^x error -- for Koc it
+    overflows outright, which is the lucky case; for a smaller value it would pass
+    silently."""
+    blob = f"{unit} {name}".lower()
+    return "log" in blob
+
+
+def to_linear(value, unit="", name=""):
+    """A value that may be log10 -> linear."""
+    v = _num(value)
+    if v is None:
+        return None
+    if not is_log_scale(unit, name):
+        return v
+    try:
+        return float(10.0 ** v)
+    except OverflowError:
+        return None
+
+
+# A log Kow is physically about -3 to 12. So a row that does not SAY "log" but
+# carries 282 is a linear Kow, while one carrying 2.45 is already the log and its
+# name merely omitted the word -- converting that one would be the same class of
+# silent error in the other direction.
+LOGKOW_PLAUSIBLE_MAX = 20.0
+
+
+def to_log10(value, unit="", name="", ambiguous_max=None):
+    """A value that may be linear -> log10 (for the log-valued inputs, e.g. log Kow).
+
+    `ambiguous_max` guards the reverse misread: when the row does not say it is
+    log-scale, a value at or below it is taken to be a log already and passed
+    through, and only a larger one is converted."""
+    import math
+    v = _num(value)
+    if v is None:
+        return None
+    if is_log_scale(unit, name):
+        return v
+    if ambiguous_max is not None and abs(v) <= ambiguous_max:
+        return v
+    return math.log10(v) if v > 0 else None
 
 
 def henry_to_kaw(value, unit=""):
@@ -526,13 +627,21 @@ def properties(dtxsid, key=None, base=None, _get_fn=None):
 
     props = {}
     for name, patterns in _PROPERTY_PATTERNS.items():
-        row, src = _pick(tagged, patterns)
+        if name == "pka_unlabelled" and ("pka_acidic" in props or "pka_basic" in props):
+            continue                       # a labelled centre was found; don't guess
+        row, src = _pick(tagged, patterns, _PROPERTY_EXCLUDE.get(name, ()))
         if row is None:
             continue
-        v = _num(_first(row, _VALUE_KEYS))
+        raw = _num(_first(row, _VALUE_KEYS))
+        unit, pname = _unit_of(row), _name_of(row)
+        scale = _SCALE_OF.get(name)         # normalise log-vs-linear at parse time
+        v = (to_log10(raw, unit, pname, LOGKOW_PLAUSIBLE_MAX) if scale == "log10" else
+             to_linear(raw, unit, pname) if scale == "linear" else raw)
+        if v is None:
+            continue
         origin = str(_first(row, _SOURCE_KEYS) or ("OPERA" if src == "predicted" else ""))
         props[name] = Prop(value=v, source=src or "unknown", origin=origin,
-                           raw_value=v, raw_unit=_unit_of(row),
+                           raw_value=raw, raw_unit=unit,
                            ad=str(_first(row, _AD_KEYS) or ""))
 
     h = props.get("henry")
@@ -593,7 +702,29 @@ def _cli(argv):
                          f"/chemical/property/predicted/search/by-dtxsid/{sid}",
                          f"/chemical/fate/search/by-dtxsid/{sid}"):
                 pl, e = _get(path, k, base)
-                print(f"\n--- {path}\n{e or json.dumps(pl, indent=2)[:4000]}")
+                if e:
+                    print(f"\n--- {path}\n{e}")
+                    continue
+                # An INVENTORY of every property name/value/unit first: the JSON dump
+                # truncates, and a property that came back empty is almost always one
+                # whose NAME this module's patterns do not match. This is the list to
+                # read when a field is missing.
+                inv = []
+                for r_ in _rows(pl):
+                    for nk_ in ("experimentalFateData", "experimental_fate_data",
+                                "predictedFateData", "predicted_fate_data"):
+                        inv += [x for x in (r_.get(nk_) or []) if isinstance(x, dict)]
+                    if not any(r_.get(nk_) for nk_ in ("experimentalFateData",
+                                                       "experimental_fate_data",
+                                                       "predictedFateData",
+                                                       "predicted_fate_data")):
+                        inv.append(r_)
+                names = [(str(_first(x, _NAME_KEYS) or "?"), _first(x, _VALUE_KEYS),
+                          _unit_of(x)) for x in inv if isinstance(x, dict)]
+                print(f"\n--- {path}   ({len(names)} rows)")
+                for nm, v, u in names:
+                    print(f"      {nm[:46]:48} {str(v)[:14]:16} {u}")
+                print(json.dumps(pl, indent=2)[:2000])
         return 0
     r = lookup(q)
     if not r.ok:

@@ -194,10 +194,24 @@ guarded by a test:
 4. **Units are not what you expect.** Henry's law comes as atm·m³/mol; reading
    Pa·m³/mol as atm·m³/mol is a clean **5.006 log-unit** offset that still looks
    plausible, so the conversion is explicit and an unrecognised unit returns nothing.
+   The sharpest form of the same trap is **log vs linear**, and it is the one the live
+   API actually sprang: `LogKow` arrives as `2.45 [Log10 unitless]` but **`Koc` arrives
+   as `549.541 [L/kg]` — linear** — even though Koc is normally written "log Koc", so
+   assuming log10 is `10**549` (an outright overflow; a smaller value would have passed
+   silently). The scale is read off each row's unit, then its name, and normalised at
+   parse time; an implausible Koc is refused rather than handed to the soil model.
 5. **The OPERA applicability domain** is reported only in the `…Global` fields. A
    prediction its own model places *outside* its domain is out of scope, not merely
    uncertain: it loses the tie to an in-domain candidate and the panel raises a
    separate error naming it.
+
+A sixth, learned from the live API rather than the notes: a property can come back
+under a **name none of the patterns match** — OPERA labels its two ionisation centres
+`pKa_a`/`pKa_b`, but a plain `pKa` row exists as well — and that shows up as an *empty
+column*, not an error. A `pKa` row with no stated centre is therefore still used (as an
+acid by default, with the acid/base radio left to the user), and `--raw` prints an
+**inventory of every returned property name** before the JSON: that list is what to read
+when a field comes back blank.
 
 **Key and network.** The CTX API needs a free EPA key, read from `CTX_API_KEY` or
 the Streamlit secret `ctx_api_key` — never committed. Without a key, without
@@ -213,7 +227,7 @@ compound (benzoic acid, benzyl alcohol) first:
 ```bash
 python src/chem_lookup.py carbamazepine        # resolved values + provenance
 python src/chem_lookup.py 298-46-4
-python src/chem_lookup.py carbamazepine --raw  # raw JSON, when a field comes back empty
+python src/chem_lookup.py carbamazepine --raw  # property inventory + raw JSON, when a field is empty
 ```
 
 ### Soil sorption for a neutral compound
@@ -228,8 +242,9 @@ It is flagged **PROVISIONAL** for a specific reason: no table in this repo score
 Koc (the neutral tables either supply the exposure directly or carry the paper's own measured
 isotherm), and Li 2019's soil half shows exactly what is at stake — root bias **+0.033** with an
 experimental `K_om` against **+0.291** with an estimated one. Type a measured value whenever
-you have one — or let the CompTox lookup above supply the dashboard's OPERA `logKoc`,
-which then replaces the Karickhoff default and is labelled as predicted.
+you have one — or let the CompTox lookup above supply the dashboard's OPERA `Koc`
+(returned **linear, in L/kg**), which then replaces the Karickhoff default and is
+labelled as predicted.
 
 ## Tang 2026 validation tab (out-of-sample)
 
