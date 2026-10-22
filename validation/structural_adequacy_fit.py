@@ -59,7 +59,7 @@ import organ_mass as om  # noqa: E402
 MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")
 M = om.organ_matrix(_b, MASS_BASIS)
 inputs = PlantInputs(t=t, Cwo=np.full_like(t, 1.0), Qtp=fr.Q_TP(t, SEASON), M=M,
-                     leaf_loss=_b.get("leaf_death_rate"))
+                     leaf_loss=_b.get("leaf_death_rate"), M_basis=MASS_BASIS)
 Mf = inputs.M_(t[-1])
 
 

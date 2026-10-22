@@ -85,7 +85,8 @@ def w2_rmse(M, crop=True):
     basis here. The placeholder logistic carries no basis and is used as is."""
     if crop:
         M = M * np.array([om.fresh_factor(o, MASS_BASIS) for o in om.ORGANS])
-    inp = PlantInputs(t=T, Cwo=np.full_like(T, 1.0), Qtp=QTP, M=M)
+    inp = PlantInputs(t=T, Cwo=np.full_like(T, 1.0), Qtp=QTP, M=M,
+                      M_basis=MASS_BASIS if crop else None)
     errs = []
     for c in PAR["congeners"]:
         p = c["name"]

@@ -213,6 +213,38 @@ class Compartment:
                              # speciation calculation at all, which is the PFAS path.
 
 
+M_BASES = (None, "fresh", "dry")
+
+# Transpiring surface per kg DRY matter [m^2/kg], for the leaf/grain xylem split when M is
+# fresh weight. Leaf 20 is the SLA reading of the original S. Grain 0.5116 = 2 x (1-0.78)/
+# (1-0.14): the value at which splitting on DRY matter gives the split the original S
+# gave on fresh mass at the shipped theta -- ~4% of the transpiration stream to the grain
+# during filling (nstem_leaf assumes 5%). NOT measured, and a FIXED literal on purpose:
+# computing it from theta would tie the split to the organs' water again. Reading the
+# original grain S=2 as per kg DRY instead sends ~14% to the grain and leaves 8 of 11
+# Yamazaki grain BAFs out of reach at the L_Ph floor (docs/HANDOFF_mass_basis_refit.md §2).
+S_XYLEM_DRY = {LEAF: 20.0, FRUIT: 0.5116}
+
+
+def xylem_leaf_share(comps, M, M_basis=None):
+    """Leaf share of the xylem stream that leaves the stem (the grain takes the rest).
+
+    Split by transpiring surface x mass. For a FRESH M (M_basis='fresh') the split runs
+    on DRY matter M*(1-theta), with the binding factor's own theta, and S_XYLEM_DRY --
+    the crop-model SLA convention (leaf area = SLA x leaf dry weight), so an organ's
+    water content does not set its transpiration share. M_basis None/'dry' splits on M
+    as given with Compartment.S (the placeholder logistic and the pre-fix dry-matter
+    records, which were made that way; Compartment.S is also the air-exchange surface).
+    """
+    if M_basis == "fresh":
+        A3 = S_XYLEM_DRY[LEAF] * M[LEAF] * (1.0 - comps[LEAF].theta)
+        A4 = S_XYLEM_DRY[FRUIT] * M[FRUIT] * (1.0 - comps[FRUIT].theta)
+    else:
+        A3 = comps[LEAF].S * M[LEAF]
+        A4 = comps[FRUIT].S * M[FRUIT]
+    return A3 / (A3 + A4) if (A3 + A4) > 0 else 0.5
+
+
 @dataclass
 class PlantInputs:
     """Time-dependent external drivers (from soil model + growth model).
@@ -222,14 +254,22 @@ class PlantInputs:
         Qtp : transpiration stream                 [L/day]  (from HYDRUS/Phydrus)
         M   : tissue fresh mass, shape (len(t), 4) [kg]     (from growth model)
     Cubic/linear interpolants are built for use inside the ODE RHS.
+
+    M_basis says what M is, for the one place that needs DRY matter -- the leaf/grain
+    xylem split (`xylem_leaf_share`): 'fresh' = M is fresh weight, so the split takes its
+    dry matter M*(1-theta) first; None (default) or 'dry' = split on M as given (the
+    basis-free placeholder logistic, and M that is already dry matter).
     """
     t: np.ndarray
     Cwo: np.ndarray
     Qtp: np.ndarray
     M: np.ndarray            # shape (len(t), 4)
     leaf_loss: np.ndarray | None = None   # leaf senescence loss RATE [1/day] (opt; 0 if None)
+    M_basis: str | None = None            # 'fresh' | 'dry' | None -- see the docstring
 
     def __post_init__(self):
+        if self.M_basis not in M_BASES:
+            raise ValueError(f"unknown M_basis {self.M_basis!r}; expected one of {M_BASES}")
         self.M = np.asarray(self.M, dtype=float)
         assert self.M.shape[1] == 4, "M must have 4 columns (root,stem,leaf,fruit)"
         kw = dict(kind="linear", bounds_error=False, fill_value="extrapolate")
@@ -406,10 +446,8 @@ class RiceUptakeModel:
         B = binding_factors(self.comps, self.cmpd)   # [L/kg]
         Cw = C / B                                   # free aqueous conc [ug/L]
 
-        # leaf/fruit xylem split by surface-area fraction
-        A3 = self.comps[LEAF].S * M[LEAF]
-        A4 = self.comps[FRUIT].S * M[FRUIT]
-        split = A3 / (A3 + A4) if (A3 + A4) > 0 else 0.5
+        # leaf/fruit xylem split by transpiring surface, on DRY matter
+        split = xylem_leaf_share(self.comps, M, self.inputs.M_basis)
         f3, f4 = split, 1.0 - split
 
         # phloem flow and sap concentration (carrier loading at leaf; NOT pH trap)

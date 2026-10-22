@@ -343,7 +343,7 @@ def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season:
     else:
         Qtp = fr.Q_TP(t, season)
 
-    return PlantInputs(t=t, Cwo=Cw_h, Qtp=Qtp, M=M, leaf_loss=leaf_loss), res
+    return PlantInputs(t=t, Cwo=Cw_h, Qtp=Qtp, M=M, leaf_loss=leaf_loss, M_basis=mass_basis), res
 
 
 # ---------------------------------------------------------------------------

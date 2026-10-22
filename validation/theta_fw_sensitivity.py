@@ -160,29 +160,24 @@ def main():
 
 
 def xylem_split_note():
-    """POST-HOC (not pre-registered): why grain theta moves the 4-pool grain BAF.
+    """POST-HOC (not pre-registered): the xylem split and grain theta.
 
-    The canonical core splits the xylem between leaf and grain by S*M (specific surface
-    x organ mass; pfas_rice_plant_module_4pool_surf.py). M is FRESH since the organ-mass
-    fix, so an organ's water content now sets its share of the transpiration stream.
-    S (leaf 20, grain 2 m^2/kg) is documented only as a ratio, with no basis; before the
-    fix M was dry matter, so the split was effectively per kg DRY."""
-    print("\nPOST-HOC — grain theta acts through the XYLEM SPLIT, not through partitioning")
-    S = {"leaf": 20.0, "grain": 2.0}
+    The first run of this script found that grain theta moved the 4-pool grain BAF
+    through the leaf/grain xylem split, which then ran on FRESH mass (S*M), so the
+    organs' water set their transpiration shares. Decided with the user: the split runs
+    on DRY matter with S_XYLEM_DRY (leaf 20, grain 0.5116 per kg dry; see the core), so
+    grain theta no longer moves it. This prints the check."""
+    from pfas_rice_plant_module_4pool_surf import xylem_leaf_share
+    print("\nPOST-HOC — the xylem split runs on DRY matter (S_XYLEM_DRY), so grain theta no "
+          "longer moves it")
     for th in (RANGES["grain"][1], RANGES["grain"][2]):
         with theta("grain", th):
             r = api.simulate("PFOA")
-            M = r["M"][-1]
-            ml, mg = M[2], M[3]
-            fresh = S["grain"] * mg / (S["leaf"] * ml + S["grain"] * mg)
-            dl, dg = ml * (1 - om.THETA_FW["leaf"]), mg * (1 - om.THETA_FW["grain"])
-            dry = S["grain"] * dg / (S["leaf"] * dl + S["grain"] * dg)
-            print(f"  grain theta {th:.2f}: grain share of the leaf+grain xylem at harvest "
-                  f"{fresh:.3f} (split on fresh mass, current) vs {dry:.3f} (on dry mass); "
+            share = 1.0 - xylem_leaf_share(api._compartments(), r["M"][-1], "fresh")
+            print(f"  grain theta {th:.2f}: grain share of the xylem at harvest {share:.3f}; "
                   f"PFOA grain BAF (dw) {r['conc']['grain'][-1] / (1 - th) / r['cwo_ref']:.3f}")
-    print("  The basis of S is undefined, and it moves every 4-pool grain number (PFOA grain")
-    print("  0.036 -> 0.103 fw if the split is taken on dry mass). A modelling decision, not")
-    print("  a theta question: see docs/HANDOFF_mass_basis_refit.md section 2.")
+    print("  (Reading the original grain S=2 as per kg DRY instead would give 0.343 at harvest,")
+    print("  ~14% during filling: docs/HANDOFF_mass_basis_refit.md section 2.)")
 
 
 if __name__ == "__main__":

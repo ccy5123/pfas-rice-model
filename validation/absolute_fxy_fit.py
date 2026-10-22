@@ -51,7 +51,7 @@ t = np.linspace(0.0, SEASON, 121)                         # coarse grid (fit spe
 Qtp = fr.Q_TP(t, SEASON)                                  # MEASURED transpiration
 b = gr.organ_biomass(t, SEASON)                           # MEASURED (ORYZA) biomass
 M = om.organ_matrix(b, MASS_BASIS)                  # crop DRY matter -> ODE mass basis
-inputs = PlantInputs(t=t, Cwo=np.full_like(t, 1.0), Qtp=Qtp, M=M)
+inputs = PlantInputs(t=t, Cwo=np.full_like(t, 1.0), Qtp=Qtp, M=M, M_basis=MASS_BASIS)
 comps = [Compartment("root",  comp["root"]["theta_fw"], comp["root"]["f_prot"],
                      comp["root"]["f_PL"], comp["root"]["f_cw"]),
          Compartment("stem",  comp["stem"]["theta_fw"], comp["stem"]["f_prot"],

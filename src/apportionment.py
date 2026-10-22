@@ -41,7 +41,7 @@ from __future__ import annotations
 import numpy as np
 
 from pfas_rice_plant_module_4pool_surf import (
-    RiceUptakeModel, binding_factors, root_uptake, ROOT, STEM, LEAF, FRUIT)
+    RiceUptakeModel, binding_factors, root_uptake, xylem_leaf_share, ROOT, STEM, LEAF, FRUIT)
 
 _trapz = getattr(np, "trapezoid", None) or np.trapz   # numpy>=2 renames trapz
 
@@ -74,9 +74,7 @@ def flux_terms(model: RiceUptakeModel, t: float, C: np.ndarray) -> dict:
     B = binding_factors(model.comps, cmpd)
     Cw = C / B
 
-    A3 = model.comps[LEAF].S * M[LEAF]
-    A4 = model.comps[FRUIT].S * M[FRUIT]
-    split = A3 / (A3 + A4) if (A3 + A4) > 0 else 0.5
+    split = xylem_leaf_share(model.comps, M, inp.M_basis)
     f3, f4 = split, 1.0 - split
 
     Q_Phl = max(inp.dM_(t)[FRUIT] * model.T_C_Ph + model.phi * Qtp, 0.0)

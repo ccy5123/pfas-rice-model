@@ -18,7 +18,7 @@ _ROOT = os.path.dirname(_HERE)
 
 from pfas_rice_plant_module_4pool_surf import (
     Environment, Compound, Compartment, RiceUptakeModel, PlantInputs,
-    binding_factors, root_uptake, _logistic, ROOT, STEM, LEAF, FRUIT)
+    binding_factors, root_uptake, xylem_leaf_share, _logistic, ROOT, STEM, LEAF, FRUIT)
 import forcing_rice as fr
 import growth_rice as gr
 import organ_mass as om
@@ -392,6 +392,17 @@ def _default_drivers(t, season, Cwo, measured_forcing, biomass="oryza",
     return Cwo_series, Qtp, M, leaf_loss
 
 
+def _M_basis(drivers, measured_forcing, mass_basis=DEFAULT_MASS_BASIS):
+    """What the ODE's M is, for the one place that needs DRY matter -- the leaf/grain
+    xylem split (`xylem_leaf_share`). A `drivers` M carries its builder's tag and an
+    untagged one is FRESH (§8: a user CSV / growth table is fresh as-is); the built-in
+    measured forcing is on `mass_basis`; the placeholder logistic has no basis (None,
+    split on M as given -- so `reproduce_demo` does not move)."""
+    if drivers is not None:
+        return drivers.get("mass_basis", "fresh")
+    return mass_basis if measured_forcing else None
+
+
 def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
              f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
              lipid_loading=False, g_xy_override=None, g_ph_override=None,
@@ -483,7 +494,8 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
             Cwo_series = cwo_profile_series(
                 t, level=Cwo, profile=cwo_profile, n_C=c["n_C"], group=c["group"],
                 congener=congener, **(cwo_kw or {}))
-    inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
+    inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss,
+                         M_basis=_M_basis(drivers, measured_forcing, mass_basis))
 
     f_xy_def, L_Ph_def, kappa_d_def, g_xy_def, g_ph_def = _transport_defaults(
         c, f_xy_source, lipid_loading, mass_basis)
@@ -561,7 +573,8 @@ def apportionment(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommen
         raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
     t = np.linspace(0.0, float(season), int(n_t))
     Cwo_series, Qtp, M, leaf_loss = _default_drivers(t, season, Cwo, measured_forcing, biomass)
-    inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
+    inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss,
+                         M_basis=_M_basis(None, measured_forcing))
     cmpd = _compound_for(congener, f_xy_source, f_xy_override, L_Ph_override,
                          kappa_d_override, lipid_loading, g_xy_override, g_ph_override,
                          K_cw_organ="root")
@@ -807,7 +820,7 @@ def _twopool_seq():
 
 
 def _twopool_seq_rhs(t_grid, Cwo_s, Qtp_s, M_s, dM_s, cmpd, comps, B, env,
-                     gxy, gph, kseq, phi=0.1, T_C_Ph=10.0, k_rel=0.0):
+                     gxy, gph, kseq, phi=0.1, T_C_Ph=10.0, k_rel=0.0, M_basis=None):
     """5-state RHS (mass-conserving; sole source M_root*j_R into the mobile pool).
 
     Faithful re-implementation of validation/twopool_root_exploration.make_rhs,
@@ -829,8 +842,7 @@ def _twopool_seq_rhs(t_grid, Cwo_s, Qtp_s, M_s, dM_s, cmpd, comps, B, env,
         Cw[_TP_LF] = C[_TP_LF] / B[LEAF]
         Cw[_TP_GR] = C[_TP_GR] / B[FRUIT]
 
-        A3 = comps[LEAF].S * M[LEAF]; A4 = comps[FRUIT].S * M[FRUIT]
-        split = A3 / (A3 + A4) if (A3 + A4) > 0 else 0.5
+        split = xylem_leaf_share(comps, M, M_basis)
         f3, f4 = split, 1.0 - split
 
         Q_Phl = max(dM[FRUIT] * T_C_Ph + phi * Qtp, 0.0)
@@ -910,7 +922,8 @@ def simulate_twopool_seq(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, season=120.0,
 
     dM = np.gradient(M, t, axis=0)
     rhs = _twopool_seq_rhs(t, Cwo_series, Qtp, M, dM, cmpd, comps, B, env,
-                           gxy, gph, kseq, k_rel=k_rel)
+                           gxy, gph, kseq, k_rel=k_rel,
+                           M_basis=_M_basis(drivers, measured_forcing))
     from scipy.integrate import solve_ivp
     sol = solve_ivp(rhs, (t[0], t[-1]), np.zeros(5), t_eval=t,
                     method="BDF", rtol=1e-6, atol=1e-9)
@@ -1133,7 +1146,8 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
             Cwo_series = cwo_profile_series(
                 t, level=Cwo, profile=cwo_profile, log_kow=float(log_kow), Koc=Koc,
                 **(cwo_kw or {}))
-    drv = dict(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
+    drv = dict(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss,
+               mass_basis=_M_basis(drivers, measured_forcing, mass_basis))
 
     gam = float(np.log(2.0) / half_life) if half_life else 0.0
     lipid_source = lipid_source or ND.DEFAULT_LIPID_SOURCE
@@ -1203,13 +1217,16 @@ def drivers_from_arrays(t, Cwo, Qtp=None, M=None, season=None, biomass="oryza",
     Cwo = np.asarray(Cwo, float)
     season = float(t[-1]) if season is None else float(season)
     leaf_loss = None
+    basis = "fresh"                                   # a supplied M is fresh as-is
     if Qtp is None:
         Qtp = fr.Q_TP(t, season)
     if M is None:
         b = _biomass_fn(biomass)(t, season)
         M = om.organ_matrix(b, mass_basis)
+        basis = mass_basis
         leaf_loss = b.get("leaf_death_rate")          # only the senescing ORYZA driver supplies it
-    drv = dict(t=t, Cwo=Cwo, Qtp=np.asarray(Qtp, float), M=np.asarray(M, float))
+    drv = dict(t=t, Cwo=Cwo, Qtp=np.asarray(Qtp, float), M=np.asarray(M, float),
+               mass_basis=basis)
     if leaf_loss is not None:
         drv["leaf_loss"] = np.asarray(leaf_loss, float)
     return drv
@@ -1397,7 +1414,8 @@ def hydrus_drivers(congener=None, season=120.0, Cwo_ref=1.0, f_oc=0.02, n_t=241,
                                      qtp_from_hydrus=qtp_from_hydrus, biomass=biomass,
                                      mass_basis=mass_basis, **run_kw)
     drivers = dict(t=np.asarray(pin.t, float), Cwo=np.asarray(pin.Cwo, float),
-                   Qtp=np.asarray(pin.Qtp, float), M=np.asarray(pin.M, float))
+                   Qtp=np.asarray(pin.Qtp, float), M=np.asarray(pin.M, float),
+                   mass_basis=pin.M_basis)
     if getattr(pin, "leaf_loss", None) is not None:
         drivers["leaf_loss"] = np.asarray(pin.leaf_loss, float)
     return drivers, res

@@ -333,7 +333,7 @@ def oryza_drivers(congener: str = "PFOA", Cwo: float = 1.0, season: float = 120.
     M = om.organ_matrix(b, mass_basis, floor=1e-9)
     Qtp = fr.Q_TP(t, season) if Qtp is None else np.asarray(Qtp, float)
     return dict(t=t, Cwo=np.full_like(t, float(Cwo)), Qtp=Qtp, M=M,
-                leaf_loss=b["leaf_death_rate"])
+                leaf_loss=b["leaf_death_rate"], mass_basis=mass_basis)
 
 
 if __name__ == "__main__":

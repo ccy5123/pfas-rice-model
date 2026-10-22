@@ -67,7 +67,7 @@ def predict(knobs):
     """Final root/straw/grain BAF for a set of exposure/transport knobs."""
     k = {**DEFAULTS, **knobs}
     drivers = dict(t=_T, Cwo=np.full_like(_T, k["cwo_level"]),
-                   Qtp=k["qtp_scale"] * _BASE_Q, M=_M)
+                   Qtp=k["qtp_scale"] * _BASE_Q, M=_M, mass_basis=MASS_BASIS)
     r = api.simulate(CONGENER, drivers=drivers,
                      f_xy_override=_BASE_FXY * k["f_xy_mult"],
                      kappa_d_override=_BASE_KD * k["kappa_d_mult"])

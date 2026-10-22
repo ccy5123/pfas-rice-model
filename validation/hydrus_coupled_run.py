@@ -83,7 +83,8 @@ def baseline_inputs():
     t = np.linspace(0.0, SEASON, N_T)
     b = gr.organ_biomass(t, SEASON)
     M = om.organ_matrix(b, MASS_BASIS)              # crop DRY matter -> ODE mass basis
-    return PlantInputs(t=t, Cwo=np.full_like(t, 1.0), Qtp=fr.Q_TP(t, SEASON), M=M)
+    return PlantInputs(t=t, Cwo=np.full_like(t, 1.0), Qtp=fr.Q_TP(t, SEASON), M=M,
+                       M_basis=MASS_BASIS)
 
 
 def main():
@@ -97,7 +98,7 @@ def main():
     for name in CONGENERS:
         c = CONG[name]
         inp_h, res = sh.inputs_from_hydrus(c["n_C"], c["group"], season=SEASON,
-                                           Cwo_ref=1.0, n_t=N_T)
+                                           Cwo_ref=1.0, n_t=N_T, mass_basis=MASS_BASIS)
         traj[name] = (inp_h.t, inp_h.Cwo, res.Kd)
         b = solve_baf(base, name)
         h = solve_baf(inp_h, name)

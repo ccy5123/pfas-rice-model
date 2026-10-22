@@ -55,6 +55,7 @@ def install_measured_forcings():
     TP.QTP = Qtp
     TP.MMAT = M
     TP._dM = np.gradient(M, t, axis=0)
+    TP.M_BASIS = MASS_BASIS
     return t, Qtp, M
 
 

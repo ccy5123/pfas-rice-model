@@ -31,7 +31,8 @@ from scipy.optimize import brentq
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "src"))
 import json
-from pfas_rice_plant_module_4pool_surf import Environment, Compound, Compartment, root_uptake  # noqa
+from pfas_rice_plant_module_4pool_surf import (  # noqa
+    Environment, Compound, Compartment, root_uptake, S_XYLEM_DRY, LEAF, FRUIT)
 import oryza_growth as og, forcing_rice as fr  # noqa
 import organ_mass as om  # noqa
 MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")   # organ_mass; "dry" = the pre-fix record
@@ -88,6 +89,9 @@ def simulate2(name, f_xy, g_xy, g_ph, k_off=0.02, L_Ph=None, kappa_d=None, vmax_
     Bst = _Bfull(cc["stem"], c); Blf = _Bfull(cc["leaf"], c)
     # stem/leaf use full B (single pool); grain via phloem
     S_leaf, S_grain = 20.0, 2.0
+    if MASS_BASIS == "fresh":            # xylem split on DRY matter (`xylem_leaf_share`)
+        S_leaf = S_XYLEM_DRY[LEAF] * (1.0 - cc["leaf"]["theta_fw"])
+        S_grain = S_XYLEM_DRY[FRUIT] * (1.0 - cc["grain"]["theta_fw"])
 
     def rhs(tt, C):
         rm, rb, st, lf, gr = C

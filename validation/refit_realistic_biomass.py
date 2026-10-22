@@ -55,7 +55,7 @@ T = np.linspace(0.0, 120.0, 241)
 QTP = 0.05 + 0.35 * np.exp(-((T - 75.0) ** 2) / (2 * 25.0 ** 2))   # same shape as reproduce_demo
 _b = gr.organ_biomass(T, 120.0, root_shoot=ROOT_SHOOT)
 M = om.organ_matrix(_b, MASS_BASIS, floor=1e-6)     # crop DRY matter -> ODE mass basis
-INPUTS = PlantInputs(t=T, Cwo=np.full_like(T, 1.0), Qtp=QTP, M=M)
+INPUTS = PlantInputs(t=T, Cwo=np.full_like(T, 1.0), Qtp=QTP, M=M, M_basis=MASS_BASIS)
 ENV = Environment()
 
 

@@ -41,7 +41,8 @@ def _repro_drivers():
     Qtp = 0.05 + 0.35 * np.exp(-((t - 75.0) ** 2) / (2 * 25.0 ** 2))
     M = np.column_stack([_logistic(t, 1e-3, 0.030, 0.10, 20.0), _logistic(t, 1e-3, 0.040, 0.10, 25.0),
                          _logistic(t, 1e-3, 0.050, 0.12, 30.0), _logistic(t, 1e-5, 0.025, 0.18, 80.0)])
-    return dict(t=t, Cwo=np.full_like(t, 1.0), Qtp=Qtp, M=M)
+    return dict(t=t, Cwo=np.full_like(t, 1.0), Qtp=Qtp, M=M,
+                mass_basis=None)          # basis-free placeholder: split on M as given
 
 plt.rcParams["axes.unicode_minus"] = False
 _C = {"lipid": "#d62728", "mono": "#1f77b4", "W2": "#2ca02c", "obs": "#222222"}
