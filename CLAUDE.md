@@ -74,7 +74,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (390 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (393 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1402,13 +1402,23 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     Root θ is a VALUE uncertainty, not a time trend (flooded roots stay hydrated) ⇒ θ(t) is not worth an ODE change; a root
     water measurement is. θ's three copies (`model_api._COMP`, `organ_mass.THETA_FW`, `neutral_dpu.RICE_WATER`) now pinned
     equal. `tests/test_theta_fw_sensitivity.py` (4).
-  - **OPEN DECISION the θ run exposed — the xylem split's mass basis.** The 4-pool core splits the xylem between leaf and
-    grain by `S·M` (`4pool_surf.py:410`); since the organ-mass fix `M` is FRESH, so an organ's WATER sets its transpiration
-    share, while `S` (leaf 20, grain 2) is defined only as a ratio, with no basis. Grain share at harvest: 0.343 before the
-    fix (dry M) → 0.118 now; on dry mass it is θ-free. Splitting on dry mass gives PFOA grain 0.036 → 0.103 and the fresh
-    lipid fit 0.177 → 0.271 (not re-fitted) — and most of PR #69's grain drop (0.148 → 0.036, vs the ×1.16 mass factor) looks
-    like this share, not dilution. Not changed: it moves every 4-pool grain number and would need the step-1 re-fits again.
-    Pinned as-is by `test_theta_fw_sensitivity.py::test_open_issue_the_xylem_split_runs_on_fresh_grain_mass`.
+  - **DECIDED (with the user) — the xylem split runs on DRY matter, grain surface 0.5116 per kg dry.** The 4-pool core split
+    the xylem between leaf and grain by `S·M`; since the organ-mass fix `M` is FRESH, so an organ's WATER set its transpiration
+    share. Now `xylem_leaf_share()` (core) splits a fresh `M` on its dry matter `M·(1−θ)` with **`S_XYLEM_DRY` = leaf 20, grain
+    0.5116 m²/kg dry** (`PlantInputs.M_basis`; drivers dicts carry a `mass_basis` tag, untagged = fresh; placeholder = None).
+    Reading the original grain `S`=2 as per kg dry was tried first and REJECTED on evidence: it sends ~14% of the transpiration
+    stream to the grain during filling (vs ~4% now; `nstem_leaf` assumes 5%), `refit_oryza` 0.283 → 0.394 with **8 of 11 L_Ph at
+    the floor** (PFBA grain 11.65 vs 1.06 from the xylem alone), two-pool measured 0.412 → 0.513. **Key point: with constant θ
+    the two bases are the same equation up to `S_grain`** — 0.5116 = 2×(1−0.78)/(1−0.14) is exactly the value at which the dry
+    split reproduces the old fresh split, so **every number above is unchanged** (≤5e-5 rel.) and no re-fit was needed; what the
+    decision buys is that grain θ no longer moves the split (θ 0.14 → 0.60: harvest share 0.118 both; Ge θ-effect 0.008 → 0.000).
+    0.5116 is a fixed literal on purpose (computing it from θ would re-couple the split to water) and is NOT measured — a panicle/
+    caryopsis transpiration share is the input that would replace it. `Compartment.S` (20/2) still serves the as-given split
+    (placeholder, `mass_basis="dry"` records: bit-identical; `reproduce_demo` 0.029) and the `plant_air` surface. Pinned by
+    `test_theta_fw_sensitivity.py` + `test_organ_mass.py::test_the_xylem_split_follows_the_mass_basis_of_M`.
+  - **App fix found on the way**: the run cache (`ui/common._drivers_tuple`) rebuilt the driver dict from t/Cwo/Qtp/M only, so
+    every driver mode silently DROPPED the ORYZA `leaf_loss` (leaf-senescence correction) — PFOA leaf BAF 1.08 instead of 0.55.
+    Now every key round-trips (`tests/test_ui_helpers.py::test_the_run_cache_keeps_every_driver_key`).
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1565,7 +1575,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**390 collected; 389 pass, 2 skip** (390 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**393 collected; 392 pass, 2 skip** (393 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
@@ -1590,7 +1600,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (`oryza_growth`, `growth_rice`, `measured_biomass` tables) produces **DRY** matter, so whatever turns a
   driver into `M` must go through `organ_mass` (`fresh = dry/(1−θ_fw)`, θ_fw = the binding factor's).
   `mass_basis="dry"` exists ONLY to reproduce artifacts fitted before that fix. A `drivers=` `M` (CSV,
-  app growth table) is taken as fresh as-is.
+  app growth table) is taken as fresh as-is. The ONE place that needs dry matter is the leaf/grain xylem
+  split (`xylem_leaf_share`, `S_XYLEM_DRY` per kg dry), so `M` carries its basis: `PlantInputs.M_basis` and a
+  `mass_basis` key on drivers dicts (builders set it; untagged = fresh; the placeholder logistic = None).
 - **Exposure `C_w^o(t)`**: the default scenario holds it CONSTANT (`Cwo`, so conc==BAF). `Q_TP(t)` is
   ALWAYS time-varying (FAO-56 `forcing_rice`). For a time-varying exposure use `simulate(cwo_profile=
   "flooded"|"hydrus")` (mean-normalised to `Cwo`) or supply a `drivers=` series. Architecturally both
