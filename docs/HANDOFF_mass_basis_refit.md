@@ -7,7 +7,7 @@
 > **아래 순서대로** 진행한다. 각 단계는 앞 단계 결과에 기댄다.
 
 ## 0. 먼저 확인할 것
-- PR #69의 CI(`tests.yml` 전체 스위트, `rigor.yml`)가 초록인지, 머지됐는지. 로컬 결과: 373 collected, **372 pass, 2 skip**. (1단계 이후: 381 collected, **380 pass, 2 skip**, ~25분.)
+- PR #69의 CI(`tests.yml` 전체 스위트, `rigor.yml`)가 초록인지, 머지됐는지. 로컬 결과: 373 collected, **372 pass, 2 skip**. (1단계 이후: 381 collected. 1b·2·6단계 이후: 390 collected, **390 pass, 1 skip**(emcee 설치 시), ~31분.)
   머지 전이면 이 브랜치에서 이어서, 머지 후면 `main`에서 새 브랜치로 시작.
 - 핵심 규약: 성장모델 출력은 **건물중**, ODE의 `M`은 **생중량**. 드라이버를 `M`으로 만드는 곳은 반드시
   `src/organ_mass.py`(`to_model_mass` / `organ_matrix`)를 거친다. `mass_basis="dry"`는 수정 전 재현용일 뿐.
