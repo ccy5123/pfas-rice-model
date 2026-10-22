@@ -37,7 +37,11 @@ def test_qtp_fxy_is_a_product_ridge():
 def test_emcee_posterior_recovers_well_posed():
     """The full-MCMC cross-check (affine-invariant sampler) recovers the well-posed
     exposure, agreeing with the Laplace verdict. Tiny chain for speed; skips when
-    emcee is absent (the forward ODE is ~0.7 s/sample, so this is opt-in)."""
+    emcee is absent (the forward ODE is ~0.7 s/sample, so this is opt-in).
+
+    Seeded (`seed=0`, the default): a 30-step chain is noisy, and while the sampler
+    drew from OS entropy this test passed or failed by luck -- on fresh organ mass
+    one CI run landed at cwo_level 0.39. Seeds 0-7 all land within the bound."""
     pytest.importorskip("emcee")
     out = bid.emcee_posterior(["qtp_scale", "cwo_level"], nstep=30, nwalk=6, discard=10)
     assert out is not None and out["n"] > 0

@@ -145,11 +145,15 @@ def run_scenario(name, free, truth=None, noise=True):
                 corr=off, cond=cond, sd=sd.tolist(), product=prod)
 
 
-def emcee_posterior(free, truth=None, nstep=600, nwalk=16, discard=200):
+def emcee_posterior(free, truth=None, nstep=600, nwalk=16, discard=200, seed=0):
     """Full MCMC posterior for the `free` params (affine-invariant ensemble sampler).
     Returns a dict with the flat chain, per-param medians/16-84% bands, the product
     posterior and the sample correlation -- a sampling cross-check of the Laplace
-    result. None if emcee is not installed."""
+    result. None if emcee is not installed.
+
+    `seed` fixes the observation noise, the walkers' start AND the sampler's own
+    random state (emcee otherwise draws from OS entropy), so a run is reproducible:
+    a short chain is noisy, and an unseeded one made a test pass or fail by luck."""
     try:
         import emcee
     except Exception:
@@ -157,7 +161,8 @@ def emcee_posterior(free, truth=None, nstep=600, nwalk=16, discard=200):
               "`pip install emcee` for the full-MCMC cross-check)")
         return None
     truth = {**DEFAULTS, **(truth or {})}
-    obs = predict({k: truth[k] for k in DEFAULTS}) * np.exp(_RNG.normal(0, SIGMA, 3))
+    rng = np.random.default_rng(seed)
+    obs = predict({k: truth[k] for k in DEFAULTS}) * np.exp(rng.normal(0, SIGMA, 3))
 
     def logpost(logp):
         if np.any(np.abs(logp) > 1.5):                    # broad flat prior, ±1.5 dex
@@ -169,8 +174,9 @@ def emcee_posterior(free, truth=None, nstep=600, nwalk=16, discard=200):
         return -0.5 * float(np.sum(((np.log10(pred) - np.log10(obs)) / SIGMA) ** 2))
 
     nd = len(free)
-    p0 = _RNG.normal(0, 0.05, size=(nwalk, nd))
+    p0 = rng.normal(0, 0.05, size=(nwalk, nd))
     s = emcee.EnsembleSampler(nwalk, nd, logpost)
+    s.random_state = np.random.RandomState(seed).get_state()
     s.run_mcmc(p0, nstep, progress=False)
     chain = s.get_chain(discard=discard, flat=True)        # log10 space
     lin = 10.0 ** chain
