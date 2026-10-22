@@ -43,8 +43,8 @@ def main():
     print()
 
     # --- Kim 2019 grain + Li 2025 TF (clean / confounded) -------------------
-    cross.kim_grain()
-    cross.li_tf()
+    kim = cross.kim_grain()
+    li = cross.li_tf()
 
     print("\n" + "=" * 72)
     print("SUMMARY  (OOS log10 RMSE; lower = better; * primary = CLEAN datasets)")
@@ -52,7 +52,11 @@ def main():
     print(f"{'dataset':38}{'lipid':>8}{'mono':>8}{'W2':>8}")
     print(f"{'* Tang 2026 per-organ TF (dw)':38}{lip_tang:>8.2f}{free_tang:>8.2f}{'-':>8}")
     print(f"{'  (free-anion baseline = mono column)':38}")
-    print("  Kim/Li RMSE printed in the tables above (lipid wins both CLEAN tests:")
+    print(f"{'* Kim 2019 grain, excl PFOA':38}" + "".join(f"{kim[m][0]:>8.2f}" for m in cross.MODES))
+    print(f"{'  Kim, reliable DF>=15% only':38}" + "".join(f"{kim[m][1]:>8.2f}" for m in cross.MODES))
+    print(f"{'  Li 2025 TF straw/root':38}" + "".join(f"{li[m][0]:>8.2f}" for m in cross.MODES))
+    print(f"{'  Li 2025 TF grain/root':38}" + "".join(f"{li[m][1]:>8.2f}" for m in cross.MODES))
+    print(f"  organ mass = {cross.MASS_BASIS}  (PFAS_MASS_BASIS=dry reproduces the pre-fix record:")
     print("   Tang 0.52<1.23, Kim 0.48<2.05 / reliable 0.20<1.92; Li confounded=mixed).")
     print("\n=> lipid generalizes OOS across the CLEAN independent datasets (Tang, Kim);")
     print("   Li (field/group-water/surface-confounded) is inconclusive as pre-registered.")

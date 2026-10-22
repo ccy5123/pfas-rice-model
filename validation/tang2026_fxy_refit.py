@@ -33,8 +33,13 @@ dw-converted to match Tang: TF_dw = TF_fw * (1-theta_root)/(1-theta_organ).
 Provenance: the fitted f_xy is reported as an OVERRIDE only -- params/parameters.json
 is NOT modified (same policy as the existing Tang nstem validation).
 
+Organ-mass basis (src/organ_mass.py): the ORYZA dry matter becomes the ODE's FRESH mass by
+default. The fit made before that fix (dry matter used as M) is kept as
+`model_api.TANG_REFIT_FXY_DRY`; reproduce it with PFAS_MASS_BASIS=dry.
+
 Run:  python validation/tang2026_fxy_refit.py
       -> table (current vs fitted f_xy, RMSE before/after) + figure
+      PFAS_MASS_BASIS=dry python validation/tang2026_fxy_refit.py   (the pre-fix record)
 """
 import csv
 import json
@@ -54,6 +59,7 @@ import model_api as api            # noqa: E402
 import oryza_growth as og          # noqa: E402
 
 CONGENERS = ["PFOA", "PFOS", "GenX"]
+MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")   # organ_mass.MASS_BASES
 SEASON = 150.0                                    # Tang growth cycle
 # model organ -> (theta key, Tang organ); fit on the shoot pair, report grain
 SHOOT = {"stem": ("stem", "stalk"), "leaf": ("leaf", "leaf")}
@@ -95,7 +101,7 @@ def tang_agg(dd, mode):
 def model_tf_dw(cong, theta, f_xy=None):
     """nstem_leaf + ORYZA biomass -> dw TF dict over model organs (stem/leaf/grain)."""
     r = api.simulate_nstem_leaf(cong, Cwo=1.0, season=SEASON, biomass_fn=_OB,
-                                f_xy_override=f_xy)
+                                f_xy_override=f_xy, mass_basis=MASS_BASIS)
     froot = 1.0 - theta["root"]
     return {mk: r["tf_final"][mk] * froot / (1.0 - theta[tk]) for mk, (tk, _) in ALL.items()}
 
@@ -149,7 +155,7 @@ def main():
         rb = np.sqrt(np.mean([res[c]["rb"] ** 2 for c in CONGENERS]))
         ra = np.sqrt(np.mean([res[c]["ra"] ** 2 for c in CONGENERS]))
         print(f"  overall log10 RMSE @ dose={m:4}:  before {rb:.2f} -> after {ra:.2f}")
-    print("(PRIMARY = 0.1 ug/g dose; mean = sensitivity. f_xy fit to stalk+leaf;")
+    print(f"(organ mass = {MASS_BASIS}. PRIMARY = 0.1 ug/g dose; mean = sensitivity. f_xy fit to stalk+leaf;")
     print(" grain phloem-fed (reported, not fit). OVERRIDE-only; parameters.json unchanged.)")
 
     tang_low, res_low = results["low"]
@@ -175,9 +181,10 @@ def _figure(theta, tang, cur, fitted, tf_before, tf_after):
         ax.legend(fontsize=7.5, loc="upper right")
     axes[0].set_ylabel("transfer factor TF$_{dw}$ = C$_{organ}$/C$_{root}$")
     fig.suptitle("Tang 2026 TF — f_xy re-calibration on nstem_leaf + ORYZA biomass "
-                 "(shoot fit; grain phloem-fed)", fontsize=12)
+                 f"({MASS_BASIS} organ mass; shoot fit; grain phloem-fed)", fontsize=12)
     fig.tight_layout(rect=[0, 0, 1, 0.96])
-    out = os.path.join(HERE, "figures", "tang2026_fxy_refit.png")
+    sfx = "_dry" if MASS_BASIS == "dry" else ""
+    out = os.path.join(HERE, "figures", f"tang2026_fxy_refit{sfx}.png")
     fig.savefig(out, dpi=140)
     print(f"\n[written] {out}")
 

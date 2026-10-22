@@ -128,10 +128,26 @@ STRAW_PARTS = ("stem", "leaf")
 #   "bound" term loads the membrane/lipid-associated pool into xylem (g_xy) and
 #   phloem (g_ph) so high-binding long chains reach the shoot. Global params fit to
 #   Yamazaki (excl. near-MQL PFDoDA); IN-SAMPLE shape/mechanism, NOT validated.
-LIPID_LOADING = dict(a=0.25, b=0.50, g_xy=0.05, g_ph=0.010, K_half=3000.0, pfsa_ln=1.25)
+#   One set per organ-mass basis (`organ_mass`), fitted by validation/fit_lipid_loading.py:
+#   LIPID_LOADING     -- FRESH mass (the default).
+#   LIPID_LOADING_DRY -- the pre-fix record (dry matter used as M), kept as stored so the
+#                        documented numbers (Tang OOS 0.516, Kim 0.48) still reproduce.
+#   Fresh re-fit: Yamazaki excl PFDoDA log10 RMSE 0.177 (root 0.088), vs 0.372 for the dry
+#   constants on dry mass -- the "lipid loading drains the long-chain root" trade-off
+#   recorded in docs/fxy_longchain_lipid_exploration.md was largely the dry-mass M (a root
+#   10x too light). NOTE the six globals ride on per-congener kappa_d/L_Ph (the W2 fits).
+LIPID_LOADING = dict(a=0.2146, b=0.1421, g_xy=0.03315, g_ph=0.02096, K_half=4654.0, pfsa_ln=0.8926)
+LIPID_LOADING_DRY = dict(a=0.25, b=0.50, g_xy=0.05, g_ph=0.010, K_half=3000.0, pfsa_ln=1.25)
 
 
-def lipid_loading_conductances(n_C, K_PL, group="PFCA"):
+def lipid_loading_params(mass_basis=DEFAULT_MASS_BASIS):
+    """The LIPID_LOADING constants that match an organ-mass basis."""
+    if mass_basis not in MASS_BASES:
+        raise ValueError(f"unknown mass_basis {mass_basis!r}; expected one of {MASS_BASES}")
+    return LIPID_LOADING_DRY if mass_basis == "dry" else LIPID_LOADING
+
+
+def lipid_loading_conductances(n_C, K_PL, group="PFCA", mass_basis=DEFAULT_MASS_BASIS):
     """(f_xy_free, g_xy, g_ph) for the K_PL-gated lipid-loading model.
 
     f_xy_free = a*exp(-b*(n-4))             free-anion TSCF (declining)
@@ -139,7 +155,7 @@ def lipid_loading_conductances(n_C, K_PL, group="PFCA"):
     g_xy,g_ph = g_*max * phi                B-independent bound loading
     PFSA carries a head-group factor exp(-pfsa_ln). See LIPID_LOADING.
     """
-    p = LIPID_LOADING
+    p = lipid_loading_params(mass_basis)
     sf = np.exp(-p["pfsa_ln"]) if group == "PFSA" else 1.0
     phi = K_PL / (K_PL + p["K_half"])
     return (p["a"] * np.exp(-p["b"] * (n_C - 4)) * sf, p["g_xy"] * phi * sf, p["g_ph"] * phi * sf)
@@ -199,9 +215,24 @@ def close_longchain_2pool(congener, *, obs=None, biomass="oryza", season=120.0):
 
 # --- Tang 2026 per-organ TF validation (dry-weight basis) -----------------------
 TANG_CONGENERS = ("PFOA", "PFOS", "GenX")
-# f_xy re-fit to Tang TF at the 0.1 ug/g dose (OVERRIDE-only; validation/tang2026_fxy_refit.py).
-# PFOS is dataset-dependent (Yamazaki W2 0.142 vs Tang ~0.32) -> a condition, not one value.
-TANG_REFIT_FXY = {"PFOA": 0.097, "PFOS": 0.320, "GenX": 0.017}
+# f_xy re-fit to Tang TF at the 0.1 ug/g dose (OVERRIDE-only; validation/tang2026_fxy_refit.py),
+# one fit per organ-mass basis (`organ_mass`):
+#   TANG_REFIT_FXY     -- FRESH mass (the default). PFOS sits at the f_xy = 1 CEILING (0.9988 of
+#                         the bounded fit): the free-anion term cannot deliver Tang's PFOS shoot
+#                         even unrestricted -- the gap the K_PL-gated lipid term closes.
+#   TANG_REFIT_FXY_DRY -- the pre-fix record (dry matter used as M); used with mass_basis='dry'
+#                         so the documented numbers (Tang refit 0.519, ...) still reproduce. NOTE
+#                         it predates later model changes too: re-running the fit on 'dry' with
+#                         the current code gives PFOA 0.114 / PFOS 0.376 / GenX 0.020.
+TANG_REFIT_FXY = {"PFOA": 0.570, "PFOS": 0.999, "GenX": 0.089}
+TANG_REFIT_FXY_DRY = {"PFOA": 0.097, "PFOS": 0.320, "GenX": 0.017}
+
+
+def tang_refit_fxy(mass_basis=DEFAULT_MASS_BASIS):
+    """The Tang-refit f_xy table that matches an organ-mass basis."""
+    if mass_basis not in MASS_BASES:
+        raise ValueError(f"unknown mass_basis {mass_basis!r}; expected one of {MASS_BASES}")
+    return TANG_REFIT_FXY_DRY if mass_basis == "dry" else TANG_REFIT_FXY
 _TANG_TF_ENDPOINT = {"TF_stalk": "stalk", "TF_leaf": "leaf", "TF_endosperm": "endosperm"}
 # (model grain pool, Tang organ name, theta key) for the fresh->dry conversion
 _TANG_ORGANS = (("stem", "stalk", "stem"), ("leaf", "leaf", "leaf"), ("grain", "endosperm", "grain_brown"))
@@ -245,7 +276,8 @@ def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
     """
     if congener not in TANG_CONGENERS:
         return None
-    fxy = TANG_REFIT_FXY[congener] if use_refit else None
+    refit = tang_refit_fxy(mass_basis)
+    fxy = refit[congener] if use_refit else None
     r = simulate_nstem_leaf(congener, Cwo=1.0, season=season, biomass_fn=_biomass_fn(biomass),
                             f_xy_source=f_xy_source, f_xy_override=fxy, lipid_loading=lipid_loading,
                             mass_basis=mass_basis)
@@ -255,7 +287,7 @@ def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
     return dict(congener=congener, organs=[o for _, o, _ in _TANG_ORGANS],
                 model_tf=model, tang_tf=tang_observed_tf(congener, dose),
                 f_xy=float(r["params"]["f_xy"]), use_refit=bool(use_refit), dose=dose,
-                biomass=biomass, refit_fxy=TANG_REFIT_FXY[congener], mass_basis=mass_basis)
+                biomass=biomass, refit_fxy=refit[congener], mass_basis=mass_basis)
 
 
 def chain_table():
@@ -375,7 +407,8 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         (only when the built-in measured forcing builds M; `drivers` carry their own).
         'fresh' (default) = dry/(1-theta_fw), the basis B_k and every observation are
         on. 'dry' = the pre-fix behaviour, kept only to reproduce artifacts fitted on
-        it (f_xy_source='oryza', TANG_REFIT_FXY, LIPID_LOADING). See `organ_mass`.
+        it; it also selects the dry fits kept beside the fresh ones (`*_oryza_dry`,
+        `LIPID_LOADING_DRY`, `TANG_REFIT_FXY_DRY`). See `organ_mass`.
 
     Returns a dict with t, per-compartment conc & BAF time series, finals, straw,
     the driver series actually used (Cwo, Qtp, M), B_k, and the effective params.
@@ -543,7 +576,8 @@ def _transport_defaults(c, f_xy_source, lipid_loading, mass_basis=DEFAULT_MASS_B
     mass_basis='dry' so that legacy run still reproduces.
     """
     if lipid_loading:
-        f_xy, g_xy, g_ph = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"])
+        f_xy, g_xy, g_ph = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"],
+                                                      mass_basis)
         return f_xy, (c.get("L_Ph_W2fit") or 0.01), (c.get("kappa_d_W2fit") or 2.0), g_xy, g_ph
     if f_xy_source == "oryza":
         sfx = "_oryza_dry" if mass_basis == "dry" else "_oryza"

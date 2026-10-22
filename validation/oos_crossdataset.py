@@ -23,6 +23,10 @@ Headline result: the lipid mechanism predicts the Kim grain chain-length pattern
 (including the long-chain RISE the monotone/W2 models structurally miss) far
 better out-of-sample -- the project's first genuine predictive signal. Li does
 not discriminate. Run: python validation/oos_crossdataset.py
+
+Organ-mass basis (src/organ_mass.py): FRESH by default. The record made before that fix
+(dry matter used as M; Kim excl PFOA lipid 0.48 / mono 2.05 / W2 1.07) is reproduced with
+PFAS_MASS_BASIS=dry, which also selects the dry LIPID_LOADING constants.
 """
 import csv
 import os
@@ -37,15 +41,17 @@ import model_api as api          # noqa: E402
 import literature_params as lp   # noqa: E402
 
 MODES = ("lipid", "mono", "W2")
+MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")
 
 
 def predict(nm, mode):
     if mode == "lipid":
-        r = api.simulate(nm, lipid_loading=True, measured_forcing=True)
+        r = api.simulate(nm, lipid_loading=True, measured_forcing=True, mass_basis=MASS_BASIS)
     elif mode == "mono":
-        r = api.simulate(nm, f_xy_source="recommended", measured_forcing=True)
+        r = api.simulate(nm, f_xy_source="recommended", measured_forcing=True,
+                         mass_basis=MASS_BASIS)
     else:
-        r = api.simulate(nm, f_xy_source="W2fit", measured_forcing=True)
+        r = api.simulate(nm, f_xy_source="W2fit", measured_forcing=True, mass_basis=MASS_BASIS)
     return {"root": r["baf_final"]["root"], "straw": r["straw_baf"], "grain": r["baf_final"]["grain"]}
 
 
@@ -53,7 +59,8 @@ def kim_grain():
     """(1) Kim 2019 grain BAF — out-of-sample (PFOA* used in the L_Ph fit)."""
     kim = lp.kim2019_grain_baf("porewater")
     DF = {"PFHpA": 13, "PFOA": 57, "PFNA": 20, "PFDA": 6.7, "PFUnDA": 13, "PFDoDA": 3.3}
-    print("=== (1) Kim 2019 grain BAF [porewater]  (OUT-OF-SAMPLE; * = used in fit) ===")
+    print(f"=== (1) Kim 2019 grain BAF [porewater]  (OUT-OF-SAMPLE; * = used in fit; "
+          f"{MASS_BASIS} organ mass) ===")
     print(f"{'PFAS':7}{'DF%':>5}{'obs':>9}{'lipid':>9}{'mono':>9}{'W2':>9}")
     rows = []
     for nm, o in kim.items():
@@ -71,6 +78,7 @@ def kim_grain():
     print("log10 RMSE (excl PFOA)      : " + "  ".join(f"{m}={rmse(m):.2f}" for m in MODES))
     print("log10 RMSE (DF>=15%, no PFOA): " + "  ".join(f"{m}={rmse(m, True):.2f}" for m in MODES)
           + "   [reliable: PFHpA, PFNA]")
+    return {m: (rmse(m), rmse(m, True)) for m in MODES}
 
 
 def li_tf():
@@ -97,9 +105,11 @@ def li_tf():
                 eg[m].append((np.log10(max(tg[m], 1e-6)) - np.log10(tg_o)) ** 2)
         print(f"{nm:7}{ts_o:>13.2f}{ts['lipid']:>7.2f}{ts['mono']:>7.2f}{ts['W2']:>7.2f}"
               f"   {tg_o:>13.2f}{tg['lipid']:>7.2f}{tg['mono']:>7.2f}{tg['W2']:>7.2f}")
-    print("log10 RMSE TF straw/root: " + "  ".join(f"{m}={np.sqrt(np.mean(es[m])):.2f}" for m in MODES))
-    print("log10 RMSE TF grain/root: " + "  ".join(f"{m}={np.sqrt(np.mean(eg[m])):.2f}" for m in MODES))
+    out = {m: (float(np.sqrt(np.mean(es[m]))), float(np.sqrt(np.mean(eg[m])))) for m in MODES}
+    print("log10 RMSE TF straw/root: " + "  ".join(f"{m}={out[m][0]:.2f}" for m in MODES))
+    print("log10 RMSE TF grain/root: " + "  ".join(f"{m}={out[m][1]:.2f}" for m in MODES))
     print("(Li is field/group-water/surface-confounded -> expected to be inconclusive.)")
+    return out
 
 
 if __name__ == "__main__":

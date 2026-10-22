@@ -53,7 +53,9 @@ def single_pool(c, f_xy, lipid=False):
     """Return (root, straw, grain) BAF for the canonical single-pool model."""
     g_xy = g_ph = 0.0
     if lipid:
-        _, g_xy, g_ph = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"])
+        # the demo forcings carry no organ-mass basis; the published lipid baseline here
+        # (Kim excl-PFOA 1.12) was made with the DRY-fit constants, so keep them explicit
+        _, g_xy, g_ph = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"], "dry")
     cmpd = Compound(name=c["name"], K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
                     K_cw=c["K_cw_wholecw_Lkg"]["root"], kappa_d=c["kappa_d_W2fit"],
                     Vmax_in=CARR["Vmax_in"], Km_in=CARR["Km_in"],
