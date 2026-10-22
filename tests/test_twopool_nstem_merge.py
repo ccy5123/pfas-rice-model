@@ -12,8 +12,14 @@ Pins the three published numbers so the merged model cannot drift silently:
     the Result-7 diagnosis (the two-pool's Tang failure was a SHOOT artifact, not
     a root-mechanism failure) and is driven by the stalk (1.89 -> 0.61).
 
-These use the CACHED merged fit (validation/twopool_nstem_fitted_params.json);
-re-fitting is the ~40 min job the validation script runs.
+These use the CACHED merged fits -- one per organ-mass basis (src/organ_mass.py):
+validation/twopool_nstem_fitted_params_dry.json is the record above (the biomass
+driver's DRY matter used as M); validation/twopool_nstem_fitted_params.json is the
+re-fit on FRESH mass, where the staged sequestration fit degrades in-sample
+(0.301 -> 0.515: the root-match floors k_seq at 0 for most congeners, so the
+U-shape is pulled by a few points) while the Tang OOS improves (0.801 -> 0.602),
+still behind single-pool lipid loading (0.520). Re-fitting is the ~10 min job the
+validation script runs.
 """
 import os
 import sys
@@ -29,12 +35,29 @@ pytest.importorskip("scipy")
 import twopool_nstem_merge as MG  # noqa: E402
 
 
-@pytest.fixture(scope="module")
-def fit():
-    MG.DRIVERS = MG.install_forcings("measured")   # explicit; import must not do this
+def _use_basis(basis):
+    """Point the module at one organ-mass basis (its cache, forcings and Tang
+    transfer all follow MG.MASS_BASIS); returns the cached (p, q)."""
     import json
-    d = json.load(open(MG.FIT_CACHE))
+    MG.MASS_BASIS = basis
+    MG.DRIVERS = MG.install_forcings("measured")   # explicit; import must not do this
+    d = json.load(open(MG.fit_cache(basis)))
     return d["global"], np.array(d["ushape_q"])
+
+
+@pytest.fixture
+def fit():
+    """The DRY-mass record (in-sample 0.301, Tang OOS 0.801)."""
+    saved = MG.MASS_BASIS, MG.DRIVERS
+    yield _use_basis("dry")
+    MG.MASS_BASIS, MG.DRIVERS = saved
+
+
+@pytest.fixture
+def fit_fresh():
+    saved = MG.MASS_BASIS, MG.DRIVERS
+    yield _use_basis("fresh")
+    MG.MASS_BASIS, MG.DRIVERS = saved
 
 
 def test_import_does_not_mutate_shared_forcings():
@@ -93,6 +116,32 @@ def test_merged_tang_per_organ_oos(fit):
     assert MG._rmse(by_organ["leaf"]) == pytest.approx(0.28, abs=0.10)    # was 0.38
     # the residual is the grain, not the shoot
     assert MG._rmse(by_organ["endosperm"]) > MG._rmse(by_organ["stalk"])
+
+
+def test_caches_are_per_basis_and_default_fresh():
+    assert MG.fit_cache("dry").endswith("twopool_nstem_fitted_params_dry.json")
+    assert MG.fit_cache("fresh").endswith("twopool_nstem_fitted_params.json")
+    import json
+    assert json.load(open(MG.fit_cache("fresh")))["mass_basis"] == "fresh"
+
+
+def test_fresh_refit_in_sample_and_tang(fit_fresh):
+    """On FRESH organ mass the merged fit degrades in-sample (the staged U-shape is
+    fitted to root-matched k_seq that floor at 0 for most congeners) but transfers to
+    Tang better than the dry record -- and still not better than lipid loading."""
+    p, q = fit_fresh
+    overall, by, _ = MG.rmse_report(
+        p, lambda c: MG.TP.kseq_ushape(c["n_C"], c["group"], q))
+    assert overall == pytest.approx(0.515, abs=0.04)
+    assert overall > 0.301 + 0.1                     # worse than the dry record
+    pairs = []
+    for nm in MG.api.TANG_CONGENERS:
+        obs = MG.api.tang_observed_tf(nm, MG.DOSE)
+        tf = MG.merged_tang_tf(nm, p, q)
+        pairs += [(tf[o], obs[o]) for _, o, _ in MG.api._TANG_ORGANS]
+    assert MG._rmse(pairs) == pytest.approx(0.602, abs=0.06)
+    # the non-K_PL PFOS/PFUnDA separation does not carry over: PFOS's sink is ~0
+    assert MG.TP.kseq_ushape(8, "PFSA", q) < 1e-2
 
 
 if __name__ == "__main__":

@@ -119,8 +119,14 @@ def test_fig_tang_tf_lipid_extra_series():
     fig = plots.fig_tang_tf(val, None, vall)
     assert len(fig.data) == 3                       # Tang + model + lipid (no refit bar)
     assert any("lipid" in (tr.name or "") for tr in fig.data)
-    # the documented mechanism-level fix: PFOS stalk 0.013 (free anion) -> ~0.62 vs Tang 0.571
-    assert val["model_tf"]["stalk"] < 0.1 < vall["model_tf"]["stalk"]
+    # the mechanism-level fix on FRESH organ mass: PFOS stalk 0.002 (free anion) -> 0.11
+    # (Tang 0.571; ~5x under but ~50x above the free anion) ...
+    assert vall["model_tf"]["stalk"] > 20 * val["model_tf"]["stalk"]
+    # ... and the documented dry-mass record: 0.013 -> ~0.62
+    vd = api.tang_tf_validation("PFOS", dose="low", mass_basis="dry")
+    vld = api.tang_tf_validation("PFOS", dose="low", lipid_loading=True, mass_basis="dry")
+    assert vd["model_tf"]["stalk"] < 0.1 < vld["model_tf"]["stalk"]
+    assert vld["model_tf"]["stalk"] == pytest.approx(0.62, abs=0.05)
 
 
 def test_fig_burden_builds():

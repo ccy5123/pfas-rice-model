@@ -14,7 +14,13 @@
 # QTP, MMAT, _dM) with the measured series, then re-run its fit. EXPLORATORY /
 # in-sample; canonical core + parameters.json UNCHANGED.
 #
+# ORGAN-MASS BASIS (src/organ_mass.py): growth_rice returns DRY matter; the ODE's M is
+# FRESH (dry/(1-theta_fw)) by default -> twopool_fitted_params_measured.json. The pre-fix
+# record (dry matter used as M; in-sample 0.278, Kim excl-PFOA 0.56) is kept as
+# twopool_fitted_params_measured_dry.json and regenerated with PFAS_MASS_BASIS=dry.
+#
 #   python validation/twopool_root_measured.py   (re-fits ~3 min)
+#   PFAS_MASS_BASIS=dry python validation/twopool_root_measured.py   (pre-fix record)
 # =============================================================================
 from __future__ import annotations
 import os, sys, json
@@ -26,13 +32,16 @@ sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
 sys.path.insert(0, HERE)
 
 import forcing_rice as fr
+import organ_mass as om
 from growth_rice import organ_biomass
 import twopool_root_exploration as TP
 from literature_params import KIM2019_FIELD, kim2019_grain_baf
 
 SEASON = 120.0
 LONG = ("PFDA", "PFUnDA", "PFDoDA")
-MEAS_CACHE = os.path.join(HERE, "twopool_fitted_params_measured.json")
+MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")
+MEAS_CACHE = os.path.join(
+    HERE, f"twopool_fitted_params_measured{'_dry' if MASS_BASIS == 'dry' else ''}.json")
 
 
 def install_measured_forcings():
@@ -40,7 +49,7 @@ def install_measured_forcings():
     t = np.linspace(0.0, SEASON, 241)
     Qtp = fr.Q_TP(t, SEASON)
     b = organ_biomass(t, SEASON)
-    M = np.maximum(np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-4)
+    M = om.organ_matrix(b, MASS_BASIS)
     TP.T = t
     TP.CWO = np.full_like(t, 1.0)
     TP.QTP = Qtp
@@ -70,7 +79,7 @@ def _rmse(rows, names):
 
 def main():
     print("=" * 78)
-    print("Two-pool root + U-shaped k_seq — RE-FIT on MEASURED forcings (robustness)")
+    print(f"Two-pool root + U-shaped k_seq — RE-FIT on MEASURED forcings ({MASS_BASIS} organ mass)")
     print("=" * 78)
     t, Qtp, M = install_measured_forcings()
     print(f"measured forcings: Q_TP peak={Qtp.max():.3f} L/d/hill (demo ~0.40), "
@@ -80,8 +89,13 @@ def main():
 
     # re-fit on measured forcings (do NOT use the demo cache)
     print("\nre-fitting (global + root-match + U-shape) on measured forcings ...")
-    p, q = TP.compute_fit_quiet()
-    json.dump({"global": p, "ushape_q": list(map(float, q))}, open(MEAS_CACHE, "w"), indent=2)
+    from scipy.optimize import least_squares
+    sol = least_squares(TP.residuals, TP._x0(), bounds=TP._bounds(), method="trf",
+                        diff_step=1e-2, max_nfev=4000, args=(True,))
+    p = TP._unpack(sol.x)
+    demanded = TP.root_matched_analysis(p)      # prints the per-congener root-matched k_seq
+    q = TP.fit_ushape(demanded)
+    n_floor = sum(1 for d in demanded if d[3] <= 0.0)
 
     # in-sample fit quality
     print(f"\n{'PFAS':8}{'nC':>3}{'grp':>5}{'k_seq':>9} | "
@@ -102,12 +116,19 @@ def main():
     rt = {k: float(np.sqrt(np.mean(v))) for k, v in err.items()}
     print(f"\nin-sample log10 RMSE (measured forcings) = {np.sqrt(np.mean(allsq)):.3f}"
           f"  root={rt['root']:.3f} straw={rt['straw']:.3f} grain={rt['grain']:.3f}")
-    print("   (demo-forcing fit was 0.251; fxy-doc U-shaped-K_PL-f_xy on measured = 0.286)")
+    print("   (demo-forcing fit was 0.251; fxy-doc U-shaped-K_PL-f_xy on measured = 0.286, DRY mass)")
+    json.dump({"global": p, "ushape_q": list(map(float, q)), "mass_basis": MASS_BASIS,
+               "rmse_text": f"{np.sqrt(np.mean(allsq)):.3f} / root {rt['root']:.3f}"},
+              open(MEAS_CACHE, "w"), indent=2)
 
     ks_os = TP.kseq_ushape(8, "PFSA", q); ks_un = TP.kseq_ushape(11, "PFCA", q)
-    print(f"\nPFOS/PFUnDA separation: k_seq {ks_os:.3f} vs {ks_un:.3f} "
-          f"({ks_un/ks_os:.1f}x at identical K_PL)  "
-          f"{'HELD' if ks_un/ks_os > 1.5 else 'LOST'}")
+    # a ratio of two ~zero rates is not a separation: require both sinks to be in use
+    KS_MIN = 1e-3
+    sep = ("UNDEFINED (k_seq ~ 0: the sink is not used)" if min(ks_os, ks_un) < KS_MIN
+           else "HELD" if ks_un / ks_os > 1.5 else "LOST")
+    print(f"\nPFOS/PFUnDA separation: k_seq {ks_os:.3g} vs {ks_un:.3g}  {sep}")
+    print(f"root-match needed NO sink (k_seq floor 0, root already over-predicted) for "
+          f"{n_floor}/{len(demanded)} congeners")
     print(f"U-shape q (measured) = [{', '.join(f'{x:.3f}' for x in q)}]")
     print(f"   global: kappa_d={p['kappa_d']:.2f} L_Ph={p['L_Ph']:.2e} "
           f"gxy={p['gxy']:.4f} gph={p['gph']:.4f}")
@@ -125,15 +146,15 @@ def main():
     rel = [r[0] for r in rows if r[2] >= 15.0]
     print(f"\n2pool Kim grain RMSE:  all={_rmse(rows, alln):.2f}  "
           f"excl-PFOA={_rmse(rows, excl):.2f}  reliable={_rmse(rows, rel):.2f}")
-    print("  fxy-doc baselines (measured forcings, excl PFOA): lipid 0.55 | mono 2.04 | W2 1.11")
+    print("  fxy-doc baselines (measured forcings, DRY mass, excl PFOA): lipid 0.55 | mono 2.04 | W2 1.11")
 
     # robustness vs the demo-forcing fit
     print("\n" + "=" * 78)
     print("VERDICT (robustness to measured forcings):")
-    held_sep = ks_un / ks_os > 1.5
+    held_sep = sep == "HELD"
     rmse_meas = np.sqrt(np.mean(allsq))
     print(f"  in-sample RMSE {rmse_meas:.3f} (demo 0.251); root {rt['root']:.3f}; "
-          f"PFOS/PFUnDA separation {'HELD' if held_sep else 'LOST'} ({ks_un/ks_os:.1f}x).")
+          f"PFOS/PFUnDA separation {sep}.")
     print("  The qualitative result (monotone physical f_xy + non-K_PL U-shaped k_seq ->")
     print("  root solved + the separation) is" + (" ROBUST" if held_sep and rmse_meas < 0.45
           else " SENSITIVE") + " to the realistic biomass/transpiration.")
