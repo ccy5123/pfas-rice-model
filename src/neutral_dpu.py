@@ -626,10 +626,10 @@ if __name__ == "__main__":
 
     season, n = 120.0, 241
     t = np.linspace(0.0, season, n)
+    import organ_mass as om
     b = organ_biomass(t, season)
     drivers = dict(t=t, Cwo=np.full(n, 1.0), Qtp=fr.Q_TP(t, season),
-                   M=np.maximum(np.column_stack(
-                       [b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-4))
+                   M=om.organ_matrix(b))                   # crop DRY matter -> ODE FRESH mass
     print(f"{'compound':16}{'logKow':>8}{'TSCF':>8}{'K_PW root':>11}"
           f"{'root':>9}{'straw':>9}{'grain':>9}")
     for c in (NeutralCompound("thiamethoxam", -0.13),

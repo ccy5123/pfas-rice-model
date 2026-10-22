@@ -66,13 +66,16 @@ def _B_mobile(d, c):
 
 
 @lru_cache(maxsize=8)
-def _drivers(season: float, biomass: str):
+def _drivers(season: float, biomass: str, mass_basis: str = "fresh"):
     """Interpolated forcings: transpiration Q_TP(t) and per-organ biomass M(t)+dM/dt.
 
     biomass='oryza' = the mechanistic ORYZA2000 carbon balance (default, matches the
     validated breakthrough); 'growth_rice' = the ORYZA IR72 logistic reconstruction.
+    The crop model's DRY matter is converted to the FRESH mass the ODE runs on
+    (`organ_mass`; mass_basis="dry" = the pre-fix legacy).
     """
     import forcing_rice as fr
+    import organ_mass as om
     t = np.linspace(0.0, season, int(season) + 1)
     if biomass == "growth_rice":
         import growth_rice as gr
@@ -80,6 +83,7 @@ def _drivers(season: float, biomass: str):
     else:
         import oryza_growth as og
         b = og.organ_biomass_oryza(t, p=og.OryzaParams(season=season))
+    b = om.to_model_mass(b, mass_basis)
     Mr = np.maximum(b["root"], 1e-9)
     Ms = np.maximum(b["stem"], 1e-9)
     Ml = np.maximum(b["leaf"], 1e-9)
@@ -93,7 +97,7 @@ def _drivers(season: float, biomass: str):
 
 
 def simulate(name, f_xy, vmax_in, *, g_xy=0.0, g_ph=None, k_off=0.02, seq=1.0,
-             kappa_d=None, L_Ph=None, season=120.0, biomass="oryza"):
+             kappa_d=None, L_Ph=None, season=120.0, biomass="oryza", mass_basis="fresh"):
     """Run the 2-pool root ODE for one congener; return BAFs (Cwo=1).
 
     f_xy      : free xylem-loading factor (TSCF analog); LOW for long chains.
@@ -117,7 +121,7 @@ def simulate(name, f_xy, vmax_in, *, g_xy=0.0, g_ph=None, k_off=0.02, seq=1.0,
     Bst = _B_full(cc["stem"], c)
     Blf = _B_full(cc["leaf"], c)
     S_leaf, S_grain = 20.0, 2.0
-    fQ, fMr, fMs, fMl, fMg, dMr, dMs, dMl, dMg = _drivers(float(season), biomass)
+    fQ, fMr, fMs, fMl, fMg, dMr, dMs, dMl, dMg = _drivers(float(season), biomass, mass_basis)
 
     def rhs(tt, C):
         rm, rb, st, lf, gr = C

@@ -52,7 +52,12 @@ env = Environment()
 SEASON = 120.0
 t = np.linspace(0.0, SEASON, 121)
 _b = og.organ_biomass_oryza(t, p=og.OryzaParams(season=SEASON))
-M = np.maximum(np.column_stack([_b["root"], _b["stem"], _b["leaf"], _b["grain"]]), 1e-4)
+# crop DRY matter -> the FRESH mass the ODE runs on (src/organ_mass.py). Results recorded
+# before that fix (structural adequacy ~0.18, f_xy_oryza in parameters.json up to the
+# fix) were on the DRY basis: set MASS_BASIS = "dry" to reproduce them.
+import organ_mass as om  # noqa: E402
+MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")
+M = om.organ_matrix(_b, MASS_BASIS)
 inputs = PlantInputs(t=t, Cwo=np.full_like(t, 1.0), Qtp=fr.Q_TP(t, SEASON), M=M,
                      leaf_loss=_b.get("leaf_death_rate"))
 Mf = inputs.M_(t[-1])

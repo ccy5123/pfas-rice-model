@@ -179,7 +179,7 @@ pfas_rice_model/
 │   ├── Bk_table_S5.csv           legacy naive-basis assembly (K_PL/K_prot/f_xy source only)
 │   └── W2_transport_fit.csv      S6 transport fit (f_xy/L_Ph/kappa_d per congener)
 ├── data_obs/                     ← observed BAF/TF for validation
-│   ├── obs_baf_Yamazaki.csv      Andosol, clean per-congener water (main calibration)
+│   ├── obs_baf_Yamazaki.csv      Andosol paddy field, ambient exposure, ÷ irrigation water (main calibration)
 │   ├── obs_baf_Li2025.csv        Tianjin field (group-water; see surface caveat)
 │   ├── Li2025_BAF_TF.csv         Li2025 BAF + TF summary
 │   └── yamazaki_stem_height.csv  Yamazaki S18/S19 per-height stem gradient (for nstem)

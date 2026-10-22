@@ -8,7 +8,8 @@
 ## TL;DR
 The model sits on **measured partition coefficients (K_PL, K_prot) + measured crop forcing
 (Q_TP, M)**, with the transport parameters (f_xy, L_Ph, root sink) **fitted to a single
-greenhouse BAF study (Yamazaki 2023, 33 points)**. Reproduction is therefore *saturated*
+paddy-FIELD BAF study (Yamazaki 2023, 33 points — an Andosol field under ambient exposure,
+not a greenhouse; see `sampling_protocols_audit_KR.md`)**. Reproduction is therefore *saturated*
 (≈3 transport params per 3 observed BAFs per congener), **not validation**. Moving to
 prediction is **data-limited, not modelling-limited**: the priorities are (a) a tissue- and
 time-resolved greenhouse time-course, (b) xylem/phloem sap (direct translocation & grain
@@ -17,8 +18,9 @@ soil sorption, (e) **filling-grain subcellular PFAS + phloem sap** (a *new* stru
 on a dry-weight basis the model grain TF is ~3–8× low and unclosable by `L_Ph`/lipid; §2④).
 
 > **Two open issues surfaced this session (both now in §1a/§2④ + Gap_Analysis):**
-> (1) **`f_xy` is condition-dependent** — PFOS `f_xy` ≈ 0.14 (Yamazaki clean water) vs ~0.32
-> (Tang flooded soil); report the range with conditions, don't pin one value.
+> (1) **`f_xy` is condition-dependent** — PFOS `f_xy` ≈ 0.14 (Yamazaki paddy field, ÷ irrigation
+> water) vs ~0.32 (Tang flooded pot soil); report the range with conditions, don't pin one value.
+> (Both are flooded paddies — the older "Yamazaki = clean water/greenhouse" contrast was wrong.)
 > (2) **Grain accumulation is a structural sink gap** — only revealed once the model→Tang
 > TF comparison was put on a consistent **dry-weight** basis (`docs/tang2026_grain_units_exploration.md`).
 
@@ -39,7 +41,7 @@ each needing a different measurement:
 
 | dataset | scope | role | confidence / caveat |
 |---|---|---|---|
-| **Yamazaki 2023** (`10.1021/acs.est.2c08767`) | 11 congeners × root/straw/grain = **33 pts**; Andosol, clean per-congener water | **primary calibration** | single greenhouse study; PFDoDA near-MQL outlier |
+| **Yamazaki 2023** (`10.1021/acs.est.2c08767`) | 11 congeners × root/straw/grain = **33 pts**; Andosol paddy FIELD, ambient exposure; repo BAF ÷ one irrigation-water grab | **primary calibration** | single field study, 1 composite per tissue; θ_fw assumed; PFDoDA near-MQL outlier |
 | Yamazaki S18/S19 | stem by height (0–20…>60 cm) | nstem gradient direction | qualitative |
 | **Li 2025** (Tianjin field) | 5 congeners (PFBA, PFHxA, PFOA, PFBS, PFOS) × root/straw/grain | cross-field TF (water-independent direction) | group-water exposure; surface confound |
 | **Kim 2019** (`10.1016/j.scitotenv.2019.03.240`) | per-congener brown-rice BAF + paired pore water | L_Ph fit (PFOA, 1 pt) | grain-only |
@@ -51,7 +53,7 @@ not a predictive test.
 
 **Condition-dependence of `f_xy` (this session).** Re-fitting `f_xy` to translocation TF
 gives **different values across studies because the conditions differ**: PFOS `f_xy` ≈
-**0.142** (Yamazaki — Andosol, clean per-congener water, greenhouse) vs **~0.32** (Tang —
+**0.142** (Yamazaki — Andosol paddy field, ambient exposure) vs **~0.32** (Tang —
 flooded paddy-soil pot, Nipponbare, 5 doses). The model build's `f_xy` is therefore
 **conditional**: do NOT pin PFOS `f_xy` to one number; carry the **0.14–0.32 range with its
 conditions**. GenX, by contrast, agrees (~0.013–0.02) and independently confirms the

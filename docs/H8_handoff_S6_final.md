@@ -35,7 +35,7 @@
 
 `surface_excess = max(0, obs_root_BAF − B_root_ceiling)`.
 
-- **Yamazaki(clean per-congener water)**: 전 11종 obs/ceiling 0.06–0.95, **전부 sub-equilibrium, excess 0**.
+- **Yamazaki(논 포장, 관개수 1회 채취값을 분모로 사용)**: 전 11종 obs/ceiling 0.06–0.95, **전부 sub-equilibrium, excess 0**.
 - **Li2025(Tianjin, group-water)**: 표면상 5–22× 초과지만 **excess가 사슬 아닌 pore-water 품질을 따라감**:
 
   | water 품질 | congener | obs/ceiling |

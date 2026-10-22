@@ -22,7 +22,9 @@ biomass [kg/hill] on a requested time grid, plus LAI(t) and DVS(t).
 This is NOT the IRRI ORYZA executable (a Windows binary needing a full weather/crop/
 management input deck); it is the published ORYZA2000 Level-1 equation set
 re-coded in Python.  Structure & defaults follow:
-  * Bouman & van Laar 2006, Agric. Syst. 87:249-273 (ORYZA2000 description/eval)   10.1016/j.agsy.2004.07.011
+  * Bouman & van Laar 2006, Agric. Syst. 87:249-273 (ORYZA2000 description/eval)   10.1016/j.agsy.2004.09.011
+    (read at source: it prints NO partition/SLA/DVR tables -- it defers them to Bouman et al.
+    2001 -- and no 1740 g/m^2; see docs/sampling_protocols_audit_KR.md)
   * Bouman et al. 2001, "ORYZA2000: modeling lowland rice" (IRRI/WUR manual)
   * Goudriaan & van Laar 1994 (SUCROS canopy assimilation; ASTRO/TOTASS)
   * Li et al. 2017 (ORYZA v3)                                                       10.1016/j.agrformet.2017.02.025
@@ -111,7 +113,8 @@ class OryzaParams:
     WRTI: float = 20.0
 
     # --- IR72 field anchor for a light post-hoc scale (potential -> attainable) ---
-    shoot_anchor_g_m2: float = 1740.0         # Bouman 2006 IR72 aboveground
+    shoot_anchor_g_m2: float = 1740.0         # IR72 aboveground DW at 390 ppm CO2: Kumar et al. 2017
+                                              # sunlit chambers, 4-season mean 1744 (PMC5291415) -- NOT Bouman 2006
 
 
 def _interp(x, xp, fp):
@@ -316,15 +319,18 @@ def M_matrix_oryza(t: np.ndarray, p: OryzaParams | None = None, weather: dict | 
 
 def oryza_drivers(congener: str = "PFOA", Cwo: float = 1.0, season: float = 120.0,
                   n_t: int = 241, p: OryzaParams | None = None, weather: dict | None = None,
-                  Qtp=None):
+                  Qtp=None, mass_basis: str = "fresh"):
     """Build a `drivers` dict for model_api.simulate(drivers=...) with ORYZA biomass.
 
     Cwo is held constant (so conc==BAF at Cwo=1); Q_TP defaults to the measured
-    forcing_rice transpiration; M is the mechanistic ORYZA biomass."""
+    forcing_rice transpiration; M is the mechanistic ORYZA biomass, converted from DRY
+    matter to the FRESH mass the plant ODE runs on (`organ_mass`; mass_basis="dry"
+    reproduces the pre-fix drivers)."""
     import forcing_rice as fr
+    import organ_mass as om
     t = np.linspace(0.0, season, n_t)
     b = organ_biomass_oryza(t, p, weather)
-    M = np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]])
+    M = om.organ_matrix(b, mass_basis, floor=1e-9)
     Qtp = fr.Q_TP(t, season) if Qtp is None else np.asarray(Qtp, float)
     return dict(t=t, Cwo=np.full_like(t, float(Cwo)), Qtp=Qtp, M=M,
                 leaf_loss=b["leaf_death_rate"])

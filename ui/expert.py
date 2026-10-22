@@ -291,12 +291,18 @@ def render(cfg):
                         st.markdown(
                             "**Yamazaki et al. 2023**, *Environ. Sci. Technol.* **57** "
                             "([doi:10.1021/acs.est.2c08767](https://doi.org/10.1021/acs.est.2c08767)).\n\n"
-                            "- **Design**: greenhouse **pot** study, Japanese **Andosol** soil; each congener "
-                            "spiked **individually** with clean irrigation water; grown a **full cycle** to maturity.\n"
-                            "- **Cultivars**: the plotted observed BAFs are the **geomean of Indica + Japonica** "
-                            "(SI tables S16/S18/S19), fresh-weight.\n"
-                            "- **BAF definition**: **tissue conc ÷ pore-water (soil-solution) conc** [L/kg], for "
-                            "**root / straw (stem+leaf) / grain (brown rice)** — the same definition the model reports.\n\n"
+                            "- **Design**: an open **paddy FIELD** (NARO, Tsukuba; 10 × 50 m, Andosol), continuously "
+                            "flooded except the midsummer drainage, **ambient** exposure (irrigation water, rain, "
+                            "airborne particles) — **nothing was spiked**; grown a **full cycle**, harvested ~30 d "
+                            "after heading.\n"
+                            "- **Cultivars**: the plotted observed BAFs are the **geomean of Kasalath (indica) + "
+                            "Koshihikari (japonica)** (SI tables S16/S18/S19), one composite sample per tissue.\n"
+                            "- **BAF definition**: the paper computes **no BAF**. This repo builds it as tissue conc "
+                            "(dw, converted to fresh weight with ASSUMED water contents — the plants were oven-dried "
+                            "whole, so no organ moisture exists) ÷ the **single irrigation-water grab** (no pore water "
+                            "was measured), for **root / straw / grain**. Straw = unweighted mean of the four "
+                            "stem+leaf height bands; grain = brown rice **reconstructed** as 0.88·white + 0.12·bran "
+                            "(brown rice itself was not analysed). See `docs/sampling_protocols_audit_KR.md`.\n\n"
                             "**These observed points are fixed measurements** — they do **not** move when you change "
                             "the sidebar. The model was calibrated to reproduce them at one operating point, so the "
                             "overlay is a like-for-like comparison **only at those settings**:")
@@ -308,8 +314,8 @@ def render(cfg):
                             "| E_m | **−120 mV** (default) · Season ~**120 d** |")
                         st.caption("Changing E_m / f_xy / Cwᵒ / season, or a non-parametric source (HYDRUS, soil "
                                    "inventory…), moves the model AWAY from the Yamazaki experiment — then the overlay "
-                                   "is a reference trend, not a calibrated match. (Yamazaki = clean per-congener Andosol "
-                                   "pot study; your scenario may differ in soil, exposure and crop.)")
+                                   "is a reference trend, not a calibrated match. (Yamazaki = an Andosol paddy field "
+                                   "under ambient exposure; your scenario may differ in soil, exposure and crop.)")
 
         # ---- Tab 5: chain-length trends -----------------------------------------
         with tabs[4]:

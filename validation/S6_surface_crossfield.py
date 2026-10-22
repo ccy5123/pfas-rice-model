@@ -31,7 +31,7 @@ def root_obs(path):
             d[r["compound"]] = (float(r["baf"]), q.group(1) if q else "")
     return d
 
-ya = root_obs("obs_baf_Yamazaki.csv")     # clean per-congener water (11)
+ya = root_obs("obs_baf_Yamazaki.csv")     # paddy field, ÷ one irrigation-water grab (11)
 li = root_obs("obs_baf_Li2025.csv")       # group-water + quality flag (5)
 
 rows = []

@@ -27,7 +27,10 @@ are kept here — the publisher PDFs/DOCX themselves are **not** committed
   partition coefficients; the single-site `K_D` → partition route OVERESTIMATES
   by ~50× (BSA PFOA: dialysis 110 vs `K_D`-derived ~5850), so they are kept for
   reference only (`k_prot_albumin()`).
-- **Kim 2019 BAFs** are **field ensemble averages** (pore water n=27; soil & rice
-  n=30), **not** same-site paired, and brown-rice averages for low detection-
-  frequency congeners are uncertain — treat as approximate calibration anchors.
-  Only congeners with detectable brown rice are included.
+- **Kim 2019 BAFs** are **ratios of field ensemble averages** (pore water n=27;
+  soil & rice n=30; one rice plant per field; non-detects averaged as zero), and
+  brown-rice averages for low detection-frequency congeners are uncertain — treat
+  as approximate calibration anchors. Only congeners with detectable brown rice are
+  included. PFOA *is* site-paired in the main-text Table 1: one WWTP-impacted field
+  (A-2) carries 83% of the pore-water mean, so the ratio of means (4.4 L/kg) sits far
+  below the site-paired geomean (27, n=14). See `docs/sampling_protocols_audit_KR.md`.

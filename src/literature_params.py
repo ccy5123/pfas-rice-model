@@ -493,11 +493,18 @@ def grain_baf_chain_factor(n_perfluoroC: float, ref_n_perfluoroC: int = 7) -> fl
 
 
 # --- MEASURED field calibration data: Kim et al. 2019 (Korean paddy) ------------
-# Table 4 averages (porewater n=27; soil & brown rice n=30), per congener:
+# SI concentration table averages (the SI file labels it Table 6, the main text cites
+# it as Table S5; there is no main-text "Table 4") -- void (pore) water n=27, soil &
+# brown rice n=30 -- per congener:
 #   (porewater [ng/L], soil [ng/g dw], brown rice [ng/g], rice detection freq [%]).
 # Only congeners with detectable brown rice are kept.  These are field ENSEMBLE
-# averages (NOT same-site paired), so the BAFs below are approximate anchors.
-# (see docs/literature_db/raw_si/kim2019_field_conc.csv, kim2019_grain_baf.csv)
+# averages, so the BAFs below are approximate anchors.  What the main text adds
+# (docs/sampling_protocols_audit_KR.md): ONE rice plant per field, harvest Oct 2016;
+# non-detects were averaged as ZERO; PFOA is site-paired in main Table 1, and one
+# WWTP-impacted field (A-2, 1760 ng/L) is 83% of the void-water PFOA mean -- the
+# ratio of means is 4.4 L/kg, the site-paired geomean 27 (n=14, range 1-597). The
+# long chains rest on 1-4 detections (PFDoDA rice 1/30); the authors themselves
+# analysed PFOA only. (see docs/literature_db/raw_si/kim2019_field_conc.csv, kim2019_grain_baf.csv)
 KIM2019_FIELD: dict[str, tuple[float, float, float, float]] = {
     "PFHpA":  (24.7,   0.499,  0.00974, 13.0),
     "PFOA":   (78.7,   0.160,  0.349,   57.0),
@@ -539,7 +546,7 @@ EM_PLANT_GENERIC_RANGE_V = (-0.160, -0.090)  # generic plant sweep (sensitivity)
 # SIGN NOW CONFIRMED (was "uncertain"): PFSA translocates LESS than the
 # CF2-comparable PFCA -- the transfer factor TF=tissue/root is consistently lower:
 #   * Tang 2026 (paddy rice, low dose): PFOS/PFOA TF_stalk = 0.57/2.22 = 0.26
-#   * Yamazaki 2023 (lysimeter): PFOS/PFOA TF(straw/root) = 0.73/1.69 = 0.43
+#   * Yamazaki 2023 (Andosol paddy field): PFOS/PFOA TF(straw/root) = 0.73/1.69 = 0.43
 #   geomean ratio ~0.33 -> ln offset ~ -1.1 (refines the placeholder -1.5).
 # Ether (GenX/PFECA): Tang GenX/PFOA TF ~0.4-1.2 (variable, single study) -> ~-0.7;
 #   provisional, and not among the 12 core congeners.
