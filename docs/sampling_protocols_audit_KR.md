@@ -159,7 +159,8 @@ Briggs 1982 blot만 · Hwang 흐르는 물 + 종이타월.
 3. **Li 2025 단계별 비교**(SI Table S6, 5단계 × 기관)와 저자 정의 TF.
 4. **Kim PFOA**: 필지 짝 BAF 사용 여부 결정; 장쇄는 검출 1–4건이므로 censored 처리.
 5. **ORYZA 파라미터를 IR72.D92 원본과 대조·정렬**(숫자가 다시 크게 바뀌므로 별도 작업) + FACE 뿌리/IR72DS92로 검증.
-6. **Tang endosperm을 백미 조성으로**; `tang2026_fxy_TF_validation.py`의 120일 → 150일.
+6. **Tang endosperm을 백미 조성으로**; `tang2026_fxy_TF_validation.py`의 120일 → 150일. — ✅ 완료(백미는 선택지, 기본 현미; 백미면 곡물 격차가
+   커짐). 2번(θ_fw)은 민감도까지 완료: 뿌리 θ만 민감, 그리고 물관 분배의 질량 기준이라는 새 결정 사항이 나옴(`docs/HANDOFF_mass_basis_refit.md` §2).
 
 ## 6. 저자 문의가 필요한 것 (원문에도 없음)
 Tang(도정법·chaff 정의·잎집 배정·기관 질량·담수 농도·월별 수치) · Li 2025(단계별 날짜·낟알 정의·물질별 관개수) ·

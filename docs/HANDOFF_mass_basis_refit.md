@@ -46,10 +46,15 @@
 문서에 남은 이들의 수치는 dry 기록이다. sci-adk `runs/*` 기록도 dry 기록으로 동결(rigor guard는 검증만 하고 재계산하지 않음).
 
 ### 1b. 1단계가 드러낸 후속 작업 (2단계 전에 할지 결정 필요)
-- **carrier-vs-bypass / dose-series 판정을 생중량에서 재확인**: 두 스크립트는 기본 `simulate()`(PR #69 이후 fresh)를 쓴다. 테스트는 통과하지만
-  핵심 수치(1.035 vs 0.996, bootstrap 0.749, `Km`≥500)가 fresh에서 어떻게 움직였는지 문서와 대조하지 않았다. carrier 강화가 평탄해진 결과(위)는
-  "두 진입 항이 같은 사슬 길이 보정을 요구한다"는 수렴 결론을 약화시킬 수 있다.
-- **곡물 "구조적 ~3–8× 과소"**(`docs/tang2026_grain_units_exploration.md`) 재검토: 생중량 refit에서 PFOA endosperm은 맞고(1.61 vs 1.37) PFOS는 ~4× 과소.
+- ✅ **carrier-vs-bypass / dose-series 판정을 생중량에서 재확인 — 완료, 판정 유지** (`docs/HANDOFF_carrier_vs_bypass.md` §5).
+  두 스크립트에 `PFAS_MASS_BASIS` 추가(`--fast` dry가 기록 2.640/1.035/0.996/2.289, bootstrap 0.749, corr +0.832를 정확히 재현).
+  dose-series는 기준과 무관(PFOS 6.27× vs 1.17×, `Km`≥500, 1/3). "추가 항 필요"는 유지(아무것도 없음 3.004, 탈분극 2.634).
+  **"어느 쪽인가"는 공정성 수정 후에만 유지**: 그대로 돌리면 bypass만 재적합되고 carrier `Vmax`는 W2 값이라 P=0.996으로 bypass가 이기는 착시.
+  새 사후 섹션 6이 carrier 전역 매개변수도 재적합 → fresh 1.161 vs 1.194, P=0.30(dry 0.16). bypass의 사슬 길이 무관 주장은 더 강하게 반박(+0.909).
+  **수렴은 같은 설정에서 처음 확인**: carrier `Vmax`도 congener별로 corr +0.915(fresh)/+0.880(dry). f_xy가 자유인 carrier two-pool에서는
+  보정이 사라짐(1.26–1.50×) → 보정은 자유로운 항으로 옮겨 간다(B3 "η 잘못 분할" 해석과 일치, `theory_anchor.tex`에 기록).
+- ✅ **곡물 "구조적 ~3–8× 과소" 재검토 — 6단계와 함께 완료** (`docs/tang2026_grain_units_exploration.md` §6): 생중량에서 모델 의존적
+  (지질 PFOA 2.8×/PFOS 5.8× 과소, refit PFOA 맞음·PFOS ~4× 과소). 백미 해석은 격차를 **키운다**(아래 6단계).
 - **two-pool 위상 결정**: 단일 풀 지질(0.177)이 두 two-pool 변형(0.412 / 0.515)보다 낫다. 승격 게이트(습식 실험)는 그대로지만, 탐색 우선순위를 낮출지 사용자와 결정.
 - 변환만 한 스크립트의 재실행(특히 `hydrus_coupled_run`: "constant Cwo가 곡물/짚 BAF를 2–4× 과대" 결론).
 
@@ -59,6 +64,16 @@
 - 후보 자료: Yoshida 1981(낟알 수분 ~58%→≤20%; `http://books.irri.org/9711040522_content.pdf`), Brunetti 2021 SI
   Fig S1/S2(완두 기관 생중량+건물중 5회; DPU4OC zip), 常丽英 2008은 측정만 하고 미보고.
 - 설계 결정 필요: θ를 시간 함수로 만들면 B_k도 시간에 따라 변한다(ODE 구조 변경). 먼저 영향 크기(민감도)를 보고 결정.
+- ✅ **민감도 완료** (`validation/theta_fw_sensitivity.py`, 사전등록 커밋 `4f74a02`를 결과보다 먼저 push). 한 기관씩 범위 끝값, 건물중 쪽 지표(Tang TF, Ge 2017 TF):
+  뿌리(0.88–0.92) Tang 0.039 / Ge **0.053 → INTERMEDIATE**, 줄기 0.000/0.015, 잎 0.001/0.002, 곡물(0.14–0.60) 0.002/0.008 → SMALL.
+  지상부 θ는 건물중 기준에서 상쇄된다(생중량 BAF는 줄기 θ로 0.13 log 움직임 → **결과는 건물중으로 인용**). 뿌리 θ는 시기별 변화보다 **값 자체의 불확실성**이
+  문제다(담수 논에서 뿌리는 내내 수화) → θ(t) ODE 변경은 불필요, **뿌리 수분 실측**이 필요한 입력. ⇒ 판정 규칙상 뿌리는 사용자 결정 사항.
+- ⚠️ **사후 발견 — 물관 분배의 질량 기준(사용자 결정 필요)**: 4-pool 코어는 물관을 잎/곡물에 `S·M`으로 나누는데(`4pool_surf.py:410`), PR #69 이후
+  `M`이 생중량이 되어 **수분 함량이 증산 몫을 정한다**. `S`(잎 20, 곡물 2)는 비율로만 정의돼 기준이 없다. 수확기 곡물 몫: 수정 전(건물중) 0.343 →
+  현재 0.118. 건물중 분배로 되돌리면 PFOA 곡물 BAF 0.036→0.103(2.8×), 지질 적합 0.177→0.271(재적합 전). PR #69의 곡물 0.148→0.036(4.1×) 중
+  질량 환산(×1.16)을 넘는 부분 대부분이 이 몫 변화로 보인다. 결정하면 1단계 재적합(지질·oryza)을 다시 해야 한다.
+  `tests/test_theta_fw_sensitivity.py::test_open_issue_the_xylem_split_runs_on_fresh_grain_mass`가 현 상태를 고정(결정 시 이 테스트를 바꿀 것).
+- θ의 세 사본(`model_api._COMP`, `organ_mass.THETA_FW`, `neutral_dpu.RICE_WATER`) 일치를 테스트로 고정(`test_organ_mass.py`).
 
 ## 3. Li 2025를 생육단계별로 다시 비교
 - 레포의 `data_obs/Li2025_BAF_TF.csv`는 5단계 평균 농도의 비(저자 TF보다 1.0–5.8배 낮음). 저자 TF = 단계별 비율의 평균.
@@ -81,11 +96,15 @@
 - 주의: 파라미터를 바꾸면 바이오매스가 바뀌어 **1단계 재적합을 다시 해야** 한다 → 1단계 이후, 그러나 결과를 확정하기 전에 범위를 결정.
 - 함께 볼 것: HI 0.46(문헌 0.50–0.55), 개화/성숙일의 파종·이식 기준 혼동, 1740 g/m²(Kumar 2017) 스케일링이 고사엽 미포함 녹색 지상부를 기준으로 하는 문제.
 
-## 6. Tang 2026 세부
-- endosperm을 백미 조성으로(현재 `grain_brown`). `params/rice_tissue_params.csv`에 백미(white/polished) 행이 있으니 그것을 출처와 함께 확인해 사용.
-- chaff TF(PFOA 1.10 / PFOS 0.65 / GenX 1.18) 사용 여부(왕겨+endosperm 질량가중은 기관 질량이 필요 → 저자 문의).
-- `validation/tang2026_fxy_TF_validation.py`의 `SEASON=120` → 150(논문·`model_api`와 일치).
-- 뿌리는 헹굼만 → Li와 같은 표면 흡착 주의 표시.
+## 6. Tang 2026 세부 — ✅ 대부분 완료
+- ✅ endosperm 백미 조성: `tang_tf_validation(endosperm="brown"|"white")`(`TANG_ENDOSPERM`), 기본 brown(도정법 미보고). 출처 키
+  (`S_proximate_rg`·`S_USDA_white`·`S_PL_review`·`S_FAO`)는 레포에서 해석되지 않음(θ 키와 같은 문제). **두 행의 인지질 정의가 다르다**: brown 0.003은
+  쌀겨·배아 막 인지질만, white 0.003은 전분 결합 lyso-PL(brown 행이 세지 않는 풀) → brown 정의에 맞춰 white 막 PL = 0.2×0.003/0.88 ≈ 0.0007.
+  결과: 백미 계수 PFOA 0.33/PFOS 0.25/GenX 0.66, Tang 점수 모두 악화(지질 0.520→0.700, refit 0.327→0.513). 곡물 격차는 조성으로 안 닫히고
+  백미면 더 커진다 → 백미인데 TF≥1이면 쌀겨·배유가 같은 자유 농도를 공유하지 않는다(체관 용질의 배유 축적) 쪽. `tests/test_tang_endosperm.py`.
+- chaff TF 사용: 보류(기관 질량 필요 → 저자 문의 목록 그대로).
+- ✅ `tang2026_fxy_TF_validation.py` `SEASON` 120→150: 4-pool Tang TF RMSE 1.90→1.74.
+- ✅ 뿌리 헹굼만(표면 흡착 → 모든 Tang TF를 낮게 치우칠 수 있음) 주의를 `tang_tf_validation` docstring에 기록.
 
 ## 저자 문의 목록 (원문에도 없음)
 Tang(Baoliang Chen, blchen@zju.edu.cn: 도정법·chaff 정의·잎집 배정·기관 질량·담수 농도·월별 수치) ·
@@ -94,7 +113,7 @@ Ge 2017(SI S6 기준) · Liu 2023(72 h 용액 농도, S4 단위).
 
 ## 다음 세션 시작 프롬프트 (복사용)
 ```
-docs/HANDOFF_mass_basis_refit.md를 읽자. 1단계(생중량 재적합)는 끝났다.
-먼저 PR #69와 그 위에 쌓은 PR의 상태(CI, 머지 여부)를 확인하고,
-1b(1단계가 드러낸 후속 작업) 중 무엇을 2단계(θ_fw) 전에 할지 정한 뒤 진행해.
+docs/HANDOFF_mass_basis_refit.md를 읽자. 1단계, 1b-①·②, 2단계 민감도, 6단계는 끝났다.
+먼저 PR #69와 #70의 상태(CI, 머지 여부)를 확인하고, 2단계의 "물관 분배 질량 기준(S)" 결정과
+뿌리 θ 판단을 사용자에게 받은 뒤 진행해. 그 결정에 따라 1단계 재적합을 다시 하거나 3단계(Li 2025)로 간다.
 ```

@@ -1379,6 +1379,36 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     each builds the identical pre-fix `M`; they were converted, NOT re-run, so their recorded numbers are dry-basis records.
     The sci-adk run records (`runs/*`) are frozen dry-basis records too (the rigor guard verifies them, it does not
     recompute). App text (Tang tab, ⚙️ Mechanism help) updated to the fresh numbers.
+- **Fresh-basis follow-ups — handoff 1b-①, step 6, step 2 (this session)**: `parameters.json`, `simulate()` defaults and
+  `reproduce_demo` (0.029) UNCHANGED; every script below takes `PFAS_MASS_BASIS` and reproduces its dry record.
+  - **Carrier vs bypass / dose series re-checked on fresh mass — the verdicts survive.** Both scripts had silently been
+    running on fresh mass. Dose series: basis-free (PFOS 6.27× vs 1.17×, `Km` ≥ 500, 1/3). "An addition is necessary":
+    holds (nothing 3.004, depolarisation 2.634). **"Which addition" holds only after a fairness fix**: as written the
+    script re-fits the bypass's one parameter but keeps the carrier's W2-era `Vmax`, so on fresh mass the bypass "wins" at
+    bootstrap 0.996. New POST-HOC section 6 of `carrier_vs_bypass.py` re-fits the carrier's global `Vmax` too: 1.161 vs
+    1.194, P 0.30 (dry 0.16) — indistinguishable. Bypass chain-length independence refuted more strongly (+0.909). **The
+    convergence is now shown on ONE setup**: per-congener carrier `Vmax` corr(n_C) +0.915 fresh / +0.880 dry vs the bypass's
+    +0.909 / +0.832; where `f_xy` is free (carrier two-pool) the carrier correction vanishes ⇒ the correction lands on
+    whichever term is free (B3, recorded in `theory_anchor.tex`). The documented record was the `--fast` grid.
+  - **Tang endosperm** (`tang_tf_validation(endosperm="brown"|"white")`, default brown — milling unreported): the white-rice
+    reading re-partitions the grain's free conc into a white composition with membrane PL counted as the `grain_brown` row
+    counts it (the `grain_white` row's 0.003 is starch-complexed lyso-PL, a pool the brown row excludes; the source keys of
+    both rows resolve nowhere). Factor PFOA 0.33 / PFOS 0.25 / GenX 0.66, and every Tang score WORSENS (lipid 0.520 → 0.700,
+    refit 0.327 → 0.513): composition does not close the grain gap. `tang2026_fxy_TF_validation.py` season 120 → 150 d
+    (4-pool Tang TF 1.90 → 1.74). Tang roots rinse-only → surface-sorption caveat recorded. `tests/test_tang_endosperm.py` (4).
+  - **θ_fw sensitivity** (`validation/theta_fw_sensitivity.py`, PRE-REGISTERED and pushed before running): one organ at a
+    time over `rice_tissue_params.csv` ranges, dry-side metrics. Root (0.88–0.92) Tang 0.039 / Ge **0.053 → INTERMEDIATE**;
+    stem/leaf/grain SMALL (≤0.015). Shoot θ cancels on the dry basis (fresh-weight BAFs move up to 0.13 log — quote dry).
+    Root θ is a VALUE uncertainty, not a time trend (flooded roots stay hydrated) ⇒ θ(t) is not worth an ODE change; a root
+    water measurement is. θ's three copies (`model_api._COMP`, `organ_mass.THETA_FW`, `neutral_dpu.RICE_WATER`) now pinned
+    equal. `tests/test_theta_fw_sensitivity.py` (4).
+  - **OPEN DECISION the θ run exposed — the xylem split's mass basis.** The 4-pool core splits the xylem between leaf and
+    grain by `S·M` (`4pool_surf.py:410`); since the organ-mass fix `M` is FRESH, so an organ's WATER sets its transpiration
+    share, while `S` (leaf 20, grain 2) is defined only as a ratio, with no basis. Grain share at harvest: 0.343 before the
+    fix (dry M) → 0.118 now; on dry mass it is θ-free. Splitting on dry mass gives PFOA grain 0.036 → 0.103 and the fresh
+    lipid fit 0.177 → 0.271 (not re-fitted) — and most of PR #69's grain drop (0.148 → 0.036, vs the ×1.16 mass factor) looks
+    like this share, not dilution. Not changed: it moves every 4-pool grain number and would need the step-1 re-fits again.
+    Pinned as-is by `test_theta_fw_sensitivity.py::test_open_issue_the_xylem_split_runs_on_fresh_grain_mass`.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1499,7 +1529,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Organ-mass basis of a re-fit**: every re-fit script runs on FRESH organ mass and takes `PFAS_MASS_BASIS=dry` to
   reproduce its pre-fix record — `tang2026_fxy_refit.py`, `fit_lipid_loading.py` (the `LIPID_LOADING` constants;
   `--eval` scores the stored ones; ~2 min), `twopool_root_measured.py`, `twopool_nstem_merge.py`, `refit_oryza.py`,
-  `structural_adequacy_fit.py`, and the OOS reports `oos_tang_lipid.py` / `oos_crossdataset.py` / `oos_multidataset.py`.
+  `structural_adequacy_fit.py`, the OOS reports `oos_tang_lipid.py` / `oos_crossdataset.py` / `oos_multidataset.py`,
+  and `carrier_vs_bypass.py` / `dose_series_carrier.py` (their records are the dry `--fast` / default runs).
+- **θ_fw sensitivity**: `python validation/theta_fw_sensitivity.py` (~5 min; pre-registered rule in the header; ends with
+  the POST-HOC xylem-split note). Tang endosperm as milled rice: `model_api.tang_tf_validation(c, endosperm="white")`.
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
   Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered; engine-free),
   `"hydrus"` the real-engine shape, `"constant"` the flat default (conc==BAF). Both shapes are
