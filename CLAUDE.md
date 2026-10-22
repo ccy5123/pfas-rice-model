@@ -1332,6 +1332,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     Growth anchors: Bouman DOI fixed (`…2004.09.011`), 1740 g/m² is Kumar 2017 not Bouman, `growth_rice` tables are Li 2017
     Table S2, Nada 2018 root:shoot is fresh-weight non-paddy (paddy DW: Kim 2001 FACE 0.026–0.033 at maturity).
     **No rice dataset reports organ water content over a season** — θ_fw remains the open input behind every dw↔fw step.
+  - **Next-session handoff: `docs/HANDOFF_mass_basis_refit.md`** — in order: (1) re-fit the remaining dry-basis artifacts
+    (`TANG_REFIT_FXY`, `LIPID_LOADING` — no committed fit script —, the two-pool fits) and re-check the OOS conclusions;
+    (2) θ_fw provenance/stage dependence; (3) Li 2025 stage-resolved comparison; (4) Kim PFOA anchor + censored long
+    chains; (5) align ORYZA parameters with IR72.D92 + validate; (6) Tang endosperm → white-rice composition, season 150.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
