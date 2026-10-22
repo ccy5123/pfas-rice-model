@@ -16,6 +16,8 @@ are kept here — the publisher PDFs/DOCX themselves are **not** committed
 | `tang2026_doseresponse.csv` | Tang et al. 2026, JHM (SI **S7/S8**) | `10.1016/j.jhazmat.2025.141017` | per-organ **BCF** (rice/soil) + **TF** (stalk/leaf/chaff/endosperm vs root) at **all 5 soil doses** 0.1–100 µg/g; Nipponbare, flooded paddy, 150 d, harvest. Canonical Tang TF/BCF source (f_xy head-group + OOS TF). |
 | `tang2026_tf_bcf.csv` | derived from Tang 2026 (S7/S8) | `10.1016/j.jhazmat.2025.141017` | the **0.1 µg/g** (environmentally-closest, least toxicity-confounded) BCF/TF slice — the basis of the `f_xy` PFSA/ether head-group **offset**. |
 | `tang2026_harvest_biomass.csv` | Tang 2026, **Fig 1a/1b** (figure-digitized) | `10.1016/j.jhazmat.2025.141017` | harvest **whole-plant ~33.5 g FW** + **ear ~6.8 g FW** (control) → final-mass/HI anchor only. **No** per-organ biomass time series exists in Tang (cannot drive `M(t)`). |
+| `li2025_stage_conc.csv` | Li et al. 2025, JHM (SI **Table S6**) | `10.1016/j.jhazmat.2025.138256` | per-congener tissue concentration (ng/g **dw**, mean ± SD, ND flag) at **5 growth stages** (no dates) × root/stem/leaf/grain (grain from heading), all 15 PFAS; Tianjin paddy field. The 5-stage means reproduce `data_obs/Li2025_BAF_TF.csv`. |
+| `li2025_stage_water_soil.csv` | Li et al. 2025 (SI **Table S5**) | `10.1016/j.jhazmat.2025.138256` | irrigation water (ng/L) and soil (ng/g dw) per stage by compound **class** only — per-congener water is not printed. |
 
 ## Notes / caveats
 - **K_MW units**: Chen and Droge both use the SSLM/TRANSIL method; their PFCA
