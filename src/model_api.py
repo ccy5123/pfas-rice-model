@@ -237,6 +237,41 @@ _TANG_TF_ENDPOINT = {"TF_stalk": "stalk", "TF_leaf": "leaf", "TF_endosperm": "en
 # (model grain pool, Tang organ name, theta key) for the fresh->dry conversion
 _TANG_ORGANS = (("stem", "stalk", "stem"), ("leaf", "leaf", "leaf"), ("grain", "endosperm", "grain_brown"))
 
+# What Tang's "endosperm" is compared against. The model's grain pool is the whole
+# caryopsis (BROWN rice). Tang's endosperm is most likely MILLED (white) rice -- its SI
+# cites white-rice moisture -- but the milling method is not reported, so "brown" stays the
+# default and "white" is the named alternative (docs/sampling_protocols_audit_KR.md).
+#   "white" re-partitions the grain's free concentration into an endosperm of white-rice
+#   composition (params/rice_tissue_params.csv grain_white: theta 0.11, protein 0.075, cell
+#   wall 0.005 + lignin 0.001), assuming bran and endosperm share one free concentration.
+#   Membrane phospholipid is counted the way the grain_brown row counts it: that row puts
+#   ~80% of brown rice's membrane PL in the bran/embryo, so the endosperm (~88% of brown dw)
+#   carries 0.2*f_PL_brown/0.88. The grain_white row's own 0.003 is mostly starch-complexed
+#   lyso-PL, which the brown row does NOT count -- using it would compare two different PL pools.
+TANG_ENDOSPERM = ("brown", "white")
+_ENDO_PL_BRAN_SHARE, _ENDO_MASS_SHARE = 0.80, 0.88
+
+
+def _grain_white_composition():
+    b = _COMP["grain_brown"]
+    return dict(theta_fw=0.11, f_prot=0.075, f_cw=0.006,
+                f_PL=(1.0 - _ENDO_PL_BRAN_SHARE) * b["f_PL"] / _ENDO_MASS_SHARE)
+
+
+def _dry_binding(comp, c, K_cw):
+    """C_dw / Cw for a tissue composition: theta/(1-theta) + sum f*K (L/kg dw)."""
+    th = comp["theta_fw"]
+    return (th / (1.0 - th) + comp["f_prot"] * c["K_prot_Lkg"]
+            + comp["f_PL"] * c["K_PL_Lkg"] + comp["f_cw"] * K_cw)
+
+
+def endosperm_white_factor(congener, K_cw_organ="stem"):
+    """White-rice/brown-rice DRY concentration ratio at a shared free concentration."""
+    c = _CONG[congener]
+    K_cw = c["K_cw_wholecw_Lkg"][K_cw_organ]
+    return (_dry_binding(_grain_white_composition(), c, K_cw)
+            / _dry_binding(_COMP["grain_brown"], c, K_cw))
+
 
 def tang_observed_tf(congener, dose="mean"):
     """Tang 2026 MEASURED per-organ TF (DRY weight) -> {stalk,leaf,endosperm: TF}, or {}.
@@ -261,7 +296,7 @@ def tang_observed_tf(congener, dose="mean"):
 
 def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
                        dose="mean", biomass="oryza", season=150.0, lipid_loading=False,
-                       mass_basis=DEFAULT_MASS_BASIS):
+                       mass_basis=DEFAULT_MASS_BASIS, endosperm="brown"):
     """Model per-organ transfer factor (DRY-weight) vs Tang 2026, for a Tang congener.
 
     The model conc is fresh-weight (C=B_k*Cw, basis A); Tang TF is dry/dry, and the
@@ -272,10 +307,15 @@ def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
     the Tang-calibrated f_xy override. ``lipid_loading`` turns on the K_PL-gated
     lipid-facilitated loading mechanism (constants fit on Yamazaki, NOT Tang -> applying it
     here is out-of-sample; see validation/oos_tang_lipid.py). Returns None for non-Tang congeners.
-    NOTE: grain/endosperm is structurally under-predicted ~3-8x (docs/tang2026_grain_units_exploration.md).
+    ``endosperm`` -- 'brown' (default; the model's whole-caryopsis grain) or 'white' (milled
+    rice; see TANG_ENDOSPERM). NOTE Tang's roots were rinsed only, so its root -- the TF
+    denominator -- may carry surface-sorbed PFAS (no Fe/Mn plaque removal; same confound as
+    Li 2025), which would bias every Tang TF low.
     """
     if congener not in TANG_CONGENERS:
         return None
+    if endosperm not in TANG_ENDOSPERM:
+        raise ValueError(f"unknown endosperm {endosperm!r}; expected one of {TANG_ENDOSPERM}")
     refit = tang_refit_fxy(mass_basis)
     fxy = refit[congener] if use_refit else None
     r = simulate_nstem_leaf(congener, Cwo=1.0, season=season, biomass_fn=_biomass_fn(biomass),
@@ -284,10 +324,13 @@ def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
     froot = 1.0 - _COMP["root"]["theta_fw"]
     model = {org: r["tf_final"][mk] * froot / (1.0 - _COMP[tk]["theta_fw"])
              for mk, org, tk in _TANG_ORGANS}
+    if endosperm == "white":            # simulate_nstem_leaf's default K_cw_organ is "stem"
+        model["endosperm"] *= endosperm_white_factor(congener, K_cw_organ="stem")
     return dict(congener=congener, organs=[o for _, o, _ in _TANG_ORGANS],
                 model_tf=model, tang_tf=tang_observed_tf(congener, dose),
                 f_xy=float(r["params"]["f_xy"]), use_refit=bool(use_refit), dose=dose,
-                biomass=biomass, refit_fxy=refit[congener], mass_basis=mass_basis)
+                biomass=biomass, refit_fxy=refit[congener], mass_basis=mass_basis,
+                endosperm=endosperm)
 
 
 def chain_table():
