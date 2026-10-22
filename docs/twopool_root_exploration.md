@@ -508,3 +508,17 @@ anchor:
   `twopool_kseq_mechanism.md` §5 cell-wall / plaque batch-sorption + desorption assay is
   the experiment that would convert `k_seq` from descriptor-with-analogy to directly
   anchored — and gate the promotion question.
+
+## On FRESH organ mass (2026-10) — the two-pool's distinguishing evidence does not survive
+Results 6 and 8 (measured forcings) were run with the biomass driver's DRY matter as `M` (fixed in
+`src/organ_mass.py`). Re-fitted on fresh mass, the dry fits kept as `*_dry.json` (`PFAS_MASS_BASIS=dry`
+reproduces 0.278 / 0.301 / Tang 0.801 exactly):
+
+- **Result 6 (measured forcings)**: in-sample 0.278 → **0.412**, Kim excl-PFOA 0.56 → 0.76. Root-matching
+  needs **no sink for 5/11 congeners** (root already over-predicted at `k_seq`=0, PFOS among them), so the
+  U-shape degenerates and the **non-K_PL PFOS/PFUnDA separation is undefined** (both ~0; dry 4.5×).
+- **Result 8 (merge)**: in-sample 0.301 → **0.515**, Tang OOS 0.801 → **0.602** (single-pool lipid 0.520).
+- Meanwhile the single-pool lipid model re-fitted on fresh mass reaches **0.177** (root 0.088) —
+  `docs/fxy_longchain_lipid_exploration.md` — so the mass-balance wall this document starts from was
+  largely the dry-mass `M`. The demo-forcing results (Results 1–5, 7) use the placeholder logistic,
+  which carries no basis, and are unchanged. The promotion decision (DO NOT promote) stands a fortiori.

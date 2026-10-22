@@ -143,3 +143,23 @@ long-chain translocation, and it exposes a remaining **structural** limit (the r
 sequestered, non-draining sub-pool — e.g. apoplast/plaque `K_surf` or a two-pool root — to
 carry the huge long-chain root BAF without starving the shoot). Still in-sample; the
 xylem-sap experiment remains the decisive test.
+
+## Re-fit on FRESH organ mass (2026-10) — the root trade-off was mostly the dry-mass bug
+Everything above was run with the biomass driver's DRY matter used as the ODE's fresh mass `M`
+(fixed in `src/organ_mass.py`). The constants were re-fitted on fresh mass by
+`validation/fit_lipid_loading.py`, which reconstructs this document's protocol (Yamazaki excl PFDoDA,
+measured forcing, `growth_rice`, per-congener W2 `kappa_d`/`L_Ph`); on dry mass the stored constants
+give 0.372, matching the "~0.36" above.
+
+| | excl PFDoDA | root | straw | grain |
+|---|---|---|---|---|
+| stored constants, dry mass (the record above) | 0.372 | 0.488 | 0.431 | 0.423 |
+| **re-fit, fresh mass** | **0.177** | **0.088** | 0.194 | 0.285 |
+
+Fresh constants: a=0.2146, b=0.1421, g_xy=0.03315, g_ph=0.02096, K_half=4654, pfsa_ln=0.8926 (none at a
+bound). PFUnDA root 14.7 vs 19.5 while its shoot is delivered: **the "lipid loading drains the long-chain
+root" trade-off in "Status — WIRED" was largely a root 10× too light**, not a single-pool limit. The
+two-pool root built to escape it does worse on fresh mass (0.412 measured-forcing, 0.515 merged; see
+`docs/twopool_root_exploration.md`). OOS: Tang 0.520 (dry 0.516), Kim grain excl PFOA 0.50 (dry 0.48),
+reliable Kim subset worse (0.74 vs 0.20). Still in-sample for Yamazaki; and the 6 globals ride on
+per-congener W2 `kappa_d`/`L_Ph`, so this is not a 6-DOF fit. `LIPID_LOADING_DRY` keeps the record.

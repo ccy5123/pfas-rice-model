@@ -149,7 +149,8 @@ Briggs 1982 blot만 · Hwang 흐르는 물 + 종이타월.
 ---
 
 ## 5. 남은 일 (우선순위)
-1. **생중량 기준 재적합**: `*_oryza`는 완료(RMSE 0.283). 남은 것: `TANG_REFIT_FXY`(`validation/tang2026_fxy_refit.py`),
+1. **생중량 기준 재적합 — ✅ 다음 세션에서 완료**(결과·해석: `docs/HANDOFF_mass_basis_refit.md` §1, CLAUDE.md §6
+   "Fresh-basis RE-FITS"). 아래는 원래 목록. `*_oryza`는 완료(RMSE 0.283). 남은 것: `TANG_REFIT_FXY`(`validation/tang2026_fxy_refit.py`),
    `LIPID_LOADING`, two-pool 적합(`twopool_fitted_params_measured.json`, `twopool_nstem_fitted_params.json`), 그리고
    이들에 기댄 OOS 결론(Tang 지질 0.516, Kim 0.48 등)의 재확인. 수정 전 결과는 `mass_basis="dry"`로 재현 가능.
    직접 M을 만드는 validation 스크립트 다수(`twopool_*`, `tang2026_fxy_refit.py` 등)는 아직 건물중을 그대로 쓴다 —

@@ -322,8 +322,8 @@ def _mechanism_panel():
                  "anion Cw=C/B starves high-binding long chains, but the membrane-lipid-"
                  "bound pool still rides the transpiration stream. Constants were fit on "
                  "YAMAZAKI, so transferring them is genuine out-of-sample — and it is the "
-                 "repo's strongest cross-dataset result (Tang per-organ 1.232→0.516; best "
-                 "on Kim 2019 grain too). EXPLORATORY, default off. NOTE it supplies its "
+                 "repo's strongest cross-dataset result (Tang per-organ 1.48→0.52 on fresh "
+                 "organ mass; best on Kim 2019 grain too). EXPLORATORY, default off. NOTE it supplies its "
                  "own f_xy, so the 'Root→shoot f_xy' choice above is ignored while it is on.")
         st.caption("Both default to the shipped model; turning either on changes every "
                    "tab (map, dynamics, BAF), never `parameters.json`.")

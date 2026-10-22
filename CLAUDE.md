@@ -1315,9 +1315,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     f_xy rises ~4× (PFOA 0.083 → 0.359) and **PFBA/PFOS/PFDoDA hit f_xy=1**, short-chain grain stays high at the L_Ph
     floor ⇒ part of the single-straw 4-pool's "saturated reproduction" was enabled by the bug. `*_oryza` now = fresh fit;
     the pre-fix fit is kept as `*_oryza_dry` / `params/refit_oryza_dry.csv` (used when `mass_basis="dry"`;
-    `build_parameters.py` merges both). **Still on the dry basis (NOT re-fit)**: `TANG_REFIT_FXY`, `LIPID_LOADING`, the
-    two-pool cached fits, and validation scripts that build `M` themselves (`twopool_*`, `tang2026_fxy_refit.py`, …) —
-    convert with `organ_mass.to_model_mass` before re-running. `tests/test_organ_mass.py` (9).
+    `build_parameters.py` merges both). The remaining dry-basis fits (`TANG_REFIT_FXY`, `LIPID_LOADING`, the two-pool
+    caches, scripts that build `M` themselves) were re-fitted in the NEXT session — see the bullet below.
+    `tests/test_organ_mass.py` (9).
   - **Dataset descriptions corrected (at source)**: **Yamazaki 2023 is an Andosol paddy FIELD** (NARO Tsukuba,
     Kasalath+Koshihikari, ambient irrigation-water/rain/PM exposure) — NOT greenhouse/pot/spiked/"clean per-congener
     water"; it computes NO BAF (the repo's = tissue ÷ ONE irrigation-water grab), brown rice was NOT analysed (repo
@@ -1336,6 +1336,49 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     (`TANG_REFIT_FXY`, `LIPID_LOADING` — no committed fit script —, the two-pool fits) and re-check the OOS conclusions;
     (2) θ_fw provenance/stage dependence; (3) Li 2025 stage-resolved comparison; (4) Kim PFOA anchor + censored long
     chains; (5) align ORYZA parameters with IR72.D92 + validate; (6) Tang endosperm → white-rice composition, season 150.
+- **Fresh-basis RE-FITS — handoff step 1 (this session)**: every fit that still ran on the dry-matter `M` was re-made on
+  FRESH organ mass, with the dry one KEPT beside it and selected by `mass_basis="dry"` / `PFAS_MASS_BASIS=dry` (the repo's
+  idiom; each dry record re-verified to reproduce its documented numbers). `tests/test_mass_basis_refits.py` (6) +
+  `test_twopool_nstem_merge.py` (+2) + `test_two_pool.py` pin BOTH bases. `parameters.json`, `simulate()` defaults and
+  `reproduce_demo` (0.029) UNCHANGED.
+  - **`LIPID_LOADING` — the headline.** No fit script existed, so `validation/fit_lipid_loading.py` reconstructs the
+    protocol (Yamazaki excl PFDoDA, measured forcing, `growth_rice`, per-congener W2 `kappa_d`/`L_Ph`); on dry mass the stored
+    constants give 0.372, matching the documented ~0.36. **Fresh re-fit: 0.372 → 0.177 (root 0.488 → 0.088; PFUnDA root
+    14.7 vs 19.5)** — so the "lipid loading drains the long-chain root" single-pool trade-off, the stated motivation of
+    the two-pool root arc, was largely the dry-mass `M` (a root 10× too light). Caveat: the 6 globals sit on per-congener
+    W2 `kappa_d`/`L_Ph`, so this is not a 6-DOF fit. `LIPID_LOADING` = fresh fit; `LIPID_LOADING_DRY` = the stored record;
+    `lipid_loading_params(mass_basis)`. **OOS re-checked** (`oos_multidataset.py`): Tang per-organ lipid **0.520** (dry 0.516)
+    vs free anion 1.483 — the generalisation SURVIVES; Kim grain excl-PFOA lipid **0.50** (dry 0.48) vs mono 2.77 / W2 1.67;
+    but Kim's reliable DF≥15% subset worsens (0.20 → 0.74) and Li straw/root flips to lipid (0.18 vs W2 0.81). The old line
+    "lipid OOS ≈ in-sample Tang refit (0.516 vs 0.519)" NO LONGER HOLDS: the fresh in-sample refit reaches 0.327.
+  - **`TANG_REFIT_FXY`** (`tang2026_fxy_refit.py`, 0.1 µg/g): fresh **PFOA 0.570 / PFOS 0.999 / GenX 0.089** (dry record
+    0.097/0.320/0.017 kept as `TANG_REFIT_FXY_DRY`; `tang_refit_fxy(mass_basis)`). **PFOS sits at the f_xy = 1 ceiling** — the
+    free anion cannot deliver Tang's PFOS shoot even unrestricted (Yamazaki's `f_xy_oryza` PFOS is also at 1 on fresh mass),
+    so the "PFOS f_xy is condition-dependent, 0.14 vs 0.32" reading becomes "both at the ceiling". GenX's over-prediction by
+    the provisional 0.233 shrinks from ~12× to ~2.6×. In-sample Tang refit 0.519 → **0.327**. NOTE the dry record itself
+    predates later model changes: re-running the dry fit with the current code gives 0.114/0.376/0.020.
+  - **Two-pool seq, measured forcings** (`twopool_root_measured.py`, now through `organ_mass`): in-sample 0.278 → **0.412**,
+    Kim excl-PFOA 0.56 → 0.76. Root-matching needs **no sink at all for 5/11 congeners** (root already over-predicted at
+    `k_seq`=0, PFOS among them), so the U-shape degenerates and **the non-K_PL PFOS/PFUnDA separation (4.5× dry) is
+    UNDEFINED on fresh mass** (both sinks ~0). The script printed "HELD (30246×)" from a ratio of two near-zeros — its verdict
+    now requires both sinks in use. Caches: `twopool_fitted_params_measured{,_dry}.json`.
+  - **Two-pool + nstem merge** (`twopool_nstem_merge.py`, `PFAS_MASS_BASIS` env; fit ~10 min, not 40): in-sample 0.301 →
+    **0.515**, Tang OOS 0.801 → **0.602** (still behind lipid 0.520). Same cause: the staged U-shape is fitted to root-matched
+    `k_seq` that floor at 0, so a few points pull it (PFSA offset 10^+0.80 → PFBS root 18 vs 2.3). Caches
+    `twopool_nstem_fitted_params{,_dry}.json`; the Tang baselines in its Stage 3 now run on the script's own basis.
+  - **Carrier two-pool closure** (`close_longchain`): on fresh mass PFDA/PFUnDA/PFDoDA need f_xy 0.51/0.48/**1.0 (bound)**
+    and carrier 1.26/1.27/**1.50×** (dry: 0.18/0.13/0.43, 1.41/1.51/3.15×). "Low f_xy + enhanced carrier" was a dry-mass
+    reading; the long-chain carrier enhancement nearly flattens. PFDoDA straw still cannot close (21 vs 49.7 at f_xy=1) — the
+    C12 shoot-loading ceiling remains. Pinned in `test_two_pool.py::test_model_api_hook`.
+  - **Net reading** (in-sample except where marked OOS): on fresh mass the SINGLE-POOL lipid model (0.177) beats both
+    two-pool variants (0.412 / 0.515), and the two-pool's distinguishing evidence (the non-K_PL separation) does not survive.
+    This weakens the case for the two-pool root; it does not by itself retire it (B2 / the wet-lab gate are unchanged).
+  - Scripts that build `M` themselves now go through `organ_mass` (`absolute_fxy_fit`, `bayesian_inverse_demo`,
+    `hydrus_coupled_run`, `refit_realistic_biomass`, `root_shoot_biomass_sensitivity` — partition stats stay on dry matter,
+    the placeholder row stays basis-free —, `twopool_longchain` and its `longchain_*` importers). With `PFAS_MASS_BASIS=dry`
+    each builds the identical pre-fix `M`; they were converted, NOT re-run, so their recorded numbers are dry-basis records.
+    The sci-adk run records (`runs/*`) are frozen dry-basis records too (the rigor guard verifies them, it does not
+    recompute). App text (Tang tab, ⚙️ Mechanism help) updated to the fresh numbers.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1453,6 +1496,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   number moves. The §3b ladder in `validation/neutral_dpu_validation.py` reports it against the metabolism ladder.
 - Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
   `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
+- **Organ-mass basis of a re-fit**: every re-fit script runs on FRESH organ mass and takes `PFAS_MASS_BASIS=dry` to
+  reproduce its pre-fix record — `tang2026_fxy_refit.py`, `fit_lipid_loading.py` (the `LIPID_LOADING` constants;
+  `--eval` scores the stored ones; ~2 min), `twopool_root_measured.py`, `twopool_nstem_merge.py`, `refit_oryza.py`,
+  `structural_adequacy_fit.py`, and the OOS reports `oos_tang_lipid.py` / `oos_crossdataset.py` / `oos_multidataset.py`.
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
   Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered; engine-free),
   `"hydrus"` the real-engine shape, `"constant"` the flat default (conc==BAF). Both shapes are
@@ -1529,8 +1576,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Lipid-bound loading (opt-in, default off)**: `Compound.g_xy`/`g_ph` add a B-independent
   `g·C` term to xylem/phloem loading (free anion is `f_xy·Cw`, but `Cw=C/B` starves high-binding long
   chains; the bound pool rides the lipid phase). `model_api.simulate(lipid_loading=True)` uses the
-  `K_PL`-gated fit; cuts monotone error 0.98→~0.36 and fixes long-chain grain, but trades off root
-  (single-pool limit). EXPLORATORY / in-sample.
+  `K_PL`-gated fit (`LIPID_LOADING`, fresh organ mass; `validation/fit_lipid_loading.py`): Yamazaki excl
+  PFDoDA 0.177, root 0.088, and fixes long-chain grain. The root trade-off recorded on the pre-fix dry
+  mass (0.36, root 0.49 — "single-pool limit") was largely the dry-matter `M`; `mass_basis="dry"`
+  selects that record (`LIPID_LOADING_DRY`). EXPLORATORY / in-sample (OOS: Tang 0.52, Kim 0.50).
 - Symbols map 1:1 to `docs/pfas_rice_compartmental_model.tex` (`j_R, B_k, N, f_xy, L_Ph, ...`).
 
 ## 9. Next tasks (prioritized)
