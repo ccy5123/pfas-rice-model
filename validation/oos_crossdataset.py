@@ -82,7 +82,12 @@ def kim_grain():
 
 
 def li_tf():
-    """(2) Li 2025 water-independent tissue ratios (TF) — the only usable Li signal."""
+    """(2) Li 2025 water-independent tissue ratios (TF) — the only usable Li signal.
+
+    Kept as the record the multi-dataset OOS report was made with. It sets the model's
+    HARVEST-day BAF against the data's 5-STAGE MEAN, on fresh weight. The time-matched,
+    dry-weight comparison with a stated TF estimator is validation/li2025_stage_resolved.py,
+    and it is not inconclusive: the redistributed shoot + lipid loading wins there."""
     obs = {}
     with open(os.path.join(ROOT, "data_obs", "obs_baf_Li2025.csv")) as f:
         for r in csv.DictReader(f):
