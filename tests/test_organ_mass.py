@@ -101,3 +101,13 @@ def test_measured_biomass_table_is_dry_in_fresh_out():
     drv = mb.biomass_drivers(mb.load_biomass_table(table), "g/hill", n_t=13)
     assert drv["M"][-1, 1] == pytest.approx(0.040 * om.fresh_factor("stem"), rel=1e-6)
     assert drv["M"][-1, 3] == pytest.approx(0.050 * om.fresh_factor("grain"), rel=1e-6)
+
+
+def test_every_copy_of_theta_agrees():
+    """theta_fw is read in three places -- the binding factor (model_api._COMP), the
+    dry->fresh mass conversion (organ_mass.THETA_FW) and the neutral path's own
+    hard-coded neutral_dpu.RICE_WATER. They must not drift apart."""
+    import neutral_dpu as ND
+    for organ, key in (("root", "root"), ("stem", "stem"), ("leaf", "leaf"),
+                       ("grain", "grain_brown")):
+        assert ND.RICE_WATER[organ] == om.THETA_FW[organ] == api._COMP[key]["theta_fw"]
