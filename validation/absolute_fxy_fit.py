@@ -34,6 +34,8 @@ from pfas_rice_plant_module_4pool_surf import (
 from calibration import calibrate, Param, ObservedBAF, predict_bafs
 import forcing_rice as fr
 import growth_rice as gr
+import organ_mass as om
+MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")   # organ_mass; "dry" = the pre-fix record
 
 PAR = json.load(open(os.path.join(ROOT_DIR, "params", "parameters.json")))
 comp = PAR["tissue_composition_recommended"]
@@ -48,7 +50,7 @@ SEASON = 120.0
 t = np.linspace(0.0, SEASON, 121)                         # coarse grid (fit speed)
 Qtp = fr.Q_TP(t, SEASON)                                  # MEASURED transpiration
 b = gr.organ_biomass(t, SEASON)                           # MEASURED (ORYZA) biomass
-M = np.maximum(np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-4)
+M = om.organ_matrix(b, MASS_BASIS)                  # crop DRY matter -> ODE mass basis
 inputs = PlantInputs(t=t, Cwo=np.full_like(t, 1.0), Qtp=Qtp, M=M)
 comps = [Compartment("root",  comp["root"]["theta_fw"], comp["root"]["f_prot"],
                      comp["root"]["f_PL"], comp["root"]["f_cw"]),

@@ -33,6 +33,8 @@ sys.path.insert(0, os.path.join(ROOT, "src"))
 import json
 from pfas_rice_plant_module_4pool_surf import Environment, Compound, Compartment, root_uptake  # noqa
 import oryza_growth as og, forcing_rice as fr  # noqa
+import organ_mass as om  # noqa
+MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")   # organ_mass; "dry" = the pre-fix record
 
 PAR = json.load(open(os.path.join(ROOT, "params", "parameters.json")))
 carr = PAR["carrier_MichaelisMenten"]; comp = PAR["tissue_composition_recommended"]
@@ -44,7 +46,7 @@ CONG = {c["name"]: c for c in PAR["congeners"]}
 
 SEASON = 120.0
 t = np.linspace(0.0, SEASON, 121)
-_b = og.organ_biomass_oryza(t, p=og.OryzaParams(season=SEASON))
+_b = om.to_model_mass(og.organ_biomass_oryza(t, p=og.OryzaParams(season=SEASON)), MASS_BASIS)
 Mr = np.maximum(_b["root"], 1e-9); Ms = np.maximum(_b["stem"], 1e-9)
 Ml = np.maximum(_b["leaf"], 1e-9); Mg = np.maximum(_b["grain"], 1e-4)
 Qtp = fr.Q_TP(t, SEASON)

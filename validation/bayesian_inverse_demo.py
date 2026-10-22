@@ -42,6 +42,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 import model_api as api          # noqa: E402
 import forcing_rice as fr        # noqa: E402
 import growth_rice as gr         # noqa: E402
+import organ_mass as om          # noqa: E402
+MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")   # organ_mass; "dry" = the pre-fix record
 
 CONGENER = "PFOA"
 SEASON = 120.0
@@ -56,7 +58,7 @@ _BASE_FXY, _, _BASE_KD, _, _ = api._transport_defaults(_c, "recommended", False)
 _T = np.linspace(0.0, SEASON, N_T)
 _BASE_Q = fr.Q_TP(_T, SEASON)
 _b = gr.organ_biomass(_T, SEASON)
-_M = np.maximum(np.column_stack([_b["root"], _b["stem"], _b["leaf"], _b["grain"]]), 1e-4)
+_M = om.organ_matrix(_b, MASS_BASIS)          # crop DRY matter -> ODE mass basis
 
 DEFAULTS = dict(qtp_scale=1.0, cwo_level=1.0, f_xy_mult=1.0, kappa_d_mult=1.0)
 
