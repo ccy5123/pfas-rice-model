@@ -86,6 +86,9 @@ OBS = os.path.join(ROOT_DIR, "data_obs", "obs_baf_Yamazaki.csv")
 KEYS = ("root", "straw", "grain")
 SEASON = 120.0
 E_M_DEFAULT = -120.0
+# organ-mass basis (src/organ_mass.py). The recorded verdict below was produced on the
+# pre-fix DRY basis; PFAS_MASS_BASIS=dry reproduces it, the default is FRESH.
+MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")
 E_M_PLAUSIBLE = (-120.0, -90.0)      # parameters.json environment.E_m_plausible_range_V
 
 
@@ -100,7 +103,8 @@ def load_obs(path=OBS):
 def predict(name, *, vmax_scale=1.0, g_apo=0.0, E_m_mV=E_M_DEFAULT):
     """The three tissue BAFs for one congener under one arm's uptake term."""
     r = api.simulate(name, f_xy_source="recommended", season=SEASON,
-                     vmax_scale=vmax_scale, g_apo=g_apo, E_m_mV=E_m_mV)
+                     vmax_scale=vmax_scale, g_apo=g_apo, E_m_mV=E_m_mV,
+                     mass_basis=MASS_BASIS)
     return (r["baf_final"]["root"], r["straw_baf"], r["baf_final"]["grain"])
 
 
@@ -242,14 +246,45 @@ def main(fast=False):
     rB = _residuals(names, obs, vmax_scale=0.0, g_apo=b_val)
     pb = _boot_beats(rB, rA)
     print(f"      P(bypass beats carrier over resampled residuals) = {pb:.3f}")
-    print("   Not a difference. The two entry mechanisms are NOT separable by this")
-    print("   dataset, which is itself the answer to 'which addition'.")
+    if pb < 0.9:
+        print("   Not a difference. The two entry mechanisms are NOT separable by this")
+        print("   dataset, which is itself the answer to 'which addition'.")
+    else:
+        print("   The bypass is ahead -- but only because its one parameter was re-fitted")
+        print("   here and the carrier's was not. Section 6 re-fits both before judging.")
+
+    # -- 6 -------------------------------------------------------------------
+    print("\n6. POST-HOC (added with the organ-mass fix, NOT pre-registered) — FAIRNESS")
+    print("   Pre-registered item 2 rests on the carrier's Vmax being 'fitted on this very")
+    print("   dataset'. It was fixed in the W2 fit on the pre-fix driver, so on any other")
+    print(f"   basis (here: {MASS_BASIS} organ mass) only arm B is re-fitted. Re-fit the")
+    print("   carrier's ONE global parameter (Vmax scale) on the same footing, then compare;")
+    print("   and fit it per congener, the same-setup counterpart of section 3.")
+    grid_a = ([0.5, 1.0, 2.0, 4.0, 8.0, 16.0] if fast else
+              [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0])
+    curve_a = scan(names, obs, "vmax_scale", grid_a)
+    a_val, a_rmse = _best(curve_a)
+    print("      " + "  ".join(f"x{v:g} {e:.3f}" for v, e in curve_a))
+    print(f"   best Vmax scale = x{a_val:g}  ->  {a_rmse:.3f}"
+          + ("   (AT THE GRID EDGE)" if a_val == grid_a[-1] else ""))
+    pfair = _boot_beats(rB, _residuals(names, obs, vmax_scale=a_val))
+    print(f"      P(bypass beats the RE-FITTED carrier) = {pfair:.3f}")
+    grid_pa = ([0.5, 2.0, 8.0, 32.0] if fast else
+               [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0])
+    per_a = {nm: _best([(v, rmse([nm], obs, vmax_scale=v)) for v in grid_pa])[0] for nm in names}
+    va = np.array([per_a[nm] for nm in names], float)
+    ra = float(np.corrcoef(ncs, np.log10(va))[0, 1])
+    print("      per-congener Vmax scale: "
+          + "  ".join(f"{nm} x{per_a[nm]:g}" for nm in names))
+    print(f"   spread {va.max()/va.min():.0f}x ;  corr(n_C, log10 Vmax scale) = {ra:+.3f}"
+          f"   (bypass, section 3: {r:+.3f})")
 
     # -- verdict -------------------------------------------------------------
     print("\n" + "=" * 84)
     print("VERDICT")
     print("=" * 84)
-    print(f"   A carrier (incumbent, Vmax fitted on THIS data)  log10 RMSE {on:.3f}")
+    print(f"   A carrier (incumbent, shipped Vmax)              log10 RMSE {on:.3f}")
+    print(f"   A carrier (Vmax re-fitted, x{a_val:g}, section 6)       log10 RMSE {a_rmse:.3f}")
     print(f"   B bypass  (one global g_apo = {b_val:g})               log10 RMSE {b_rmse:.3f}")
     print(f"   C depol   (E_m = {c_val:g} mV, no new term)          log10 RMSE {c_rmse:.3f}")
     print(f"   nothing   (Trapp's PFAS limit as-is)             log10 RMSE {off:.3f}")
@@ -261,7 +296,8 @@ def main(fast=False):
     print("   repo's extension of it is justified in EXISTENCE.")
     print()
     print("   WHICH addition is NOT DETERMINED by this data — A and B are")
-    print(f"   indistinguishable ({on:.3f} vs {b_rmse:.3f}, bootstrap {pb:.3f}), and B does not even")
+    print(f"   indistinguishable once both are fitted ({a_rmse:.3f} vs {b_rmse:.3f}, bootstrap {pfair:.3f};")
+    print(f"   against the shipped Vmax {on:.3f}, bootstrap {pb:.3f}), and B does not even")
     print("   get to claim parsimony: both are one global parameter (checked, not")
     print("   assumed -- Vmax_in is global, not per-congener).")
     print()
@@ -272,7 +308,9 @@ def main(fast=False):
     print("   length'. On its own criterion this is a relabelled carrier, not a")
     print("   water-flow bypass.")
     print()
-    print("   THE CONVERGENCE IS THE INTERESTING PART. LC6 found the per-congener")
+    print(f"   THE CONVERGENCE IS THE INTERESTING PART -- and section 6 now shows it on ONE")
+    print(f"   setup: the per-congener carrier Vmax trends with n as the bypass does")
+    print(f"   (corr {ra:+.3f} vs {r:+.3f}). Earlier, from a different setup, LC6 found the per-congener")
     print("   Vmax multiplier needed is ~flat to C10 then 2.0x at C11 and 5.5x at C12;")
     print("   per-congener g_apo here runs 2-5 for C4-C8 then 20-50 for C9-C12. BOTH")
     print("   mechanisms need the same chain-length correction, of similar size. A")
@@ -290,7 +328,9 @@ def main(fast=False):
     print("   NOTE the absolute levels are a-priori-limited (monotone f_xy, not fit)")
     print("   and are NOT comparable to reproduce_demo's fitted 0.029 or to the")
     print("   documented a-priori ~0.84, which uses different drivers.")
-    return dict(names=names, carrier=on, nothing=off, bypass=(b_val, b_rmse),
+    return dict(names=names, carrier=on, carrier_fit=(a_val, a_rmse), p_bypass_beats_fit=pfair,
+                per_congener_vmax=per_a, corr_nC_vmax=ra,
+                nothing=off, bypass=(b_val, b_rmse),
                 depol=(c_val, c_rmse), per_congener_g_apo=per,
                 spread=spread, corr_nC=r, arm_rmse=pc, p_bypass_beats=pb)
 
