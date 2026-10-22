@@ -141,7 +141,7 @@ Briggs 1982 blot만 · Hwang 흐르는 물 + 종이타월.
 | Yamazaki를 온실/포트/주입/공극수로 서술 | **정정**: 앱(`ui/expert.py`), README, CLAUDE.md, docs, DB |
 | Kim "필지별 짝 없음", "Table 4", Andosol | **정정**: `literature_params.py` 주석, `raw_si/README.md`, C1 DB(csv+xlsx). 값 자체는 유지(L_Ph 적합 보존) |
 | Kim PFOA BAF = 비율의 평균, A-2 83% | 기록(대안: 필지 짝 기하평균 27, n=14). 재적합은 §5 |
-| Li 2025 TF 정의 불일치(레포 1.0–5.8배 낮음), 5단계 평균, 물 농도 디지털화 | 기록. 단계별 비교로 재평가 필요(§5) |
+| Li 2025 TF 정의 불일치(레포 1.0–5.8배 낮음), 5단계 평균, 물 농도 디지털화 | 기록. **단계별 비교 완료**(`validation/li2025_stage_resolved.py`, handoff §3) |
 | Tang "HI_dw≈0.5" 주석, endosperm=현미 가정 | 주석 정정; 조성 변경은 §5 |
 | Nada R/S "verified" | **DB 정정** |
 | Bouman DOI, 1740 출처, Li 2017 표 번호 | **정정** |

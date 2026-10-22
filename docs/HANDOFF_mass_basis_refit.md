@@ -102,7 +102,25 @@
   테스트: `test_theta_fw_sensitivity.py`(θ 무관 + 기각된 해석의 증산 몫 14%), `test_organ_mass.py::test_the_xylem_split_follows_the_mass_basis_of_M`.
 - θ의 세 사본(`model_api._COMP`, `organ_mass.THETA_FW`, `neutral_dpu.RICE_WATER`) 일치를 테스트로 고정(`test_organ_mass.py`).
 
-## 3. Li 2025를 생육단계별로 다시 비교
+## 3. Li 2025를 생육단계별로 다시 비교 — ✅ 완료 (사전등록 `4df3047`, 결과보다 먼저 push)
+- **전사**: SI Table S6/S5 → `raw_si/li2025_stage_conc.csv`(15종 × 5단계 × 기관, dw), `li2025_stage_water_soil.csv`(물질군 합만).
+  5단계 평균이 `data_obs/Li2025_BAF_TF.csv` 20칸을 모두 재현, 단계별 비율 평균이 저자 PFOA 줄기 TF 2.35를 재현.
+- **설계**: TF = 조직/뿌리, **건물중**, 단계별(물 농도 불필요). 단계 날짜가 없어 ORYZA DVS로 대응(분얼 0.4·출수 1.0·등숙 1.25·
+  유숙 1.5·성숙 2.0 → 28·66·78·90·116일). 양쪽에 **같은 추정식(단계 기하평균)·같은 단계**. 곡물은 등숙기부터 채점.
+- **결과** (`validation/li2025_stage_resolved.py`, ~25초):
+  - Q1 추정식만 바꿔도 관측 TF가 중앙 3.0배·최대 5.8배 달라진다(저자 "비율의 평균"은 뿌리 농도가 작은 단계 하나에 끌려 올라감,
+    PFOA 줄기 2.35 중 등숙기 비율 9.67).
+  - Q2 단계 간 산포가 보고된 SD로 설명되는 양의 **4.5배** → 단계별 모양 비교는 잡음 한계. Q4 모양 신호 없음(모든 변형 ρ≈0).
+  - Q3 **판정: `nstem_leaf` + lipid가 구분된다** — 지상부/곡물 RMSE 0.43/0.52 vs 4-pool lipid 0.81/1.52, 단조 1.25/2.42,
+    W2 1.31/2.70. DVS ±0.15에서도 동일. **사전등록한 예상(결론 못 냄)은 틀렸다.**
+  - 사후(판정에 미사용): 다른 두 추정식에서도 같은 승자(0.66/0.66, 0.36/0.47). 분해 — lipid 없는 `nstem_leaf` 1.11/1.20,
+    4-pool + lipid 0.81/1.52 → **지상부 구조와 lipid 항이 둘 다 필요**(Tang에서 이긴 조합과 같다). 잡음 하한 0.31/0.32.
+    TF는 노출 수준에 무관(Cwo 1 vs 0.05에서 ≤0.001 log).
+  - 한계: 노지 단일 필지, 뿌리 표면 흡착 미제거(관측 TF를 낮추는 쪽 → 모델 과소 예측을 설명하지 못함), 단계 날짜 가정,
+    ORYZA IR72 vs Jinyu Japonica No.22. `nstem_leaf`의 곡물은 여전히 과소(PFBS 0.30 vs 2.15, PFOA 0.33 vs 0.93).
+  - 기존 `oos_crossdataset.li_tf`(수확일 모델 vs 5단계 평균, 생중량)는 기록으로 남기고 docstring에 이 비교를 가리킴.
+    `runs/pfas-rice-oos-multidataset`의 "Li inconclusive"는 동결된 기록.
+- (원래 계획)
 - 레포의 `data_obs/Li2025_BAF_TF.csv`는 5단계 평균 농도의 비(저자 TF보다 1.0–5.8배 낮음). 저자 TF = 단계별 비율의 평균.
 - SI Table S6(단계별 농도, dw): `https://ars.els-cdn.com/content/image/1-s2.0-S0304389425011719-mmc1.docx`
   → `docs/literature_db/raw_si/li2025_stage_conc.csv`로 전사 → 모델(동적)을 단계별(5단계 × 기관)로 비교.
@@ -142,6 +160,7 @@ Ge 2017(SI S6 기준) · Liu 2023(72 h 용액 농도, S4 단위).
 ```
 docs/HANDOFF_mass_basis_refit.md를 읽자. 1단계, 1b-①·②, 2단계(민감도 + 물관 분배 결정), 6단계는 끝났다.
 물관 분배는 건물중 정의 + S_grain 0.5116/kg 건물로 결정됐다(수치 불변, 재적합 불필요).
-먼저 PR #69와 #70의 상태(CI, 머지 여부)를 확인하고, 뿌리 θ 판단(INTERMEDIATE: 뿌리 수분 실측이 필요한 입력)을
-사용자에게 확인한 뒤 3단계(Li 2025 단계별 비교)로 간다.
+3단계(Li 2025 단계별)도 끝났다: nstem_leaf + lipid가 구분된다(0.43/0.52).
+먼저 PR #69와 #70의 상태(CI, 머지 여부)를 확인하고 4단계(Kim 2019 PFOA 기준점·장쇄 검열 처리)로 간다.
+Kim 원문이 필요하면 사용자에게 papers.zip을 다시 요청.
 ```

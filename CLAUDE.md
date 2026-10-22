@@ -74,7 +74,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (393 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (398 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -414,6 +414,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   per-organ). Honest limits (pre-registered): **Li 2025** is field/group-water/surface-confounded and inconclusive (W2 wins
   straw/root TF 0.33 vs lipid 0.57, but lipid wins grain/root 0.72 vs 1.15/1.47), and Kim long chains are low-DF (3–13%).
   hyp-001 SUPPORTED (digest 68ebaf39); guard `test_oos_multidataset_run_reproduces`. Core unchanged; lipid stays opt-in.
+  **Li re-scored stage by stage later (handoff step 3)** — no longer inconclusive; see the "Li 2025 stage by stage" bullet.
 - **Leaf senescence-loss flux (this session) — fixes the ORYZA leaf-TF artifact**: with the mechanistic
   ORYZA biomass the leaf shrinks (senescence), so the growth-dilution sink `μ=(dM/dt)/M` goes NEGATIVE and the
   `−μ·C` term spuriously CONCENTRATES the leaf — but `oryza_growth` models that loss as leaf DEATH (carbon removed
@@ -1419,6 +1420,27 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   - **App fix found on the way**: the run cache (`ui/common._drivers_tuple`) rebuilt the driver dict from t/Cwo/Qtp/M only, so
     every driver mode silently DROPPED the ORYZA `leaf_loss` (leaf-senescence correction) — PFOA leaf BAF 1.08 instead of 0.55.
     Now every key round-trips (`tests/test_ui_helpers.py::test_the_run_cache_keeps_every_driver_key`).
+- **Li 2025 stage by stage (handoff step 3; PRE-REGISTERED in `4df3047`, pushed before any model number) — Li now
+  DISCRIMINATES, and the expectation was wrong**: `validation/li2025_stage_resolved.py` + `tests/test_li2025_stage_resolved.py`
+  (5) + `docs/literature_db/raw_si/li2025_stage_conc.csv` (SI Table S6, all 15 PFAS × 5 stages × organ, ng/g dw; S5 water/soil
+  by class in `li2025_stage_water_soil.csv`). The old `oos_crossdataset.li_tf` set the model's HARVEST-day BAF against the
+  data's 5-STAGE MEAN on fresh weight; the authors' TF is a third estimator (mean of per-stage ratios). Transcription checked:
+  the 5-stage means reproduce `data_obs/Li2025_BAF_TF.csv` (20/20 cells) and the authors' PFOA stem TF 2.35. Design: TF =
+  tissue/root, **dry weight**, per stage (no water needed); stages have no dates, so ORYZA DVS maps them (tillering 0.4 /
+  heading 1.0 / filling 1.25 / milk 1.5 / ripening 2.0 → days 28/66/78/90/116); the SAME estimator (stage geometric mean) over
+  the SAME stages on both sides; grain scored from filling. **Results**: (Q1) the estimator alone moves the observed TF a
+  median 3.0×, max 5.8× (the authors' mean of ratios is pulled up by one low-root stage: PFOA stem 2.35 of which the filling
+  ratio is 9.67); (Q2) the stage-to-stage scatter is **4.5×** what the reported SDs imply ⇒ per-stage SHAPE is noise-limited,
+  and (Q4) no variant shows a shape signal (ρ≈0); (Q3) **the redistributed shoot + lipid loading (`nstem_leaf`, Tang's
+  winning configuration) discriminates: shoot/grain log10 RMSE 0.43/0.52** vs 4-pool lipid 0.81/1.52, monotone 1.25/2.42,
+  W2 1.31/2.70 — beyond the pre-registered 0.10 margin on both, unchanged at DVS ±0.15. POST-HOC (not used for the verdict):
+  the same winner under the other two estimators (0.66/0.66, 0.36/0.47); **both halves are needed** — `nstem_leaf` without
+  lipid 1.11/1.20, 4-pool with lipid 0.81/1.52; the noise floor a perfect model would score is 0.31/0.32; TF is exposure-
+  independent (Cwo 1 vs 0.05: ≤0.001 log). ⇒ the second independent per-organ dataset (after Tang) where the SAME combination
+  wins out-of-sample. Limits: one field, roots not plaque-cleaned (biases obs TF LOW, so it cannot explain the models' under-
+  prediction), assumed stage days, IR72 phenology for Jinyu Japonica No.22; `nstem_leaf` grain stays under (PFBS 0.30 vs 2.15,
+  PFOA 0.33 vs 0.93). `oos_crossdataset.li_tf` is kept as the record (docstring points here); `runs/pfas-rice-oos-multidataset`
+  stays a frozen record. `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029) UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1542,7 +1564,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   `structural_adequacy_fit.py`, the OOS reports `oos_tang_lipid.py` / `oos_crossdataset.py` / `oos_multidataset.py`,
   and `carrier_vs_bypass.py` / `dose_series_carrier.py` (their records are the dry `--fast` / default runs).
 - **θ_fw sensitivity**: `python validation/theta_fw_sensitivity.py` (~5 min; pre-registered rule in the header; ends with
-  the POST-HOC xylem-split note). Tang endosperm as milled rice: `model_api.tang_tf_validation(c, endosperm="white")`.
+  the POST-HOC xylem-split note).
+- **Li 2025 stage by stage**: `python validation/li2025_stage_resolved.py` (~25 s; pre-registered header; Q1 estimators ·
+  Q2 noise · Q3/Q4 per variant · DVS sensitivity · POST-HOC estimators/decomposition/noise floor). Tang endosperm as milled rice: `model_api.tang_tf_validation(c, endosperm="white")`.
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
   Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered; engine-free),
   `"hydrus"` the real-engine shape, `"constant"` the flat default (conc==BAF). Both shapes are
@@ -1575,7 +1599,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**393 collected; 392 pass, 2 skip** (393 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**398 collected; 397 pass, 2 skip** (398 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
