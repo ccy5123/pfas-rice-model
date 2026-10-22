@@ -212,10 +212,14 @@ def test_gaseous_uptake_loads_the_shoot_from_clean_soil(drv):
     r = ND.simulate_neutral(c, clean, air=True, air_kw=dict(C_air=10.0))
     assert r["conc"]["leaf"][-1] > 0.0
     assert r["conc"]["root"][-1] == pytest.approx(0.0, abs=1e-12)
-    # and the particle-bound fraction is excluded from the gaseous uptake
+    # and the particle-bound fraction is excluded from the gaseous uptake. Two distinct
+    # solves (different source term -> different adaptive steps): conftest case 3. The
+    # old rel=1e-6 sat AT the solver's own accuracy and only passed by luck on the dry
+    # organ mass; on the fresh basis the two solves differ by 3e-6.
     half = ND.simulate_neutral(c, clean, air=True,
                                air_kw=dict(C_air=10.0, f_particle=0.5))
-    assert half["conc"]["leaf"][-1] == pytest.approx(0.5 * r["conc"]["leaf"][-1], rel=1e-6)
+    assert half["conc"]["leaf"][-1] == pytest.approx(0.5 * r["conc"]["leaf"][-1],
+                                                     rel=SOLVE_INVARIANCE_REL)
 
 
 def test_equilibrium_with_the_air_gives_zero_net_flux():

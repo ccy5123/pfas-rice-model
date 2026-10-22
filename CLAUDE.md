@@ -1303,7 +1303,14 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     6–14× → 1.6–3.7×), **Liu 2023 0.281 → 0.213** (ODE mode; equilibrium 0.206 unchanged). **The Ge "~7-d in-planta
     half-life" was absorbing this error**: on the fresh basis shortening the half-life only hurts (7 d 0.773, 30 d 0.231).
     PFAS: Tang OOS free-anion 1.232 → 1.483, lipid 0.516 → 0.561 (the lipid generalisation survives), Tang refit 0.519 →
-    0.844 (dry-fit f_xy); Kim grain OOS lipid 0.48 → 0.55 (DF≥15% 0.20 → 0.81).
+    0.844 (dry-fit f_xy); Kim grain OOS lipid 0.48 → 0.55 (DF≥15% 0.20 → 0.81). **Two recorded neutral findings were
+    mostly this bug**: the "ODE-vs-equilibrium root discount" (ODE/K_PW 0.55 at logKow 1.78 → **0.92** on fresh mass — a
+    10×-too-light root could not keep up with its own xylem export), and Kodešová's "metabolism cannot close the leaf/root
+    gap" (no-metabolism 181 → **35**, 1.5-d half-life 28.5 → **4.5** vs measured 3.25 — on fresh mass a short half-life
+    nearly closes it). The carrier two-pool PFDoDA closure runs its free f_xy to the bound (1) on fresh mass, so its
+    "low f_xy + enhanced carrier" reading is dry-basis; `validation/twopool_nstem_merge.py` is pinned to `MASS_BASIS="dry"`
+    (fit and Tang transfer consistent). Tests now pin BOTH readings where a recorded finding moved
+    (`test_neutral_dpu`, `test_li2019_schriever_tables`, `test_weak_electrolyte`, `test_nstem_leaf`, `test_two_pool`).
   - **`f_xy_source="oryza"` RE-FIT on fresh mass** (`validation/refit_oryza.py`, 1.7 min): reproduction RMSE 0.236 → **0.283**;
     f_xy rises ~4× (PFOA 0.083 → 0.359) and **PFBA/PFOS/PFDoDA hit f_xy=1**, short-chain grain stays high at the L_Ph
     floor ⇒ part of the single-straw 4-pool's "saturated reproduction" was enabled by the bug. `*_oryza` now = fresh fit;

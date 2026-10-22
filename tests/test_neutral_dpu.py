@@ -183,18 +183,31 @@ def test_ge2017_apriori_prediction():
     a-priori run has no in-planta metabolism and the leaf is therefore an unbounded
     terminal accumulator (validation section 3). Imposing a realistic half-life
     must therefore help a lot -- and it has a genuine MINIMUM (~7 d), which is a
-    testable prediction rather than a monotone slide toward faster loss."""
+    testable prediction rather than a monotone slide toward faster loss.
+
+    SUPERSEDED BY THE ORGAN-MASS FIX (src/organ_mass.py): the 0.783 and the ~7-d
+    minimum are on the pre-fix DRY organ mass (pinned below as the legacy record).
+    On the corrected FRESH mass the strict a-priori run is 0.311 and shortening the
+    half-life only HURTS -- the "~7-d half-life" was absorbing the mass-basis error,
+    not measuring metabolism."""
     import neutral_dpu_validation as V
     path = os.path.join(_ROOT, "data_obs", "neutral_obs_ge2017.csv")
-    drv = V.drivers()
+    # legacy record (pre-fix, dry organ mass)
+    drv = V.drivers(mass_basis="dry")
     rmse = V.compare_to_obs(path, drv, quiet=True)
     assert rmse == pytest.approx(0.783, abs=0.05)
     errs = {h: V.compare_to_obs(path, drv, half_life=h, quiet=True)
             for h in (30.0, 14.0, 7.0, 3.0)}
-    assert errs[7.0] < 0.4 * rmse                 # metabolism explains most of it
-    assert errs[7.0] < errs[30.0] and errs[7.0] < errs[3.0]   # a real minimum
+    assert errs[7.0] < 0.4 * rmse                 # metabolism "explained" most of it
+    assert errs[7.0] < errs[30.0] and errs[7.0] < errs[3.0]   # a "real" minimum
     # the ORIGINAL Briggs bell beats the broader modern refit on this data
     assert V.compare_to_obs(path, drv, tscf_model="schriever", quiet=True) > rmse
+    # the corrected basis
+    drv = V.drivers()
+    rmse = V.compare_to_obs(path, drv, quiet=True)
+    assert rmse == pytest.approx(0.311, abs=0.05)
+    errs = {h: V.compare_to_obs(path, drv, half_life=h, quiet=True) for h in (30.0, 7.0, 3.0)}
+    assert errs[3.0] > errs[7.0] > errs[30.0]     # faster loss only makes it worse
 
 
 def test_liu2023_root_partition_apriori():
@@ -206,12 +219,16 @@ def test_liu2023_root_partition_apriori():
     metabolism -- it is an equilibrium -- so this isolates the Briggs K_PW core
     on rice, against a QSPR fitted to barley. The half-life sensitivity must be
     FLAT here, which is the counterpart of the Ge case where it is steep: root is
-    exposure-buffered, leaf is an accumulator."""
+    exposure-buffered, leaf is an accumulator.
+
+    0.281 is the pre-fix (DRY organ mass) record; on the corrected FRESH mass the ODE
+    root sits much closer to K_PW and the score is 0.213 (src/organ_mass.py)."""
     import neutral_dpu_validation as V
     path = os.path.join(_ROOT, "data_obs", "neutral_obs_liu2023.csv")
+    assert V.compare_to_obs(path, V.drivers(mass_basis="dry"), quiet=True) == pytest.approx(0.281, abs=0.04)
     drv = V.drivers()
     rmse = V.compare_to_obs(path, drv, quiet=True)
-    assert rmse == pytest.approx(0.281, abs=0.04)
+    assert rmse == pytest.approx(0.213, abs=0.04)
     flat = V.compare_to_obs(path, drv, half_life=7.0, quiet=True)
     assert abs(flat - rmse) < 0.02             # equilibrium endpoint: metabolism-insensitive
     rows = V.load_neutral_obs(path)

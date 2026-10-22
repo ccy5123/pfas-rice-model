@@ -85,10 +85,19 @@ def install_forcings(kind="measured"):
     """
     if kind == "demo":
         return dict(t=TP.T, Cwo=TP.CWO, Qtp=TP.QTP, M=TP.MMAT)
+    import organ_mass as om
     t = np.linspace(0.0, SEASON, 241)
     b = organ_biomass(t, SEASON)
-    M = np.maximum(np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-4)
+    M = om.organ_matrix(b, MASS_BASIS)
     return dict(t=t, Cwo=np.full_like(t, 1.0), Qtp=fr.Q_TP(t, SEASON), M=M)
+
+
+# ORGAN-MASS BASIS of this whole script (src/organ_mass.py). The cached fit
+# (twopool_nstem_fitted_params.json) and every number recorded from it (in-sample 0.301,
+# Tang OOS 0.801) were made with the biomass driver's DRY matter as M, so the fit AND its
+# Tang transfer both run on "dry" -- a consistent pre-fix record. Re-fitting on the
+# corrected "fresh" basis is open (docs/sampling_protocols_audit_KR.md section 5).
+MASS_BASIS = "dry"
 
 
 DRIVERS = None      # set by main() / the test fixture; see `_drivers()`
@@ -238,7 +247,7 @@ def merged_tang_tf(name, p, q, season=150.0):
     r = api.simulate_nstem_leaf(
         name, f_xy_source="recommended", K_cw_organ="root", season=season,
         kappa_d_override=p["kappa_d"], L_Ph_override=p["L_Ph"],
-        g_xy_override=gxy, g_ph_override=gph, k_seq=float(ks), **SHOOT)
+        g_xy_override=gxy, g_ph_override=gph, k_seq=float(ks), mass_basis=MASS_BASIS, **SHOOT)
     froot = 1.0 - api._COMP["root"]["theta_fw"]
     return {org: r["tf_final"][mk] * froot / (1.0 - api._COMP[tk]["theta_fw"])
             for mk, org, tk in api._TANG_ORGANS}
