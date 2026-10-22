@@ -15,10 +15,12 @@
       "K_cw": "GAP A / Prompt2 v2 (Guo2025 Fig.3f DFT + Mel2024 lignin anchor; rice whole-cw per organ)",
       "f_xy_recommended": "GAP B / S4 + docs/theory_anchor.tex (Trapp+Briggs LFER: MONOTONE logistic)",
       "f_xy_W2fit": "S6 W2 transport fit to Yamazaki (SATURATED 3param/3obs; long-chain values NON-physical, see docs/DELIVERABLE_GAP_B_fxy.md)",
-      "f_xy_oryza": "per-congener (f_xy,L_Ph,kappa_d) re-fit to Yamazaki on the MECHANISTIC ORYZA2000 biomass (the default driver); validation/refit_oryza.py, params/refit_oryza.csv (reproduction log10 RMSE 0.236; PFDoDA long-chain outlier at param ceilings). Use model_api f_xy_source='oryza'.",
+      "f_xy_oryza": "per-congener (f_xy,L_Ph,kappa_d) re-fit to Yamazaki on the MECHANISTIC ORYZA2000 biomass (the default driver), organ mass on the FRESH basis (src/organ_mass.py); validation/refit_oryza.py, params/refit_oryza.csv (reproduction log10 RMSE 0.283; PFBA/PFOS/PFDoDA at f_xy=1, PFDoDA long-chain outlier). The pre-fix DRY-basis fit (RMSE 0.236) is kept as *_oryza_dry / params/refit_oryza_dry.csv. Use model_api f_xy_source='oryza'.",
       "composition": "rice_tissue package (recommended anchors)"
     },
-    "WARNING_f_xy": "Use f_xy_recommended (monotone). f_xy_W2fit rises spuriously for C10+ (single-straw-compartment entanglement, H7 §7.2); theory + cross-field TF both require monotone decline."
+    "WARNING_f_xy": "Use f_xy_recommended (monotone). f_xy_W2fit rises spuriously for C10+ (single-straw-compartment entanglement, H7 §7.2); theory + cross-field TF both require monotone decline.",
+    "refit_oryza": "Per-congener (f_xy, L_Ph, kappa_d) re-fit to Yamazaki on the MECHANISTIC ORYZA2000 biomass (oryza_growth) + measured Q_TP, the default driver, with organ mass on the FRESH basis (src/organ_mass.py; validation/refit_oryza.py; reproduction log10 RMSE 0.283). Saturated per congener (3 params / 3 obs) -> reproduces by construction where the bounds allow; PFBA/PFOS/PFDoDA sit at f_xy=1 and short-chain grain stays high at the L_Ph floor. Use model_api f_xy_source='oryza'.",
+    "refit_oryza_dry": "*_oryza_dry = the same re-fit made BEFORE the dry->fresh organ-mass fix (dry matter used as M; reproduction log10 RMSE 0.236), params/refit_oryza_dry.csv. Used by f_xy_source='oryza' with mass_basis='dry' only, to reproduce pre-fix artifacts."
   },
   "environment": {
     "E_m_V": -0.12,
@@ -103,9 +105,12 @@
         "leaf": 1.413,
         "grain": 1.179
       },
-      "f_xy_oryza": 0.364652,
+      "f_xy_oryza": 1.0,
       "L_Ph_oryza": 1e-05,
-      "kappa_d_oryza": 0.265365
+      "kappa_d_oryza": 0.600179,
+      "f_xy_oryza_dry": 0.364652,
+      "L_Ph_oryza_dry": 1e-05,
+      "kappa_d_oryza_dry": 0.265365
     },
     {
       "name": "PFPeA",
@@ -131,9 +136,12 @@
         "leaf": 1.654,
         "grain": 1.484
       },
-      "f_xy_oryza": 0.142669,
+      "f_xy_oryza": 0.692783,
       "L_Ph_oryza": 1e-05,
-      "kappa_d_oryza": 2.73622
+      "kappa_d_oryza": 3.02471,
+      "f_xy_oryza_dry": 0.142669,
+      "L_Ph_oryza_dry": 1e-05,
+      "kappa_d_oryza_dry": 2.73622
     },
     {
       "name": "PFHxA",
@@ -159,9 +167,12 @@
         "leaf": 2.127,
         "grain": 2.061
       },
-      "f_xy_oryza": 0.071375,
-      "L_Ph_oryza": 0.002101,
-      "kappa_d_oryza": 3.68852
+      "f_xy_oryza": 0.334838,
+      "L_Ph_oryza": 0.000789,
+      "kappa_d_oryza": 3.83685,
+      "f_xy_oryza_dry": 0.071375,
+      "L_Ph_oryza_dry": 0.002101,
+      "kappa_d_oryza_dry": 3.68852
     },
     {
       "name": "PFHpA",
@@ -187,9 +198,12 @@
         "leaf": 3.211,
         "grain": 3.176
       },
-      "f_xy_oryza": 0.035417,
-      "L_Ph_oryza": 0.004076,
-      "kappa_d_oryza": 1.72181
+      "f_xy_oryza": 0.165158,
+      "L_Ph_oryza": 0.00221,
+      "kappa_d_oryza": 1.7814,
+      "f_xy_oryza_dry": 0.035417,
+      "L_Ph_oryza_dry": 0.004076,
+      "kappa_d_oryza_dry": 1.72181
     },
     {
       "name": "PFOA",
@@ -215,9 +229,12 @@
         "leaf": 5.965,
         "grain": 6.24
       },
-      "f_xy_oryza": 0.083361,
-      "L_Ph_oryza": 0.016357,
-      "kappa_d_oryza": 5.91171
+      "f_xy_oryza": 0.359117,
+      "L_Ph_oryza": 0.016283,
+      "kappa_d_oryza": 6.09927,
+      "f_xy_oryza_dry": 0.083361,
+      "L_Ph_oryza_dry": 0.016357,
+      "kappa_d_oryza_dry": 5.91171
     },
     {
       "name": "PFNA",
@@ -243,9 +260,12 @@
         "leaf": 14.423,
         "grain": 16.251
       },
-      "f_xy_oryza": 0.138851,
-      "L_Ph_oryza": 0.047578,
-      "kappa_d_oryza": 13.6699
+      "f_xy_oryza": 0.570975,
+      "L_Ph_oryza": 0.060159,
+      "kappa_d_oryza": 14.0461,
+      "f_xy_oryza_dry": 0.138851,
+      "L_Ph_oryza_dry": 0.047578,
+      "kappa_d_oryza_dry": 13.6699
     },
     {
       "name": "PFDA",
@@ -271,9 +291,12 @@
         "leaf": 35.716,
         "grain": 41.363
       },
-      "f_xy_oryza": 0.238568,
-      "L_Ph_oryza": 0.306836,
-      "kappa_d_oryza": 2.67194
+      "f_xy_oryza": 0.921901,
+      "L_Ph_oryza": 0.520616,
+      "kappa_d_oryza": 3.68683,
+      "f_xy_oryza_dry": 0.238568,
+      "L_Ph_oryza_dry": 0.306836,
+      "kappa_d_oryza_dry": 2.67194
     },
     {
       "name": "PFUnDA",
@@ -299,9 +322,12 @@
         "leaf": 72.291,
         "grain": 83.997
       },
-      "f_xy_oryza": 0.338914,
-      "L_Ph_oryza": 0.151,
-      "kappa_d_oryza": 1.01331
+      "f_xy_oryza": 0.8754,
+      "L_Ph_oryza": 0.564364,
+      "kappa_d_oryza": 1.1978,
+      "f_xy_oryza_dry": 0.338914,
+      "L_Ph_oryza_dry": 0.151,
+      "kappa_d_oryza_dry": 1.01331
     },
     {
       "name": "PFDoDA",
@@ -329,7 +355,10 @@
       },
       "f_xy_oryza": 1.0,
       "L_Ph_oryza": 1.0,
-      "kappa_d_oryza": 0.01
+      "kappa_d_oryza": 0.319515,
+      "f_xy_oryza_dry": 1.0,
+      "L_Ph_oryza_dry": 1.0,
+      "kappa_d_oryza_dry": 0.01
     },
     {
       "name": "PFBS",
@@ -355,9 +384,12 @@
         "leaf": 3.736,
         "grain": 4.644
       },
-      "f_xy_oryza": 0.024771,
+      "f_xy_oryza": 0.118004,
       "L_Ph_oryza": 1e-05,
-      "kappa_d_oryza": 0.376051
+      "kappa_d_oryza": 0.429157,
+      "f_xy_oryza_dry": 0.024771,
+      "L_Ph_oryza_dry": 1e-05,
+      "kappa_d_oryza_dry": 0.376051
     },
     {
       "name": "PFHxS",
@@ -408,9 +440,12 @@
         "leaf": 73.101,
         "grain": 84.991
       },
-      "f_xy_oryza": 0.401896,
-      "L_Ph_oryza": 0.218969,
-      "kappa_d_oryza": 4.54425
+      "f_xy_oryza": 1.0,
+      "L_Ph_oryza": 1.0,
+      "kappa_d_oryza": 5.68442,
+      "f_xy_oryza_dry": 0.401896,
+      "L_Ph_oryza_dry": 0.218969,
+      "kappa_d_oryza_dry": 4.54425
     },
     {
       "name": "GenX",

@@ -9,9 +9,11 @@ data-grounded alternative to the modelled biomass (`growth_rice`, `oryza_growth`
 it pins the absolute compartment-mass scale (and hence the f_xy absolute scale,
 task #7) to a real experiment instead of an IR72 reconstruction.
 
-Input table: sampling `day` (days after transplanting) + organ dry weights for
+Input table: sampling `day` (days after transplanting) + organ DRY weights for
 root, stem(culm), leaf, grain(panicle).  Several reporting units are accepted and
-converted to **kg fresh-weight-free dry mass per hill** (the model's M unit):
+converted to **kg dry mass per hill**; `biomass_drivers` then converts that to the
+FRESH organ mass the plant ODE runs on (dry/(1-theta_fw), `organ_mass`) -- the
+model's M is fresh weight, like B_k and every observation it is compared with:
 
     units            extra args needed
     -----            -----------------
@@ -37,7 +39,9 @@ ORGANS = ("root", "stem", "leaf", "grain")
 
 def to_kg_per_hill(values: np.ndarray, units: str, *, plants_per_hill: float | None = None,
                    hills_per_m2: float = 25.0) -> np.ndarray:
-    """Convert an organ biomass column to kg(dry)/hill from the given reporting units."""
+    """Convert an organ biomass column to kg/hill from the given reporting units.
+
+    Unit conversion only -- the BASIS (dry or fresh) is whatever the input was."""
     v = np.asarray(values, float)
     u = units.strip().lower()
     if u == "kg/hill":
@@ -100,15 +104,17 @@ def biomass_matrix(t, day, organs_kg_hill, *, root_shoot_ratio: float | None = N
 
 def biomass_drivers(path_or_table, units, *, season=None, n_t=241, Cwo=1.0,
                     plants_per_hill=None, hills_per_m2=25.0, root_shoot_ratio=None,
-                    Qtp=None):
+                    Qtp=None, mass_basis="fresh"):
     """One-call: measured biomass table -> `drivers` dict for simulate(drivers=...).
 
     `path_or_table` is a CSV path/buffer, or a (day, organs) tuple from
     `load_biomass_table`.  `units` is the reporting unit of the table (see
     `to_kg_per_hill`).  `Qtp` (L/d/hill on the output grid) overrides the modelled
-    transpiration; otherwise `forcing_rice.Q_TP` is used.  Returns the same dict
-    shape as `model_api.drivers_from_arrays`.
+    transpiration; otherwise `forcing_rice.Q_TP` is used.  The table's DRY weights
+    become FRESH organ mass via `organ_mass` (mass_basis="dry" keeps them dry, the
+    pre-fix legacy).  Returns the same dict shape as `model_api.drivers_from_arrays`.
     """
+    import organ_mass as om
     if isinstance(path_or_table, tuple):
         day, organs_raw = path_or_table
     else:
@@ -119,6 +125,7 @@ def biomass_drivers(path_or_table, units, *, season=None, n_t=241, Cwo=1.0,
     season = float(np.max(day)) if season is None else float(season)
     t = np.linspace(0.0, season, n_t)
     M = biomass_matrix(t, day, organs_kg, root_shoot_ratio=root_shoot_ratio)
+    M = M * np.array([om.fresh_factor(o, mass_basis) for o in ORGANS])
     Cwo_arr = np.full_like(t, float(Cwo))
     if Qtp is None:
         import forcing_rice as fr

@@ -89,8 +89,11 @@ PFAS_GOLDEN = {
 
 @pytest.mark.parametrize("key,expected", list(PFAS_GOLDEN.items()))
 def test_pfas_path_is_unmoved(key, expected):
+    """The PORT must not move the PFAS path. The goldens predate the dry->fresh organ-mass
+    fix (src/organ_mass.py), so the comparison runs on mass_basis="dry" -- this test is
+    about the weak-electrolyte port, not about the mass basis (tests/test_organ_mass.py)."""
     cong, src = key
-    r = api.simulate(cong, f_xy_source=src, season=120.0, n_t=121)
+    r = api.simulate(cong, f_xy_source=src, season=120.0, n_t=121, mass_basis="dry")
     for tissue, want in expected.items():
         assert r["baf_final"][tissue] == pytest.approx(want, rel=GOLDEN_REL), tissue
 
@@ -104,9 +107,11 @@ def test_neutral_path_is_unmoved():
     with no solver in it, so it is exactly reproducible and stays an exact `==`.
     Do not "tidy" the second one onto approx: it is the control showing the
     tolerance above is about the solver and not about the partition core.
+    The published neutral RMSEs predate the dry->fresh organ-mass fix, so the golden
+    runs on mass_basis="dry" (K_PW, closed-form, has no mass in it at all).
     """
     r = api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0,
-                             season=120.0, n_t=121)
+                             season=120.0, n_t=121, mass_basis="dry")
     assert r["baf_final"]["root"] == pytest.approx(1.2139709581034162, rel=GOLDEN_REL)
     assert r["K_PW"]["root"] == 1.8394200621153844
     # the compound the neutral path builds must carry NO speciation fields
@@ -169,11 +174,20 @@ def test_uptake_falls_monotonically_as_the_acid_gets_stronger():
 def test_a_weak_base_is_a_cation_and_is_not_excluded():
     """The reason valence had to move onto the COMPOUND. At the same pKa an acid
     (anion, z=-1) is excluded by the inside-negative membrane while a base (cation,
-    z=+1) is attracted -- one global `Environment.z` cannot say both."""
+    z=+1) is attracted -- one global `Environment.z` cannot say both.
+
+    Magnitude: ~19x on the pre-fix DRY organ mass, ~3.7x on FRESH mass -- with uptake now
+    scaling with the (10x larger) fresh root mass the base reaches its partition ceiling
+    and the acid climbs toward its own, so the contrast compresses; the SIGN is the claim."""
     kw = dict(name="x", season=60.0, n_t=61, pKa=4.5)
     acid = api.simulate_neutral(2.45, is_acid=True, **kw)["baf_final"]["root"]
-    base = api.simulate_neutral(2.45, is_acid=False, **kw)["baf_final"]["root"]
-    assert base > 10.0 * acid
+    base_r = api.simulate_neutral(2.45, is_acid=False, **kw)
+    base = base_r["baf_final"]["root"]
+    assert base > 3.0 * acid
+    assert base == pytest.approx(base_r["K_PW"]["root"], rel=0.1)   # the cation is not excluded
+    dry = dict(kw, mass_basis="dry")
+    assert (api.simulate_neutral(2.45, is_acid=False, **dry)["baf_final"]["root"]
+            > 10.0 * api.simulate_neutral(2.45, is_acid=True, **dry)["baf_final"]["root"])
 
 
 def test_speciation_spans_the_whole_range():

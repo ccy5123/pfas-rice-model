@@ -10,7 +10,8 @@ they fix the gradient-flip crossover `B* ~ Q_s/(M_s*mu_s)` and the absolute f_xy
 
 Source: Bouman & van Laar 2006 (Agric. Syst. 87:249-273) and Li et al. 2017
 (ORYZA v3, Agric. For. Meteorol. 237-238:246-256).  IR72 partitioning tables
-(read from Li 2017 SI Table S1; cross-checked FLV+FST+FSO = 1 at each DVS):
+(read from Li 2017 SI Table S2, IR72 column -- the main text's Table S1 is goodness-of-fit
+statistics; cross-checked FLV+FST+FSO = 1 at each DVS):
 
     DVS:          0      0.5    0.75   1.0    1.2    2.5
     FLV (leaf):   0.52   0.45   0.58   0.03   0.02   0.01
@@ -31,7 +32,7 @@ The N-segment model folds leaves into each stem segment (Yamazaki lumps
 from __future__ import annotations
 import numpy as np
 
-# ORYZA IR72 partitioning tables (Li 2017 SI S1)
+# ORYZA IR72 partitioning tables (Li 2017 SI Table S2)
 _DVS = np.array([0.0, 0.5, 0.75, 1.0, 1.2, 2.5])
 _FLV = np.array([0.52, 0.45, 0.58, 0.03, 0.02, 0.01])
 _FST = np.array([0.48, 0.55, 0.34, 0.43, 0.07, 0.00])
@@ -45,7 +46,8 @@ _FSO = np.array([0.00, 0.00, 0.00, 0.54, 0.91, 0.99])
 _FSH_DVS = np.array([0.0, 0.43, 1.0, 2.5])
 _FSH = np.array([0.50, 0.75, 1.00, 1.00])
 
-# IR72 final aboveground biomass ~17.4 t/ha = 1740 g/m^2 (Bouman 2006); add roots.
+# IR72 final aboveground biomass ~17.4 t/ha = 1740 g/m^2 (Kumar et al. 2017, PMC5291415,
+# 390-ppm sunlit chambers; misattributed to Bouman 2006 before the protocol audit); add roots.
 WSHOOT_MAX_G_M2 = 1740.0
 AREA_PER_HILL_M2 = 0.04                  # 25 hills/m^2 (matches forcing_rice)
 G_M2_TO_KG_HILL = AREA_PER_HILL_M2 / 1000.0
@@ -155,11 +157,13 @@ def organ_biomass(t: np.ndarray, season: float = 120.0,
     return res
 
 
-def M_for_nstem(t: np.ndarray, N: int = 4, season: float = 120.0):
+def M_for_nstem(t: np.ndarray, N: int = 4, season: float = 120.0, mass_basis: str = "fresh"):
     """Mass matrix for NStemModel: columns [root, stem_1..stem_N, grain] [kg/hill].
     Stem segments fold in leaves (Yamazaki convention) and share (M_stem+M_leaf)/N.
-    A floor avoids division-by-zero in the ODE before emergence."""
-    b = organ_biomass(t, season)
+    A floor avoids division-by-zero in the ODE before emergence. The organ DRY matter
+    is converted to the ODE's FRESH mass per organ first (`organ_mass`; "dry" = legacy)."""
+    import organ_mass as om
+    b = om.to_model_mass(organ_biomass(t, season), mass_basis)
     straw = b["stem"] + b["leaf"]
     seg = np.maximum(straw / N, 1e-9)
     cols = [np.maximum(b["root"], 1e-9)] + [seg] * N + [np.maximum(b["grain"], 1e-9)]

@@ -309,7 +309,8 @@ if __name__ == "__main__":
     N, SEASON = 4, 150.0
     t = np.linspace(0.0, SEASON, 481)
     Qtp = fr.Q_TP(t, SEASON)
-    b = gr.organ_biomass(t, SEASON)
+    import organ_mass as om
+    b = om.to_model_mass(gr.organ_biomass(t, SEASON))       # crop DRY matter -> ODE FRESH mass
     M = np.column_stack(
         [np.maximum(b["root"], 1e-9)]
         + [np.maximum(b["stem"] / N, 1e-9)] * N

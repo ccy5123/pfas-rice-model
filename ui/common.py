@@ -381,7 +381,8 @@ def _default_growth_df(season, biomass, n_rows=7):
     """Editable growth table seeded from the selected biomass driver (FRESH g/hill)."""
     import pandas as pd
     t = np.linspace(0.0, float(season), n_rows)
-    b = api._biomass_fn(biomass)(t, float(season))
+    # the driver returns DRY matter; the table (and the ODE's M) is FRESH weight
+    b = api.om.to_model_mass(api._biomass_fn(biomass)(t, float(season)))
     return pd.DataFrame({"day": np.round(t, 0),
                          **{o: np.round(np.asarray(b[o], float) * 1e3, 2) for o in _ORGANS4}})
 

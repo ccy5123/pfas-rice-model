@@ -282,7 +282,7 @@ def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season:
                        Cwo_ref: float = 1.0, f_oc: float = 0.02,
                        qtp_from_hydrus: bool = True, area_per_hill_m2: float | None = None,
                        n_t: int = 241, biomass: str = "oryza", Kd: float | None = None,
-                       **run_kw):
+                       mass_basis: str = "fresh", **run_kw):
     """Build a :class:`PlantInputs` whose ``Cwo`` AND ``Q_TP`` come from a real
     HYDRUS-1D paddy run for the congener, with growth ``M`` from the selected
     ``biomass`` driver (ORYZA2000 by default; ``"growth_rice"`` for the logistic).
@@ -298,6 +298,8 @@ def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season:
         paddy is unstressed and only diverges under soil-water limitation. If
         False, the measured ``forcing_rice.Q_TP`` is used directly (soil run uses
         the default gaussian potential transpiration).
+    mass_basis : "fresh" (default) converts the biomass driver's DRY organ matter to the
+        FRESH mass the plant ODE is defined on; "dry" is the pre-fix legacy (`organ_mass`).
     Kd : pass a linear sorption coefficient [L/kg] directly instead of deriving it
         from the PFAS chain-length Koc QSPR. This is what a NEUTRAL organic needs --
         `paddy_kd` is a per-CF2 group contribution and has no meaning for one -- and
@@ -330,7 +332,8 @@ def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season:
     else:
         import growth_rice as gr
         b = gr.organ_biomass(t, season)
-    M = np.maximum(np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-4)
+    import organ_mass as om
+    M = om.organ_matrix(b, mass_basis)                # crop DRY matter -> ODE FRESH mass (default)
     leaf_loss = b.get("leaf_death_rate")              # only the senescing ORYZA driver supplies it
 
     if qtp_from_hydrus:

@@ -55,8 +55,8 @@ turns out to be **entangled** with the biomass assumption.
 - Yoshida 1981, *Fundamentals of Rice Crop Science*, IRRI (classic reference for root fraction ~5–10%).
 - Model partitioning source: Bouman & van Laar 2006, *Agric. Syst.* 87:249–273 (**10.1016/j.agsy.2004.09.011**); Li et al. 2017, *Agric. For. Meteorol.* 237–238:246–256 (ORYZA v3).
 
-> Honest caveat: none of these is the model's exact target system (e.g. Yamazaki
-> Andosol greenhouse). Partitioning is genotype × environment dependent, so the
+> Honest caveat: none of these is the model's exact target system (e.g. Yamazaki's
+> Andosol paddy field). Partitioning is genotype × environment dependent, so the
 > literature gives a defensible **range**, not a site truth. A maturity, root-
 > inclusive measurement for the target system would close the gap.
 

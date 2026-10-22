@@ -505,7 +505,7 @@ _BIB = [
      "PFCA/PFSA membrane-water partition coefficients (SSLM)"),
     ("higgins2006", "Higgins and Luthy", "2006", "Environ. Sci. Technol.", "10.1021/es061000n",
      "Sorption of perfluorinated surfactants to sediments (Koc QSPR)"),
-    ("bouman2006", "Bouman and van Laar", "2006", "Agric. Syst.", "10.1016/j.agsy.2004.07.011",
+    ("bouman2006", "Bouman and van Laar", "2006", "Agric. Syst.", "10.1016/j.agsy.2004.09.011",
      "ORYZA2000 rice growth model and organ partitioning"),
     ("briggs1982", "Briggs et al.", "1982", "Pestic. Sci.", "10.1002/ps.2780130506",
      "Root concentration factor and TSCF (barley)"),

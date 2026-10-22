@@ -55,7 +55,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── forcing_rice.py                       # measured transpiration Q_TP(t) (FAO-56 dual-Kc; Kumari2022 + NayHtoon2018)
 │   ├── growth_rice.py                        # ORYZA IR72 partitioning on a logistic → organ M_s(t) (DEFAULT biomass driver)
 │   ├── oryza_growth.py                       # MECHANISTIC ORYZA2000 Level-1 carbon balance → weather-responsive M_s(t) (opt-in; drivers=/weather=)
-│   └── measured_biomass.py                   # ingest a MEASURED per-organ biomass table → M(t) driver (units→kg/hill; Tang etc.)
+│   ├── measured_biomass.py                   # ingest a MEASURED per-organ biomass table → M(t) driver (units→kg/hill; Tang etc.)
+│   └── organ_mass.py                         # crop-model DRY matter → the FRESH organ mass the ODE runs on (mass_basis)
 ├── examples/                         # ready-to-load CSVs for app.py (HYDRUS drivers + biomonitoring)
 ├── params/                           # parameters.json (CANONICAL) + source CSVs (Bk, f_xy, Kcw, ...)
 ├── data_obs/                         # observed BAF/TF (Yamazaki, Li2025) + yamazaki_stem_height.csv
@@ -73,7 +74,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (349 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (373 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -283,8 +284,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   - `validation/tang2026_fxy_refit.py` (ORYZA-driven nstem_leaf; OVERRIDE-only, `parameters.json` UNCHANGED) re-fits
     `f_xy` to Tang TF: overall log10 RMSE 1.23→0.53 (@0.1). **GenX 0.233→0.017–0.020** (independently confirms the
     documented ~12× over-prediction; ≈ the 0.013 recalibration). **PFOS 0.013→~0.32** (current value far too low) — but
-    note this **DISAGREES with the Yamazaki-W2 0.142**: PFOS `f_xy` is **dataset/condition-dependent** (Yamazaki = Andosol
-    clean per-congener water, greenhouse, Indica+Japonica; Tang = flooded paddy-soil pot, Nipponbare, 5 doses) → do NOT
+    note this **DISAGREES with the Yamazaki-W2 0.142**: PFOS `f_xy` is **dataset/condition-dependent** (Yamazaki = an
+    Andosol paddy FIELD under ambient irrigation-water exposure, Kasalath+Koshihikari — NOT a greenhouse/clean-water/spiked
+    study, corrected by the sampling-protocol audit below; Tang = flooded paddy-soil pot, Nipponbare, 5 doses) → do NOT
     pin PFOS `f_xy` to a single value. **PFOA 0.040→0.064–0.097** (dose-condition dependent). This EXTENDS
     `VALIDATION_TANG2026_NSTEM_KR.md` (ORYZA driver + explicit data-file fit), not a re-derivation.
   - `validation/mass_drivers_plot.py`: diagnostic that `M_k(t)` is a time-varying growth curve and the growth-dilution
@@ -382,7 +384,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   PFSA ~40–200× under, GenX ~10× over). **hyp-001 REFUTED**: the structure can REPRODUCE Tang by fitting (0.52, consistent
   with the structural-adequacy result) but does NOT PREDICT an independent dataset with parameters fit elsewhere — confirming
   H3/H4 at the cross-dataset level. The PFSA/GenX directional miss re-confirms the `f_xy` head-group offset / ether QSPR are
-  dataset/condition-dependent (Yamazaki Andosol clean water vs Tang flooded paddy), not pinnable to a single value.
+  dataset/condition-dependent (Yamazaki Andosol paddy field vs Tang flooded paddy pot — both flooded; "clean water" was a
+  mis-description, see the sampling-protocol audit), not pinnable to a single value.
   `validation/oos_tang.py`; guard `test_oos_tang_run_reproduces` (`sci-adk verify` exit 0, digest 46d71f24).
 - **Does the lipid mechanism GENERALIZE out-of-sample? (this session) — SUPPORTED, via the `sci-adk run` CLI**:
   the positive follow-through to the OOS REFUTED baseline. The OOS failure above was the *free-anion* model. The
@@ -1281,6 +1284,58 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   PATTERN rather than one field — that every seeded widget passes through the clamp. Verified in a headless
   drive: water renders `Koc 0.01946` with no exception, log Kow 8 → `3.681e+07`, −2 → `0.004742`, default 2.45
   → 119.4 unchanged. UI-only; `parameters.json`, the model math and `reproduce_demo` (0.029) UNCHANGED.
+- **Sampling-protocol audit + the DRY→FRESH organ-mass fix (this session)**: `docs/sampling_protocols_audit_KR.md`
+  (+ `docs/literature_db/Sampling_Protocols.csv`, `raw_si/rice_organ_biomass_literature.csv`). Question: which growth
+  model, what measured organ masses exist, and how each dataset actually sampled/fractionated its compartments (grain
+  milled or not, roots washed how). Read at source (main texts + SI; PDFs user-supplied, NOT committed).
+  - **THE BUG (fixed)**: every biomass driver (`oryza_growth`, `growth_rice`, `measured_biomass` tables) returns DRY
+    matter, but `PlantInputs.M` and `B_k` are FRESH weight; the dry matter went into `M` unconverted, so a terminal
+    organ's concentration was a burden per kg DRY reported per kg fresh (leaf ×4.5, stem ×5.9, grain ×1.16; the root,
+    set by uptake per unit mass, barely moves). **`src/organ_mass.py`** converts `fresh = dry/(1−θ_fw)` with the SAME
+    θ_fw as `B_k`, at every point a driver becomes `M` (`model_api` incl. `simulate`/`simulate_nstem_leaf`/
+    `simulate_neutral`/`tang_tf_validation`/`measured_forcing`/`drivers_from_arrays`/`hydrus_drivers`, `soil_hydrus`,
+    `oryza_drivers`, `measured_biomass.biomass_drivers`, `M_for_nstem`, `pfas_rice_two_pool`, the app's growth-table
+    seed, `neutral_dpu_validation.drivers`, `structural_adequacy_fit`). Named mode **`mass_basis="fresh"` (default) |
+    `"dry"`** — `"dry"` is NOT a physical alternative, it only reproduces pre-fix artifacts (verified bit-for-bit on
+    the documented numbers). The placeholder logistic (`measured_forcing=False`, `reproduce_demo` 0.029) is untouched.
+  - **Effect** (dry → fresh): PFOA default BAF root/leaf/grain 0.479/2.52/0.148 → 0.488/0.614/0.036. **The unfitted
+    neutral path improves sharply — independent evidence the fix is right: Ge 2017 0.783 → 0.311** (leaf over-prediction
+    6–14× → 1.6–3.7×), **Liu 2023 0.281 → 0.213** (ODE mode; equilibrium 0.206 unchanged). **The Ge "~7-d in-planta
+    half-life" was absorbing this error**: on the fresh basis shortening the half-life only hurts (7 d 0.773, 30 d 0.231).
+    PFAS: Tang OOS free-anion 1.232 → 1.483, lipid 0.516 → 0.561 (the lipid generalisation survives), Tang refit 0.519 →
+    0.844 (dry-fit f_xy); Kim grain OOS lipid 0.48 → 0.55 (DF≥15% 0.20 → 0.81). **Two recorded neutral findings were
+    mostly this bug**: the "ODE-vs-equilibrium root discount" (ODE/K_PW 0.55 at logKow 1.78 → **0.92** on fresh mass — a
+    10×-too-light root could not keep up with its own xylem export), and Kodešová's "metabolism cannot close the leaf/root
+    gap" (no-metabolism 181 → **35**, 1.5-d half-life 28.5 → **4.5** vs measured 3.25 — on fresh mass a short half-life
+    nearly closes it). The carrier two-pool PFDoDA closure runs its free f_xy to the bound (1) on fresh mass, so its
+    "low f_xy + enhanced carrier" reading is dry-basis; `validation/twopool_nstem_merge.py` is pinned to `MASS_BASIS="dry"`
+    (fit and Tang transfer consistent). Tests now pin BOTH readings where a recorded finding moved
+    (`test_neutral_dpu`, `test_li2019_schriever_tables`, `test_weak_electrolyte`, `test_nstem_leaf`, `test_two_pool`).
+  - **`f_xy_source="oryza"` RE-FIT on fresh mass** (`validation/refit_oryza.py`, 1.7 min): reproduction RMSE 0.236 → **0.283**;
+    f_xy rises ~4× (PFOA 0.083 → 0.359) and **PFBA/PFOS/PFDoDA hit f_xy=1**, short-chain grain stays high at the L_Ph
+    floor ⇒ part of the single-straw 4-pool's "saturated reproduction" was enabled by the bug. `*_oryza` now = fresh fit;
+    the pre-fix fit is kept as `*_oryza_dry` / `params/refit_oryza_dry.csv` (used when `mass_basis="dry"`;
+    `build_parameters.py` merges both). **Still on the dry basis (NOT re-fit)**: `TANG_REFIT_FXY`, `LIPID_LOADING`, the
+    two-pool cached fits, and validation scripts that build `M` themselves (`twopool_*`, `tang2026_fxy_refit.py`, …) —
+    convert with `organ_mass.to_model_mass` before re-running. `tests/test_organ_mass.py` (9).
+  - **Dataset descriptions corrected (at source)**: **Yamazaki 2023 is an Andosol paddy FIELD** (NARO Tsukuba,
+    Kasalath+Koshihikari, ambient irrigation-water/rain/PM exposure) — NOT greenhouse/pot/spiked/"clean per-congener
+    water"; it computes NO BAF (the repo's = tissue ÷ ONE irrigation-water grab), brown rice was NOT analysed (repo
+    reconstructs 0.88·white+0.12·bran; the paper's own "brown" sums concentrations), straw = unweighted band mean, all θ
+    assumed (whole plants oven-dried before segregation). Fixed in the app (`ui/expert.py`), README, docs, DB. **Kim 2019**:
+    one plant per field, non-detects averaged as zero, PFOA IS site-paired and one WWTP field (A-2) is 83% of the pore-water
+    mean (ratio of means 4.4 vs site-paired geomean 27), long chains on 1–4 detects, soils NOT Andosol (DB fixed). **Li
+    2025**: authors' TF = mean of per-stage ratios, the repo's = ratio of 5-stage means (1.0–5.8× lower); water values are
+    digitised irrigation-water shares; Methods say "leaves (including stems)". **Tang 2026**: endosperm most likely milled
+    rice (model uses brown), chaff unused, roots rinse-only (surface confound applies), the old "HI_dw≈0.5" note was wrong
+    (endosperm ≈10–16% of plant DW). **No dataset removed Fe/Mn plaque**; only Liu 2023 has a solvent desorption rinse.
+    Growth anchors: Bouman DOI fixed (`…2004.09.011`), 1740 g/m² is Kumar 2017 not Bouman, `growth_rice` tables are Li 2017
+    Table S2, Nada 2018 root:shoot is fresh-weight non-paddy (paddy DW: Kim 2001 FACE 0.026–0.033 at maturity).
+    **No rice dataset reports organ water content over a season** — θ_fw remains the open input behind every dw↔fw step.
+  - **Next-session handoff: `docs/HANDOFF_mass_basis_refit.md`** — in order: (1) re-fit the remaining dry-basis artifacts
+    (`TANG_REFIT_FXY`, `LIPID_LOADING` — no committed fit script —, the two-pool fits) and re-check the OOS conclusions;
+    (2) θ_fw provenance/stage dependence; (3) Li 2025 stage-resolved comparison; (4) Kim PFOA anchor + censored long
+    chains; (5) align ORYZA parameters with IR72.D92 + validate; (6) Tang endosperm → white-rice composition, season 150.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1430,7 +1485,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**349 collected; 348 pass, 2 skip** — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**373 collected; 372 pass, 2 skip** — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
@@ -1451,6 +1506,11 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ## 8. Conventions
 - Units: time **day**; aqueous conc **µg/L**; tissue conc **µg/kg**; mass **kg**;
   flow **L/day**; `B_k` in **L/kg fw** (`C_k = B_k · C_w,k`).
+- **Organ mass `M` is FRESH weight** (like `B_k` and every observation). Every crop/biomass driver
+  (`oryza_growth`, `growth_rice`, `measured_biomass` tables) produces **DRY** matter, so whatever turns a
+  driver into `M` must go through `organ_mass` (`fresh = dry/(1−θ_fw)`, θ_fw = the binding factor's).
+  `mass_basis="dry"` exists ONLY to reproduce artifacts fitted before that fix. A `drivers=` `M` (CSV,
+  app growth table) is taken as fresh as-is.
 - **Exposure `C_w^o(t)`**: the default scenario holds it CONSTANT (`Cwo`, so conc==BAF). `Q_TP(t)` is
   ALWAYS time-varying (FAO-56 `forcing_rice`). For a time-varying exposure use `simulate(cwo_profile=
   "flooded"|"hydrus")` (mean-normalised to `Cwo`) or supply a `drivers=` series. Architecturally both

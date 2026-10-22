@@ -366,7 +366,7 @@ def fig_forcings(t, season):
     fig.update_layout(title="Measured forcings (Q_TP, M_s)", xaxis_title="days",
                       hovermode="x unified", **_LAYOUT)
     fig.update_yaxes(title_text="Q_TP [L/day/hill]", secondary_y=False)
-    fig.update_yaxes(title_text="biomass [kg/hill]", secondary_y=True)
+    fig.update_yaxes(title_text="dry biomass [kg DM/hill]", secondary_y=True)
     return fig
 
 

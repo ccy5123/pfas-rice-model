@@ -66,13 +66,16 @@ def _B_mobile(d, c):
 
 
 @lru_cache(maxsize=8)
-def _drivers(season: float, biomass: str):
+def _drivers(season: float, biomass: str, mass_basis: str = "fresh"):
     """Interpolated forcings: transpiration Q_TP(t) and per-organ biomass M(t)+dM/dt.
 
     biomass='oryza' = the mechanistic ORYZA2000 carbon balance (default, matches the
     validated breakthrough); 'growth_rice' = the ORYZA IR72 logistic reconstruction.
+    The crop model's DRY matter is converted to the FRESH mass the ODE runs on
+    (`organ_mass`; mass_basis="dry" = the pre-fix legacy).
     """
     import forcing_rice as fr
+    import organ_mass as om
     t = np.linspace(0.0, season, int(season) + 1)
     if biomass == "growth_rice":
         import growth_rice as gr
@@ -80,6 +83,7 @@ def _drivers(season: float, biomass: str):
     else:
         import oryza_growth as og
         b = og.organ_biomass_oryza(t, p=og.OryzaParams(season=season))
+    b = om.to_model_mass(b, mass_basis)
     Mr = np.maximum(b["root"], 1e-9)
     Ms = np.maximum(b["stem"], 1e-9)
     Ml = np.maximum(b["leaf"], 1e-9)
@@ -93,7 +97,7 @@ def _drivers(season: float, biomass: str):
 
 
 def simulate(name, f_xy, vmax_in, *, g_xy=0.0, g_ph=None, k_off=0.02, seq=1.0,
-             kappa_d=None, L_Ph=None, season=120.0, biomass="oryza"):
+             kappa_d=None, L_Ph=None, season=120.0, biomass="oryza", mass_basis="fresh"):
     """Run the 2-pool root ODE for one congener; return BAFs (Cwo=1).
 
     f_xy      : free xylem-loading factor (TSCF analog); LOW for long chains.
@@ -117,7 +121,7 @@ def simulate(name, f_xy, vmax_in, *, g_xy=0.0, g_ph=None, k_off=0.02, seq=1.0,
     Bst = _B_full(cc["stem"], c)
     Blf = _B_full(cc["leaf"], c)
     S_leaf, S_grain = 20.0, 2.0
-    fQ, fMr, fMs, fMl, fMg, dMr, dMs, dMl, dMg = _drivers(float(season), biomass)
+    fQ, fMr, fMs, fMl, fMg, dMr, dMs, dMl, dMg = _drivers(float(season), biomass, mass_basis)
 
     def rhs(tt, C):
         rm, rb, st, lf, gr = C
@@ -150,11 +154,12 @@ def simulate(name, f_xy, vmax_in, *, g_xy=0.0, g_ph=None, k_off=0.02, seq=1.0,
     return {"root": rm + rb, "straw": straw, "grain": gr, "rm": rm, "rb": rb}
 
 
-def _carrier_for_root(name, f_xy, obs_root, biomass="oryza", season=120.0):
+def _carrier_for_root(name, f_xy, obs_root, biomass="oryza", season=120.0, mass_basis="fresh"):
     base = _CARR["Vmax_in"]
 
     def g(lm):
-        r = simulate(name, f_xy, base * 10 ** lm, biomass=biomass, season=season)["root"]
+        r = simulate(name, f_xy, base * 10 ** lm, biomass=biomass, season=season,
+                     mass_basis=mass_basis)["root"]
         return np.log10(max(r, 1e-6)) - np.log10(obs_root)
 
     lo, hi = -2.0, 7.0
@@ -165,16 +170,18 @@ def _carrier_for_root(name, f_xy, obs_root, biomass="oryza", season=120.0):
     return base * 10 ** brentq(g, lo, hi, xtol=1e-3, maxiter=80)
 
 
-def close_longchain(name, obs, *, biomass="oryza", season=120.0):
+def close_longchain(name, obs, *, biomass="oryza", season=120.0, mass_basis="fresh"):
     """Saturated 3-param structural-adequacy fit (the breakthrough recipe):
     free f_xy -> straw, active carrier -> root, g_ph -> grain (g_xy=0).
-    ``obs`` = {'root':.., 'straw':.., 'grain':..} measured BAFs. Returns params + sim."""
+    ``obs`` = {'root':.., 'straw':.., 'grain':..} measured BAFs. Returns params + sim.
+    ``mass_basis="dry"`` reruns the closure on the pre-fix dry organ mass (organ_mass)."""
     o = obs
+    kw = dict(biomass=biomass, season=season, mass_basis=mass_basis)
 
     def straw_err(lf):
         f_xy = 10 ** lf
-        vm = _carrier_for_root(name, f_xy, o["root"], biomass, season)
-        s = simulate(name, f_xy, vm, biomass=biomass, season=season)["straw"]
+        vm = _carrier_for_root(name, f_xy, o["root"], **kw)
+        s = simulate(name, f_xy, vm, **kw)["straw"]
         return np.log10(max(s, 1e-6)) - np.log10(o["straw"])
 
     a, b = -6.0, 0.0
@@ -182,16 +189,16 @@ def close_longchain(name, obs, *, biomass="oryza", season=120.0):
         f_xy = 10 ** brentq(straw_err, a, b, xtol=1e-3, maxiter=60)
     else:
         f_xy = 10 ** a if abs(straw_err(a)) < abs(straw_err(b)) else 10 ** b
-    vm = _carrier_for_root(name, f_xy, o["root"], biomass, season)
+    vm = _carrier_for_root(name, f_xy, o["root"], **kw)
 
     def gp_err(lg):
-        r = simulate(name, f_xy, vm, g_ph=10 ** lg, biomass=biomass, season=season)["grain"]
+        r = simulate(name, f_xy, vm, g_ph=10 ** lg, **kw)["grain"]
         return np.log10(max(r, 1e-6)) - np.log10(o["grain"])
 
     a2, b2 = -10.0, 2.0
     g_ph = 10 ** brentq(gp_err, a2, b2, xtol=1e-2, maxiter=60) if gp_err(a2) * gp_err(b2) < 0 else (
         10 ** a2 if abs(gp_err(a2)) < abs(gp_err(b2)) else 10 ** b2)
-    sim = simulate(name, f_xy, vm, g_ph=g_ph, biomass=biomass, season=season)
+    sim = simulate(name, f_xy, vm, g_ph=g_ph, **kw)
     return {"f_xy": f_xy, "vmax_in": vm, "carrier_x": vm / _CARR["Vmax_in"],
             "g_ph": g_ph, "sim": sim}
 

@@ -114,6 +114,16 @@ if os.path.exists(_refit_path):
             cg["f_xy_oryza"] = round(float(rr["f_xy_oryza"]), 6)
             cg["L_Ph_oryza"] = round(float(rr["L_Ph_oryza"]), 6)
             cg["kappa_d_oryza"] = round(float(rr["kappa_d_oryza"]), 6)
+# ... and the same fit made BEFORE the dry->fresh organ-mass fix (src/organ_mass.py),
+# kept so f_xy_source='oryza' with mass_basis='dry' still reproduces the pre-fix runs.
+_refit_dry_path = os.path.join(P, "refit_oryza_dry.csv")
+if os.path.exists(_refit_dry_path):
+    _refit_dry = {r["compound"]: r for r in rd("refit_oryza_dry.csv")}
+    for cg in congeners:
+        rr = _refit_dry.get(cg["name"])
+        if rr:
+            for k in ("f_xy_oryza_dry", "L_Ph_oryza_dry", "kappa_d_oryza_dry"):
+                cg[k] = round(float(rr[k]), 6)
 
 doc = {
     "_meta": {
@@ -126,7 +136,7 @@ doc = {
             "K_cw": "GAP A / Prompt2 v2 (Guo2025 Fig.3f DFT + Mel2024 lignin anchor; rice whole-cw per organ)",
             "f_xy_recommended": "GAP B / S4 + docs/theory_anchor.tex (Trapp+Briggs LFER: MONOTONE logistic)",
             "f_xy_W2fit": "S6 W2 transport fit to Yamazaki (SATURATED 3param/3obs; long-chain values NON-physical, see docs/DELIVERABLE_GAP_B_fxy.md)",
-            "f_xy_oryza": "per-congener (f_xy,L_Ph,kappa_d) re-fit to Yamazaki on the MECHANISTIC ORYZA2000 biomass (the default driver); validation/refit_oryza.py, params/refit_oryza.csv (reproduction log10 RMSE 0.236; PFDoDA long-chain outlier at param ceilings). Use model_api f_xy_source='oryza'.",
+            "f_xy_oryza": "per-congener (f_xy,L_Ph,kappa_d) re-fit to Yamazaki on the MECHANISTIC ORYZA2000 biomass (the default driver), organ mass on the FRESH basis (src/organ_mass.py); validation/refit_oryza.py, params/refit_oryza.csv (reproduction log10 RMSE 0.283; PFBA/PFOS/PFDoDA at f_xy=1, PFDoDA long-chain outlier). The pre-fix DRY-basis fit (RMSE 0.236) is kept as *_oryza_dry / params/refit_oryza_dry.csv. Use model_api f_xy_source='oryza'.",
             "composition": "rice_tissue package (recommended anchors)",
         },
         "WARNING_f_xy": "Use f_xy_recommended (monotone). f_xy_W2fit rises spuriously for C10+ (single-straw-compartment entanglement, H7 §7.2); theory + cross-field TF both require monotone decline.",

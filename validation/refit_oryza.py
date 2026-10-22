@@ -18,7 +18,13 @@
 # fields f_xy_oryza / L_Ph_oryza / kappa_d_oryza (the legacy *_W2fit are PRESERVED
 # for provenance / reproduce_demo) and a params/refit_oryza.csv artifact.
 #
-#   python validation/refit_oryza.py
+# ORGAN-MASS BASIS: the fit runs on FRESH organ mass (src/organ_mass.py; log10 RMSE
+# 0.283, PFBA/PFOS/PFDoDA at f_xy=1). Before that fix the biomass driver's DRY matter
+# was used as M; that fit (RMSE 0.236) is kept as *_oryza_dry / refit_oryza_dry.csv
+# and is regenerated with PFAS_MASS_BASIS=dry.
+#
+#   python validation/refit_oryza.py                     # fresh (default)
+#   PFAS_MASS_BASIS=dry python validation/refit_oryza.py # pre-fix legacy
 # =============================================================================
 import json, csv, os, sys
 import numpy as np
@@ -28,9 +34,13 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)            # reuse the fast ORYZA-driven machinery
 sys.path.insert(0, os.path.join(ROOT, "src"))
 from structural_adequacy_fit import (  # noqa: E402
-    _predict, _fit_scalar, obs, CONG, FXY, LPH, KD, _le)
+    _predict, _fit_scalar, obs, CONG, FXY, LPH, KD, _le, MASS_BASIS)
 
 PARJSON = os.path.join(ROOT, "params", "parameters.json")
+# organ-mass basis of the fit (src/organ_mass.py): FRESH by default -> *_oryza /
+# refit_oryza.csv; PFAS_MASS_BASIS=dry reproduces the pre-fix fit -> *_oryza_dry /
+# refit_oryza_dry.csv (so the two never overwrite each other)
+SFX = "_dry" if MASS_BASIS == "dry" else ""
 TISS = ("root", "straw", "grain")
 N_PASS = 3                          # coupling passes (root/straw/grain are near-separable)
 
@@ -70,8 +80,10 @@ def main():
           f"   (saturated per congener -> reproduces; cf. placeholder W2 0.029)")
 
     # ---- write artifacts -------------------------------------------------
-    with open(os.path.join(ROOT, "params", "refit_oryza.csv"), "w", newline="") as f:
-        w = csv.writer(f); w.writerow(["compound", "n_C", "f_xy_oryza", "L_Ph_oryza", "kappa_d_oryza"])
+    keys = [f"f_xy_oryza{SFX}", f"L_Ph_oryza{SFX}", f"kappa_d_oryza{SFX}"]
+    out_csv = f"refit_oryza{SFX}.csv"
+    with open(os.path.join(ROOT, "params", out_csv), "w", newline="") as f:
+        w = csv.writer(f); w.writerow(["compound", "n_C"] + keys)
         for c in CONG:
             v = fitted[c["name"]]; w.writerow([c["name"], c["n_C"],
                                                f"{v['f_xy']:.6g}", f"{v['L_Ph']:.6g}", f"{v['kappa_d']:.6g}"])
@@ -80,19 +92,19 @@ def main():
     for c in par["congeners"]:
         if c["name"] in fitted:
             v = fitted[c["name"]]
-            c["f_xy_oryza"] = round(v["f_xy"], 6)
-            c["L_Ph_oryza"] = round(v["L_Ph"], 6)
-            c["kappa_d_oryza"] = round(v["kappa_d"], 6)
-    par.setdefault("_meta", {})["refit_oryza"] = (
+            for k, src in zip(keys, ("f_xy", "L_Ph", "kappa_d")):
+                c[k] = round(v[src], 6)
+    par.setdefault("_meta", {})[f"refit_oryza{SFX}"] = (
         "Per-congener (f_xy, L_Ph, kappa_d) re-fit to Yamazaki on the MECHANISTIC "
-        "ORYZA2000 biomass (oryza_growth) + measured Q_TP, the new default driver "
-        f"(validation/refit_oryza.py; reproduction log10 RMSE {rmse:.3f}). Saturated "
-        "per congener (3 params / 3 obs) -> reproduces by construction; the *_W2fit "
-        "values (placeholder/growth_rice driver) are preserved for reproduce_demo. "
-        "Use model_api f_xy_source='oryza' to apply these with biomass='oryza'.")
+        "ORYZA2000 biomass (oryza_growth) + measured Q_TP, the default driver, organ mass "
+        f"on the {MASS_BASIS.upper()} basis (src/organ_mass.py; validation/refit_oryza.py; "
+        f"reproduction log10 RMSE {rmse:.3f}). Saturated per congener (3 params / 3 obs) -> "
+        "reproduces by construction where the bounds allow; the *_W2fit values "
+        "(placeholder/growth_rice driver) are preserved for reproduce_demo. Use model_api "
+        f"f_xy_source='oryza' (with mass_basis='{MASS_BASIS}') to apply these.")
     json.dump(par, open(PARJSON, "w"), indent=2, ensure_ascii=False)
-    print(f"\nwrote f_xy_oryza/L_Ph_oryza/kappa_d_oryza for {len(fitted)} congeners -> "
-          f"params/parameters.json (+ params/refit_oryza.csv)")
+    print(f"\nwrote {'/'.join(keys)} for {len(fitted)} congeners -> "
+          f"params/parameters.json (+ params/{out_csv})")
     return fitted, rmse
 
 

@@ -295,7 +295,7 @@ Three things the tab makes explicit (the rigor points from this work):
 - **Dry-weight basis.** Tang's TF is dry/dry; the model conc is fresh-weight, and the
   `(1−θ)` factor differs by tissue, so `TF_dw = TF_fw·(1−θ_root)/(1−θ_tissue)` is applied
   (comparing fresh model TF to dry Tang TF flatters the grain ~8×).
-- **`f_xy` is condition-dependent.** PFOS `f_xy` ≈ 0.14 (Yamazaki, clean water) vs ~0.32
+- **`f_xy` is condition-dependent.** PFOS `f_xy` ≈ 0.14 (Yamazaki, paddy field) vs ~0.32
   (Tang, flooded soil); GenX's provisional 0.233 is ~12× too high (refit ≈ 0.013). The refit
   is **override-only** (`parameters.json` unchanged). Dose toggle (across-dose mean vs 0.1 µg/g)
   and an optional ORYZA-biomass driver are exposed.

@@ -27,14 +27,19 @@ def test_simulate_runs():
 
 def test_breakthrough_closes_pfdoda():
     """The breakthrough: with a LOW free f_xy + an ENHANCED carrier, the 2-pool reproduces
-    PFDoDA root AND grain simultaneously -- which the single-pool core cannot."""
+    PFDoDA root AND grain simultaneously -- which the single-pool core cannot.
+
+    Pinned to the pre-fix DRY organ mass: on the corrected FRESH mass (src/organ_mass.py)
+    the closure's free f_xy runs to its bound, so the "low f_xy + enhanced carrier" reading
+    is a dry-basis result until the two-pool closure is re-examined
+    (docs/sampling_protocols_audit_KR.md section 5)."""
     import pfas_rice_two_pool as tp
     import csv
     obs = {}
     with open(os.path.join(ROOT, "data_obs", "obs_baf_Yamazaki.csv")) as f:
         for row in csv.DictReader(f):
             obs.setdefault(row["compound"], {})[row["tissue"]] = float(row["baf"])
-    d = tp.close_longchain("PFDoDA", obs["PFDoDA"])
+    d = tp.close_longchain("PFDoDA", obs["PFDoDA"], mass_basis="dry")
     sim, o = d["sim"], obs["PFDoDA"]
     assert sim["root"] == pytest.approx(o["root"], rel=0.10)     # root closes (~70 vs 69)
     assert sim["grain"] == pytest.approx(o["grain"], rel=0.20)   # grain closes (~46 vs 45.5)

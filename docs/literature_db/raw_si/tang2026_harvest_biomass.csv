@@ -1,16 +1,24 @@
 # Tang 2026 (JHM 502:141017) Fig. 1a (biomass) + 1b (ear of rice) — HARVEST biomass.
 # IMPORTANT: Tang reports biomass ONLY at harvest (after 150 d), as whole-plant and ear,
-#   FRESH weight, per plant (pot experiment, Nipponbare, 20 seedlings/2.5 kg soil). There is
-#   NO per-organ (root/stem/leaf) biomass and NO time series in the paper or SI -- the
+#   FRESH weight (pot experiment, Nipponbare, 20 seedlings/2.5 kg soil). There is NO
+#   per-organ (root/stem/leaf) biomass PRINTED and NO time series in the paper or SI -- the
 #   time-resolved, per-organ data Tang provides is PFAS CONCENTRATION/TF/BCF, not biomass.
-# So this anchors only the FINAL total mass + harvest index (HI), NOT the M(t) trajectory.
+#   Organ masses WERE measured (Fig 3 burdens = mass x conc; the abstract's endosperm share of
+#   the plant burden needs them) but not published -- ask the authors.
+# So this anchors only the FINAL total mass, NOT the M(t) trajectory.
 # Values for the CONTROL (0 ug/g, no PFAS) bars, read from Fig 1a/1b => APPROXIMATE (+/- ~1 g).
-# Units: g fresh weight per plant. HI_fw = ear/total ~ 0.20 (=> ~0.5 on a dry-weight basis,
-#   grain ~14% vs vegetative ~80% water) -- consistent with modern rice.
+# Units: g fresh weight. Fig 1 itself does not say per plant or per pot; per plant follows from
+#   Fig 3 (labelled per plant), whose mass/conc ratio is ~0.23 x the Fig 1a biomass at every
+#   readable point (=> dry/fresh ~0.23).
+# CORRECTED by the sampling-protocol audit (docs/sampling_protocols_audit_KR.md): HI_fw = ear/total
+#   ~0.20 does NOT imply HI_dw ~0.5 -- back-calculating from the abstract's endosperm burden shares
+#   (PFOA <=10.4%, PFOS <=12.8%, GenX <=20.8%) and the S8 TFs puts endosperm at ~10-16% of plant DRY
+#   mass. Tang's "endosperm" is most likely MILLED (polished) rice (SI Text S3 uses the milled-rice
+#   moisture standard), and "chaff" may include bran; dehulling/polishing is not described.
 quantity,value_gfw_per_plant,basis,source,note
 whole_plant_biomass_control,33.5,fresh_weight,Tang2026_Fig1a,"digitized from control bar; ~consistent across PFOA/PFOS/GenX panels"
 ear_panicle_control,6.8,fresh_weight,Tang2026_Fig1b,"digitized from control bar"
-harvest_index_fw,0.20,ear/total,Tang2026_Fig1,"=6.8/33.5; ~0.5 on dry-weight basis"
+harvest_index_fw,0.20,ear/total,Tang2026_Fig1,"=6.8/33.5; fresh-weight ratio only (endosperm ~10-16% of plant DW, see header)"
 # Toxicity context (EXACT, from main text; dose-response, not needed by the uptake model):
 #   whole-plant biomass reduction at 100 ug/g: PFOA -43.75%, PFOS -34.56%, GenX -24.59%.
 #   ear weight reduction (0.1->100 ug/g): PFOA -33.22..-73.25%, PFOS -29.34..-68.51%, GenX -20.54..-65.93%.
