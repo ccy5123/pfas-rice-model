@@ -75,7 +75,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (424 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (425 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1575,12 +1575,28 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   run yet: `raw_si/yang2006_wuxi_face_dm.csv` (Wuxi FACE 2001–2003, Wuxiangjing 14: above-ground DM + leaf/stem/spike
   fractions at 5 stages — the stem/panicle partitioning Kim lacks), `gao2021_cold_japonica_oryza_params.csv` (an ORYZA2000
   crop set calibrated for a cold-region japonica, incl. DRLV/SLA/partitioning tables) + `gao2021_qingan_phenology.csv` +
-  `gao2021_fig3_digitised.csv` (green stem/leaf/panicle + LAI time series, digitised by colour masks; organ sums within
-  −5.3…−0.3% of the plotted total), `sasaki2005_shizukuishi_1999.csv` and `hasegawa2017_face_conditions.csv` (OA Table S1).
+  `gao2021_fig3_digitised.csv` (green stem/leaf/panicle + LAI time series, digitised by colour masks, then VERIFIED by
+  overlay on the original figure — see the next bullet), `sasaki2005_shizukuishi_1999.csv` and
+  `hasegawa2017_face_conditions.csv` (OA Table S1).
   **Two facts that bear on option C**: the Shizukuishi nursery was 20/27/29 d (sowing dates, Hasegawa S1) and covered
   (plastic chambers, Sasaki), not the assumed open 30 d; and Kim 2003's 1999 "PI"/"anthesis" samplings (DAT 62/88) were taken
   ~8/~10 d AFTER the events (PI ~54, heading 78 DAT; Sasaki) — so option C's targets for 1999 were late, and the LOYO anthesis
-  "miss" of −10.3 d for 1999 lands on the real heading day. `tests/test_face_transcriptions.py` (5).
+  "miss" of −10.3 d for 1999 lands on the real heading day. `tests/test_face_transcriptions.py` (6).
+- **Gao 2021 Fig. 3 digitisation checked against the original figure (this session; user request "digitize하면 원본
+  그림과 겹쳐서 확인")** — `docs/literature_db/tools/gao2021_fig3_check.py <the PDF>` re-fits the axes on every tick
+  (≤13 kg/ha, ≤0.006 LAI off), checks marker centres against the error bars (an SD bar is symmetric, so its cap midpoint is
+  the plotted value whatever the marker shape: 28 unambiguous pairs, +1.2 ± 0.8 px, max 2.7 ⇒ ±2 px = ±58 kg/ha / ±0.02 LAI
+  for clear markers), and draws every value's full nominal marker outline on the original. **The first pass was biased
+  wherever a marker was partly hidden** (by another marker, an error-bar cap, or the axis frame, which clips markers): it
+  took the centre of the TRUNCATED visible box. Those markers are re-placed on a visible edge + the nominal half-size
+  (15 values, e.g. 2019-06-16 DWST 332→199, DWGL 202→35; 2018-06-07 D-AGB 390→244; 2019-05-28 LAI 0→0.06), the two
+  "hidden" markers are measured (2018-06-18 DWST 289, 2019-06-26 DWGL 390) and 8 partly visible markers that the colour
+  masks missed are added; every row now carries `value_lo`/`value_hi`. Values below ~200 kg/ha (centre within 7 px of the
+  axis) are flagged `near_axis` — NOT resolvable (2018-05-30 DWST 133 > D-AGB 71) and not for use in ratios. The organ
+  sums now close at the early dates too, and the remaining mismatches (2018-07-26 +14.6%, 2018-08-18/09-17 −4.8/−3.5%) are
+  15–29 px, i.e. in the figure, not the reading. Data not yet used by any model run. The earlier digitisations (Kim 2003
+  Fig. 2, Bouman & van Laar 2006 Fig. 2b, Li 2025 Fig. 2a, Tang 2026 Fig. 1) have NOT been overlay-checked — their source
+  images are not in this session.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1752,7 +1768,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**424 collected; 423 pass, 2 skip** (424 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**425 collected; 424 pass, 2 skip** (425 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`

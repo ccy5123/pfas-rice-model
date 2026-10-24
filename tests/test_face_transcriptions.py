@@ -4,7 +4,10 @@ Sasaki et al. 2005 (the 1999 Shizukuishi FACE crop) and Hasegawa et al. 2017 Tab
 
 Pinned: each table's own internal consistency -- the checks that caught transcription errors
 elsewhere in this repo -- and the one cross-source fact the Sasaki paper adds: Kim 2003's 1999
-"PI" and "anthesis" samplings were taken ~8 and ~10 days after the events themselves.
+"PI" and "anthesis" samplings were taken ~8 and ~10 days after the events themselves. The Gao
+Fig. 3 digitisation was verified by overlaying it on the original figure
+(docs/literature_db/tools/gao2021_fig3_check.py): its reading ranges, flags and the markers that
+the overlay re-placed are pinned here.
 """
 import csv
 import os
@@ -70,9 +73,36 @@ def test_gao2021_fig3_organs_sum_to_green_biomass():
             else:
                 assert -0.06 < rel < 0.0
             checked += 1
-    assert checked == 12
+    assert checked == 13
     assert len({r["date"] for r in rows if r["year"] == "2018" and r["series"] == "LAI"}) == 9
     assert len({r["date"] for r in rows if r["year"] == "2019" and r["series"] == "LAI"}) == 10
+
+
+def test_gao2021_fig3_overlay_verified_readings():
+    rows = _rows("gao2021_fig3_digitised.csv")
+    px = {"kg/ha": 16000 / 554.5, "m2/m2": 6 / 555.0}                 # value per pixel
+    assert {r["flag"] for r in rows} == {"clear", "partial", "near_axis", "on_axis_zero"}   # nothing 'hidden'
+    for r in rows:
+        v, lo, hi, u = float(r["value"]), float(r["value_lo"]), float(r["value_hi"]), r["unit"]
+        assert lo <= v <= hi
+        if r["flag"] == "clear":                                  # +-2 px (error-bar cap check, max 2.7 px)
+            assert hi - v == pytest.approx(2 * px[u], abs=0.6 if u == "kg/ha" else 0.006)
+        if r["flag"] == "on_axis_zero":
+            assert v == 0 and hi == pytest.approx(3 * px[u], abs=0.6 if u == "kg/ha" else 0.006)
+        else:                                                     # near_axis <=> centre within 7 px of the axis
+            assert (r["flag"] == "near_axis") == (v < 7 * px[u])
+    val = {(r["date"], r["series"]): float(r["value"]) for r in rows}
+    # re-placed on a visible edge (the first pass took the centre of the truncated visible box)
+    assert val[("2019-06-16", "DWST")] == 199 and val[("2019-06-16", "D-AGB")] == 244
+    assert val[("2018-06-07", "DWGL")] == 92 and val[("2018-09-17", "DWGL")] == 808
+    assert val[("2019-05-28", "LAI")] == 0.06
+    assert val[("2018-06-18", "DWST")] == 289 and val[("2019-06-26", "DWGL")] == 390   # formerly 'hidden'
+    # 200-1000 kg/ha dates: the summed organ ranges overlap the D-AGB range
+    rng = {(r["date"], r["series"]): (float(r["value_lo"]), float(r["value_hi"])) for r in rows}
+    for d in ("2018-06-07", "2018-06-18", "2019-06-16"):
+        parts = [rng.get((d, s), (0.0, 0.0)) for s in ("DWST", "DWGL", "DWSO")]
+        lo, hi = sum(p[0] for p in parts), sum(p[1] for p in parts)
+        assert lo <= rng[(d, "D-AGB")][1] and hi >= rng[(d, "D-AGB")][0], d
 
 
 def test_sasaki2005_dates_and_the_kim_sampling_lag():
