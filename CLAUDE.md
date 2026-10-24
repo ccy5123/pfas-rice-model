@@ -75,7 +75,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (428 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (431 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1570,7 +1570,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   and on no flips; WRONG that C1 fails on (b) and that LOYO phenology would be adequate. ⇒ once both develop like the
   cultivar, the port's organ shapes fit an independent experiment better overall; it still over-states dead leaves. The
   rates are an Akitakomachi-at-Shizukuishi result, not a temperate-japonica set. `parameters.json`, `simulate()` defaults
-  and `reproduce_demo` (0.029) UNCHANGED.
+  and `reproduce_demo` (0.029) UNCHANGED. **Redone with the recorded nursery and the 1999 event dates — see the "Option C
+  redone" bullet below: the PASS is robust to the nursery but SENSITIVE to the 1999 event dates.**
 - **Second wave of rice-growth sources transcribed (this session; user-supplied PDFs, NOT committed)** — data only, no model
   run yet: `raw_si/yang2006_wuxi_face_dm.csv` (Wuxi FACE 2001–2003, Wuxiangjing 14: above-ground DM + leaf/stem/spike
   fractions at 5 stages — the stem/panicle partitioning Kim lacks), `gao2021_cold_japonica_oryza_params.csv` (an ORYZA2000
@@ -1623,6 +1624,33 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   - **Not checked**: Bouman & van Laar 2006 Fig. 2b needs no PDF — it is the IR72DS92 experiment whose exact table is already in
     `raw_si/oryza_ir72ds92_obs.csv`; against it the digitised rows are −12…+11% off (stated ±5%) and no script uses them. Kim 2001
     Fig. 1 (3 root values) is NOT checkable here: the session's `kim2001.pdf` turned out to be a JavaScript stub page, not the paper.
+- **Option C redone with the recorded nursery and the 1999 event dates (POST-HOC addendum, PRE-REGISTERED in `b1774b4`) —
+  the PASS survives the nursery but NOT the 1999 event dates**: `validation/oryza2000_kim_face_nursery_events.py` +
+  `tests/test_oryza2000_kim_face_nursery_events.py` (3). Two option C inputs are contradicted by sources transcribed after it
+  ran: the **nursery** (Kim 2003 Crop history, read at source: transplanted **14/23/24 d after EMERGENCE** from trays in plastic
+  chambers ⇒ ORYZA SBDUR 14/23/24 + **TMPSB 9 °C**, the manual's Japan value — not an assumed 30-d open seedbed; Hasegawa's
+  20/27/29 d count from SOWING) and, for **1999 only**, the **events** (Sasaki 2005: PI ~54, heading 78 DAT, vs the sampling
+  targets 62/88). Everything else is option C (DRATES rates, LOYO, station weather, Q2x, C1). The file first re-runs option C
+  through its own code (reproduced exactly); the shipped arm is untouched by the nursery (identical). **N (primary, nursery
+  only): D1 PASSES**, pooled 0.220 vs 0.244 (option C 0.222); no flip under TMPSB 0 (0.237), nursery-from-sowing (0.206) or
+  POWER+1.7 °C (0.220). The recorded nursery does NOT explain the year-to-year development differences: the port's J/I factor
+  spreads further (×1.397/1.044/1.075 vs ×1.352/1.092/1.156) and the LOYO PI errors worsen (+14.6/−8.0/−6.4 d). D4: Q2x drop
+  0.061 (< 0.10) ⇒ still the leaf-death table. **NE (1999 events; every sample placed at the DVS the driver's own-year run has
+  on the sampling day — the 1999 PI/anthesis/mid-ripening samples sit at DVS ~0.76/1.26/1.66, not 0.65/1.0/1.53): FAILS on
+  (b)** — port Q2x 0.281 vs shipped 0.181 (worse by 0.100 > 0.05); pooled 0.234 vs 0.214, shipped ahead. The placement control
+  NG (same placement, option C targets) PASSES (0.218 vs 0.253) ⇒ the flip is the event dates, not the placement. Mechanism: the
+  port OVER-predicts the dead-leaf share in every year (+0.10…+0.37 log), the shipped driver UNDER-predicts it at mid-ripening;
+  reading 1999 at its true (later) phase narrows the shipped gap and widens the port's; moving anthesis earlier with maturity
+  fixed at the sampling day also lengthens 1999's ripening (port DVRR ×1.209 → ×0.877). NE phenology: 1999 LOYO hits the true
+  events (PI +0.0, heading −1.7 d); 1998 +10.6/+8.9/+13.5, 2000 −10.5/−6.6/−4.9 ⇒ C3 still NOT adequate. Expectation: right on
+  N (factor spread widens, PI errors no better, pooled < 0.02, D1 PASS), D4, the NE phenology directions, NG ≈ N and no flips;
+  **WRONG that NE passes**, and wrong in its reason for C3 ("E1 does not touch DVRR" — it moved 1999's). ⇒ **option C's PASS is
+  robust to the nursery but SENSITIVE to the 1999 event dates: correcting the one year that can be corrected removes the margin
+  on (b), and what decides it is the port's dead-leaf excess (IR72's DRLVT).** NE mixes event targets (1999) with sampling
+  targets (1998/2000, no event dates exist) and keeps 1999's maturity at the sampling day, so it is not the better-informed
+  verdict overall — but a default-switch pre-registration can no longer rest on option C's PASS alone. A cultivar leaf-death
+  table (needs stem + panicle weights on the same dates) is what would settle (b). `parameters.json`, `simulate()` defaults and
+  `reproduce_demo` (0.029) UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1762,6 +1790,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   + post-hoc addendum; stage-matched ratios under the pre-registered weather treatments, then the JMA-station run).
 - **Option C (phenology calibrated to the cultivar)**: `python validation/oryza2000_kim_face_phenology.py` (~20 s;
   pre-registered header; DRATES-style rates per year · LOYO phenology error · stage-matched ratios · C1–C3 verdicts).
+- **Option C with the recorded nursery + the 1999 event dates**: `python validation/oryza2000_kim_face_nursery_events.py`
+  (~40 s; pre-registered header; N primary · NG placement control · NE 1999 events · sensitivities · D1–D5).
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
   Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered; engine-free),
   `"hydrus"` the real-engine shape, `"constant"` the flat default (conc==BAF). Both shapes are
@@ -1794,7 +1824,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**428 collected; 427 pass, 2 skip** (428 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**431 collected; 430 pass, 2 skip** (431 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
