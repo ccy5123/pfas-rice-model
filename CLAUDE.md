@@ -74,7 +74,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (398 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (401 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -415,6 +415,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   straw/root TF 0.33 vs lipid 0.57, but lipid wins grain/root 0.72 vs 1.15/1.47), and Kim long chains are low-DF (3–13%).
   hyp-001 SUPPORTED (digest 68ebaf39); guard `test_oos_multidataset_run_reproduces`. Core unchanged; lipid stays opt-in.
   **Li re-scored stage by stage later (handoff step 3)** — no longer inconclusive; see the "Li 2025 stage by stage" bullet.
+  **NOTE the "reliable DF≥15%" Kim score is ONE congener (PFNA)** — the script's label said PFHpA+PFNA, but PFHpA's
+  rice DF is 13%; see the "Kim 2019 with its non-detects" bullet.
 - **Leaf senescence-loss flux (this session) — fixes the ORYZA leaf-TF artifact**: with the mechanistic
   ORYZA biomass the leaf shrinks (senescence), so the growth-dilution sink `μ=(dM/dt)/M` goes NEGATIVE and the
   `−μ·C` term spuriously CONCENTRATES the leaf — but `oryza_growth` models that loss as leaf DEATH (carbon removed
@@ -1350,7 +1352,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     W2 `kappa_d`/`L_Ph`, so this is not a 6-DOF fit. `LIPID_LOADING` = fresh fit; `LIPID_LOADING_DRY` = the stored record;
     `lipid_loading_params(mass_basis)`. **OOS re-checked** (`oos_multidataset.py`): Tang per-organ lipid **0.520** (dry 0.516)
     vs free anion 1.483 — the generalisation SURVIVES; Kim grain excl-PFOA lipid **0.50** (dry 0.48) vs mono 2.77 / W2 1.67;
-    but Kim's reliable DF≥15% subset worsens (0.20 → 0.74) and Li straw/root flips to lipid (0.18 vs W2 0.81). The old line
+    but Kim's reliable DF≥15% subset worsens (0.20 → 0.74; that subset is PFNA ALONE) and Li straw/root flips to lipid (0.18 vs W2 0.81). The old line
     "lipid OOS ≈ in-sample Tang refit (0.516 vs 0.519)" NO LONGER HOLDS: the fresh in-sample refit reaches 0.327.
   - **`TANG_REFIT_FXY`** (`tang2026_fxy_refit.py`, 0.1 µg/g): fresh **PFOA 0.570 / PFOS 0.999 / GenX 0.089** (dry record
     0.097/0.320/0.017 kept as `TANG_REFIT_FXY_DRY`; `tang_refit_fxy(mass_basis)`). **PFOS sits at the f_xy = 1 ceiling** — the
@@ -1441,6 +1443,22 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   prediction), assumed stage days, IR72 phenology for Jinyu Japonica No.22; `nstem_leaf` grain stays under (PFBS 0.30 vs 2.15,
   PFOA 0.33 vs 0.93). `oos_crossdataset.li_tf` is kept as the record (docstring points here); `runs/pfas-rice-oos-multidataset`
   stays a frozen record. `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029) UNCHANGED.
+- **Kim 2019 with its non-detects (handoff step 4a; PRE-REGISTERED in `bbb3a8a`) — the lipid advantage is robust, the
+  choice between lipid variants is not**: `validation/kim2019_censored.py` + `tests/test_kim2019_censored.py` (3) +
+  `docs/literature_db/raw_si/kim2019_si_detection.csv` (SI Tables S5 MDL + S6 min/avg/max/DF; averages identical to
+  `kim2019_field_conc.csv`) + `literature_params.KIM2019_DETECTION` / `kim2019_grain_baf_bounds()`. Kim averaged
+  non-detects as ZERO, and for the long chains BOTH sides are mostly non-detects (PFDoDA rice 1/30, void water 3/27), so
+  each published grain BAF is one corner of a range: with every non-detect in [0, MDL] the ratio of means lies in
+  PFHpA [0.39, 2.11] · PFOA [4.43, 4.92] · PFNA [2.21, 7.07] · PFDA [1.55, 11.3] · **PFUnDA [19.8, 168] · PFDoDA [5.5, 630]**
+  L/kg (the shipped ND=0 values are the LOWER corner for PFHpA/PFNA/PFOA). (Q1) The **C11 rise survives** (PFUnDA lo
+  19.8 > PFDA hi 11.3); **the C12 level does not** (PFDoDA lo 5.5 < PFDA hi). (Q2) point / interval log10 RMSE (PFOA out):
+  monotone 2.77/2.51, W2 1.67/1.52, **4-pool lipid 0.50/0.38, `nstem_leaf` + lipid 0.60/0.14** (3/5 inside the intervals
+  each). Verdict: **no single winner** — both lipid variants beat the free-anion ones by >1 log on either score, but
+  which lipid variant leads depends on the non-detect treatment (point margin exactly 0.10). The expectation held. The
+  4-pool lipid's PFUnDA (7.8) sits below the robust lower bound; `nstem_leaf` + lipid (36.6) sits inside it. The
+  `oos_crossdataset` label "[reliable: PFHpA, PFNA]" is fixed (PFNA alone). **Step 4b (the PFOA anchor) is still
+  open**: the per-field PFOA of main-text Table 1 is not in the SI and the article is closed-access — it needs the
+  Kim 2019 PDF from the user. `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029) UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1566,7 +1584,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **θ_fw sensitivity**: `python validation/theta_fw_sensitivity.py` (~5 min; pre-registered rule in the header; ends with
   the POST-HOC xylem-split note).
 - **Li 2025 stage by stage**: `python validation/li2025_stage_resolved.py` (~25 s; pre-registered header; Q1 estimators ·
-  Q2 noise · Q3/Q4 per variant · DVS sensitivity · POST-HOC estimators/decomposition/noise floor). Tang endosperm as milled rice: `model_api.tang_tf_validation(c, endosperm="white")`.
+  Q2 noise · Q3/Q4 per variant · DVS sensitivity · POST-HOC estimators/decomposition/noise floor).
+- **Kim 2019 with its non-detects**: `python validation/kim2019_censored.py` (~20 s; pre-registered header; the
+  [0, MDL] bounds per congener · whether the long-chain rise survives · point vs interval score per variant). Tang endosperm as milled rice: `model_api.tang_tf_validation(c, endosperm="white")`.
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
   Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered; engine-free),
   `"hydrus"` the real-engine shape, `"constant"` the flat default (conc==BAF). Both shapes are
@@ -1599,7 +1619,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**398 collected; 397 pass, 2 skip** (398 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**401 collected; 400 pass, 2 skip** (401 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`

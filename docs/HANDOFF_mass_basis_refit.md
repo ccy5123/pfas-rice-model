@@ -127,7 +127,18 @@
 - 주의: 물은 **관개수**(공극수 아님), 물질별 농도는 Fig 2a에서 디지털화한 값. 방법 절은 "leaves (including stems)".
 - 영향받는 곳: `validation/oos_crossdataset.py`, `validation/S6_Gap4.py`, two-pool Li OOS.
 
-## 4. Kim 2019 PFOA BAF와 장쇄 처리
+## 4. Kim 2019 PFOA BAF와 장쇄 처리 — 4a ✅ 완료 (사전등록 `bbb3a8a`), 4b ⏸ 본문 필요
+- **4a 장쇄(미검출) 처리** — SI(Table S5 MDL·S6 분포)를 출판사 CDN에서 받아 `raw_si/kim2019_si_detection.csv`로 전사
+  (평균은 기존 `kim2019_field_conc.csv`와 동일). 미검출을 0~MDL 어디에 두느냐로 BAF 범위:
+  PFHpA 0.39–2.11 · PFOA 4.43–4.92 · PFNA 2.21–7.07 · PFDA 1.55–11.3 · **PFUnDA 19.8–168 · PFDoDA 5.5–630**(114배).
+  `literature_params.kim2019_grain_baf_bounds()`. `validation/kim2019_censored.py`:
+  - Q1 C11 상승은 미검출 처리와 무관하게 성립, C12 수준은 판단 불가.
+  - Q2 기존(미검출=0)/구간 RMSE: 단조 2.77/2.51 · W2 1.67/1.52 · **4-pool lipid 0.50/0.38 · nstem_leaf+lipid 0.60/0.14**.
+    판정: **단일 승자 없음** — lipid 계열이 lipid 없는 모델보다 두 점수 모두 1 log 이상 좋지만, 두 lipid 모델의 순위는
+    미검출 처리에 달렸다(기존 점수 차 정확히 0.10). 예상대로.
+  - `oos_crossdataset`의 "신뢰(DF≥15%)" 점수는 **PFNA 한 물질**뿐(라벨이 PFHpA+PFNA로 잘못돼 있었음 → 수정).
+- **4b PFOA 기준점** — 필지별 PFOA(본문 Table 1)는 SI에 없고 논문은 비공개. **Kim 2019 PDF(papers.zip)가 있어야 진행**.
+- (원래 계획)
 - 현재 `kim2019_grain_baf` = 평균의 비(PFOA 4.43). 필지 A-2(하수처리장)가 공극수 평균의 83% → 필지 짝 기하평균 27(n=14, 1–597).
 - 결정: L_Ph 적합 앵커로 무엇을 쓸지(평균의 비 / 필지 짝 중앙값 / A-2 제외). 장쇄(PFUnDA·PFDoDA)는 검출 1–4건 →
   censored likelihood 또는 OOS 점수에서 제외 표시.
@@ -161,6 +172,6 @@ Ge 2017(SI S6 기준) · Liu 2023(72 h 용액 농도, S4 단위).
 docs/HANDOFF_mass_basis_refit.md를 읽자. 1단계, 1b-①·②, 2단계(민감도 + 물관 분배 결정), 6단계는 끝났다.
 물관 분배는 건물중 정의 + S_grain 0.5116/kg 건물로 결정됐다(수치 불변, 재적합 불필요).
 3단계(Li 2025 단계별)도 끝났다: nstem_leaf + lipid가 구분된다(0.43/0.52).
-먼저 PR #69와 #70의 상태(CI, 머지 여부)를 확인하고 4단계(Kim 2019 PFOA 기준점·장쇄 검열 처리)로 간다.
-Kim 원문이 필요하면 사용자에게 papers.zip을 다시 요청.
+4a(Kim 장쇄 미검출 처리)도 끝났다: lipid 계열 우위는 견고, 두 lipid 모델 사이는 미정.
+먼저 PR #69와 #70의 상태를 확인하고, 사용자가 Kim 2019 PDF를 주면 4b(PFOA 기준점)를, 아니면 5단계(ORYZA IR72.D92 정렬)로 간다.
 ```
