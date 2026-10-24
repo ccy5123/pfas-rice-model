@@ -242,12 +242,13 @@ def _doy(d):
     return d.timetuple().tm_yday
 
 
-def run_port(year, dT=0.0, sbdur=30, source="power", crop=None):
+def run_port(year, dT=0.0, sbdur=30, source="power", crop=None, tmpsb=0.0):
     """`crop` overrides the IR72.D92 crop dict (oryza2000_kim_face_phenology.py passes
-    calibrated development rates); None = IR72.D92 as loaded."""
+    calibrated development rates); None = IR72.D92 as loaded. `tmpsb` = seedbed-cover
+    increase of Tmax [oC] (ORYZA TMPSB; 0 = open seedbed, the default here)."""
     w = load_weather(year, dT, source)
     tp = _doy(TRANSPLANT[year])
-    m = O2K.Management(lat=LAT, emd=tp - sbdur, sbdur=sbdur, nplh=NPLH, nh=NH, co2=CO2)
+    m = O2K.Management(lat=LAT, emd=tp - sbdur, sbdur=sbdur, nplh=NPLH, nh=NH, co2=CO2, tmpsb=tmpsb)
     r = O2K.simulate(w, crop if crop is not None else O2K.load_crop(), m,
                      max_days=len(w["rad_mj"]) - (m.emd - w["doy0"]))
     assert r["events"].get("transplanting") == tp
