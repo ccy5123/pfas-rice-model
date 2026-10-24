@@ -3,8 +3,8 @@
 #   rice. IRRI, Los Banos. Section 7.3 "The crop data file" (pp. 163-175). http://books.irri.org/9712201716_content.pdf
 # Cross-checked value by value against the APSIM copy "derived from IR72.D92"
 #   (https://raw.githubusercontent.com/APSIMInitiative/APSIMClassic/master/Model/Oryza.xml): column apsim_agrees.
-# Potential-production parameters only (sections 1-7); the drought-stress (8-9) and N (10) blocks are not used in
-# potential mode and are omitted. Tables are written x:y pairs separated by ';' (x = DVS unless the unit says oC).
+# Potential-production parameters only (sections 1-7, plus NFLVI from section 10, which NNOSTRESS reads in potential
+# mode); the drought-stress (8-9) and the rest of the N (10) block are not used in potential mode and are omitted. Tables are written x:y pairs separated by ';' (x = DVS unless the unit says oC).
 # The APSIM copy writes EFFTB with an extra 0 oC point (0:0.54) -- identical on the 10-40 oC range ORYZA interpolates.
 parameter,value,unit,section,description,apsim_agrees
 TBD,8.0,oC,1 phenology,base temperature for development,Y
@@ -63,3 +63,4 @@ FCST,0.431,kg C kg-1 DM,7 carbon balance,carbon fraction stems,Y
 FCSO,0.487,kg C kg-1 DM,7 carbon balance,carbon fraction panicles,Y
 FCRT,0.431,kg C kg-1 DM,7 carbon balance,carbon fraction roots,Y
 FCSTR,0.444,kg C kg-1 DM,7 carbon balance,carbon fraction stem reserves,Y
+NFLVI,0.5,g N m-2 leaf,10 nitrogen,initial leaf N on area basis (read by NNOSTRESS in potential mode; used until the first rate step),Y
