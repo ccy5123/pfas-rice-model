@@ -75,7 +75,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (419 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (424 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1571,6 +1571,16 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   cultivar, the port's organ shapes fit an independent experiment better overall; it still over-states dead leaves. The
   rates are an Akitakomachi-at-Shizukuishi result, not a temperate-japonica set. `parameters.json`, `simulate()` defaults
   and `reproduce_demo` (0.029) UNCHANGED.
+- **Second wave of rice-growth sources transcribed (this session; user-supplied PDFs, NOT committed)** — data only, no model
+  run yet: `raw_si/yang2006_wuxi_face_dm.csv` (Wuxi FACE 2001–2003, Wuxiangjing 14: above-ground DM + leaf/stem/spike
+  fractions at 5 stages — the stem/panicle partitioning Kim lacks), `gao2021_cold_japonica_oryza_params.csv` (an ORYZA2000
+  crop set calibrated for a cold-region japonica, incl. DRLV/SLA/partitioning tables) + `gao2021_qingan_phenology.csv` +
+  `gao2021_fig3_digitised.csv` (green stem/leaf/panicle + LAI time series, digitised by colour masks; organ sums within
+  −5.3…−0.3% of the plotted total), `sasaki2005_shizukuishi_1999.csv` and `hasegawa2017_face_conditions.csv` (OA Table S1).
+  **Two facts that bear on option C**: the Shizukuishi nursery was 20/27/29 d (sowing dates, Hasegawa S1) and covered
+  (plastic chambers, Sasaki), not the assumed open 30 d; and Kim 2003's 1999 "PI"/"anthesis" samplings (DAT 62/88) were taken
+  ~8/~10 d AFTER the events (PI ~54, heading 78 DAT; Sasaki) — so option C's targets for 1999 were late, and the LOYO anthesis
+  "miss" of −10.3 d for 1999 lands on the real heading day. `tests/test_face_transcriptions.py` (5).
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1742,7 +1752,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**419 collected; 418 pass, 2 skip** (419 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**424 collected; 423 pass, 2 skip** (424 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`

@@ -1,0 +1,129 @@
+# Hasegawa T, Li T, Yin X, Zhu Y, Boote K, Baker J, Bregaglio S, Buis S, Confalonieri R, Fugice J, Fumoto T, Gaydon D, et al.
+# (2017) Causes of variation among rice models in yield response to CO2 examined with Free-Air CO2 Enrichment and growth
+# chamber experiments. Sci. Rep. 7:14858. doi:10.1038/s41598-017-13582-y -- OPEN ACCESS (CC BY 4.0); transcribed from
+# Supplementary Table S1 (41598_2017_13582_MOESM1_ESM.pdf, Europe PMC PMC5666007). Experimental conditions of the two FACE
+# experiments the AgMIP rice models were run on: Shizukuishi, Japan (= Kim et al. 2001/2003) and Wuxi, China (= Yang et al.
+# 2006). The organ data behind the paper are "available from the corresponding authors on reasonable request".
+# Phase means use the paper's phases: transplanting-tillering, tillering-PI, PI-heading, heading-mid-ripening, mid-ripening-maturity.
+site,year,item,value,unit
+Shizukuishi,,lat_lon,39 38 N / 140 57 E,
+Wuxi,,lat_lon,31 37 N / 120 28 E,
+Shizukuishi,,soil,Andosol; sand 43.1% silt 31.4% clay 25.5%; bulk density 0.73 g cm-3; total C 82.5 g kg-1,
+Wuxi,,soil,Stagnic anthrosol; sand 9.2% silt 65.7% clay 25.1%; bulk density 1.2 g cm-3; total C 15.0 g kg-1,
+Shizukuishi,,cultivar,Akitakomachi,
+Wuxi,,cultivar,Wuxiangjing 14,
+Shizukuishi,,mean_growth_duration,146,d
+Wuxi,,mean_growth_duration,158,d
+Shizukuishi,,spikelets_per_panicle,81,
+Wuxi,,spikelets_per_panicle,155,
+Shizukuishi,,planting_density,19,hills m-2
+Wuxi,,planting_density,24,hills m-2
+Shizukuishi,1998,sowing,05-01,mm-dd
+Shizukuishi,1999,sowing,04-23,mm-dd
+Shizukuishi,2000,sowing,04-23,mm-dd
+Shizukuishi,1998,transplanting,05-21,mm-dd
+Shizukuishi,1999,transplanting,05-20,mm-dd
+Shizukuishi,2000,transplanting,05-22,mm-dd
+Wuxi,2001-2003,sowing,05-18,mm-dd
+Wuxi,2001-2003,transplanting,06-13,mm-dd
+Shizukuishi,1998,co2_daylight_ambient,368,umol/mol
+Shizukuishi,1998,co2_daylight_FACE,599,umol/mol
+Shizukuishi,1999,co2_daylight_ambient,369,umol/mol
+Shizukuishi,1999,co2_daylight_FACE,568,umol/mol
+Shizukuishi,2000,co2_daylight_ambient,365,umol/mol
+Shizukuishi,2000,co2_daylight_FACE,559,umol/mol
+Wuxi,2001,co2_daylight_ambient,354,umol/mol
+Wuxi,2001,co2_daylight_FACE,578,umol/mol
+Wuxi,2002,co2_daylight_ambient,364,umol/mol
+Wuxi,2002,co2_daylight_FACE,562,umol/mol
+Wuxi,2003,co2_daylight_ambient,375,umol/mol
+Wuxi,2003,co2_daylight_FACE,574,umol/mol
+Shizukuishi,1998,N_low,4,g N m-2
+Shizukuishi,1998,N_standard,8,g N m-2
+Shizukuishi,1998,N_high,12,g N m-2
+Shizukuishi,1999,N_low,4,g N m-2
+Shizukuishi,1999,N_standard,9,g N m-2
+Shizukuishi,1999,N_high,15,g N m-2
+Shizukuishi,2000,N_low,4,g N m-2
+Shizukuishi,2000,N_standard,9,g N m-2
+Shizukuishi,2000,N_high,15,g N m-2
+Wuxi,2001,N_low,15,g N m-2
+Wuxi,2001,N_standard,25,g N m-2
+Wuxi,2002,N_low,15,g N m-2
+Wuxi,2002,N_standard,25,g N m-2
+Wuxi,2002,N_high,35,g N m-2
+Wuxi,2003,N_low,15,g N m-2
+Wuxi,2003,N_standard,25,g N m-2
+Wuxi,2003,N_high,35,g N m-2
+Shizukuishi,1998,Tmean_transplanting_to_tillering,15.4,C
+Shizukuishi,1998,Tmean_tillering_to_PI,19.9,C
+Shizukuishi,1998,Tmean_PI_to_heading,21.4,C
+Shizukuishi,1998,Tmean_heading_to_midripening,21.3,C
+Shizukuishi,1998,Tmean_midripening_to_maturity,20.3,C
+Shizukuishi,1998,Tmean_season,19.7,C
+Shizukuishi,1999,Tmean_transplanting_to_tillering,17.2,C
+Shizukuishi,1999,Tmean_tillering_to_PI,20.6,C
+Shizukuishi,1999,Tmean_PI_to_heading,25.9,C
+Shizukuishi,1999,Tmean_heading_to_midripening,22.5,C
+Shizukuishi,1999,Tmean_midripening_to_maturity,19.8,C
+Shizukuishi,1999,Tmean_season,21.0,C
+Shizukuishi,2000,Tmean_transplanting_to_tillering,17.7,C
+Shizukuishi,2000,Tmean_tillering_to_PI,21.3,C
+Shizukuishi,2000,Tmean_PI_to_heading,24.7,C
+Shizukuishi,2000,Tmean_heading_to_midripening,23.6,C
+Shizukuishi,2000,Tmean_midripening_to_maturity,20.9,C
+Shizukuishi,2000,Tmean_season,21.4,C
+Wuxi,2001,Tmean_transplanting_to_tillering,26.7,C
+Wuxi,2001,Tmean_tillering_to_PI,29.1,C
+Wuxi,2001,Tmean_PI_to_heading,26.6,C
+Wuxi,2001,Tmean_heading_to_midripening,24.1,C
+Wuxi,2001,Tmean_midripening_to_maturity,20.9,C
+Wuxi,2001,Tmean_season,25.2,C
+Wuxi,2002,Tmean_transplanting_to_tillering,24.9,C
+Wuxi,2002,Tmean_tillering_to_PI,28.6,C
+Wuxi,2002,Tmean_PI_to_heading,26.6,C
+Wuxi,2002,Tmean_heading_to_midripening,25.7,C
+Wuxi,2002,Tmean_midripening_to_maturity,20.3,C
+Wuxi,2002,Tmean_season,24.7,C
+Wuxi,2003,Tmean_transplanting_to_tillering,25.8,C
+Wuxi,2003,Tmean_tillering_to_PI,29.4,C
+Wuxi,2003,Tmean_PI_to_heading,28.5,C
+Wuxi,2003,Tmean_heading_to_midripening,26.0,C
+Wuxi,2003,Tmean_midripening_to_maturity,18.8,C
+Wuxi,2003,Tmean_season,25.4,C
+Shizukuishi,1998,radiation_transplanting_to_tillering,14.8,MJ m-2 d-1
+Shizukuishi,1998,radiation_tillering_to_PI,13.9,MJ m-2 d-1
+Shizukuishi,1998,radiation_PI_to_heading,14.7,MJ m-2 d-1
+Shizukuishi,1998,radiation_heading_to_midripening,12.3,MJ m-2 d-1
+Shizukuishi,1998,radiation_midripening_to_maturity,9.7,MJ m-2 d-1
+Shizukuishi,1998,radiation_season,13.2,MJ m-2 d-1
+Shizukuishi,1999,radiation_transplanting_to_tillering,20.3,MJ m-2 d-1
+Shizukuishi,1999,radiation_tillering_to_PI,15.1,MJ m-2 d-1
+Shizukuishi,1999,radiation_PI_to_heading,19.4,MJ m-2 d-1
+Shizukuishi,1999,radiation_heading_to_midripening,10.5,MJ m-2 d-1
+Shizukuishi,1999,radiation_midripening_to_maturity,11.4,MJ m-2 d-1
+Shizukuishi,1999,radiation_season,16.2,MJ m-2 d-1
+Shizukuishi,2000,radiation_transplanting_to_tillering,20.3,MJ m-2 d-1
+Shizukuishi,2000,radiation_tillering_to_PI,16.8,MJ m-2 d-1
+Shizukuishi,2000,radiation_PI_to_heading,17.3,MJ m-2 d-1
+Shizukuishi,2000,radiation_heading_to_midripening,18.2,MJ m-2 d-1
+Shizukuishi,2000,radiation_midripening_to_maturity,9.4,MJ m-2 d-1
+Shizukuishi,2000,radiation_season,16.8,MJ m-2 d-1
+Wuxi,2001,radiation_transplanting_to_tillering,16.7,MJ m-2 d-1
+Wuxi,2001,radiation_tillering_to_PI,22.1,MJ m-2 d-1
+Wuxi,2001,radiation_PI_to_heading,17.1,MJ m-2 d-1
+Wuxi,2001,radiation_heading_to_midripening,17.2,MJ m-2 d-1
+Wuxi,2001,radiation_midripening_to_maturity,15.7,MJ m-2 d-1
+Wuxi,2001,radiation_season,17.6,MJ m-2 d-1
+Wuxi,2002,radiation_transplanting_to_tillering,14.9,MJ m-2 d-1
+Wuxi,2002,radiation_tillering_to_PI,19.4,MJ m-2 d-1
+Wuxi,2002,radiation_PI_to_heading,14.1,MJ m-2 d-1
+Wuxi,2002,radiation_heading_to_midripening,14.7,MJ m-2 d-1
+Wuxi,2002,radiation_midripening_to_maturity,13.0,MJ m-2 d-1
+Wuxi,2002,radiation_season,14.9,MJ m-2 d-1
+Wuxi,2003,radiation_transplanting_to_tillering,12.4,MJ m-2 d-1
+Wuxi,2003,radiation_tillering_to_PI,17.1,MJ m-2 d-1
+Wuxi,2003,radiation_PI_to_heading,15.0,MJ m-2 d-1
+Wuxi,2003,radiation_heading_to_midripening,12.5,MJ m-2 d-1
+Wuxi,2003,radiation_midripening_to_maturity,10.9,MJ m-2 d-1
+Wuxi,2003,radiation_season,13.3,MJ m-2 d-1
