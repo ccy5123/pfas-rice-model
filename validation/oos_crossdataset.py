@@ -77,7 +77,7 @@ def kim_grain():
         return float(np.sqrt(np.mean(e))) if e else float("nan")
     print("log10 RMSE (excl PFOA)      : " + "  ".join(f"{m}={rmse(m):.2f}" for m in MODES))
     print("log10 RMSE (DF>=15%, no PFOA): " + "  ".join(f"{m}={rmse(m, True):.2f}" for m in MODES)
-          + "   [reliable: PFHpA, PFNA]")
+          + "   [PFNA alone: PFHpA's rice DF is 13%; see validation/kim2019_censored.py]")
     return {m: (rmse(m), rmse(m, True)) for m in MODES}
 
 

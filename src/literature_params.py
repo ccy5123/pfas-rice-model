@@ -528,6 +528,39 @@ def kim2019_grain_baf(basis: str = "porewater") -> dict[str, float]:
     return out
 
 
+# Kim 2019 SI Tables S5 (MDL) + S6 (detection frequency), for the non-detects the averages
+# above count as ZERO: (brown-rice MDL [ng/g], void-water MDL [ng/L], void-water DF [%]).
+# n = 30 rice / 27 void water (docs/literature_db/raw_si/kim2019_si_detection.csv).
+KIM2019_DETECTION: dict[str, tuple[float, float, float]] = {
+    "PFHpA":  (0.049, 0.267, 89.0),
+    "PFOA":   (0.088, 0.683, 96.0),
+    "PFNA":   (0.079, 0.220, 100.0),
+    "PFDA":   (0.037, 0.158, 85.0),
+    "PFUnDA": (0.038, 0.200, 19.0),
+    "PFDoDA": (0.030, 0.297, 11.0),
+}
+KIM2019_N_RICE, KIM2019_N_WATER = 30, 27
+
+
+def kim2019_grain_baf_bounds() -> dict[str, tuple[float, float, float]]:
+    """(lower, published, upper) brown-rice BAF [L/kg, pore-water basis], Kim et al. 2019.
+
+    The published averages count every non-detect as zero; a non-detect actually lies in
+    [0, MDL]. Putting all of them at 0 or all at the MDL bounds each average, so the
+    ratio of means lies in [rice_avg / water_hi, rice_hi / water_avg]. For the
+    low-detection congeners the range is wide (PFDoDA rice 1/30, water 3/27: 5.5-630).
+    """
+    out = {}
+    for sp, (pw, _soil, rice, df_rice) in KIM2019_FIELD.items():
+        mdl_r, mdl_w, df_w = KIM2019_DETECTION[sp]
+        nd_r = round(KIM2019_N_RICE * (1.0 - df_rice / 100.0))
+        nd_w = round(KIM2019_N_WATER * (1.0 - df_w / 100.0))
+        rice_hi = rice + nd_r * mdl_r / KIM2019_N_RICE
+        water_hi = pw + nd_w * mdl_w / KIM2019_N_WATER
+        out[sp] = (rice / (water_hi / 1000.0), rice / (pw / 1000.0), rice_hi / (pw / 1000.0))
+    return out
+
+
 # ===========================================================================
 # C5 -- root membrane potential for the GHK exclusion term
 # ===========================================================================
