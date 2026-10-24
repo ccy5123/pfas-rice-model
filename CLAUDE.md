@@ -75,7 +75,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (411 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (416 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1523,6 +1523,33 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (decision for the user)**: switching needs the ORYZA-based fits redone (`refit_oryza`, `TANG_REFIT_FXY`, the OOS reports
   that run on the default) and a season tied to crop maturity. `parameters.json`, `simulate()` defaults and
   `reproduce_demo` (0.029) UNCHANGED.
+- **Independent check of the ORYZA2000 port — Shizukuishi FACE (PRE-REGISTERED in `9f90d55`; post-hoc addendum `4fca549`)
+  — the IR72DS92 advantage does NOT transfer cleanly; DEFAULT UNCHANGED**: `validation/oryza2000_kim_face.py` +
+  `tests/test_oryza2000_kim_face.py` (5) + `docs/literature_db/raw_si/nasa_power_shizukuishi_1998_2000.csv` /
+  `jma_amedas_shizukuishi_1998_2000.csv`. IR72DS92 is the manual's own calibration example, so before any default switch
+  the port and the shipped driver were run on an experiment neither was built on: Kim 2003 Table 2 (green/senescent leaf
+  blades, exact), Kim 2003 Fig. 2 (totals, digitised) and Kim 2001 Table 1 (roots, a floor) — Akitakomachi, ambient CO2,
+  medium N, 1998–2000. **Both drivers carry IR72 phenology**, so every observation is placed by STAGE on each driver's
+  own DVS (the five samplings are tillering/PI/anthesis/mid-ripening/maturity — Kim 2003 abstract via OpenAlex) and only
+  RATIOS are scored: Q1 green-leaf course, Q2 senescent share, Q3 leaf share of the plant, Q4 dry-matter timing, Q5 root
+  share. **Pre-registered verdict: D1 FAILS on the primary weather** (uncorrected NASA POWER cell): the cell sits at 461 m
+  vs a ~200 m paddy, so IR72 never reaches maturity by Nov 30 under EITHER driver, and the port's green-leaf course is
+  worse (Q1 0.457 vs 0.205); **D2: it flips to PASS only under S1** (+1.7 °C lapse). The pre-registration wrongly said
+  no station data exist — the JMA AMeDAS station Shizukuishi (195 m, ~8 km away) does, and runs **+1.1/+1.45/+1.2 °C**
+  warmer than the cell (May–Oct), i.e. close to S1. **POST-HOC on station temperatures (S4)**: the port reaches maturity
+  in all three years (anthesis DAT 91–102 vs observed 78–88, maturity 140–168 vs 120–131 — IR72 is not Akitakomachi), the
+  shipped driver **never matures at 39.6 N in any treatment** (its grain-fill thermal time is ~1.7× IR72.D92's). The rule
+  as written PASSES on S4 only because the shipped driver has no leaf death before DVS 1, so its senescent share at
+  anthesis is exactly 0 and its Q2 is infinite; scored without that point (Q2x, post-hoc) **D1 fails on (b) in every
+  treatment** — the port over-states the dead-leaf share (Q2x 0.328 vs 0.172; port 0.80–0.90 at maturity vs observed
+  0.36–0.47, which is a floor since detached blades are lost). By group on S4 (port | shipped): Q1 0.259 | 0.241, Q3
+  0.225 | 0.151 (shipped better), **Q4 0.104 | 0.166 (port better)**, Q5 0.403 | 0.358 (both ~2.4× over a root floor —
+  not discriminating). Expectation: right that the port times early dry matter better and the shipped driver may not
+  mature (it never did); WRONG that D1 passes, that both over-predict Q2, and that Q3 would tie. ⇒ on organ SHAPES the
+  port is not better than the shipped driver on independent data; its clear advantages are fidelity to ORYZA2000 and
+  finishing the season at a temperate site. Neither driver is a temperate japonica: a cultivar phenology calibration
+  would be the next thing needed for either. `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029)
+  UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1658,6 +1685,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   header; three weather treatments · phenology + per-organ log10 RMSE · R1/R2 verdict · POST-HOC PFAS BAF change). The port
   itself: `oryza2000.simulate(weather)` (daily ORYZA states from emergence) / `oryza2000.organ_biomass(t)` (kg/hill on days
   after transplanting); in the PFAS model `simulate(biomass="oryza2000")` (opt-in; pass `season=` ≈ the crop's maturity).
+- **Independent check on the Shizukuishi FACE data**: `python validation/oryza2000_kim_face.py` (~5 s; pre-registered header
+  + post-hoc addendum; stage-matched ratios under the pre-registered weather treatments, then the JMA-station run).
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
   Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered; engine-free),
   `"hydrus"` the real-engine shape, `"constant"` the flat default (conc==BAF). Both shapes are
@@ -1690,7 +1719,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**411 collected; 410 pass, 2 skip** (411 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**416 collected; 415 pass, 2 skip** (416 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`

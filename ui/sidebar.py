@@ -497,7 +497,11 @@ def build():
                                      "production model ported line by line from the ORYZA2000 manual with the "
                                      "IR72 crop file verbatim: it reproduces the manual's IR72DS92 experiment "
                                      "(phenology within 2 d, biomass within ~6%) where the reduced one matures "
-                                     "12 d late; it matures earlier, so a 120-d season runs past maturity. "
+                                     "12 d late (that is its own calibration experiment). On an independent "
+                                     "temperate one (Shizukuishi FACE, Akitakomachi) neither driver fits the organ "
+                                     "shapes clearly better, the reduced one never matures at 39.6 N, and the port "
+                                     "over-states dead leaves. It matures earlier, so a 120-d season runs past "
+                                     "maturity. "
                                      "growth_rice = ORYZA IR72 partitioning imposed on a logistic (lightweight; "
                                      "the historical calibration basis). Drives M(t) when the scenario uses "
                                      "built-in forcings (ignored if a driver CSV supplies M).")

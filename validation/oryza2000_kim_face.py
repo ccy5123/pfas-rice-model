@@ -159,6 +159,7 @@ LAT, NH, NPLH, CO2 = 39.63, 19.05, 3.0, 368.0
 GROUPS = ("Q1", "Q2", "Q3", "Q4", "Q5")
 TREATMENTS = {"primary": dict(dT=0.0, sbdur=30), "S1_lapse+1.7C": dict(dT=1.7, sbdur=30),
               "S2_sbdur20": dict(dT=0.0, sbdur=20), "S3_sbdur40": dict(dT=0.0, sbdur=40)}
+POSTHOC = {"S4_station": dict(dT=0.0, sbdur=30, source="station")}      # addendum; not pre-registered
 
 
 def _rows(name):
@@ -204,20 +205,45 @@ def ripening_fraction(obs_y):
     return (mr - a) / (ma - a)
 
 
-def load_weather(year, dT=0.0):
+def station_offset(year):
+    """Mean station - POWER (Tmin, Tmax) over May-Oct of `year`, usable JMA days only."""
+    pw = {r["date"]: r for r in _rows("nasa_power_shizukuishi_1998_2000.csv")}
+    dn, dx = [], []
+    for r in _rows("jma_amedas_shizukuishi_1998_2000.csv"):
+        if r["date"].startswith(str(year)) and "-05-" <= r["date"][4:8] <= "-10-" and "]" not in r["jma_flag"]:
+            dn.append(float(r["tmin"]) - float(pw[r["date"]]["tmin"]))
+            dx.append(float(r["tmax"]) - float(pw[r["date"]]["tmax"]))
+    return float(np.mean(dn)), float(np.mean(dx))
+
+
+def load_weather(year, dT=0.0, source="power"):
+    """NASA POWER for the cell (`source="power"`, + dT on both temperatures), or the JMA
+    station temperatures with POWER radiation (`source="station"`; ']' days -> POWER + offset)."""
     rows = [r for r in _rows("nasa_power_shizukuishi_1998_2000.csv") if r["date"].startswith(str(year))]
     rows.sort(key=lambda r: int(r["doy"]))
+    tmin = np.array([float(r["tmin"]) for r in rows]) + dT
+    tmax = np.array([float(r["tmax"]) for r in rows]) + dT
+    if source == "station":
+        st = {r["date"]: r for r in _rows("jma_amedas_shizukuishi_1998_2000.csv")}
+        on, ox = station_offset(year)
+        for i, r in enumerate(rows):
+            s = st[r["date"]]
+            if "]" in s["jma_flag"]:
+                tmin[i], tmax[i] = float(r["tmin"]) + on, float(r["tmax"]) + ox
+            else:
+                tmin[i], tmax[i] = float(s["tmin"]), float(s["tmax"])
+    elif source != "power":
+        raise ValueError(source)
     return dict(doy0=int(rows[0]["doy"]), rad_mj=np.array([float(r["rad_mj"]) for r in rows]),
-                tmin=np.array([float(r["tmin"]) for r in rows]) + dT,
-                tmax=np.array([float(r["tmax"]) for r in rows]) + dT)
+                tmin=tmin, tmax=tmax)
 
 
 def _doy(d):
     return d.timetuple().tm_yday
 
 
-def run_port(year, dT=0.0, sbdur=30):
-    w = load_weather(year, dT)
+def run_port(year, dT=0.0, sbdur=30, source="power"):
+    w = load_weather(year, dT, source)
     tp = _doy(TRANSPLANT[year])
     m = O2K.Management(lat=LAT, emd=tp - sbdur, sbdur=sbdur, nplh=NPLH, nh=NH, co2=CO2)
     r = O2K.simulate(w, O2K.load_crop(), m, max_days=len(w["rad_mj"]) - (m.emd - w["doy0"]))
@@ -227,8 +253,8 @@ def run_port(year, dT=0.0, sbdur=30):
             "LAI": r["lai"], "NSP": r["nsp"], "NGR": r["ngr"], "WSO": r["wso"]}
 
 
-def run_shipped(year, dT=0.0, anchored=True):
-    w = load_weather(year, dT)
+def run_shipped(year, dT=0.0, anchored=True, source="power"):
+    w = load_weather(year, dT, source)
     tp = _doy(TRANSPLANT[year])
     n = int(w["doy0"] + len(w["rad_mj"]) - tp)                     # transplanting .. Nov 30
     p = OG.OryzaParams(lat_deg=LAT, sow_doy=tp, season=float(n - 1))
@@ -294,17 +320,25 @@ def evaluate(runs, obs, root_obs):
         qo = quantities({s: obs[y][s] for s in SCORED}, root_obs if y == 1999 else None)
         for g in GROUPS:
             for s, o in qo[g].items():
-                err[g].append(np.log10(qm[g][s]) - np.log10(o))
+                with np.errstate(divide="ignore"):
+                    err[g].append(np.log10(qm[g][s]) - np.log10(o))
         detail[y] = dict(idx=idx, reached=reached, qm=qm, qo=qo, mv=mv)
-    rmse = {g: float(np.sqrt(np.mean(np.square(e)))) for g, e in err.items()}
+    with np.errstate(over="ignore", invalid="ignore"):
+        rmse = {g: float(np.sqrt(np.mean(np.square(e)))) for g, e in err.items()}
+        bias = {g: float(np.mean(e)) for g, e in err.items()}
     rmse["POOLED"] = float(np.mean([rmse[g] for g in GROUPS]))
-    bias = {g: float(np.mean(e)) for g, e in err.items()}
+    # POST-HOC (addendum): Q2 without the anthesis point, where the shipped driver predicts 0
+    e2 = [np.log10(detail[y]["qm"]["Q2"][s]) - np.log10(detail[y]["qo"]["Q2"][s])
+          for y in YEARS for s in ("mid_ripening", "maturity")]
+    rmse["Q2x"] = float(np.sqrt(np.mean(np.square(e2))))
+    rmse["POOLEDx"] = float(np.mean([rmse[g] for g in ("Q1", "Q2x", "Q3", "Q4", "Q5")]))
     return rmse, bias, detail
 
 
-def d1(ra, rb, detail_a):
-    a = ra["POOLED"] <= rb["POOLED"] + 0.05
-    b = (ra["Q1"] <= rb["Q1"] + 0.05) and (ra["Q2"] <= rb["Q2"] + 0.05)
+def d1(ra, rb, detail_a, q2="Q2", pooled="POOLED"):
+    """The pre-registered rule; q2="Q2x", pooled="POOLEDx" is the post-hoc finite variant."""
+    a = ra[pooled] <= rb[pooled] + 0.05
+    b = (ra["Q1"] <= rb["Q1"] + 0.05) and (ra[q2] <= rb[q2] + 0.05)
     c = all(detail_a[y]["reached"]["maturity"] for y in YEARS)
     return dict(a=a, b=b, c=c, passed=a and b and c)
 
@@ -313,13 +347,14 @@ def adequacy(x):
     return "good" if x <= 0.10 else ("fair" if x <= 0.20 else "poor")
 
 
-def run_treatment(obs, root_obs, dT, sbdur):
-    ra_runs = {y: run_port(y, dT, sbdur) for y in YEARS}
-    rb_runs = {y: run_shipped(y, dT) for y in YEARS}
+def run_treatment(obs, root_obs, dT, sbdur, source="power"):
+    ra_runs = {y: run_port(y, dT, sbdur, source) for y in YEARS}
+    rb_runs = {y: run_shipped(y, dT, source=source) for y in YEARS}
     ra, ba, da = evaluate(ra_runs, obs, root_obs)
     rb, bb, db = evaluate(rb_runs, obs, root_obs)
     return dict(A=dict(rmse=ra, bias=ba, detail=da, runs=ra_runs),
-                B=dict(rmse=rb, bias=bb, detail=db, runs=rb_runs), d1=d1(ra, rb, da))
+                B=dict(rmse=rb, bias=bb, detail=db, runs=rb_runs), d1=d1(ra, rb, da),
+                d1x=d1(ra, rb, da, q2="Q2x", pooled="POOLEDx"))
 
 
 def _fmt_stage_row(name, d, run):
@@ -331,37 +366,25 @@ def _fmt_stage_row(name, d, run):
     return f"    {name:<8}" + "  ".join(out)
 
 
-def main(verbose=True):
-    obs, root_obs = load_obs()
-    res = {name: run_treatment(obs, root_obs, **kw) for name, kw in TREATMENTS.items()}
-    if not verbose:
-        return dict(res=res, obs=obs, root_obs=root_obs)
-    P = res["primary"]
-    print("=" * 78)
-    print("ORYZA2000 port (A) vs shipped oryza_growth (B) -- Shizukuishi FACE, Akitakomachi,")
-    print("ambient CO2, medium N, 1998-2000; observations placed by STAGE on each driver's DVS")
-    print("=" * 78)
-    print("\n1. Phenology on each driver's own clock (days after transplanting; * = not reached")
+def report(P, obs, title):
+    """Phenology, scored ratios, group RMSEs and the unscored diagnostics for one treatment."""
+    print(f"\n--- {title} ---")
+    print("1. Phenology on each driver's own clock (days after transplanting; * = not reached")
     print("   by Nov 30). REPORTED, NOT SCORED -- both drivers carry IR72 phenology.")
-    print("    year      PI  anthesis  maturity | observed sampling DAT (PI / anthesis / maturity)")
+    print("               PI  anthesis  maturity")
     for y in YEARS:
         o = obs[y]
-        print(f"  {y}  observed {o['panicle_initiation']['dat']:5d} {o['anthesis']['dat']:5d} "
-              f"{o['maturity']['dat']:5d}")
+        print(f"  {y}  obs  {o['panicle_initiation']['dat']:5d} {o['anthesis']['dat']:6d} "
+              f"{o['maturity']['dat']:7d}   (sampling DAT)")
         for arm in ("A", "B"):
             print(_fmt_stage_row(arm, P[arm]["detail"][y], P[arm]["runs"][y]))
-    print("\n   anthesis -> maturity duration [d]:")
-    for y in YEARS:
-        o = obs[y]
-        dur_o = o["maturity"]["dat"] - o["anthesis"]["dat"]
-        s = []
-        for arm in ("A", "B"):
-            d = P[arm]["detail"][y]
-            s.append(f"{arm} {d['idx']['maturity'] - d['idx']['anthesis']:.0f}"
-                     f"{'' if d['reached']['maturity'] else '*'}")
-        print(f"    {y}: observed {dur_o}   " + "   ".join(s))
+    print("   anthesis -> maturity [d]: " + "; ".join(
+        f"{y} obs {obs[y]['maturity']['dat'] - obs[y]['anthesis']['dat']}, "
+        + ", ".join(f"{arm} {P[arm]['detail'][y]['idx']['maturity'] - P[arm]['detail'][y]['idx']['anthesis']:.0f}"
+                    f"{'' if P[arm]['detail'][y]['reached']['maturity'] else '*'}" for arm in ("A", "B"))
+        for y in YEARS))
 
-    print("\n2. Scored ratios, primary weather (observed | A | B), per year")
+    print("2. Scored ratios (observed | A | B)")
     labels = {"Q1": "GL(s)/GL(anthesis)", "Q2": "SL/(GL+SL)", "Q3": "GL/TOT",
               "Q4": "TOT(s)/TOT(maturity)", "Q5": "root/total (1999)"}
     for g in GROUPS:
@@ -369,52 +392,82 @@ def main(verbose=True):
         for y in YEARS:
             qo, qa, qb = (P["A"]["detail"][y]["qo"][g], P["A"]["detail"][y]["qm"][g],
                           P["B"]["detail"][y]["qm"][g])
-            for s in qo:
-                print(f"    {y} {s:<19} {qo[s]:7.3f} | {qa[s]:7.3f} | {qb[s]:7.3f}")
+            for st in qo:
+                print(f"    {y} {st:<19} {qo[st]:7.3f} | {qa[st]:7.3f} | {qb[st]:7.3f}")
 
-    print("\n3. log10 RMSE per group (bias = mean log10 model/observed), primary weather")
-    print("        " + "".join(f"{g:>16}" for g in GROUPS) + f"{'POOLED':>9}")
+    print("3. log10 RMSE per group (bias = mean log10 model/observed); Q2x/POOLEDx = POST-HOC")
+    print("      " + "".join(f"{g:>16}" for g in GROUPS) + f"{'POOLED':>8}{'Q2x':>7}{'POOLEDx':>9}")
     for arm in ("A", "B"):
         r, b = P[arm]["rmse"], P[arm]["bias"]
-        print(f"    {arm}   " + "".join(f"  {r[g]:.3f} ({b[g]:+.3f})" for g in GROUPS)
-              + f"  {r['POOLED']:.3f}")
+        print(f"    {arm} " + "".join(f"  {r[g]:6.3f} ({b[g]:+.3f})" for g in GROUPS)
+              + f"  {r['POOLED']:6.3f} {r['Q2x']:6.3f} {r['POOLEDx']:8.3f}")
     for arm in ("A", "B"):
         print(f"    {arm} adequacy (D3): " + ", ".join(f"{g} {adequacy(P[arm]['rmse'][g])}"
                                                  for g in GROUPS))
 
-    print("\n4. D1 / D2 -- does the independent evidence support the switch?")
-    for name, R in res.items():
-        d = R["d1"]
-        print(f"    {name:<15} pooled A {R['A']['rmse']['POOLED']:.3f} vs B {R['B']['rmse']['POOLED']:.3f}"
-              f" | (a) {d['a']} (b) {d['b']} (c) {d['c']} -> {'PASS' if d['passed'] else 'FAIL'}")
-    v0 = P["d1"]["passed"]
-    flips = [n for n, R in res.items() if R["d1"]["passed"] != v0]
-    print(f"\n  VERDICT (primary): D1 {'PASSES' if v0 else 'FAILS'}"
-          + (f"; sensitive to {', '.join(flips)}" if flips else "; unchanged under S1-S3"))
-
-    print("\n5. Reported, not scored")
-    print("   absolute (g m-2): observed TOT(maturity) | A | B(anchored);  GL(anthesis) obs | A | B")
+    print("5. Reported, not scored")
+    print("   absolute (g m-2) TOT at maturity obs | A | B(anchored);  GL at anthesis obs | A | B")
     for y in YEARS:
         o = obs[y]
         va, vb = P["A"]["detail"][y]["mv"], P["B"]["detail"][y]["mv"]
         print(f"    {y}: {o['maturity']['TOT']:6.0f} | {va['maturity']['TOT'] / 10:6.0f} | "
               f"{vb['maturity']['TOT'] / 10:6.0f}     {o['anthesis']['GL']:5.0f} | "
               f"{va['anthesis']['GL'] / 10:5.0f} | {vb['anthesis']['GL'] / 10:5.0f}")
-    print("   specific green leaf area GLAI/GL at anthesis (m2 g-1): observed | A | B")
+    print("   specific green leaf area GLAI/GL at anthesis (m2 g-1): obs | A | B")
     for y in YEARS:
         o = obs[y]["anthesis"]
-        s = []
+        cells = []
         for arm in ("A", "B"):
             d, run = P[arm]["detail"][y], P[arm]["runs"][y]
             i = d["idx"]["anthesis"]
-            s.append(f"{at(run, 'LAI', i) / (at(run, 'GL', i) / 10):.4f}")
-        print(f"    {y}: {o['GLAI'] / o['GL']:.4f} | " + " | ".join(s))
-    print("   port spikelet fertility (grains / spikelets at the end of the run):")
-    for y in YEARS:
-        run = P["A"]["runs"][y]
-        print(f"    {y}: {run['NGR'][-1] / max(run['NSP'][-1], 1e-9):.2f}  "
-              f"(spikelets {run['NSP'][-1] / 1e4:.0f} m-2)")
-    return dict(res=res, obs=obs, root_obs=root_obs)
+            cells.append(f"{at(run, 'LAI', i) / (at(run, 'GL', i) / 10):.4f}")
+        print(f"    {y}: {o['GLAI'] / o['GL']:.4f} | " + " | ".join(cells))
+    print("   port spikelet fertility (grains / spikelets, end of run): " + "; ".join(
+        f"{y} {P['A']['runs'][y]['NGR'][-1] / max(P['A']['runs'][y]['NSP'][-1], 1e-9):.2f}" for y in YEARS))
+
+
+def main(verbose=True):
+    obs, root_obs = load_obs()
+    res = {name: run_treatment(obs, root_obs, **kw) for name, kw in TREATMENTS.items()}
+    post = {name: run_treatment(obs, root_obs, **kw) for name, kw in POSTHOC.items()}
+    out = dict(res=res, post=post, obs=obs, root_obs=root_obs,
+               offsets={y: station_offset(y) for y in YEARS})
+    v0 = res["primary"]["d1"]["passed"]
+    out["verdict"] = v0
+    out["flips"] = [n for n, R in res.items() if R["d1"]["passed"] != v0]
+    if not verbose:
+        return out
+    print("=" * 78)
+    print("ORYZA2000 port (A) vs shipped oryza_growth (B) -- Shizukuishi FACE, Akitakomachi,")
+    print("ambient CO2, medium N, 1998-2000; observations placed by STAGE on each driver's DVS")
+    print("=" * 78)
+    report(res["primary"], obs, "PRE-REGISTERED primary weather (NASA POWER cell, uncorrected)")
+
+    print("\n4. D1 / D2 -- does the independent evidence support the switch? (pre-registered)")
+    for name, R in res.items():
+        d = R["d1"]
+        print(f"    {name:<15} pooled A {R['A']['rmse']['POOLED']:.3f} vs B {R['B']['rmse']['POOLED']:.3f}"
+              f" | (a) {d['a']} (b) {d['b']} (c) {d['c']} -> {'PASS' if d['passed'] else 'FAIL'}")
+    print(f"\n  VERDICT (pre-registered, primary): D1 {'PASSES' if v0 else 'FAILS'}"
+          + (f"; sensitive to {', '.join(out['flips'])}" if out["flips"] else "; unchanged under S1-S3"))
+
+    print("\n" + "=" * 78)
+    print("POST-HOC (addendum; not pre-registered)")
+    print("=" * 78)
+    print("   station - POWER offset over May-Oct (Tmin, Tmax): " + "; ".join(
+        f"{y} {on:+.2f}, {ox:+.2f} C" for y, (on, ox) in out["offsets"].items()))
+    report(post["S4_station"], obs, "S4: JMA station temperatures + POWER radiation")
+    print("\n   D1 with the finite Q2 variant (Q2x, POOLEDx), every treatment:")
+    for name, R in list(res.items()) + list(post.items()):
+        d = R["d1x"]
+        print(f"    {name:<15} pooledx A {R['A']['rmse']['POOLEDx']:.3f} vs B {R['B']['rmse']['POOLEDx']:.3f}"
+              f"  Q1 {R['A']['rmse']['Q1']:.3f}/{R['B']['rmse']['Q1']:.3f}"
+              f"  Q2x {R['A']['rmse']['Q2x']:.3f}/{R['B']['rmse']['Q2x']:.3f}"
+              f" | (a) {d['a']} (b) {d['b']} (c) {d['c']} -> {'PASS' if d['passed'] else 'FAIL'}")
+    d = post["S4_station"]["d1"]
+    print(f"   S4 under the pre-registered rule: (a) {d['a']} (b) {d['b']} (c) {d['c']} -> "
+          f"{'PASS' if d['passed'] else 'FAIL'}")
+    return out
 
 
 if __name__ == "__main__":
