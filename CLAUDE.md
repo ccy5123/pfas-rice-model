@@ -54,7 +54,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── plots.py                              # Plotly builders: fig_plant_schematic (colormap), drivers, ...
 │   ├── forcing_rice.py                       # measured transpiration Q_TP(t) (FAO-56 dual-Kc; Kumari2022 + NayHtoon2018)
 │   ├── growth_rice.py                        # ORYZA IR72 partitioning on a logistic → organ M_s(t) (DEFAULT biomass driver)
-│   ├── oryza_growth.py                       # MECHANISTIC ORYZA2000 Level-1 carbon balance → weather-responsive M_s(t) (opt-in; drivers=/weather=)
+│   ├── oryza_growth.py                       # REDUCED re-coding of the ORYZA2000 Level-1 carbon balance → M_s(t) (the biomass="oryza" DEFAULT)
+│   ├── oryza2000.py                          # ORYZA2000 potential production ported line by line from the manual, IR72.D92 verbatim (biomass="oryza2000", opt-in)
 │   ├── measured_biomass.py                   # ingest a MEASURED per-organ biomass table → M(t) driver (units→kg/hill; Tang etc.)
 │   └── organ_mass.py                         # crop-model DRY matter → the FRESH organ mass the ODE runs on (mass_basis)
 ├── examples/                         # ready-to-load CSVs for app.py (HYDRUS drivers + biomonitoring)
@@ -74,7 +75,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (373 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (437 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -153,7 +154,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   literature); transport params (`f_xy, L_Ph, kappa_d, Vmax/Km`) remain fitted (Tier-1/2).
 - **Real Tier-1 calibration (task #4)**: Kim 2019 (`docs/literature_db/raw_si/kim2019_*`) gives
   per-congener brown-rice (grain) BAF paired with paddy pore water. `literature_params.kim2019_grain_baf()`
-  exposes it; the demo fits `L_Ph` to the PFOA grain BAF (0.07 → 4.43 L/kg, `L_Ph≈0.84`). The
+  exposes it; the demo fits `L_Ph` to the PFOA grain BAF (now the per-site estimate 9.94 L/kg, 1.27 → 9.94 at `L_Ph`
+  0.067; to the old ratio-of-means 4.43 it took 0.022 — the "0.07 → 4.43, `L_Ph≈0.84`" once recorded here was stale). The
   measured binding keeps `root > straw > grain` (delivery-limited), but the *grain BAF* now matches
   data. **Limitation**: Kim is grain-only, so `f_xy` (root→shoot) is unconstrained — full
   compartment-resolved TF (root/straw) is a DB gap (greenhouse time-series needed).
@@ -414,6 +416,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   per-organ). Honest limits (pre-registered): **Li 2025** is field/group-water/surface-confounded and inconclusive (W2 wins
   straw/root TF 0.33 vs lipid 0.57, but lipid wins grain/root 0.72 vs 1.15/1.47), and Kim long chains are low-DF (3–13%).
   hyp-001 SUPPORTED (digest 68ebaf39); guard `test_oos_multidataset_run_reproduces`. Core unchanged; lipid stays opt-in.
+  **Li re-scored stage by stage later (handoff step 3)** — no longer inconclusive; see the "Li 2025 stage by stage" bullet.
+  **NOTE the "reliable DF≥15%" Kim score is ONE congener (PFNA)** — the script's label said PFHpA+PFNA, but PFHpA's
+  rice DF is 13%; see the "Kim 2019 with its non-detects" bullet.
 - **Leaf senescence-loss flux (this session) — fixes the ORYZA leaf-TF artifact**: with the mechanistic
   ORYZA biomass the leaf shrinks (senescence), so the growth-dilution sink `μ=(dM/dt)/M` goes NEGATIVE and the
   `−μ·C` term spuriously CONCENTRATES the leaf — but `oryza_growth` models that loss as leaf DEATH (carbon removed
@@ -468,7 +473,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   model is transferred WITHOUT re-fitting to independent data, all 4 models on the SAME demo forcings. **Kim 2019 grain
   (clean, PFHpA→PFDoDA): two-pool excl-PFOA log10 RMSE 0.47 = BEST** (mono 1.49, W2 0.57, lipid 1.12) and CAPTURES the
   long-chain grain RISE (2pool PFUnDA 6.1/PFDoDA 8.7 vs monotone 0.19/0.52; obs ~33/35). Honest limits: absolute long-chain
-  grain still under (low-DF Kim tail), Kim PFOA grain 4.43 ≫ Yamazaki 0.46 (between-dataset shift), Li 2025 grain/root TF
+  grain still under (low-DF Kim tail), Kim PFOA grain 4.43 (per site ~9.9, step 4b) ≫ Yamazaki 0.46 (between-dataset shift), Li 2025 grain/root TF
   root-surface-confounded (inconclusive, as documented). ⇒ OOS SUPPORTS the structure/mechanism but does NOT warrant
   promoting the fitted `k_seq` into `parameters.json` (single clean OOS set; demo forcings). `parameters.json` UNCHANGED
   (exploration-only). Fitted params cached → `validation/twopool_fitted_params.json`. (6) **Long-chain shoot floor diagnosed
@@ -1315,9 +1320,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     f_xy rises ~4× (PFOA 0.083 → 0.359) and **PFBA/PFOS/PFDoDA hit f_xy=1**, short-chain grain stays high at the L_Ph
     floor ⇒ part of the single-straw 4-pool's "saturated reproduction" was enabled by the bug. `*_oryza` now = fresh fit;
     the pre-fix fit is kept as `*_oryza_dry` / `params/refit_oryza_dry.csv` (used when `mass_basis="dry"`;
-    `build_parameters.py` merges both). **Still on the dry basis (NOT re-fit)**: `TANG_REFIT_FXY`, `LIPID_LOADING`, the
-    two-pool cached fits, and validation scripts that build `M` themselves (`twopool_*`, `tang2026_fxy_refit.py`, …) —
-    convert with `organ_mass.to_model_mass` before re-running. `tests/test_organ_mass.py` (9).
+    `build_parameters.py` merges both). The remaining dry-basis fits (`TANG_REFIT_FXY`, `LIPID_LOADING`, the two-pool
+    caches, scripts that build `M` themselves) were re-fitted in the NEXT session — see the bullet below.
+    `tests/test_organ_mass.py` (9).
   - **Dataset descriptions corrected (at source)**: **Yamazaki 2023 is an Andosol paddy FIELD** (NARO Tsukuba,
     Kasalath+Koshihikari, ambient irrigation-water/rain/PM exposure) — NOT greenhouse/pot/spiked/"clean per-congener
     water"; it computes NO BAF (the repo's = tissue ÷ ONE irrigation-water grab), brown rice was NOT analysed (repo
@@ -1336,6 +1341,361 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
     (`TANG_REFIT_FXY`, `LIPID_LOADING` — no committed fit script —, the two-pool fits) and re-check the OOS conclusions;
     (2) θ_fw provenance/stage dependence; (3) Li 2025 stage-resolved comparison; (4) Kim PFOA anchor + censored long
     chains; (5) align ORYZA parameters with IR72.D92 + validate; (6) Tang endosperm → white-rice composition, season 150.
+- **Fresh-basis RE-FITS — handoff step 1 (this session)**: every fit that still ran on the dry-matter `M` was re-made on
+  FRESH organ mass, with the dry one KEPT beside it and selected by `mass_basis="dry"` / `PFAS_MASS_BASIS=dry` (the repo's
+  idiom; each dry record re-verified to reproduce its documented numbers). `tests/test_mass_basis_refits.py` (6) +
+  `test_twopool_nstem_merge.py` (+2) + `test_two_pool.py` pin BOTH bases. `parameters.json`, `simulate()` defaults and
+  `reproduce_demo` (0.029) UNCHANGED.
+  - **`LIPID_LOADING` — the headline.** No fit script existed, so `validation/fit_lipid_loading.py` reconstructs the
+    protocol (Yamazaki excl PFDoDA, measured forcing, `growth_rice`, per-congener W2 `kappa_d`/`L_Ph`); on dry mass the stored
+    constants give 0.372, matching the documented ~0.36. **Fresh re-fit: 0.372 → 0.177 (root 0.488 → 0.088; PFUnDA root
+    14.7 vs 19.5)** — so the "lipid loading drains the long-chain root" single-pool trade-off, the stated motivation of
+    the two-pool root arc, was largely the dry-mass `M` (a root 10× too light). Caveat: the 6 globals sit on per-congener
+    W2 `kappa_d`/`L_Ph`, so this is not a 6-DOF fit. `LIPID_LOADING` = fresh fit; `LIPID_LOADING_DRY` = the stored record;
+    `lipid_loading_params(mass_basis)`. **OOS re-checked** (`oos_multidataset.py`): Tang per-organ lipid **0.520** (dry 0.516)
+    vs free anion 1.483 — the generalisation SURVIVES; Kim grain excl-PFOA lipid **0.50** (dry 0.48) vs mono 2.77 / W2 1.67;
+    but Kim's reliable DF≥15% subset worsens (0.20 → 0.74; that subset is PFNA ALONE) and Li straw/root flips to lipid (0.18 vs W2 0.81). The old line
+    "lipid OOS ≈ in-sample Tang refit (0.516 vs 0.519)" NO LONGER HOLDS: the fresh in-sample refit reaches 0.327.
+  - **`TANG_REFIT_FXY`** (`tang2026_fxy_refit.py`, 0.1 µg/g): fresh **PFOA 0.570 / PFOS 0.999 / GenX 0.089** (dry record
+    0.097/0.320/0.017 kept as `TANG_REFIT_FXY_DRY`; `tang_refit_fxy(mass_basis)`). **PFOS sits at the f_xy = 1 ceiling** — the
+    free anion cannot deliver Tang's PFOS shoot even unrestricted (Yamazaki's `f_xy_oryza` PFOS is also at 1 on fresh mass),
+    so the "PFOS f_xy is condition-dependent, 0.14 vs 0.32" reading becomes "both at the ceiling". GenX's over-prediction by
+    the provisional 0.233 shrinks from ~12× to ~2.6×. In-sample Tang refit 0.519 → **0.327**. NOTE the dry record itself
+    predates later model changes: re-running the dry fit with the current code gives 0.114/0.376/0.020.
+  - **Two-pool seq, measured forcings** (`twopool_root_measured.py`, now through `organ_mass`): in-sample 0.278 → **0.412**,
+    Kim excl-PFOA 0.56 → 0.76. Root-matching needs **no sink at all for 5/11 congeners** (root already over-predicted at
+    `k_seq`=0, PFOS among them), so the U-shape degenerates and **the non-K_PL PFOS/PFUnDA separation (4.5× dry) is
+    UNDEFINED on fresh mass** (both sinks ~0). The script printed "HELD (30246×)" from a ratio of two near-zeros — its verdict
+    now requires both sinks in use. Caches: `twopool_fitted_params_measured{,_dry}.json`.
+  - **Two-pool + nstem merge** (`twopool_nstem_merge.py`, `PFAS_MASS_BASIS` env; fit ~10 min, not 40): in-sample 0.301 →
+    **0.515**, Tang OOS 0.801 → **0.602** (still behind lipid 0.520). Same cause: the staged U-shape is fitted to root-matched
+    `k_seq` that floor at 0, so a few points pull it (PFSA offset 10^+0.80 → PFBS root 18 vs 2.3). Caches
+    `twopool_nstem_fitted_params{,_dry}.json`; the Tang baselines in its Stage 3 now run on the script's own basis.
+  - **Carrier two-pool closure** (`close_longchain`): on fresh mass PFDA/PFUnDA/PFDoDA need f_xy 0.51/0.48/**1.0 (bound)**
+    and carrier 1.26/1.27/**1.50×** (dry: 0.18/0.13/0.43, 1.41/1.51/3.15×). "Low f_xy + enhanced carrier" was a dry-mass
+    reading; the long-chain carrier enhancement nearly flattens. PFDoDA straw still cannot close (21 vs 49.7 at f_xy=1) — the
+    C12 shoot-loading ceiling remains. Pinned in `test_two_pool.py::test_model_api_hook`.
+  - **Net reading** (in-sample except where marked OOS): on fresh mass the SINGLE-POOL lipid model (0.177) beats both
+    two-pool variants (0.412 / 0.515), and the two-pool's distinguishing evidence (the non-K_PL separation) does not survive.
+    This weakens the case for the two-pool root; it does not by itself retire it (B2 / the wet-lab gate are unchanged).
+  - Scripts that build `M` themselves now go through `organ_mass` (`absolute_fxy_fit`, `bayesian_inverse_demo`,
+    `hydrus_coupled_run`, `refit_realistic_biomass`, `root_shoot_biomass_sensitivity` — partition stats stay on dry matter,
+    the placeholder row stays basis-free —, `twopool_longchain` and its `longchain_*` importers). With `PFAS_MASS_BASIS=dry`
+    each builds the identical pre-fix `M`; they were converted, NOT re-run, so their recorded numbers are dry-basis records.
+    The sci-adk run records (`runs/*`) are frozen dry-basis records too (the rigor guard verifies them, it does not
+    recompute). App text (Tang tab, ⚙️ Mechanism help) updated to the fresh numbers.
+- **Fresh-basis follow-ups — handoff 1b-①, step 6, step 2 (this session)**: `parameters.json`, `simulate()` defaults and
+  `reproduce_demo` (0.029) UNCHANGED; every script below takes `PFAS_MASS_BASIS` and reproduces its dry record.
+  - **Carrier vs bypass / dose series re-checked on fresh mass — the verdicts survive.** Both scripts had silently been
+    running on fresh mass. Dose series: basis-free (PFOS 6.27× vs 1.17×, `Km` ≥ 500, 1/3). "An addition is necessary":
+    holds (nothing 3.004, depolarisation 2.634). **"Which addition" holds only after a fairness fix**: as written the
+    script re-fits the bypass's one parameter but keeps the carrier's W2-era `Vmax`, so on fresh mass the bypass "wins" at
+    bootstrap 0.996. New POST-HOC section 6 of `carrier_vs_bypass.py` re-fits the carrier's global `Vmax` too: 1.161 vs
+    1.194, P 0.30 (dry 0.16) — indistinguishable. Bypass chain-length independence refuted more strongly (+0.909). **The
+    convergence is now shown on ONE setup**: per-congener carrier `Vmax` corr(n_C) +0.915 fresh / +0.880 dry vs the bypass's
+    +0.909 / +0.832; where `f_xy` is free (carrier two-pool) the carrier correction vanishes ⇒ the correction lands on
+    whichever term is free (B3, recorded in `theory_anchor.tex`). The documented record was the `--fast` grid.
+  - **Tang endosperm** (`tang_tf_validation(endosperm="brown"|"white")`, default brown — milling unreported): the white-rice
+    reading re-partitions the grain's free conc into a white composition with membrane PL counted as the `grain_brown` row
+    counts it (the `grain_white` row's 0.003 is starch-complexed lyso-PL, a pool the brown row excludes; the source keys of
+    both rows resolve nowhere). Factor PFOA 0.33 / PFOS 0.25 / GenX 0.66, and every Tang score WORSENS (lipid 0.520 → 0.700,
+    refit 0.327 → 0.513): composition does not close the grain gap. `tang2026_fxy_TF_validation.py` season 120 → 150 d
+    (4-pool Tang TF 1.90 → 1.74). Tang roots rinse-only → surface-sorption caveat recorded. `tests/test_tang_endosperm.py` (4).
+  - **θ_fw sensitivity** (`validation/theta_fw_sensitivity.py`, PRE-REGISTERED and pushed before running): one organ at a
+    time over `rice_tissue_params.csv` ranges, dry-side metrics. Root (0.88–0.92) Tang 0.039 / Ge **0.053 → INTERMEDIATE**;
+    stem/leaf/grain SMALL (≤0.015). Shoot θ cancels on the dry basis (fresh-weight BAFs move up to 0.13 log — quote dry).
+    Root θ is a VALUE uncertainty, not a time trend (flooded roots stay hydrated) ⇒ θ(t) is not worth an ODE change; a root
+    water measurement is. θ's three copies (`model_api._COMP`, `organ_mass.THETA_FW`, `neutral_dpu.RICE_WATER`) now pinned
+    equal. `tests/test_theta_fw_sensitivity.py` (4).
+  - **DECIDED (with the user) — the xylem split runs on DRY matter, grain surface 0.5116 per kg dry.** The 4-pool core split
+    the xylem between leaf and grain by `S·M`; since the organ-mass fix `M` is FRESH, so an organ's WATER set its transpiration
+    share. Now `xylem_leaf_share()` (core) splits a fresh `M` on its dry matter `M·(1−θ)` with **`S_XYLEM_DRY` = leaf 20, grain
+    0.5116 m²/kg dry** (`PlantInputs.M_basis`; drivers dicts carry a `mass_basis` tag, untagged = fresh; placeholder = None).
+    Reading the original grain `S`=2 as per kg dry was tried first and REJECTED on evidence: it sends ~14% of the transpiration
+    stream to the grain during filling (vs ~4% now; `nstem_leaf` assumes 5%), `refit_oryza` 0.283 → 0.394 with **8 of 11 L_Ph at
+    the floor** (PFBA grain 11.65 vs 1.06 from the xylem alone), two-pool measured 0.412 → 0.513. **Key point: with constant θ
+    the two bases are the same equation up to `S_grain`** — 0.5116 = 2×(1−0.78)/(1−0.14) is exactly the value at which the dry
+    split reproduces the old fresh split, so **every number above is unchanged** (≤5e-5 rel.) and no re-fit was needed; what the
+    decision buys is that grain θ no longer moves the split (θ 0.14 → 0.60: harvest share 0.118 both; Ge θ-effect 0.008 → 0.000).
+    0.5116 is a fixed literal on purpose (computing it from θ would re-couple the split to water) and is NOT measured — a panicle/
+    caryopsis transpiration share is the input that would replace it. `Compartment.S` (20/2) still serves the as-given split
+    (placeholder, `mass_basis="dry"` records: bit-identical; `reproduce_demo` 0.029) and the `plant_air` surface. Pinned by
+    `test_theta_fw_sensitivity.py` + `test_organ_mass.py::test_the_xylem_split_follows_the_mass_basis_of_M`.
+  - **App fix found on the way**: the run cache (`ui/common._drivers_tuple`) rebuilt the driver dict from t/Cwo/Qtp/M only, so
+    every driver mode silently DROPPED the ORYZA `leaf_loss` (leaf-senescence correction) — PFOA leaf BAF 1.08 instead of 0.55.
+    Now every key round-trips (`tests/test_ui_helpers.py::test_the_run_cache_keeps_every_driver_key`).
+- **Li 2025 stage by stage (handoff step 3; PRE-REGISTERED in `4df3047`, pushed before any model number) — Li now
+  DISCRIMINATES, and the expectation was wrong**: `validation/li2025_stage_resolved.py` + `tests/test_li2025_stage_resolved.py`
+  (5) + `docs/literature_db/raw_si/li2025_stage_conc.csv` (SI Table S6, all 15 PFAS × 5 stages × organ, ng/g dw; S5 water/soil
+  by class in `li2025_stage_water_soil.csv`). The old `oos_crossdataset.li_tf` set the model's HARVEST-day BAF against the
+  data's 5-STAGE MEAN on fresh weight; the authors' TF is a third estimator (mean of per-stage ratios). Transcription checked:
+  the 5-stage means reproduce `data_obs/Li2025_BAF_TF.csv` (20/20 cells) and the authors' PFOA stem TF 2.35. Design: TF =
+  tissue/root, **dry weight**, per stage (no water needed); stages have no dates, so ORYZA DVS maps them (tillering 0.4 /
+  heading 1.0 / filling 1.25 / milk 1.5 / ripening 2.0 → days 28/66/78/90/116); the SAME estimator (stage geometric mean) over
+  the SAME stages on both sides; grain scored from filling. **Results**: (Q1) the estimator alone moves the observed TF a
+  median 3.0×, max 5.8× (the authors' mean of ratios is pulled up by one low-root stage: PFOA stem 2.35 of which the filling
+  ratio is 9.67); (Q2) the stage-to-stage scatter is **4.5×** what the reported SDs imply ⇒ per-stage SHAPE is noise-limited,
+  and (Q4) no variant shows a shape signal (ρ≈0); (Q3) **the redistributed shoot + lipid loading (`nstem_leaf`, Tang's
+  winning configuration) discriminates: shoot/grain log10 RMSE 0.43/0.52** vs 4-pool lipid 0.81/1.52, monotone 1.25/2.42,
+  W2 1.31/2.70 — beyond the pre-registered 0.10 margin on both, unchanged at DVS ±0.15. POST-HOC (not used for the verdict):
+  the same winner under the other two estimators (0.66/0.66, 0.36/0.47); **both halves are needed** — `nstem_leaf` without
+  lipid 1.11/1.20, 4-pool with lipid 0.81/1.52; the noise floor a perfect model would score is 0.31/0.32; TF is exposure-
+  independent (Cwo 1 vs 0.05: ≤0.001 log). ⇒ the second independent per-organ dataset (after Tang) where the SAME combination
+  wins out-of-sample. Limits: one field, roots not plaque-cleaned (biases obs TF LOW, so it cannot explain the models' under-
+  prediction), assumed stage days, IR72 phenology for Jinyu Japonica No.22; `nstem_leaf` grain stays under (PFBS 0.30 vs 2.15,
+  PFOA 0.33 vs 0.93). `oos_crossdataset.li_tf` is kept as the record (docstring points here); `runs/pfas-rice-oos-multidataset`
+  stays a frozen record. `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029) UNCHANGED.
+- **Kim 2019 with its non-detects (handoff step 4a; PRE-REGISTERED in `bbb3a8a`) — the lipid advantage is robust, the
+  choice between lipid variants is not**: `validation/kim2019_censored.py` + `tests/test_kim2019_censored.py` (3) +
+  `docs/literature_db/raw_si/kim2019_si_detection.csv` (SI Tables S5 MDL + S6 min/avg/max/DF; averages identical to
+  `kim2019_field_conc.csv`) + `literature_params.KIM2019_DETECTION` / `kim2019_grain_baf_bounds()`. Kim averaged
+  non-detects as ZERO, and for the long chains BOTH sides are mostly non-detects (PFDoDA rice 1/30, void water 3/27), so
+  each published grain BAF is one corner of a range: with every non-detect in [0, MDL] the ratio of means lies in
+  PFHpA [0.39, 2.11] · PFOA [4.43, 4.92] · PFNA [2.21, 7.07] · PFDA [1.55, 11.3] · **PFUnDA [19.8, 168] · PFDoDA [5.5, 630]**
+  L/kg (the shipped ND=0 values are the LOWER corner for PFHpA/PFNA/PFOA). (Q1) The **C11 rise survives** (PFUnDA lo
+  19.8 > PFDA hi 11.3); **the C12 level does not** (PFDoDA lo 5.5 < PFDA hi). (Q2) point / interval log10 RMSE (PFOA out):
+  monotone 2.77/2.51, W2 1.67/1.52, **4-pool lipid 0.50/0.38, `nstem_leaf` + lipid 0.60/0.14** (3/5 inside the intervals
+  each). Verdict: **no single winner** — both lipid variants beat the free-anion ones by >1 log on either score, but
+  which lipid variant leads depends on the non-detect treatment (point margin exactly 0.10). The expectation held. The
+  4-pool lipid's PFUnDA (7.8) sits below the robust lower bound; `nstem_leaf` + lipid (36.6) sits inside it. The
+  `oos_crossdataset` label "[reliable: PFHpA, PFNA]" is fixed (PFNA alone). Step 4b (the PFOA anchor) is the next
+  bullet. `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029) UNCHANGED.
+- **Kim 2019 PFOA per site (handoff step 4b; PRE-REGISTERED in `bedadbf`) — the published 4.43 is one field's number;
+  per site it is ~10, and the per-site ratio is not a plant constant**: `validation/kim2019_pfoa_anchor.py` +
+  `tests/test_kim2019_pfoa_anchor.py` (4) + `docs/literature_db/raw_si/kim2019_table1_sites.csv` (main-text Table 1,
+  per-site PFOA/PFOS/Σ17 in soil, void water and brown rice for the 30 fields; transcribed by the user from the PDF text
+  layer and checked row by row against the rendered page; reproduces SI Table S6: rice 0.3494 ng/g 17/30, water 78.73
+  ng/L 26/27, soil 0.1599 13/30) + `literature_params.KIM2019_PFOA_SITE_BAF`. (Q1) Candidates [L/kg]: published ratio
+  of means **4.44** (rice over 30 sites, water over 27 — three E sites have no water), same 27 sites 4.18, without A-2
+  21.5, per-site geomean of the 14 both-detected sites 27.0 (median 28.3). Pre-registered admissibility (same sites in
+  numerator and denominator; no site dropped for detection status or value; no site above half the weight) leaves only
+  the **censored per-site geomean: 9.94 L/kg, 90% site bootstrap [4.57, 20.16]** (26 sites: 14 exact + 12 rice<MDL as
+  upper limits; site sd 0.82 log10; Kaplan-Meier median 7.77; leave-one-out 8.77–11.65). The ratio of means fails
+  because A-2 (WWTP, 1760 ng/L) is **82.8%** of the void-water PFOA and has the LOWEST ratio (0.98); the "27" drops the
+  12 rice-ND sites, which are low-ratio sites, so it is biased up. (Q2) **Rice ∝ water^0.52 [0.24, 0.87]** (censored
+  slope; a constant BAF means 1) while (Q3b) the model is linear over Kim's range (slope 0.964 in every variant — only
+  the carrier is nonlinear) ⇒ the harvest void water (a 2-day snapshot) is a noisy proxy for the season exposure, and the
+  per-site ratio carries that noise; it is not the carrier. (Q3) Every variant sits BELOW the per-site interval:
+  nstem_leaf+lipid 1.44 (−0.84 log), 4-pool lipid 0.34 (−1.46), monotone 0.036 (−2.44), W2 0.023 (−2.63) — the
+  admissible estimator makes the PFOA miss LARGER than 4.43 did. (Q4) A-2 is **67.3%** of the void-water Σ17 too.
+  Decisions: **D1** `kim2019_grain_baf()` keeps the ratio of means for every congener (the only estimator the other five
+  have; mixed estimators would compare unlike quantities) and the per-site constant sits beside it; **D2** the
+  `literature_params` demo's L_Ph target moves 4.43 → 9.94 — but by a 3% margin (E1 4.44 vs bootstrap low 4.57; robust
+  over 10 seeds, NOT to the interval method: the POST-HOC profile-likelihood interval [4.18, 19.78] contains 4.43);
+  **D3** the "PFOA\* used in the L_Ph fit" labels are removed (no shipped parameter is fitted to Kim — `L_Ph_W2fit`,
+  `L_Ph_oryza`, `LIPID_LOADING` are Yamazaki fits) and PFOA is reported as its own OOS check, not folded into the
+  pre-registered 4a RMSE; **D4** the absolute LEVEL of every Kim congener is A-2-weighted (the chain-length shape compares
+  like with like; the level does not — for PFOA the per-site value is 2.2× the mean). Every pre-registered expectation
+  held. Also fixed on the way: `validation_summary` panel B ("PFOA\* (used in fit)", "reliable PFHpA·PFNA") and
+  `revalidation_crosscheck` ("DF≥15%" = PFNA alone) labels. `parameters.json`, `simulate()` defaults and
+  `reproduce_demo` (0.029) UNCHANGED.
+- **ORYZA2000 ported from the manual; the shipped "ORYZA" driver was a reduced re-coding (handoff step 5;
+  PRE-REGISTERED in `288de63`)**: `src/oryza2000.py` + `validation/oryza2000_ir72ds92.py` + `tests/test_oryza2000.py` (6) +
+  `docs/literature_db/raw_si/oryza_ir72_d92_params.csv` (IR72.D92, manual §7.3) / `oryza_ir72ds92_obs.csv` (the IR72DS92
+  experiment, §7.2) / `irri_phil1_1992_printed.csv` / `nasa_power_losbanos_1992.csv`. Source: Bouman et al. 2001,
+  *ORYZA2000: modeling lowland rice* (IRRI; free PDF) — every value checked by script against the manual and the
+  parameters also against the APSIM `Oryza.xml` copy. **Scope chosen with the user ("누가 물어도 문제가 없는 방법")**:
+  port the WHOLE potential-production path from the Fortran the manual prints — ORYZA1, PHENOL/SUBDD (transplanting
+  shock), SGPCDT/SASTRO/SSKYC/SGPC1/SGPL/SRDPRF/GPPARGET (sunlit/shaded canopy, leaf-N profile, CO2), respiration, stem
+  reserves, partitioning with the grain sink limit, SUBGRN (spikelet sterility), SUBLAI2 (seedbed → dilution → shock →
+  SLA), leaf death, the carbon-balance check — and leave out only what potential mode switches off (water/N stress
+  modules; their factors kept at 1 so the equations read as printed). One printed line is ambiguous: GPPARGET's AMAX is
+  continuous between its branches only if REDFT·CO2 multiply the whole first term; that form is the default
+  (`amax_form="as_printed"` keeps the literal text; they differ only below 20 °C daytime or away from 340 ppm). The
+  carbon balance closes to ~1e-15. **The original engine/weather could not be obtained**: the WUR ORYZA2000 source
+  (`O2000V2N13gnufortran.zip`) and the full PHIL1.992 station file are login-gated (the user's WUR account got 403; the
+  IRRI v3 form is pending), so weather = NASA POWER corrected to the station by the 12 days the manual prints (Tmin
+  +1.17, Tmax +1.67 °C, radiation ×1.211); temperature-only and uncorrected runs are reported too, and a station run
+  will SUPERSEDE them. **Framing**: IR72DS92 is the manual's own calibration example, so for the port this is a
+  FIDELITY test, not an independent validation of ORYZA2000. **Result** (scored main-field dates doy 34–114): the port
+  is **ADEQUATE under every weather treatment** — PI/flowering/maturity doy 56/82/115 vs observed 58/83/114, log10 RMSE
+  aboveground 0.024 (~6%), green leaf 0.085, stem 0.073, panicle 0.052; the shipped `oryza_growth` (anchored, as the
+  PFAS default runs it) matures **12 d late** (126), grows too slowly early (WAGT 1373 vs 3498 kg/ha at doy 58), keeps
+  growing its stem after flowering (7095 vs 4243 at maturity) and under-fills panicles (6912 vs 9843) — RMSE 0.23/0.29/
+  0.17/0.24 ⇒ **the port fits better on 4/4 series and on maturity** (R2). The expectation held (except that the
+  shipped maturity miss was 12 d, not 15–20). **Wired as an OPT-IN mode** `simulate(biomass="oryza2000")`
+  (`model_api.BIOMASS_DRIVERS`; `_biomass_fn` now RAISES on an unknown name instead of silently falling back to
+  `growth_rice`) and in the app's biomass radio, which now labels the default honestly ("ORYZA Level-1, reduced") next to
+  "ORYZA2000 IR72.D92 (faithful port)". **POST-HOC (what a switch would move)**: in the PFAS climatology the port
+  matures at t = 93 d; at the default 120-d season it raises straw ×1.6–1.9 and grain ×1.9–2.5 (root unchanged), but
+  harvested at its own maturity straw is ×1.1–1.2 and grain ×0.6–0.75 — **the harvest date, not the crop model, moves
+  the grain most**, and the 120-d default season was tied to the reduced driver's late maturity. **DEFAULT UNCHANGED
+  (decision for the user)**: switching needs the ORYZA-based fits redone (`refit_oryza`, `TANG_REFIT_FXY`, the OOS reports
+  that run on the default) and a season tied to crop maturity. `parameters.json`, `simulate()` defaults and
+  `reproduce_demo` (0.029) UNCHANGED.
+- **Independent check of the ORYZA2000 port — Shizukuishi FACE (PRE-REGISTERED in `9f90d55`; post-hoc addendum `4fca549`)
+  — the IR72DS92 advantage does NOT transfer cleanly; DEFAULT UNCHANGED**: `validation/oryza2000_kim_face.py` +
+  `tests/test_oryza2000_kim_face.py` (5) + `docs/literature_db/raw_si/nasa_power_shizukuishi_1998_2000.csv` /
+  `jma_amedas_shizukuishi_1998_2000.csv`. IR72DS92 is the manual's own calibration example, so before any default switch
+  the port and the shipped driver were run on an experiment neither was built on: Kim 2003 Table 2 (green/senescent leaf
+  blades, exact), Kim 2003 Fig. 2 (totals, digitised) and Kim 2001 Table 1 (roots, a floor) — Akitakomachi, ambient CO2,
+  medium N, 1998–2000. **Both drivers carry IR72 phenology**, so every observation is placed by STAGE on each driver's
+  own DVS (the five samplings are tillering/PI/anthesis/mid-ripening/maturity — Kim 2003 abstract via OpenAlex) and only
+  RATIOS are scored: Q1 green-leaf course, Q2 senescent share, Q3 leaf share of the plant, Q4 dry-matter timing, Q5 root
+  share. **Pre-registered verdict: D1 FAILS on the primary weather** (uncorrected NASA POWER cell): the cell sits at 461 m
+  vs a ~200 m paddy, so IR72 never reaches maturity by Nov 30 under EITHER driver, and the port's green-leaf course is
+  worse (Q1 0.457 vs 0.205); **D2: it flips to PASS only under S1** (+1.7 °C lapse). The pre-registration wrongly said
+  no station data exist — the JMA AMeDAS station Shizukuishi (195 m, ~8 km away) does, and runs **+1.1/+1.45/+1.2 °C**
+  warmer than the cell (May–Oct), i.e. close to S1. **POST-HOC on station temperatures (S4)**: the port reaches maturity
+  in all three years (anthesis DAT 91–102 vs observed 78–88, maturity 140–168 vs 120–131 — IR72 is not Akitakomachi), the
+  shipped driver **never matures at 39.6 N in any treatment** (its grain-fill thermal time is ~1.7× IR72.D92's). The rule
+  as written PASSES on S4 only because the shipped driver has no leaf death before DVS 1, so its senescent share at
+  anthesis is exactly 0 and its Q2 is infinite; scored without that point (Q2x, post-hoc) **D1 fails on (b) in every
+  treatment** — the port over-states the dead-leaf share (Q2x 0.328 vs 0.172; port 0.80–0.90 at maturity vs observed
+  0.36–0.47, which is a floor since detached blades are lost). By group on S4 (port | shipped): Q1 0.259 | 0.241, Q3
+  0.225 | 0.151 (shipped better), **Q4 0.104 | 0.166 (port better)**, Q5 0.403 | 0.358 (both ~2.4× over a root floor —
+  not discriminating). Expectation: right that the port times early dry matter better and the shipped driver may not
+  mature (it never did); WRONG that D1 passes, that both over-predict Q2, and that Q3 would tie. ⇒ on organ SHAPES the
+  port is not better than the shipped driver on independent data; its clear advantages are fidelity to ORYZA2000 and
+  finishing the season at a temperate site. Neither driver is a temperate japonica: a cultivar phenology calibration
+  would be the next thing needed for either. `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029)
+  UNCHANGED.
+- **Option C — both drivers' phenology calibrated to Akitakomachi, then the FACE comparison re-run (PRE-REGISTERED in
+  `7743bfc`) — the port now PASSES; the switch can be pre-registered (user decision)**:
+  `validation/oryza2000_kim_face_phenology.py` + `tests/test_oryza2000_kim_face_phenology.py` (3). Only the four development
+  rates of each driver are fitted, the DRATES way (ORYZA manual §8.2): one common factor on DVRJ/DVRI to the observed PI day
+  (the juvenile/photoperiod split is not observable), DVRP to anthesis, DVRR to maturity, by root-finding on each driver's
+  own heat units (hits the targets to <0.001 d; port carbon balance still ~1e-16). Partitioning, leaf death, SLA etc. stay
+  IR72.D92 / shipped. **Leave-one-year-out** (held-out year runs on the other two years' mean rates), station weather,
+  nursery 30 d (an ASSUMPTION — sowing is not in the transcription), Q2 scored without the anthesis point (Q2x).
+  **C1 PASSES**: pooled 0.222 (port) vs 0.245 (shipped); Q1 green-leaf course **0.174 vs 0.287**, Q4 dry-matter timing
+  **0.210 vs 0.307**, Q3 0.147 vs 0.138 (tie), Q5 0.324 vs 0.274 (both over a root floor), **Q2x 0.256 vs 0.221 — the
+  port is still worse on the dead-leaf share, by 0.035 against the 0.05 allowance** (narrow). Holds under every
+  sensitivity (nursery 20/40 d, POWER+1.7 °C) and with each year's OWN rates (0.246 vs 0.267). **C2**: the port's Q2x
+  falls only 0.328 → 0.256 (−0.072 < 0.10) ⇒ its dead-leaf excess sits mostly in IR72's leaf-death table (DRLVT, from
+  DVS 0.6 and steeper), which Kim cannot re-fit (PARAM needs stem/panicle weights). **C3 NOT adequate**: LOYO phenology
+  misses anthesis by +10.5 / −10.3 / +0.7 d (1998/1999/2000) — the calibrated rates vary year to year (J/I ×1.09–1.35,
+  DVRR ×0.86–1.21) — but the verdict holds with exact (own-year) phenology too. Calibrated rates move the port by
+  ×0.86–1.35 and the shipped driver's DVRR by ×1.47–2.08 (its grain fill was far too slow). Expectation: right on C2
+  and on no flips; WRONG that C1 fails on (b) and that LOYO phenology would be adequate. ⇒ once both develop like the
+  cultivar, the port's organ shapes fit an independent experiment better overall; it still over-states dead leaves. The
+  rates are an Akitakomachi-at-Shizukuishi result, not a temperate-japonica set. `parameters.json`, `simulate()` defaults
+  and `reproduce_demo` (0.029) UNCHANGED. **Redone with the recorded nursery and the 1999 event dates — see the "Option C
+  redone" bullet below: the PASS is robust to the nursery but SENSITIVE to the 1999 event dates.**
+- **Second wave of rice-growth sources transcribed (this session; user-supplied PDFs, NOT committed)** — data only, no model
+  run yet: `raw_si/yang2006_wuxi_face_dm.csv` (Wuxi FACE 2001–2003, Wuxiangjing 14: above-ground DM + leaf/stem/spike
+  fractions at 5 stages — the stem/panicle partitioning Kim lacks), `gao2021_cold_japonica_oryza_params.csv` (an ORYZA2000
+  crop set calibrated for a cold-region japonica, incl. DRLV/SLA/partitioning tables) + `gao2021_qingan_phenology.csv` +
+  `gao2021_fig3_digitised.csv` (green stem/leaf/panicle + LAI time series, digitised by colour masks, then VERIFIED by
+  overlay on the original figure — see the next bullet), `sasaki2005_shizukuishi_1999.csv` and
+  `hasegawa2017_face_conditions.csv` (OA Table S1).
+  **Two facts that bear on option C**: the Shizukuishi nursery was 20/27/29 d (sowing dates, Hasegawa S1) and covered
+  (plastic chambers, Sasaki), not the assumed open 30 d; and Kim 2003's 1999 "PI"/"anthesis" samplings (DAT 62/88) were taken
+  ~8/~10 d AFTER the events (PI ~54, heading 78 DAT; Sasaki) — so option C's targets for 1999 were late, and the LOYO anthesis
+  "miss" of −10.3 d for 1999 lands on the real heading day. `tests/test_face_transcriptions.py` (6).
+- **Gao 2021 Fig. 3 digitisation checked against the original figure (this session; user request "digitize하면 원본
+  그림과 겹쳐서 확인")** — `docs/literature_db/tools/gao2021_fig3_check.py <the PDF>` re-fits the axes on every tick
+  (≤13 kg/ha, ≤0.006 LAI off), checks marker centres against the error bars (an SD bar is symmetric, so its cap midpoint is
+  the plotted value whatever the marker shape: 28 unambiguous pairs, +1.2 ± 0.8 px, max 2.7 ⇒ ±2 px = ±58 kg/ha / ±0.02 LAI
+  for clear markers), and draws every value's full nominal marker outline on the original. **The first pass was biased
+  wherever a marker was partly hidden** (by another marker, an error-bar cap, or the axis frame, which clips markers): it
+  took the centre of the TRUNCATED visible box. Those markers are re-placed on a visible edge + the nominal half-size
+  (15 values, e.g. 2019-06-16 DWST 332→199, DWGL 202→35; 2018-06-07 D-AGB 390→244; 2019-05-28 LAI 0→0.06), the two
+  "hidden" markers are measured (2018-06-18 DWST 289, 2019-06-26 DWGL 390) and 8 partly visible markers that the colour
+  masks missed are added; every row now carries `value_lo`/`value_hi`. Values below ~200 kg/ha (centre within 7 px of the
+  axis) are flagged `near_axis` — NOT resolvable (2018-05-30 DWST 133 > D-AGB 71) and not for use in ratios. The organ
+  sums now close at the early dates too, and the remaining mismatches (2018-07-26 +14.6%, 2018-08-18/09-17 −4.8/−3.5%) are
+  15–29 px, i.e. in the figure, not the reading. Data not yet used by any model run. The earlier digitisations were
+  checked next — see the next bullet.
+- **The earlier digitisations checked against the originals (this session; user-supplied PDFs, NOT committed)** —
+  `docs/literature_db/tools/fig_overlay_checks.py {kim2003|li2025|tang2026} <PDF>` re-fits each figure's axes on its own
+  ticks, re-reads the values, prints them beside the stored ones and writes an overlay PNG. `tests/test_digitisation_overlay_checks.py` (3).
+  - **Kim 2003 Fig. 2** (FACE total biomass; ambient open circles): corrections −50…+49 g m⁻², the **1999 HN DAT89 point was
+    missing** (added), and the three near-zero tillering points were 20–27 g m⁻² too high (50/65/95 → 23/47/75; the 2000 value
+    sat ABOVE its FACE disk, which the figure rules out). Hidden open circles are read from the crescent their ring leaves beyond
+    the FACE disk. The values run +10…+25 g m⁻² (1–6%) above Kim 2001 Table 1 for the same crop (that table's year is itself
+    inferred). **Re-run of 5b/5c on the corrected totals — no verdict changes**: 5b S4 Q3 0.225|0.151 → 0.224|0.148, Q4
+    0.104|0.166 → 0.100|0.163; 5c Q3 0.147|0.138 → 0.148|0.133, Q4 0.210|0.307 → 0.207|0.306, pooled 0.222 vs 0.245 → 0.222 vs
+    0.244, own-year 0.246 vs 0.267 → 0.246 vs 0.265 (the tillering totals are not scored).
+  - **Li 2025 Fig. 2a** (irrigation-water composition): re-read shares close against the TABULATED SI S5 class sums within
+    0.4 %-points on 4 of 5 stages and reproduce the printed PFOA 59.3–70.2 % / PFBA 18.6–31.1 % ranges. The water values the
+    old `data_obs` Li tables were built with (external package, no script) are off for two congeners: **PFHxA 2.5 → 1.21 ng/L**
+    (≈ PFHxA + PFHpA, two adjacent similar colours read as one) and **PFOS 0.4 → 0.71**; PFBA 17.9 → 18.7, PFBS 1.3 → 1.10,
+    PFOA 46.7 → 46.5. New `raw_si/li2025_fig2a_water_shares.csv`; the verified water/BAF are added BESIDE the old values in
+    `data_obs/Li2025_BAF_TF.csv` / `obs_baf_Li2025.csv` (`*_verified` columns; the old columns stay as the S6 record). The
+    figure itself has an anomaly: its ripening bar carries a 4.45 % 6:2 FTS segment that S5 (precursors 0.05 %) rules out.
+    TF = tissue/tissue does not use water, so the stage-resolved Li analysis (step 3) and the TF scores are unaffected. **POST-HOC
+    consequence for S6** (`docs/H8_handoff_S6_final.md` §2, not re-run in place): root BAF ÷ the internal ceiling becomes PFHxA
+    46 / PFBS 19 / PFBA 6.6 / PFOS 2.9 / PFOA 0.53 (was 22 / 16 / 6.9 / 5.1 / 0.53) — the excess orders by chain length, not by
+    the reading quality, so the recorded reading "the Li surface excess is a water-denominator (reading) artifact" does not hold;
+    what remains is that irrigation water is not the pore water the model needs.
+  - **Tang 2026 Fig. 1a/1b**: correct — control biomass 33.47 g FW (stored 33.5), ear 6.86 (6.8), the same control bar in all
+    three groups.
+  - **Not checked**: Bouman & van Laar 2006 Fig. 2b needs no PDF — it is the IR72DS92 experiment whose exact table is already in
+    `raw_si/oryza_ir72ds92_obs.csv`; against it the digitised rows are −12…+11% off (stated ±5%) and no script uses them. Kim 2001
+    Fig. 1 (3 root values) is NOT checkable here: the session's `kim2001.pdf` turned out to be a JavaScript stub page, not the paper.
+- **Option C redone with the recorded nursery and the 1999 event dates (POST-HOC addendum, PRE-REGISTERED in `b1774b4`) —
+  the PASS survives the nursery but NOT the 1999 event dates**: `validation/oryza2000_kim_face_nursery_events.py` +
+  `tests/test_oryza2000_kim_face_nursery_events.py` (3). Two option C inputs are contradicted by sources transcribed after it
+  ran: the **nursery** (Kim 2003 Crop history, read at source: transplanted **14/23/24 d after EMERGENCE** from trays in plastic
+  chambers ⇒ ORYZA SBDUR 14/23/24 + **TMPSB 9 °C**, the manual's Japan value — not an assumed 30-d open seedbed; Hasegawa's
+  20/27/29 d count from SOWING) and, for **1999 only**, the **events** (Sasaki 2005: PI ~54, heading 78 DAT, vs the sampling
+  targets 62/88). Everything else is option C (DRATES rates, LOYO, station weather, Q2x, C1). The file first re-runs option C
+  through its own code (reproduced exactly); the shipped arm is untouched by the nursery (identical). **N (primary, nursery
+  only): D1 PASSES**, pooled 0.220 vs 0.244 (option C 0.222); no flip under TMPSB 0 (0.237), nursery-from-sowing (0.206) or
+  POWER+1.7 °C (0.220). The recorded nursery does NOT explain the year-to-year development differences: the port's J/I factor
+  spreads further (×1.397/1.044/1.075 vs ×1.352/1.092/1.156) and the LOYO PI errors worsen (+14.6/−8.0/−6.4 d). D4: Q2x drop
+  0.061 (< 0.10) ⇒ still the leaf-death table. **NE (1999 events; every sample placed at the DVS the driver's own-year run has
+  on the sampling day — the 1999 PI/anthesis/mid-ripening samples sit at DVS ~0.76/1.26/1.66, not 0.65/1.0/1.53): FAILS on
+  (b)** — port Q2x 0.281 vs shipped 0.181 (worse by 0.100 > 0.05); pooled 0.234 vs 0.214, shipped ahead. The placement control
+  NG (same placement, option C targets) PASSES (0.218 vs 0.253) ⇒ the flip is the event dates, not the placement. Mechanism: the
+  port OVER-predicts the dead-leaf share in every year (+0.10…+0.37 log), the shipped driver UNDER-predicts it at mid-ripening;
+  reading 1999 at its true (later) phase narrows the shipped gap and widens the port's; moving anthesis earlier with maturity
+  fixed at the sampling day also lengthens 1999's ripening (port DVRR ×1.209 → ×0.877). NE phenology: 1999 LOYO hits the true
+  events (PI +0.0, heading −1.7 d); 1998 +10.6/+8.9/+13.5, 2000 −10.5/−6.6/−4.9 ⇒ C3 still NOT adequate. Expectation: right on
+  N (factor spread widens, PI errors no better, pooled < 0.02, D1 PASS), D4, the NE phenology directions, NG ≈ N and no flips;
+  **WRONG that NE passes**, and wrong in its reason for C3 ("E1 does not touch DVRR" — it moved 1999's). ⇒ **option C's PASS is
+  robust to the nursery but SENSITIVE to the 1999 event dates: correcting the one year that can be corrected removes the margin
+  on (b), and what decides it is the port's dead-leaf excess (IR72's DRLVT).** NE mixes event targets (1999) with sampling
+  targets (1998/2000, no event dates exist) and keeps 1999's maturity at the sampling day, so it is not the better-informed
+  verdict overall — but a default-switch pre-registration can no longer rest on option C's PASS alone. A cultivar leaf-death
+  table (needs stem + panicle weights on the same dates) is what would settle (b). `parameters.json`, `simulate()` defaults and
+  `reproduce_demo` (0.029) UNCHANGED.
+- **A japonica crop set in the port — Gao 2021 (cold-region japonica) transferred to the FACE data (PRE-REGISTERED in
+  `5aada97`) — it does NOT fix the dead-leaf excess; it makes it worse**: `validation/oryza2000_kim_face_gao_japonica.py` +
+  `tests/test_oryza2000_kim_face_gao_japonica.py` (3). Gao et al. 2021 publish an ORYZA2000 crop set calibrated on Suijing-18
+  (Heilongjiang, 47 N): partitioning FLVTB/FSTTB/FSOTB, leaf death DRLVT (from DVS 0.4, 0.024 at DVS 1, 0.020 after 1.6), an
+  SLA TABLE (0.0010–0.0023 ha/kg, about half IR72's), a single KDF 0.4, RGRLMX 0.0088, FRPAR 0.45, and DVRs (COLDMIN not
+  applied: the port has no cold-stop rule). Its calibration weather is unpublished, so this is a TRANSFER test. Arms A
+  (IR72.D92), **G (Gao)**, B (shipped), all with phenology calibrated to Akitakomachi as in the redo (so they differ only in
+  non-phenology parameters); A and B reproduce the redo exactly. Design N (primary) / NE (1999 events). **G1 NOT fixed**:
+  Q2x G 0.331 vs A 0.267 (worse); **G2 FAILS on (b) under N AND NE** (Q2x 0.331/0.341 vs shipped 0.221/0.181) ⇒ by the
+  pre-registered mapping "the Gao set does not transfer". But it is better on everything else: Q1 green-leaf course **0.110**
+  vs A 0.173 / B 0.287, Q4 dry-matter timing **0.095** vs 0.183 / 0.306 (Q3 0.173 and Q5 0.415 worse); **G3: no general loss**
+  (pooled 0.225 vs A 0.220). No flip under TMPSB 0 / nursery from sowing. **Decomposition** (one group swapped into IR72.D92,
+  design N): the leaf-death table alone carries the Q2x rise (A+DRLVT 0.329) and the Q1 gain (0.127); the canopy group (SLA
+  table, KDF, RGRLMX, FRPAR) leaves Q2x unchanged (0.267) and gives the best pooled score of any arm (**0.209**: Q3 0.109, Q4
+  0.116); partitioning alone does little. **Gao's OWN development rates (no calibration)** miss anthesis by +9.0/−8.7/−2.1 d
+  and maturity by −2.3/−10.2/−11.3 (IR72's own rates: +13…+14 d late at anthesis), and score pooled 0.201 (Q2x 0.299).
+  Expectation: right on G1 (may rise), A+DRLVT ≈ G on Q2x, Q3 worse, G2 failing NE; WRONG on G3 (expected a general loss)
+  and on Gao's own phenology being within 7/10 d. ⇒ **a japonica leaf-death table does not close the port's dead-leaf gap**
+  — Gao's kills leaves earlier and the dead pool (WLVD) keeps them. POST-HOC caveat (not tested): Kim's senescent blades are a
+  FLOOR (detached blades are lost) while ORYZA keeps every dead leaf, so part of every port arm's "excess" may be blades the
+  measurement could not recover — at maturity the port's share (0.70–0.79 vs 0.36–0.47 observed) would need ~3/4 of the dead
+  blades lost. Gao's set stays a candidate only; the port's default crop file is IR72.D92. `parameters.json`, `simulate()`
+  defaults and `reproduce_demo` (0.029) UNCHANGED.
+- **A second independent check — organ PARTITIONING at the Wuxi FACE (Yang 2006; PRE-REGISTERED in `54bf8c3`) — the port is
+  clearly closer on the leaf/stem/spike split; robust**: `validation/oryza2000_wuxi_partitioning.py` +
+  `tests/test_oryza2000_wuxi_partitioning.py` (3) + `raw_si/nasa_power_wuxi_2001_2003.csv`. The Shizukuishi data have no stem or
+  panicle weights, so they cannot test the split the PFAS model takes most directly from a biomass driver (grain = the terminal
+  sink, straw = stem + leaf). Yang 2006 Tables 1/3: above-ground DM + leaf/stem(incl. sheath)/spike shares at 5 samplings,
+  2001–2003, Wuxiangjing 14 (late japonica), 31.6 N, ambient CO2. **No heading/maturity dates are published** (Hasegawa 2017's
+  modellers received them; not in the paper), so samples are placed by stage on each driver's OWN DVS (PI 0.65, heading 1.0,
+  heading + 20/30 d, maturity 2.0); Hasegawa's mean duration (158 d sowing→maturity ⇒ ~DAT 132) pins the season in the
+  secondary design Wp. Scored W1 leaf / W2 spike / W3 stem share, W4 dry-matter timing; leaf = green + dead (primary reading).
+  **R1 PASSES**: pooled port **0.076** vs shipped 0.129; spike share **0.047 vs 0.095**, stem 0.064 vs 0.075, leaf 0.053 vs
+  0.079, timing 0.142 vs 0.266; the port reaches maturity every year. **The shipped driver (the PFAS default) under-fills the
+  panicles** — spike share 0.43–0.46 at maturity vs observed 0.50–0.55, with too much stem after heading (0.38–0.39 vs
+  0.30–0.33) — the same pattern it showed on IR72DS92. **No flip** under Wp (0.058 vs 0.118), SBDUR 18/26, the green-leaf-only
+  reading (0.117 vs 0.153) or the temperature offset (POWER within 0.24/0.37/0.57 °C of Hasegawa's season means; 2003 triggered
+  the pre-registered offset run). **R3**: Gao's japonica partitioning is not better than IR72's by 0.05 (A+PART W1–3 0.044, G
+  0.049 vs 0.055). Phenology (descriptive): with IR72's own rates the port heads at 62–63 and matures at **93–95 DAT** (vs ~132),
+  above-ground DM at maturity 1456–1613 vs observed 1674–1829 g m⁻²; the shipped driver matures at 116–129 DAT; Gao's rates at
+  80. Expectation: right on R1, the shipped driver's under-filled panicles, the port's early maturity and short DM, R3 and no
+  flips; WRONG that W1 would be no better for the port (0.053 vs 0.079). ⇒ **on the split that feeds the PFAS grain and straw
+  compartments, independent data favour the port over the shipped driver** (with IR72DS92, two datasets agree; Shizukuishi's
+  dead-leaf share is the one place it loses). Limits: one cultivar, stage placement without dates, POWER weather.
+  `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029) UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1453,6 +1813,34 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   number moves. The §3b ladder in `validation/neutral_dpu_validation.py` reports it against the metabolism ladder.
 - Tang 2026 f_xy: `python validation/tang2026_fxy_TF_validation.py` (4-pool TF vs Tang, ORYZA-driven);
   `python validation/tang2026_fxy_refit.py` (nstem_leaf + ORYZA f_xy re-calibration; 0.1 µg/g dose primary).
+- **Organ-mass basis of a re-fit**: every re-fit script runs on FRESH organ mass and takes `PFAS_MASS_BASIS=dry` to
+  reproduce its pre-fix record — `tang2026_fxy_refit.py`, `fit_lipid_loading.py` (the `LIPID_LOADING` constants;
+  `--eval` scores the stored ones; ~2 min), `twopool_root_measured.py`, `twopool_nstem_merge.py`, `refit_oryza.py`,
+  `structural_adequacy_fit.py`, the OOS reports `oos_tang_lipid.py` / `oos_crossdataset.py` / `oos_multidataset.py`,
+  and `carrier_vs_bypass.py` / `dose_series_carrier.py` (their records are the dry `--fast` / default runs).
+- **θ_fw sensitivity**: `python validation/theta_fw_sensitivity.py` (~5 min; pre-registered rule in the header; ends with
+  the POST-HOC xylem-split note).
+- **Li 2025 stage by stage**: `python validation/li2025_stage_resolved.py` (~25 s; pre-registered header; Q1 estimators ·
+  Q2 noise · Q3/Q4 per variant · DVS sensitivity · POST-HOC estimators/decomposition/noise floor).
+- **Kim 2019 with its non-detects**: `python validation/kim2019_censored.py` (~20 s; pre-registered header; the
+  [0, MDL] bounds per congener · whether the long-chain rise survives · point vs interval score per variant). Tang endosperm as milled rice: `model_api.tang_tf_validation(c, endosperm="white")`.
+- **Kim 2019 PFOA per site**: `python validation/kim2019_pfoa_anchor.py` (~1.5 min; pre-registered header; candidate
+  estimators · censored per-site geomean + bootstrap · censored slope · model linearity · A-2 weight · decisions ·
+  POST-HOC interval-method check).
+- **ORYZA2000 port vs the shipped driver on IR72DS92**: `python validation/oryza2000_ir72ds92.py` (~1 min; pre-registered
+  header; three weather treatments · phenology + per-organ log10 RMSE · R1/R2 verdict · POST-HOC PFAS BAF change). The port
+  itself: `oryza2000.simulate(weather)` (daily ORYZA states from emergence) / `oryza2000.organ_biomass(t)` (kg/hill on days
+  after transplanting); in the PFAS model `simulate(biomass="oryza2000")` (opt-in; pass `season=` ≈ the crop's maturity).
+- **Independent check on the Shizukuishi FACE data**: `python validation/oryza2000_kim_face.py` (~5 s; pre-registered header
+  + post-hoc addendum; stage-matched ratios under the pre-registered weather treatments, then the JMA-station run).
+- **Option C (phenology calibrated to the cultivar)**: `python validation/oryza2000_kim_face_phenology.py` (~20 s;
+  pre-registered header; DRATES-style rates per year · LOYO phenology error · stage-matched ratios · C1–C3 verdicts).
+- **Option C with the recorded nursery + the 1999 event dates**: `python validation/oryza2000_kim_face_nursery_events.py`
+  (~40 s; pre-registered header; N primary · NG placement control · NE 1999 events · sensitivities · D1–D5).
+- **Gao 2021 japonica crop set on the FACE data**: `python validation/oryza2000_kim_face_gao_japonica.py` (~80 s;
+  pre-registered header; arms A/G/B · Gao's own phenology · one-group decomposition · G1–G4).
+- **Wuxi partitioning check**: `python validation/oryza2000_wuxi_partitioning.py` (~5 s; pre-registered header;
+  weather check · stage-placed leaf/stem/spike shares · W/Wp + sensitivities · R1–R4).
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
   Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered; engine-free),
   `"hydrus"` the real-engine shape, `"constant"` the flat default (conc==BAF). Both shapes are
@@ -1485,7 +1873,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**373 collected; 372 pass, 2 skip** — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**437 collected; 436 pass, 2 skip** (437 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
@@ -1510,7 +1898,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (`oryza_growth`, `growth_rice`, `measured_biomass` tables) produces **DRY** matter, so whatever turns a
   driver into `M` must go through `organ_mass` (`fresh = dry/(1−θ_fw)`, θ_fw = the binding factor's).
   `mass_basis="dry"` exists ONLY to reproduce artifacts fitted before that fix. A `drivers=` `M` (CSV,
-  app growth table) is taken as fresh as-is.
+  app growth table) is taken as fresh as-is. The ONE place that needs dry matter is the leaf/grain xylem
+  split (`xylem_leaf_share`, `S_XYLEM_DRY` per kg dry), so `M` carries its basis: `PlantInputs.M_basis` and a
+  `mass_basis` key on drivers dicts (builders set it; untagged = fresh; the placeholder logistic = None).
 - **Exposure `C_w^o(t)`**: the default scenario holds it CONSTANT (`Cwo`, so conc==BAF). `Q_TP(t)` is
   ALWAYS time-varying (FAO-56 `forcing_rice`). For a time-varying exposure use `simulate(cwo_profile=
   "flooded"|"hydrus")` (mean-normalised to `Cwo`) or supply a `drivers=` series. Architecturally both
@@ -1529,8 +1919,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Lipid-bound loading (opt-in, default off)**: `Compound.g_xy`/`g_ph` add a B-independent
   `g·C` term to xylem/phloem loading (free anion is `f_xy·Cw`, but `Cw=C/B` starves high-binding long
   chains; the bound pool rides the lipid phase). `model_api.simulate(lipid_loading=True)` uses the
-  `K_PL`-gated fit; cuts monotone error 0.98→~0.36 and fixes long-chain grain, but trades off root
-  (single-pool limit). EXPLORATORY / in-sample.
+  `K_PL`-gated fit (`LIPID_LOADING`, fresh organ mass; `validation/fit_lipid_loading.py`): Yamazaki excl
+  PFDoDA 0.177, root 0.088, and fixes long-chain grain. The root trade-off recorded on the pre-fix dry
+  mass (0.36, root 0.49 — "single-pool limit") was largely the dry-matter `M`; `mass_basis="dry"`
+  selects that record (`LIPID_LOADING_DRY`). EXPLORATORY / in-sample (OOS: Tang 0.52, Kim 0.50).
 - Symbols map 1:1 to `docs/pfas_rice_compartmental_model.tex` (`j_R, B_k, N, f_xy, L_Ph, ...`).
 
 ## 9. Next tasks (prioritized)
@@ -1552,7 +1944,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
    driven by the measured `forcing_rice` transpiration and reproducing it to <1% when unstressed.
 4. **Tier-1 calibration machinery** **DONE** + **first real fit done**: **Kim et al. 2019**
    (Korean paddy, paired pore-water/soil/brown-rice, `10.1016/j.scitotenv.2019.03.240`) is wired in
-   (`kim2019_grain_baf()`); the demo fits `L_Ph` to the PFOA grain BAF (→ matches 4.43 L/kg).
+   (`kim2019_grain_baf()`); the demo fits `L_Ph` to the PFOA grain BAF (per-site 9.94 L/kg since step 4b;
+   the ratio of means 4.43 is A-2-weighted — see §6).
    **Remaining**: a chain-length series fit and a full compartment-resolved fit — Kim is grain-only,
    so `f_xy` (root→shoot) needs root/straw tissue data (DB gap; greenhouse time-series needed).
 5. **Literature parameter DB + measured `B_k`** **DONE** (`docs/literature_db/`, `src/literature_params.py`):

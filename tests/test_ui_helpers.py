@@ -96,3 +96,24 @@ def test_every_seeded_sidebar_field_is_clamped():
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
+
+
+def test_the_run_cache_keeps_every_driver_key():
+    """The app caches runs by turning the driver dict into a hashable tuple. That tuple
+    used to keep only t/Cwo/Qtp/M, so `leaf_loss` (the ORYZA leaf-senescence correction)
+    was silently dropped in every driver mode. Round-trip must keep every key."""
+    import numpy as np
+    import model_api as api
+    from ui.common import _drivers_tuple, _drivers_from_tuple
+    t = np.linspace(0.0, 120.0, 61)
+    d = api.drivers_from_arrays(t, np.ones_like(t))          # ORYZA M -> carries leaf_loss
+    assert "leaf_loss" in d
+    key = _drivers_tuple(d)
+    hash(key)                                                 # must stay cacheable
+    r = _drivers_from_tuple(key)
+    assert set(r) == set(d)
+    np.testing.assert_array_equal(r["leaf_loss"], d["leaf_loss"])
+    assert r["mass_basis"] == d["mass_basis"] == "fresh"
+    bare = dict(t=t, Cwo=np.ones_like(t), Qtp=d["Qtp"], M=d["M"])   # a user CSV: no tags
+    rb = _drivers_from_tuple(_drivers_tuple(bare))
+    assert "leaf_loss" not in rb and rb["mass_basis"] == "fresh"

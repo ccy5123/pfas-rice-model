@@ -42,6 +42,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 import model_api as api          # noqa: E402
 import forcing_rice as fr        # noqa: E402
 import growth_rice as gr         # noqa: E402
+import organ_mass as om          # noqa: E402
+MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")   # organ_mass; "dry" = the pre-fix record
 
 CONGENER = "PFOA"
 SEASON = 120.0
@@ -56,7 +58,7 @@ _BASE_FXY, _, _BASE_KD, _, _ = api._transport_defaults(_c, "recommended", False)
 _T = np.linspace(0.0, SEASON, N_T)
 _BASE_Q = fr.Q_TP(_T, SEASON)
 _b = gr.organ_biomass(_T, SEASON)
-_M = np.maximum(np.column_stack([_b["root"], _b["stem"], _b["leaf"], _b["grain"]]), 1e-4)
+_M = om.organ_matrix(_b, MASS_BASIS)          # crop DRY matter -> ODE mass basis
 
 DEFAULTS = dict(qtp_scale=1.0, cwo_level=1.0, f_xy_mult=1.0, kappa_d_mult=1.0)
 
@@ -65,7 +67,7 @@ def predict(knobs):
     """Final root/straw/grain BAF for a set of exposure/transport knobs."""
     k = {**DEFAULTS, **knobs}
     drivers = dict(t=_T, Cwo=np.full_like(_T, k["cwo_level"]),
-                   Qtp=k["qtp_scale"] * _BASE_Q, M=_M)
+                   Qtp=k["qtp_scale"] * _BASE_Q, M=_M, mass_basis=MASS_BASIS)
     r = api.simulate(CONGENER, drivers=drivers,
                      f_xy_override=_BASE_FXY * k["f_xy_mult"],
                      kappa_d_override=_BASE_KD * k["kappa_d_mult"])
@@ -143,11 +145,15 @@ def run_scenario(name, free, truth=None, noise=True):
                 corr=off, cond=cond, sd=sd.tolist(), product=prod)
 
 
-def emcee_posterior(free, truth=None, nstep=600, nwalk=16, discard=200):
+def emcee_posterior(free, truth=None, nstep=600, nwalk=16, discard=200, seed=0):
     """Full MCMC posterior for the `free` params (affine-invariant ensemble sampler).
     Returns a dict with the flat chain, per-param medians/16-84% bands, the product
     posterior and the sample correlation -- a sampling cross-check of the Laplace
-    result. None if emcee is not installed."""
+    result. None if emcee is not installed.
+
+    `seed` fixes the observation noise, the walkers' start AND the sampler's own
+    random state (emcee otherwise draws from OS entropy), so a run is reproducible:
+    a short chain is noisy, and an unseeded one made a test pass or fail by luck."""
     try:
         import emcee
     except Exception:
@@ -155,7 +161,8 @@ def emcee_posterior(free, truth=None, nstep=600, nwalk=16, discard=200):
               "`pip install emcee` for the full-MCMC cross-check)")
         return None
     truth = {**DEFAULTS, **(truth or {})}
-    obs = predict({k: truth[k] for k in DEFAULTS}) * np.exp(_RNG.normal(0, SIGMA, 3))
+    rng = np.random.default_rng(seed)
+    obs = predict({k: truth[k] for k in DEFAULTS}) * np.exp(rng.normal(0, SIGMA, 3))
 
     def logpost(logp):
         if np.any(np.abs(logp) > 1.5):                    # broad flat prior, ±1.5 dex
@@ -167,8 +174,9 @@ def emcee_posterior(free, truth=None, nstep=600, nwalk=16, discard=200):
         return -0.5 * float(np.sum(((np.log10(pred) - np.log10(obs)) / SIGMA) ** 2))
 
     nd = len(free)
-    p0 = _RNG.normal(0, 0.05, size=(nwalk, nd))
+    p0 = rng.normal(0, 0.05, size=(nwalk, nd))
     s = emcee.EnsembleSampler(nwalk, nd, logpost)
+    s.random_state = np.random.RandomState(seed).get_state()
     s.run_mcmc(p0, nstep, progress=False)
     chain = s.get_chain(discard=discard, flat=True)        # log10 space
     lin = 10.0 ** chain

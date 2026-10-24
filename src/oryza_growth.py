@@ -2,10 +2,13 @@
 oryza_growth.py — ORYZA2000 potential-production (Level 1) growth core, in Python
 =================================================================================
 
-A faithful re-implementation of the ORYZA2000 / ORYZA(v3) **potential production**
+A REDUCED re-coding of the ORYZA2000 / ORYZA(v3) **potential production**
 crop-growth mechanism (carbon-driven), as opposed to the lightweight DVS-partition-
-on-a-logistic reconstruction in `growth_rice.py`.  It actually runs the ORYZA carbon
-balance on a daily step:
+on-a-logistic reconstruction in `growth_rice.py`.  It runs a simplified ORYZA carbon
+balance on a daily step (for the line-by-line port with the IR72.D92 crop file -- stem
+reserves, transplanting shock, leaf-N based AMAX, the grain sink limit -- see
+`oryza2000.py`; on the IR72DS92 experiment this reduced version matures 12 d late and
+keeps growing its stem after flowering, validation/oryza2000_ir72ds92.py):
 
     radiation + temperature
         -> SUCROS astronomy (daylength, solar height)            [ASTRO]
@@ -333,7 +336,7 @@ def oryza_drivers(congener: str = "PFOA", Cwo: float = 1.0, season: float = 120.
     M = om.organ_matrix(b, mass_basis, floor=1e-9)
     Qtp = fr.Q_TP(t, season) if Qtp is None else np.asarray(Qtp, float)
     return dict(t=t, Cwo=np.full_like(t, float(Cwo)), Qtp=Qtp, M=M,
-                leaf_loss=b["leaf_death_rate"])
+                leaf_loss=b["leaf_death_rate"], mass_basis=mass_basis)
 
 
 if __name__ == "__main__":

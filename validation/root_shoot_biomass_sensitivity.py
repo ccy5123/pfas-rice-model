@@ -39,6 +39,8 @@ from pfas_rice_plant_module_4pool_surf import (   # noqa: E402
     Environment, Compound, Compartment, RiceUptakeModel, PlantInputs,
     _logistic, ROOT, STEM, LEAF, FRUIT)
 import growth_rice as gr                            # noqa: E402
+import organ_mass as om                             # noqa: E402
+MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")   # organ_mass; "dry" = the pre-fix record
 
 PAR = json.load(open(os.path.join(ROOT_DIR, "params", "parameters.json")))
 OBS = {}
@@ -75,9 +77,16 @@ def partition_stats(M):
     return dict(root_pct=100 * f[ROOT] / tot, root_shoot=f[ROOT] / shoot, HI=f[FRUIT] / tot)
 
 
-def w2_rmse(M):
-    """log10 RMSE of root/straw/grain BAF vs Yamazaki, W2 fit fixed, on biomass M."""
-    inp = PlantInputs(t=T, Cwo=np.full_like(T, 1.0), Qtp=QTP, M=M)
+def w2_rmse(M, crop=True):
+    """log10 RMSE of root/straw/grain BAF vs Yamazaki, W2 fit fixed, on biomass M.
+
+    `M` is DRY matter for the crop drivers (`crop=True`): the partition stats are read on
+    it (root:shoot, HI are dry-matter quantities) and it is converted to the ODE's mass
+    basis here. The placeholder logistic carries no basis and is used as is."""
+    if crop:
+        M = M * np.array([om.fresh_factor(o, MASS_BASIS) for o in om.ORGANS])
+    inp = PlantInputs(t=T, Cwo=np.full_like(T, 1.0), Qtp=QTP, M=M,
+                      M_basis=MASS_BASIS if crop else None)
     errs = []
     for c in PAR["congeners"]:
         p = c["name"]
@@ -112,7 +121,9 @@ def main():
     print("-" * 66)
     for lab, M in rows:
         s = partition_stats(M)
-        print(f"{lab:36s} {s['root_pct']:6.1f} {s['root_shoot']:6.3f} {s['HI']:6.3f} {w2_rmse(M):8.3f}")
+        rm = w2_rmse(M, crop=not lab.startswith("reproduce placeholder"))
+        print(f"{lab:36s} {s['root_pct']:6.1f} {s['root_shoot']:6.3f} {s['HI']:6.3f} {rm:8.3f}")
+    print(f"(organ mass for the ODE = {MASS_BASIS}; root%/R/S/HI are read on dry matter)")
     print("\nLiterature maturity root:shoot ~0.08-0.13; HI ~0.45-0.55.")
     print("=> RMSE 0.029 needs the non-physical placeholder (HI 0.07); realistic HI")
     print("   gives ~0.25-0.31 for ANY root:shoot -> the W2 fit must be re-fitted on a")

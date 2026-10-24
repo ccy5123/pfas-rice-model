@@ -1,0 +1,25 @@
+{
+  "params": {
+    "a": 0.2146350272386328,
+    "b": 0.14214764149670275,
+    "g_xy": 0.03315229003883988,
+    "g_ph": 0.020956841106531676,
+    "K_half": 4653.504451875061,
+    "pfsa_ln": 0.8925841158143457
+  },
+  "rmse": {
+    "all": 0.2052195104738297,
+    "excl": 0.1768377158904476,
+    "root": 0.08777179501471741,
+    "straw": 0.19392993607782383,
+    "grain": 0.2846619650218492
+  },
+  "mass_basis": "fresh",
+  "biomass": "growth_rice",
+  "excluded": [
+    "PFDoDA"
+  ],
+  "at_bound": [],
+  "nfev": 17,
+  "note": "Yamazaki in-sample; validation/fit_lipid_loading.py"
+}

@@ -1,0 +1,28 @@
+{
+  "global": {
+    "kappa_d": 31.445846498876644,
+    "L_Ph": 0.00010000093610987472,
+    "gxy": 0.05266257832120442,
+    "gph": 0.002606860671297126,
+    "K_half": 3000.0,
+    "pfsa_ln": 1.25,
+    "ks0": -1.0945771745293016,
+    "ks_b": 5.03136439846996e-06,
+    "ks_sa": 0.24018645792445345
+  },
+  "ushape_q": [
+    -0.6459296875798356,
+    0.522264927552349,
+    -0.08839861107106294,
+    1.4993795514292465,
+    0.19484171928007482
+  ],
+  "shoot": {
+    "N": 4,
+    "stem_transp_frac": 0.45,
+    "lam_grain": 0.05,
+    "retention": 0.6
+  },
+  "forcing": "measured",
+  "note": "merged two-pool root + nstem_leaf redistributed shoot; Yamazaki in-sample; EXPLORATORY (parameters.json UNCHANGED)"
+}

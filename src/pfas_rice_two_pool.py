@@ -35,7 +35,8 @@ from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
 from scipy.optimize import brentq
 
-from pfas_rice_plant_module_4pool_surf import Environment, Compound, root_uptake
+from pfas_rice_plant_module_4pool_surf import (
+    Environment, Compound, root_uptake, S_XYLEM_DRY, LEAF, FRUIT)
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_HERE)
@@ -121,6 +122,11 @@ def simulate(name, f_xy, vmax_in, *, g_xy=0.0, g_ph=None, k_off=0.02, seq=1.0,
     Bst = _B_full(cc["stem"], c)
     Blf = _B_full(cc["leaf"], c)
     S_leaf, S_grain = 20.0, 2.0
+    # the xylem split runs on DRY matter for a fresh M (`xylem_leaf_share`); dry M is
+    # split as given, the way the pre-fix records were made
+    if mass_basis == "fresh":
+        S_leaf = S_XYLEM_DRY[LEAF] * (1.0 - cc["leaf"]["theta_fw"])
+        S_grain = S_XYLEM_DRY[FRUIT] * (1.0 - cc["grain"]["theta_fw"])
     fQ, fMr, fMs, fMl, fMg, dMr, dMs, dMl, dMg = _drivers(float(season), biomass, mass_basis)
 
     def rhs(tt, C):

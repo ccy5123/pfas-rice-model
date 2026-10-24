@@ -356,15 +356,15 @@ def render(cfg):
                 dose = ("low" if c1.radio("Tang dose", ["across-dose mean", "0.1 µg/g (env-closest)"],
                                           horizontal=True).startswith("0.1") else "mean")
                 bm = ("oryza" if c2.checkbox("ORYZA biomass driver", value=False,
-                                             help="Drive the shoot model with the mechanistic ORYZA2000 "
+                                             help="Drive the shoot model with the reduced ORYZA Level-1 "
                                                   "biomass instead of the logistic (slower).") else "growth_rice")
                 show_lipid = c3.checkbox(
                     "lipid loading (OOS)", value=False,
                     help="Turn on the K_PL-gated lipid-facilitated loading. Its constants were fit on "
                          "YAMAZAKI and nothing here is re-fit to Tang, so this is a genuine "
                          "out-of-sample prediction — and it is the one that works: Tang per-organ "
-                         "log10 RMSE 1.232 (free anion) → 0.516, matching the in-sample Tang refit "
-                         "(0.519). See validation/oos_tang_lipid.py.")
+                         "log10 RMSE 1.48 (free anion) → 0.52 (ORYZA biomass, 0.1 µg/g, fresh organ "
+                         "mass); the in-sample Tang refit reaches 0.33. See validation/oos_tang_lipid.py.")
                 val = api.tang_tf_validation(congener, dose=dose, biomass=bm)
                 valr = api.tang_tf_validation(congener, dose=dose, biomass=bm, use_refit=True)
                 vall = (api.tang_tf_validation(congener, dose=dose, biomass=bm, lipid_loading=True)
@@ -374,22 +374,23 @@ def render(cfg):
                     st.success(
                         "**The purple bars are a prediction, not a fit.** The green refit bars were "
                         "calibrated ON these measurements; the lipid mechanism was calibrated on "
-                        "Yamazaki and transferred here untouched, yet lands in the same place "
-                        "(0.516 vs 0.519 across Tang's three congeners). The dominant free-anion "
-                        "failure — PFOS, the high-K_PL sulfonate, ~40–200× under — is fixed at the "
-                        "mechanism level "
-                        "(stalk 0.013 → 0.620 vs Tang 0.571). Residuals it does NOT fix: GenX "
-                        "(provisional ether f_xy) and the PFOS endosperm (~5× under).")
-                _verdict = {"GenX": "GenX over-predicted ~12× by the provisional 0.233; the refit ≈ the documented 0.013.",
-                            "PFOS": "PFOS is **dataset-dependent** — Yamazaki W2 0.142 vs Tang ~0.32; report the **range with conditions**, not one value.",
-                            "PFOA": "PFOA f_xy is dose-sensitive (0.064 across-dose mean → 0.097 at 0.1 µg/g)."}[congener]
+                        "Yamazaki and transferred here untouched: 0.52 across Tang's three congeners "
+                        "against 1.48 for the free anion (the in-sample refit reaches 0.33). The "
+                        "dominant free-anion failure — PFOS, the high-K_PL sulfonate, ~100–300× under — "
+                        "is cut at the mechanism level (stalk 0.002 → 0.11 vs Tang 0.571, still ~5× "
+                        "under). Residuals it does NOT fix: GenX (provisional ether f_xy, over) and "
+                        "the PFOS shoot/endosperm (under).")
+                _verdict = {"GenX": "GenX: the provisional 0.233 is ~2.6× above the Tang refit (0.089 on fresh organ mass; the dry-mass fit gave 0.017).",
+                            "PFOS": "PFOS: the free-anion refit sits at the **f_xy = 1 ceiling** on fresh organ mass — the free anion cannot deliver Tang's PFOS shoot even unrestricted; the K_PL-gated lipid term is what carries it.",
+                            "PFOA": "PFOA f_xy is dose-sensitive (0.38 across-dose mean → 0.57 at 0.1 µg/g, fresh organ mass)."}[congener]
                 st.markdown(
                     f"- **f_xy**: recommended **{val['f_xy']:.3g}** → Tang-refit **{valr['f_xy']:.3g}**. {_verdict}\n"
                     f"- **Dry-weight basis** — `TF_dw = TF_fw·(1−θ_root)/(1−θ_tissue)`; comparing the model's "
                     f"fresh-weight TF to Tang's dry-weight TF (without this factor) is a units error that "
                     f"flatters the grain ~8×.\n"
-                    f"- **Grain/endosperm is structurally under-predicted ~3–8×** and is **not** closable by "
-                    f"`L_Ph`/lipid — a phloem-delivery + dry-weight limit, not a calibration gap.")
+                    f"- **Grain/endosperm**: on the pre-fix dry-mass record it was ~3–8× under and not closable "
+                    f"by `L_Ph`/lipid. On fresh organ mass the gap is smaller and model-dependent (Tang refit: "
+                    f"PFOA closes, PFOS ~4× under) — re-examination pending.")
             st.caption("Source: docs/literature_db/raw_si/tang2026_doseresponse.csv (SI S7/S8). Model: "
                        "redistributed-shoot `simulate_nstem_leaf`; the f_xy refit is OVERRIDE-only (parameters.json "
                        "unchanged). Details: docs/VALIDATION_TANG2026_NSTEM_KR.md · docs/tang2026_grain_units_exploration.md.")

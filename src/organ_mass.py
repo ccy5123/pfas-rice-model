@@ -27,10 +27,11 @@ so the mass basis and the concentration basis cannot drift apart.
 `mass_basis` names the two readings, in the repo's named-mode idiom:
     "fresh" (DEFAULT) -- the corrected basis above.
     "dry"             -- the pre-fix behaviour (dry matter used as M). Kept ONLY so the
-                         artifacts fitted on it can be reproduced: `f_xy_oryza`/
-                         `L_Ph_oryza`/`kappa_d_oryza`, `TANG_REFIT_FXY`, the two-pool
-                         cached fits on measured forcings, `LIPID_LOADING`. It is not a
-                         physically alternative reading.
+                         artifacts fitted on it can be reproduced. Every such fit has been
+                         re-made on fresh mass and the dry one kept beside it, selected by
+                         this mode: `*_oryza_dry`, `TANG_REFIT_FXY_DRY`, `LIPID_LOADING_DRY`,
+                         and the `*_dry.json` two-pool caches (validation scripts take
+                         PFAS_MASS_BASIS=dry). It is not a physically alternative reading.
 
 LIMITATIONS (docs/sampling_protocols_audit_KR.md): theta_fw is held constant over
 the season (grain 0.14 is harvest moisture; filling grain is ~0.5-0.6 water, mature

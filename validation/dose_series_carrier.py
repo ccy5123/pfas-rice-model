@@ -117,6 +117,9 @@ DOSES = os.path.join(ROOT_DIR, "docs", "literature_db", "raw_si",
 CONGENERS = ("PFOA", "PFOS", "GenX")
 SEASON = 120.0
 N_T = 121
+# organ-mass basis (src/organ_mass.py). The recorded verdict below was produced on the
+# pre-fix DRY basis; PFAS_MASS_BASIS=dry reproduces it, the default is FRESH.
+MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")
 GATE_MIN_DECLINE = 1.5          # pre-registered well-conditioning gate
 BOOT_MIN = 0.90                 # pre-registered bootstrap threshold
 F_OC = 0.02                     # repo default (soil_hydrus.paddy_kd)
@@ -170,7 +173,7 @@ def whole_plant_baf(name, Cwo, uptake="carrier", km_scale=1.0):
     """Mass-weighted whole-plant BAF -- Tang's BCF endpoint (C_rice/C_soil) up to
     the dose-independent factor 1/Kd, which cancels in every shape used here."""
     r = api.simulate(name, Cwo=Cwo, uptake=uptake, f_xy_source="recommended",
-                     season=SEASON, n_t=N_T, km_scale=km_scale)
+                     season=SEASON, n_t=N_T, km_scale=km_scale, mass_basis=MASS_BASIS)
     Mf = r["M"][-1]
     C = np.array([r["conc"][k][-1] for k in api.TISSUES])
     return float((C * Mf).sum() / Mf.sum() / r["cwo_ref"])
@@ -179,7 +182,7 @@ def whole_plant_baf(name, Cwo, uptake="carrier", km_scale=1.0):
 def model_tf(name, Cwo, uptake="carrier"):
     """Shoot/root ratio -- the model's analogue of Tang's TF, for section 4."""
     r = api.simulate(name, Cwo=Cwo, uptake=uptake, f_xy_source="recommended",
-                     season=SEASON, n_t=N_T)
+                     season=SEASON, n_t=N_T, mass_basis=MASS_BASIS)
     return float(r["straw_baf"] / max(r["baf_final"]["root"], 1e-12))
 
 

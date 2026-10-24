@@ -1,0 +1,66 @@
+# ORYZA2000 crop data file IR72.D92 (Oryza sativa cv. IR72), transcribed from the PRIMARY source:
+#   Bouman BAM, Kropff MJ, Tuong TP, Wopereis MCS, ten Berge HFM, van Laar HH (2001). ORYZA2000: modeling lowland
+#   rice. IRRI, Los Banos. Section 7.3 "The crop data file" (pp. 163-175). http://books.irri.org/9712201716_content.pdf
+# Cross-checked value by value against the APSIM copy "derived from IR72.D92"
+#   (https://raw.githubusercontent.com/APSIMInitiative/APSIMClassic/master/Model/Oryza.xml): column apsim_agrees.
+# Potential-production parameters only (sections 1-7, plus NFLVI from section 10, which NNOSTRESS reads in potential
+# mode); the drought-stress (8-9) and the rest of the N (10) block are not used in potential mode and are omitted. Tables are written x:y pairs separated by ';' (x = DVS unless the unit says oC).
+# The APSIM copy writes EFFTB with an extra 0 oC point (0:0.54) -- identical on the 10-40 oC range ORYZA interpolates.
+parameter,value,unit,section,description,apsim_agrees
+TBD,8.0,oC,1 phenology,base temperature for development,Y
+TBLV,8.0,oC,1 phenology,base temperature for juvenile leaf area growth,not in APSIM copy
+TMD,42.0,oC,1 phenology,maximum temperature for development,Y
+TOD,30.0,oC,1 phenology,optimum temperature for development,Y
+DVRJ,0.000773,oCd-1,1 phenology,development rate juvenile phase (DVS 0-0.4),Y
+DVRI,0.000758,oCd-1,1 phenology,development rate photoperiod-sensitive phase (DVS 0.4-0.65),Y
+DVRP,0.000784,oCd-1,1 phenology,development rate panicle development (DVS 0.65-1),Y
+DVRR,0.001784,oCd-1,1 phenology,development rate reproductive phase (DVS 1-2),Y
+MOPP,11.50,h,1 phenology,maximum optimum photoperiod,Y
+PPSE,0.0,h-1,1 phenology,photoperiod sensitivity (0 = insensitive),Y
+SHCKD,0.4,oCd oCd-1,1 phenology,seedling age -> delay in phenological development after transplanting,Y
+RGRLMX,0.0085,oCd-1,2 leaf/stem,maximum relative growth rate of leaf area,Y
+RGRLMN,0.0040,oCd-1,2 leaf/stem,minimum relative growth rate of leaf area,Y
+SHCKL,0.25,oCd oCd-1,2 leaf/stem,seedling age -> delay in leaf area development after transplanting,Y
+SWISLA,FUNCTION,-,2 leaf/stem,SLA = ASLA + BSLA*exp(CSLA*(DVS-DSLA)) capped at SLAMAX,implied (no switch tag; function parameters present and the SLA table commented out)
+ASLA,0.0024,ha kg-1,2 leaf/stem,SLA function parameter,Y
+BSLA,0.0025,ha kg-1,2 leaf/stem,SLA function parameter,Y
+CSLA,-4.5,-,2 leaf/stem,SLA function parameter,Y
+DSLA,0.14,-,2 leaf/stem,SLA function parameter,Y
+SLAMAX,0.0045,ha kg-1,2 leaf/stem,maximum SLA,Y
+SSGATB,0.0:0.0003;0.9:0.0003;2.1:0.0;2.5:0.0,ha kg-1,2 leaf/stem,specific green stem area vs DVS,Y
+FRPAR,0.5,-,3 photosynthesis,fraction of sunlight that is PAR,Y
+SCP,0.2,-,3 photosynthesis,scattering coefficient of leaves for PAR,Y
+CO2REF,340.0,ppm,3 photosynthesis,reference CO2,Y
+CO2,340.0,ppm,3 photosynthesis,ambient CO2 in the IR72DS92 run,not in APSIM copy
+KDFTB,0.00:0.4;0.65:0.4;1.00:0.6;2.50:0.6,-,3 photosynthesis,light extinction coefficient for leaves vs DVS,Y
+KNFTB,0.0:0.4;2.5:0.4,-,3 photosynthesis,extinction coefficient of the canopy N profile vs DVS,Y
+EFFTB,10.0:0.54;40.0:0.36,-,3 photosynthesis,initial light-use efficiency vs temperature (x in oC),Y
+REDFTT,-10.0:0.0;10.0:0.0;20.0:1.0;37.0:1.0;43.0:0.0,-,3 photosynthesis,temperature effect on AMAX (x in oC),Y
+NFLVTB,0.00:0.54;0.16:0.54;0.33:1.53;0.65:1.22;0.79:1.56;1.00:1.29;1.46:1.37;2.02:0.83;2.50:0.83,g N m-2 leaf,3 photosynthesis,leaf N on area basis vs DVS (drives AMAX in potential mode),Y
+MAINLV,0.02,kg CH2O kg-1 DM d-1,4 maintenance,maintenance respiration leaves,Y
+MAINST,0.015,kg CH2O kg-1 DM d-1,4 maintenance,maintenance respiration stems,Y
+MAINSO,0.003,kg CH2O kg-1 DM d-1,4 maintenance,maintenance respiration panicles,Y
+MAINRT,0.01,kg CH2O kg-1 DM d-1,4 maintenance,maintenance respiration roots,Y
+TREF,25.0,oC,4 maintenance,reference temperature,Y
+Q10,2.0,-,4 maintenance,maintenance Q10,Y
+CRGLV,1.326,kg CH2O kg-1 DM,5 growth respiration,carbohydrate requirement leaves,Y
+CRGST,1.326,kg CH2O kg-1 DM,5 growth respiration,carbohydrate requirement stems,Y
+CRGSO,1.462,kg CH2O kg-1 DM,5 growth respiration,carbohydrate requirement panicles,Y
+CRGRT,1.326,kg CH2O kg-1 DM,5 growth respiration,carbohydrate requirement roots,Y
+CRGSTR,1.11,kg CH2O kg-1 DM,5 growth respiration,carbohydrate requirement stem reserves,Y
+LRSTR,0.947,-,5 growth respiration,fraction of allocated stem reserves available for growth,Y
+FSTR,0.20,-,6 growth,fraction of stem carbohydrate stored as reserves,Y
+TCLSTR,10.0,d,6 growth,time coefficient for loss of stem reserves,Y
+SPGF,64900.0,no kg-1,6 growth,spikelet growth factor,Y
+WGRMX,0.0000249,kg grain-1,6 growth,maximum individual grain weight,Y
+FSHTB,0.00:0.50;0.43:0.75;1.00:1.00;2.50:1.00,-,6 growth,fraction of total DM to shoot vs DVS,Y
+FLVTB,0.000:0.60;0.500:0.60;0.750:0.30;1.000:0.00;1.200:0.00;2.5:0.0,-,6 growth,fraction of shoot DM to leaves vs DVS,Y
+FSTTB,0.000:0.40;0.500:0.40;0.750:0.70;1.000:0.40;1.200:0.00;2.5:0.0,-,6 growth,fraction of shoot DM to stems vs DVS,Y
+FSOTB,0.000:0.000;0.500:0.000;0.750:0.000;1.000:0.600;1.200:1.000;2.5:1.0,-,6 growth,fraction of shoot DM to panicles vs DVS,Y
+DRLVT,0.00:0.000;0.60:0.000;1.00:0.015;1.60:0.025;2.10:0.050;2.50:0.050,d-1,6 growth,leaf death coefficient vs DVS,Y
+FCLV,0.419,kg C kg-1 DM,7 carbon balance,carbon fraction leaves,Y
+FCST,0.431,kg C kg-1 DM,7 carbon balance,carbon fraction stems,Y
+FCSO,0.487,kg C kg-1 DM,7 carbon balance,carbon fraction panicles,Y
+FCRT,0.431,kg C kg-1 DM,7 carbon balance,carbon fraction roots,Y
+FCSTR,0.444,kg C kg-1 DM,7 carbon balance,carbon fraction stem reserves,Y
+NFLVI,0.5,g N m-2 leaf,10 nitrogen,initial leaf N on area basis (read by NNOSTRESS in potential mode; used until the first rate step),Y

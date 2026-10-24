@@ -29,10 +29,9 @@ def test_breakthrough_closes_pfdoda():
     """The breakthrough: with a LOW free f_xy + an ENHANCED carrier, the 2-pool reproduces
     PFDoDA root AND grain simultaneously -- which the single-pool core cannot.
 
-    Pinned to the pre-fix DRY organ mass: on the corrected FRESH mass (src/organ_mass.py)
-    the closure's free f_xy runs to its bound, so the "low f_xy + enhanced carrier" reading
-    is a dry-basis result until the two-pool closure is re-examined
-    (docs/sampling_protocols_audit_KR.md section 5)."""
+    Pinned to the pre-fix DRY organ mass. On the corrected FRESH mass (src/organ_mass.py)
+    the reading does not hold -- see test_model_api_hook: the free f_xy runs to its bound
+    and the carrier enhancement shrinks to ~1.5x, so this is a dry-basis result."""
     import pfas_rice_two_pool as tp
     import csv
     obs = {}
@@ -51,6 +50,16 @@ def test_model_api_hook():
     import model_api as api
     d = api.close_longchain_2pool("PFDoDA")
     assert d["sim"]["root"] > 0 and 0 < d["f_xy"] <= 1.0
+    # FRESH organ mass (the default), re-examined: the free f_xy sits at its bound (1)
+    # and the carrier needs only ~1.5x (dry: f_xy 0.43, 3.2x), so "low f_xy + enhanced
+    # carrier" was a dry-mass reading. Root and grain still close; the straw does NOT
+    # (21 vs 49.7 even unrestricted) -- the C12 shoot-loading ceiling remains.
+    o = api.observed_baf("PFDoDA")
+    assert d["f_xy"] == pytest.approx(1.0, abs=1e-3)
+    assert d["carrier_x"] < 2.0
+    assert d["sim"]["root"] == pytest.approx(o["root"], rel=0.10)
+    assert d["sim"]["grain"] == pytest.approx(o["grain"], rel=0.20)
+    assert d["sim"]["straw"] < 0.5 * o["straw"]
     # and the canonical core path is still intact (default 4pool_surf simulate)
     base = api.simulate("PFOA")
     assert base["baf_final"]["root"] > 0

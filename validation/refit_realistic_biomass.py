@@ -38,6 +38,8 @@ sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
 from pfas_rice_plant_module_4pool_surf import (   # noqa: E402
     Environment, Compound, Compartment, RiceUptakeModel, PlantInputs)
 import growth_rice as gr                            # noqa: E402
+import organ_mass as om                             # noqa: E402
+MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")   # organ_mass; "dry" = the pre-fix record
 from calibration import Param, ObservedBAF, calibrate   # noqa: E402
 
 ROOT_SHOOT = 0.10                                    # field anchor (Japanese paddy)
@@ -52,8 +54,8 @@ with open(os.path.join(ROOT_DIR, "data_obs", "obs_baf_Yamazaki.csv")) as f:
 T = np.linspace(0.0, 120.0, 241)
 QTP = 0.05 + 0.35 * np.exp(-((T - 75.0) ** 2) / (2 * 25.0 ** 2))   # same shape as reproduce_demo
 _b = gr.organ_biomass(T, 120.0, root_shoot=ROOT_SHOOT)
-M = np.maximum(np.column_stack([_b["root"], _b["stem"], _b["leaf"], _b["grain"]]), 1e-6)
-INPUTS = PlantInputs(t=T, Cwo=np.full_like(T, 1.0), Qtp=QTP, M=M)
+M = om.organ_matrix(_b, MASS_BASIS, floor=1e-6)     # crop DRY matter -> ODE mass basis
+INPUTS = PlantInputs(t=T, Cwo=np.full_like(T, 1.0), Qtp=QTP, M=M, M_basis=MASS_BASIS)
 ENV = Environment()
 
 

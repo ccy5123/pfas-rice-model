@@ -212,7 +212,12 @@ chain length --- $\mathrm{corr}(n_C,\log_{10} g_{\mathrm{apo}}) = +0.832$ over a
 rising from $\sim2$--$5$ at C4--C8 to $20$--$50$ at C9--C12. Independently,
 \texttt{runs/pfas-rice-carrier} (LC6) finds the \emph{carrier} needs the same correction
 ($\sim$flat to C10, then $2.0\times$ at C11 and $5.5\times$ at C12). Both halves of $\eta$
-therefore require a chain--length term of similar size.
+therefore require a chain--length term of similar size. A same-setup check, added to the script
+with the organ-mass fix, confirms it on \emph{one} model: the per-congener carrier $V_{\max}$
+trends with chain length as the bypass does ($\mathrm{corr} = +0.880$ vs $+0.832$ on the pre-fix
+dry organ mass, $+0.915$ vs $+0.909$ on fresh). Where $f_{xy}$ is left free instead (the carrier
+two-pool closure), the carrier's correction nearly vanishes ($1.26$--$1.50\times$ on fresh mass):
+the chain-length correction lands on whichever term is free.
 
 The equation is left as written, deliberately: a requirement common to two \emph{different} entry
 terms is unlikely to be a property of entry at all, and the natural reading is that

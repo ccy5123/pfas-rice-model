@@ -41,7 +41,8 @@ def _repro_drivers():
     Qtp = 0.05 + 0.35 * np.exp(-((t - 75.0) ** 2) / (2 * 25.0 ** 2))
     M = np.column_stack([_logistic(t, 1e-3, 0.030, 0.10, 20.0), _logistic(t, 1e-3, 0.040, 0.10, 25.0),
                          _logistic(t, 1e-3, 0.050, 0.12, 30.0), _logistic(t, 1e-5, 0.025, 0.18, 80.0)])
-    return dict(t=t, Cwo=np.full_like(t, 1.0), Qtp=Qtp, M=M)
+    return dict(t=t, Cwo=np.full_like(t, 1.0), Qtp=Qtp, M=M,
+                mass_basis=None)          # basis-free placeholder: split on M as given
 
 plt.rcParams["axes.unicode_minus"] = False
 _C = {"lipid": "#d62728", "mono": "#1f77b4", "W2": "#2ca02c", "obs": "#222222"}
@@ -110,7 +111,7 @@ def panel_B(ax):
                 color=_C[m], lw=1.6, ms=5, label=_LBL[m], alpha=0.9)
     for n in names:
         if n == "PFOA":
-            ax.annotate("PFOA*\n(used in fit)", (nC[n], kim[n]), textcoords="offset points",
+            ax.annotate("PFOA*\n(not scored)", (nC[n], kim[n]), textcoords="offset points",
                         xytext=(4, 8), fontsize=7.5, color="#b00")
         elif DF.get(n, 0) < 15:
             ax.annotate(f"DF {DF[n]:.0f}%", (nC[n], kim[n]), textcoords="offset points",
@@ -119,7 +120,7 @@ def panel_B(ax):
     ax.set_xlabel("perfluorocarbon chain length")
     ax.set_ylabel("grain BAF [L/kg]")
     ax.set_title("(B) Out-of-sample: Kim 2019 brown-rice grain\n"
-                 "only lipid tracks the long-chain rise (reliable PFHpA·PFNA: RMSE 0.23 vs mono 1.91)",
+                 "only lipid tracks the long-chain rise (reliable DF≥15% = PFNA alone: RMSE 0.23 vs mono 1.91, dry-mass record)",
                  fontsize=10.5)
     ax.legend(fontsize=8.5, loc="upper left")
     ax.grid(True, which="both", alpha=0.25)

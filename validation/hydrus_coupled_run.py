@@ -33,6 +33,8 @@ from pfas_rice_plant_module_4pool_surf import (  # noqa: E402
     _logistic, ROOT as I_ROOT, STEM, LEAF, FRUIT)
 import soil_hydrus as sh  # noqa: E402
 import growth_rice as gr  # noqa: E402
+import organ_mass as om  # noqa: E402
+MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")   # organ_mass; "dry" = the pre-fix record
 import forcing_rice as fr  # noqa: E402
 
 PAR = json.load(open(os.path.join(ROOT, "params", "parameters.json")))
@@ -80,8 +82,9 @@ def solve_baf(inputs, name):
 def baseline_inputs():
     t = np.linspace(0.0, SEASON, N_T)
     b = gr.organ_biomass(t, SEASON)
-    M = np.maximum(np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]]), 1e-4)
-    return PlantInputs(t=t, Cwo=np.full_like(t, 1.0), Qtp=fr.Q_TP(t, SEASON), M=M)
+    M = om.organ_matrix(b, MASS_BASIS)              # crop DRY matter -> ODE mass basis
+    return PlantInputs(t=t, Cwo=np.full_like(t, 1.0), Qtp=fr.Q_TP(t, SEASON), M=M,
+                       M_basis=MASS_BASIS)
 
 
 def main():
@@ -95,7 +98,7 @@ def main():
     for name in CONGENERS:
         c = CONG[name]
         inp_h, res = sh.inputs_from_hydrus(c["n_C"], c["group"], season=SEASON,
-                                           Cwo_ref=1.0, n_t=N_T)
+                                           Cwo_ref=1.0, n_t=N_T, mass_basis=MASS_BASIS)
         traj[name] = (inp_h.t, inp_h.Cwo, res.Kd)
         b = solve_baf(base, name)
         h = solve_baf(inp_h, name)

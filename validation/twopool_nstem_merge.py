@@ -43,9 +43,11 @@
 # (peak Q_TP 0.40 L/d/hill, ~4x the measured 0.098) the deposition route floods the
 # grain and the fit collapses onto its bounds. `--demo` keeps the old comparison.
 #
-#   python validation/twopool_nstem_merge.py            (re-fit, ~10 min)
+#   python validation/twopool_nstem_merge.py            (re-fit, ~40 min, FRESH organ mass)
 #   python validation/twopool_nstem_merge.py --cached   (reuse the cached fit)
 #   python validation/twopool_nstem_merge.py --demo     (demo forcings instead)
+#   PFAS_MASS_BASIS=dry python validation/twopool_nstem_merge.py --cached
+#                                                       (the pre-fix DRY-mass record)
 # =============================================================================
 from __future__ import annotations
 import json, os, sys
@@ -62,7 +64,6 @@ from growth_rice import organ_biomass          # ORYZA IR72 organ biomass M(t)
 import twopool_root_exploration as TP          # obs, k_seq descriptors, fit machinery
 import model_api as api                        # the merged model + Tang endpoints
 
-FIT_CACHE = os.path.join(HERE, "twopool_nstem_fitted_params.json")
 OBS, CONGENERS = TP.OBS, TP.CONGENERS
 DOSE = "low"                                   # Tang 0.1 ug/g (environmentally closest)
 SEASON = 120.0
@@ -92,12 +93,28 @@ def install_forcings(kind="measured"):
     return dict(t=t, Cwo=np.full_like(t, 1.0), Qtp=fr.Q_TP(t, SEASON), M=M)
 
 
-# ORGAN-MASS BASIS of this whole script (src/organ_mass.py). The cached fit
-# (twopool_nstem_fitted_params.json) and every number recorded from it (in-sample 0.301,
-# Tang OOS 0.801) were made with the biomass driver's DRY matter as M, so the fit AND its
-# Tang transfer both run on "dry" -- a consistent pre-fix record. Re-fitting on the
-# corrected "fresh" basis is open (docs/sampling_protocols_audit_KR.md section 5).
-MASS_BASIS = "dry"
+# ORGAN-MASS BASIS of this whole script (src/organ_mass.py) -- the fit, its cache and
+# its Tang transfer always run on ONE basis, so a record never mixes them.
+#   "fresh" (default): the corrected basis -> twopool_nstem_fitted_params.json
+#   "dry"            : the pre-fix record (biomass driver's DRY matter used as M; in-sample
+#                      0.301, Tang OOS 0.801) -> twopool_nstem_fitted_params_dry.json.
+#                      Regenerate with  PFAS_MASS_BASIS=dry python validation/twopool_nstem_merge.py
+MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")
+
+
+def fit_cache(basis=None):
+    """The merged-fit cache for an organ-mass basis (default: the module's)."""
+    basis = MASS_BASIS if basis is None else basis
+    sfx = "_dry" if basis == "dry" else ""
+    return os.path.join(HERE, f"twopool_nstem_fitted_params{sfx}.json")
+
+
+def measured_twopool_cache(basis=None):
+    """The pass-through-stem two-pool fit on the SAME measured forcings and basis
+    (written by validation/twopool_root_measured.py)."""
+    basis = MASS_BASIS if basis is None else basis
+    sfx = "_dry" if basis == "dry" else ""
+    return os.path.join(HERE, f"twopool_fitted_params_measured{sfx}.json")
 
 
 DRIVERS = None      # set by main() / the test fixture; see `_drivers()`
@@ -274,11 +291,10 @@ def tang_oos(p, q, dose=DOSE):
         obs = api.tang_observed_tf(nm, dose)
         tf_merged = merged_tang_tf(nm, p, q)
         tf_2pool = tf_2pool_all[nm]
-        v_m = api.tang_tf_validation(nm, f_xy_source="recommended", dose=dose)
-        v_l = api.tang_tf_validation(nm, f_xy_source="recommended", dose=dose,
-                                     lipid_loading=True)
-        v_r = api.tang_tf_validation(nm, f_xy_source="recommended", use_refit=True,
-                                     dose=dose)
+        kw = dict(f_xy_source="recommended", dose=dose, mass_basis=MASS_BASIS)
+        v_m = api.tang_tf_validation(nm, **kw)
+        v_l = api.tang_tf_validation(nm, lipid_loading=True, **kw)
+        v_r = api.tang_tf_validation(nm, use_refit=True, **kw)
         for _, organ, _ in api._TANG_ORGANS:
             o = obs[organ]
             vals = (tf_merged[organ], tf_2pool[organ], v_m["model_tf"][organ],
@@ -310,9 +326,36 @@ def _reference_twopool_fit(forcing):
     if forcing == "demo":
         p, q = TP.load_fit()
         return p, q, "0.251 / root 0.156 / straw 0.260 / grain 0.311 (demo forcings)"
-    d = json.load(open(os.path.join(HERE, "twopool_fitted_params_measured.json")))
+    d = json.load(open(measured_twopool_cache()))
+    ref = d.get("rmse_text") or "0.278 / root 0.154"     # the dry record predates the key
     return (d["global"], np.array(d["ushape_q"]),
-            "0.278 / root 0.154 (measured forcings)")
+            f"{ref} (measured forcings, {MASS_BASIS} organ mass)")
+
+
+def refit(forcing="measured"):
+    """Stage 2 on its own: re-fit the merged model on Yamazaki and write the cache
+    for the current MASS_BASIS. Returns (p, q)."""
+    global DRIVERS
+    if DRIVERS is None:
+        DRIVERS = install_forcings(forcing)
+    print(f"\nSTAGE 2 — re-fitting the merged model on Yamazaki (7 globals, "
+          f"PFDoDA excluded; {MASS_BASIS} organ mass) ...")
+    lo, hi = _bounds()
+    sol = least_squares(residuals, _x0(), bounds=(lo, hi), method="trf",
+                        diff_step=1e-2, max_nfev=400, args=(True,))
+    p = _unpack(sol.x)
+    print("  fitted globals:  " + "  ".join(f"{n}={p[n]:.4g}" for n in FIT))
+    demanded = root_match(p)
+    print("  root-matched empirical k_seq: "
+          + "  ".join(f"{nm}={ks:.3f}" for nm, _, _, ks in demanded))
+    q = TP.fit_ushape(demanded)
+    json.dump({"global": p, "ushape_q": list(map(float, q)),
+               "shoot": SHOOT, "forcing": forcing, "mass_basis": MASS_BASIS,
+               "note": "merged two-pool root + nstem_leaf redistributed shoot; "
+                       "Yamazaki in-sample; EXPLORATORY (parameters.json UNCHANGED)"},
+              open(fit_cache(), "w"), indent=2)
+    print(f"  saved -> {fit_cache()}")
+    return p, q
 
 
 def main(cached=False, forcing="measured"):
@@ -321,7 +364,7 @@ def main(cached=False, forcing="measured"):
     print("=" * 86)
     print("STRUCTURAL MERGE — two-pool sequestration root + redistributed (N-stem+leaf) shoot")
     print("=" * 86)
-    print(f"forcings = {forcing}  (Q_TP peak {DRIVERS['Qtp'].max():.3f} L/d/hill, "
+    print(f"forcings = {forcing}, organ mass = {MASS_BASIS}  (Q_TP peak {DRIVERS['Qtp'].max():.3f} L/d/hill, "
           f"season {DRIVERS['t'][-1]:.0f} d)")
 
     # --- Stage 1: transfer the cached two-pool fit onto the new shoot ---------
@@ -338,28 +381,12 @@ def main(cached=False, forcing="measured"):
     print("     4pool's phloem-only route, so L_Ph/g_ph do not carry over. Hence Stage 2.")
 
     # --- Stage 2: re-fit the merged model on Yamazaki ------------------------
-    if cached and os.path.exists(FIT_CACHE):
-        d = json.load(open(FIT_CACHE))
+    if cached and os.path.exists(fit_cache()):
+        d = json.load(open(fit_cache()))
         p, q = d["global"], np.array(d["ushape_q"])
-        print(f"\nSTAGE 2 — loaded cached merged fit ({FIT_CACHE})")
+        print(f"\nSTAGE 2 — loaded cached merged fit ({fit_cache()})")
     else:
-        print("\nSTAGE 2 — re-fitting the merged model on Yamazaki (7 globals, "
-              "PFDoDA excluded) ...")
-        lo, hi = _bounds()
-        sol = least_squares(residuals, _x0(), bounds=(lo, hi), method="trf",
-                            diff_step=1e-2, max_nfev=400, args=(True,))
-        p = _unpack(sol.x)
-        print("  fitted globals:  " + "  ".join(f"{n}={p[n]:.4g}" for n in FIT))
-        demanded = root_match(p)
-        print("  root-matched empirical k_seq: "
-              + "  ".join(f"{nm}={ks:.3f}" for nm, _, _, ks in demanded))
-        q = TP.fit_ushape(demanded)
-        json.dump({"global": p, "ushape_q": list(map(float, q)),
-                   "shoot": SHOOT, "forcing": forcing,
-                   "note": "merged two-pool root + nstem_leaf redistributed shoot; "
-                           "Yamazaki in-sample; EXPLORATORY (parameters.json UNCHANGED)"},
-                  open(FIT_CACHE, "w"), indent=2)
-        print(f"  saved -> {FIT_CACHE}")
+        p, q = refit(forcing)
 
     print(f"\n  U-shaped k_seq = [{10**q[0]:.3f}*exp(-{q[1]:.2f}(n-4)) + "
           f"{10**q[2]:.4f}*exp({q[3]:.2f}(n-12))] * {{10^{q[4]:+.2f} if PFSA}}")
@@ -368,8 +395,12 @@ def main(cached=False, forcing="measured"):
     print(f"\n  in-sample log10 RMSE (all 11, incl PFDoDA) = {r2:.3f}   "
           f"root={by2['root']:.3f} straw={by2['straw']:.3f} grain={by2['grain']:.3f}")
     ks_os = TP.kseq_ushape(8, "PFSA", q); ks_un = TP.kseq_ushape(11, "PFCA", q)
-    print(f"  PFOS(C8) k_seq={ks_os:.3f} vs PFUnDA(C11) k_seq={ks_un:.3f} "
-          f"({ks_un/max(ks_os,1e-9):.1f}x at identical K_PL=31623) — non-K_PL separation")
+    if min(ks_os, ks_un) < 1e-2:       # a ratio against a ~zero rate is not a separation
+        print(f"  PFOS(C8) k_seq={ks_os:.3g} vs PFUnDA(C11) k_seq={ks_un:.3g} — separation "
+              f"UNDEFINED (a sink near zero is not in use)")
+    else:
+        print(f"  PFOS(C8) k_seq={ks_os:.3f} vs PFUnDA(C11) k_seq={ks_un:.3f} "
+              f"({ks_un/ks_os:.1f}x at identical K_PL=31623) — non-K_PL separation")
 
     # --- Stage 3: the fair per-organ OOS ------------------------------------
     rmses = tang_oos(p, q)

@@ -580,7 +580,8 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
         core.L_Ph = float(L_Ph)
     env = neutral_environment()
     inputs = PlantInputs(t=t, Cwo=Cwo, Qtp=Qtp, M=M,
-                         leaf_loss=drivers.get("leaf_loss"))
+                         leaf_loss=drivers.get("leaf_loss"),
+                         M_basis=drivers.get("mass_basis", "fresh"))   # untagged M is fresh (§8)
     air_obj = None
     if air is not False and air is not None:
         air_obj = air_exchange(cmpd, **(air_kw or {})) if air is True else air
@@ -629,7 +630,7 @@ if __name__ == "__main__":
     import organ_mass as om
     b = organ_biomass(t, season)
     drivers = dict(t=t, Cwo=np.full(n, 1.0), Qtp=fr.Q_TP(t, season),
-                   M=om.organ_matrix(b))                   # crop DRY matter -> ODE FRESH mass
+                   M=om.organ_matrix(b), mass_basis="fresh")   # crop DRY matter -> ODE FRESH mass
     print(f"{'compound':16}{'logKow':>8}{'TSCF':>8}{'K_PW root':>11}"
           f"{'root':>9}{'straw':>9}{'grain':>9}")
     for c in (NeutralCompound("thiamethoxam", -0.13),

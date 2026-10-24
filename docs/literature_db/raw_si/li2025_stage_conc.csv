@@ -1,0 +1,293 @@
+# Li et al. 2025 (J. Hazard. Mater.; DOI 10.1016/j.jhazmat.2025.138256) SI Table S6:
+# 'The concentrations of individual PFASs in paddy tissues', ng/g DRY weight, mean +/- SD,
+# Tianjin paddy field, Jinyu Japonica No.22, Jul-Oct 2023; 5 growth stages WITHOUT dates
+# (triplicate x 5 subsamples per stage). Grain reported from heading onward. nd=1: 'ND'.
+# Transcribed from the SI .docx with merged header cells de-duplicated (PFEtS, PFBS, OBS,
+# the Cl-PFESAs each span two grid columns). Methods text says 'leaves (including stems)'
+# but the table reports stem and leaf separately (docs/sampling_protocols_audit_KR.md).
+stage,stage_order,tissue,compound,mean_ng_g_dw,sd_ng_g_dw,nd
+tillering,1,root,PFBA,1.5,0.5,0
+tillering,1,root,PFHxA,0.05,0.01,0
+tillering,1,root,PFHpA,,,1
+tillering,1,root,PFOA,3.3,0.3,0
+tillering,1,root,L-PFPrS,0.10,0.01,0
+tillering,1,root,PFEtS,0.15,0.04,0
+tillering,1,root,PFBS,0.12,0.01,0
+tillering,1,root,PFOS,1.2,0.2,0
+tillering,1,stem,PFBA,2.6,0.4,0
+tillering,1,stem,PFHxA,0.50,0.05,0
+tillering,1,stem,PFHpA,,,1
+tillering,1,stem,PFOA,0.55,0.06,0
+tillering,1,stem,L-PFPrS,0.55,0.08,0
+tillering,1,stem,PFEtS,0.20,0.04,0
+tillering,1,stem,PFBS,0.40,0.2,0
+tillering,1,stem,PFOS,0.33,0.2,0
+tillering,1,leaf,PFBA,1.9,0.2,0
+tillering,1,leaf,PFHxA,0.20,0.02,0
+tillering,1,leaf,PFHpA,,,1
+tillering,1,leaf,PFOA,0.03,0.003,0
+tillering,1,leaf,L-PFPrS,0.27,0.008,0
+tillering,1,leaf,PFEtS,0.31,0.008,0
+tillering,1,leaf,PFBS,0.15,0.03,0
+tillering,1,leaf,PFOS,0.11,0.006,0
+heading,2,root,PFBA,1.8,0.05,0
+heading,2,root,PFHxA,0.43,0.04,0
+heading,2,root,PFHpA,,,1
+heading,2,root,PFOA,0.79,0.08,0
+heading,2,root,L-PFPrS,0.14,0.01,0
+heading,2,root,PFEtS,0.09,0.04,0
+heading,2,root,PFBS,0.40,0.1,0
+heading,2,root,PFOS,1.8,0.2,0
+heading,2,stem,PFBA,4.5,1.1,0
+heading,2,stem,PFHxA,1.1,0.1,0
+heading,2,stem,PFHpA,,,1
+heading,2,stem,PFOA,0.12,0.01,0
+heading,2,stem,L-PFPrS,0.17,0.005,0
+heading,2,stem,PFEtS,0.17,0.005,0
+heading,2,stem,PFBS,0.26,0.02,0
+heading,2,stem,PFOS,0.21,0.008,0
+heading,2,leaf,PFBA,1.6,0.2,0
+heading,2,leaf,PFHxA,1.0,0.1,0
+heading,2,leaf,PFHpA,,,1
+heading,2,leaf,PFOA,0.19,0.02,0
+heading,2,leaf,L-PFPrS,0.51,0.05,0
+heading,2,leaf,PFEtS,0.28,0.06,0
+heading,2,leaf,PFBS,0.36,0.05,0
+heading,2,leaf,PFOS,0.25,0.08,0
+heading,2,grain,PFBA,,,1
+heading,2,grain,PFHxA,1.8,0.2,0
+heading,2,grain,PFHpA,,,1
+heading,2,grain,PFOA,0.14,0.01,0
+heading,2,grain,L-PFPrS,,,1
+heading,2,grain,PFEtS,,,1
+heading,2,grain,PFBS,1.5,0.02,0
+heading,2,grain,PFOS,0.10,0.002,0
+filling,3,root,PFBA,2.3,0.8,0
+filling,3,root,PFHxA,2.7,0.4,0
+filling,3,root,PFHpA,,,1
+filling,3,root,PFOA,0.09,0.01,0
+filling,3,root,L-PFPrS,0.08,0.008,0
+filling,3,root,PFEtS,0.09,0.009,0
+filling,3,root,PFBS,0.68,0.02,0
+filling,3,root,PFOS,0.12,0.02,0
+filling,3,stem,PFBA,0.45,0.03,0
+filling,3,stem,PFHxA,0.86,0.09,0
+filling,3,stem,PFHpA,,,1
+filling,3,stem,PFOA,0.87,0.09,0
+filling,3,stem,L-PFPrS,0.30,0.04,0
+filling,3,stem,PFEtS,0.64,0.01,0
+filling,3,stem,PFBS,0.32,0.008,0
+filling,3,stem,PFOS,0.72,0.08,0
+filling,3,leaf,PFBA,0.88,0.06,0
+filling,3,leaf,PFHxA,0.95,0.10,0
+filling,3,leaf,PFHpA,,,1
+filling,3,leaf,PFOA,0.10,0.01,0
+filling,3,leaf,L-PFPrS,0.20,0.05,0
+filling,3,leaf,PFEtS,0.38,0.02,0
+filling,3,leaf,PFBS,0.48,0.1,0
+filling,3,leaf,PFOS,0.10,0.009,0
+filling,3,grain,PFBA,,,1
+filling,3,grain,PFHxA,1.4,0.4,0
+filling,3,grain,PFHpA,,,1
+filling,3,grain,PFOA,0.22,0.02,0
+filling,3,grain,L-PFPrS,,,1
+filling,3,grain,PFEtS,,,1
+filling,3,grain,PFBS,0.97,0.2,0
+filling,3,grain,PFOS,0.10,0.02,0
+milk,4,root,PFBA,0.51,0.03,0
+milk,4,root,PFHxA,0.07,0.02,0
+milk,4,root,PFHpA,,,1
+milk,4,root,PFOA,0.77,0.01,0
+milk,4,root,L-PFPrS,0.12,0.02,0
+milk,4,root,PFEtS,0.29,0.13,0
+milk,4,root,PFBS,0.37,0.12,0
+milk,4,root,PFOS,1.1,0.34,0
+milk,4,stem,PFBA,2.1,0.4,0
+milk,4,stem,PFHxA,0.48,0.05,0
+milk,4,stem,PFHpA,,,1
+milk,4,stem,PFOA,0.32,0.03,0
+milk,4,stem,L-PFPrS,0.18,0.07,0
+milk,4,stem,PFEtS,0.21,0.02,0
+milk,4,stem,PFBS,0.41,0.08,0
+milk,4,stem,PFOS,0.17,0.02,0
+milk,4,leaf,PFBA,0.30,0.1,0
+milk,4,leaf,PFHxA,0.67,0.07,0
+milk,4,leaf,PFHpA,,,1
+milk,4,leaf,PFOA,0.10,0.01,0
+milk,4,leaf,L-PFPrS,0.25,0.05,0
+milk,4,leaf,PFEtS,0.26,0.04,0
+milk,4,leaf,PFBS,0.07,0.01,0
+milk,4,leaf,PFOS,0.08,0.008,0
+milk,4,grain,PFBA,,,1
+milk,4,grain,PFHxA,0.26,0.15,0
+milk,4,grain,PFHpA,,,1
+milk,4,grain,PFOA,0.16,0.07,0
+milk,4,grain,L-PFPrS,,,1
+milk,4,grain,PFEtS,,,1
+milk,4,grain,PFBS,1.6,0.37,0
+milk,4,grain,PFOS,0.04,0.006,0
+ripening,5,root,PFBA,1.2,0.05,0
+ripening,5,root,PFHxA,1.2,0.1,0
+ripening,5,root,PFHpA,,,1
+ripening,5,root,PFOA,0.17,0.02,0
+ripening,5,root,L-PFPrS,0.08,0.005,0
+ripening,5,root,PFEtS,0.07,0.006,0
+ripening,5,root,PFBS,1.0,0.1,0
+ripening,5,root,PFOS,0.29,0.07,0
+ripening,5,stem,PFBA,2.1,0.1,0
+ripening,5,stem,PFHxA,0.28,0.03,0
+ripening,5,stem,PFHpA,,,1
+ripening,5,stem,PFOA,0.23,0.02,0
+ripening,5,stem,L-PFPrS,0.32,0.14,0
+ripening,5,stem,PFEtS,0.09,0.04,0
+ripening,5,stem,PFBS,0.14,0.05,0
+ripening,5,stem,PFOS,0.15,0.05,0
+ripening,5,leaf,PFBA,0.28,0.03,0
+ripening,5,leaf,PFHxA,0.08,0.01,0
+ripening,5,leaf,PFHpA,,,1
+ripening,5,leaf,PFOA,1.2,0.1,0
+ripening,5,leaf,L-PFPrS,0.32,0.03,0
+ripening,5,leaf,PFEtS,0.34,0.01,0
+ripening,5,leaf,PFBS,,,1
+ripening,5,leaf,PFOS,0.70,0.1,0
+ripening,5,grain,PFBA,,,1
+ripening,5,grain,PFHxA,0.55,0.03,0
+ripening,5,grain,PFHpA,,,1
+ripening,5,grain,PFOA,0.27,0.03,0
+ripening,5,grain,L-PFPrS,,,1
+ripening,5,grain,PFEtS,,,1
+ripening,5,grain,PFBS,1.6,0.2,0
+ripening,5,grain,PFOS,0.17,0.02,0
+tillering,1,root,6:2 FTS,0.12,0.007,0
+tillering,1,root,PFECHS,0.03,0.007,0
+tillering,1,root,8:2 diPAP,,,1
+tillering,1,root,6:2 diPAP,0.01,0.003,0
+tillering,1,root,OBS,0.71,0.07,0
+tillering,1,root,6:2 Cl-PFESA,0.17,0.02,0
+tillering,1,root,8:2 Cl-PFESA,0.019,0.001,0
+tillering,1,stem,6:2 FTS,0.41,0.16,0
+tillering,1,stem,PFECHS,0.03,0.01,0
+tillering,1,stem,8:2 diPAP,,,1
+tillering,1,stem,6:2 diPAP,0.007,0.0008,0
+tillering,1,stem,OBS,0.09,0.02,0
+tillering,1,stem,6:2 Cl-PFESA,0.014,0.001,0
+tillering,1,stem,8:2 Cl-PFESA,0.017,0.002,0
+tillering,1,leaf,6:2 FTS,0.09,0.01,0
+tillering,1,leaf,PFECHS,0.02,0.006,0
+tillering,1,leaf,8:2 diPAP,,,1
+tillering,1,leaf,6:2 diPAP,0.002,0.0001,0
+tillering,1,leaf,OBS,0.18,0.01,0
+tillering,1,leaf,6:2 Cl-PFESA,0.019,0.005,0
+tillering,1,leaf,8:2 Cl-PFESA,0.011,0.0004,0
+heading,2,root,6:2 FTS,1.1,0.01,0
+heading,2,root,PFECHS,0.38,0.03,0
+heading,2,root,8:2 diPAP,,,1
+heading,2,root,6:2 diPAP,0.26,0.05,0
+heading,2,root,OBS,0.57,0.03,0
+heading,2,root,6:2 Cl-PFESA,0.52,0.03,0
+heading,2,root,8:2 Cl-PFESA,0.006,0.0001,0
+heading,2,stem,6:2 FTS,0.14,0.007,0
+heading,2,stem,PFECHS,0.07,0.008,0
+heading,2,stem,8:2 diPAP,,,1
+heading,2,stem,6:2 diPAP,0.002,0.0002,0
+heading,2,stem,OBS,0.04,0.01,0
+heading,2,stem,6:2 Cl-PFESA,0.005,0.001,0
+heading,2,stem,8:2 Cl-PFESA,0.001,0.0003,0
+heading,2,leaf,6:2 FTS,0.51,0.15,0
+heading,2,leaf,PFECHS,0.11,0.01,0
+heading,2,leaf,8:2 diPAP,,,1
+heading,2,leaf,6:2 diPAP,0.05,0.008,0
+heading,2,leaf,OBS,0.25,0.01,0
+heading,2,leaf,6:2 Cl-PFESA,0.08,0.008,0
+heading,2,leaf,8:2 Cl-PFESA,0.011,0.001,0
+heading,2,grain,6:2 FTS,0.11,0.02,0
+heading,2,grain,PFECHS,,,1
+heading,2,grain,8:2 diPAP,,,1
+heading,2,grain,6:2 diPAP,0.04,0.007,0
+heading,2,grain,OBS,0.10,0.02,0
+heading,2,grain,6:2 Cl-PFESA,0.002,0.0001,0
+heading,2,grain,8:2 Cl-PFESA,,,1
+filling,3,root,6:2 FTS,0.20,0.01,0
+filling,3,root,PFECHS,0.02,0.002,0
+filling,3,root,8:2 diPAP,,,1
+filling,3,root,6:2 diPAP,0.002,0.0001,0
+filling,3,root,OBS,0.10,0.01,0
+filling,3,root,6:2 Cl-PFESA,0.014,0.001,0
+filling,3,root,8:2 Cl-PFESA,0.002,0.0001,0
+filling,3,stem,6:2 FTS,0.08,0.03,0
+filling,3,stem,PFECHS,0.09,0.04,0
+filling,3,stem,8:2 diPAP,,,1
+filling,3,stem,6:2 diPAP,0.002,0.0002,0
+filling,3,stem,OBS,0.08,0.01,0
+filling,3,stem,6:2 Cl-PFESA,0.020,0.001,0
+filling,3,stem,8:2 Cl-PFESA,0.003,0.0002,0
+filling,3,leaf,6:2 FTS,0.19,0.03,0
+filling,3,leaf,PFECHS,0.02,0.002,0
+filling,3,leaf,8:2 diPAP,,,1
+filling,3,leaf,6:2 diPAP,0.002,0.0002,0
+filling,3,leaf,OBS,0.05,0.007,0
+filling,3,leaf,6:2 Cl-PFESA,0.007,0.003,0
+filling,3,leaf,8:2 Cl-PFESA,0.002,0.0002,0
+filling,3,grain,6:2 FTS,0.14,0.009,0
+filling,3,grain,PFECHS,,,1
+filling,3,grain,8:2 diPAP,,,1
+filling,3,grain,6:2 diPAP,0.003,0.0001,0
+filling,3,grain,OBS,0.02,0.005,0
+filling,3,grain,6:2 Cl-PFESA,0.001,0.0001,0
+filling,3,grain,8:2 Cl-PFESA,,,1
+milk,4,root,6:2 FTS,,,1
+milk,4,root,PFECHS,0.05,0.006,0
+milk,4,root,8:2 diPAP,,,1
+milk,4,root,6:2 diPAP,0.02,0.006,0
+milk,4,root,OBS,0.94,0.06,0
+milk,4,root,6:2 Cl-PFESA,0.14,0.01,0
+milk,4,root,8:2 Cl-PFESA,0.033,0.003,0
+milk,4,stem,6:2 FTS,0.16,0.07,0
+milk,4,stem,PFECHS,0.02,0.002,0
+milk,4,stem,8:2 diPAP,,,1
+milk,4,stem,6:2 diPAP,0.002,0.0001,0
+milk,4,stem,OBS,0.19,0.02,0
+milk,4,stem,6:2 Cl-PFESA,0.009,0.0008,0
+milk,4,stem,8:2 Cl-PFESA,0.002,0.0002,0
+milk,4,leaf,6:2 FTS,0.09,0.01,0
+milk,4,leaf,PFECHS,0.02,0.007,0
+milk,4,leaf,8:2 diPAP,,,1
+milk,4,leaf,6:2 diPAP,0.002,0.0001,0
+milk,4,leaf,OBS,0.16,0.01,0
+milk,4,leaf,6:2 Cl-PFESA,0.006,0.0007,0
+milk,4,leaf,8:2 Cl-PFESA,0.002,0.0001,0
+milk,4,grain,6:2 FTS,0.08,0.03,0
+milk,4,grain,PFECHS,,,1
+milk,4,grain,8:2 diPAP,,,1
+milk,4,grain,6:2 diPAP,0.03,0.01,0
+milk,4,grain,OBS,0.005,0.002,0
+milk,4,grain,6:2 Cl-PFESA,0.001,0.0001,0
+milk,4,grain,8:2 Cl-PFESA,,,1
+ripening,5,root,6:2 FTS,0.13,0.03,0
+ripening,5,root,PFECHS,0.24,0.15,0
+ripening,5,root,8:2 diPAP,,,1
+ripening,5,root,6:2 diPAP,0.20,0.07,0
+ripening,5,root,OBS,0.29,0.01,0
+ripening,5,root,6:2 Cl-PFESA,0.20,0.009,0
+ripening,5,root,8:2 Cl-PFESA,0.17,0.009,0
+ripening,5,stem,6:2 FTS,0.24,0.01,0
+ripening,5,stem,PFECHS,0.015,0.002,0
+ripening,5,stem,8:2 diPAP,,,1
+ripening,5,stem,6:2 diPAP,0.005,0.0008,0
+ripening,5,stem,OBS,0.25,0.07,0
+ripening,5,stem,6:2 Cl-PFESA,0.008,0.001,0
+ripening,5,stem,8:2 Cl-PFESA,0.019,0.0009,0
+ripening,5,leaf,6:2 FTS,,,1
+ripening,5,leaf,PFECHS,0.07,0.02,0
+ripening,5,leaf,8:2 diPAP,,,1
+ripening,5,leaf,6:2 diPAP,0.015,0.002,0
+ripening,5,leaf,OBS,0.06,0.009,0
+ripening,5,leaf,6:2 Cl-PFESA,0.13,0.05,0
+ripening,5,leaf,8:2 Cl-PFESA,0.005,0.0002,0
+ripening,5,grain,6:2 FTS,0.035,0.004,0
+ripening,5,grain,PFECHS,,,1
+ripening,5,grain,8:2 diPAP,,,1
+ripening,5,grain,6:2 diPAP,0.04,0.006,0
+ripening,5,grain,OBS,0.004,0.0009,0
+ripening,5,grain,6:2 Cl-PFESA,0.001,0.0001,0
+ripening,5,grain,8:2 Cl-PFESA,,,1

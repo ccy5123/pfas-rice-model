@@ -132,7 +132,7 @@ def biomass_drivers(path_or_table, units, *, season=None, n_t=241, Cwo=1.0,
         Qtp = fr.Q_TP(t, season)
     else:
         Qtp = np.asarray(Qtp, float)
-    return dict(t=t, Cwo=Cwo_arr, Qtp=Qtp, M=M)
+    return dict(t=t, Cwo=Cwo_arr, Qtp=Qtp, M=M, mass_basis=mass_basis)
 
 
 if __name__ == "__main__":

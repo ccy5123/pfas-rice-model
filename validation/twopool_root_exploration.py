@@ -42,7 +42,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
 from pfas_rice_plant_module_4pool_surf import (   # noqa: E402
-    Environment, Compound, Compartment, binding_factors, root_uptake, _logistic,
+    Environment, Compound, Compartment, binding_factors, root_uptake, xylem_leaf_share, _logistic,
     ROOT, STEM, LEAF, FRUIT)
 
 # 5-state indices: root-mobile, root-seq, stem, leaf, grain
@@ -91,6 +91,7 @@ MMAT = np.column_stack([
 _Cwo = lambda t: 1.0
 _Qtp = np.interp
 _dM = np.gradient(MMAT, T, axis=0)
+M_BASIS = None      # demo forcings carry no mass basis: the xylem split runs on M as given
 
 
 def _interp_row(t, col):
@@ -135,9 +136,8 @@ def make_rhs(cmpd: Compound, comps, B, gxy, gph, kseq, phi=0.1, T_C_Ph=10.0, k_r
         Cw[LF] = C[LF] / B[LEAF]
         Cw[GR] = C[GR] / B[FRUIT]
 
-        # xylem leaf/fruit split by surface area
-        A3 = comps[LEAF].S * M[LEAF]; A4 = comps[FRUIT].S * M[FRUIT]
-        split = A3 / (A3 + A4) if (A3 + A4) > 0 else 0.5
+        # xylem leaf/fruit split by transpiring surface, on DRY matter
+        split = xylem_leaf_share(comps, M, M_BASIS)
         f3, f4 = split, 1.0 - split
 
         Q_Phl = max(dM[FRUIT] * T_C_Ph + phi * Qtp, 0.0)

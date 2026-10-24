@@ -48,7 +48,8 @@ sys.path.insert(0, os.path.join(ROOT, "src"))
 import model_api as api            # noqa: E402
 import oryza_growth as og          # noqa: E402
 
-SEASON = 120.0
+SEASON = 150.0     # Tang's growth cycle (the paper, model_api.tang_tf_validation, tang2026_fxy_refit);
+                   # this script used 120 d until the sampling-protocol audit caught it
 CONGENERS = ["PFOA", "PFOS", "GenX"]
 # model organ -> (theta key, Tang organ name)
 ORGAN_MAP = {"stem": ("stem", "stalk"), "leaf": ("leaf", "leaf"), "grain": ("grain_brown", "endosperm")}

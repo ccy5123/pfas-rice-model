@@ -141,7 +141,7 @@ Briggs 1982 blot만 · Hwang 흐르는 물 + 종이타월.
 | Yamazaki를 온실/포트/주입/공극수로 서술 | **정정**: 앱(`ui/expert.py`), README, CLAUDE.md, docs, DB |
 | Kim "필지별 짝 없음", "Table 4", Andosol | **정정**: `literature_params.py` 주석, `raw_si/README.md`, C1 DB(csv+xlsx). 값 자체는 유지(L_Ph 적합 보존) |
 | Kim PFOA BAF = 비율의 평균, A-2 83% | 기록(대안: 필지 짝 기하평균 27, n=14). 재적합은 §5 |
-| Li 2025 TF 정의 불일치(레포 1.0–5.8배 낮음), 5단계 평균, 물 농도 디지털화 | 기록. 단계별 비교로 재평가 필요(§5) |
+| Li 2025 TF 정의 불일치(레포 1.0–5.8배 낮음), 5단계 평균, 물 농도 디지털화 | 기록. **단계별 비교 완료**(`validation/li2025_stage_resolved.py`, handoff §3) |
 | Tang "HI_dw≈0.5" 주석, endosperm=현미 가정 | 주석 정정; 조성 변경은 §5 |
 | Nada R/S "verified" | **DB 정정** |
 | Bouman DOI, 1740 출처, Li 2017 표 번호 | **정정** |
@@ -149,7 +149,8 @@ Briggs 1982 blot만 · Hwang 흐르는 물 + 종이타월.
 ---
 
 ## 5. 남은 일 (우선순위)
-1. **생중량 기준 재적합**: `*_oryza`는 완료(RMSE 0.283). 남은 것: `TANG_REFIT_FXY`(`validation/tang2026_fxy_refit.py`),
+1. **생중량 기준 재적합 — ✅ 다음 세션에서 완료**(결과·해석: `docs/HANDOFF_mass_basis_refit.md` §1, CLAUDE.md §6
+   "Fresh-basis RE-FITS"). 아래는 원래 목록. `*_oryza`는 완료(RMSE 0.283). 남은 것: `TANG_REFIT_FXY`(`validation/tang2026_fxy_refit.py`),
    `LIPID_LOADING`, two-pool 적합(`twopool_fitted_params_measured.json`, `twopool_nstem_fitted_params.json`), 그리고
    이들에 기댄 OOS 결론(Tang 지질 0.516, Kim 0.48 등)의 재확인. 수정 전 결과는 `mass_basis="dry"`로 재현 가능.
    직접 M을 만드는 validation 스크립트 다수(`twopool_*`, `tang2026_fxy_refit.py` 등)는 아직 건물중을 그대로 쓴다 —
@@ -158,7 +159,8 @@ Briggs 1982 blot만 · Hwang 흐르는 물 + 종이타월.
 3. **Li 2025 단계별 비교**(SI Table S6, 5단계 × 기관)와 저자 정의 TF.
 4. **Kim PFOA**: 필지 짝 BAF 사용 여부 결정; 장쇄는 검출 1–4건이므로 censored 처리.
 5. **ORYZA 파라미터를 IR72.D92 원본과 대조·정렬**(숫자가 다시 크게 바뀌므로 별도 작업) + FACE 뿌리/IR72DS92로 검증.
-6. **Tang endosperm을 백미 조성으로**; `tang2026_fxy_TF_validation.py`의 120일 → 150일.
+6. **Tang endosperm을 백미 조성으로**; `tang2026_fxy_TF_validation.py`의 120일 → 150일. — ✅ 완료(백미는 선택지, 기본 현미; 백미면 곡물 격차가
+   커짐). 2번(θ_fw)은 민감도까지 완료: 뿌리 θ만 민감, 그리고 물관 분배의 질량 기준이라는 새 결정 사항이 나옴(`docs/HANDOFF_mass_basis_refit.md` §2).
 
 ## 6. 저자 문의가 필요한 것 (원문에도 없음)
 Tang(도정법·chaff 정의·잎집 배정·기관 질량·담수 농도·월별 수치) · Li 2025(단계별 날짜·낟알 정의·물질별 관개수) ·

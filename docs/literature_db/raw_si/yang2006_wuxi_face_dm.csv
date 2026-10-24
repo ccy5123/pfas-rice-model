@@ -1,0 +1,45 @@
+# Yang L, Huang J, Yang H, Dong G, Liu G, Zhu J, Wang Y (2006) Seasonal changes in the effects of free-air CO2 enrichment (FACE)
+# on dry matter production and distribution of rice. Field Crops Res. 98:12-19. doi:10.1016/j.fcr.2005.11.003
+# (PDF supplied by the user, NOT committed - copyright). Transcribed from Table 1 (above-ground DM, g m-2) and Table 3 (DM
+# distribution ratio leaf/stem/spike) -- both cross-checked against the PDF text layer; the three fractions sum to 1.000+-0.001.
+# Site: China rice/wheat FACE, Nianyu Farm, Wuxi, Jiangsu (31 35'N, 120 30'E, 5 m), stagnic anthrosol, rice-wheat rotation.
+# Cultivar Wuxiangjing 14 (early-maturing late japonica, ~155 spikelets/panicle). Sown 18 May; seedlings raised under ambient air;
+# transplanted 13 June, 3 seedlings/hill, 17.5 x 30 cm = 24 hills m-2. N 25 g m-2 (40% basal / 20-24% early tillering / 35-40% PI).
+# Flooded 13 Jun-10 Jul, drained several times 11 Jul-4 Aug, intermittent irrigation 5 Aug to 10 d before harvest.
+# Sampling (fixed to coincide with stages): 2001 28 & 51 DAT, heading (50% headed), 20 DAH, maturity; 2002 27 & 47 DAT, heading,
+# 20 DAH, maturity; 2003 28 & 45 DAT, heading, 30 DAH, maturity. Five plants (hills) with mean stem number per subplot; separated
+# into living and dead leaf, stem (incl. leaf sheath) and panicle; oven-dried 80 C.
+# NOT reported in this paper: the heading and maturity DATES, roots, and dead leaves separately. Table 3's "leaf" is the leaf share
+# of the above-ground DM with leaf+stem+spike = 1, so whether dead leaves are inside "leaf" or outside the total is not stated.
+# Ambient (daylight) CO2 2001/2002/2003 = 354/364/375 umol/mol (Hasegawa et al. 2017 Table S1). AMB is spelled "ABM" in Table 1.
+year,co2,stage_no,stage,sampling,aboveground_dm_g_m2,leaf_frac,stem_frac,spike_frac
+2001,AMB,1,tillering,28 DAT,124.7,0.477,0.523,
+2001,AMB,2,panicle_initiation,51 DAT,563.2,0.414,0.586,
+2001,AMB,3,heading,heading,1057.5,0.291,0.571,0.138
+2001,AMB,4,mid_ripening,20 DAH,1368.5,0.206,0.392,0.402
+2001,AMB,5,maturity,maturity,1829.1,0.142,0.307,0.551
+2001,FACE,1,tillering,28 DAT,170.2,0.449,0.551,
+2001,FACE,2,panicle_initiation,51 DAT,746.8,0.373,0.627,
+2001,FACE,3,heading,heading,1286.4,0.259,0.610,0.131
+2001,FACE,4,mid_ripening,20 DAH,1687.4,0.185,0.402,0.413
+2001,FACE,5,maturity,maturity,2091.3,0.133,0.318,0.549
+2002,AMB,1,tillering,27 DAT,84.1,0.481,0.519,
+2002,AMB,2,panicle_initiation,47 DAT,432.0,0.473,0.527,
+2002,AMB,3,heading,heading,969.2,0.334,0.536,0.130
+2002,AMB,4,mid_ripening,20 DAH,1321.6,0.227,0.380,0.393
+2002,AMB,5,maturity,maturity,1691.1,0.162,0.297,0.541
+2002,FACE,1,tillering,27 DAT,126.5,0.451,0.549,
+2002,FACE,2,panicle_initiation,47 DAT,538.7,0.421,0.579,
+2002,FACE,3,heading,heading,1184.2,0.304,0.572,0.124
+2002,FACE,4,mid_ripening,20 DAH,1691.6,0.202,0.377,0.421
+2002,FACE,5,maturity,maturity,1952.2,0.146,0.329,0.524
+2003,AMB,1,tillering,28 DAT,110.5,0.518,0.482,
+2003,AMB,2,panicle_initiation,45 DAT,449.3,0.469,0.531,
+2003,AMB,3,heading,heading,1024.7,0.333,0.536,0.131
+2003,AMB,4,mid_ripening,30 DAH,1429.4,0.197,0.348,0.454
+2003,AMB,5,maturity,maturity,1674.0,0.163,0.333,0.505
+2003,FACE,1,tillering,28 DAT,150.3,0.494,0.506,
+2003,FACE,2,panicle_initiation,45 DAT,585.6,0.424,0.576,
+2003,FACE,3,heading,heading,1253.4,0.296,0.573,0.130
+2003,FACE,4,mid_ripening,30 DAH,1821.7,0.174,0.357,0.470
+2003,FACE,5,maturity,maturity,1989.3,0.149,0.370,0.482

@@ -47,6 +47,7 @@
 
 - **진단**: 신뢰 가능한 유일점 PFOA(good)만 sub-equilibrium → Yamazaki와 동일. excess는 강흡착(낮은 aqueous %, PFOS 0.3–1.6%)일수록 water 분모가 과소·불확실 → BAF 인위 팽창. 사슬로 설명 안 됨(C4 PFBA 6.9 > C8 PFOA 0.53).
 - **결론**: H7 §4 "surface field 의존(Tianjin 큼)" → **water-분모 artifact로 재해석**. **field-dependent surface 증거 없음. K_surf=0 default 정당**, K_surf-vs-토양(foc/pH) 회귀는 신호 자체가 없어 **근거 없음**. Fe/Mn plaque 흡착 실재(rice_tissue NOTES #5)하므로 K_surf capability는 유지 — Li2025로 calibrate 불가일 뿐. 진짜 검정엔 **신뢰 가능 per-congener pore-water 또는 hydroponic RCF** 필요.
+- **사후 확인 (2026-10, 원본 그림 겹침 검증)**: 위 판정의 분모였던 Li 물 농도 중 PFHxA(2.5→1.21 ng/L)와 PFOS(0.4→0.71)가 그림 2a 판독 오류였다(`docs/literature_db/raw_si/li2025_fig2a_water_shares.csv`). 검증값으로는 root BAF/ceiling이 PFHxA 46 · PFBS 19 · PFBA 6.6 · PFOS 2.9 · PFOA 0.53 — 초과가 판독 품질이 아니라 사슬 길이를 따라가므로 "판독 분모 artifact" 해석은 성립하지 않는다. 남는 것은 관개수가 모델이 요구하는 공극수가 아니라는 노출 지표의 문제다. 이 절의 숫자는 기록으로 둔다 (`data_obs`의 `*_verified` 열에 검증값).
 
 산물: `S6_surface_crossfield.py`, `S6_surface_crossfield.csv`, `S6_surface_crossfield.png`.
 

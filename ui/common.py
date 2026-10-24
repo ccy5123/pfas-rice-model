@@ -60,9 +60,7 @@ def _simulate(congener, **kw):
     """Cache model runs (drivers passed as a hashable tuple, rebuilt here)."""
     drv = kw.pop("drivers_tuple", None)
     if drv is not None:
-        t, Cwo, Qtp, Mflat, ncol = drv
-        kw["drivers"] = dict(t=np.array(t), Cwo=np.array(Cwo), Qtp=np.array(Qtp),
-                             M=np.array(Mflat).reshape(-1, ncol))
+        kw["drivers"] = _drivers_from_tuple(drv)
     kl = kw.pop("cwo_k_leach", None)                       # scalar (hashable) -> cwo_kw dict
     if kl is not None and kw.get("cwo_profile", "constant") != "constant":
         kw["cwo_kw"] = {"k_leach": float(kl)}
@@ -70,8 +68,23 @@ def _simulate(congener, **kw):
 
 
 def _drivers_tuple(d):
+    """A driver dict as a hashable tuple for the run caches. It must carry EVERY key the
+    model reads: dropping `leaf_loss` silently turned off the ORYZA leaf-senescence
+    correction in every driver mode, and `mass_basis` decides the xylem split."""
+    ll = d.get("leaf_loss")
     return (tuple(d["t"]), tuple(d["Cwo"]), tuple(d["Qtp"]),
-            tuple(np.asarray(d["M"]).ravel()), int(np.asarray(d["M"]).shape[1]))
+            tuple(np.asarray(d["M"]).ravel()), int(np.asarray(d["M"]).shape[1]),
+            None if ll is None else tuple(np.asarray(ll, float)),
+            d.get("mass_basis", "fresh"))
+
+
+def _drivers_from_tuple(drv):
+    t, Cwo, Qtp, Mflat, ncol, ll, basis = drv
+    d = dict(t=np.array(t), Cwo=np.array(Cwo), Qtp=np.array(Qtp),
+             M=np.array(Mflat).reshape(-1, ncol), mass_basis=basis)
+    if ll is not None:
+        d["leaf_loss"] = np.array(ll)
+    return d
 
 
 @st.cache_data(show_spinner=False)
@@ -81,9 +94,7 @@ def _simulate_neutral(**kw):
     tissue dynamics, drivers, downloads — works on a neutral compound unchanged."""
     drv = kw.pop("drivers_tuple", None)
     if drv is not None:
-        t, Cwo, Qtp, Mflat, ncol = drv
-        kw["drivers"] = dict(t=np.array(t), Cwo=np.array(Cwo), Qtp=np.array(Qtp),
-                             M=np.array(Mflat).reshape(-1, ncol))
+        kw["drivers"] = _drivers_from_tuple(drv)
     kl = kw.pop("cwo_k_leach", None)
     if kl is not None and kw.get("cwo_profile", "constant") != "constant":
         kw["cwo_kw"] = {"k_leach": float(kl)}
@@ -128,9 +139,7 @@ def _simulate_smiles(smiles, **kw):
     """Cache a SMILES (structure) run: RDKit → descriptors → Compound → full ODE."""
     drv = kw.pop("drivers_tuple", None)
     if drv is not None:
-        t, Cwo, Qtp, Mflat, ncol = drv
-        kw["drivers"] = dict(t=np.array(t), Cwo=np.array(Cwo), Qtp=np.array(Qtp),
-                             M=np.array(Mflat).reshape(-1, ncol))
+        kw["drivers"] = _drivers_from_tuple(drv)
     kl = kw.pop("cwo_k_leach", None)                       # scalar (hashable) -> cwo_kw dict
     if kl is not None and kw.get("cwo_profile", "constant") != "constant":
         kw["cwo_kw"] = {"k_leach": float(kl)}

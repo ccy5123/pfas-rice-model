@@ -54,7 +54,8 @@ def drivers(season=SEASON, n_t=NT, Cwo=1.0, mass_basis="fresh"):
     t = np.linspace(0.0, float(season), int(n_t))
     b = organ_biomass(t, season)
     M = om.organ_matrix(b, mass_basis)
-    return dict(t=t, Cwo=np.full(len(t), float(Cwo)), Qtp=fr.Q_TP(t, season), M=M)
+    return dict(t=t, Cwo=np.full(len(t), float(Cwo)), Qtp=fr.Q_TP(t, season), M=M,
+                mass_basis=mass_basis)
 
 
 # ---------------------------------------------------------------------------
