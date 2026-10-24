@@ -356,7 +356,7 @@ def render(cfg):
                 dose = ("low" if c1.radio("Tang dose", ["across-dose mean", "0.1 µg/g (env-closest)"],
                                           horizontal=True).startswith("0.1") else "mean")
                 bm = ("oryza" if c2.checkbox("ORYZA biomass driver", value=False,
-                                             help="Drive the shoot model with the mechanistic ORYZA2000 "
+                                             help="Drive the shoot model with the reduced ORYZA Level-1 "
                                                   "biomass instead of the logistic (slower).") else "growth_rice")
                 show_lipid = c3.checkbox(
                     "lipid loading (OOS)", value=False,

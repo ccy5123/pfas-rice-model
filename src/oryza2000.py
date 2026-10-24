@@ -551,3 +551,59 @@ def simulate(weather: dict, crop: dict | None = None, mgmt: Management | None = 
     out["events"] = events
     out["cbc_max"] = cbc_max
     return out
+
+
+# ---------------------------------------------------------------------------
+# Bridge to the PFAS model: per-organ dry biomass [kg/hill] on days after transplanting
+# ---------------------------------------------------------------------------
+HA_PER_HILL = 0.04 / 1.0e4          # 25 hills m-2 (= Management.nh), as oryza_growth / forcing_rice
+
+
+def default_weather(transplant_doy: int = 180, sbdur: int = 12, n_days: int = 200) -> dict:
+    """The repo's representative tropical wet-season climatology (oryza_growth._weather),
+    indexed from the transplanting day and extended back over the seedbed days."""
+    d = np.arange(-sbdur, n_days - sbdur, dtype=float)
+    return dict(doy0=transplant_doy - sbdur,
+                rad_mj=19.0 + 3.0 * np.sin(2 * np.pi * (d - 20) / 120.0),
+                tmax=31.0 + 1.5 * np.sin(2 * np.pi * (d - 30) / 120.0),
+                tmin=23.0 + 1.0 * np.sin(2 * np.pi * (d - 30) / 120.0))
+
+
+def organ_biomass(t, season: float = 120.0, weather: dict | None = None,
+                  mgmt: Management | None = None, transplant_doy: int = 180,
+                  crop: dict | None = None, amax_form: str = "continuous") -> dict:
+    """Per-organ DRY biomass [kg/hill] on `t` = days after transplanting (root/stem/leaf/grain).
+
+    root = WRT, stem = WST (structural + reserves), leaf = WLVG (green leaves; dead leaves
+    have left the plant), grain = WSO (panicles).  t = 0 is the main-field state right after
+    transplanting (the seedbed state diluted by NPLH*NH/NPLSB).  After maturity the states
+    are held and the leaf death rate is 0.  ``leaf_death_rate`` [1/d] = DRLV(DVS) = LLV/WLVG,
+    the rate the PFAS leaf ODE removes with the dead leaf (as for oryza_growth).
+
+    No post-hoc scaling: ORYZA2000 with IR72.D92 is calibrated to give attainable IR72 yields
+    at IRRI (validation/oryza2000_ir72ds92.py).  ``weather`` (optional) is in `simulate`'s
+    format (doy0 + daily arrays covering emergence onward); default = the repo's tropical
+    climatology (`default_weather`)."""
+    t = np.asarray(t, float)
+    m = mgmt or Management(emd=transplant_doy - 12)
+    trans = m.emd + m.sbdur
+    w = weather or default_weather(trans, m.sbdur, int(np.ceil(max(season, t.max()))) + m.sbdur + 60)
+    r = simulate(w, crop, m, amax_form=amax_form)
+    sta = r["cropsta"]
+    i3 = int(np.where(sta == 3)[0][0])
+    pltr = m.nplh * m.nh / m.nplsb
+    main = np.where(sta >= 4)[0]
+    td = np.concatenate([[0.0], r["doy"][main] - trans])
+    td = np.where(td < 0, td + 365, td)                    # year wrap
+    organs = {"root": "wrt", "stem": "wst", "leaf": "wlvg", "grain": "wso"}
+    out = {}
+    for name, key in organs.items():
+        v = np.concatenate([[r[key][i3] * pltr], r[key][main]])
+        out[name] = np.maximum(np.interp(t, td, v * HA_PER_HILL), 1e-9)
+    drlv = np.concatenate([[r["drlv"][i3]], r["drlv"][main]])
+    if r["dvs"][-1] > 2.0:
+        drlv[-1] = 0.0
+    t_mat = td[-1]
+    out["leaf_death_rate"] = np.where(t >= t_mat, 0.0, np.maximum(np.interp(t, td, drlv), 0.0))
+    out["dvs"] = np.interp(t, td, np.concatenate([[r["dvs"][i3]], r["dvs"][main]]))
+    return out

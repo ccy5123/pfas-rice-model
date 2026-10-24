@@ -347,6 +347,9 @@ def chain_table():
     return rows
 
 
+BIOMASS_DRIVERS = ("oryza", "oryza2000", "growth_rice")
+
+
 def _biomass_fn(biomass="oryza"):
     """Organ-biomass callable (t, season) -> dict{root,stem,leaf,grain} [kg DRY/hill].
 
@@ -354,18 +357,30 @@ def _biomass_fn(biomass="oryza"):
     driver goes through `organ_mass` (`om.organ_matrix` / `om.to_model_mass`), which
     converts to FRESH mass by default -- see `organ_mass` and `mass_basis`.
 
-    'oryza'       -> the mechanistic ORYZA2000 Level-1 carbon balance (`oryza_growth`;
-                     radiation/temperature-driven). THE DEFAULT (first-principles).
+    'oryza'       -> a REDUCED re-coding of the ORYZA2000 Level-1 carbon balance (`oryza_growth`;
+                     radiation/temperature-driven, "IR72 order of magnitude" parameters,
+                     anchored to a 1740 g/m2 shoot). THE DEFAULT.
+    'oryza2000'   -> ORYZA2000 potential production ported line by line from the manual's
+                     Fortran with the IR72.D92 crop file verbatim (`oryza2000`; no anchor).
+                     Opt-in: it reproduces the IR72DS92 experiment (phenology within 2 d,
+                     aboveground biomass within ~6%) where 'oryza' matures 12 d late and keeps
+                     growing its stem after flowering (validation/oryza2000_ir72ds92.py). The
+                     ORYZA-based fits were made on 'oryza', so switching moves those numbers.
     'growth_rice' -> ORYZA IR72 DVS-partitioning on a logistic total-biomass curve
                      (`growth_rice`; the lightweight reconstruction). NOTE: the per-congener
                      f_xy_W2fit/L_Ph_W2fit and `reproduce_demo.py` reproduction were tuned on
                      a placeholder/growth_rice driver, so use 'growth_rice' to match those
-                     legacy artifacts; the live default is the mechanistic ORYZA2000.
+                     legacy artifacts; the live default is 'oryza'.
     """
     if biomass == "oryza":
         import oryza_growth as og
         return lambda t, s: og.organ_biomass_oryza(t, p=og.OryzaParams(season=s))
-    return gr.organ_biomass
+    if biomass == "oryza2000":
+        import oryza2000 as o2k
+        return lambda t, s: o2k.organ_biomass(t, season=s)
+    if biomass == "growth_rice":
+        return gr.organ_biomass
+    raise ValueError(f"biomass must be one of {BIOMASS_DRIVERS}, got {biomass!r}")
 
 
 def _default_drivers(t, season, Cwo, measured_forcing, biomass="oryza",

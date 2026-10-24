@@ -487,13 +487,21 @@ def build():
                 fxy_label = st.radio("Root→shoot loading f_xy",
                                      ["recommended (monotone, physical)", "W2 fit (reproduces Yamazaki)"])
                 fxy_source = "recommended" if fxy_label.startswith("recommended") else "W2fit"
-            bm_label = st.radio("Biomass driver M(t)",
-                                ["ORYZA2000 (mechanistic)", "growth_rice (partition + logistic)"],
-                                help="ORYZA2000 = the Level-1 carbon balance (radiation/temperature-driven; "
-                                     "first-principles). growth_rice = ORYZA IR72 partitioning imposed on a "
-                                     "logistic (lightweight; the historical calibration basis). Drives M(t) "
-                                     "when the scenario uses built-in forcings (ignored if a driver CSV supplies M).")
-            biomass = "oryza" if bm_label.startswith("ORYZA2000") else "growth_rice"
+            _bm = {"ORYZA Level-1, reduced (default)": "oryza",
+                   "ORYZA2000 IR72.D92 (faithful port)": "oryza2000",
+                   "growth_rice (partition + logistic)": "growth_rice"}
+            bm_label = st.radio("Biomass driver M(t)", list(_bm),
+                                help="ORYZA Level-1 = a reduced re-coding of the ORYZA2000 carbon balance with "
+                                     "'IR72 order of magnitude' parameters, anchored to 1740 g/m2 (the default; "
+                                     "the ORYZA-based fits were made on it). ORYZA2000 IR72.D92 = the potential-"
+                                     "production model ported line by line from the ORYZA2000 manual with the "
+                                     "IR72 crop file verbatim: it reproduces the manual's IR72DS92 experiment "
+                                     "(phenology within 2 d, biomass within ~6%) where the reduced one matures "
+                                     "12 d late; it matures earlier, so a 120-d season runs past maturity. "
+                                     "growth_rice = ORYZA IR72 partitioning imposed on a logistic (lightweight; "
+                                     "the historical calibration basis). Drives M(t) when the scenario uses "
+                                     "built-in forcings (ignored if a driver CSV supplies M).")
+            biomass = _bm[bm_label]
 
             # PFAS mechanism switches (carrier/bypass, lipid loading) -- see _mechanism_panel
             if not neutral:
@@ -528,7 +536,7 @@ def build():
                         pass
                 measured = st.checkbox("Measured forcings (Q_TP, M_s)", value=True,
                                        help="On: transpiration from Kumari/NayHtoon, biomass M(t) from the "
-                                            "sidebar biomass driver (ORYZA2000 mechanistic, or growth_rice).")
+                                            "sidebar biomass driver (ORYZA Level-1, ORYZA2000 IR72.D92, or growth_rice).")
 
             elif mode == "Custom tables (Cwᵒ + growth)":
                 st.caption("Enter the **growth** and **pore-water Cwᵒ(t)** tables in the main panel → "
