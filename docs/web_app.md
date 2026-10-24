@@ -28,6 +28,27 @@ What does **not** get faster: a genuinely new solve still takes ~0.6–1.8 s, be
 that is the scipy ODE itself. Making *that* faster is a separate job (a compiled
 RHS / solver), not a front-end one.
 
+## Measured (same interactions, both front ends)
+
+Headless Chromium, same machine, Expert mode on PFOA unless noted; time from the
+action until the screen has settled (Streamlit: its "running" indicator gone; web:
+no pending result/figure). The web timings include a fixed ~350 ms settle wait in
+the harness, so they are upper bounds; the server had been running (warm memo).
+
+| Interaction | Streamlit | Web |
+|---|---:|---:|
+| First load (Simple view) | 6.1 s | 0.47 s |
+| Switch Simple → Expert | 5.3 s | 1.6 s |
+| Move the day slider on the plant map | 2.0 s | 0.03 s (no server call) |
+| Open the "Tissue dynamics" tab | 3.3 s | 0.56 s |
+| Change congener PFOA → PFOS | 2.7 s | 0.43 s |
+| Change back PFOS → PFOA (already computed) | 2.0 s | 0.36 s |
+
+Read the last two rows carefully: the Streamlit app takes ~2 s even for a result
+it has cached, because the whole script (every tab, including the uncached Tang
+solves) re-runs; that overhead is what the web app removes. A congener the server
+has **never** solved still costs one ODE solve (~0.6–1.8 s) in either app.
+
 ## Run it
 
 ```bash
