@@ -74,7 +74,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (401 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (405 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -153,7 +153,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   literature); transport params (`f_xy, L_Ph, kappa_d, Vmax/Km`) remain fitted (Tier-1/2).
 - **Real Tier-1 calibration (task #4)**: Kim 2019 (`docs/literature_db/raw_si/kim2019_*`) gives
   per-congener brown-rice (grain) BAF paired with paddy pore water. `literature_params.kim2019_grain_baf()`
-  exposes it; the demo fits `L_Ph` to the PFOA grain BAF (0.07 → 4.43 L/kg, `L_Ph≈0.84`). The
+  exposes it; the demo fits `L_Ph` to the PFOA grain BAF (now the per-site estimate 9.94 L/kg, 1.27 → 9.94 at `L_Ph`
+  0.067; to the old ratio-of-means 4.43 it took 0.022 — the "0.07 → 4.43, `L_Ph≈0.84`" once recorded here was stale). The
   measured binding keeps `root > straw > grain` (delivery-limited), but the *grain BAF* now matches
   data. **Limitation**: Kim is grain-only, so `f_xy` (root→shoot) is unconstrained — full
   compartment-resolved TF (root/straw) is a DB gap (greenhouse time-series needed).
@@ -471,7 +472,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   model is transferred WITHOUT re-fitting to independent data, all 4 models on the SAME demo forcings. **Kim 2019 grain
   (clean, PFHpA→PFDoDA): two-pool excl-PFOA log10 RMSE 0.47 = BEST** (mono 1.49, W2 0.57, lipid 1.12) and CAPTURES the
   long-chain grain RISE (2pool PFUnDA 6.1/PFDoDA 8.7 vs monotone 0.19/0.52; obs ~33/35). Honest limits: absolute long-chain
-  grain still under (low-DF Kim tail), Kim PFOA grain 4.43 ≫ Yamazaki 0.46 (between-dataset shift), Li 2025 grain/root TF
+  grain still under (low-DF Kim tail), Kim PFOA grain 4.43 (per site ~9.9, step 4b) ≫ Yamazaki 0.46 (between-dataset shift), Li 2025 grain/root TF
   root-surface-confounded (inconclusive, as documented). ⇒ OOS SUPPORTS the structure/mechanism but does NOT warrant
   promoting the fitted `k_seq` into `parameters.json` (single clean OOS set; demo forcings). `parameters.json` UNCHANGED
   (exploration-only). Fitted params cached → `validation/twopool_fitted_params.json`. (6) **Long-chain shoot floor diagnosed
@@ -1456,9 +1457,37 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   each). Verdict: **no single winner** — both lipid variants beat the free-anion ones by >1 log on either score, but
   which lipid variant leads depends on the non-detect treatment (point margin exactly 0.10). The expectation held. The
   4-pool lipid's PFUnDA (7.8) sits below the robust lower bound; `nstem_leaf` + lipid (36.6) sits inside it. The
-  `oos_crossdataset` label "[reliable: PFHpA, PFNA]" is fixed (PFNA alone). **Step 4b (the PFOA anchor) is still
-  open**: the per-field PFOA of main-text Table 1 is not in the SI and the article is closed-access — it needs the
-  Kim 2019 PDF from the user. `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029) UNCHANGED.
+  `oos_crossdataset` label "[reliable: PFHpA, PFNA]" is fixed (PFNA alone). Step 4b (the PFOA anchor) is the next
+  bullet. `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029) UNCHANGED.
+- **Kim 2019 PFOA per site (handoff step 4b; PRE-REGISTERED in `bedadbf`) — the published 4.43 is one field's number;
+  per site it is ~10, and the per-site ratio is not a plant constant**: `validation/kim2019_pfoa_anchor.py` +
+  `tests/test_kim2019_pfoa_anchor.py` (4) + `docs/literature_db/raw_si/kim2019_table1_sites.csv` (main-text Table 1,
+  per-site PFOA/PFOS/Σ17 in soil, void water and brown rice for the 30 fields; transcribed by the user from the PDF text
+  layer and checked row by row against the rendered page; reproduces SI Table S6: rice 0.3494 ng/g 17/30, water 78.73
+  ng/L 26/27, soil 0.1599 13/30) + `literature_params.KIM2019_PFOA_SITE_BAF`. (Q1) Candidates [L/kg]: published ratio
+  of means **4.44** (rice over 30 sites, water over 27 — three E sites have no water), same 27 sites 4.18, without A-2
+  21.5, per-site geomean of the 14 both-detected sites 27.0 (median 28.3). Pre-registered admissibility (same sites in
+  numerator and denominator; no site dropped for detection status or value; no site above half the weight) leaves only
+  the **censored per-site geomean: 9.94 L/kg, 90% site bootstrap [4.57, 20.16]** (26 sites: 14 exact + 12 rice<MDL as
+  upper limits; site sd 0.82 log10; Kaplan-Meier median 7.77; leave-one-out 8.77–11.65). The ratio of means fails
+  because A-2 (WWTP, 1760 ng/L) is **82.8%** of the void-water PFOA and has the LOWEST ratio (0.98); the "27" drops the
+  12 rice-ND sites, which are low-ratio sites, so it is biased up. (Q2) **Rice ∝ water^0.52 [0.24, 0.87]** (censored
+  slope; a constant BAF means 1) while (Q3b) the model is linear over Kim's range (slope 0.964 in every variant — only
+  the carrier is nonlinear) ⇒ the harvest void water (a 2-day snapshot) is a noisy proxy for the season exposure, and the
+  per-site ratio carries that noise; it is not the carrier. (Q3) Every variant sits BELOW the per-site interval:
+  nstem_leaf+lipid 1.44 (−0.84 log), 4-pool lipid 0.34 (−1.46), monotone 0.036 (−2.44), W2 0.023 (−2.63) — the
+  admissible estimator makes the PFOA miss LARGER than 4.43 did. (Q4) A-2 is **67.3%** of the void-water Σ17 too.
+  Decisions: **D1** `kim2019_grain_baf()` keeps the ratio of means for every congener (the only estimator the other five
+  have; mixed estimators would compare unlike quantities) and the per-site constant sits beside it; **D2** the
+  `literature_params` demo's L_Ph target moves 4.43 → 9.94 — but by a 3% margin (E1 4.44 vs bootstrap low 4.57; robust
+  over 10 seeds, NOT to the interval method: the POST-HOC profile-likelihood interval [4.18, 19.78] contains 4.43);
+  **D3** the "PFOA\* used in the L_Ph fit" labels are removed (no shipped parameter is fitted to Kim — `L_Ph_W2fit`,
+  `L_Ph_oryza`, `LIPID_LOADING` are Yamazaki fits) and PFOA is reported as its own OOS check, not folded into the
+  pre-registered 4a RMSE; **D4** the absolute LEVEL of every Kim congener is A-2-weighted (the chain-length shape compares
+  like with like; the level does not — for PFOA the per-site value is 2.2× the mean). Every pre-registered expectation
+  held. Also fixed on the way: `validation_summary` panel B ("PFOA\* (used in fit)", "reliable PFHpA·PFNA") and
+  `revalidation_crosscheck` ("DF≥15%" = PFNA alone) labels. `parameters.json`, `simulate()` defaults and
+  `reproduce_demo` (0.029) UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1587,6 +1616,9 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   Q2 noise · Q3/Q4 per variant · DVS sensitivity · POST-HOC estimators/decomposition/noise floor).
 - **Kim 2019 with its non-detects**: `python validation/kim2019_censored.py` (~20 s; pre-registered header; the
   [0, MDL] bounds per congener · whether the long-chain rise survives · point vs interval score per variant). Tang endosperm as milled rice: `model_api.tang_tf_validation(c, endosperm="white")`.
+- **Kim 2019 PFOA per site**: `python validation/kim2019_pfoa_anchor.py` (~1.5 min; pre-registered header; candidate
+  estimators · censored per-site geomean + bootstrap · censored slope · model linearity · A-2 weight · decisions ·
+  POST-HOC interval-method check).
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
   Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered; engine-free),
   `"hydrus"` the real-engine shape, `"constant"` the flat default (conc==BAF). Both shapes are
@@ -1619,7 +1651,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**401 collected; 400 pass, 2 skip** (401 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**405 collected; 404 pass, 2 skip** (405 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
@@ -1690,7 +1722,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
    driven by the measured `forcing_rice` transpiration and reproducing it to <1% when unstressed.
 4. **Tier-1 calibration machinery** **DONE** + **first real fit done**: **Kim et al. 2019**
    (Korean paddy, paired pore-water/soil/brown-rice, `10.1016/j.scitotenv.2019.03.240`) is wired in
-   (`kim2019_grain_baf()`); the demo fits `L_Ph` to the PFOA grain BAF (→ matches 4.43 L/kg).
+   (`kim2019_grain_baf()`); the demo fits `L_Ph` to the PFOA grain BAF (per-site 9.94 L/kg since step 4b;
+   the ratio of means 4.43 is A-2-weighted — see §6).
    **Remaining**: a chain-length series fit and a full compartment-resolved fit — Kim is grain-only,
    so `f_xy` (root→shoot) needs root/straw tissue data (DB gap; greenhouse time-series needed).
 5. **Literature parameter DB + measured `B_k`** **DONE** (`docs/literature_db/`, `src/literature_params.py`):

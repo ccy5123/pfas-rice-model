@@ -275,7 +275,7 @@ them, so a PFSA-specific transport term is still needed.
   generalizes out-of-sample** across two independent datasets (Tang 2026, Kim 2019). Consolidated,
   **engine-rendered** synthesis paper: **`sci_adk_review/runs/pfas-rice-consolidation/paper/draft.tex`**
   (rebuild: `python sci_adk_review/build_consolidation.py`; KR narrative: `sci_adk_review/FINDINGS.md`).
-- **Tier-1 fit** — `src/literature_params.py` fits `L_Ph` to the Kim 2019 PFOA grain BAF (matches 4.43 L/kg).
+- **Tier-1 fit** — `src/literature_params.py` fits `L_Ph` to the Kim 2019 PFOA grain BAF (the per-site censored estimate 9.94 L/kg; the published ratio of means 4.43 is weighted 83% by one WWTP field — `validation/kim2019_pfoa_anchor.py`).
 - **Visualization tool** — `app.py` (+ `src/model_api.py`, `src/plots.py`): plant/soil accumulation
   colormap + six exposure modes (model / custom tables / HYDRUS CSV / **live HYDRUS-1D** / soil
   inventory / biomonitoring), the opt-in mechanism switches, and the neutral / weak-electrolyte
