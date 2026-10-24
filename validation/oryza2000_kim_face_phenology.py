@@ -96,7 +96,240 @@
 # =============================================================================
 from __future__ import annotations
 
+import os
 import sys
 
+import numpy as np
+from scipy.optimize import brentq
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.path.insert(0, os.path.join(ROOT, "src"))
+sys.path.insert(0, HERE)
+
+import oryza2000 as O2K           # noqa: E402
+import oryza_growth as OG         # noqa: E402
+import oryza2000_kim_face as K    # noqa: E402
+
+YEARS = K.YEARS
+ARMS = ("A", "B")                 # A = ORYZA2000 port, B = shipped oryza_growth
+RATE_KEYS = ("DVRJ", "DVRI", "DVRP", "DVRR")
+STAGE_DVS = (("panicle_initiation", 0.65), ("anthesis", 1.0), ("maturity", 2.0))
+TREATMENTS = {"primary": dict(source="station", dT=0.0, sbdur=30),
+              "S_sbdur20": dict(source="station", dT=0.0, sbdur=20),
+              "S_sbdur40": dict(source="station", dT=0.0, sbdur=40),
+              "S_power+1.7C": dict(source="power", dT=1.7, sbdur=30)}
+SCORE_GROUPS = ("Q1", "Q2x", "Q3", "Q4", "Q5")
+UNCALIBRATED_PORT_Q2X = 0.328     # oryza2000_kim_face.py, station weather (recomputed below)
+
+
+def base_rates(arm):
+    if arm == "A":
+        c = O2K.load_crop()
+        return {k: float(c[k]) for k in RATE_KEYS}
+    p = OG.OryzaParams()
+    return {k: float(getattr(p, k)) for k in RATE_KEYS}
+
+
+def run(arm, year, rates, tr):
+    if arm == "A":
+        crop = O2K.load_crop()
+        crop.update(rates)
+        return K.run_port(year, tr["dT"], tr["sbdur"], tr["source"], crop=crop)
+    return K.run_shipped(year, tr["dT"], source=tr["source"], params_kw=dict(rates))
+
+
+def crossing(r, lim):
+    """Fractional day after transplanting at which DVS first reaches `lim` (None if never)."""
+    d, t = r["DVS"], r["dat"]
+    hit = np.where(d >= lim - 1e-12)[0]
+    if not len(hit):
+        return None
+    i = int(hit[0])
+    if i == 0:
+        return float(t[0])
+    f = (lim - d[i - 1]) / (d[i] - d[i - 1])
+    return float(t[i - 1] + f * (t[i] - t[i - 1]))
+
+
+def calibrate(arm, year, tr, obs):
+    """DRATES-style: common factor on DVRJ/DVRI -> PI day; DVRP -> anthesis; DVRR -> maturity."""
+    base = base_rates(arm)
+    rates = dict(base)
+    target = {s: float(obs[year][s]["dat"]) for s, _ in STAGE_DVS}
+
+    def miss(lim, tgt):
+        def g(r_):
+            x = crossing(run(arm, year, r_, tr), lim)
+            return (x if x is not None else 1.0e3) - tgt
+        return g
+
+    def solve(fun, lo, hi):
+        for _ in range(6):
+            if fun(lo) * fun(hi) < 0:
+                return brentq(fun, lo, hi, xtol=1e-7, rtol=1e-7)
+            lo, hi = lo / 2.0, hi * 2.0
+        raise RuntimeError(f"no bracket ({arm}, {year})")
+
+    g1 = miss(0.65, target["panicle_initiation"])
+    f = solve(lambda x: g1({**rates, "DVRJ": base["DVRJ"] * x, "DVRI": base["DVRI"] * x}), 0.3, 3.0)
+    rates.update(DVRJ=base["DVRJ"] * f, DVRI=base["DVRI"] * f)
+    g2 = miss(1.0, target["anthesis"])
+    rates["DVRP"] = solve(lambda x: g2({**rates, "DVRP": x}), base["DVRP"] / 3, base["DVRP"] * 3)
+    g3 = miss(2.0, target["maturity"])
+    rates["DVRR"] = solve(lambda x: g3({**rates, "DVRR": x}), base["DVRR"] / 3, base["DVRR"] * 3)
+    return rates, f
+
+
+def loyo_rates(own, arm):
+    """Held-out year -> mean of the other two years' calibrated rates (J/I via the factor)."""
+    base = base_rates(arm)
+    out = {}
+    for y in YEARS:
+        others = [own[o] for o in YEARS if o != y]
+        fbar = float(np.mean([o[1] for o in others]))
+        out[y] = {"DVRJ": base["DVRJ"] * fbar, "DVRI": base["DVRI"] * fbar,
+                  "DVRP": float(np.mean([o[0]["DVRP"] for o in others])),
+                  "DVRR": float(np.mean([o[0]["DVRR"] for o in others]))}
+    return out
+
+
+def calendar_scores(runs, obs, root_obs):
+    """The same ratios read on the OBSERVED sampling days (adds the phenology error)."""
+    err = {g: [] for g in K.GROUPS}
+    for y in YEARS:
+        r = runs[y]
+        idx = {s: float(np.interp(obs[y][s]["dat"], r["dat"], np.arange(len(r["dat"]))))
+               for s in K.SCORED}
+        mv = K.model_values(r, idx)
+        qm = K.quantities(mv, {s: (mv[s]["ROOT"], mv[s]["TOT"]) for s in root_obs} if y == 1999 else None)
+        qo = K.quantities({s: obs[y][s] for s in K.SCORED}, root_obs if y == 1999 else None)
+        for g in K.GROUPS:
+            for s, o in qo[g].items():
+                if g == "Q2" and s == "anthesis":
+                    continue
+                err[g].append(np.log10(max(qm[g][s], 1e-12)) - np.log10(o))
+    rm = {("Q2x" if g == "Q2" else g): float(np.sqrt(np.mean(np.square(e)))) for g, e in err.items()}
+    rm["POOLEDx"] = float(np.mean([rm[g] for g in SCORE_GROUPS]))
+    return rm
+
+
+def phenology_errors(runs, obs):
+    return {y: {s: (None if crossing(runs[y], lim) is None
+                    else crossing(runs[y], lim) - obs[y][s]["dat"]) for s, lim in STAGE_DVS}
+            for y in YEARS}
+
+
+def c1(ra, rb, reached_a):
+    a = ra["POOLEDx"] <= rb["POOLEDx"] + 0.05
+    b = (ra["Q1"] <= rb["Q1"] + 0.05) and (ra["Q2x"] <= rb["Q2x"] + 0.05)
+    c = all(reached_a)
+    return dict(a=a, b=b, c=c, passed=a and b and c)
+
+
+def run_treatment(tr, obs, root_obs):
+    out = {}
+    for arm in ARMS:
+        own = {y: calibrate(arm, y, tr, obs) for y in YEARS}
+        lr = loyo_rates(own, arm)
+        runs_l = {y: run(arm, y, lr[y], tr) for y in YEARS}
+        runs_o = {y: run(arm, y, own[y][0], tr) for y in YEARS}
+        rl, bl, dl = K.evaluate(runs_l, obs, root_obs)
+        ro, bo, do = K.evaluate(runs_o, obs, root_obs)
+        out[arm] = dict(own=own, loyo_rates=lr, runs=runs_l, rmse=rl, bias=bl, detail=dl,
+                        own_rmse=ro, own_detail=do, phen=phenology_errors(runs_l, obs),
+                        cal=calendar_scores(runs_l, obs, root_obs))
+    reached = [out["A"]["detail"][y]["reached"]["maturity"] for y in YEARS]
+    out["c1"] = c1(out["A"]["rmse"], out["B"]["rmse"], reached)
+    reached_own = [out["A"]["own_detail"][y]["reached"]["maturity"] for y in YEARS]
+    out["c1_own"] = c1(out["A"]["own_rmse"], out["B"]["own_rmse"], reached_own)
+    return out
+
+
+def main(verbose=True):
+    obs, root_obs = K.load_obs()
+    res = {name: run_treatment(tr, obs, root_obs) for name, tr in TREATMENTS.items()}
+    unc = K.run_treatment(obs, root_obs, dT=0.0, sbdur=30, source="station")
+    q2x_unc = unc["A"]["rmse"]["Q2x"]
+    P = res["primary"]
+    drop = q2x_unc - P["A"]["rmse"]["Q2x"]
+    phen = P["A"]["phen"]
+    c3 = all(abs(phen[y]["anthesis"]) <= 5 and phen[y]["maturity"] is not None
+             and abs(phen[y]["maturity"]) <= 7 for y in YEARS)
+    flips = [n for n, R in res.items() if R["c1"]["passed"] != P["c1"]["passed"]]
+    out = dict(res=res, obs=obs, root_obs=root_obs, q2x_uncal=q2x_unc, unc=unc,
+               c1=P["c1"], c2_drop=drop, c2_phenological=drop >= 0.10, c3=c3, flips=flips)
+    if not verbose:
+        return out
+
+    print("=" * 78)
+    print("OPTION C -- both drivers' development rates calibrated to Akitakomachi (DRATES-style),")
+    print("Shizukuishi FACE, leave-one-year-out; station weather primary")
+    print("=" * 78)
+    print("\n1. Calibrated rates per year (own-year), relative to each driver's base values")
+    for arm in ARMS:
+        base = base_rates(arm)
+        print(f"  {arm}  base " + ", ".join(f"{k} {base[k]:.6f}" for k in RATE_KEYS))
+        for y in YEARS:
+            r, f = P[arm]["own"][y]
+            print(f"     {y}  J/I x{f:.3f}   DVRP x{r['DVRP'] / base['DVRP']:.3f}   "
+                  f"DVRR x{r['DVRR'] / base['DVRR']:.3f}")
+    print("\n2. Phenology prediction, leave-one-year-out (model - observed, days)")
+    for arm in ARMS:
+        for y in YEARS:
+            e = P[arm]["phen"][y]
+            print(f"    {arm} {y}: " + "  ".join(
+                f"{s.split('_')[0]} {'n/r' if v is None else f'{v:+.1f}'}" for s, v in e.items()))
+    print(f"    C3 (port; |anthesis| <= 5 d, |maturity| <= 7 d every year): {'adequate' if c3 else 'NOT adequate'}")
+
+    print("\n3. Stage-matched ratios, LOYO, primary (observed | A | B)")
+    labels = {"Q1": "GL(s)/GL(anthesis)", "Q2": "SL/(GL+SL)", "Q3": "GL/TOT",
+              "Q4": "TOT(s)/TOT(maturity)", "Q5": "root/total (1999)"}
+    for g in K.GROUPS:
+        print(f"  {g} {labels[g]}" + ("   [anthesis point reported, not scored]" if g == "Q2" else ""))
+        for y in YEARS:
+            qo, qa, qb = (P["A"]["detail"][y]["qo"][g], P["A"]["detail"][y]["qm"][g],
+                          P["B"]["detail"][y]["qm"][g])
+            for st in qo:
+                print(f"    {y} {st:<19} {qo[st]:7.3f} | {qa[st]:7.3f} | {qb[st]:7.3f}")
+
+    print("\n4. log10 RMSE (bias), primary")
+    hdr = "".join(f"{g:>16}" for g in SCORE_GROUPS) + f"{'POOLED':>9}"
+    print("              " + hdr)
+    for arm in ARMS:
+        r, b = P[arm]["rmse"], P[arm]["bias"]
+        cells = []
+        for g in SCORE_GROUPS:
+            bb = b["Q2"] if g == "Q2x" else b[g]
+            cells.append(f"  {r[g]:6.3f}" + (f" ({bb:+.3f})" if g != "Q2x" else "         "))
+        print(f"    {arm} LOYO   " + "".join(cells) + f"  {r['POOLEDx']:6.3f}")
+    for arm in ARMS:
+        r = P[arm]["own_rmse"]
+        print(f"    {arm} own-yr " + "".join(f"  {r[g]:6.3f}         " for g in SCORE_GROUPS)
+              + f"  {r['POOLEDx']:6.3f}")
+    for arm in ARMS:
+        r = P[arm]["cal"]
+        print(f"    {arm} calendar" + "".join(f" {r[g]:6.3f}          " for g in SCORE_GROUPS)
+              + f" {r['POOLEDx']:6.3f}")
+    print("    (own-yr: phenology exact by construction; calendar: LOYO ratios read on the observed days)")
+
+    print("\n5. Verdicts")
+    for name, R in res.items():
+        d = R["c1"]
+        print(f"    {name:<13} pooled A {R['A']['rmse']['POOLEDx']:.3f} vs B {R['B']['rmse']['POOLEDx']:.3f}"
+              f"  Q1 {R['A']['rmse']['Q1']:.3f}/{R['B']['rmse']['Q1']:.3f}"
+              f"  Q2x {R['A']['rmse']['Q2x']:.3f}/{R['B']['rmse']['Q2x']:.3f}"
+              f" | (a) {d['a']} (b) {d['b']} (c) {d['c']} -> {'PASS' if d['passed'] else 'FAIL'}")
+    print(f"  C1 (primary, LOYO): {'PASSES' if P['c1']['passed'] else 'FAILS'}"
+          + (f"; sensitive to {', '.join(flips)}" if flips else "; unchanged under every sensitivity"))
+    d = P["c1_own"]
+    print(f"     same rule with own-year rates: (a) {d['a']} (b) {d['b']} (c) {d['c']} -> "
+          f"{'PASS' if d['passed'] else 'FAIL'}")
+    print(f"  C2: port Q2x {q2x_unc:.3f} (IR72 phenology, station) -> {P['A']['rmse']['Q2x']:.3f}; "
+          f"drop {drop:+.3f} -> " + ("largely PHENOLOGICAL" if drop >= 0.10 else
+                                   "mostly IR72's leaf-death table (DRLVT)"))
+    return out
+
+
 if __name__ == "__main__":
-    sys.exit("pre-registration only -- the calibration is implemented in the next commit")
+    main()

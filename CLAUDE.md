@@ -75,7 +75,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (416 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (419 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1550,6 +1550,27 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   finishing the season at a temperate site. Neither driver is a temperate japonica: a cultivar phenology calibration
   would be the next thing needed for either. `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029)
   UNCHANGED.
+- **Option C — both drivers' phenology calibrated to Akitakomachi, then the FACE comparison re-run (PRE-REGISTERED in
+  `7743bfc`) — the port now PASSES; the switch can be pre-registered (user decision)**:
+  `validation/oryza2000_kim_face_phenology.py` + `tests/test_oryza2000_kim_face_phenology.py` (3). Only the four development
+  rates of each driver are fitted, the DRATES way (ORYZA manual §8.2): one common factor on DVRJ/DVRI to the observed PI day
+  (the juvenile/photoperiod split is not observable), DVRP to anthesis, DVRR to maturity, by root-finding on each driver's
+  own heat units (hits the targets to <0.001 d; port carbon balance still ~1e-16). Partitioning, leaf death, SLA etc. stay
+  IR72.D92 / shipped. **Leave-one-year-out** (held-out year runs on the other two years' mean rates), station weather,
+  nursery 30 d (an ASSUMPTION — sowing is not in the transcription), Q2 scored without the anthesis point (Q2x).
+  **C1 PASSES**: pooled 0.222 (port) vs 0.245 (shipped); Q1 green-leaf course **0.174 vs 0.287**, Q4 dry-matter timing
+  **0.210 vs 0.307**, Q3 0.147 vs 0.138 (tie), Q5 0.324 vs 0.274 (both over a root floor), **Q2x 0.256 vs 0.221 — the
+  port is still worse on the dead-leaf share, by 0.035 against the 0.05 allowance** (narrow). Holds under every
+  sensitivity (nursery 20/40 d, POWER+1.7 °C) and with each year's OWN rates (0.246 vs 0.267). **C2**: the port's Q2x
+  falls only 0.328 → 0.256 (−0.072 < 0.10) ⇒ its dead-leaf excess sits mostly in IR72's leaf-death table (DRLVT, from
+  DVS 0.6 and steeper), which Kim cannot re-fit (PARAM needs stem/panicle weights). **C3 NOT adequate**: LOYO phenology
+  misses anthesis by +10.5 / −10.3 / +0.7 d (1998/1999/2000) — the calibrated rates vary year to year (J/I ×1.09–1.35,
+  DVRR ×0.86–1.21) — but the verdict holds with exact (own-year) phenology too. Calibrated rates move the port by
+  ×0.86–1.35 and the shipped driver's DVRR by ×1.47–2.08 (its grain fill was far too slow). Expectation: right on C2
+  and on no flips; WRONG that C1 fails on (b) and that LOYO phenology would be adequate. ⇒ once both develop like the
+  cultivar, the port's organ shapes fit an independent experiment better overall; it still over-states dead leaves. The
+  rates are an Akitakomachi-at-Shizukuishi result, not a temperate-japonica set. `parameters.json`, `simulate()` defaults
+  and `reproduce_demo` (0.029) UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1687,6 +1708,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   after transplanting); in the PFAS model `simulate(biomass="oryza2000")` (opt-in; pass `season=` ≈ the crop's maturity).
 - **Independent check on the Shizukuishi FACE data**: `python validation/oryza2000_kim_face.py` (~5 s; pre-registered header
   + post-hoc addendum; stage-matched ratios under the pre-registered weather treatments, then the JMA-station run).
+- **Option C (phenology calibrated to the cultivar)**: `python validation/oryza2000_kim_face_phenology.py` (~20 s;
+  pre-registered header; DRATES-style rates per year · LOYO phenology error · stage-matched ratios · C1–C3 verdicts).
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
   Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered; engine-free),
   `"hydrus"` the real-engine shape, `"constant"` the flat default (conc==BAF). Both shapes are
@@ -1719,7 +1742,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**416 collected; 415 pass, 2 skip** (416 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**419 collected; 418 pass, 2 skip** (419 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`

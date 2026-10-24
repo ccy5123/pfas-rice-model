@@ -242,22 +242,26 @@ def _doy(d):
     return d.timetuple().tm_yday
 
 
-def run_port(year, dT=0.0, sbdur=30, source="power"):
+def run_port(year, dT=0.0, sbdur=30, source="power", crop=None):
+    """`crop` overrides the IR72.D92 crop dict (oryza2000_kim_face_phenology.py passes
+    calibrated development rates); None = IR72.D92 as loaded."""
     w = load_weather(year, dT, source)
     tp = _doy(TRANSPLANT[year])
     m = O2K.Management(lat=LAT, emd=tp - sbdur, sbdur=sbdur, nplh=NPLH, nh=NH, co2=CO2)
-    r = O2K.simulate(w, O2K.load_crop(), m, max_days=len(w["rad_mj"]) - (m.emd - w["doy0"]))
+    r = O2K.simulate(w, crop if crop is not None else O2K.load_crop(), m,
+                     max_days=len(w["rad_mj"]) - (m.emd - w["doy0"]))
     assert r["events"].get("transplanting") == tp
     return {"dat": r["doy"] - tp, "DVS": r["dvs"], "GL": r["wlvg"], "SL": r["wlvd"],
             "ROOT": r["wrt"], "TOT": r["wlvg"] + r["wlvd"] + r["wst"] + r["wso"] + r["wrt"],
             "LAI": r["lai"], "NSP": r["nsp"], "NGR": r["ngr"], "WSO": r["wso"]}
 
 
-def run_shipped(year, dT=0.0, anchored=True, source="power"):
+def run_shipped(year, dT=0.0, anchored=True, source="power", params_kw=None):
+    """`params_kw` overrides OryzaParams fields (e.g. calibrated DVRJ..DVRR)."""
     w = load_weather(year, dT, source)
     tp = _doy(TRANSPLANT[year])
     n = int(w["doy0"] + len(w["rad_mj"]) - tp)                     # transplanting .. Nov 30
-    p = OG.OryzaParams(lat_deg=LAT, sow_doy=tp, season=float(n - 1))
+    p = OG.OryzaParams(lat_deg=LAT, sow_doy=tp, season=float(n - 1), **(params_kw or {}))
     k = tp - w["doy0"]
     sim = OG.simulate_oryza(p, {key: w[key][k:k + n] for key in ("tmax", "tmin", "rad_mj")})
     dead = np.concatenate([[0.0], np.cumsum(sim["drlv"] * sim["wlv"])[:-1]])

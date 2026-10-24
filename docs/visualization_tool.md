@@ -350,9 +350,10 @@ The sidebar **“Biomass driver M(t)”** radio chooses the organ-biomass forcin
   manual with the IR72 crop file verbatim (`oryza2000`, `biomass="oryza2000"`). It reproduces the manual's IR72DS92
   experiment (phenology within 2 d, biomass within ~6%) where the reduced driver matures 12 d late
   (`validation/oryza2000_ir72ds92.py`) — but that is the manual's own calibration experiment. On an independent
-  temperate one (Shizukuishi FACE, Akitakomachi, `validation/oryza2000_kim_face.py`) neither driver fits the organ
-  shapes clearly better: the port times dry matter better and finishes the season, the reduced driver never reaches
-  maturity at 39.6 N, and the port over-states the dead-leaf share. It matures earlier (~93 d after transplanting in
+  temperate one (Shizukuishi FACE, Akitakomachi, `validation/oryza2000_kim_face.py`) the reduced driver never reaches
+  maturity at 39.6 N; with IR72 phenology neither driver fits the organ shapes clearly better, and once both drivers'
+  development rates are calibrated to the cultivar (`validation/oryza2000_kim_face_phenology.py`) the port fits better
+  overall (green-leaf course, dry-matter timing) while still over-stating the dead-leaf share. It matures earlier (~93 d after transplanting in
   the app's climatology), so the default 120-d season runs past maturity — set the season to the crop's duration when
   using it.
 - **growth_rice (partition + logistic)** — ORYZA IR72 partitioning imposed on a logistic total-biomass curve;
