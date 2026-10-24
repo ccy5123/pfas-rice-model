@@ -152,13 +152,27 @@
     배포 파라미터는 없음; L_Ph·LIPID_LOADING은 Yamazaki 적합), PFOA는 별도 OOS 점검으로. D4 A-2가 Σ17 공극수의 67.3% →
     Kim 계열의 절대 수준은 A-2 가중(모양 비교는 유효). 사전등록 예상은 모두 맞음.
 
-## 5. ORYZA 파라미터를 IR72 원본과 정렬 + 실측 검증
-- `src/oryza_growth.py`의 분배표·SLA·DRLV·DVRR·CV가 IR72.D92와 다름(개화 후 줄기 분배 25–30% vs 0; 성숙 116일 vs 원본값으로 97일).
-  원본: APSIM 사본 `https://raw.githubusercontent.com/APSIMInitiative/APSIMClassic/master/Model/Oryza.xml`.
-- 검증 자료: `docs/literature_db/raw_si/rice_organ_biomass_literature.csv`(Kim 2001/2003 FACE 뿌리·잎몸, Bouman Fig 2b),
-  ORYZA2000 매뉴얼 IR72DS92 관측값(`http://books.irri.org/9712201716_content.pdf`).
-- 주의: 파라미터를 바꾸면 바이오매스가 바뀌어 **1단계 재적합을 다시 해야** 한다 → 1단계 이후, 그러나 결과를 확정하기 전에 범위를 결정.
-- 함께 볼 것: HI 0.46(문헌 0.50–0.55), 개화/성숙일의 파종·이식 기준 혼동, 1740 g/m²(Kumar 2017) 스케일링이 고사엽 미포함 녹색 지상부를 기준으로 하는 문제.
+## 5. ORYZA를 IR72.D92 원본에 맞추기 — ✅ 이식·검증 완료 (사전등록 `288de63`), 기본값 교체는 사용자 결정 대기
+- 범위(사용자와 결정, "누가 물어도 문제가 없는 방법"): 파라미터만이 아니라 **ORYZA2000 잠재생산 경로 전체를 매뉴얼의 Fortran에서 줄 단위로 이식**
+  (`src/oryza2000.py`). 잠재생산 모드에서 꺼지는 수분·질소 스트레스 모듈만 제외(계수는 1로 두어 식은 원문 그대로).
+- 출처: Bouman et al. 2001 매뉴얼(IRRI 무료 PDF) §7.3 IR72.D92 → `raw_si/oryza_ir72_d92_params.csv`, §7.2 IR72DS92 실측 →
+  `raw_si/oryza_ir72ds92_obs.csv`. 매뉴얼 원문·APSIM 사본과 스크립트로 전부 대조.
+- 애매한 원문 한 줄: GPPARGET의 AMAX — 두 분기가 이어지려면 REDFT·CO2가 첫 항 전체에 곱해져야 함 → 그 형태가 기본(`amax_form`).
+- 원본 엔진·기상은 못 구함: WUR 소스(`O2000V2N13gnufortran.zip`)·`ORYZA2000v2n14s1inclWeather.zip`은 로그인 후에도 403, IRRI v3는 폼 대기,
+  옛 드라이브 폴더는 권한 필요. → 기상은 NASA POWER를 매뉴얼에 실린 관측소 12일로 보정(Tmin +1.17, Tmax +1.67 °C, 일사 ×1.211),
+  온도만 보정·무보정도 함께 보고. **PHIL1.992를 구하면 그 결과가 대체한다(규칙 동일).**
+- 성격: IR72DS92는 매뉴얼의 보정 예제 → 이식본에는 **충실도 시험**이지 ORYZA2000의 독립 검증이 아님.
+- 결과(`validation/oryza2000_ir72ds92.py`): 이식본 **ADEQUATE(세 기상 처리 모두)** — PI/개화/성숙 56/82/115 vs 실측 58/83/114,
+  지상부 log10 RMSE 0.024(~6%). 기존 `oryza_growth`는 성숙 12일 늦음(126), 초반 생장 느림, 개화 후 줄기 계속 증가, 이삭 덜 채움 →
+  이식본이 4/4 계열 + 성숙일에서 우세(R2). 탄소수지 ~1e-15로 닫힘.
+- 연결: `simulate(biomass="oryza2000")` 옵트인. 앱 라디오에 추가하고 기존 기본을 "ORYZA Level-1, reduced"로 정직하게 재표기.
+  `_biomass_fn`은 모르는 이름이면 이제 오류(전에는 조용히 growth_rice로 대체).
+- 사후(규칙 아님): PFAS 기후에서 이식본 성숙 t=93일. 120일 시즌이면 짚 ×1.6–1.9·낟알 ×1.9–2.5, 성숙일 수확이면 짚 ×1.1–1.2·낟알 ×0.6–0.75
+  → 낟알 수치는 작물 모델보다 **수확 시점(시즌 길이)**이 더 좌우. 120일 기본 시즌은 늦게 성숙하는 축약 모델에 묶여 있던 값.
+- **남은 결정(사용자)**: 기본을 `oryza2000`으로 바꿀지. 바꾸면 ORYZA 기반 적합(`refit_oryza`, `TANG_REFIT_FXY`, 기본값으로 도는 OOS 보고)을
+  다시 하고, 시즌을 작물 성숙에 묶는 방식(예: `season=None` → 성숙일)을 정해야 함.
+- 아직 안 한 것: 뿌리·잎몸 실측(Kim 2001/2003 FACE, Bouman Fig 2b)과의 비교(다른 품종·기후라 독립 자료), 1740 g/m² 기준점 문제(녹색 vs 고사엽 포함)는
+  이식본에서는 기준점을 쓰지 않으므로 해소, 기존 모드에는 그대로 남음.
 
 ## 6. Tang 2026 세부 — ✅ 대부분 완료
 - ✅ endosperm 백미 조성: `tang_tf_validation(endosperm="brown"|"white")`(`TANG_ENDOSPERM`), 기본 brown(도정법 미보고). 출처 키
@@ -182,5 +196,7 @@ docs/HANDOFF_mass_basis_refit.md를 읽자. 1단계, 1b-①·②, 2단계(민감
 3단계(Li 2025 단계별)도 끝났다: nstem_leaf + lipid가 구분된다(0.43/0.52).
 4a(Kim 장쇄 미검출 처리)도 끝났다: lipid 계열 우위는 견고, 두 lipid 모델 사이는 미정.
 4b(Kim PFOA 기준점)도 끝났다: 필지별 검열 기하평균 9.94(평균의 비 4.44는 A-2 한 필지 값), 필지별 비율은 상수가 아님(기울기 0.52).
-먼저 PR #69와 #70의 상태를 확인하고 5단계(ORYZA IR72.D92 정렬)로 간다.
+5단계(ORYZA)도 끝났다: 매뉴얼에서 ORYZA2000을 이식했고 IR72DS92를 재현한다(옵트인 biomass="oryza2000").
+먼저 PR #69와 #70의 상태를 확인하고, 사용자에게 기본 바이오매스를 oryza2000으로 바꿀지(바꾸면 재적합 + 시즌을 성숙에 묶기) 묻는다.
+PHIL1.992나 ORYZA 원본 소스가 오면 validation/oryza2000_ir72ds92.py를 관측소 기상으로 다시 돌린다.
 ```

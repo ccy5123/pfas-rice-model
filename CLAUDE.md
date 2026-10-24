@@ -54,7 +54,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── plots.py                              # Plotly builders: fig_plant_schematic (colormap), drivers, ...
 │   ├── forcing_rice.py                       # measured transpiration Q_TP(t) (FAO-56 dual-Kc; Kumari2022 + NayHtoon2018)
 │   ├── growth_rice.py                        # ORYZA IR72 partitioning on a logistic → organ M_s(t) (DEFAULT biomass driver)
-│   ├── oryza_growth.py                       # MECHANISTIC ORYZA2000 Level-1 carbon balance → weather-responsive M_s(t) (opt-in; drivers=/weather=)
+│   ├── oryza_growth.py                       # REDUCED re-coding of the ORYZA2000 Level-1 carbon balance → M_s(t) (the biomass="oryza" DEFAULT)
+│   ├── oryza2000.py                          # ORYZA2000 potential production ported line by line from the manual, IR72.D92 verbatim (biomass="oryza2000", opt-in)
 │   ├── measured_biomass.py                   # ingest a MEASURED per-organ biomass table → M(t) driver (units→kg/hill; Tang etc.)
 │   └── organ_mass.py                         # crop-model DRY matter → the FRESH organ mass the ODE runs on (mass_basis)
 ├── examples/                         # ready-to-load CSVs for app.py (HYDRUS drivers + biomonitoring)
@@ -74,7 +75,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (405 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (411 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1488,6 +1489,40 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   held. Also fixed on the way: `validation_summary` panel B ("PFOA\* (used in fit)", "reliable PFHpA·PFNA") and
   `revalidation_crosscheck` ("DF≥15%" = PFNA alone) labels. `parameters.json`, `simulate()` defaults and
   `reproduce_demo` (0.029) UNCHANGED.
+- **ORYZA2000 ported from the manual; the shipped "ORYZA" driver was a reduced re-coding (handoff step 5;
+  PRE-REGISTERED in `288de63`)**: `src/oryza2000.py` + `validation/oryza2000_ir72ds92.py` + `tests/test_oryza2000.py` (6) +
+  `docs/literature_db/raw_si/oryza_ir72_d92_params.csv` (IR72.D92, manual §7.3) / `oryza_ir72ds92_obs.csv` (the IR72DS92
+  experiment, §7.2) / `irri_phil1_1992_printed.csv` / `nasa_power_losbanos_1992.csv`. Source: Bouman et al. 2001,
+  *ORYZA2000: modeling lowland rice* (IRRI; free PDF) — every value checked by script against the manual and the
+  parameters also against the APSIM `Oryza.xml` copy. **Scope chosen with the user ("누가 물어도 문제가 없는 방법")**:
+  port the WHOLE potential-production path from the Fortran the manual prints — ORYZA1, PHENOL/SUBDD (transplanting
+  shock), SGPCDT/SASTRO/SSKYC/SGPC1/SGPL/SRDPRF/GPPARGET (sunlit/shaded canopy, leaf-N profile, CO2), respiration, stem
+  reserves, partitioning with the grain sink limit, SUBGRN (spikelet sterility), SUBLAI2 (seedbed → dilution → shock →
+  SLA), leaf death, the carbon-balance check — and leave out only what potential mode switches off (water/N stress
+  modules; their factors kept at 1 so the equations read as printed). One printed line is ambiguous: GPPARGET's AMAX is
+  continuous between its branches only if REDFT·CO2 multiply the whole first term; that form is the default
+  (`amax_form="as_printed"` keeps the literal text; they differ only below 20 °C daytime or away from 340 ppm). The
+  carbon balance closes to ~1e-15. **The original engine/weather could not be obtained**: the WUR ORYZA2000 source
+  (`O2000V2N13gnufortran.zip`) and the full PHIL1.992 station file are login-gated (the user's WUR account got 403; the
+  IRRI v3 form is pending), so weather = NASA POWER corrected to the station by the 12 days the manual prints (Tmin
+  +1.17, Tmax +1.67 °C, radiation ×1.211); temperature-only and uncorrected runs are reported too, and a station run
+  will SUPERSEDE them. **Framing**: IR72DS92 is the manual's own calibration example, so for the port this is a
+  FIDELITY test, not an independent validation of ORYZA2000. **Result** (scored main-field dates doy 34–114): the port
+  is **ADEQUATE under every weather treatment** — PI/flowering/maturity doy 56/82/115 vs observed 58/83/114, log10 RMSE
+  aboveground 0.024 (~6%), green leaf 0.085, stem 0.073, panicle 0.052; the shipped `oryza_growth` (anchored, as the
+  PFAS default runs it) matures **12 d late** (126), grows too slowly early (WAGT 1373 vs 3498 kg/ha at doy 58), keeps
+  growing its stem after flowering (7095 vs 4243 at maturity) and under-fills panicles (6912 vs 9843) — RMSE 0.23/0.29/
+  0.17/0.24 ⇒ **the port fits better on 4/4 series and on maturity** (R2). The expectation held (except that the
+  shipped maturity miss was 12 d, not 15–20). **Wired as an OPT-IN mode** `simulate(biomass="oryza2000")`
+  (`model_api.BIOMASS_DRIVERS`; `_biomass_fn` now RAISES on an unknown name instead of silently falling back to
+  `growth_rice`) and in the app's biomass radio, which now labels the default honestly ("ORYZA Level-1, reduced") next to
+  "ORYZA2000 IR72.D92 (faithful port)". **POST-HOC (what a switch would move)**: in the PFAS climatology the port
+  matures at t = 93 d; at the default 120-d season it raises straw ×1.6–1.9 and grain ×1.9–2.5 (root unchanged), but
+  harvested at its own maturity straw is ×1.1–1.2 and grain ×0.6–0.75 — **the harvest date, not the crop model, moves
+  the grain most**, and the 120-d default season was tied to the reduced driver's late maturity. **DEFAULT UNCHANGED
+  (decision for the user)**: switching needs the ORYZA-based fits redone (`refit_oryza`, `TANG_REFIT_FXY`, the OOS reports
+  that run on the default) and a season tied to crop maturity. `parameters.json`, `simulate()` defaults and
+  `reproduce_demo` (0.029) UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1619,6 +1654,10 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Kim 2019 PFOA per site**: `python validation/kim2019_pfoa_anchor.py` (~1.5 min; pre-registered header; candidate
   estimators · censored per-site geomean + bootstrap · censored slope · model linearity · A-2 weight · decisions ·
   POST-HOC interval-method check).
+- **ORYZA2000 port vs the shipped driver on IR72DS92**: `python validation/oryza2000_ir72ds92.py` (~1 min; pre-registered
+  header; three weather treatments · phenology + per-organ log10 RMSE · R1/R2 verdict · POST-HOC PFAS BAF change). The port
+  itself: `oryza2000.simulate(weather)` (daily ORYZA states from emergence) / `oryza2000.organ_biomass(t)` (kg/hill on days
+  after transplanting); in the PFAS model `simulate(biomass="oryza2000")` (opt-in; pass `season=` ≈ the crop's maturity).
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
   Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered; engine-free),
   `"hydrus"` the real-engine shape, `"constant"` the flat default (conc==BAF). Both shapes are
@@ -1651,7 +1690,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**405 collected; 404 pass, 2 skip** (405 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**411 collected; 410 pass, 2 skip** (411 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
