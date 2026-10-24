@@ -109,7 +109,299 @@
 # =============================================================================
 from __future__ import annotations
 
+import csv
+import datetime as _dt
+import os
 import sys
 
+import numpy as np
+from scipy.optimize import brentq
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.path.insert(0, os.path.join(ROOT, "src"))
+sys.path.insert(0, HERE)
+
+import oryza2000 as O2K                         # noqa: E402
+import oryza_growth as OG                       # noqa: E402
+import oryza2000_kim_face_phenology as C        # noqa: E402
+import oryza2000_kim_face_gao_japonica as GJ    # noqa: E402
+
+RAW = os.path.join(ROOT, "docs", "literature_db", "raw_si")
+YEARS = (2001, 2002, 2003)
+LAT, NH, NPLH = 31.58, 24.0, 3.0
+CO2 = {2001: 354.0, 2002: 364.0, 2003: 375.0}          # Hasegawa 2017 Table S1, daylight ambient
+SOW = {y: _dt.date(y, 5, 18) for y in YEARS}
+TRANSPLANT = {y: _dt.date(y, 6, 13) for y in YEARS}
+SBDUR = 22                                             # emergence 4 d after sowing (assumption)
+MATURITY_DAT = 132.0                                   # 158 d sowing -> maturity (Hasegawa S1) - 26
+HASEGAWA_TMEAN = {2001: 25.2, 2002: 24.7, 2003: 25.4}
+DAH_MID = {2001: 20, 2002: 20, 2003: 30}               # mid-ripening sampling, days after heading
+SCORED = ("panicle_initiation", "heading", "mid_ripening", "maturity")
+WGROUPS = ("W1", "W2", "W3", "W4")
+ARMS = ("A", "B", "G", "A+PART")
+RATE_KEYS = C.RATE_KEYS
+
+
+def _rows(name):
+    with open(os.path.join(RAW, name)) as f:
+        return list(csv.DictReader(line for line in f if not line.startswith("#")))
+
+
+def load_obs():
+    """{year: {stage: {dat, AGB, leaf, stem, spike}}} (ambient plots; fractions sum to 1)."""
+    obs = {y: {} for y in YEARS}
+    for r in _rows("yang2006_wuxi_face_dm.csv"):
+        if r["co2"] != "AMB":
+            continue
+        y = int(r["year"])
+        sp = float(r["spike_frac"]) if r["spike_frac"] else 0.0
+        d = {"AGB": float(r["aboveground_dm_g_m2"]), "leaf": float(r["leaf_frac"]),
+             "stem": float(r["stem_frac"]), "spike": sp}
+        if r["sampling"].endswith("DAT"):
+            d["dat"] = float(r["sampling"].split()[0])
+        obs[y][r["stage"]] = d
+    return obs
+
+
+def _doy(d):
+    return d.timetuple().tm_yday
+
+
+def load_weather(year, dT=0.0):
+    rows = sorted((r for r in _rows("nasa_power_wuxi_2001_2003.csv") if r["date"].startswith(str(year))),
+                  key=lambda r: int(r["doy"]))
+    return dict(doy0=int(rows[0]["doy"]), rad_mj=np.array([float(r["rad_mj"]) for r in rows]),
+                tmin=np.array([float(r["tmin"]) for r in rows]) + dT,
+                tmax=np.array([float(r["tmax"]) for r in rows]) + dT)
+
+
+def weather_check():
+    """POWER mean temperature, transplanting -> DAT 132, vs Hasegawa's season mean."""
+    out = {}
+    for y in YEARS:
+        w = load_weather(y)
+        k = _doy(TRANSPLANT[y]) - w["doy0"]
+        sl = slice(k, k + int(MATURITY_DAT) + 1)
+        tm = float(np.mean(0.5 * (w["tmin"][sl] + w["tmax"][sl])))
+        out[y] = dict(power=tm, hasegawa=HASEGAWA_TMEAN[y], diff=HASEGAWA_TMEAN[y] - tm,
+                      rad=float(np.mean(w["rad_mj"][sl])))
+    return out
+
+
+def run_port(year, crop, sbdur=SBDUR, dT=0.0):
+    w = load_weather(year, dT)
+    tp = _doy(TRANSPLANT[year])
+    m = O2K.Management(lat=LAT, emd=tp - sbdur, sbdur=sbdur, nplh=NPLH, nh=NH, co2=CO2[year])
+    r = O2K.simulate(w, crop, m, max_days=len(w["rad_mj"]) - (m.emd - w["doy0"]))
+    assert r["events"].get("transplanting") == tp
+    return {"dat": r["doy"] - tp, "DVS": r["dvs"], "GL": r["wlvg"], "SL": r["wlvd"],
+            "ST": r["wst"], "SO": r["wso"]}
+
+
+def run_shipped(year, params_kw=None, dT=0.0):
+    w = load_weather(year, dT)
+    tp = _doy(TRANSPLANT[year])
+    n = int(w["doy0"] + len(w["rad_mj"]) - tp)                     # transplanting .. Dec 31
+    p = OG.OryzaParams(lat_deg=LAT, sow_doy=tp, season=float(n - 1), **(params_kw or {}))
+    k = tp - w["doy0"]
+    sim = OG.simulate_oryza(p, {key: w[key][k:k + n] for key in ("tmax", "tmin", "rad_mj")})
+    dead = np.concatenate([[0.0], np.cumsum(sim["drlv"] * sim["wlv"])[:-1]])
+    f = p.shoot_anchor_g_m2 * 10.0 / (sim["wlv"][-1] + sim["wst"][-1] + sim["wso"][-1])
+    return {"dat": sim["t"], "DVS": sim["dvs"], "GL": sim["wlv"] * f, "SL": dead * f,
+            "ST": sim["wst"] * f, "SO": sim["wso"] * f}
+
+
+def base_rates(arm):
+    return C.base_rates("B") if arm == "B" else GJ.base_rates("A" if arm == "A+PART" else arm)
+
+
+def run(arm, year, rates=None, sbdur=SBDUR, dT=0.0):
+    if arm == "B":
+        return run_shipped(year, dict(rates) if rates else None, dT)
+    c = GJ.crop(arm)
+    if rates:
+        c.update(rates)
+    return run_port(year, c, sbdur, dT)
+
+
+def stage_index(r, year):
+    """Fractional day index of each sample on the driver's own DVS clock; `reached` flags."""
+    ar = np.arange(len(r["dat"]))
+    idx, reached = {}, {}
+    for st, lim in (("panicle_initiation", 0.65), ("heading", 1.0), ("maturity", 2.0)):
+        x = C.crossing(r, lim)
+        reached[st] = x is not None
+        idx[st] = float(np.interp(x, r["dat"], ar)) if x is not None else float(ar[-1])
+    head_day = float(np.interp(idx["heading"], ar, r["dat"]))
+    idx["mid_ripening"] = min(float(np.interp(head_day + DAH_MID[year], r["dat"], ar)), idx["maturity"])
+    idx["tillering"] = None
+    return idx, reached
+
+
+def organs(r, i, green_only=False):
+    g = lambda k: float(np.interp(i, np.arange(len(r[k])), r[k]))
+    leaf = g("GL") if green_only else g("GL") + g("SL")
+    st, so = g("ST"), g("SO")
+    tot = leaf + st + so
+    return {"AGB": tot, "leaf": leaf / tot, "stem": st / tot, "spike": so / tot}
+
+
+def quantities(v):
+    q = {g: {} for g in WGROUPS}
+    for s in SCORED:
+        q["W1"][s] = v[s]["leaf"]
+        q["W3"][s] = v[s]["stem"]
+    for s in ("heading", "mid_ripening", "maturity"):
+        q["W2"][s] = v[s]["spike"]
+    for s in ("panicle_initiation", "heading", "mid_ripening"):
+        q["W4"][s] = v[s]["AGB"] / v["maturity"]["AGB"]
+    return q
+
+
+def evaluate(runs, obs, green_only=False):
+    err = {g: [] for g in WGROUPS}
+    detail = {}
+    for y in YEARS:
+        idx, reached = stage_index(runs[y], y)
+        mv = {s: organs(runs[y], idx[s], green_only) for s in SCORED}
+        qm, qo = quantities(mv), quantities(obs[y])
+        for g in WGROUPS:
+            for s, o in qo[g].items():
+                err[g].append(np.log10(qm[g][s]) - np.log10(o))
+        dat = {s: float(np.interp(idx[s], np.arange(len(runs[y]["dat"])), runs[y]["dat"]))
+               for s in ("heading", "maturity")}
+        till = organs(runs[y], float(np.interp(obs[y]["tillering"]["dat"], runs[y]["dat"],
+                                               np.arange(len(runs[y]["dat"])))), green_only)
+        detail[y] = dict(idx=idx, reached=reached, qm=qm, qo=qo, mv=mv, dat=dat, tillering=till)
+    rmse = {g: float(np.sqrt(np.mean(np.square(e)))) for g, e in err.items()}
+    bias = {g: float(np.mean(e)) for g, e in err.items()}
+    rmse["POOLED"] = float(np.mean([rmse[g] for g in WGROUPS]))
+    rmse["PART3"] = float(np.mean([rmse[g] for g in ("W1", "W2", "W3")]))
+    return rmse, bias, detail
+
+
+def calibrate_wp(arm, year, obs, sbdur=SBDUR):
+    """Wp: common J/I factor -> DVS 0.65 on the PI sampling day; one factor on DVRP and DVRR
+    together -> DVS 2.0 at DAT 132."""
+    base = base_rates(arm)
+
+    def solve(fun, lo, hi):
+        for _ in range(6):
+            if fun(lo) * fun(hi) < 0:
+                return brentq(fun, lo, hi, xtol=1e-7, rtol=1e-7)
+            lo, hi = lo / 2.0, hi * 2.0
+        raise RuntimeError(f"no bracket ({arm}, {year})")
+
+    def miss(rates, lim, day):
+        x = C.crossing(run(arm, year, rates, sbdur), lim)
+        return (x if x is not None else 1.0e3) - day
+
+    f = solve(lambda x: miss({**base, "DVRJ": base["DVRJ"] * x, "DVRI": base["DVRI"] * x}, 0.65,
+                             obs[year]["panicle_initiation"]["dat"]), 0.3, 3.0)
+    r1 = {**base, "DVRJ": base["DVRJ"] * f, "DVRI": base["DVRI"] * f}
+    k = solve(lambda x: miss({**r1, "DVRP": base["DVRP"] * x, "DVRR": base["DVRR"] * x}, 2.0,
+                             MATURITY_DAT), 0.3, 3.0)
+    return {**r1, "DVRP": base["DVRP"] * k, "DVRR": base["DVRR"] * k}, f, k
+
+
+def r1(R, a="A", b="B"):
+    ra, rb = R[a]["rmse"], R[b]["rmse"]
+    ok_a = ra["POOLED"] <= rb["POOLED"] + 0.05
+    ok_b = (ra["W2"] <= rb["W2"] + 0.05) and (ra["W3"] <= rb["W3"] + 0.05)
+    ok_c = all(R[a]["detail"][y]["reached"]["maturity"] for y in YEARS)
+    return dict(a=ok_a, b=ok_b, c=ok_c, passed=ok_a and ok_b and ok_c)
+
+
+def design(obs, arms, rates=None, sbdur=SBDUR, dT=None, green_only=False):
+    out = {}
+    for arm in arms:
+        runs = {y: run(arm, y, (rates or {}).get(arm, {}).get(y), sbdur if arm != "B" else SBDUR,
+                       (dT or {}).get(y, 0.0)) for y in YEARS}
+        rm, bi, de = evaluate(runs, obs, green_only)
+        out[arm] = dict(runs=runs, rmse=rm, bias=bi, detail=de)
+    return out
+
+
+def main(verbose=True):
+    obs = load_obs()
+    wc = weather_check()
+    offset_needed = any(abs(v["diff"]) > 0.5 for v in wc.values())
+    res = {"W": design(obs, ARMS)}
+    wp_rates = {arm: {} for arm in ("A", "B")}
+    wp_fk = {arm: {} for arm in ("A", "B")}
+    for arm in ("A", "B"):
+        for y in YEARS:
+            rr, f, k = calibrate_wp(arm, y, obs)
+            wp_rates[arm][y], wp_fk[arm][y] = rr, (f, k)
+    res["Wp"] = design(obs, ("A", "B"), rates=wp_rates)
+    res["W_sbdur18"] = design(obs, ("A", "B"), sbdur=18)
+    res["W_sbdur26"] = design(obs, ("A", "B"), sbdur=26)
+    res["W_greenonly"] = design(obs, ("A", "B"), green_only=True)
+    if offset_needed:
+        res["W_Toffset"] = design(obs, ("A", "B"), dT={y: v["diff"] for y, v in wc.items()})
+    verdict = {d: r1(R) for d, R in res.items()}
+    W = res["W"]
+    r3 = {arm: W[arm]["rmse"]["PART3"] <= W["A"]["rmse"]["PART3"] - 0.05 for arm in ("A+PART", "G")}
+    flips = [d for d in verdict if d != "W" and verdict[d]["passed"] != verdict["W"]["passed"]]
+    out = dict(obs=obs, weather=wc, offset_needed=offset_needed, res=res, verdict=verdict,
+               r1=verdict["W"], r3=r3, flips=flips, wp_rates=wp_rates, wp_fk=wp_fk)
+    if not verbose:
+        return out
+
+    print("=" * 78)
+    print("WUXI FACE (Yang 2006) -- leaf / stem / spike partitioning, ambient plots, 2001-2003")
+    print("=" * 78)
+    print("\n0. Weather check: POWER mean T, transplanting -> DAT 132, vs Hasegawa S1 season mean")
+    for y, v in wc.items():
+        print(f"    {y}: POWER {v['power']:.2f} C vs {v['hasegawa']:.1f} (diff {v['diff']:+.2f}); POWER rad {v['rad']:.1f} MJ")
+    print("    -> " + ("offset sensitivity RUN (a year differs by > 0.5 C)" if offset_needed else
+                      "no year differs by > 0.5 C; no offset run"))
+
+    print("\n1. Phenology on each driver's own rates (W) and Wp factors -- DAT of heading / maturity")
+    for arm in ARMS:
+        d = W[arm]["detail"]
+        print(f"    {arm:<7} " + "  ".join(
+            f"{y}: {d[y]['dat']['heading']:.0f} / " + (f"{d[y]['dat']['maturity']:.0f}" if d[y]["reached"]["maturity"] else "n/r")
+            for y in YEARS) + f"   (maturity ~{MATURITY_DAT:.0f} DAT, Hasegawa mean)")
+    for arm in ("A", "B"):
+        print(f"    Wp {arm}: " + "  ".join(f"{y} J/I x{wp_fk[arm][y][0]:.3f} P,R x{wp_fk[arm][y][1]:.3f}"
+                                         f" heading {res['Wp'][arm]['detail'][y]['dat']['heading']:.0f}" for y in YEARS))
+    agb = [W["A"]["detail"][y]["mv"]["maturity"]["AGB"] / 10.0 for y in YEARS]
+    print("    port A above-ground DM at maturity (g m-2): " + ", ".join(f"{v:.0f}" for v in agb)
+          + "   observed: " + ", ".join(f"{obs[y]['maturity']['AGB']:.0f}" for y in YEARS))
+
+    print("\n2. Shares by stage, design W (observed | A | B | G | A+PART)")
+    for key, lab in (("leaf", "leaf"), ("stem", "stem"), ("spike", "spike")):
+        print(f"  {lab}")
+        for y in YEARS:
+            for s in ("tillering",) + SCORED:
+                o = obs[y][s][key]
+                vals = [W[a]["detail"][y]["tillering"][key] if s == "tillering" else W[a]["detail"][y]["mv"][s][key]
+                        for a in ARMS]
+                print(f"    {y} {s:<19} {o:6.3f} | " + " | ".join(f"{v:6.3f}" for v in vals)
+                      + ("   (calendar, not scored)" if s == "tillering" else ""))
+
+    print("\n3. log10 RMSE (bias)")
+    print("                     " + "".join(f"{g:>16}" for g in WGROUPS) + f"{'POOLED':>9}{'W1-3':>8}")
+    for d, R in res.items():
+        for arm in R:
+            rr, b = R[arm]["rmse"], R[arm]["bias"]
+            print(f"  {d:<12} {arm:<7}" + "".join(f"  {rr[g]:6.3f} ({b[g]:+.3f})" for g in WGROUPS)
+                  + f"  {rr['POOLED']:6.3f}  {rr['PART3']:6.3f}")
+
+    print("\n4. Verdicts")
+    for d, v in verdict.items():
+        R = res[d]
+        print(f"  R1 {d:<12} pooled A {R['A']['rmse']['POOLED']:.3f} vs B {R['B']['rmse']['POOLED']:.3f}"
+              f"  W2 {R['A']['rmse']['W2']:.3f}/{R['B']['rmse']['W2']:.3f}  W3 {R['A']['rmse']['W3']:.3f}/{R['B']['rmse']['W3']:.3f}"
+              f" | (a) {v['a']} (b) {v['b']} (c) {v['c']} -> {'PASS' if v['passed'] else 'FAIL'}")
+    print("  R2: " + (f"sensitive to {', '.join(flips)}" if flips else "no flip (Wp and every sensitivity agree)"))
+    for arm, ok in r3.items():
+        print(f"  R3 {arm:<7}: W1-3 {W[arm]['rmse']['PART3']:.3f} vs A {W['A']['rmse']['PART3']:.3f} - 0.05 -> "
+              + ("Gao partitioning fits BETTER" if ok else "not better"))
+    return out
+
+
 if __name__ == "__main__":
-    sys.exit("pre-registration only -- the analysis is implemented in the next commit")
+    main()

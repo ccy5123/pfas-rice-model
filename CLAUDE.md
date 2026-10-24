@@ -75,7 +75,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (434 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (437 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1674,6 +1674,28 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   measurement could not recover — at maturity the port's share (0.70–0.79 vs 0.36–0.47 observed) would need ~3/4 of the dead
   blades lost. Gao's set stays a candidate only; the port's default crop file is IR72.D92. `parameters.json`, `simulate()`
   defaults and `reproduce_demo` (0.029) UNCHANGED.
+- **A second independent check — organ PARTITIONING at the Wuxi FACE (Yang 2006; PRE-REGISTERED in `54bf8c3`) — the port is
+  clearly closer on the leaf/stem/spike split; robust**: `validation/oryza2000_wuxi_partitioning.py` +
+  `tests/test_oryza2000_wuxi_partitioning.py` (3) + `raw_si/nasa_power_wuxi_2001_2003.csv`. The Shizukuishi data have no stem or
+  panicle weights, so they cannot test the split the PFAS model takes most directly from a biomass driver (grain = the terminal
+  sink, straw = stem + leaf). Yang 2006 Tables 1/3: above-ground DM + leaf/stem(incl. sheath)/spike shares at 5 samplings,
+  2001–2003, Wuxiangjing 14 (late japonica), 31.6 N, ambient CO2. **No heading/maturity dates are published** (Hasegawa 2017's
+  modellers received them; not in the paper), so samples are placed by stage on each driver's OWN DVS (PI 0.65, heading 1.0,
+  heading + 20/30 d, maturity 2.0); Hasegawa's mean duration (158 d sowing→maturity ⇒ ~DAT 132) pins the season in the
+  secondary design Wp. Scored W1 leaf / W2 spike / W3 stem share, W4 dry-matter timing; leaf = green + dead (primary reading).
+  **R1 PASSES**: pooled port **0.076** vs shipped 0.129; spike share **0.047 vs 0.095**, stem 0.064 vs 0.075, leaf 0.053 vs
+  0.079, timing 0.142 vs 0.266; the port reaches maturity every year. **The shipped driver (the PFAS default) under-fills the
+  panicles** — spike share 0.43–0.46 at maturity vs observed 0.50–0.55, with too much stem after heading (0.38–0.39 vs
+  0.30–0.33) — the same pattern it showed on IR72DS92. **No flip** under Wp (0.058 vs 0.118), SBDUR 18/26, the green-leaf-only
+  reading (0.117 vs 0.153) or the temperature offset (POWER within 0.24/0.37/0.57 °C of Hasegawa's season means; 2003 triggered
+  the pre-registered offset run). **R3**: Gao's japonica partitioning is not better than IR72's by 0.05 (A+PART W1–3 0.044, G
+  0.049 vs 0.055). Phenology (descriptive): with IR72's own rates the port heads at 62–63 and matures at **93–95 DAT** (vs ~132),
+  above-ground DM at maturity 1456–1613 vs observed 1674–1829 g m⁻²; the shipped driver matures at 116–129 DAT; Gao's rates at
+  80. Expectation: right on R1, the shipped driver's under-filled panicles, the port's early maturity and short DM, R3 and no
+  flips; WRONG that W1 would be no better for the port (0.053 vs 0.079). ⇒ **on the split that feeds the PFAS grain and straw
+  compartments, independent data favour the port over the shipped driver** (with IR72DS92, two datasets agree; Shizukuishi's
+  dead-leaf share is the one place it loses). Limits: one cultivar, stage placement without dates, POWER weather.
+  `parameters.json`, `simulate()` defaults and `reproduce_demo` (0.029) UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1817,6 +1839,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   (~40 s; pre-registered header; N primary · NG placement control · NE 1999 events · sensitivities · D1–D5).
 - **Gao 2021 japonica crop set on the FACE data**: `python validation/oryza2000_kim_face_gao_japonica.py` (~80 s;
   pre-registered header; arms A/G/B · Gao's own phenology · one-group decomposition · G1–G4).
+- **Wuxi partitioning check**: `python validation/oryza2000_wuxi_partitioning.py` (~5 s; pre-registered header;
+  weather check · stage-placed leaf/stem/spike shares · W/Wp + sensitivities · R1–R4).
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
   Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered; engine-free),
   `"hydrus"` the real-engine shape, `"constant"` the flat default (conc==BAF). Both shapes are
@@ -1849,7 +1873,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**434 collected; 433 pass, 2 skip** (434 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**437 collected; 436 pass, 2 skip** (437 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
