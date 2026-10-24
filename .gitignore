@@ -26,3 +26,7 @@ external/hydrus_source/HYDRUS1D-4.08.pdf
 .streamlit/secrets.toml
 secrets.toml
 
+
+# web front end (React/Vite): dependencies + build output (rebuild with `npm ci && npm run build`)
+frontend/node_modules/
+frontend/dist/

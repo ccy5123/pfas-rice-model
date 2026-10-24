@@ -31,10 +31,12 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ## 3. Repo layout
 ```
 .
-├── CLAUDE.md  README.md  requirements.txt  requirements-app.txt
+├── CLAUDE.md  README.md  requirements.txt  requirements-app.txt  requirements-web.txt
 ├── reproduce_demo.py                 # entry point: Yamazaki BAF via full ODE (W2 fit)
 ├── build_parameters.py               # (re)assembles params/parameters.json from source tables
 ├── app.py                            # Streamlit visualization tool (plant/soil map + 4 input modes)
+├── server/                           # FastAPI web backend (Scenario JSON -> model_api; memo; serves frontend/dist) — docs/web_app.md
+├── frontend/                         # React 19 + TS + Vite web front end (Simple KO / Expert EN; plant map ported to TS)
 ├── src/
 │   ├── pfas_rice_plant_module_4pool.py       # basis-A 4-compartment ODE (CANONICAL core)
 │   ├── pfas_rice_plant_module_4pool_surf.py  #  + K_surf (Fe/Mn-plaque dead-end pool)
@@ -50,6 +52,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── calibration.py                        # Tier-1 calibration (scipy)
 │   ├── literature_params.py                  # literature QSPRs/anchors (cited) + Kim2019 BAF
 │   ├── model_api.py                          # UI-agnostic wrapper: simulate(), simulate_from_smiles(), driver/soil/biomon helpers
+│   ├── report_html.py                        # one-page summary HTML (shared by app.py and server/)
 │   ├── pfas_structure.py                      # SMILES (structure) → Compound adapter (RDKit; read-across + QSPR)
 │   ├── plots.py                              # Plotly builders: fig_plant_schematic (colormap), drivers, ...
 │   ├── forcing_rice.py                       # measured transpiration Q_TP(t) (FAO-56 dual-Kc; Kumari2022 + NayHtoon2018)
@@ -73,7 +76,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (349 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (393 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge, web API (server/)
 
 ```
 
@@ -1282,10 +1285,36 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   drive: water renders `Koc 0.01946` with no exception, log Kow 8 → `3.681e+07`, −2 → `0.004742`, default 2.45
   → 119.4 unchanged. UI-only; `parameters.json`, the model math and `reproduce_demo` (0.029) UNCHANGED.
 
+- **Web app — FastAPI backend + React front end (this session; user request "회사에서 streamlit이 느려서")**:
+  `server/` (`app.py` routes, `schemas.py` = the whole sidebar as one `Scenario` JSON, `service.py` = Scenario →
+  the same `model_api` calls `ui/sidebar.build` + `ui/common.run_model` make, `memo.py` = thread-safe LRU with
+  in-flight de-duplication) + `frontend/` (React 19 + TypeScript + Vite; `views/Simple.tsx` = `ui/simple.py`,
+  `views/Expert.tsx` + `views/ExpertSidebar.tsx` = `ui/expert.py` + the Expert sidebar). **Why it is faster**: Streamlit
+  re-runs the whole script (every tab, incl. the UNCACHED Tang solves) on every widget touch; here tabs, the
+  season day slider and the conc/BAF switch never reach the server (the plant map is re-drawn in the browser by
+  `frontend/src/plantSvg.ts`, a byte-identical port of `src/plot_svg.py`), a model input change is ONE debounced
+  `/api/run`, each tab fetches its own Plotly figure (built by the same `src/plots.py`) only when opened, every
+  solve/figure/Tang/two-pool/inverse is memoised and shared across users, the Simple defaults are pre-solved at
+  start-up, and the inverse streams progress (NDJSON). A genuinely new solve is still the ~0.6–1.8 s scipy ODE — the
+  front end cannot change that. **Parity**: the default `/api/run` is bit-identical to `model_api.simulate()`; the
+  shared bilingual copy comes from `ui/i18n.py` via `/api/meta`; the one-page summary moved to `src/report_html.py`
+  (the Streamlit `_summary_html` now delegates to it). **Bug found (Streamlit, NOT fixed there)**: `ui/common._drivers_tuple`
+  packs drivers as `(t, Cwo, Qtp, M)` and DROPS the ORYZA `leaf_loss`, so the Streamlit Soil-inventory and live-HYDRUS
+  modes lose the leaf-senescence correction (PFOA soil inventory leaf BAF 6.26 vs 3.13, straw 1.05 vs 0.53); the web
+  backend passes the driver dict whole (pinned in `tests/test_web_api.py`). Tests: `tests/test_web_api.py` (30) +
+  `frontend/src/__tests__` (vitest: SVG byte-parity on Python fixtures, Python `format()` parity incl. half-even
+  ties); CI `.github/workflows/web.yml` (typecheck/test/build), `tests.yml` now installs `requirements-web.txt`.
+  Verified end-to-end with headless Playwright (both views, all six data sources, SMILES, neutral + CompTox +
+  weak electrolyte, inverse, downloads). `parameters.json`, `simulate()` and `reproduce_demo` (0.029) UNCHANGED;
+  the Streamlit app is kept as is.
+
 ## 7. Build & run
 - `pip install -r requirements.txt`
 - **Main reproduction**: `python reproduce_demo.py` (Yamazaki BAF, W2 fit, RMSE≈0.029);
   `--rec` uses the monotone f_xy. Rebuild params: `python build_parameters.py`.
+- **Web app (faster; FastAPI + React)**: `pip install -r requirements-web.txt && (cd frontend && npm ci && npm run build)
+  && uvicorn server.app:app --port 8000` → http://localhost:8000 (`?mode=expert`), API docs `/api/docs`; front-end dev:
+  `npm run dev` in `frontend/` (proxies `/api` to :8000); front-end tests `npm test`. See `docs/web_app.md`.
 - **Visualization tool**: `pip install -r requirements-app.txt && streamlit run app.py`
   (plant/soil accumulation colormap + HYDRUS/soil/biomonitoring modes; the Expert sidebar's **⚙️ Mechanism**
   expander switches `uptake` carrier/bypass + `lipid_loading`; `2 · Compound` switches the COMPOUND CLASS —
@@ -1430,7 +1459,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**349 collected; 348 pass, 2 skip** — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**393 collected; 392 pass, 2 skip** — re-counted on a full local run after the web app landed; note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`

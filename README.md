@@ -102,6 +102,21 @@ GitHub, then on [share.streamlit.io](https://share.streamlit.io) pick the repo, 
 are optional and the app hides the live-HYDRUS mode when the engine is absent). `requirements-app.txt`
 holds only optional extras (kaleido PNG export, phydrus). See `docs/deploy.md`.
 
+**Faster web app (FastAPI + React) — same model, same screens.** Streamlit re-runs the whole
+script on every widget touch; the web app keeps all interaction (tabs, the season day slider,
+the colour metric) in the browser and asks the server only when a model input changes, with a
+shared memo so a solve is never repeated:
+
+```bash
+pip install -r requirements-web.txt          # requirements.txt + fastapi/uvicorn
+(cd frontend && npm ci && npm run build)     # once (Node 18+)
+uvicorn server.app:app --port 8000           # → http://localhost:8000  (?mode=expert for Expert)
+```
+
+Both views (Simple/Korean, Expert/English), all six data sources, SMILES, the neutral class,
+CompTox, the Bayesian inverse and the downloads are there; API docs at `/api/docs`. Details,
+architecture and the (few, deliberate) differences: [`docs/web_app.md`](docs/web_app.md).
+
 **🗺️ Plant & soil map** — the headline view: a fibrous-rooted rice plant with arching
 culms, long leaves and drooping grain panicles, each organ filled on a shared colorbar by
 its concentration (or BAF). A day slider (or ▶ animate) shows *where and when* PFAS builds

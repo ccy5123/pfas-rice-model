@@ -1,0 +1,31 @@
+name: web front end
+
+# Type-checks, tests and builds the React front end (frontend/). The FastAPI backend it
+# talks to (server/) is covered by tests/test_web_api.py in the full test suite
+# (tests.yml). The vitest suite pins the browser-side plant map byte-for-byte to
+# src/plot_svg.py and the number formatting to Python's format(), so the web UI cannot
+# silently draw or print something different from the Streamlit app.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build

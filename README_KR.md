@@ -91,6 +91,19 @@ streamlit run app.py
 `requirements.txt`가 전체 앱 스택이라 그대로 배포됩니다(RDKit/HYDRUS는 선택이며, 엔진이 없으면 live-HYDRUS 모드는 자동 숨김).
 `requirements-app.txt`에는 선택 extras(kaleido PNG 내보내기, phydrus)만 있습니다. 참조: `docs/deploy.md`.
 
+**더 빠른 웹 앱 (FastAPI + React) — 같은 모델, 같은 화면.** Streamlit은 위젯을 건드릴 때마다 스크립트
+전체를 서버에서 다시 실행합니다. 웹 앱은 탭 전환·날짜 슬라이더·색 기준 같은 조작을 브라우저에서 처리하고,
+모델 입력이 바뀔 때만 서버에 계산을 요청합니다(같은 계산은 공유 캐시로 다시 하지 않음):
+
+```bash
+pip install -r requirements-web.txt          # requirements.txt + fastapi/uvicorn
+(cd frontend && npm ci && npm run build)     # 최초 1회 (Node 18+)
+uvicorn server.app:app --port 8000           # → http://localhost:8000  (전문가 모드: ?mode=expert)
+```
+
+간단(한국어)·전문가(영어) 모드, 데이터 소스 6종, SMILES, 중성 유기물, CompTox, 베이지안 역추정, 다운로드를
+모두 지원합니다. API 문서는 `/api/docs`. 구조와 (의도적인) 차이점: [`docs/web_app.md`](docs/web_app.md).
+
 > 처음 화면은 **일반인 모드(한국어)** 입니다. 사이드바 토글 **🔬 전문가/고급 모드 (Expert / advanced)** 로
 > 전체 연구용 인터페이스(영어)로 전환합니다. 자세한 사용법은 매뉴얼 참조.
 
@@ -139,6 +152,7 @@ pfas_rice_model/
 ├── build_parameters.py           ← 소스 표에서 params/parameters.json 조립
 ├── reproduce_demo.py             ← 독립 실행 ODE 재현(엔트리 포인트)
 ├── app.py                        ← Streamlit 앱(일반인 한국어 / 전문가 영어)
+├── server/ · frontend/          ← 웹 앱: FastAPI 백엔드 + React 프론트엔드 (docs/web_app.md)
 ├── src/                          ← 모델 코드
 │   ├── pfas_rice_plant_module_4pool.py        4구획 식물 ODE (basis-A)            ← 정본(CANONICAL)
 │   ├── pfas_rice_plant_module_4pool_surf.py   + K_surf (Fe/Mn-plaque 표면 풀)
