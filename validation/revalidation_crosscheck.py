@@ -122,7 +122,7 @@ def check_kim():
         e = [(np.log10(max(r[i], 1e-6)) - np.log10(r[1])) ** 2
              for r in rows if r[0] != "PFOA" and r[4] >= 15]
         return float(np.sqrt(np.mean(e)))
-    print(f"  RMSE (reliable DF>=15%, no PFOA): 4pool-W2={rmse(2):.2f}  nstem-W2={rmse(3):.2f}")
+    print(f"  RMSE (reliable DF>=15% = PFNA alone): 4pool-W2={rmse(2):.2f}  nstem-W2={rmse(3):.2f}")
     print("  -> nstem does not break Kim and slightly improves it; the long-chain grain spike "
           "(PFUnDA/PFDoDA) still needs the lipid mechanism.\n")
 

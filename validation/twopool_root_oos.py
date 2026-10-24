@@ -122,7 +122,7 @@ def main():
         return float(np.sqrt(np.mean(e))) if e else float("nan")
 
     allnames = [nm for (nm, *_ ) in models["2pool"]]
-    excl_pfoa = [nm for nm in allnames if nm != "PFOA"]          # PFOA used in L_Ph fit elsewhere
+    excl_pfoa = [nm for nm in allnames if nm != "PFOA"]          # PFOA kept out as recorded (no fit uses it; see kim2019_pfoa_anchor.py)
     reliable = [nm for (nm, v, o, df) in models["2pool"] if df >= 15.0]
     print(f"\nlog10 RMSE vs Kim grain   {'2pool':>8}{'mono':>8}{'W2':>8}{'lipid':>8}")
     for label, names in (("all", allnames), ("excl PFOA", excl_pfoa),
@@ -174,7 +174,8 @@ def main():
     print(f"    (2pool PFUnDA {lc.get('PFUnDA',0):.1f}/PFDoDA {lc.get('PFDoDA',0):.1f} vs "
           f"monotone {lcm.get('PFUnDA',0):.2f}/{lcm.get('PFDoDA',0):.2f}; Kim obs ~33/35).")
     print("  - HONEST limits: absolute long-chain grain still UNDER (low-DF Kim tail);")
-    print("    Kim PFOA grain 4.43 >> Yamazaki 0.46 (between-dataset shift, unbridgeable);")
+    print("    Kim PFOA grain 4.43 (ratio of means; ~9.9 per site, kim2019_pfoa_anchor) >> Yamazaki 0.46 "
+          "(between-dataset shift, unbridgeable);")
     print("    Li 2025 grain/root TF is root-surface-confounded (short-chain anomaly) -> inconclusive.")
     print("  => OOS SUPPORTS the structure/mechanism, but does NOT warrant promoting the")
     print("     fitted k_seq into parameters.json (single clean OOS set; demo forcings).")

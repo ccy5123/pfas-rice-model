@@ -111,7 +111,7 @@ def panel_B(ax):
                 color=_C[m], lw=1.6, ms=5, label=_LBL[m], alpha=0.9)
     for n in names:
         if n == "PFOA":
-            ax.annotate("PFOA*\n(used in fit)", (nC[n], kim[n]), textcoords="offset points",
+            ax.annotate("PFOA*\n(not scored)", (nC[n], kim[n]), textcoords="offset points",
                         xytext=(4, 8), fontsize=7.5, color="#b00")
         elif DF.get(n, 0) < 15:
             ax.annotate(f"DF {DF[n]:.0f}%", (nC[n], kim[n]), textcoords="offset points",
@@ -120,7 +120,7 @@ def panel_B(ax):
     ax.set_xlabel("perfluorocarbon chain length")
     ax.set_ylabel("grain BAF [L/kg]")
     ax.set_title("(B) Out-of-sample: Kim 2019 brown-rice grain\n"
-                 "only lipid tracks the long-chain rise (reliable PFHpA·PFNA: RMSE 0.23 vs mono 1.91)",
+                 "only lipid tracks the long-chain rise (reliable DF≥15% = PFNA alone: RMSE 0.23 vs mono 1.91, dry-mass record)",
                  fontsize=10.5)
     ax.legend(fontsize=8.5, loc="upper left")
     ax.grid(True, which="both", alpha=0.25)

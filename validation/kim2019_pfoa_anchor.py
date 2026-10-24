@@ -84,3 +84,248 @@
 #
 #   python validation/kim2019_pfoa_anchor.py
 # =============================================================================
+from __future__ import annotations
+
+import contextlib
+import csv
+import io
+import os
+import sys
+
+import numpy as np
+from scipy import optimize, stats
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.path.insert(0, os.path.join(ROOT, "src"))
+sys.path.insert(0, HERE)
+
+import literature_params as lp     # noqa: E402
+import model_api as api            # noqa: E402
+import kim2019_censored as K       # noqa: E402
+
+TABLE = os.path.join(ROOT, "docs", "literature_db", "raw_si", "kim2019_table1_sites.csv")
+MDL_RICE = lp.KIM2019_DETECTION["PFOA"][0]        # 0.088 ng/g
+N_BOOT, SEED, LEVEL = 2000, 20261024, 0.90
+CWO_LO, CWO_HI = 0.0008, 1.76                     # ug/L: lowest / highest PFOA void water
+
+
+def load_sites(path=TABLE):
+    with open(path) as f:
+        return list(csv.DictReader(line for line in f if not line.startswith("#")))
+
+
+def _num(x):
+    return None if x in ("ND", "NS") else float(x)
+
+
+def ratio_data(rows):
+    """Per-site log10 water / log10 rice / censoring, over the sites that inform the ratio.
+
+    Kept: water detected (26 sites). Rice detected -> exact; rice ND -> left-censored at the
+    MDL. Dropped: C-6 (water ND as well: no information on the ratio) and E-2..E-4 (NS)."""
+    out = []
+    for r in rows:
+        w, ri = r["water_PFOA_ngL"], r["rice_PFOA_ngg"]
+        if w in ("ND", "NS"):
+            continue
+        out.append(dict(site=r["site"], wwtp=r["wwtp_near"] == "1",
+                        x=np.log10(float(w) / 1000.0),                    # log10 ug/L
+                        y=np.log10(MDL_RICE if ri == "ND" else float(ri)),  # log10 ug/kg
+                        cens=ri == "ND"))
+    return out
+
+
+def estimators(rows):
+    """E1-E4: the candidates computed before the pre-registration (data only)."""
+    water = np.array([np.nan if r["water_PFOA_ngL"] == "NS" else (_num(r["water_PFOA_ngL"]) or 0.0)
+                      for r in rows])
+    rice = np.array([_num(r["rice_PFOA_ngg"]) or 0.0 for r in rows])
+    has_w = ~np.isnan(water)
+    not_a2 = np.array([r["site"] != "A-2" for r in rows])
+    both = [(r["site"], _num(r["rice_PFOA_ngg"]), _num(r["water_PFOA_ngL"])) for r in rows
+            if _num(r["rice_PFOA_ngg"]) and _num(r["water_PFOA_ngL"])]
+    b = np.array([1000.0 * ri / w for _, ri, w in both])
+    return dict(
+        E1=1000.0 * rice.mean() / np.nanmean(water),
+        E2=1000.0 * rice[has_w].mean() / water[has_w].mean(),
+        E3=1000.0 * rice[not_a2].mean() / np.nanmean(water[not_a2]),
+        E4=float(np.exp(np.mean(np.log(b)))), E4_median=float(np.median(b)),
+        E4_range=(float(b.min()), float(b.max())), n_both=len(b),
+        a2_water_share=float(1760.0 / np.nansum(water)))
+
+
+def _tobit_nll(theta, x, y, cens, slope):
+    if slope is None:
+        a, b, ls = theta
+    else:
+        (a, ls), b = theta, slope
+    s = np.exp(ls)
+    mu = a + b * x
+    z = (y - mu) / s
+    return -(np.sum(stats.norm.logpdf(z[~cens]) - ls) + np.sum(stats.norm.logcdf(z[cens])))
+
+
+def tobit(x, y, cens, slope=None):
+    """Left-censored normal ML of y = a + b x. slope=1 gives E5 (a = mean log10 ratio)."""
+    a0 = np.mean(y - (x if slope is not None else 0.0))
+    th0 = [a0, np.log(np.std(y) + 0.1)] if slope is not None else [np.mean(y), 0.0,
+                                                                     np.log(np.std(y) + 0.1)]
+    res = optimize.minimize(_tobit_nll, th0, args=(x, y, cens, slope), method="Nelder-Mead",
+                            options=dict(xatol=1e-8, fatol=1e-10, maxiter=20000))
+    if slope is None:
+        a, b, ls = res.x
+    else:
+        (a, ls), b = res.x, slope
+    return dict(a=float(a), b=float(b), sigma=float(np.exp(ls)))
+
+
+def km_median(v, cens):
+    """Kaplan-Meier median of left-censored values (flip to right-censored, Helsel)."""
+    z = -np.asarray(v, float)
+    ev = ~np.asarray(cens)
+    S = 1.0
+    for t in np.unique(z[ev]):
+        n = np.sum(z >= t)
+        d = np.sum((z == t) & ev)
+        S *= 1.0 - d / n
+        if S <= 0.5:
+            return float(-t)
+    return float("nan")
+
+
+def anchor(d):
+    x = np.array([r["x"] for r in d])
+    y = np.array([r["y"] for r in d])
+    c = np.array([r["cens"] for r in d])
+    lr = y - x                                             # log10 BAF [L/kg]
+    e5 = tobit(x, y, c, slope=1.0)
+    reg = tobit(x, y, c)
+    rng = np.random.default_rng(SEED)
+    boot_e5, boot_b = [], []
+    for _ in range(N_BOOT):
+        i = rng.integers(0, len(d), len(d))
+        if c[i].all():
+            continue
+        boot_e5.append(tobit(x[i], y[i], c[i], slope=1.0)["a"])
+        boot_b.append(tobit(x[i], y[i], c[i])["b"])
+    q = [(1 - LEVEL) / 2, (1 + LEVEL) / 2]
+    loo = [tobit(np.delete(x, k), np.delete(y, k), np.delete(c, k), slope=1.0)["a"]
+           for k in range(len(d))]
+    k_lo, k_hi = int(np.argmin(loo)), int(np.argmax(loo))
+    return dict(E5=10 ** e5["a"], E5_sigma_log10=e5["sigma"],
+                E5_ci=tuple(10 ** np.quantile(boot_e5, q)),
+                km_median=10 ** km_median(lr, c),
+                loo=((d[k_lo]["site"], 10 ** loo[k_lo]), (d[k_hi]["site"], 10 ** loo[k_hi])),
+                slope=reg["b"], slope_ci=tuple(np.quantile(boot_b, q)),
+                n=len(d), n_cens=int(c.sum()))
+
+
+def profile_interval(d, level=LEVEL):
+    """POST-HOC: profile-likelihood interval of E5 (not the pre-registered bootstrap)."""
+    x = np.array([r["x"] for r in d])
+    y = np.array([r["y"] for r in d])
+    c = np.array([r["cens"] for r in d])
+
+    def prof(a):
+        return optimize.minimize_scalar(lambda ls: _tobit_nll([a, ls], x, y, c, 1.0),
+                                        bounds=(-3.0, 2.0), method="bounded").fun
+    a_hat = tobit(x, y, c, slope=1.0)["a"]
+    best, crit = prof(a_hat), stats.chi2.ppf(level, 1) / 2.0
+    lo = optimize.brentq(lambda a: prof(a) - best - crit, a_hat - 2.0, a_hat)
+    hi = optimize.brentq(lambda a: prof(a) - best - crit, a_hat, a_hat + 2.0)
+    return 10 ** lo, 10 ** hi
+
+
+def model_baf(v, cwo=1.0):
+    """Harvest PFOA grain BAF [L/kg fw] at constant Cwo (as kim2019_censored.predict)."""
+    if v == "nstem_lipid":
+        r = api.simulate_nstem_leaf("PFOA", Cwo=cwo, season=120.0, lipid_loading=True,
+                                    biomass_fn=api._biomass_fn("oryza"))
+    else:
+        kw = dict(mono=dict(f_xy_source="recommended"), W2=dict(f_xy_source="W2fit"),
+                  lipid=dict(lipid_loading=True))[v]
+        r = api.simulate("PFOA", Cwo=cwo, **kw)
+    return float(r["baf_final"]["grain"])
+
+
+def where(p, lo, hi):
+    return "inside" if lo <= p <= hi else ("below" if p < lo else "above")
+
+
+def main():
+    rows = load_sites()
+    est = estimators(rows)
+    d = ratio_data(rows)
+    an = anchor(d)
+    w17 = [float(r["water_sum17_ngL"]) for r in rows if r["water_sum17_ngL"] != "NS"]
+    a2_sum17 = float([r for r in rows if r["site"] == "A-2"][0]["water_sum17_ngL"]) / sum(w17)
+
+    print("=" * 84)
+    print("KIM 2019 PFOA GRAIN BAF: WHICH ESTIMATOR? — pre-registered in bedadbf (see header)")
+    print("=" * 84)
+    print("\nQ1 — candidate estimators [L/kg, pore-water basis]")
+    print(f"  E1 published ratio of means (rice/30, water/27)      {est['E1']:7.2f}   fails a, c")
+    print(f"  E2 ratio of means, the 27 sites with water           {est['E2']:7.2f}   fails c "
+          f"(A-2 = {100 * est['a2_water_share']:.1f}% of water)")
+    print(f"  E3 ratio of means without A-2                        {est['E3']:7.2f}   fails b")
+    print(f"  E4 per-site geomean, both detected (n={est['n_both']})          {est['E4']:7.2f}   "
+          f"fails b (median {est['E4_median']:.1f}, range {est['E4_range'][0]:.2f}-"
+          f"{est['E4_range'][1]:.0f})")
+    lo, hi = an["E5_ci"]
+    print(f"  E5 censored per-site geomean (n={an['n']}, {an['n_cens']} censored)   {an['E5']:7.2f}   "
+          f"admissible; {int(100 * LEVEL)}% bootstrap [{lo:.2f}, {hi:.2f}], "
+          f"sd {an['E5_sigma_log10']:.2f} log10")
+    print(f"     sensitivity: Kaplan-Meier median {an['km_median']:.2f}; leave-one-site-out "
+          f"{an['loo'][0][1]:.2f} (without {an['loo'][0][0]}) to {an['loo'][1][1]:.2f} "
+          f"(without {an['loo'][1][0]})")
+
+    slo, shi = an["slope_ci"]
+    print(f"\nQ2 — censored slope of log10 rice on log10 water: b = {an['slope']:.2f} "
+          f"[{slo:.2f}, {shi:.2f}]  (a constant BAF means b = 1)")
+    print(f"     -> the interval {'EXCLUDES' if shi < 1 or slo > 1 else 'includes'} 1")
+
+    print("\nQ3 — model PFOA grain BAF (Cwo 1, fresh weight) vs E1 and E5")
+    with contextlib.redirect_stdout(io.StringIO()):
+        pred = {v: model_baf(v) for v in K.VARIANTS}
+    for v in K.VARIANTS:
+        p = pred[v]
+        print(f"  {v:12}{p:8.3f}   vs E1 {np.log10(p / est['E1']):+.2f} log   vs E5 "
+              f"{np.log10(p / an['E5']):+.2f} log   ({where(p, lo, hi)} E5's interval)")
+
+    print(f"\nQ3b — model slope of log10 grain conc on log10 Cwo, {CWO_LO}-{CWO_HI} ug/L")
+    with contextlib.redirect_stdout(io.StringIO()):
+        slope_m = {v: 1.0 + np.log10(model_baf(v, CWO_HI) / model_baf(v, CWO_LO))
+                   / np.log10(CWO_HI / CWO_LO) for v in K.VARIANTS}
+    print("  " + "   ".join(f"{v} {s:.3f}" for v, s in slope_m.items()))
+
+    print(f"\nQ4 — A-2 share of the void-water SUM-17: {100 * a2_sum17:.1f}% "
+          f"(PFOA {100 * est['a2_water_share']:.1f}%)")
+
+    d2 = not (lo <= est["E1"] <= hi)
+    d4 = a2_sum17 > 0.5
+    print("\n" + "=" * 84)
+    print("DECISIONS (against the pre-registered rules)")
+    print("=" * 84)
+    print("  D1 kim2019_grain_baf() keeps the published ratio of means for all congeners;"
+          " the per-site PFOA estimate is added beside it")
+    print(f"  D2 demo L_Ph target: {'E1 -> E5' if d2 else 'stays E1'} "
+          f"(E1 {est['E1']:.2f} is {'outside' if d2 else 'inside'} [{lo:.2f}, {hi:.2f}])")
+    print("  D3 'PFOA* used in the fit' labels removed; PFOA reported as a separate OOS check: "
+          + ", ".join(f"{v} {where(pred[v], lo, hi)}" for v in K.VARIANTS))
+    print(f"  D4 Kim series LEVEL A-2-weighted: {'YES' if d4 else 'no'} "
+          f"(A-2 SUM-17 share {100 * a2_sum17:.1f}%)")
+    plo, phi = profile_interval(d)
+    print("\nPOST-HOC (not part of the rule)")
+    print(f"  D2 is decided by a 3% margin (E1 {est['E1']:.2f} vs bootstrap low {lo:.2f}). The bootstrap"
+          " low end stays 4.54-4.79 over 10 seeds (E1 outside in all), but the profile-likelihood")
+    print(f"  {int(100 * LEVEL)}% interval is [{plo:.2f}, {phi:.2f}], which CONTAINS E1: robust to the seed,"
+          " not to the interval method. What does not depend on it: E5 is ~2x E1 and ~2.7x below E4.")
+    print("  Why the means are low: A-2, the highest-water site, has the lowest ratio (0.98) -- the same"
+          f" b < 1 pattern; a ratio of means is weighted toward high-water sites.")
+    return dict(est=est, anchor=an, pred=pred, slope_model=slope_m, a2_sum17=a2_sum17,
+                d2=d2, d4=d4, profile=(plo, phi))
+
+
+if __name__ == "__main__":
+    main()

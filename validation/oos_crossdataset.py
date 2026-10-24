@@ -56,10 +56,13 @@ def predict(nm, mode):
 
 
 def kim_grain():
-    """(1) Kim 2019 grain BAF — out-of-sample (PFOA* used in the L_Ph fit)."""
+    """(1) Kim 2019 grain BAF — out-of-sample.
+
+    PFOA* is left out of the RMSE as recorded, but no variant is fitted to it (only the
+    literature_params demo is); its per-site check is validation/kim2019_pfoa_anchor.py."""
     kim = lp.kim2019_grain_baf("porewater")
     DF = {"PFHpA": 13, "PFOA": 57, "PFNA": 20, "PFDA": 6.7, "PFUnDA": 13, "PFDoDA": 3.3}
-    print(f"=== (1) Kim 2019 grain BAF [porewater]  (OUT-OF-SAMPLE; * = used in fit; "
+    print(f"=== (1) Kim 2019 grain BAF [porewater]  (OUT-OF-SAMPLE; * = not in the RMSE, see kim2019_pfoa_anchor; "
           f"{MASS_BASIS} organ mass) ===")
     print(f"{'PFAS':7}{'DF%':>5}{'obs':>9}{'lipid':>9}{'mono':>9}{'W2':>9}")
     rows = []

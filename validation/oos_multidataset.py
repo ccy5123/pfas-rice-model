@@ -13,7 +13,7 @@
 # (free-anion), the saturated per-congener W2 fit, and the K_PL-gated lipid loading --
 # transferred WITHOUT refitting to THREE independent datasets:
 #   * Tang 2026  per-organ TF (dw; PFOA/PFOS/GenX)        -- clean pot study
-#   * Kim 2019   brown-rice grain BAF (porewater; excl PFOA used in the L_Ph fit) -- clean field
+#   * Kim 2019   brown-rice grain BAF (porewater; excl PFOA as recorded -- no variant is fitted to it, see kim2019_pfoa_anchor.py) -- clean field
 #   * Li 2025    water-independent tissue ratios (TF)      -- field/surface CONFOUNDED (pre-registered
 #                                                            as a sensitivity check, NOT a primary test)
 #

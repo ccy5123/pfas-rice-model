@@ -128,7 +128,7 @@ def main():
     print(f"  {'PFAS':7}{'interval':>17}  " + "".join(f"{v:>12}" for v in VARIANTS))
     for nm in CHAIN:
         lo, _, hi = b[nm]
-        tag = " (anchor, not scored)" if nm not in SCORED else ""
+        tag = " (not scored here; see kim2019_pfoa_anchor.py)" if nm not in SCORED else ""
         print(f"  {nm:7}{f'[{lo:.2f}, {hi:.2f}]':>17}  "
               + "".join(f"{preds[v][nm]:>12.3g}" for v in VARIANTS) + tag)
     scores = {}
