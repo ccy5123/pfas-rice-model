@@ -98,7 +98,235 @@
 # =============================================================================
 from __future__ import annotations
 
+import csv
+import os
 import sys
 
+import numpy as np
+from scipy.optimize import brentq
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.path.insert(0, os.path.join(ROOT, "src"))
+sys.path.insert(0, HERE)
+
+import oryza2000 as O2K                         # noqa: E402
+import oryza2000_kim_face as K                  # noqa: E402
+import oryza2000_kim_face_phenology as C        # noqa: E402
+import oryza2000_kim_face_nursery_events as E   # noqa: E402
+
+YEARS = K.YEARS
+GAO_CSV = os.path.join(ROOT, "docs", "literature_db", "raw_si", "gao2021_cold_japonica_oryza_params.csv")
+RATE_KEYS = C.RATE_KEYS
+GROUPS_GAO = {
+    "DRLVT": ("DRLVT",),
+    "PART": ("FLVTB", "FSTTB", "FSOTB"),
+    "CANOPY": ("SLATB", "SWISLA", "KDFTB", "RGRLMX", "FRPAR"),
+    "DVR": RATE_KEYS,
+}
+SCORE_GROUPS = C.SCORE_GROUPS
+
+
+def _table(v):
+    pairs = [p.split(":") for p in v.split(";")]
+    return np.array([float(a) for a, _ in pairs]), np.array([float(b) for _, b in pairs])
+
+
+def gao_values():
+    """Gao 2021 Table 3 calibrated values, in the port's crop-dict form (COLDMIN not applied)."""
+    with open(GAO_CSV) as f:
+        rows = {r["parameter"]: r["calibrated"] for r in csv.DictReader(l for l in f if not l.startswith("#"))}
+    out = {k: _table(rows[k]) for k in ("FLVTB", "FSTTB", "FSOTB", "DRLVT", "SLATB")}
+    out["SWISLA"] = "TABLE"
+    out["KDFTB"] = (np.array([0.0, 2.5]), np.array([float(rows["KDF"])] * 2))    # Table A1: a single KDF
+    for k in ("RGRLMX", "FRPAR") + RATE_KEYS:
+        out[k] = float(rows[k])
+    return out
+
+
+GAO = gao_values()
+ARM_CROP = {                                     # port arms: overrides on IR72.D92
+    "A": {},
+    "G": {k: GAO[k] for g in GROUPS_GAO.values() for k in g},
+    "A+DRLVT": {k: GAO[k] for k in GROUPS_GAO["DRLVT"]},
+    "A+PART": {k: GAO[k] for k in GROUPS_GAO["PART"]},
+    "A+CANOPY": {k: GAO[k] for k in GROUPS_GAO["CANOPY"]},
+}
+MAIN_ARMS = ("A", "G", "B")
+DECOMP_ARMS = ("A+DRLVT", "A+PART", "A+CANOPY")
+
+
+def crop(arm):
+    c = O2K.load_crop()
+    c.update(ARM_CROP[arm])
+    return c
+
+
+def base_rates(arm):
+    if arm == "B":
+        return C.base_rates("B")
+    c = crop(arm)
+    return {k: float(c[k]) for k in RATE_KEYS}
+
+
+def run(arm, year, rates, tr):
+    if arm == "B":
+        return K.run_shipped(year, tr["dT"], source=tr["source"], params_kw=dict(rates))
+    c = crop(arm)
+    c.update(rates)
+    return K.run_port(year, tr["dT"], tr["sbdur"][year], tr["source"], crop=c, tmpsb=tr["tmpsb"])
+
+
+def calibrate(arm, year, tr, tgt):
+    """The redo's DRATES-style calibration (common J/I factor -> PI; DVRP; DVRR)."""
+    base = base_rates(arm)
+    rates = dict(base)
+
+    def miss(lim, day):
+        def g(r_):
+            x = C.crossing(run(arm, year, r_, tr), lim)
+            return (x if x is not None else 1.0e3) - day
+        return g
+
+    def solve(fun, lo, hi):
+        for _ in range(6):
+            if fun(lo) * fun(hi) < 0:
+                return brentq(fun, lo, hi, xtol=1e-7, rtol=1e-7)
+            lo, hi = lo / 2.0, hi * 2.0
+        raise RuntimeError(f"no bracket ({arm}, {year})")
+
+    g1 = miss(0.65, tgt[year]["panicle_initiation"])
+    f = solve(lambda x: g1({**rates, "DVRJ": base["DVRJ"] * x, "DVRI": base["DVRI"] * x}), 0.3, 3.0)
+    rates.update(DVRJ=base["DVRJ"] * f, DVRI=base["DVRI"] * f)
+    g2 = miss(1.0, tgt[year]["anthesis"])
+    rates["DVRP"] = solve(lambda x: g2({**rates, "DVRP": x}), base["DVRP"] / 3, base["DVRP"] * 3)
+    g3 = miss(2.0, tgt[year]["maturity"])
+    rates["DVRR"] = solve(lambda x: g3({**rates, "DVRR": x}), base["DVRR"] / 3, base["DVRR"] * 3)
+    return rates, f
+
+
+def loyo_rates(own, arm):
+    base = base_rates(arm)
+    out = {}
+    for y in YEARS:
+        others = [own[o] for o in YEARS if o != y]
+        fbar = float(np.mean([o[1] for o in others]))
+        out[y] = {"DVRJ": base["DVRJ"] * fbar, "DVRI": base["DVRI"] * fbar,
+                  "DVRP": float(np.mean([o[0]["DVRP"] for o in others])),
+                  "DVRR": float(np.mean([o[0]["DVRR"] for o in others]))}
+    return out
+
+
+def run_design(tr, obs, root_obs, arms):
+    tgt = E.targets(tr, obs)
+    out = dict(targets=tgt)
+    for arm in arms:
+        own = {y: calibrate(arm, y, tr, tgt) for y in YEARS}
+        lr = loyo_rates(own, arm)
+        runs = {y: run(arm, y, lr[y], tr) for y in YEARS}
+        own_runs = {y: run(arm, y, own[y][0], tr) for y in YEARS}
+        rl, bl, dl, sd = E.score(runs, obs, root_obs, tr, own_runs)
+        ro, _, _, _ = E.score(own_runs, obs, root_obs, tr, own_runs)
+        out[arm] = dict(own=own, loyo_rates=lr, runs=runs, own_runs=own_runs, rmse=rl, bias=bl,
+                        detail=dl, sample_dvs=sd, own_rmse=ro, phen=E.phenology_errors(runs, tgt))
+    return out
+
+
+def c1(R, arm, ref="B"):
+    reached = [R[arm]["detail"][y]["reached"]["maturity"] for y in YEARS]
+    return C.c1(R[arm]["rmse"], R[ref]["rmse"], reached)
+
+
+def uncalibrated_gao(obs, root_obs, tr):
+    """G with Gao's own development rates; option C's stage placement on its own DVS."""
+    runs = {y: run("G", y, base_rates("G"), tr) for y in YEARS}
+    rmse, bias, detail = K.evaluate(runs, obs, root_obs)
+    tgt = E.targets(tr, obs)
+    return dict(runs=runs, rmse=rmse, bias=bias, detail=detail, phen=E.phenology_errors(runs, tgt))
+
+
+def main(verbose=True):
+    obs, root_obs = K.load_obs()
+    D = E.DESIGNS
+    res = {"N": run_design(D["N"], obs, root_obs, MAIN_ARMS + DECOMP_ARMS),
+           "NE": run_design(D["NE"], obs, root_obs, MAIN_ARMS)}
+    for s in ("N_s1_tmpsb0", "N_s2_sowing"):
+        res[s] = run_design(D[s], obs, root_obs, ("G", "B"))
+    redo = E.main(verbose=False)["res"]
+    checks = {d: all(abs(res[d][a]["rmse"][g] - redo[d][a]["rmse"][g]) < 1e-9
+                     for a in ("A", "B") for g in SCORE_GROUPS + ("POOLEDx",)) for d in ("N", "NE")}
+    unc = uncalibrated_gao(obs, root_obs, D["N"])
+    N, NE = res["N"], res["NE"]
+    g1_fixed = N["G"]["rmse"]["Q2x"] <= N["A"]["rmse"]["Q2x"] - 0.05
+    g2 = {d: c1(res[d], "G") for d in ("N", "NE")}
+    g3 = N["G"]["rmse"]["POOLEDx"] <= N["A"]["rmse"]["POOLEDx"] + 0.02
+    g4 = {s: c1(res[s], "G") for s in ("N_s1_tmpsb0", "N_s2_sowing")}
+    flips = [s for s, v in g4.items() if v["passed"] != g2["N"]["passed"]]
+    if g2["N"]["passed"] and g2["NE"]["passed"]:
+        consequence = "passes N AND NE: a japonica crop set makes the port's pass robust to the 1999 events"
+    elif g2["N"]["passed"]:
+        consequence = "passes N, fails NE: the same fragility as IR72.D92"
+    else:
+        consequence = "fails N: the Gao set does not transfer to Akitakomachi"
+    out = dict(res=res, checks=checks, unc=unc, g1_fixed=g1_fixed, g2=g2, g3=g3, g4=g4, flips=flips,
+               consequence=consequence)
+    if not verbose:
+        return out
+
+    print("=" * 78)
+    print("GAO 2021 JAPONICA CROP SET IN THE PORT -- Shizukuishi FACE, LOYO, station weather")
+    print("=" * 78)
+    print(f"\n0. Checks: arms A and B reproduce the redo exactly: N {checks['N']}, NE {checks['NE']}")
+
+    print("\n1. Gao's OWN development rates (no calibration), design N -- phenology error (days) and scores")
+    for y in YEARS:
+        e = unc["phen"][y]
+        print(f"    {y}: " + "  ".join(f"{s.split('_')[0]} {'n/r' if v is None else f'{v:+.1f}'}" for s, v in e.items()))
+    r = unc["rmse"]
+    print("    log10 RMSE " + "  ".join(f"{g} {r[g]:.3f}" for g in SCORE_GROUPS) + f"  POOLEDx {r['POOLEDx']:.3f}")
+
+    print("\n2. Calibrated rates per year (own-year, design N), relative to each arm's base")
+    for arm in MAIN_ARMS:
+        base = base_rates(arm)
+        print(f"  {arm:<3} " + " | ".join(
+            f"{y} J/I x{N[arm]['own'][y][1]:.3f} P x{N[arm]['own'][y][0]['DVRP'] / base['DVRP']:.3f}"
+            f" R x{N[arm]['own'][y][0]['DVRR'] / base['DVRR']:.3f}" for y in YEARS))
+
+    print("\n3. Stage-matched ratios, design N (observed | A | G | B)")
+    for g in K.GROUPS:
+        print(f"  {g}" + ("   [anthesis point reported, not scored]" if g == "Q2" else ""))
+        for y in YEARS:
+            qo = N["A"]["detail"][y]["qo"][g]
+            for st in qo:
+                print(f"    {y} {st:<19} {qo[st]:7.3f} | " + " | ".join(
+                    f"{N[a]['detail'][y]['qm'][g][st]:7.3f}" for a in MAIN_ARMS))
+
+    print("\n4. log10 RMSE, LOYO (bias for Q1/Q3/Q4/Q5)")
+    print("                " + "".join(f"{g:>16}" for g in SCORE_GROUPS) + f"{'POOLED':>9}  own-yr")
+    for d in res:
+        for arm in [a for a in MAIN_ARMS + DECOMP_ARMS if a in res[d]]:
+            rr, b = res[d][arm]["rmse"], res[d][arm]["bias"]
+            cells = [f"  {rr[g]:6.3f}" + ("         " if g == "Q2x" else f" ({b[g]:+.3f})") for g in SCORE_GROUPS]
+            print(f"  {d:<11} {arm:<9}" + "".join(cells) + f"  {rr['POOLEDx']:6.3f}  {res[d][arm]['own_rmse']['POOLEDx']:6.3f}")
+
+    print("\n5. Verdicts")
+    print(f"  G1 (N): Q2x G {N['G']['rmse']['Q2x']:.3f} vs A {N['A']['rmse']['Q2x']:.3f} -> "
+          + ("FIXED by the Gao leaf-death table" if g1_fixed else "NOT fixed"))
+    for d in ("N", "NE"):
+        v = g2[d]
+        print(f"  G2 ({d}): pooled G {res[d]['G']['rmse']['POOLEDx']:.3f} vs B {res[d]['B']['rmse']['POOLEDx']:.3f}"
+              f"  Q1 {res[d]['G']['rmse']['Q1']:.3f}/{res[d]['B']['rmse']['Q1']:.3f}"
+              f"  Q2x {res[d]['G']['rmse']['Q2x']:.3f}/{res[d]['B']['rmse']['Q2x']:.3f}"
+              f" | (a) {v['a']} (b) {v['b']} (c) {v['c']} -> {'PASS' if v['passed'] else 'FAIL'}")
+    print(f"     -> {consequence}")
+    print(f"  G3 (N): pooled G {N['G']['rmse']['POOLEDx']:.3f} vs A {N['A']['rmse']['POOLEDx']:.3f} + 0.02 -> "
+          + ("no general loss" if g3 else "GENERAL LOSS"))
+    for s, v in g4.items():
+        print(f"  G4 {s:<12}: pooled G {res[s]['G']['rmse']['POOLEDx']:.3f} vs B {res[s]['B']['rmse']['POOLEDx']:.3f}"
+              f" | (a) {v['a']} (b) {v['b']} (c) {v['c']} -> {'PASS' if v['passed'] else 'FAIL'}")
+    print("     " + (f"flips under {', '.join(flips)}" if flips else "no flip under (s1), (s2)"))
+    return out
+
+
 if __name__ == "__main__":
-    sys.exit("pre-registration only -- the analysis is implemented in the next commit")
+    main()

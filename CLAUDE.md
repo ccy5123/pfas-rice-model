@@ -75,7 +75,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (431 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (434 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1651,6 +1651,29 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   verdict overall — but a default-switch pre-registration can no longer rest on option C's PASS alone. A cultivar leaf-death
   table (needs stem + panicle weights on the same dates) is what would settle (b). `parameters.json`, `simulate()` defaults and
   `reproduce_demo` (0.029) UNCHANGED.
+- **A japonica crop set in the port — Gao 2021 (cold-region japonica) transferred to the FACE data (PRE-REGISTERED in
+  `5aada97`) — it does NOT fix the dead-leaf excess; it makes it worse**: `validation/oryza2000_kim_face_gao_japonica.py` +
+  `tests/test_oryza2000_kim_face_gao_japonica.py` (3). Gao et al. 2021 publish an ORYZA2000 crop set calibrated on Suijing-18
+  (Heilongjiang, 47 N): partitioning FLVTB/FSTTB/FSOTB, leaf death DRLVT (from DVS 0.4, 0.024 at DVS 1, 0.020 after 1.6), an
+  SLA TABLE (0.0010–0.0023 ha/kg, about half IR72's), a single KDF 0.4, RGRLMX 0.0088, FRPAR 0.45, and DVRs (COLDMIN not
+  applied: the port has no cold-stop rule). Its calibration weather is unpublished, so this is a TRANSFER test. Arms A
+  (IR72.D92), **G (Gao)**, B (shipped), all with phenology calibrated to Akitakomachi as in the redo (so they differ only in
+  non-phenology parameters); A and B reproduce the redo exactly. Design N (primary) / NE (1999 events). **G1 NOT fixed**:
+  Q2x G 0.331 vs A 0.267 (worse); **G2 FAILS on (b) under N AND NE** (Q2x 0.331/0.341 vs shipped 0.221/0.181) ⇒ by the
+  pre-registered mapping "the Gao set does not transfer". But it is better on everything else: Q1 green-leaf course **0.110**
+  vs A 0.173 / B 0.287, Q4 dry-matter timing **0.095** vs 0.183 / 0.306 (Q3 0.173 and Q5 0.415 worse); **G3: no general loss**
+  (pooled 0.225 vs A 0.220). No flip under TMPSB 0 / nursery from sowing. **Decomposition** (one group swapped into IR72.D92,
+  design N): the leaf-death table alone carries the Q2x rise (A+DRLVT 0.329) and the Q1 gain (0.127); the canopy group (SLA
+  table, KDF, RGRLMX, FRPAR) leaves Q2x unchanged (0.267) and gives the best pooled score of any arm (**0.209**: Q3 0.109, Q4
+  0.116); partitioning alone does little. **Gao's OWN development rates (no calibration)** miss anthesis by +9.0/−8.7/−2.1 d
+  and maturity by −2.3/−10.2/−11.3 (IR72's own rates: +13…+14 d late at anthesis), and score pooled 0.201 (Q2x 0.299).
+  Expectation: right on G1 (may rise), A+DRLVT ≈ G on Q2x, Q3 worse, G2 failing NE; WRONG on G3 (expected a general loss)
+  and on Gao's own phenology being within 7/10 d. ⇒ **a japonica leaf-death table does not close the port's dead-leaf gap**
+  — Gao's kills leaves earlier and the dead pool (WLVD) keeps them. POST-HOC caveat (not tested): Kim's senescent blades are a
+  FLOOR (detached blades are lost) while ORYZA keeps every dead leaf, so part of every port arm's "excess" may be blades the
+  measurement could not recover — at maturity the port's share (0.70–0.79 vs 0.36–0.47 observed) would need ~3/4 of the dead
+  blades lost. Gao's set stays a candidate only; the port's default crop file is IR72.D92. `parameters.json`, `simulate()`
+  defaults and `reproduce_demo` (0.029) UNCHANGED.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1792,6 +1815,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   pre-registered header; DRATES-style rates per year · LOYO phenology error · stage-matched ratios · C1–C3 verdicts).
 - **Option C with the recorded nursery + the 1999 event dates**: `python validation/oryza2000_kim_face_nursery_events.py`
   (~40 s; pre-registered header; N primary · NG placement control · NE 1999 events · sensitivities · D1–D5).
+- **Gao 2021 japonica crop set on the FACE data**: `python validation/oryza2000_kim_face_gao_japonica.py` (~80 s;
+  pre-registered header; arms A/G/B · Gao's own phenology · one-group decomposition · G1–G4).
 - **Time-varying exposure `cwo_profile`**: `simulate(cwo_profile="flooded")` gives an analytic
   Freundlich dilution+leaching `C_w^o(t)` (short chains leach, long chains buffered; engine-free),
   `"hydrus"` the real-engine shape, `"constant"` the flat default (conc==BAF). Both shapes are
@@ -1824,7 +1849,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**431 collected; 430 pass, 2 skip** (431 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**434 collected; 433 pass, 2 skip** (434 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
