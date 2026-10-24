@@ -35,7 +35,7 @@ def test_observations_are_placed_by_stage():
     assert [obs[y]["anthesis"]["dat"] for y in V.YEARS] == [81, 88, 78]
     assert [obs[y]["maturity"]["dat"] for y in V.YEARS] == [131, 123, 120]
     assert obs[1999]["anthesis"]["GL"] == 187.3 and obs[2000]["maturity"]["SL"] == 85.58
-    assert obs[1999]["panicle_initiation"]["TOT"] == 435.0                 # Fig. 2 (digitised)
+    assert obs[1999]["panicle_initiation"]["TOT"] == 439.0                 # Fig. 2 (overlay-verified; first pass 435)
     assert root == {"panicle_initiation": (45.1, 425.94), "maturity": (37.94, 1495.64)}
     fr = [V.ripening_fraction(obs[y]) for y in V.YEARS]
     assert fr == pytest.approx([0.56, 0.486, 0.524], abs=1e-3)

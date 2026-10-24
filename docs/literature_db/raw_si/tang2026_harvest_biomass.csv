@@ -6,7 +6,9 @@
 #   Organ masses WERE measured (Fig 3 burdens = mass x conc; the abstract's endosperm share of
 #   the plant burden needs them) but not published -- ask the authors.
 # So this anchors only the FINAL total mass, NOT the M(t) trajectory.
-# Values for the CONTROL (0 ug/g, no PFAS) bars, read from Fig 1a/1b => APPROXIMATE (+/- ~1 g).
+# Values for the CONTROL (0 ug/g, no PFAS) bars, read from Fig 1a/1b. OVERLAY-VERIFIED against the article bitmap
+#   (docs/literature_db/tools/fig_overlay_checks.py tang2026 <PDF>): y axes re-fitted on the inward ticks (residual
+#   0.03 g / 0.007 g), value = centre of the bar's top border line; reading +-1 px = +-0.10 g / +-0.02 g.
 # Units: g fresh weight. Fig 1 itself does not say per plant or per pot; per plant follows from
 #   Fig 3 (labelled per plant), whose mass/conc ratio is ~0.23 x the Fig 1a biomass at every
 #   readable point (=> dry/fresh ~0.23).
@@ -16,9 +18,9 @@
 #   mass. Tang's "endosperm" is most likely MILLED (polished) rice (SI Text S3 uses the milled-rice
 #   moisture standard), and "chaff" may include bran; dehulling/polishing is not described.
 quantity,value_gfw_per_plant,basis,source,note
-whole_plant_biomass_control,33.5,fresh_weight,Tang2026_Fig1a,"digitized from control bar; ~consistent across PFOA/PFOS/GenX panels"
-ear_panicle_control,6.8,fresh_weight,Tang2026_Fig1b,"digitized from control bar"
-harvest_index_fw,0.20,ear/total,Tang2026_Fig1,"=6.8/33.5; fresh-weight ratio only (endosperm ~10-16% of plant DW, see header)"
+whole_plant_biomass_control,33.47,fresh_weight,Tang2026_Fig1a,"control bar (identical in the PFOA/PFOS/GenX groups); overlay-verified: top border 33.47 +- 0.10 g (first pass 33.5)"
+ear_panicle_control,6.86,fresh_weight,Tang2026_Fig1b,"control bar (identical in all three groups); overlay-verified: top border 6.86 +- 0.02 g (first pass 6.8)"
+harvest_index_fw,0.205,ear/total,Tang2026_Fig1,"=6.86/33.47; fresh-weight ratio only (endosperm ~10-16% of plant DW, see header)"
 # Toxicity context (EXACT, from main text; dose-response, not needed by the uptake model):
 #   whole-plant biomass reduction at 100 ug/g: PFOA -43.75%, PFOS -34.56%, GenX -24.59%.
 #   ear weight reduction (0.1->100 ug/g): PFOA -33.22..-73.25%, PFOS -29.34..-68.51%, GenX -20.54..-65.93%.

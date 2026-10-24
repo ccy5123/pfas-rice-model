@@ -75,7 +75,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
 ├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
 ├── data/                             # (gitignored)
-└── tests/                            # pytest (425 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
+└── tests/                            # pytest (428 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
 
 ```
 
@@ -1594,9 +1594,35 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   masks missed are added; every row now carries `value_lo`/`value_hi`. Values below ~200 kg/ha (centre within 7 px of the
   axis) are flagged `near_axis` — NOT resolvable (2018-05-30 DWST 133 > D-AGB 71) and not for use in ratios. The organ
   sums now close at the early dates too, and the remaining mismatches (2018-07-26 +14.6%, 2018-08-18/09-17 −4.8/−3.5%) are
-  15–29 px, i.e. in the figure, not the reading. Data not yet used by any model run. The earlier digitisations (Kim 2003
-  Fig. 2, Bouman & van Laar 2006 Fig. 2b, Li 2025 Fig. 2a, Tang 2026 Fig. 1) have NOT been overlay-checked — their source
-  images are not in this session.
+  15–29 px, i.e. in the figure, not the reading. Data not yet used by any model run. The earlier digitisations were
+  checked next — see the next bullet.
+- **The earlier digitisations checked against the originals (this session; user-supplied PDFs, NOT committed)** —
+  `docs/literature_db/tools/fig_overlay_checks.py {kim2003|li2025|tang2026} <PDF>` re-fits each figure's axes on its own
+  ticks, re-reads the values, prints them beside the stored ones and writes an overlay PNG. `tests/test_digitisation_overlay_checks.py` (3).
+  - **Kim 2003 Fig. 2** (FACE total biomass; ambient open circles): corrections −50…+49 g m⁻², the **1999 HN DAT89 point was
+    missing** (added), and the three near-zero tillering points were 20–27 g m⁻² too high (50/65/95 → 23/47/75; the 2000 value
+    sat ABOVE its FACE disk, which the figure rules out). Hidden open circles are read from the crescent their ring leaves beyond
+    the FACE disk. The values run +10…+25 g m⁻² (1–6%) above Kim 2001 Table 1 for the same crop (that table's year is itself
+    inferred). **Re-run of 5b/5c on the corrected totals — no verdict changes**: 5b S4 Q3 0.225|0.151 → 0.224|0.148, Q4
+    0.104|0.166 → 0.100|0.163; 5c Q3 0.147|0.138 → 0.148|0.133, Q4 0.210|0.307 → 0.207|0.306, pooled 0.222 vs 0.245 → 0.222 vs
+    0.244, own-year 0.246 vs 0.267 → 0.246 vs 0.265 (the tillering totals are not scored).
+  - **Li 2025 Fig. 2a** (irrigation-water composition): re-read shares close against the TABULATED SI S5 class sums within
+    0.4 %-points on 4 of 5 stages and reproduce the printed PFOA 59.3–70.2 % / PFBA 18.6–31.1 % ranges. The water values the
+    old `data_obs` Li tables were built with (external package, no script) are off for two congeners: **PFHxA 2.5 → 1.21 ng/L**
+    (≈ PFHxA + PFHpA, two adjacent similar colours read as one) and **PFOS 0.4 → 0.71**; PFBA 17.9 → 18.7, PFBS 1.3 → 1.10,
+    PFOA 46.7 → 46.5. New `raw_si/li2025_fig2a_water_shares.csv`; the verified water/BAF are added BESIDE the old values in
+    `data_obs/Li2025_BAF_TF.csv` / `obs_baf_Li2025.csv` (`*_verified` columns; the old columns stay as the S6 record). The
+    figure itself has an anomaly: its ripening bar carries a 4.45 % 6:2 FTS segment that S5 (precursors 0.05 %) rules out.
+    TF = tissue/tissue does not use water, so the stage-resolved Li analysis (step 3) and the TF scores are unaffected. **POST-HOC
+    consequence for S6** (`docs/H8_handoff_S6_final.md` §2, not re-run in place): root BAF ÷ the internal ceiling becomes PFHxA
+    46 / PFBS 19 / PFBA 6.6 / PFOS 2.9 / PFOA 0.53 (was 22 / 16 / 6.9 / 5.1 / 0.53) — the excess orders by chain length, not by
+    the reading quality, so the recorded reading "the Li surface excess is a water-denominator (reading) artifact" does not hold;
+    what remains is that irrigation water is not the pore water the model needs.
+  - **Tang 2026 Fig. 1a/1b**: correct — control biomass 33.47 g FW (stored 33.5), ear 6.86 (6.8), the same control bar in all
+    three groups.
+  - **Not checked**: Bouman & van Laar 2006 Fig. 2b needs no PDF — it is the IR72DS92 experiment whose exact table is already in
+    `raw_si/oryza_ir72ds92_obs.csv`; against it the digitised rows are −12…+11% off (stated ±5%) and no script uses them. Kim 2001
+    Fig. 1 (3 root values) is NOT checkable here: the session's `kim2001.pdf` turned out to be a JavaScript stub page, not the paper.
 
 ## 7. Build & run
 - `pip install -r requirements.txt`
@@ -1768,7 +1794,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 - **Structure (SMILES) input**: `pip install -r requirements-structure.txt` (RDKit), then
   `python src/pfas_structure.py` (SMILES → descriptors → Compound demo). In code:
   `model_api.simulate_from_smiles("OC(=O)C(F)(F)...")` runs the ODE for any PFAS structure.
-- Tests: `pip install pytest && pytest` (**425 collected; 424 pass, 2 skip** (425 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
+- Tests: `pip install pytest && pytest` (**428 collected; 427 pass, 2 skip** (428 pass, 1 skip with `emcee` installed) — note the two numbers do not add up,
   and that is correct: `test_sci_adk_rigor.py` skips at MODULE level, so it contributes a skip OUTCOME while
   collecting zero tests, and the long-quoted "300 collected" was this same off-by-one. ~27 min with the full stack — RDKit + the built
   HYDRUS-1D engine + phydrus, as the SessionStart hook provides on the web; the `test_sci_adk_rigor.py`
