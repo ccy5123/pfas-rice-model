@@ -348,6 +348,14 @@
 - **Hasegawa et al. 2017 본문.** SI의 Table S1만 읽었다.
 - **Bouman & van Laar 2006.** 이번에 읽지 않았다(같은 IR72DS92 자료는 매뉴얼 §7.2로 확인).
 - **Yamazaki 2023, Kim 2019, Liu 2023.** 이번 세션에 PDF가 없어 이전 감사 기록을 그대로 인용했다.
+- **입수 요청용 서지** (DOI는 OpenAlex에서 확인, DOI가 없는 것은 인용한 논문의 참고문헌 목록에서 옮김):
+  Kim et al. 2001 `10.1046/j.1469-8137.2001.00111.x` · Okada et al. 2001 `10.1046/j.1469-8137.2001.00097.x` ·
+  Hasegawa et al. 2017 `10.1038/s41598-017-13582-y` · Bouman & van Laar 2006 `10.1016/j.agsy.2004.09.011` ·
+  Yamazaki et al. 2023 `10.1021/acs.est.2c08767` · Kim et al. 2019 `10.1016/j.scitotenv.2019.03.240` ·
+  Liu et al. 2023 `10.1016/j.scitotenv.2022.159826`. DOI 없음: Kropff, van Laar & Matthews (eds) 1994a, *ORYZA1: an
+  ecophysiological model for irrigated rice production*, SARP Research Proceedings, IRRI/AB-DLO (ORYZA2000 매뉴얼
+  참고문헌) · Liu et al. 2002, *Chin. J. Appl. Ecol.* 13:1253–1258 (Yang 2006 참고문헌) · Han, Peng & Wei 2009,
+  *Water Sav. Irrig.* 12:5–7 (Gao 2021 참고문헌).
 - **Tang·Li SI의 쪽 번호.** Word 파일이라 고정 쪽이 없다(LibreOffice로 변환하면 Tang SI가 19쪽이 되지만, 원문 표지는 "12 pages"라고 쓴다). 그래서 Text/Table 번호로 인용했다.
 
 ### 5.2 이번에 읽은 논문 어디에도 없는 항목
