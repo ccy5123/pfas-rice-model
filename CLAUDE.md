@@ -224,6 +224,11 @@ app run since the switch); "4-pool free anion" = the previous default (`recommen
   but transfer gets worse beyond the 0.10 margin on Kim's interval (0.154 → 0.267) and Li's grain TF
   (0.510 → 0.940) (A2 FAIL; Tang 0.708, Kim point 0.421, Li shoot 0.398) ⇒ KEEP `"gate"`;
   `"size"` stays runnable. Not foreseen: the Li grain loss (expected ±0.15).
+- **Gate numerics** (`gate_numerics_sensitivity.py`; descriptive): the `"gate"` peak's SIZE is set by two
+  unsourced numbers, the 1e-4 kg organ-mass floor and the ramp to 1.5 × the floor (the panicle opens
+  on day 70 at that mass). Moving them (ramp 1.1–10 ×, floor 1e-5–1e-3 kg) moves the PFOA peak
+  1.41–9.65× (shipped 3.29×) but the scores barely: Yamazaki 0.367–0.384, transfer endpoints ≤ 0.038.
+  So the peak's existence is structural, its height is not data.
 - Every transfer dataset runs on the calibration site-year drivers (Tang/Kim/Li sites and dates
   are not in the repo) — see `docs/ASSUMPTIONS.md` §5.
 
@@ -311,7 +316,8 @@ K_AW = 0. Details: `docs/neutral_dpu_validation.md`.
   `apportionment(c)`.
 - **Default configuration**: `validation/default_switch.py` (the pre-registered switch, ~15 min),
   `validation/default_sensitivity.py` (unmeasured inputs on the default, ~4 min) and
-  `validation/panicle_share_amendment.py` (the grain-share amendment, ~5 min; `grain_share="gate"|"size"`).
+  `validation/panicle_share_amendment.py` (the grain-share amendment, ~5 min; `grain_share="gate"|"size"`),
+  `validation/gate_numerics_sensitivity.py` (the grain gate's floor / ramp, ~10 min).
 - **Transfer tests**: `validation/oos_multidataset.py` (summary), `oos_tang_lipid.py`,
   `kim2019_censored.py`, `kim2019_pfoa_anchor.py`, `li2025_stage_resolved.py`, `tang2026_fxy_refit.py`.
 - **Mechanism checks**: `carrier_vs_bypass.py` (`--fast`), `dose_series_carrier.py` (`--fast`),
@@ -337,7 +343,7 @@ K_AW = 0. Details: `docs/neutral_dpu_validation.md`.
   first version (ccy5123/pfas-rice-model#65) carried pre-correction numbers.
 - **Compound lookup** (EPA CompTox): `python src/chem_lookup.py carbamazepine` (needs `CTX_API_KEY`;
   base URL `https://comptox.epa.gov/ctx-api`).
-- **Tests**: `pytest` (483 collected; all pass with the full stack, plus 1 module-level skip for `test_sci_adk_rigor.py` without sci-adk; ~22 min). CI (`.github/workflows/tests.yml`) runs the whole suite;
+- **Tests**: `pytest` (484 collected; all pass with the full stack, plus 1 module-level skip for `test_sci_adk_rigor.py` without sci-adk; ~22 min). CI (`.github/workflows/tests.yml`) runs the whole suite;
   `rigor.yml` runs the sci-adk over-claim guard on the frozen `runs/` records.
 
 ## 8. Conventions
@@ -365,7 +371,11 @@ K_AW = 0. Details: `docs/neutral_dpu_validation.md`.
 1. **Measurements that would replace assumptions** (`docs/ASSUMPTIONS.md` §7): Yamazaki 2023 SI
    S16/S18/S19 (raw values, MQL flags, planting density, nursery); a panicle transpiration share
    (grain xylem surface); rice phloem sap volume per grain DM (T_C,Ph); organ water content over a
-   season; rice-root cell-wall / plaque PFAS sorption (K_cw, K_surf); carrier kinetics (Km, Vmax).
+   season; rice-root cell-wall / plaque PFAS sorption (K_cw, K_surf); carrier kinetics (Km, Vmax);
+   rice organ composition (f_prot, f_PL, f_cw) and θ_fw -- the shipped table's source keys resolve to
+   no reference in the repo. Values with no source at all (carrier constants, φ, `retention`,
+   `stem_transp_frac`, `lam_grain`, the soil profile, the gate numerics) and the decision margins
+   are listed as such in `docs/ASSUMPTIONS.md` (§3, §6, §8).
 2. **Transfer datasets on their own drivers**: Tang (site, dates), Kim (field calendars), Li (stage
    dates) — each currently runs on the Yamazaki site-year.
 3. **Grain**: the 4-pool free anion under-predicts grain (on Yamazaki the long-chain grain is out of
@@ -376,7 +386,8 @@ K_AW = 0. Details: `docs/neutral_dpu_validation.md`.
    (`retention`, `lam_grain`) are unmeasured; the lipid constants are Yamazaki-fitted on the 4-pool.
    Found after the switch: once the panicle forms it takes the whole residual xylem stream (its own
    `lam_grain` deposit plus every non-retained share, 0.43 of the export), so the young panicle's
-   concentration peaks ~2 weeks before heading (PFOA 3.3× its harvest value) and dilutes (the 4-pool's
+   concentration peaks ~2 weeks before heading (PFOA 3.3× its harvest value; the height is set by the
+   gate numerics, 1.4–9.7×) and dilutes (the 4-pool's
    share scales with panicle dry matter: no peak). **Tested** (`panicle_share_amendment.py`,
    pre-registered): a size-scaled share (`grain_share="size"`) removes the peak and improves Yamazaki
    (0.380 → 0.254) but fails transfer non-inferiority on Kim's [0, MDL] interval (+0.113) and Li's

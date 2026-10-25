@@ -218,8 +218,9 @@ M_BASES = (None, "fresh")
 # Transpiring surface per kg DRY matter [m^2/kg], for the leaf/grain xylem split when M is
 # fresh weight. Leaf 20 is the SLA reading of the original S. Grain 0.5116 = 2 x (1-0.78)/
 # (1-0.14): the value at which splitting on DRY matter gives the split the original S
-# gave on fresh mass at the shipped theta -- ~4% of the transpiration stream to the grain
-# during filling (nstem_leaf assumes 5%). NOT measured, and a FIXED literal on purpose:
+# gave on fresh mass at the shipped theta -- on the site-year ~6% of the leaf + grain
+# stream to the grain from panicle formation to harvest, transpiration-weighted (8% from
+# heading; nstem_leaf assumes 5%). NOT measured, and a FIXED literal on purpose:
 # computing it from theta would tie the split to the organs' water again. Reading the
 # original grain S=2 as per kg DRY instead sends ~14% to the grain and leaves 8 of 11
 # Yamazaki grain BAFs out of reach at the L_Ph floor (docs/HANDOFF_mass_basis_refit.md §2).

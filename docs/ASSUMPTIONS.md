@@ -57,24 +57,26 @@ An effect above its yardstick is **consequential** (bold).
 
 | constant | value | status | range run / note |
 |---|---|---|---|
-| θ_fw (root/stem/leaf/grain) | 0.90 / 0.83 / 0.78 / 0.14 | estimates | `params/rice_tissue_params.csv` ranges; `validation/theta_fw_sensitivity.py`: root INTERMEDIATE, stem/leaf/grain SMALL (pre-registered rule; dry-basis metrics) |
-| composition f_prot, f_PL, f_cw | `rice_tissue_params.csv` | measured / estimate per row | |
+| θ_fw (root/stem/leaf/grain) | 0.90 / 0.83 / 0.78 / 0.14 | estimates, **source not traceable** | `params/rice_tissue_params.csv` ranges (its `source_key` column -- `S_physiol`, `S_grainMC`, ... -- resolves to no reference anywhere in the repo, so the rows labelled "measured" there are not checkable either); `validation/theta_fw_sensitivity.py`: root INTERMEDIATE, stem/leaf/grain SMALL (pre-registered rule; dry-basis metrics) |
+| composition f_prot, f_PL, f_cw | `rice_tissue_params.csv` | **source not traceable** | the file labels each row measured or estimate, but none of its source keys resolves to a reference in the repo; no sensitivity has been run on f_prot, f_PL or f_cw |
 | K_PL, K_prot | Chen 2025, Zhou 2025 | measured | |
 | K_cw | GAP A deliverable | derived | no measured coefficient exists |
 | E_m | −120 mV | measured (Wang 1994) | −90 mV (NH₄⁺ depolarisation): default **0.128 / 0.126 / 0.127**; 4-pool **0.128 / 0.126 / 0.127**, re-fit κ_d ×1.46 (1.33–2.29), f_xy and L_Ph unchanged |
-| carrier Vmax_in / Km / Vmax_out | 20 / 5 µg L⁻¹ / 8 | **unmeasured, fixed** | Km × 100 (the dose-series lower bound ≥ 500 µg/L): default **1.27 / 1.27 / 1.27**; 4-pool **1.26 / 1.26 / 1.26**, re-fit: κ_d → ~0 (the now-linear carrier takes over), f_xy ×3.9 (1.0–28), L_Ph ×1.1 (1.0–9000). The level of every fitted transport parameter depends on this unmeasured constant. |
-| φ (phloem recirculation to the root) | 0.1 | unmeasured | 0.05 / 0.2: default 0.000 / 0.026 / 0.002 (not consequential); 4-pool 0.001 / **0.048** / 0.026 (straw, through the root's recirculated burden), re-fit f_xy ×0.94 / ×1.11 (up to ×5.7) |
+| carrier Vmax_in / Km / Vmax_out | 20 / 5 µg L⁻¹ / 8 | **unmeasured, fixed, no source** (the values are chosen, not taken from any study) | Km × 100 (the dose-series lower bound ≥ 500 µg/L): default **1.27 / 1.27 / 1.27**; 4-pool **1.26 / 1.26 / 1.26**, re-fit: κ_d → ~0 (the now-linear carrier takes over), f_xy ×3.9 (1.0–28), L_Ph ×1.1 (1.0–9000). The level of every fitted transport parameter depends on this unmeasured constant. |
+| φ (phloem recirculation to the root) | 0.1 | unmeasured, no source | 0.05 / 0.2: default 0.000 / 0.026 / 0.002 (not consequential); 4-pool 0.001 / **0.048** / 0.026 (straw, through the root's recirculated burden), re-fit f_xy ×0.94 / ×1.11 (up to ×5.7) |
 | T_C,Ph (phloem flow per kg grain DM) | 10 L/kg | literature order of magnitude | 4 / 12 L/kg (sap 100–300 g/L sugar + grain water): default 0.000 / 0.009 / 0.017 (not consequential: PFOA's default grain is ~80 % xylem-fed, `apportionment`); 4-pool 0.000 / 0.012 / **0.160** — it sets the whole grain phloem volume there; re-fit L_Ph to its bound or ×0.85 |
-| grain xylem surface (4-pool only) | 0.5116 m² per kg DM (~6 % of the stream during filling on the site-year) | unmeasured | 0.2 (~2.5 %) / 2.0 (~18 %): 4-pool 0.000 / **0.044 / 0.280**; re-fit L_Ph ×1.31 (up to ×300) / ×0.15 (down to the floor). The default shoot splits the stream by `lam_grain` instead (below) |
+| grain xylem surface (4-pool only) | 0.5116 m² per kg DM (~6 % of the leaf + grain stream from panicle formation to harvest on the site-year, transpiration-weighted; 8 % from heading) | unmeasured | 0.2 (~2.5 %) / 2.0 (~18 %): 4-pool 0.000 / **0.044 / 0.280**; re-fit L_Ph ×1.31 (up to ×300) / ×0.15 (down to the floor). The default shoot splits the stream by `lam_grain` instead (below) |
 | redistributed shoot: `lam_grain` (grain share of the stream) | 0.05 | unmeasured | 0.025 / 0.18 (the share the 4-pool range spans): default 0.000 / 0.034 / **0.063** |
 | redistributed shoot: grain routing of the residual xylem stream (`grain_share`) | "gate": all of it once the panicle forms | structural choice, tested | "size" (share = panicle mass / mature mass): Yamazaki 0.380 → 0.254, Kim interval 0.154 → 0.267, Li grain TF 0.510 → 0.940; kept "gate" by the pre-registered rule (`validation/panicle_share_amendment.py`) |
 | redistributed shoot: `retention` (share of the deposited solute an organ keeps) | 0.6 | unmeasured, no source | ± one third, 0.40 / 0.80: default 0.000 / **0.110 / 0.225** |
 | redistributed shoot: `stem_transp_frac` (stem share of the shoot stream) | 0.45 | unmeasured, no source | ± one third, 0.30 / 0.60: default 0.000 / 0.011 / 0.008 |
 | redistributed shoot: stem segments N | 4 | convention | the configuration scored in every transfer test |
-| leaf xylem surface | 20 m² per kg DM | convention (SLA reading) | |
-| grain formation gate | mass leaves its floor | convention | |
+| leaf xylem surface (4-pool only) | 20 m² per kg DM | convention, **value not sourced** | the original S read as an SLA; not a rice SLA measurement -- IR72.D92's own SLA is 24–45 m² per kg (ASLA 0.0024 + BSLA 0.0025·e^(−4.5(DVS−0.14)) ha/kg, capped at SLAMAX 0.0045); not run over a range |
+| grain formation gate | opens as the grain mass leaves the 1e-4 kg organ-mass floor, fully open at 1.5 × the floor (one day later on the site-year) | **numerical choice, no source** | `validation/gate_numerics_sensitivity.py` (ramp 1.1 / 3 / 10 ×, floor 1e-5 / 1e-3 kg): the PFOA young-panicle peak moves 1.41–9.65× its harvest value (shipped 3.29×) -- its size is set by these two numbers, not by data; the scores barely move: Yamazaki 0.367–0.384 (shipped 0.380), grain BAFs median \|Δ log10\| ≤ 0.024, transfer endpoints ≤ 0.038 (Li grain 0.498–0.548) |
 | root surface / plaque pool K_surf | 0 | convention | no dataset removed plaque; absorbed by κ_d in the fit |
 | f_xy bounds | ≤ 1 | physical | |
+| f_xy head-group offset (free anion, `f_xy_recommended`) | PFSA = PFCA × e^−1.1, ether × e^−0.7 | derived from TF ratios | PFOS/PFOA TF of Tang 2026 (0.26) and Yamazaki 2023 (0.43) -- so Tang's PFOS is not independent of the free-anion f_xy; the default (lipid loading) uses the fitted `pfsa_ln` instead. GenX from Tang alone (provisional) |
+| organ-mass floor | 1e-4 kg (`organ_mass.organ_matrix`) | numerical choice | keeps the ODE off zero mass; also sets when the grain gate opens (row above) |
 | L_Ph, κ_d bounds | [1e-5, 1], [1e-2, 50] | convention | L_Ph = 1 means sieve-tube sap at the leaf's free concentration (no active concentrating); the upper bound BINDS for PFDA, PFUnDA, PFOS and PFDoDA, whose grain stays under -- whether phloem loading can concentrate PFAS is unmeasured |
 
 ## 4. Transport fit — `validation/refit_site_year.py` (pre-registered, amendment 1)
@@ -119,10 +121,10 @@ not either, because each transfer dataset also runs on borrowed drivers (section
 
 | input | value | status |
 |---|---|---|
-| Kd | Koc(chain length) × f_oc, f_oc 0.02 | QSPR (measured anchors), f_oc unmeasured for the site |
+| Kd | Koc(chain length) × f_oc, f_oc 0.02 | QSPR (measured anchors); f_oc unmeasured for the site, no range run |
 | flooding | continuous to day 90, then drainage | convention (Yamazaki: continuous except midsummer drainage; dates not reported) |
-| percolation | 0.30 cm/d | convention |
-| profile | 100 cm, ρ_b 1.3, dispersivity 5 cm | convention |
+| percolation | 0.30 cm/d | chosen, no source, no range run |
+| profile | 100 cm, ρ_b 1.3, dispersivity 5 cm | chosen, no source, no range run |
 
 ## 7. External data that would replace an assumption
 
@@ -131,3 +133,19 @@ not either, because each transfer dataset also runs on borrowed drivers (section
 - Phloem sap volume per grain dry matter for rice (T_C,Ph).
 - Organ water content over a season (θ_fw).
 - A rice-root cell-wall / plaque PFAS sorption coefficient (K_cw, K_surf).
+
+## 8. Decision thresholds
+
+The pre-registered analyses decide by margins. The margins were fixed before each run (so a
+result could not tune them), but no study supplies their values: they are choices. For each
+decision, the margin at which the verdict would change, from the recorded scores:
+
+| decision (script) | margin used | recorded result | verdict holds for |
+|---|---|---|---|
+| default switch D1, beat the old default on every transfer endpoint (`default_switch.py`) | > 0.3 log | smallest gain 0.90 (Li shoot 1.26 → 0.36) | any margin < 0.90 |
+| default switch D1, within 0.1 of the 4-pool lipid variant | 0.1 log | better on all five endpoints | any margin ≥ 0 |
+| panicle amendment A2, transfer non-inferiority of `"size"` (`panicle_share_amendment.py`) | 0.10 log | Kim interval +0.113, Li grain +0.430 | FAIL for any margin < 0.43 (from 0.12 only Li grain fails) |
+| Kim robust winner between the two lipid variants (`kim2019_censored.py`) | 0.10 log on point and interval | point 0.56 vs 0.47 (0.09), interval 0.38 vs 0.15 | **close**: a margin below ~0.09 names the default |
+| θ_fw: constant θ kept if every metric < 0.05, θ(t) built if any > 0.10 (`theta_fw_sensitivity.py`) | 0.05 / 0.10 log | root 0.053 (Ge) → INTERMEDIATE | **close**: a lower cut of 0.054 would make root SMALL |
+| panicle amendment A1, `"size"` has no young-panicle peak | max ≤ 1.5 × harvest value | `"size"` max 1.00× (`"gate"` 3.2–3.8×) | any cut ≥ 1.00; the `"gate"` peak size itself depends on the gate numerics (§3, grain formation gate) |
+

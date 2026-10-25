@@ -20,8 +20,10 @@ root-internal free aqueous PFAS loaded into the ascending xylem. Theory in `docs
 **Closed form** (bounded logistic): `f_xy(n) = η / (1 + 10^(s·(n − n₀)))`, η = 1, s ≈ 0.372,
 n₀ ≈ 4.74; equivalently `logit f_xy = 4.061 − 0.857·n` (OLS, R² = 0.97). Slope bracket
 β ∈ [0.6, 1.1] C⁻¹ (LFER prediction), pooled empirical 0.67. Polar ceiling f_xy(PFBA) = 0.79 ≈
-Briggs neutral maximum 0.784. Head group: **PFSA = PFCA · e^(−1.5)** (≈ +1.8–2.2 "effective
-carbons"; sign uncertain, sensitivity term). The exponential long-chain tail and the short-chain
+Briggs neutral maximum 0.784. Head group: first placed at PFSA = PFCA · e^(−1.5) (≈ +1.8–2.2 "effective
+carbons"); the shipped offset is **PFSA = PFCA · e^(−1.1)**, from the PFOS/PFOA TF ratios of
+Tang 2026 (0.26) and Yamazaki 2023 (0.43), which also fix the sign (`literature_params.FXY_HEADGROUP_LN_OFFSET`;
+Tang's PFOS is therefore not independent of the free-anion f_xy). The exponential long-chain tail and the short-chain
 plateau are the two asymptotes of this single logistic.
 
 ## Theory (why monotone — Task A)

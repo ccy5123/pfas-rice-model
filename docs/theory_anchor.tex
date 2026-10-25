@@ -305,8 +305,11 @@ $\log\Kow\approx1.8$.
 \noindent\textbf{Head group.} A sulfonate adds a near-constant binding increment; in the
 linear--free--energy picture this is an additive offset to $\alpha$,
 $\fxy^{\mathrm{SA}}\approx\fxy^{\mathrm{CA}}\,e^{-1.5}$, equivalent to
-$\Delta\alpha=-1.5$ or $\approx+1.8$--$2.2$ ``effective carbons'' of extra sorption. Treated as a
-sensitivity term (sign uncertain; one crop reversed it at $C_4$).
+$\Delta\alpha=-1.5$ or $\approx+1.8$--$2.2$ ``effective carbons'' of extra sorption. That was the
+first placement (sign uncertain; one crop reversed it at $C_4$). The shipped offset is
+$e^{-1.1}$, from the PFOS/PFOA transfer-factor ratios of Tang 2026 (0.26) and Yamazaki 2023
+(0.43), which also fix the sign ($\fxy^{\mathrm{SA}}<\fxy^{\mathrm{CA}}$;
+\texttt{literature\_params.FXY\_HEADGROUP\_LN\_OFFSET}).
 
 \subsection{Vindication of decision F1 (bell/U $\RCF$ $\to$ root sorption, not $\fxy$)}
 $\RCF$ and $\fxy$ are \emph{different} quantities. By eq.~\eqref{eq:briggsR}/\eqref{eq:phifree},
@@ -337,7 +340,7 @@ Closed form & bounded logistic (exp.\ tail = asymptote) & logistic, $\operatorna
 Slope $\beta$ & $0.6$--$1.1\,\mathrm{C^{-1}}$ (LFER) & $0.41$--$1.14$ (pooled $0.67$; OLS $0.86$) & \checkmark\\
 Polar ceiling & $\to$ Briggs max $0.784$ & $\fxy(\mathrm{PFBA})=0.79$ & \checkmark\\
 Long-chain level & exp.\ tail $\ll0.1$ & $\fxy(\mathrm{PFTeDA})=5.2\times10^{-4}$ & \checkmark\\
-Head group & SA $<$ CA (const.\ offset) & $\fxy^{\mathrm{SA}}\!\approx\!\fxy^{\mathrm{CA}}e^{-1.5}$ & \checkmark\\
+Head group & SA $<$ CA (const.\ offset) & $\fxy^{\mathrm{SA}}\!\approx\!\fxy^{\mathrm{CA}}e^{-1.1}$ & \checkmark\\
 Bell/U RCF & belongs to sorption, not $\fxy$ (F1) & assigned to root sorption & \checkmark\\
 \bottomrule
 \end{tabular}
@@ -481,7 +484,7 @@ are taken as given (\S\ref{sec:emp}); this note justifies their form, not their 
 10{:}5.1\!\times\!10^{-3},\,12{:}3.0\!\times\!10^{-3},\,14{:}5.2\!\times\!10^{-4}\}$;
 logistic $\operatorname{logit}\fxy=\alpha-\beta n$, pooled $\beta\approx0.67\,\mathrm{C^{-1}}$
 (per-crop/tissue $0.41$--$1.14$); level anchored on $\TSCF(\mathrm{PFBA})=0.79$, non-PFBA $C_4$--$C_{14}$
-$\TSCF<0.3$; head group $\fxy^{\mathrm{SA}}\approx\fxy^{\mathrm{CA}}e^{-1.5}$.
+$\TSCF<0.3$; head group $\fxy^{\mathrm{SA}}\approx\fxy^{\mathrm{CA}}e^{-1.1}$.
 \textbf{(b)} Root uptake carrier-mediated/partly active (Michaelis--Menten, inhibitor-sensitive);
 bell/U-shaped RCF assigned to root sorption (decision F1).
 \textbf{(c)} $\Bk$ rises $\sim\!3$ orders $C_4$--$C_{12}$ (root: PFBA $\approx1.7$, PFOA $\approx23$,
