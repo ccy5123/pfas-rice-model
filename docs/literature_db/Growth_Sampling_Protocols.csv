@@ -189,3 +189,40 @@ Li et al. 2025 (J. Hazard. Mater. 492:138256),grain_protein,"낟알 단백질은
 Li et al. 2025 (J. Hazard. Mater. 492:138256),conc_basis,건중(ng/g dw),p.3,"the root, stem, leaf, and grain (ng/g dw)",reported
 Li et al. 2025 (J. Hazard. Mater. 492:138256),yield_and_grain_processing,보고 안 함 (수량·천립중·수분 기준 없음),-,,not reported
 Li et al. 2025 (J. Hazard. Mater. 492:138256),organ_water_content,보고 안 함,-,,not reported
+Kim et al. 2001 (New Phytol. 150:223-229),site,"Shizukuishi Rice FACE (시설 상세는 Okada et al. 2001). FACE 링 4개 + 대조 논 4개, 4블록, 대조구는 FACE 링에서 90 m 이상",p.224,A full description of the Rice FACE facility is provided by Okada et al. (2001),reported
+Kim et al. 2001 (New Phytol. 150:223-229),years,"1998, 1999 (2작기)",p.224,In both 1998 and 1999 seeds of rice cv. Akitakomachi were obtained,reported
+Kim et al. 2001 (New Phytol. 150:223-229),nursery_transplanting,"흐르는 물에 발아, 유근 출현 직후 비료 함유 암면 매트 트레이에 파종, 플라스틱 챔버에서 육묘(대기 또는 +200 ppm). 출아 후 14일(1998)/23일(1999)에 3본씩 손 이앙, 1998-05-21 / 1999-05-20",p.224,"Fourteen (1998) and 23 (1999) d after emergence, seedlings were hand-transplanted in groups of three",reported
+Kim et al. 2001 (New Phytol. 150:223-229),planting_density,"포기 간격 17.5 cm, 줄 간격 30 cm (19.05 hills m-2), 포기당 3본",p.224,"Hills and rows were 17.5 and 30 cm apart, respectively (equivalent to 19.05 hills m-2)",reported
+Kim et al. 2001 (New Phytol. 150:223-229),water_management,"전 기간 담수; 7월 중순 5일 중간낙수, 수확 10일 전부터 낙수",p.224,Fields were flooded throughout both seasons except for a 5 d summer drainage in mid-July and from 10 d before harvest,reported
+Kim et al. 2001 (New Phytol. 150:223-229),sampling_dates_stages,"MN 5회: 1998년 25, 53, 81, 109, 131 DAT(3곳), 1999년 32, 62, 88, 105, 123 DAT(2곳); 분얼 중기, PI, 출수, 등숙 중기, 성숙에 맞춤. 1999년 HN 63, 89, 124 DAT, LN 61, 124 DAT",p.224,"Sample dates were chosen to coincide as closely as possible with the mid-tillering, panicle initiation (PI), heading, mid-ripening and grain maturity growth stages",reported
+Kim et al. 2001 (New Phytol. 150:223-229),hills_per_sample,회당 4포기(1998)/6포기(1999); MN은 합계 12포기,p.224,"Four and six hills were sampled for each sampling in 1998 and 1999, respectively",reported
+Kim et al. 2001 (New Phytol. 150:223-229),border_exclusion,처음 두 번의 채취 자리는 보호구 예비 포기로 보식(보식 포기는 채취 안 함); 시험 포기는 기계 이앙 보호구로 둘러쌈,p.224,hills were replaced with spare hills from the borders; these were not sampled,reported
+Kim et al. 2001 (New Phytol. 150:223-229),root_soil_volume,포기마다 흙 블록 폭 30 cm × 길이 17.5 cm × 깊이 20 cm (Kim 2003은 같은 실험에 깊이 15 cm라고 씀),p.224,"a block of soil 30 cm wide, 17.5 cm long and 20 cm deep around each individual hill was removed",reported
+Kim et al. 2001 (New Phytol. 150:223-229),root_washing,포기의 1/2 또는 1/3만 흐르는 물로 흙·이물질을 씻고 뿌리 건물중 측정,p.224-225,"For half or one-third of the hills, soil and other extraneous matter was carefully cleaned from the roots under running water",reported
+Kim et al. 2001 (New Phytol. 150:223-229),organ_fractions,"살아 있는 잎, 고사 잎, 줄기(잎집 포함), 이삭(있을 때), 뿌리",p.224,"Hills were separated into living and dead leaf tissue, stems (including leaf sheath), panicles (when present) and roots",reported
+Kim et al. 2001 (New Phytol. 150:223-229),detached_blade_handling,보고 안 함 (고사 잎 조직을 분리했다고만 씀),-,,not reported
+Kim et al. 2001 (New Phytol. 150:223-229),drying,"강제송풍 오븐 80 °C, 1주, 기관별",p.225,after drying at 80°C in a forced air oven for 1 wk,reported
+Kim et al. 2001 (New Phytol. 150:223-229),sample_grinding,"질소 분석용 0.5 mm 체 분쇄, micro-Kjeldahl",p.225,"After milling (0.5 mm mesh), the N content of all plant parts was determined separately",reported
+Kim et al. 2001 (New Phytol. 150:223-229),yield_sampling,"성숙기 LN·HN 18포기(1998)/20포기(1999) 1곳, MN 54포기(3곳, 1998)/60포기(2곳, 1999); 이삭·임실 영화 수, 낟알 질량; 수량 = 임실 낟알 건물중",p.225,Grain yield was expressed as the dry mass of filled grains,reported
+Kim et al. 2001 (New Phytol. 150:223-229),thousand_grain_weight,"Table 2 개별 낟알 질량(mg): 대기 CO2 LN 25.93, MN 24.15, HN 23.64 (연도 표기 없음)",p.227,Individual grain mass (mg),reported
+Kim et al. 2001 (New Phytol. 150:223-229),fresh_weight_recorded,보고 안 함,-,,not reported
+Kim et al. 2001 (New Phytol. 150:223-229),phenology_event_dates,보고 안 함 (채취일만 단계 이름으로),-,,not reported
+Kim et al. 2001 (New Phytol. 150:223-229),sampling_time_of_day,보고 안 함,-,,not reported
+Kim et al. 2001 (New Phytol. 150:223-229),root_plaque_removal,보고 안 함,-,,not reported
+Okada et al. 2001 (New Phytol. 150:251-260),site,"Shizukuishi, Iwate (39°38′N, 140°57′E), 해발 약 200 m; 논 100 m × 30 m; 팔각 FACE 링 지름 12 m, 유효 면적 약 80 m2",p.252,It is situated at an altitude of about 200 m,reported
+Okada et al. 2001 (New Phytol. 150:251-260),sample_processing,보고 안 함 (재배 이력은 Kim et al. 2001로 미룸; 시설·CO2 제어 논문),-,A full description of the crop history is provided by Kim et al. (2001),not reported
+Hasegawa et al. 2017 main text (Sci. Rep. 7:14858),site,"Shizukuishi(39°38′N, 140°57′E)와 Wuxi(31°37′N, 120°28′E). 실험 절차는 Okada·Kim(Shizukuishi), Liu·Yang(Wuxi)으로 미룸",p.10,Details of experimental procedures are given in Okada et al. and Kim et al. for the Shizukuishi site and in Liu et al. and Yang et al. for the Wuxi site,reported
+Hasegawa et al. 2017 main text (Sci. Rep. 7:14858),nursery_transplanting,4–5엽기에 이앙; 수확 10–15일 전까지 담수,p.10,Seedlings were transplanted at 4–5 leaf age and grown under flooded conditions until 10–15 d before harvest,reported
+Hasegawa et al. 2017 main text (Sci. Rep. 7:14858),planting_density,"Shizukuishi 19, Wuxi 24 hills m-2, 포기당 3본",p.10,"The planting density was 19 and 24 hills m−2 at Shizukuishi and Wuxi, respectively",reported
+Hasegawa et al. 2017 main text (Sci. Rep. 7:14858),phenology_event_dates,"FACE 시험의 날짜는 보고 안 함. 개화·성숙 날짜를 모델러에게 줬다고 쓴 것은 SPAR 챔버 시험뿐; FACE는 보정 자료(Shizukuishi 1999, Wuxi 2002)를 줬다고만 씀",p.10-11,"Each modelling group received all required crop management, soil and weather data, phenology dates (anthesis and maturity)",not reported
+Hasegawa et al. 2017 main text (Sci. Rep. 7:14858),sample_processing,보고 안 함,-,,not reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),setting,ORYZA 매개변수화에 쓴 IRRI 포장 시험 4개(1991–1993; IR72와 IR58 계통; IR72 1992 건기 포함)와 검증 시험 1개(Wopereis et al. 1994),p.254-255,"four field experiments at IRRI between 1991 and 1993, with variety IR72 and breeding lines of IR58",reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),replicates,모든 시험 4반복; 관측값은 4반복 평균,p.255,All experiments had four replicates,reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),nursery_transplanting,"12일묘, 포기당 5본 이앙",p.255,Twelve-day-old seedlings were transplanted at 5 seedlings per hill,reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),planting_density,25 hills m-2,p.255,25 hills per square meter,reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),hills_per_sample,"생육 중 순차 채취, 회당 14포기",p.255,Sequential crop samples were taken during the growing season from 14 hills,reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),organ_fractions,"LAI와 녹색 잎, 고사 잎, 줄기, 이삭의 건물중",p.255,"to determine LAI and biomass of green leaves, dead leaves, stems, and panicles",reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),thousand_grain_weight,수확 때 낟알 1개 무게를 포함한 수량 구성요소를 쟀다고 씀. 값은 논문에 없음,p.255,"At harvest, yield components were measured, including individual grain weight",reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),drying,보고 안 함,-,,not reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),root_collected,보고 안 함,-,,not reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),detached_blade_handling,보고 안 함,-,,not reported

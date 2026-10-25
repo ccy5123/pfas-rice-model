@@ -6,8 +6,8 @@
 > - 모든 내용은 논문 원문(본문과, 있는 경우 SI)을 직접 읽고 적었다. 쪽 번호를 붙였고, 핵심 문장은 원문을 그대로(영문, 25단어 이하) 인용했다.
 > - 원문에 없는 항목은 **"보고 안 함"** 으로 적었다. 일반 지식으로 채우거나 추측하지 않았다.
 > - 쪽 번호는 학술지에 인쇄된 쪽이다. Kim 2003은 826–837쪽, Yang 2006은 12–19쪽, Sasaki 2005는 1704–1712쪽이다. Gao 2021, Tang 2026, Li 2025는 논문 번호 체계라 PDF 쪽(1–12)이 곧 논문 쪽이다. ORYZA2000 매뉴얼은 인쇄 쪽이고 PDF 쪽은 인쇄 쪽 + 9다. Tang·Li의 SI는 Word 파일이라 고정된 쪽 번호가 없어서 Text/Table 번호로 인용했다.
-> - 항목별 전체 표(논문 × 항목, 190행)는 `docs/literature_db/Growth_Sampling_Protocols.csv`에 있다. CSV의 인용문은 모두 PDF 텍스트와 대조해 확인했다(다단 편집 때문에 텍스트로 대조할 수 없었던 1건은 페이지 이미지로 확인).
-> - Yamazaki 2023, Kim 2019, Liu 2023은 이전 세션의 감사(`docs/sampling_protocols_audit_KR.md`, `docs/literature_db/Sampling_Protocols.csv`)에서 가져왔다. 이번 세션에서 원문을 다시 읽지는 않았다(PDF가 이번에 제공되지 않음).
+> - 항목별 전체 표(논문 × 항목, 227행)는 `docs/literature_db/Growth_Sampling_Protocols.csv`에 있다. CSV의 인용문은 모두 PDF 텍스트와 대조해 확인했다(다단 편집 때문에 텍스트로 대조할 수 없었던 1건은 페이지 이미지로 확인).
+> - Yamazaki 2023, Kim 2019, Liu 2023은 처음에 이전 세션의 감사(`docs/sampling_protocols_audit_KR.md`, `docs/literature_db/Sampling_Protocols.csv`)에서 가져왔고, **2026-10-25에 받은 본문 PDF로 다시 확인했다**(§1.9). 같은 날 Kim 2001, Okada 2001, Hasegawa 2017 본문, Bouman & van Laar 2006도 받아 읽었다(§1.10–1.12). Yamazaki와 Liu의 SI는 이번에 받지 않았으므로, SI에만 있는 항목은 이전 감사 기록(†)으로 남겨 두었다.
 > - 원문 PDF는 저작권 때문에 레포에 넣지 않았다.
 
 ---
@@ -16,9 +16,9 @@
 
 포장(노지) 생장 논문 4편(Kim 2003, Sasaki 2005, Yang 2006, Gao 2021)은 큰 틀이 같다. 생육단계(분얼기, 유수형성기, 출수·개화기, 등숙 중기, 성숙기)에 맞춰 날짜를 잡았고, 보호구(border) 포기는 빼고 몇 포기를 통째로 파냈다. 기관은 잎몸 / 줄기(잎집 포함) / 이삭으로 나눴고(Kim·Sasaki·Gao는 뿌리도), 80 °C 오븐(Kim, Yang, Gao)이나 동결건조(Sasaki)로 말린 뒤 **건물중만** 보고했다. 차이가 나는 지점은 이렇다.
 
-- 건조: 80 °C에서 1주(Kim)인지, 항량까지(Yang, Gao)인지, 동결건조(Sasaki, Tang, Li)인지. Yamazaki는 이전 감사 기준으로 식물체 전체를 70 °C에서 1주 말린 **뒤에** 기관을 나눴다.
-- 고사엽: 녹색 잎과 고사엽을 따로 칭량했는지. 따로 단 논문은 Kim, Yang, Gao이고, 나누지 않은 논문은 Sasaki, Tang, Li다.
-- 뿌리: 정해진 흙 부피를 팠는지. Kim은 포기마다 30 × 17.5 × 15 cm 블록을 팠다. 나머지는 채취 부피를 보고하지 않았고, Yang은 뿌리를 아예 다루지 않았다.
+- 건조: 80 °C에서 1주(Kim 2001·2003)인지, 항량까지(Yang, Gao)인지, 동결건조(Sasaki, Tang, Li)인지. Yamazaki는 이전 감사 기준으로 식물체 전체를 70 °C에서 1주 말린 **뒤에** 기관을 나눴다.
+- 고사엽: 녹색 잎과 고사엽을 따로 칭량했는지. 따로 단 논문은 Kim 2001·2003, Yang, Gao, Bouman & van Laar 2006(IR72DS92를 포함한 IRRI 시험)이고, 나누지 않은 논문은 Sasaki, Tang, Li다.
+- 뿌리: 정해진 흙 부피를 팠는지. Kim은 포기마다 폭 30 × 길이 17.5 cm 블록을 팠는데, 깊이를 같은 실험에 대해 Kim 2001은 **20 cm**(1998–1999), Kim 2003은 **15 cm**(1998–2000)로 적었다. 나머지는 채취 부피를 보고하지 않았고, Yang은 뿌리를 아예 다루지 않았다.
 - "낟알"의 실체: 임실 영화의 건물중(Kim), 14% 수분 수량(Yang), "dry grain yield"(Gao), 정의 없는 chaff/endosperm(Tang), 정의 없는 grains/paddy rice(Li). Yamazaki는 왕겨/쌀겨/백미, Kim 2019는 현미다.
 - PFAS 시료 세척수: 탈이온수(Tang), 증류수(Li), 수돗물 후 Milli-Q(Yamazaki).
 
@@ -27,7 +27,7 @@
 - 채취 시각, 저울 정밀도, 뿌리 세척에 쓴 체 눈금.
 - 철·망간 피막(plaque) 제거.
 - **떨어진(탈락) 잎몸을 수거했는지 여부.**
-- 제현·도정 조건(생장 논문 전부, Tang, Li), 천립중.
+- 제현·도정 조건(생장 논문 전부, Tang, Li). 천립중은 Kim 2001 Table 2가 유일하다(낟알 1개 23.6–25.9 mg, 대기 CO₂). Bouman & van Laar 2006은 쟀다고만 쓰고 값은 싣지 않았다.
 
 이 공백 가운데 모델에 가장 직접 걸리는 것은 기관별 수분 함량(θ_fw)이다. 레포에는 실측한 계절 값이 하나도 없다.
 
@@ -129,7 +129,7 @@
 | 생육단계(관측) | 이앙 DOY 16, PI DOY 58, 개화 DOY 83, 성숙 DOY 114 | 161 | "IDOYPI = 58 ! Day of panicle initiation" |
 | 관측 항목 | 녹색 잎(WLVG), 고사엽(WLVD), 줄기(WST), 이삭(WSO, panicle dry weight), 지상부 합계(WAGT), LAI, 잎 질소. 단위는 kg 건물 ha⁻¹이고 관측일은 DOY 4, 16, 34, 58, 68, 83, 97, 114. **뿌리 관측값은 없다** | 161–164 | "Observed values can be given for green leaf weight (WLVG; kg dry matter ha−1)" |
 | 잎집 | 매뉴얼은 줄기와 잎집을 함께 다룬다("stem (or sheath)"). IR72DS92 채취에서 잎집을 어디에 넣었는지는 **보고 안 함** | 37 | "stem (or sheath) area index (SAI)" |
-| 시료 처리 | 회당 포기 수, 반복, 건조 온도, 뿌리, 탈곡은 모두 **보고 안 함**. 매뉴얼은 시험 정보를 Kropff et al. (1994a)로 미루는데, 이번 세션에서는 그 문헌을 보지 못했다 | 191–192 | "More information on this experiment and on the application of ORYZA2000 is given by" |
+| 시료 처리 | 매뉴얼에는 회당 포기 수, 반복, 건조 온도, 뿌리, 탈곡이 모두 **없다**. 매뉴얼은 시험 정보를 Kropff et al. (1994a)로 미루는데, 그 책은 아직 보지 못했다. 회당 포기 수·반복·분리 기관은 Bouman & van Laar 2006이 채운다(§1.11). 건조 온도와 뿌리는 거기에도 없다 | 191–192 | "More information on this experiment and on the application of ORYZA2000 is given by" |
 | 자료 요건(매뉴얼 지침) | 분배계수를 구하려면 무게 관측을 모두 같은 날 해야 하고, LAI도 가능하면 같은 날 잰다. 고사엽을 재지 않으면 개화 후 감소를 반영할 수 없다. 정조 수량은 14% 수분 기준(WRR14 = WRR/0.86)이다 | 164, 172, 74 | "all the weight observations should be made on the same dates and preferably also for the leaf area index" / "this maximum value is used for partitioning calculations when dead leaves are not measured" |
 
 ### 1.6 Hasegawa et al. 2017 SI, Table S1 (두 FACE 시험의 조건 요약)
@@ -180,42 +180,93 @@
 | 생물량·생중량·수분 | **보고 안 함** | – | – |
 | 농도 기준 | 건중(ng/g dw) | 3 | "the root, stem, leaf, and grain (ng/g dw)" |
 
-### 1.9 이전 감사에서 가져온 PFAS 데이터셋 (이번 세션에서 원문 재확인 안 함)
+### 1.9 PFAS 데이터셋 3편 (본문 재확인; †는 SI에만 있어 이번에 재확인하지 못한 항목)
 
-출처는 `docs/literature_db/Sampling_Protocols.csv`다. 쪽 번호는 그 CSV에 적힌 그대로다.
+처음 출처는 `docs/literature_db/Sampling_Protocols.csv`다. 2026-10-25에 받은 본문 PDF로 다시 확인했고, 본문으로 확인한 항목에는 쪽을 붙였다.
 
-- **Yamazaki 2023**(ES&T, NARO 쓰쿠바 Andosol 노지 논, Kasalath + Koshihikari, 2020년)
-  - 뿌리는 수돗물로 충분히 씻고 Milli-Q로 헹궜다. 피막 제거와 탈착 단계는 없었다.
-  - **식물체 전체를 70 °C에서 1주 말린 뒤** 기관을 나눴다.
-  - 지상부는 잎을 포함한 채 높이 4구간(0–20/20–40/40–60/>60 cm)으로 잘랐다. 잎집과 잎몸은 나누지 않았다.
-  - 낟알은 제현기로 왕겨와 현미를 나누고, 현미를 도정해 쌀겨와 백미로 나눴다(백미:현미 86–90%). **현미는 분석하지 않았다.**
-  - 기관 질량은 보고되지 않았다. (SI p.S2–S3)
-- **Kim 2019**(Sci. Total Environ., 한국 논 30필지, 2016년 수확기)
-  - 필지당 1주를 채취했다.
-  - 낟알은 −30 °C에서 동결건조하고 도정기로 왕겨를 벗긴 뒤 2 g을 분쇄했다(Fritsch). 즉 **현미**다.
-  - 뿌리와 지상부는 분석하지 않았다. (본문 p.715–716)
-- **Liu 2023**(수경, 유묘)
-  - 뿌리를 탈이온수로 3번 씻고 아세토니트릴로 빠르게 헹궜다. 표면 탈착 단계가 있는 유일한 자료다.
-  - 기관은 가위로 잘랐고 생중량 기준이다. (본문 p.3)
+- **Yamazaki 2023**(*ES&T* 57:4208–4218, NARO 쓰쿠바 Andosol 노지 논, Kasalath + Koshihikari, 2020년)
+  - 장소: NARO 시험장(36°1′28.6″N, 140°6′25.0″E). 2020년 5–9월에 채취 (p.4209)
+  - 벼와 흙은 **필지 전체에서 부분시료를 모아 혼합 시료**를 만들었다. 백미, 쌀겨, 왕겨, 뿌리, 높이별 줄기(잎 포함; 0–20/20–40/40–60/>60 cm)가 **각 n = 1**, 관개수 n = 1 (p.4209). "Rice and soil samples were collected subsamples from whole-field and made composite samples."
+  - 추출에는 건중 5 g을 썼다. 정량한계(MQL)는 벼·흙 0.04–2 pg/g dw, 관개수 0.004–0.02 ng/L (p.4209, 4211)
+  - 본문은 BAF·BCF·TF를 계산하지 않는다(레포의 BAF는 조직 농도 ÷ 관개수 1점)
+  - 채취 일정과 시료 처리 상세는 본문이 SI로 미룬다(p.4209: "Details on the sampling campaign and sample preparation are summarized in the SI"). 다음은 SI에만 있어 이번에 재확인하지 못했다†: 뿌리를 수돗물로 충분히 씻고 Milli-Q로 헹굼(피막 제거·탈착 단계 없음), **식물체 전체를 70 °C에서 1주 말린 뒤** 기관 분리, 제현기 → 현미 도정(백미:현미 86–90%), 현미 미분석, 이앙·수확일 (SI p.S2–S3)
+- **Kim 2019**(*Sci. Total Environ.* 671:714–721, 한국 논 30필지, 2016년)
+  - 수확기(2016년 10월 6–18일)에 5개 지역(A–E) 30필지에서 흙(n = 30), 공극수(n = 27), 현미(n = 30)를 채취했다. E 지역은 공극수가 모자라 1점만 받았다 (p.715)
+  - **필지당 벼 1포기**(*O. sativa* subsp. *japonica*, 품종 미기재). 낟알을 −30 °C에서 동결건조하고 도정기(rice-polishing machine)로 왕겨를 벗겨 **현미**로 만들었다. 흙은 뿌리 옆을 삽으로 떴다 (p.715)
+  - 공극수: 지름 200 mm × 길이 300 mm PVC 원통을 흙에 박고 뚜껑을 덮어 **2일** 둔 뒤 안에 고인 물을 받았다. 500 mL를 GF/F(0.45 µm)로 걸렀다 (p.715)
+  - 백미 비교용은 부산 슈퍼마켓에서 산 현미 1종을 도정한 것 (p.715). 현미·백미 2 g을 Mini-mill(Fritsch)로 분쇄 (p.716)
+  - 검출한계 미만은 **0으로 처리**했다. 검출한계는 흙 0.01–0.20 ng/g dw, 공극수 0.16–1.29 ng/L, 현미·백미 0.03–0.71 ng/g (p.716). 흙에는 dw를 붙였지만 **현미 농도의 건물/생체 기준은 적지 않았다**(현미는 동결건조 뒤 분석)
+  - 뿌리와 지상부는 분석하지 않았다
+- **Liu 2023**(*Sci. Total Environ.* 858:159826, 수경 유묘, Nanjing 5055)
+  - 25일 키운 유묘, 영양액 pH 5.6–5.8, 낮 30 °C 14시간 / 밤 25 °C 10시간 (p.2)
+  - 레포가 쓰는 세포 하 분획 시험(§2.3.3)은 농약 1종 1 mg/L, 72시간 노출이고 "나머지 채취 과정은 2.3.2와 같다". 2.3.2의 채취 과정은 **탈이온수로 3번 헹군 뒤 아세토니트릴로 빠르게 헹궈** 뿌리 표면의 농약을 지우고, 여과지로 물기를 닦은 다음 뿌리·줄기·잎을 나누는 것이다 (p.2–3). 표면 탈착 단계가 있는 유일한 자료다
+  - 분리한 조직을 달아 기록한 뒤, 90 kPa 진공 침투로 아포플라스트를 먼저 뽑고, 심플라스트를 4000 r/min(세포벽)과 10,000 r/min(소기관/가용 분획)으로 원심 분리했다 (p.3)
+  - **Table S3의 분획 질량비는 대조구 분획을 동결건조해 단 건물 비율이다** (p.3: "The cell walls, organelles, and soluble fractions of the control group were lyophilized, weighed and recorded to calculate the mass ratio, as shown in Table S3"). "All fresh weight samples were recorded"라는 문장은 반감기 시험(§2.3.1) 단락에 있다
+
+### 1.10 Kim et al. 2001, *New Phytol.* 150:223–229 (Shizukuishi FACE 1998–1999, Akitakomachi)
+
+Kim 2003과 같은 시험의 앞선 두 해다. 레포는 이 논문의 Table 1(뿌리·전체 건물중)을 `raw_si/rice_organ_biomass_literature.csv`에 옮겨 쓰고, Table 1의 12개 값은 원문과 모두 일치한다.
+
+| 항목 | 내용 | 쪽 | 원문 인용 |
+|---|---|---|---|
+| 장소·연도 | Shizukuishi Rice FACE(시설 상세는 Okada et al. 2001). FACE 링 4개 + 대조 논 4개, 4블록. 1998, 1999 | 224 | "A full description of the Rice FACE facility is provided by Okada et al. (2001)" |
+| 육묘·이앙 | 흐르는 물에서 발아, 유근이 나오자 비료 함유 암면 매트 트레이에 파종, 플라스틱 챔버에서 육묘. 출아 후 14일(1998)/23일(1999)에 3본씩 손 이앙(5월 21일 / 5월 20일) | 224 | "Fourteen (1998) and 23 (1999) d after emergence, seedlings were hand-transplanted in groups of three" |
+| 재식 | 17.5 × 30 cm, 19.05 hills m⁻², 포기당 3본. 시험 포기는 기계 이앙한 보호구로 둘러쌌다 | 224 | "(equivalent to 19.05 hills m–2)" |
+| 물관리 | 전 기간 담수, 7월 중순 5일 중간낙수, 수확 10일 전부터 낙수 | 224 | "except for a 5 d summer drainage in mid-July and from 10 d before harvest" |
+| 채취 시기 | MN: 1998년 25, 53, 81, 109, 131 DAT, 1999년 32, 62, 88, 105, 123 DAT. 분얼 중기, PI, 출수, 등숙 중기, 성숙에 맞췄다. 1999년 HN은 63, 89, 124 DAT, LN은 61, 124 DAT | 224 | "chosen to coincide as closely as possible with the mid-tillering, panicle initiation (PI), heading, mid-ripening and grain maturity" |
+| 회당 포기 수 | 1998년 4포기, 1999년 6포기(MN은 1998년 3곳, 1999년 2곳에서 모두 12포기) | 224 | "Four and six hills were sampled for each sampling in 1998 and 1999, respectively." |
+| 포기 선정 | 이웃 포기의 교란을 최소화하도록 골랐고, 처음 두 번 채취한 자리는 보호구 예비 포기로 보식했다(보식 포기는 채취 안 함) | 224 | "hills were replaced with spare hills from the borders; these were not sampled" |
+| 뿌리 | 포기마다 흙 블록 **폭 30 × 길이 17.5 × 깊이 20 cm**를 파냈다(Kim 2003은 15 cm). 포기의 1/2 또는 1/3만 흐르는 물로 흙과 이물질을 씻고 뿌리 건물중을 쟀다 | 224–225 | "a block of soil 30 cm wide, 17.5 cm long and 20 cm deep around each individual hill was removed" |
+| 기관 분리 | 살아 있는 잎, 고사 잎, 줄기(잎집 포함), 이삭(있을 때), 뿌리. **떨어진 잎몸 처리는 보고 안 함** | 224 | "Hills were separated into living and dead leaf tissue, stems (including leaf sheath), panicles (when present) and roots." |
+| 건조·분쇄 | 강제송풍 오븐 **80 °C, 1주**, 기관별. 질소 분석용으로 0.5 mm 체 분쇄 | 225 | "after drying at 80°C in a forced air oven for 1 wk. After milling (0.5 mm mesh)" |
+| 수량 | 성숙기 LN·HN 18포기(1998)/20포기(1999), MN 54포기(1998)/60포기(1999). 이삭 수, 임실 영화 수, 낟알 질량. 수량 = 임실 낟알 건물중 | 225 | "Grain yield was expressed as the dry mass of filled grains." |
+| 낟알 1개 질량 | Table 2: 대기 CO₂ LN 25.93, MN 24.15, HN 23.64 mg(천립중 23.6–25.9 g에 해당). 연도는 적지 않았다 | 227 | "Individual grain mass (mg)" |
+| Table 1의 연도 | 표 제목에 연도가 없다. 그러나 LN·HN은 1999년에만 채취했으므로(p.224) LN·HN 값이 있는 Table 1은 1999년 값일 수밖에 없다. 표 제목의 HN "12 g N m⁻²"는 1998년 시비량이고, 1999년은 15 g이었다(p.224) | 224–225 | "In 1999 HN plants were sampled at 63, 89 and 124 DAT and LN plants at 61 and 124 DAT." |
+| 생중량, 채취 시각, 피막, 생육단계 사건 날짜 | **보고 안 함** | – | – |
+
+### 1.11 Bouman & van Laar 2006, *Agric. Syst.* 87:249–273 (ORYZA2000 매개변수화·검증 시험, IRRI)
+
+IR72DS92(1992 건기, IR72)는 이 논문의 보정 자료 4개 시험 가운데 하나다(IRRI, 1991–1993, IR72와 IR58 계통, p.254–255). 매뉴얼이 비워 둔 시료 처리 일부를 이 논문이 채운다.
+
+| 항목 | 내용 | 쪽 | 원문 인용 |
+|---|---|---|---|
+| 반복 | 모든 시험 4반복. 관측값은 4반복 평균 | 255 | "All experiments had four replicates" |
+| 육묘·재식 | 12일묘, 포기당 5본, 25 hills m⁻²(매뉴얼 입력값과 같다) | 255 | "Twelve-day-old seedlings were transplanted at 5 seedlings per hill and 25 hills per square meter." |
+| 채취 | 생육 중 순차 채취, **회당 14포기** | 255 | "Sequential crop samples were taken during the growing season from 14 hills" |
+| 기관 분리 | LAI와 **녹색 잎, 고사 잎**, 줄기, 이삭의 건물중 | 255 | "biomass of green leaves, dead leaves, stems, and panicles" |
+| 수량 | 수확 때 낟알 1개 무게를 포함한 수량 구성요소를 쟀다. 값은 논문에 없다 | 255 | "including individual grain weight" |
+| 건조 온도, 뿌리, 떨어진 잎몸, 잎집 배정 | **보고 안 함** | – | – |
+
+### 1.12 Okada et al. 2001, *New Phytol.* 150:251–260 · Hasegawa et al. 2017 본문, *Sci. Rep.* 7:14858
+
+둘 다 시료 처리 절차는 싣지 않는다. Okada는 재배 이력을 Kim 2001로, Hasegawa는 실험 절차를 Okada·Kim(Shizukuishi)과 Liu·Yang(Wuxi)으로 미룬다.
+
+| 항목 | 내용 | 쪽 | 원문 인용 |
+|---|---|---|---|
+| Shizukuishi 위치·해발 | Iwate현 Shizukuishi(39°38′N, 140°57′E), **해발 약 200 m**. 논 하나는 100 m × 30 m, FACE 링은 지름 12 m 팔각형(유효 면적 약 80 m²). 대조구는 FACE 링에서 90 m 이상 | Okada 252 | "It is situated at an altitude of about 200 m" |
+| 이앙·물관리 | 두 FACE 시험 모두 4–5엽기에 이앙, 수확 10–15일 전까지 담수 | Hasegawa 10 | "transplanted at 4–5 leaf age and grown under flooded conditions until 10–15 d before harvest" |
+| 재식 | Shizukuishi 19, Wuxi 24 hills m⁻², 포기당 3본(Yang 2006 원문의 17.5 × 30 cm는 19.05) | Hasegawa 10 | "The planting density was 19 and 24 hills m−2" |
+| 모델러에게 준 자료 | FACE는 보정 자료(Shizukuishi 1999, Wuxi 2002)를 줬다고만 쓴다. **개화·성숙 날짜를 줬다고 명시한 것은 SPAR 챔버 시험뿐이다** | Hasegawa 10–11 | "received all required crop management, soil and weather data, phenology dates (anthesis and maturity)" |
 
 ---
 
 ## 2. 비교표
 
-"–"는 해당 없음, "NR"은 보고 안 함이다. †는 이전 감사에서 인용한 값(이번 세션 재확인 안 함)이다.
+"–"는 해당 없음, "NR"은 보고 안 함이다. †는 SI에만 있어 이전 감사에서 인용한 값(이번에 재확인 못 함)이다.
 
 | 논문 | 재배·재식 | 채취 단위·반복 | 뿌리 채취·세척 | 기관 분리(잎집 / 고사엽) | 건조 | 생중량 | 낟알·수량 | 엽면적 |
 |---|---|---|---|---|---|---|---|---|
+| Kim 2001 | 논, 19.05 hills m⁻², 3본 | 4포기(1998)/6포기(1999) × 2–3곳, 보호구 보식 | 30×17.5×**20** cm 블록. 1/2–1/3 포기만 흐르는 물로 세척 | 잎집→줄기 / 살아 있는 잎·고사 잎 분리, 탈락 잎몸 NR | 80 °C 강제송풍 오븐, 1주 | NR | 임실 낟알 건물중(18–60포기), 낟알 1개 23.6–25.9 mg | NR |
 | Kim 2003 | 논, 19.05 hills m⁻², 3본 | 4–6포기 × 1–3곳/구, 4블록, 보호구 보식 | 30×17.5×15 cm 블록. 1/2–1/6 포기만 흐르는 물로 세척, 나머지는 지상부:뿌리 건물중 비로 추정. 체 NR | 잎집→줄기 / 녹색·고사 잎몸 분리, 탈락 잎몸 NR | 80 °C 강제송풍 오븐, 1주 | NR | 임실 영화 건물중(10–60포기). 탈곡·도정 NR | 포기 절반, 방법 NR |
 | Sasaki 2005 | 논, 19.05 hills m⁻², 3본 | 4포기(¹³C 공급 포기), LAI 16포기 | 흐르는 물 세척 후 동결건조. 부피·체 NR | 잎집→줄기(줄기 = 잎집 + 稈) / 구분 NR | −80 °C 보관 후 동결건조 | NR | NR | 방법 NR |
 | Yang 2006 | 논, 24 hills m⁻²로 기재(산술 19.05), 3본 | 평균 줄기 수 5포기/소구, 보호구 보식 | 뿌리 NR | 잎집→줄기 / 녹색·고사 분리(표에서 합쳤는지 NR) | 80 °C 오븐, 항량 | NR | 2 m², 14% 수분 생중량 기준. HI = 이삭 비율 | 2/5포기, 방법 NR |
 | Gao 2021 | 논, 20 hills m⁻², 5본 | 3지점, 약 10일 간격, 9–10회. 포기 수 NR | 분리했다고만 씀. 방법·값 NR | 잎집 NR / 녹색·고사 분리(고사엽 값은 미제시) | 80 °C 오븐, 항량 | NR | 1 m² × 6, "dry grain yield". 수분 기준 NR | 잎 길이 × 너비 × 0.75 |
-| IR72DS92(매뉴얼) | 논, 25 hills m⁻², 5본(입력값) | NR | 뿌리 관측 없음 | NR / WLVG·WLVD 분리 | NR | NR | WSO = 이삭. 모델 WRR14는 14% | NR |
+| IR72DS92(매뉴얼 + Bouman & van Laar 2006) | 논, 25 hills m⁻², 12일묘 5본 | 14포기/회, 4반복 | 뿌리 관측 없음 | NR / 녹색·고사 잎 분리(WLVG·WLVD) | NR | NR | WSO = 이삭. 낟알 1개 무게 측정(값 미게재). 모델 WRR14는 14% | NR |
 | Tang 2026 | 포트(2.5 kg, 20본), 3반복 | 매월. 회당 본수 NR | 탈이온수 헹굼. 횟수·피막 NR | 잎집 NR / NR. chaff·endosperm 정의 NR | −80 °C 동결건조 → 분말 | 분리 직후 칭량(값 미공개) | 정의·도정 NR | – |
 | Li 2025 | 농가 논. 재식 NR | 3반복 × 부분시료 5(20×20 m) | 증류수 세척. 부피·피막 NR | 방법 "잎(줄기 포함)"이지만 표는 분리 / NR | 동결건조 → 전동 분쇄 | NR | grains·paddy rice라는 용어의 정의 NR | – |
-| Yamazaki 2023† | Andosol 노지 논 | 혼합 1점/조직/품종 | 수돗물 → Milli-Q, 피막 제거 없음 | 높이 구간(잎 포함), 잎집·잎몸 미분리 | 70 °C 1주(전체 건조 후 분리) | NR | 왕겨/쌀겨/백미(현미 미측정) | – |
-| Kim 2019† | 농가 논 30필지 | 필지당 1주 | 미분석 | 미분석 | 낟알 −30 °C 동결건조 | NR | 현미(도정기로 왕겨 제거) | – |
-| Liu 2023† | 수경 유묘 | n = 3 | 탈이온수 3회 + 아세토니트릴 헹굼 | 가위로 분리 | 생중량 | 생중량 기준 | – | – |
+| Yamazaki 2023 | Andosol 노지 논 | 필지 전체 부분시료의 혼합 1점/조직/품종 | 수돗물 → Milli-Q, 피막 제거 없음† | 높이 구간(잎 포함), 잎집·잎몸 미분리 | 70 °C 1주(전체 건조 후 분리)† | NR | 왕겨/쌀겨/백미(현미 미측정†) | – |
+| Kim 2019 | 농가 논 30필지 | 필지당 1포기 | 미분석 | 미분석 | 낟알 −30 °C 동결건조 | NR | 현미(도정기로 왕겨 제거), 농도 기준 미기재 | – |
+| Liu 2023 | 수경 유묘 | n = 3 | 탈이온수 3회 + 아세토니트릴 헹굼 | 가위로 분리 | 분획은 동결건조(Table S3 질량비) | 조직은 분리 후 칭량 | – | – |
 
 ---
 
@@ -299,12 +350,12 @@
 ### F. PFAS 분석용 처리
 
 19. **세척수 종류와 헹굼 횟수를 기록한다.**
-    - (a) 탈이온수: Tang. 증류수: Li. 수돗물 후 Milli-Q: Yamazaki†. 조직 헹굼 횟수를 보고한 PFAS–벼 논문은 없다.
+    - (a) 탈이온수: Tang. 증류수: Li. 수돗물 후 Milli-Q: Yamazaki†. 탈이온수 3회 후 아세토니트릴: Liu 2023(수경). 흙에서 키운 벼의 조직 헹굼 횟수를 보고한 PFAS–벼 논문은 없다.
     - (b) 데이터셋끼리 뿌리·지상부 표면 오염 수준을 비교할 수 있다.
 20. **채취 기구와 용기를 정해 둔다.**
     - (a) Tang은 전 과정에 폴리프로필렌 재질을 쓰고 용기를 Milli-Q 물로 미리 씻었다(SI Text S2). Li는 PP 봉지에 넣어 아이스백으로 바로 운반했다. Tang은 조직을 PE 봉지에 밀봉해 동결건조했다.
 21. **건조·분쇄·분석량을 정한다.**
-    - (a) 동결건조 후 분말화한 것은 Tang과 Li(Li는 전동 분쇄기), 2 g 분쇄는 Kim 2019†(Fritsch)다. 추출에 쓴 양은 Tang이 분말 1 g + 메탄올 5 mL, Li가 1 g + 아세토니트릴 6 mL(SI)다.
+    - (a) 동결건조 후 분말화한 것은 Tang과 Li(Li는 전동 분쇄기), 2 g 분쇄는 Kim 2019(Fritsch Mini-mill)다. 추출에 쓴 양은 Tang이 분말 1 g + 메탄올 5 mL, Li가 1 g + 아세토니트릴 6 mL(SI)다.
 22. **보관 조건을 기록한다.**
     - (a) Sasaki는 분리 즉시 −80 °C에 넣었다가 동결건조했고, Tang은 토양을 −20 °C에 두었다. 분말 보관 조건은 Tang과 Li 모두 보고하지 않았다.
 23. **농도는 건중으로 보고하되, 같은 시료의 생중량과 건물중을 남긴다.**
@@ -314,10 +365,10 @@
 ### G. 수량
 
 24. **수량은 수확 면적이나 포기 수, 원시 무게와 함께 오븐 건조 기준과 14% 수분 기준을 둘 다 남긴다.**
-    - (a) Kim 2003은 임실 영화 건물중(10–60포기), Yang 2006은 2 m²·14% 생중량 기준, Gao 2021은 1 m² × 6에 수분 기준 미상이다. ORYZA의 WRR14는 낟알 건물중 / 0.86이다(매뉴얼 p.74).
+    - (a) Kim 2001·2003은 임실 낟알 건물중(Kim 2001은 18–60포기, Kim 2003은 10–60포기), Yang 2006은 2 m²·14% 생중량 기준, Gao 2021은 1 m² × 6에 수분 기준 미상이다. ORYZA의 WRR14는 낟알 건물중 / 0.86이다(매뉴얼 p.74).
     - (b) 수확지수의 정의도 논문마다 다르다. Yang의 HI는 이삭 비율이다. 그래서 낟알 질량과 이삭 질량을 둘 다 남긴다.
 25. **천립중과 임실률은 선택 항목이다.**
-    - (a) 이번에 본 논문 중 측정법까지 보고한 것은 없다. Kim 2003은 임실 영화 수를 세었다.
+    - (a) 값을 실은 것은 Kim 2001 Table 2(낟알 1개 23.6–25.9 mg)뿐이고, Bouman & van Laar 2006은 쟀다고만 썼다. 측정법(몇 립을 어떤 수분에서 달았는지)까지 보고한 논문은 없다. Kim 2003은 임실 영화 수를 세었다.
 
 ---
 
@@ -334,7 +385,12 @@
 4. **Kim 2003 고사엽을 "하한"으로 보는 해석.** CLAUDE.md §6은 Kim의 고사엽 비율을 "detached blades are lost"이므로 하한이라고 쓴다. Kim 2003은 탈락 잎몸을 모았는지 잃었는지 **보고하지 않는다.** 레포의 추론이지 원문의 진술이 아니다.
 5. **Yang 2006 재식밀도.** `raw_si/yang2006_wuxi_face_dm.csv` 머리말의 "17.5 x 30 cm = 24 hills m-2"는 원문을 옮긴 것이지만, 원문 자체가 계산과 맞지 않는다(19.05). Hasegawa 2017 SI도 24로 적었다.
 6. **Gao 2021 전사 머리말**(`raw_si/gao2021_fig3_digitised.csv`, `gao2021_qingan_phenology.csv`). 원문은 DWST를 "dry biomass of stems"로 쓰고 "green stems"라고 하지 않는다. Table A1의 생육 DOY에는 연도가 적혀 있지 않다(성숙 DOY 261이 2018년 수확일 9월 18일과 맞으므로 "2018년"은 타당한 추론이지만 원문 진술은 아니다).
-7. 그 밖에 Tang과 Li에 관한 감사 기록(탈이온수·증류수 세척, 피막 제거 없음, 동결건조, 건중 기준, Li의 "잎(줄기 포함)"과 표 사이의 불일치, Li 낟알 정의 미보고, Tang 담수 2–3 cm·탈이온수 관개·무시비·150일·매월 채취)은 원문과 **일치한다.**
+7. **(2026-10-25, 원문 추가 확인) Kim 뿌리 블록 깊이.** 같은 Shizukuishi 실험에 대해 Kim 2001(1998–1999)은 20 cm, Kim 2003(1998–2000)은 15 cm라고 적었다. 원문끼리 다르다. 레포의 `raw_si` 머리말은 둘을 모두 적어 두었다.
+8. **(같은 날) Kim 2001 Table 1의 연도.** 레포는 "1999년(추론)"으로 적었다. 표에는 연도가 없지만, LN·HN을 1999년에만 채취했다는 방법 서술(p.224)이 있으므로 1999년 값이라는 것은 원문에서 바로 따라 나온다. 표 제목의 HN 12 g N m⁻²는 1998년 시비량으로, 원문 내부 불일치다.
+9. **(같은 날) Wuxi 생육단계 날짜.** `validation/oryza2000_wuxi_partitioning.py` 주석은 "Hasegawa 2017의 모델러들은 받았지만 공개되지 않았다"고 썼다. Hasegawa 본문은 개화·성숙 날짜를 **SPAR 챔버 시험**의 모델러에게 줬다고만 쓰고, FACE 시험에 대해서는 보정 자료를 줬다고만 쓴다. SI는 단계별 기상 평균을 실으므로 날짜가 존재했던 것은 맞지만, 모델러가 받았다는 진술은 원문에 없다. 주석을 고쳤다.
+10. **(같은 날) Liu 2023의 생체중 근거.** `data_obs/neutral_obs_liu2023.csv`의 BASIS 주석은 "All fresh weight samples were recorded"를 근거로 들었는데, 이 문장은 반감기 시험(§2.3.1) 단락에 있다. 레포가 쓰는 세포 하 분획 시험에서는 조직을 분리 후 칭량했고, 재구성에 쓰는 Table S3 질량비는 **동결건조한 분획의 건물 비율**이다. Table S4 농도의 기준은 본문에 없다. 친수성 화합물(log Kow < 1)의 재구성 RCF가 0.44–1.23으로 뿌리 수분 함량 수준인 것은 생체중 기준의 특징이므로 값과 fw 표시는 그대로 두고, 근거 서술을 고치고 SI 확인 항목으로 남겼다.
+11. **(같은 날) Kim 2019 SI 표 번호.** 본문은 검출한계를 Table S4, 농도를 Table S5로 인용한다. 레포는 SI 파일 자체의 번호(S5 검출한계, S6 농도)를 쓴다. 같은 표이고 번호 체계만 하나씩 다르다.
+12. 그 밖에 Tang과 Li에 관한 감사 기록(탈이온수·증류수 세척, 피막 제거 없음, 동결건조, 건중 기준, Li의 "잎(줄기 포함)"과 표 사이의 불일치, Li 낟알 정의 미보고, Tang 담수 2–3 cm·탈이온수 관개·무시비·150일·매월 채취)은 원문과 **일치한다.**
 
 ---
 
@@ -342,12 +398,11 @@
 
 ### 5.1 확인하지 못한 자료
 
-- **Kim et al. 2001**(*New Phytol.* 150:223). 이번 세션의 파일(`scratchpad/kimface/kim2001.pdf`)은 논문이 아니라 JavaScript 페이지다. 레포는 이 논문의 Table 1(뿌리 건물중, 블록 깊이 20 cm 등)을 `raw_si/rice_organ_biomass_literature.csv`에서 쓰지만, 이번에 확인하지 못했다.
-- **Kropff et al. 1994a.** ORYZA 매뉴얼이 IR72DS92 시험의 정보를 이 문헌으로 미룬다. 채취와 건조 절차는 이 문헌에 있을 수 있으나 제공되지 않았다.
-- **Okada et al. 2001**(Shizukuishi FACE 시스템), **Liu et al. 2002**(Wuxi FACE 시스템), **Han et al. 2009**(Gao의 LAI 식 출처). 원 논문이 인용만 했고 이번에 읽지 않았다.
-- **Hasegawa et al. 2017 본문.** SI의 Table S1만 읽었다.
-- **Bouman & van Laar 2006.** 이번에 읽지 않았다(같은 IR72DS92 자료는 매뉴얼 §7.2로 확인).
-- **Yamazaki 2023, Kim 2019, Liu 2023.** 이번 세션에 PDF가 없어 이전 감사 기록을 그대로 인용했다.
+- **2026-10-25에 받아 읽은 것**: Kim et al. 2001, Okada et al. 2001, Hasegawa et al. 2017 본문, Bouman & van Laar 2006, Yamazaki 2023 본문, Kim 2019 본문, Liu 2023 본문(§1.9–1.12).
+- **Kropff et al. 1994a**(ORYZA1 책). ORYZA 매뉴얼이 IR72DS92 시험의 정보를 이 책으로 미룬다. 건조 온도와 뿌리 처리는 이 책에 있을 수 있다.
+- **Liu et al. 2002**(Wuxi FACE 시스템, 중국어), **Han et al. 2009**(Gao의 LAI 식 출처, 중국어). 구하지 못했다.
+- **Yamazaki 2023 SI.** 뿌리 세척, 70 °C 건조 후 분리, 제현·도정, 이앙·수확일이 SI에만 있다(†).
+- **Liu 2023 SI.** Table S3(분획 질량비)와 Table S4(분획 농도)의 단위·기준을 확인해야 재구성 RCF의 기준(생체/건물)이 원문으로 확정된다.
 - **입수 요청용 서지** (DOI는 OpenAlex에서 확인, DOI가 없는 것은 인용한 논문의 참고문헌 목록에서 옮김):
   Kim et al. 2001 `10.1046/j.1469-8137.2001.00111.x` · Okada et al. 2001 `10.1046/j.1469-8137.2001.00097.x` ·
   Hasegawa et al. 2017 `10.1038/s41598-017-13582-y` · Bouman & van Laar 2006 `10.1016/j.agsy.2004.09.011` ·
@@ -358,7 +413,7 @@
   *Water Sav. Irrig.* 12:5–7 (Gao 2021 참고문헌).
 - **Tang·Li SI의 쪽 번호.** Word 파일이라 고정 쪽이 없다(LibreOffice로 변환하면 Tang SI가 19쪽이 되지만, 원문 표지는 "12 pages"라고 쓴다). 그래서 Text/Table 번호로 인용했다.
 
-### 5.2 이번에 읽은 논문 어디에도 없는 항목
+### 5.2 읽은 논문 어디에도 없는 항목
 
 | 항목 | 상태 |
 |---|---|
@@ -367,12 +422,12 @@
 | 저울 정밀도 | 모든 논문 보고 안 함 |
 | 뿌리 세척에 쓴 체 눈금 | 모든 논문 보고 안 함 |
 | 철·망간 피막 제거 | 모든 논문 보고 안 함(이전 감사의 데이터셋도 전부 미제거) |
-| 탈락 잎몸 처리 | 모든 논문 보고 안 함 |
+| 탈락 잎몸 처리 | 모든 논문 보고 안 함(고사 잎을 따로 단 Kim 2001·2003, Yang, Gao, Bouman & van Laar 2006도 떨어진 잎몸을 모았는지는 쓰지 않음) |
 | 이삭축 분리 | 모든 논문 보고 안 함 |
-| 탈곡 방법, 임실/불임 분리 방법 | 모든 논문 보고 안 함(Kim 2003은 임실 영화를 셌다고만 씀) |
-| 제현·도정 조건, 현미/백미 질량 | 생장 논문 4편, Tang, Li 보고 안 함(이전 감사 기준 Yamazaki는 백미:현미 비, Kim 2019는 현미) |
-| 천립중 | 모든 논문 보고 안 함 |
+| 탈곡 방법, 임실/불임 분리 방법 | 모든 논문 보고 안 함(Kim 2001·2003은 임실 영화를 셌다고만 씀) |
+| 제현·도정 조건, 현미/백미 질량 | 생장 논문 전부, Tang, Li 보고 안 함(Yamazaki는 백미:현미 비†, Kim 2019는 도정기로 왕겨만 벗긴 현미, 조건 미기재) |
+| 천립중 | Kim 2001 Table 2만 값이 있음(낟알 1개 23.6–25.9 mg). Bouman & van Laar 2006은 쟀다고만 씀. 측정법은 모두 보고 안 함 |
 | 회당 포기 수 | Gao, Tang(월별), Li(부분시료당) 보고 안 함 |
-| 생육단계 사건 날짜 | Kim 2003, Yang 2006, Tang, Li 보고 안 함 |
+| 생육단계 사건 날짜 | Kim 2001, Kim 2003, Yang 2006, Tang, Li 보고 안 함(Hasegawa 2017도 FACE 날짜는 싣지 않음) |
 | 육묘 방식 | Yang 2006, Gao 2021 보고 안 함 |
 | 엽면적 측정 기기 | Kim 2003, Sasaki 2005, Yang 2006 보고 안 함 |

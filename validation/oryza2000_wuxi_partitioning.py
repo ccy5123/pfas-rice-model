@@ -19,8 +19,10 @@
 # above-ground dry matter, at five samplings in each of three years, for another japonica
 # (Wuxiangjing 14, an early-maturing late japonica) at another site (31.6 N) and lab.
 #
-# What the data do NOT give (stated, not worked around): heading and maturity DATES (the
-# modellers of Hasegawa et al. 2017 received them, but they are not published), roots, and
+# What the data do NOT give (stated, not worked around): heading and maturity DATES (Hasegawa
+# et al. 2017 SI averages the weather by phase, so the dates existed, but neither paper prints
+# them; its main text says only the SPAR-chamber modellers were given anthesis and maturity
+# dates -- checked against the article 2026-10-25), roots, and
 # whether dead leaves are inside "leaf" or outside the total. Hasegawa et al. 2017 Table S1
 # gives Wuxi's mean growth duration, 158 d -- read as sowing to maturity, mean of the years:
 # for Shizukuishi the same table's 146 d matches Sasaki's 1999 maturity sampling exactly and

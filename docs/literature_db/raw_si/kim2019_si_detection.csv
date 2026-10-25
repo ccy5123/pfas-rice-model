@@ -1,5 +1,6 @@
 # Kim et al. 2019 (Sci. Total Environ.; DOI 10.1016/j.scitotenv.2019.03.240) SI Table S6 (min/average/max
-# and detection frequency per matrix) joined with SI Table S5 (method detection limit, MDL). Average
+# and detection frequency per matrix) joined with SI Table S5 (method detection limit, MDL) -- numbered as in
+# the SI file; the main text cites the same tables as S5 and S4 (p.716-717). Average
 # treats non-detects as ZERO (stated in the paper), so with the DF and the MDL it bounds the true mean:
 # the n*(1-DF) non-detects lie in [0, MDL]. Void water n=27, soil n=30, brown rice n=30 (one plant per
 # field). Blank min/avg/max = 'ND' (below MDL). Brown rice basis not stated (dw assumed in the repo).
