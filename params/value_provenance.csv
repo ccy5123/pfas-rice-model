@@ -85,4 +85,10 @@ neu_kaw_cut,volatility threshold,1e-4,-,neutral_dpu.K_AW_VOLATILE,neutral,chosen
 tr_li_dvs,Li 2025 stage -> ORYZA DVS mapping,tillering 0.4 / heading 1.0 / filling 1.25 / milk 1.5 / ripening 2.0,-,validation/li2025_stage_resolved.STAGE_DVS,analysis,chosen,stage dates not reported; +-0.15 run,literature,no,map the stage names through a published staging system
 tr_li_grain_from,Li grain scored from filling on,-,-,validation/li2025_stage_resolved.GRAIN_FROM,analysis,convention,pre-registered (gate barely open at heading),converge,no,depends on the gate structure
 tr_drivers,transfer datasets run on the Yamazaki site-year drivers,-,-,validation (Tang / Kim / Li),analysis,convention,their sites and dates are not in the repo,literature,no,each dataset's own site and calendar
+exp_intake,rice intake,150,g/day,model_api.DEFAULT_RICE_INTAKE_G_PER_DAY,app,chosen,check source,literature,no,dietary survey for the population the app addresses
+exp_bw,body weight,60,kg,model_api.DEFAULT_BODY_WEIGHT_KG,app,chosen,check source,literature,no,
+exp_twi,EFSA tolerable weekly intake,4.4,ng/kg bw/week,model_api.EFSA_TWI_NG_PER_KG_BW_WEEK,app,measured,EFSA 2020,keep,yes,
+tang_white,white-rice composition (Tang endosperm reading),theta 0.11 / protein 0.075 / cell wall 0.006,-,model_api (Tang endosperm),analysis,untraceable,rice_tissue_params.csv grain_white rows,literature,no,
+tang_pl_bran,phospholipid share in bran/embryo,0.80,-,model_api._ENDO_PL_BRAN_SHARE,analysis,untraceable,rice_tissue_params.csv note,literature,no,
+tang_endo_mass,endosperm mass share of brown rice,0.88,-,model_api._ENDO_MASS_SHARE,analysis,derived,Yamazaki SI white:brown 86-90 %,keep,yes,
 dec_margins,decision margins,"0.10, 0.3, 0.05/0.10, 1.5x, bootstrap 0.9",-,validation scripts,analysis,decision,fixed before each run; no source,bootstrap,no,docs/ASSUMPTIONS.md section 8
