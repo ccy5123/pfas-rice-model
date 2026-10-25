@@ -98,6 +98,10 @@
 #   * D3: no flip under (s1)-(s3).
 #
 #   python validation/oryza2000_kim_face_nursery_events.py
+#
+# AMENDMENT 2 (shared scorer): the observation operator and the decision rule were corrected --
+# see the AMENDMENT 2 block in validation/oryza2000_kim_face.py (senescent share scored as a
+# floor, Q3-Q5 on living biomass, paired-bootstrap decision instead of fixed margins).
 # =============================================================================
 from __future__ import annotations
 

@@ -106,6 +106,12 @@
 #   * R2: Wp agrees with W (no flip); the green-only reading does not flip R1.
 #
 #   python validation/oryza2000_wuxi_partitioning.py
+#
+# AMENDMENT 2: R1's fixed 0.05 margins are replaced by the paired-bootstrap rule of
+# validation/oryza2000_kim_face.py (AMENDMENT 2): statistic POOLED(B) - POOLED(A) over the
+# scored points, resampled within W1-W4; "A better" / "B better" / "indistinguishable" by
+# the 95 % interval; the port must reach DVS 2. R3 (Gao vs IR72) uses the same rule on W1-W3.
+# Expectation: R1 "A better", R3 "indistinguishable".
 # =============================================================================
 from __future__ import annotations
 

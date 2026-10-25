@@ -131,6 +131,45 @@
 #   such. S4 is reported beside it as the treatment closest to the observed weather; it is
 #   post-hoc (its existence was learned after the results), so it cannot overturn the
 #   pre-registered verdict by itself -- it informs the user's decision, which D4 leaves open.
+#
+# AMENDMENT 2 -- THE OBSERVATION OPERATOR WAS WRONG; CORRECTED (written and pushed before any
+# run with it; applies to every FACE script that uses this file's scorer: oryza2000_kim_face,
+# _phenology, _nursery_events, _gao_japonica; the Wuxi script gets the same decision rule).
+#   What was wrong. Kim 2003 Methods: "a block of soil ... around each individual hill was dug
+#   up. The plants were separated into living and senesced leaf laminae, stem (including leaf
+#   sheath), panicles ... and roots." Only the dug-up hill was weighed and no litter collection
+#   is described, so blades that had already detached are not in the samples. Hence:
+#     * the observed senescent share SL/(GL+SL) is a LOWER BOUND of the crop's: a model above
+#       it is not in error. Scoring it with a symmetric log error (Q2, Q2x) penalised exactly
+#       that -- the "dead-leaf excess" verdicts against the port (D1(b), C1(b), NE, G1, G2)
+#       rested on it;
+#     * the observed total TOT is short of the crop's by the detached blades, so every ratio
+#       with TOT (Q3 GL/TOT, Q4 TOT(s)/TOT(mat), Q5 root/total) mixed a model total that keeps
+#       every dead leaf with an observed total that lost an unknown part of them.
+#   Correction (no new parameter; the detached amount is never estimated):
+#     Q1  GL(s)/GL(anthesis)                    unchanged (green leaves only)
+#     Q2  SL/(GL+SL)                            ONE-SIDED: error = min(0, log10 model/obs) --
+#                                               only a prediction BELOW the floor counts; Q2x
+#                                               (anthesis point excluded) as before
+#     Q3  GL/(TOT-SL)                           leaf share of the LIVING plant
+#     Q4  (TOT-SL)(s)/(TOT-SL)(maturity)        living dry-matter timing
+#     Q5  root/(total-SL), 1999                 SL from Kim 2003 Table 2 at the same sampling
+#   (TOT-SL) is free of detachment on both sides: the model's total minus all its dead leaves,
+#   the observed total minus the attached senescent blades that were weighed.
+#   Decision rule (replaces every fixed 0.05 / 0.10 margin, which were choices, not data):
+#     paired bootstrap over the scored observation points (resampled with replacement WITHIN
+#     each group Q1, Q2x, Q3, Q4, Q5; 4000 resamples, fixed seed), statistic = POOLEDx(B) -
+#     POOLEDx(A); "A better" if the 95 % interval is above 0, "B better" if below 0, otherwise
+#     "indistinguishable". The port must still reach DVS 2 in every held-out year (logical
+#     requirement, unchanged).
+#   EXPECTATION (stated before running; from the per-point values already printed by the old
+#   scorer): the port lies above the floor at every mid-ripening/maturity point, so its Q2x
+#   error becomes ~0; the shipped driver lies below it at mid-ripening every year (0.18/0.13/
+#   0.13 vs 0.23/0.22/0.35), so it keeps a Q2x error. Removing dead leaves from the totals
+#   raises the port's Q3 (its large dead pool no longer dilutes TOT) and changes Q4 little.
+#   Verdicts: "A better" under option C (N) and under the 1999-events design (NE), where the
+#   old scorer failed it on Q2x; for 5b S4 (IR72 phenology) at least "indistinguishable";
+#   Gao vs IR72 port "indistinguishable"; Wuxi stays "A better".
 # =============================================================================
 from __future__ import annotations
 

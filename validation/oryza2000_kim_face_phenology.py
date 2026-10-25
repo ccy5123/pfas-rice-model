@@ -93,6 +93,10 @@
 #   flip under the sensitivities.
 #
 #   python validation/oryza2000_kim_face_phenology.py
+#
+# AMENDMENT 2 (shared scorer): the observation operator and the decision rule were corrected --
+# see the AMENDMENT 2 block in validation/oryza2000_kim_face.py (senescent share scored as a
+# floor, Q3-Q5 on living biomass, paired-bootstrap decision instead of fixed margins).
 # =============================================================================
 from __future__ import annotations
 
