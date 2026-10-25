@@ -118,10 +118,12 @@ and each compartment exports sap at its free concentration $C_k/B_k$, with the e
 \begin{equation}\label{eq:Cxyl}
     \Cw^{\mathrm{xyl}}=f_\mathrm{xy}\,\frac{C_1}{B_1}.
 \end{equation}
-The phloem flow is driven by grain sink demand plus a recirculating fraction $\varphi$ of transpiration:
+The leaf feeds two phloem streams: to the grain, the sap its dry-matter growth draws, and back to the root, a recirculating fraction $\varphi$ of transpiration:
 \begin{equation}\label{eq:Qphl}
-    \dot Q_\mathrm{Phl}=\dv{M_4}{t}\,T_{C,\mathrm{Ph}}+\varphi\,\dot Q_\mathrm{TP},
+    \dot Q_\mathrm{Phl,4}=\dv{M_4^\mathrm{dry}}{t}\,T_{C,\mathrm{Ph}},\qquad
+    \dot Q_\mathrm{Phl,1}=\varphi\,\dot Q_\mathrm{TP},
 \end{equation}
+with $T_{C,\mathrm{Ph}}$ the sap volume per unit grain dry matter. The recirculation does not pass through the grain.
 with phloem sap concentration set by carrier/channel loading at the leaf source (\emph{not} a pH ion-trap, per A5):
 \begin{equation}\label{eq:Cphl}
     C_\mathrm{Phl}=L_\mathrm{Ph}\,\frac{C_3}{B_3}.
@@ -131,12 +133,12 @@ with phloem sap concentration set by carrier/channel loading at the leaf source 
 
 Writing $\mu_k=\tfrac{1}{M_k}\dv*{M_k}{t}$ for the growth-dilution rate,
 \begin{align}
-    \dv{C_1}{t}&=j_R-\frac{\dot Q_\mathrm{TP}}{M_1}\Cw^{\mathrm{xyl}}+\varphi\frac{\dot Q_\mathrm{Phl}}{M_1}C_\mathrm{Phl}-\gamma_1C_1-\mu_1C_1, \label{eq:root}\\[4pt]
+    \dv{C_1}{t}&=j_R-\frac{\dot Q_\mathrm{TP}}{M_1}\Cw^{\mathrm{xyl}}+\frac{\dot Q_\mathrm{Phl,1}}{M_1}C_\mathrm{Phl}-\gamma_1C_1-\mu_1C_1, \label{eq:root}\\[4pt]
     \dv{C_2}{t}&=\frac{\dot Q_\mathrm{TP}}{M_2}\!\left(\Cw^{\mathrm{xyl}}-\frac{C_2}{B_2}\right)-\gamma_2C_2-\mu_2C_2, \label{eq:stem}\\[4pt]
-    \dv{C_3}{t}&=\frac{A_3}{A_3+A_4}\frac{\dot Q_\mathrm{TP}}{M_3}\frac{C_2}{B_2}-(1+\varphi)\frac{\dot Q_\mathrm{Phl}}{M_3}C_\mathrm{Phl}-\gamma_3C_3-\mu_3C_3, \label{eq:leaf}\\[4pt]
-    \dv{C_4}{t}&=\frac{A_4}{A_3+A_4}\frac{\dot Q_\mathrm{TP}}{M_4}\frac{C_2}{B_2}+\frac{\dot Q_\mathrm{Phl}}{M_4}C_\mathrm{Phl}-\gamma_4C_4-\mu_4C_4. \label{eq:fruit}
+    \dv{C_3}{t}&=\frac{A_3}{A_3+A_4}\frac{\dot Q_\mathrm{TP}}{M_3}\frac{C_2}{B_2}-\frac{\dot Q_\mathrm{Phl,4}+\dot Q_\mathrm{Phl,1}}{M_3}C_\mathrm{Phl}-\gamma_3C_3-\mu_3C_3, \label{eq:leaf}\\[4pt]
+    \dv{C_4}{t}&=\frac{A_4}{A_3+A_4}\frac{\dot Q_\mathrm{TP}}{M_4}\frac{C_2}{B_2}+\frac{\dot Q_\mathrm{Phl,4}}{M_4}C_\mathrm{Phl}-\gamma_4C_4-\mu_4C_4. \label{eq:fruit}
 \end{align}
-With $j_R=a_RJ_R$ from Eq.~\eqref{eq:JR_pfas} and the closures \eqref{eq:binding} and \eqref{eq:Cxyl}--\eqref{eq:Cphl}, Eqs.~\eqref{eq:root}--\eqref{eq:fruit} form a closed nonlinear ODE system in $(C_1,\dots,C_4)$.  As the phloem source, the leaf loses the \emph{whole} phloem export $(1+\varphi)\dot Q_\mathrm{Phl}C_\mathrm{Phl}$, which feeds the grain sink ($\dot Q_\mathrm{Phl}C_\mathrm{Phl}$) and the root recirculation ($\varphi\dot Q_\mathrm{Phl}C_\mathrm{Phl}$); together with the matched root$\to$stem loading $\Cw^{\mathrm{xyl}}$, the internal xylem and phloem transfers then conserve solute mass exactly, leaving $j_R$ as the only net source (the only sink being metabolism, $\gamma_k\to0$).
+With $j_R=a_RJ_R$ from Eq.~\eqref{eq:JR_pfas} and the closures \eqref{eq:binding} and \eqref{eq:Cxyl}--\eqref{eq:Cphl}, Eqs.~\eqref{eq:root}--\eqref{eq:fruit} form a closed nonlinear ODE system in $(C_1,\dots,C_4)$.  As the phloem source, the leaf loses the \emph{whole} phloem export $(\dot Q_\mathrm{Phl,4}+\dot Q_\mathrm{Phl,1})C_\mathrm{Phl}$, which feeds the grain sink ($\dot Q_\mathrm{Phl,4}C_\mathrm{Phl}$) and the root recirculation ($\dot Q_\mathrm{Phl,1}C_\mathrm{Phl}$); together with the matched root$\to$stem loading $\Cw^{\mathrm{xyl}}$, the internal xylem and phloem transfers then conserve solute mass exactly, leaving $j_R$ as the only net source (the only sink being metabolism, $\gamma_k\to0$).
 
 
 %% ============================================================
@@ -154,7 +156,7 @@ $B_k$ & binding capacity (tissue retention vs re-export) \\
 $N=zEF/RT$ & electrochemical driving force \\
 $f_\mathrm{xy}$ & root$\to$xylem loading factor (TSCF; translocation throttle) \\
 $\mathrm{Da}_k=\gamma_k B_k M_k/\dot Q_\mathrm{TP}$ & metabolism vs advective throughput \\
-$\Pi=\dot Q_\mathrm{Phl}L_\mathrm{Ph}/\dot Q_\mathrm{TP}$ & phloem vs xylem (leaf$\to$grain partitioning) \\
+$\Pi=\dot Q_\mathrm{Phl,4}L_\mathrm{Ph}/\dot Q_\mathrm{TP}$ & phloem vs xylem (leaf$\to$grain partitioning) \\
 $g_\mathrm{in}/g_\mathrm{out}$ & root influx vs efflux conductance (Eq.~\ref{eq:gio}) \\
 \bottomrule
 \end{tabular}
@@ -187,7 +189,7 @@ The root BAF is thus the binding capacity $B_1$ times an influx/(efflux $+$ load
 
 \paragraph{Grain as a terminal accumulator.}  The fruit \eqref{eq:fruit} has no outflow and $\gamma_4\approx0$; the only sink is growth dilution $\mu_4=K_4^\mathrm{gr}(1-M_4/M_4^\mathrm{max})$, which vanishes as the grain matures.  Hence \emph{no bounded steady state exists}: the grain is an accumulator, and its concentration at harvest is the time integral of all inflows divided by the final grain mass,
 \begin{equation}\label{eq:grain}
-    C_4^{\mathrm{harv}}=\frac{1}{M_4^{\mathrm f}}\int_0^{t_\mathrm{harv}}\!\left(\dot Q_\mathrm{Phl}\,C_\mathrm{Phl}+\frac{A_4}{A_3+A_4}\dot Q_\mathrm{TP}\,\frac{C_2}{B_2}\right)dt.
+    C_4^{\mathrm{harv}}=\frac{1}{M_4^{\mathrm f}}\int_0^{t_\mathrm{harv}}\!\left(\dot Q_\mathrm{Phl,4}\,C_\mathrm{Phl}+\frac{A_4}{A_3+A_4}\dot Q_\mathrm{TP}\,\frac{C_2}{B_2}\right)dt.
 \end{equation}
 This is precisely why a \emph{dynamic} model coupled to grain-filling phenology is required; a steady-state formulation cannot, in principle, predict the edible-tissue concentration.
 
@@ -228,7 +230,7 @@ $T_{C,\mathrm{Ph}}$ & phloem flux coefficient & literature ($\sim\SI{10}{L/kg}$)
 $B_k$ & compartment binding capacity & per-tissue BAF \\
 $g_\mathrm{in}/g_\mathrm{out}$ & root influx/efflux conductance ratio & root BAF \\
 $f_\mathrm{xy}$ & root$\to$xylem loading factor (TSCF) & root vs shoot BAF \\
-$\Pi=\dot Q_\mathrm{Phl}L_\mathrm{Ph}/\dot Q_\mathrm{TP}$ & phloem/xylem ratio & shoot \& grain BAF \\
+$\Pi=\dot Q_\mathrm{Phl,4}L_\mathrm{Ph}/\dot Q_\mathrm{TP}$ & phloem/xylem ratio & shoot \& grain BAF \\
 $\varphi$ & phloem recirculation fraction & root--shoot pattern \\
 \bottomrule
 \end{tabular}

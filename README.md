@@ -119,9 +119,10 @@ B_k = θ_fw + (1 − θ_fw) · ( f_prot·K_prot + f_PL·K_PL + f_cw·K_cw )     
 ```
 
 Root influx = GHK electrodiffusion (anion exclusion e^N ≈ 107 at E_m = −120 mV) + a saturable
-Michaelis–Menten carrier. Xylem loading `f_xy · C_root/B_root` (+ the opt-in lipid term);
-the grain is phloem-fed (`L_Ph`); grain and leaf are terminal accumulators, so the model is
-dynamic.
+Michaelis–Menten carrier. Xylem loading `f_xy · C_root/B_root` (+ the opt-in lipid term).
+The leaf feeds two phloem streams at concentration `L_Ph · C_leaf/B_leaf`: to the grain, the sap
+its dry-matter growth draws; to the root, a fraction φ of transpiration. Grain and leaf are
+terminal accumulators, so the model is dynamic.
 
 ## Open
 

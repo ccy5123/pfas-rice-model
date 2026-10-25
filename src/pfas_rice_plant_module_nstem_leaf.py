@@ -198,9 +198,10 @@ class NStemLeafModel:
         dC = np.zeros_like(C)
 
         leaf, grain, r = self.LEAF, self.GRAIN, self.retention
-        # phloem: loaded at the leaf (free + optional lipid-bound), feeds grain + root recirc.
-        # T_C_Ph is per kg grain DRY matter; M here is fresh organ mass (organ_mass)
-        Q_Phl = max(dM[grain] * (1.0 - self.comps[grain].theta) * self.T_C_Ph + self.phi * Q, 0.0)
+        # phloem: loaded at the leaf (free + optional lipid-bound); two streams -- to the grain
+        # the sap its DRY growth draws (T_C_Ph per kg DM; M is fresh), to the root phi x Q_TP
+        Q_g = max(dM[grain] * (1.0 - self.comps[grain].theta) * self.T_C_Ph, 0.0)
+        Q_r = max(self.phi * Q, 0.0)
         C_Phl = self.cmpd.L_Ph * Cw[leaf] + self.cmpd.g_ph * C[leaf]
 
         # --- root: uptake, full xylem export (f_xy free + lipid g_xy bound), phloem return ---
@@ -209,7 +210,7 @@ class NStemLeafModel:
         xyl_flux = Q * Cw_xyl                          # total solute loaded into the xylem
         dC[self.ROOT] = (jR
                          - xyl_flux / M[self.ROOT]
-                         + self.phi * (Q_Phl / M[self.ROOT]) * C_Phl
+                         + (Q_r / M[self.ROOT]) * C_Phl
                          - g[self.ROOT] * C[self.ROOT] - mu[self.ROOT] * C[self.ROOT])
 
         # --- stem segments: each retains its transpiration-deposited solute ---
@@ -218,8 +219,8 @@ class NStemLeafModel:
                      - g[s] * C[s] - mu[s] * C[s])
 
         # grain FORMATION gate: before the panicle sets (gam~0) the grain takes NO xylem/
-        # phloem -- its residual xylem is rerouted to the leaf and its phloem share is not
-        # exported (leaf export drops to (gam+phi)) so the balance closes (DPU-consistent).
+        # phloem -- its residual xylem is rerouted to the leaf and its phloem stream is not
+        # exported, so the balance closes (DPU-consistent).
         gam = self.inputs.grain_gate_(t)
         residual = (self.lam_grain + (1.0 - r) * (self.tau.sum() + self.lam_leaf)) * xyl_flux
 
@@ -227,13 +228,13 @@ class NStemLeafModel:
         #     source (gated grain share + root recirc); senescence loss carries PFAS away ---
         dC[leaf] = (r * self.lam_leaf * xyl_flux / M[leaf]
                     + (1.0 - gam) * residual / M[leaf]
-                    - (gam + self.phi) * (Q_Phl / M[leaf]) * C_Phl
+                    - ((gam * Q_g + Q_r) / M[leaf]) * C_Phl
                     - g[leaf] * C[leaf] - mu[leaf] * C[leaf]
                     - self.inputs.leaf_loss_(t) * C[leaf])
 
         # --- grain (formation-gated): panicle deposit + non-retained residual xylem + phloem ---
         dC[grain] = (gam * residual / M[grain]
-                     + gam * (Q_Phl / M[grain]) * C_Phl
+                     + gam * (Q_g / M[grain]) * C_Phl
                      - g[grain] * C[grain] - mu[grain] * C[grain])
 
         # --- optional SEQUESTERED root pool: an irreversible (k_rel=0) terminal

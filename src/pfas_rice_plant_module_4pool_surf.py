@@ -16,14 +16,14 @@ Equation map (report -> code):
     j_R  (Eq. JR_pfas)        -> root_uptake()
     B_k  (Eq. binding)        -> binding_factors()
     dC/dt (Eqs. root..fruit)  -> rhs()
-    Q_Phl, C_Phl (Eqs. Qphl, Cphl) -> inside rhs()
+    Q_g, Q_r, C_Phl (Eqs. Qphl, Cphl) -> phloem_flows(), rhs()
 
 Unit system (internally consistent; swap freely, just stay consistent):
     time            day
     aqueous conc    ug/L        (C_w^o, C_w,k, C_Phl)
     tissue conc     ug/kg       (state variable C_k)
     mass            kg
-    volumetric flow L/day       (Q_TP, Q_Phl)
+    volumetric flow L/day       (Q_TP, Q_g, Q_r)
     binding factor  L/kg        (B_k);  C_k = B_k * C_w,k
     membrane cond.  L/(day*kg)  (kappa_d, see note)
 
@@ -247,13 +247,22 @@ def xylem_leaf_share(comps, M, M_basis=None, s_grain_dry=None):
 
 
 def grain_dry_growth(comps, dM, M_basis=None):
-    """Grain DRY-matter growth rate [kg/day] for the phloem flow Q_Phl = growth x T_C_Ph,
+    """Grain DRY-matter growth rate [kg/day] for the grain phloem stream Q_g = growth x T_C_Ph,
     whose coefficient is per kg of grain DRY matter. A fresh M (M_basis 'fresh') carries the
     grain's water, so its growth is converted with the binding factor's theta; None (the
     basis-free placeholder) is used as given."""
     if M_basis == "fresh":
         return dM[FRUIT] * (1.0 - comps[FRUIT].theta)
     return dM[FRUIT]
+
+
+def phloem_flows(comps, dM, Qtp, T_C_Ph, phi, M_basis=None):
+    """The two phloem streams from the leaf [L/day]: to the grain, the sap its DRY-matter
+    growth draws (`grain_dry_growth` x T_C_Ph); to the root, the recirculating fraction phi
+    of transpiration. Separate streams: the recirculation does not pass through the grain."""
+    Q_g = max(grain_dry_growth(comps, dM, M_basis) * T_C_Ph, 0.0)
+    Q_r = max(phi * Qtp, 0.0)
+    return Q_g, Q_r
 
 
 @dataclass
@@ -475,10 +484,10 @@ class RiceUptakeModel:
         split = xylem_leaf_share(self.comps, M, self.inputs.M_basis, self.s_grain_dry)
         f3, f4 = split, 1.0 - split
 
-        # phloem flow and sap concentration (carrier loading at leaf; NOT pH trap)
-        Q_Phl = (grain_dry_growth(self.comps, dM, self.inputs.M_basis) * self.T_C_Ph
-                 + self.phi * Qtp)                    # [L/day]
-        Q_Phl = max(Q_Phl, 0.0)
+        # phloem flows (carrier loading at leaf; NOT pH trap): the grain draws the sap its
+        # dry-matter growth needs (T_C_Ph per kg DM); a fraction phi of transpiration
+        # recirculates to the ROOT. The two are separate streams from the same leaf source.
+        Q_g, Q_r = phloem_flows(self.comps, dM, Qtp, self.T_C_Ph, self.phi, self.inputs.M_basis)
         # L_Ph_eff == cmpd.L_Ph unless a weak-electrolyte pH trap is configured
         C_Phl = (self.phloem_loading_factor() * Cw[LEAF]
                  + self.cmpd.g_ph * C[LEAF])          # free + lipid-bound [ug/L]
@@ -496,28 +505,27 @@ class RiceUptakeModel:
         jR = root_uptake(Cwo, Cw[ROOT], self.cmpd, self.env)
         dC[ROOT] = (jR
                     - (Qtp / M[ROOT]) * Cw_xyl
-                    + self.phi * (Q_Phl / M[ROOT]) * C_Phl
+                    + (Q_r / M[ROOT]) * C_Phl
                     - g[ROOT] * C[ROOT] - mu[ROOT] * C[ROOT])
         # stem (xylem in from root at the loaded conc, xylem out to leaf+fruit)
         dC[STEM] = ((Qtp / M[STEM]) * (Cw_xyl - Cw[STEM])
                     - g[STEM] * C[STEM] - mu[STEM] * C[STEM])
-        # leaf (xylem terminal; phloem source). The leaf supplies the WHOLE
-        # phloem export: the grain sink (Q_Phl*C_Phl) plus the fraction phi*Q_Phl
-        # that recirculates to the root -> total (1+phi)*Q_Phl*C_Phl. This closes
-        # the phloem mass balance (leaf loss = grain gain + root recirculation).
+        # leaf (xylem terminal; phloem source). The leaf supplies the WHOLE phloem
+        # export: the grain stream (Q_g*C_Phl) plus the root recirculation (Q_r*C_Phl).
+        # This closes the phloem mass balance (leaf loss = grain gain + root gain).
         # leaf senescence loss: the dead/shed leaf carries its PFAS away at the leaf
         # death rate (D/M_leaf), cancelling the spurious -mu*C concentration when the
         # leaf shrinks. 0 unless a senescing biomass driver (ORYZA) supplies the rate.
         # grain FORMATION gate: before the panicle sets (gam~0) the grain takes NO xylem/
-        # phloem; its share is rerouted to the leaf (xylem f4 -> leaf; phloem export drops
-        # to (gam+phi)) so the balance still closes. gam->1 at formation (DPU-consistent).
+        # phloem; its xylem share is rerouted to the leaf and its phloem stream is not
+        # exported, so the balance still closes. gam->1 at formation (DPU-consistent).
         dC[LEAF] = ((f3 + (1.0 - gam) * f4) * (Qtp / M[LEAF]) * Cw[STEM]
-                    - (gam + self.phi) * (Q_Phl / M[LEAF]) * C_Phl
+                    - ((gam * Q_g + Q_r) / M[LEAF]) * C_Phl
                     - g[LEAF] * C[LEAF] - mu[LEAF] * C[LEAF]
                     - leaf_loss * C[LEAF])
         # fruit/grain (small xylem in; phloem-dominated; terminal sink) -- gated by gam
         dC[FRUIT] = (gam * f4 * (Qtp / M[FRUIT]) * Cw[STEM]
-                     + gam * (Q_Phl / M[FRUIT]) * C_Phl
+                     + gam * (Q_g / M[FRUIT]) * C_Phl
                      - g[FRUIT] * C[FRUIT] - mu[FRUIT] * C[FRUIT])
         # plant-air exchange (gaseous uptake - volatilisation), opt-in and OFF by
         # default: for `air=None` this branch is skipped, so the PFAS path is

@@ -106,16 +106,17 @@ class NStemModel:
         dC = np.zeros_like(C)
 
         top = self.N                                   # index of top stem segment
-        # T_C_Ph is per kg grain DRY matter; M here is fresh organ mass (organ_mass)
-        Q_Phl = max(dM[self.GRAIN] * (1.0 - self.comps[self.GRAIN].theta) * self.T_C_Ph
-                    + self.phi * Q, 0.0)
+        # two phloem streams from the top segment: to the grain, the sap its DRY growth
+        # draws (T_C_Ph per kg DM; M is fresh organ mass), and phi x Q_TP back to the root
+        Q_g = max(dM[self.GRAIN] * (1.0 - self.comps[self.GRAIN].theta) * self.T_C_Ph, 0.0)
+        Q_r = max(self.phi * Q, 0.0)
         C_Phl = self.cmpd.L_Ph * Cw[top]               # phloem loads at the top segment
 
         # --- root: uptake, xylem export (f_xy), phloem return ---
         jR = root_uptake(Cwo, Cw[self.ROOT], self.cmpd, self.env)
         dC[self.ROOT] = (jR
                          - (Q / M[self.ROOT]) * self.cmpd.f_xy * Cw[self.ROOT]
-                         + self.phi * (Q_Phl / M[self.ROOT]) * C_Phl
+                         + (Q_r / M[self.ROOT]) * C_Phl
                          - g[self.ROOT] * C[self.ROOT] - mu[self.ROOT] * C[self.ROOT])
 
         # --- serial stem segments with transpiration draw-off ---
@@ -128,11 +129,11 @@ class NStemModel:
             Cw_in = Cw[s]                              # passes its free conc upward
             Qin = Qout
         # top segment additionally exports the full phloem (grain + root recirc.)
-        dC[top] -= (1.0 + self.phi) * (Q_Phl / M[top]) * C_Phl
+        dC[top] -= ((Q_g + Q_r) / M[top]) * C_Phl
 
         # --- grain: residual xylem (Qin*Cw_in = Q_out[N]*Cw[top]) + phloem load ---
         dC[self.GRAIN] = ((Qin * Cw_in) / M[self.GRAIN]
-                          + (Q_Phl / M[self.GRAIN]) * C_Phl
+                          + (Q_g / M[self.GRAIN]) * C_Phl
                           - g[self.GRAIN] * C[self.GRAIN] - mu[self.GRAIN] * C[self.GRAIN])
         return dC
 
@@ -195,15 +196,16 @@ class NStemKineticModel(NStemModel):
         dC = np.zeros_like(C)
 
         top = self.N
-        # T_C_Ph is per kg grain DRY matter; M here is fresh organ mass (organ_mass)
-        Q_Phl = max(dM[self.GRAIN] * (1.0 - self.comps[self.GRAIN].theta) * self.T_C_Ph
-                    + self.phi * Q, 0.0)
+        # two phloem streams from the top segment: to the grain, the sap its DRY growth
+        # draws (T_C_Ph per kg DM; M is fresh organ mass), and phi x Q_TP back to the root
+        Q_g = max(dM[self.GRAIN] * (1.0 - self.comps[self.GRAIN].theta) * self.T_C_Ph, 0.0)
+        Q_r = max(self.phi * Q, 0.0)
         C_Phl = self.cmpd.L_Ph * Cw[top]
 
         jR = root_uptake(Cwo, Cw[self.ROOT], self.cmpd, self.env)
         dC[self.ROOT] = (jR
                          - (Q / M[self.ROOT]) * self.cmpd.f_xy * Cw[self.ROOT]
-                         + self.phi * (Q_Phl / M[self.ROOT]) * C_Phl
+                         + (Q_r / M[self.ROOT]) * C_Phl
                          - g[self.ROOT] * C[self.ROOT] - mu[self.ROOT] * C[self.ROOT])
 
         Cw_in = self.cmpd.f_xy * Cw[self.ROOT]
@@ -216,9 +218,9 @@ class NStemKineticModel(NStemModel):
                      - g[s] * C[s] - mu[s] * C[s])
             Cw_in = Cw_xyl                                 # the (stripped) stream goes up
             Qin = Qout
-        dC[top] -= (1.0 + self.phi) * (Q_Phl / M[top]) * C_Phl
+        dC[top] -= ((Q_g + Q_r) / M[top]) * C_Phl
 
         dC[self.GRAIN] = ((Qin * Cw_in) / M[self.GRAIN]
-                          + (Q_Phl / M[self.GRAIN]) * C_Phl
+                          + (Q_g / M[self.GRAIN]) * C_Phl
                           - g[self.GRAIN] * C[self.GRAIN] - mu[self.GRAIN] * C[self.GRAIN])
         return dC

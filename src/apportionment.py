@@ -41,7 +41,7 @@ from __future__ import annotations
 import numpy as np
 
 from pfas_rice_plant_module_4pool_surf import (
-    RiceUptakeModel, binding_factors, root_uptake, xylem_leaf_share, grain_dry_growth,
+    RiceUptakeModel, binding_factors, root_uptake, xylem_leaf_share, phloem_flows,
     ROOT, STEM, LEAF, FRUIT)
 
 _trapz = getattr(np, "trapezoid", None) or np.trapz   # numpy>=2 renames trapz
@@ -78,8 +78,7 @@ def flux_terms(model: RiceUptakeModel, t: float, C: np.ndarray) -> dict:
     split = xylem_leaf_share(model.comps, M, inp.M_basis, model.s_grain_dry)
     f3, f4 = split, 1.0 - split
 
-    Q_Phl = max(grain_dry_growth(model.comps, inp.dM_(t), inp.M_basis) * model.T_C_Ph
-                + model.phi * Qtp, 0.0)
+    Q_g, Q_r = phloem_flows(model.comps, inp.dM_(t), Qtp, model.T_C_Ph, model.phi, inp.M_basis)
     C_Phl = cmpd.L_Ph * Cw[LEAF] + cmpd.g_ph * C[LEAF]
     Cw_xyl = cmpd.f_xy * Cw[ROOT] + cmpd.g_xy * C[ROOT]
     jR = root_uptake(Cwo, Cw[ROOT], cmpd, model.env)
@@ -91,8 +90,8 @@ def flux_terms(model: RiceUptakeModel, t: float, C: np.ndarray) -> dict:
         xylem_root_stem=Qtp * Cw_xyl,
         xylem_stem_leaf=(f3 + (1.0 - gam) * f4) * Qtp * Cw[STEM],
         xylem_stem_grain=gam * f4 * Qtp * Cw[STEM],
-        phloem_leaf_grain=gam * Q_Phl * C_Phl,
-        phloem_leaf_root=model.phi * Q_Phl * C_Phl,
+        phloem_leaf_grain=gam * Q_g * C_Phl,
+        phloem_leaf_root=Q_r * C_Phl,
         leaf_loss=inp.leaf_loss_(t) * C[LEAF] * M[LEAF],
         degr_root=g[ROOT] * C[ROOT] * M[ROOT],
         degr_stem=g[STEM] * C[STEM] * M[STEM],

@@ -37,7 +37,6 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── app.py                            # Streamlit visualization tool (plant/soil map + exposure modes)
 ├── src/
 │   ├── pfas_rice_plant_module_4pool_surf.py  # basis-A 4-compartment ODE (CANONICAL core; + K_surf)
-│   ├── pfas_rice_plant_module_4pool.py / _5pool.py  # variants (no K_surf / explicit lignin pool)
 │   ├── pfas_rice_plant_module_nstem.py       # N serial stem segments (multi-height mixer; Yamazaki gradient)
 │   ├── pfas_rice_plant_module_nstem_leaf.py  # N stem segs + explicit leaf (transpiration deposition + retention)
 │   ├── pfas_rice_plant_module.py             # import alias -> 4pool_surf
