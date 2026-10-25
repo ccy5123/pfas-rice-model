@@ -106,7 +106,9 @@ class NStemModel:
         dC = np.zeros_like(C)
 
         top = self.N                                   # index of top stem segment
-        Q_Phl = max(dM[self.GRAIN] * self.T_C_Ph + self.phi * Q, 0.0)
+        # T_C_Ph is per kg grain DRY matter; M here is fresh organ mass (organ_mass)
+        Q_Phl = max(dM[self.GRAIN] * (1.0 - self.comps[self.GRAIN].theta) * self.T_C_Ph
+                    + self.phi * Q, 0.0)
         C_Phl = self.cmpd.L_Ph * Cw[top]               # phloem loads at the top segment
 
         # --- root: uptake, xylem export (f_xy), phloem return ---
@@ -193,7 +195,9 @@ class NStemKineticModel(NStemModel):
         dC = np.zeros_like(C)
 
         top = self.N
-        Q_Phl = max(dM[self.GRAIN] * self.T_C_Ph + self.phi * Q, 0.0)
+        # T_C_Ph is per kg grain DRY matter; M here is fresh organ mass (organ_mass)
+        Q_Phl = max(dM[self.GRAIN] * (1.0 - self.comps[self.GRAIN].theta) * self.T_C_Ph
+                    + self.phi * Q, 0.0)
         C_Phl = self.cmpd.L_Ph * Cw[top]
 
         jR = root_uptake(Cwo, Cw[self.ROOT], self.cmpd, self.env)

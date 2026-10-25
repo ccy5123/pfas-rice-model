@@ -76,6 +76,24 @@
 #   E5  harvest-not-at-maturity and dead-blades-lost are the consequential unknowns for
 #       straw and grain; nursery, density, plants per hill and CO2 are not.
 #
+# AMENDMENT 1 (before any result was seen). The first run was stopped, its output unread,
+#   when a basis error of the same family as the xylem split was found: the phloem flow
+#   Q_Phl = growth x T_C_Ph uses a coefficient defined per kg of grain DRY matter, but the
+#   grain growth fed to it was FRESH mass (x1/(1-0.14)). Fixed in the model
+#   (pfas_rice_plant_module_4pool_surf.grain_dry_growth and the nstem modules) before this
+#   run. The same review lists model constants that have no measurement behind them; they
+#   join the unknown inputs above, judged by the same rule:
+#     E_m       -90 mV (default -120; parameters.json's own plausible range, NH4+ depolarisation)
+#     Km        x100 = 500 ug/L (default 5, a fixed value; validation/dose_series_carrier.py
+#               bounds Km >= 500 from Tang's dose series)
+#     phi       0.05 / 0.2 (default 0.1; the phloem recirculation fraction, no source)
+#     T_C_Ph    4 / 12 L per kg grain dry matter (default 10, "literature ~10"): sap at
+#               100-300 g/L sugar carrying the grain's carbon is 3.5-11 L/kg, plus ~1 L/kg of
+#               grain water
+#     s_grain   0.2 / 2.0 m2 per kg grain dry matter (default 0.5116 ~4% of the transpiration
+#               stream to the grain at mid-filling; 2.0 = the original S read per kg dry,
+#               ~14%; 0.2 ~2%) -- not measured
+#
 #   python validation/refit_site_year.py            # fits + sensitivity, prints the verdicts
 #   python validation/refit_site_year.py --write    # ... and applies D1 to parameters.json
 # =============================================================================
@@ -116,7 +134,14 @@ UNKNOWNS = {                                      # name -> (low setting, high s
     "co2": ({"co2": 400.0}, {"co2": 430.0}),
     "dead_blades_lost": ("attached0", None),
     "single_mean_run": ("mean_run", None),
+    # AMENDMENT 1: model constants without a measurement
+    "E_m": ({"E_m_mV": -90.0}, None),
+    "Km": ({"km_scale": 100.0}, None),
+    "phi": ({"phi": 0.05}, {"phi": 0.2}),
+    "T_C_Ph": ({"T_C_Ph": 4.0}, {"T_C_Ph": 12.0}),
+    "s_grain": ({"s_grain_dry": 0.2}, {"s_grain_dry": 2.0}),
 }
+MODEL_KEYS = ("E_m_mV", "km_scale", "phi", "T_C_Ph", "s_grain_dry")
 OUT = os.path.join(HERE, "refit_site_year.json")
 
 
@@ -128,6 +153,7 @@ def used(c):
 def predict(c, f_xy, L_Ph, kappa_d, unknowns=None, attached=1.0, runs="both", lipid=None):
     """Two-run geometric-mean dry-basis harvest BAF {root, straw, grain}."""
     unknowns = dict(unknowns or {})
+    model_kw = {k: unknowns.pop(k) for k in list(unknowns) if k in MODEL_KEYS}
     cwo = OBS[c]["water_ng_L"] / 1000.0
     hs = ["mean"] if runs == "mean" else list(HARVESTS)
     kw = {}
@@ -142,7 +168,7 @@ def predict(c, f_xy, L_Ph, kappa_d, unknowns=None, attached=1.0, runs="both", li
     for h in hs:
         d = api.scenario_drivers(Cwo=cwo, harvest=h, **unknowns)
         r = api.simulate(c, drivers=d, f_xy_override=f_xy, L_Ph_override=L_Ph,
-                         kappa_d_override=kappa_d, dead_leaf_attached=attached, **kw)
+                         kappa_d_override=kappa_d, dead_leaf_attached=attached, **kw, **model_kw)
         b = r["baf_final_dw"]
         for k in TISS:
             logs[k].append(np.log10(max(b[k], 1e-30)))
@@ -298,9 +324,13 @@ def main(write=False, verbose=True):
     say = print if verbose else (lambda *a, **k: None)
     with ProcessPoolExecutor(max_workers=os.cpu_count() or 2) as pool:
         A, gmA = run_fits(pool, "A")
+        print("[progress] Fit A done", file=sys.stderr, flush=True)
         B, gmB = run_fits(pool, "B")
+        print("[progress] Fit B done", file=sys.stderr, flush=True)
         L = lipid_fit(pool, B, api.LIPID_LOADING)
+        print("[progress] lipid fit done", file=sys.stderr, flush=True)
         S = sensitivity(pool, A)
+        print("[progress] sensitivity done", file=sys.stderr, flush=True)
         refits = {}
         for name, e in S["effects"].items():
             if not any(e["consequential"].values()):
@@ -389,6 +419,13 @@ def apply(out):
         "f_xy_recommended fixed, so straw is a prediction (a-priori straw log10 RMSE "
         f"{out['rmse_B_straw']:.3f}). PFBS has no grain value: its L_Ph is the geometric mean of the others'.")
     json.dump(par, open(path, "w"), indent=2, ensure_ascii=False)
+    import csv
+    with open(os.path.join(ROOT, "params", "refit_site_year.csv"), "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["compound", "f_xy_fit", "L_Ph_fit", "kappa_d_fit", "L_Ph_rec", "kappa_d_rec"])
+        for c in CONG:
+            a, b = out["A"][c]["params"], out["B"][c]["params"]
+            w.writerow([c] + [f"{v:.6g}" for v in (a["f_xy"], a["L_Ph"], a["kappa_d"], b["L_Ph"], b["kappa_d"])])
 
 
 if __name__ == "__main__":

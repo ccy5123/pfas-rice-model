@@ -199,7 +199,8 @@ class NStemLeafModel:
 
         leaf, grain, r = self.LEAF, self.GRAIN, self.retention
         # phloem: loaded at the leaf (free + optional lipid-bound), feeds grain + root recirc.
-        Q_Phl = max(dM[grain] * self.T_C_Ph + self.phi * Q, 0.0)
+        # T_C_Ph is per kg grain DRY matter; M here is fresh organ mass (organ_mass)
+        Q_Phl = max(dM[grain] * (1.0 - self.comps[grain].theta) * self.T_C_Ph + self.phi * Q, 0.0)
         C_Phl = self.cmpd.L_Ph * Cw[leaf] + self.cmpd.g_ph * C[leaf]
 
         # --- root: uptake, full xylem export (f_xy free + lipid g_xy bound), phloem return ---

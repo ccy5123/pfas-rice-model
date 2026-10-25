@@ -213,7 +213,7 @@ class Compartment:
                              # speciation calculation at all, which is the PFAS path.
 
 
-M_BASES = (None, "fresh", "dry")
+M_BASES = (None, "fresh")
 
 # Transpiring surface per kg DRY matter [m^2/kg], for the leaf/grain xylem split when M is
 # fresh weight. Leaf 20 is the SLA reading of the original S. Grain 0.5116 = 2 x (1-0.78)/
@@ -226,23 +226,34 @@ M_BASES = (None, "fresh", "dry")
 S_XYLEM_DRY = {LEAF: 20.0, FRUIT: 0.5116}
 
 
-def xylem_leaf_share(comps, M, M_basis=None):
+def xylem_leaf_share(comps, M, M_basis=None, s_grain_dry=None):
     """Leaf share of the xylem stream that leaves the stem (the grain takes the rest).
 
     Split by transpiring surface x mass. For a FRESH M (M_basis='fresh') the split runs
     on DRY matter M*(1-theta), with the binding factor's own theta, and S_XYLEM_DRY --
     the crop-model SLA convention (leaf area = SLA x leaf dry weight), so an organ's
-    water content does not set its transpiration share. M_basis None/'dry' splits on M
-    as given with Compartment.S (the placeholder logistic and the pre-fix dry-matter
-    records, which were made that way; Compartment.S is also the air-exchange surface).
+    water content does not set its transpiration share. M_basis None splits on M as
+    given with Compartment.S (the basis-free placeholder logistic; Compartment.S is also
+    the air-exchange surface).
     """
     if M_basis == "fresh":
+        s4 = S_XYLEM_DRY[FRUIT] if s_grain_dry is None else float(s_grain_dry)
         A3 = S_XYLEM_DRY[LEAF] * M[LEAF] * (1.0 - comps[LEAF].theta)
-        A4 = S_XYLEM_DRY[FRUIT] * M[FRUIT] * (1.0 - comps[FRUIT].theta)
+        A4 = s4 * M[FRUIT] * (1.0 - comps[FRUIT].theta)
     else:
         A3 = comps[LEAF].S * M[LEAF]
         A4 = comps[FRUIT].S * M[FRUIT]
     return A3 / (A3 + A4) if (A3 + A4) > 0 else 0.5
+
+
+def grain_dry_growth(comps, dM, M_basis=None):
+    """Grain DRY-matter growth rate [kg/day] for the phloem flow Q_Phl = growth x T_C_Ph,
+    whose coefficient is per kg of grain DRY matter. A fresh M (M_basis 'fresh') carries the
+    grain's water, so its growth is converted with the binding factor's theta; None (the
+    basis-free placeholder) is used as given."""
+    if M_basis == "fresh":
+        return dM[FRUIT] * (1.0 - comps[FRUIT].theta)
+    return dM[FRUIT]
 
 
 @dataclass
@@ -257,15 +268,15 @@ class PlantInputs:
 
     M_basis says what M is, for the one place that needs DRY matter -- the leaf/grain
     xylem split (`xylem_leaf_share`): 'fresh' = M is fresh weight, so the split takes its
-    dry matter M*(1-theta) first; None (default) or 'dry' = split on M as given (the
-    basis-free placeholder logistic, and M that is already dry matter).
+    dry matter M*(1-theta) first; None (default) = split on M as given (the basis-free
+    placeholder logistic).
     """
     t: np.ndarray
     Cwo: np.ndarray
     Qtp: np.ndarray
     M: np.ndarray            # shape (len(t), 4)
     leaf_loss: np.ndarray | None = None   # leaf senescence loss RATE [1/day] (opt; 0 if None)
-    M_basis: str | None = None            # 'fresh' | 'dry' | None -- see the docstring
+    M_basis: str | None = None            # 'fresh' | None -- see the docstring
 
     def __post_init__(self):
         if self.M_basis not in M_BASES:
@@ -392,6 +403,7 @@ class RiceUptakeModel:
     inputs: PlantInputs
     phi: float = 0.1                    # phloem recirculation fraction to roots [-]
     T_C_Ph: float = 10.0                # phloem flux per unit grain dry mass [L/kg]
+    s_grain_dry: float | None = None    # override S_XYLEM_DRY[grain] (an unmeasured constant)
     # OPTIONAL plant-air exchange (volatilisation + gaseous uptake), see
     # `plant_air.AirExchange` and docs/dpu_model_summary_corrected.tex
     # sec:permeability. None (the default) skips the terms entirely -- they are
@@ -460,11 +472,12 @@ class RiceUptakeModel:
         Cw = C / B                                   # free aqueous conc [ug/L]
 
         # leaf/fruit xylem split by transpiring surface, on DRY matter
-        split = xylem_leaf_share(self.comps, M, self.inputs.M_basis)
+        split = xylem_leaf_share(self.comps, M, self.inputs.M_basis, self.s_grain_dry)
         f3, f4 = split, 1.0 - split
 
         # phloem flow and sap concentration (carrier loading at leaf; NOT pH trap)
-        Q_Phl = dM[FRUIT] * self.T_C_Ph + self.phi * Qtp     # [L/day]
+        Q_Phl = (grain_dry_growth(self.comps, dM, self.inputs.M_basis) * self.T_C_Ph
+                 + self.phi * Qtp)                    # [L/day]
         Q_Phl = max(Q_Phl, 0.0)
         # L_Ph_eff == cmpd.L_Ph unless a weak-electrolyte pH trap is configured
         C_Phl = (self.phloem_loading_factor() * Cw[LEAF]

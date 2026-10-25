@@ -23,7 +23,7 @@ import forcing_rice as fr
 import growth_rice as gr
 import organ_mass as om
 import harvest as hv
-from organ_mass import MASS_BASES, DEFAULT_MASS_BASIS   # crop-model DRY matter -> ODE FRESH mass
+from organ_mass import MASS_BASIS          # crop-model DRY matter -> ODE FRESH mass (tag)
 from soil_paddy import FreundlichSoil
 from soil_paddy_redox_corrected import PaddyRedoxCorrected
 
@@ -35,6 +35,9 @@ _CONG = {c["name"]: c for c in PARAMS["congeners"]}
 
 CONGENERS = [c["name"] for c in PARAMS["congeners"]]            # 12, ordered
 TISSUES = ("root", "stem", "leaf", "grain")
+# built-in drivers: the calibration site-year (default) or the generic climatology drivers
+SCENARIOS = ("yamazaki2020", "generic")
+DEFAULT_SCENARIO = "yamazaki2020"
 
 # ---------------------------------------------------------------------------
 # ROOT-ENTRY MECHANISM -- a named mode, because the choice is NOT settled.
@@ -129,26 +132,13 @@ STRAW_PARTS = ("stem", "leaf")
 #   "bound" term loads the membrane/lipid-associated pool into xylem (g_xy) and
 #   phloem (g_ph) so high-binding long chains reach the shoot. Global params fit to
 #   Yamazaki (excl. near-MQL PFDoDA); IN-SAMPLE shape/mechanism, NOT validated.
-#   One set per organ-mass basis (`organ_mass`), fitted by validation/fit_lipid_loading.py:
-#   LIPID_LOADING     -- FRESH mass (the default).
-#   LIPID_LOADING_DRY -- the pre-fix record (dry matter used as M), kept as stored so the
-#                        documented numbers (Tang OOS 0.516, Kim 0.48) still reproduce.
-#   Fresh re-fit: Yamazaki excl PFDoDA log10 RMSE 0.177 (root 0.088), vs 0.372 for the dry
-#   constants on dry mass -- the "lipid loading drains the long-chain root" trade-off
-#   recorded in docs/fxy_longchain_lipid_exploration.md was largely the dry-mass M (a root
-#   10x too light). NOTE the six globals ride on per-congener kappa_d/L_Ph (the W2 fits).
+#   Six globals fitted by validation/refit_site_year.py on the Yamazaki 2020 site-year (dry-basis data,
+#   harvest operator), PFDoDA excluded, riding on the per-congener (L_Ph, kappa_d) of the
+#   "recommended" set (L_Ph_rec, kappa_d_rec) -- so it is not a 6-parameter model on its own.
 LIPID_LOADING = dict(a=0.2146, b=0.1421, g_xy=0.03315, g_ph=0.02096, K_half=4654.0, pfsa_ln=0.8926)
-LIPID_LOADING_DRY = dict(a=0.25, b=0.50, g_xy=0.05, g_ph=0.010, K_half=3000.0, pfsa_ln=1.25)
 
 
-def lipid_loading_params(mass_basis=DEFAULT_MASS_BASIS):
-    """The LIPID_LOADING constants that match an organ-mass basis."""
-    if mass_basis not in MASS_BASES:
-        raise ValueError(f"unknown mass_basis {mass_basis!r}; expected one of {MASS_BASES}")
-    return LIPID_LOADING_DRY if mass_basis == "dry" else LIPID_LOADING
-
-
-def lipid_loading_conductances(n_C, K_PL, group="PFCA", mass_basis=DEFAULT_MASS_BASIS):
+def lipid_loading_conductances(n_C, K_PL, group="PFCA"):
     """(f_xy_free, g_xy, g_ph) for the K_PL-gated lipid-loading model.
 
     f_xy_free = a*exp(-b*(n-4))             free-anion TSCF (declining)
@@ -156,7 +146,7 @@ def lipid_loading_conductances(n_C, K_PL, group="PFCA", mass_basis=DEFAULT_MASS_
     g_xy,g_ph = g_*max * phi                B-independent bound loading
     PFSA carries a head-group factor exp(-pfsa_ln). See LIPID_LOADING.
     """
-    p = lipid_loading_params(mass_basis)
+    p = LIPID_LOADING
     sf = np.exp(-p["pfsa_ln"]) if group == "PFSA" else 1.0
     phi = K_PL / (K_PL + p["K_half"])
     return (p["a"] * np.exp(-p["b"] * (n_C - 4)) * sf, p["g_xy"] * phi * sf, p["g_ph"] * phi * sf)
@@ -203,57 +193,31 @@ def observed_baf(congener):
     return {k: v for k, v in d["baf_dw"].items() if d["use"][k]}
 
 
-def simulate_twopool_carrier(congener, *, f_xy, vmax_in, g_xy=0.0, g_ph=0.0, k_off=0.02,
-                             seq=1.0, biomass="oryza", season=120.0):
-    """Opt-in CARRIER two-pool root model (the long-chain breakthrough; src/pfas_rice_two_pool.py).
-
-    Splits the root into a mobile pool (feeds the xylem / sets the uptake gradient) and a
-    slow bound store (holds the measured root burden), so a LOW f_xy (strong root retention)
-    and an ENHANCED active carrier (high uptake) are independent levers -- which closes the
-    long chains the single-pool core cannot. Returns root/straw/grain BAF (Cwo=1). The
-    canonical ``simulate`` (4pool_surf) is unchanged; this is additive.
-
-    NOTE: distinct from `simulate_twopool_seq` -- that one's second pool is an irreversible
-    SEQUESTRATION sink (non-K_PL U-shaped k_seq, Yamazaki-fit); this one's is a reversible
-    bound STORE tuned by the carrier/f_xy levers (saturated long-chain closure)."""
-    import pfas_rice_two_pool as tp
-    return tp.simulate(congener, f_xy, vmax_in, g_xy=g_xy, g_ph=g_ph, k_off=k_off,
-                       seq=seq, biomass=biomass, season=season)
-
-
-def close_longchain_2pool(congener, *, obs=None, biomass="oryza", season=120.0):
-    """Saturated 3-param structural-adequacy fit of the CARRIER two-pool model
-    (`simulate_twopool_carrier`) to the measured BAFs (free f_xy -> straw, active carrier
-    -> root, g_ph -> grain). ``obs`` defaults to the Yamazaki BAF for the congener. Returns
-    the fitted (f_xy, vmax_in, g_ph) + the reproduced root/straw/grain. Reproduction (DOF 0),
-    NOT a-priori prediction."""
-    import pfas_rice_two_pool as tp
-    obs = obs or observed_baf(congener)
-    if not {"root", "straw", "grain"} <= set(obs):
-        raise KeyError(f"need root/straw/grain BAF for {congener!r}; got {sorted(obs)}")
-    return tp.close_longchain(congener, obs, biomass=biomass, season=season)
+def yamazaki_harvest_baf(congener, runs="both", dead_leaf_attached=1.0, scenario_kw=None,
+                         **sim_kw):
+    """The model's version of the Yamazaki 2023 observation: dry-basis harvest BAF
+    {root, straw, grain} [L/kg dw] on the 2020 site-year, exposure = the congener's
+    irrigation-water level (constant), the two harvest runs (2020-09-01, 2020-09-10)
+    combined by geometric mean as the data combine the two cultivars (`runs="mean"`: the
+    single mean-date run). `sim_kw` pass to `simulate` (f_xy_source, overrides, ...)."""
+    import site_scenario as ss
+    d = yamazaki_obs(congener)
+    cwo = d["water_ng_L"] / 1000.0 if d else 1.0
+    hs = ["mean"] if runs == "mean" else list(ss.YAMAZAKI_HARVESTS)
+    logs = {k: [] for k in ("root", "straw", "grain")}
+    for h in hs:
+        drv = scenario_drivers(Cwo=cwo, harvest=h, **(scenario_kw or {}))
+        r = simulate(congener, drivers=drv, dead_leaf_attached=dead_leaf_attached, **sim_kw)
+        for k in logs:
+            logs[k].append(np.log10(max(r["baf_final_dw"][k], 1e-30)))
+    return {k: float(10 ** np.mean(v)) for k, v in logs.items()}
 
 
 # --- Tang 2026 per-organ TF validation (dry-weight basis) -----------------------
 TANG_CONGENERS = ("PFOA", "PFOS", "GenX")
 # f_xy re-fit to Tang TF at the 0.1 ug/g dose (OVERRIDE-only; validation/tang2026_fxy_refit.py),
-# one fit per organ-mass basis (`organ_mass`):
-#   TANG_REFIT_FXY     -- FRESH mass (the default). PFOS sits at the f_xy = 1 CEILING (0.9988 of
-#                         the bounded fit): the free-anion term cannot deliver Tang's PFOS shoot
-#                         even unrestricted -- the gap the K_PL-gated lipid term closes.
-#   TANG_REFIT_FXY_DRY -- the pre-fix record (dry matter used as M); used with mass_basis='dry'
-#                         so the documented numbers (Tang refit 0.519, ...) still reproduce. NOTE
-#                         it predates later model changes too: re-running the fit on 'dry' with
-#                         the current code gives PFOA 0.114 / PFOS 0.376 / GenX 0.020.
+# on the same drivers `tang_tf_validation` runs (the calibration site-year).
 TANG_REFIT_FXY = {"PFOA": 0.570, "PFOS": 0.999, "GenX": 0.089}
-TANG_REFIT_FXY_DRY = {"PFOA": 0.097, "PFOS": 0.320, "GenX": 0.017}
-
-
-def tang_refit_fxy(mass_basis=DEFAULT_MASS_BASIS):
-    """The Tang-refit f_xy table that matches an organ-mass basis."""
-    if mass_basis not in MASS_BASES:
-        raise ValueError(f"unknown mass_basis {mass_basis!r}; expected one of {MASS_BASES}")
-    return TANG_REFIT_FXY_DRY if mass_basis == "dry" else TANG_REFIT_FXY
 _TANG_TF_ENDPOINT = {"TF_stalk": "stalk", "TF_leaf": "leaf", "TF_endosperm": "endosperm"}
 # (model grain pool, Tang organ name, theta key) for the fresh->dry conversion
 _TANG_ORGANS = (("stem", "stalk", "stem"), ("leaf", "leaf", "leaf"), ("grain", "endosperm", "grain_brown"))
@@ -316,42 +280,36 @@ def tang_observed_tf(congener, dose="mean"):
 
 
 def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
-                       dose="mean", biomass="oryza", season=150.0, lipid_loading=False,
-                       mass_basis=DEFAULT_MASS_BASIS, endosperm="brown"):
-    """Model per-organ transfer factor (DRY-weight) vs Tang 2026, for a Tang congener.
+                       dose="mean", lipid_loading=False, endosperm="brown", scenario=DEFAULT_SCENARIO):
+    """Model per-organ transfer factor (DRY weight) vs Tang 2026, for a Tang congener.
 
-    The model conc is fresh-weight (C=B_k*Cw, basis A); Tang TF is dry/dry, and the
-    (1-theta_fw) factor differs by tissue (root 0.90 vs grain 0.14) so it does NOT cancel
-    in C_tissue/C_root: TF_dw = TF_fw*(1-theta_root)/(1-theta_tissue). Uses the
-    redistributed-shoot model (`simulate_nstem_leaf`) for a sensible stem~leaf split;
-    biomass='oryza' drives it with the mechanistic ORYZA2000 biomass. use_refit applies
-    the Tang-calibrated f_xy override. ``lipid_loading`` turns on the K_PL-gated
-    lipid-facilitated loading mechanism (constants fit on Yamazaki, NOT Tang -> applying it
-    here is out-of-sample; see validation/oos_tang_lipid.py). Returns None for non-Tang congeners.
-    ``endosperm`` -- 'brown' (default; the model's whole-caryopsis grain) or 'white' (milled
-    rice; see TANG_ENDOSPERM). NOTE Tang's roots were rinsed only, so its root -- the TF
+    Tang's TF is tissue/root on dry weight; the model's is formed the same way from the
+    harvest operator (`conc_dw`: stalk = stem, leaf = green + attached dead blades,
+    endosperm = the grain pool). Runs the redistributed-shoot model (`simulate_nstem_leaf`)
+    on `scenario` -- by default the calibration site-year, since Tang's site and dates are
+    not in the repo (a transfer of drivers as well as parameters). use_refit applies the
+    Tang-calibrated f_xy override. ``lipid_loading`` turns on the K_PL-gated lipid loading
+    (constants fit on Yamazaki, NOT Tang -> out-of-sample; validation/oos_tang_lipid.py).
+    ``endosperm`` -- 'brown' (default; the whole-caryopsis grain) or 'white' (milled rice;
+    see TANG_ENDOSPERM). NOTE Tang's roots were rinsed only, so its root -- the TF
     denominator -- may carry surface-sorbed PFAS (no Fe/Mn plaque removal; same confound as
-    Li 2025), which would bias every Tang TF low.
+    Li 2025), which would bias every Tang TF low. Returns None for non-Tang congeners.
     """
     if congener not in TANG_CONGENERS:
         return None
     if endosperm not in TANG_ENDOSPERM:
         raise ValueError(f"unknown endosperm {endosperm!r}; expected one of {TANG_ENDOSPERM}")
-    refit = tang_refit_fxy(mass_basis)
-    fxy = refit[congener] if use_refit else None
-    r = simulate_nstem_leaf(congener, Cwo=1.0, season=season, biomass_fn=_biomass_fn(biomass),
-                            f_xy_source=f_xy_source, f_xy_override=fxy, lipid_loading=lipid_loading,
-                            mass_basis=mass_basis)
-    froot = 1.0 - _COMP["root"]["theta_fw"]
-    model = {org: r["tf_final"][mk] * froot / (1.0 - _COMP[tk]["theta_fw"])
-             for mk, org, tk in _TANG_ORGANS}
+    fxy = TANG_REFIT_FXY[congener] if use_refit else None
+    r = simulate_nstem_leaf(congener, Cwo=1.0, f_xy_source=f_xy_source, f_xy_override=fxy,
+                            lipid_loading=lipid_loading, scenario=scenario)
+    dw = r["baf_final_dw"]
+    model = {org: dw[mk] / dw["root"] for mk, org, _ in _TANG_ORGANS}
     if endosperm == "white":            # simulate_nstem_leaf's default K_cw_organ is "stem"
         model["endosperm"] *= endosperm_white_factor(congener, K_cw_organ="stem")
     return dict(congener=congener, organs=[o for _, o, _ in _TANG_ORGANS],
                 model_tf=model, tang_tf=tang_observed_tf(congener, dose),
                 f_xy=float(r["params"]["f_xy"]), use_refit=bool(use_refit), dose=dose,
-                biomass=biomass, refit_fxy=refit[congener], mass_basis=mass_basis,
-                endosperm=endosperm)
+                scenario=scenario, refit_fxy=TANG_REFIT_FXY[congener], endosperm=endosperm)
 
 
 def chain_table():
@@ -362,7 +320,7 @@ def chain_table():
                          K_PL=c["K_PL_Lkg"], K_prot=c["K_prot_Lkg"],
                          K_cw_root=c["K_cw_wholecw_Lkg"]["root"],
                          f_xy_recommended=c["f_xy_recommended"],
-                         f_xy_W2fit=c.get("f_xy_W2fit"),
+                         f_xy_fit=c.get("f_xy_fit"),
                          B_root=c["B_k_basisA_Lkg_fw"]["root"],
                          B_grain=c["B_k_basisA_Lkg_fw"]["grain"]))
     return rows
@@ -371,27 +329,21 @@ def chain_table():
 BIOMASS_DRIVERS = ("oryza", "oryza2000", "growth_rice")
 
 
-def _biomass_fn(biomass="oryza"):
-    """Organ-biomass callable (t, season) -> dict{root,stem,leaf,grain} [kg DRY/hill].
+def _biomass_fn(biomass="oryza2000"):
+    """Organ-biomass callable (t, season) -> dict{root,stem,leaf,grain} [kg DRY/hill], for
+    the "generic" scenario only (the default "yamazaki2020" scenario runs the ORYZA2000 port
+    on the site's weather and dates -- `scenario_drivers`). Every place that turns the dry
+    matter into the ODE's mass goes through `organ_mass` (fresh organ mass).
 
-    Returns the crop model's DRY matter. Every place that turns it into the ODE's mass
-    driver goes through `organ_mass` (`om.organ_matrix` / `om.to_model_mass`), which
-    converts to FRESH mass by default -- see `organ_mass` and `mass_basis`.
-
-    'oryza'       -> a REDUCED re-coding of the ORYZA2000 Level-1 carbon balance (`oryza_growth`;
-                     radiation/temperature-driven, "IR72 order of magnitude" parameters,
-                     anchored to a 1740 g/m2 shoot). THE DEFAULT.
     'oryza2000'   -> ORYZA2000 potential production ported line by line from the manual's
-                     Fortran with the IR72.D92 crop file verbatim (`oryza2000`; no anchor).
-                     Opt-in: it reproduces the IR72DS92 experiment (phenology within 2 d,
-                     aboveground biomass within ~6%) where 'oryza' matures 12 d late and keeps
-                     growing its stem after flowering (validation/oryza2000_ir72ds92.py). The
-                     ORYZA-based fits were made on 'oryza', so switching moves those numbers.
+                     Fortran with the IR72.D92 crop file verbatim (`oryza2000`) on the built-in
+                     climatology. It reproduces the IR72DS92 experiment (phenology within 2 d,
+                     aboveground biomass within ~6%; validation/oryza2000_ir72ds92.py).
+    'oryza'       -> a REDUCED re-coding of the ORYZA2000 Level-1 carbon balance (`oryza_growth`,
+                     anchored to a 1740 g/m2 shoot). On IR72DS92 it matures 12 d late and keeps
+                     growing its stem after flowering; kept as an alternative for sensitivity.
     'growth_rice' -> ORYZA IR72 DVS-partitioning on a logistic total-biomass curve
-                     (`growth_rice`; the lightweight reconstruction). NOTE: the per-congener
-                     f_xy_W2fit/L_Ph_W2fit and `reproduce_demo.py` reproduction were tuned on
-                     a placeholder/growth_rice driver, so use 'growth_rice' to match those
-                     legacy artifacts; the live default is 'oryza'.
+                     (`growth_rice`; the lightweight reconstruction; no leaf death).
     """
     if biomass == "oryza":
         import oryza_growth as og
@@ -402,10 +354,6 @@ def _biomass_fn(biomass="oryza"):
     if biomass == "growth_rice":
         return gr.organ_biomass
     raise ValueError(f"biomass must be one of {BIOMASS_DRIVERS}, got {biomass!r}")
-
-
-SCENARIOS = ("yamazaki2020", "generic")
-DEFAULT_SCENARIO = "yamazaki2020"
 
 
 def _site_run_cached():
@@ -435,8 +383,7 @@ def site_run(harvest="mean", **unknowns):
     return _SITE_RUN(harvest, tuple(sorted(unknowns.items())))
 
 
-def scenario_drivers(scenario=DEFAULT_SCENARIO, Cwo=1.0, mass_basis=DEFAULT_MASS_BASIS,
-                     harvest="mean", **unknowns):
+def scenario_drivers(scenario=DEFAULT_SCENARIO, Cwo=1.0, harvest="mean", **unknowns):
     """A `simulate(drivers=...)` dict for a site-year scenario.
 
     "yamazaki2020" -- the PFAS calibration site-year (NARO Tsukuba, 2020): JMA weather, the
@@ -447,12 +394,12 @@ def scenario_drivers(scenario=DEFAULT_SCENARIO, Cwo=1.0, mass_basis=DEFAULT_MASS
         raise ValueError(f"no site-year drivers for scenario {scenario!r}")
     import site_scenario as ss
     run = site_run(harvest, **unknowns)
-    d = ss.drivers_from_run(run, Cwo=Cwo, mass_basis=mass_basis)
+    d = ss.drivers_from_run(run, Cwo=Cwo)
     return {k: (np.array(v, copy=True) if isinstance(v, np.ndarray) else v) for k, v in d.items()}
 
 
-def _default_drivers(season, n_t, Cwo, measured_forcing, biomass="oryza",
-                     mass_basis=DEFAULT_MASS_BASIS, scenario=DEFAULT_SCENARIO, scenario_kw=None):
+def _default_drivers(season, n_t, Cwo, measured_forcing, biomass="oryza2000",
+                     scenario=DEFAULT_SCENARIO, scenario_kw=None):
     """The built-in drivers: (t, Cwo, Qtp, M, leaf_loss, M_basis).
 
     measured_forcing and scenario "yamazaki2020" (DEFAULT): the calibration site-year
@@ -464,15 +411,15 @@ def _default_drivers(season, n_t, Cwo, measured_forcing, biomass="oryza",
     if scenario not in SCENARIOS:
         raise ValueError(f"scenario must be one of {SCENARIOS}, got {scenario!r}")
     if measured_forcing and scenario == "yamazaki2020":
-        d = scenario_drivers(scenario, Cwo=Cwo, mass_basis=mass_basis, **(scenario_kw or {}))
+        d = scenario_drivers(scenario, Cwo=Cwo, **(scenario_kw or {}))
         return d["t"], d["Cwo"], d["Qtp"], d["M"], d["leaf_loss"], d["mass_basis"]
     t = np.linspace(0.0, float(season), int(n_t))
     if measured_forcing:
         Qtp = fr.Q_TP(t, season)
         b = _biomass_fn(biomass)(t, season)
-        M = om.organ_matrix(b, mass_basis)
+        M = om.organ_matrix(b)
         leaf_loss = b.get("leaf_death_rate")            # only the senescing ORYZA driver supplies it
-        basis = mass_basis
+        basis = MASS_BASIS
     else:
         Qtp = 0.05 + 0.35 * np.exp(-((t - 0.62 * season) ** 2) / (2 * (season / 4.8) ** 2))
         M = np.column_stack([_logistic(t, 1e-3, 0.030, 0.10, season * 0.17),
@@ -497,12 +444,12 @@ def _harvest(t, conc, M, comps, M_basis, leaf_loss, attached, sol, leaf_index):
 def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
              f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
              lipid_loading=False, g_xy_override=None, g_ph_override=None,
-             season=120.0, n_t=241, measured_forcing=True, biomass="oryza",
+             season=120.0, n_t=241, measured_forcing=True, biomass="oryza2000",
              drivers=None, K_surf=0.0, record=None,
              cwo_profile="constant", cwo_kw=None,
              uptake=DEFAULT_UPTAKE, vmax_scale=None, g_apo=None, km_scale=1.0,
-             mass_basis=DEFAULT_MASS_BASIS, dead_leaf_attached=1.0,
-             scenario=DEFAULT_SCENARIO, scenario_kw=None):
+             dead_leaf_attached=1.0, scenario=DEFAULT_SCENARIO, scenario_kw=None,
+             phi=0.1, T_C_Ph=10.0, s_grain_dry=None):
     """Run the 4-compartment ODE for one congener and scenario.
 
     Parameters
@@ -510,16 +457,26 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     congener : one of CONGENERS.
     Cwo : constant pore-water free concentration C_w^o [ug/L] (1.0 -> conc == BAF).
     E_m_mV : root membrane potential [mV] (GHK anion-exclusion lever).
-    f_xy_source : "recommended" (monotone) or "W2fit" (reproduces Yamazaki).
+    f_xy_source : "recommended" (DEFAULT; the monotone a-priori f_xy, with L_Ph/kappa_d
+        fitted to root and grain given it, so straw is a prediction) or "fit" (all three
+        fitted per congener -- reproduces Yamazaki by construction). See F_XY_SOURCES.
     f_xy_override : if given, use this f_xy instead.
     L_Ph_override, kappa_d_override : if given, use these phloem-loading / root
-        membrane-conductance values instead of the per-congener W2 fits.
-    measured_forcing : True -> Q_TP from forcing_rice, organ biomass M from the
-        `biomass` driver; False -> the illustrative logistic placeholders.
-    biomass : 'oryza' (the mechanistic ORYZA2000 Level-1 carbon balance,
-        `oryza_growth`; THE DEFAULT, first-principles) or 'growth_rice' (ORYZA IR72
-        partitioning on a logistic; the lightweight reconstruction that matches the
-        legacy f_xy_W2fit/`reproduce_demo` calibration). Ignored when `drivers` supply M.
+        membrane-conductance values instead of the fitted ones.
+    scenario : "yamazaki2020" (DEFAULT; the calibration site-year -- JMA Tsukuba 2020, the
+        ORYZA2000 port on the paper's dates, ORYZA2000 transpiration; `scenario_drivers`;
+        `scenario_kw` overrides its unreported inputs) or "generic" (forcing_rice
+        transpiration + the `biomass` driver over `season` days).
+    measured_forcing : False -> the illustrative logistic placeholders (any scenario).
+    biomass, season, n_t : the "generic" scenario's biomass driver and grid
+        ('oryza2000' / 'oryza' / 'growth_rice'; see `_biomass_fn`).
+    dead_leaf_attached : fraction of dead blades still on the plant at harvest, for the
+        harvest operator (`harvest`): 1 (default) keeps them in the leaf and straw, 0 drops
+        them. Not measured anywhere here -- run both ends as a sensitivity.
+    phi, T_C_Ph, s_grain_dry : the phloem recirculation fraction, the phloem flow per kg of
+        grain dry-matter growth [L/kg] and the grain's transpiring surface per kg dry matter
+        (the xylem split; default `S_XYLEM_DRY`). None of the three is measured for rice;
+        validation/refit_site_year.py runs them as sensitivities.
     drivers : optional dict with arrays {'t','Cwo','Qtp','M'} (M shape (n,4)) that
         OVERRIDE the built-in forcings -- the entry point for a HYDRUS-1D / Phydrus
         run or a soil-inventory inversion (see `drivers_from_arrays`,
@@ -549,14 +506,10 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         efflux). 1.0 (default) is the shipped Km. This is the knob a DOSE series
         acts on -- Km is what decides WHERE the carrier stops being linear, and
         `validation/dose_series_carrier.py` uses it to bound Km from below.
-    mass_basis : how the crop model's DRY organ matter becomes the ODE's mass M
-        (only when the built-in measured forcing builds M; `drivers` carry their own).
-        'fresh' (default) = dry/(1-theta_fw), the basis B_k and every observation are
-        on. 'dry' = the pre-fix behaviour, kept only to reproduce artifacts fitted on
-        it; it also selects the dry fits kept beside the fresh ones (`*_oryza_dry`,
-        `LIPID_LOADING_DRY`, `TANG_REFIT_FXY_DRY`). See `organ_mass`.
 
-    Returns a dict with t, per-compartment conc & BAF time series, finals, straw,
+    Returns a dict with t, per-compartment conc & BAF time series (FRESH weight; the green
+    leaf), finals, straw (with attached dead blades), the dry-basis harvest values
+    (`conc_dw`, `baf_final_dw` -- compare these with dw-reported data), the dead-blade pool,
     the driver series actually used (Cwo, Qtp, M), B_k, and the effective params.
     """
     if uptake not in UPTAKE_MODES:
@@ -581,7 +534,7 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         M_basis = drivers.get("mass_basis", "fresh")
     else:
         t, Cwo_series, Qtp, M, leaf_loss, M_basis = _default_drivers(
-            season, n_t, Cwo, measured_forcing, biomass, mass_basis, scenario, scenario_kw)
+            season, n_t, Cwo, measured_forcing, biomass, scenario, scenario_kw)
         season = float(t[-1])
         if cwo_profile != "constant":
             Cwo_series = cwo_profile_series(
@@ -591,7 +544,7 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
                          M_basis=M_basis)
 
     f_xy_def, L_Ph_def, kappa_d_def, g_xy_def, g_ph_def = _transport_defaults(
-        c, f_xy_source, lipid_loading, mass_basis)
+        c, f_xy_source, lipid_loading)
     f_xy = float(f_xy_override) if f_xy_override is not None else float(f_xy_def)
     g_xy = float(g_xy_override) if g_xy_override is not None else float(g_xy_def)
     g_ph = float(g_ph_override) if g_ph_override is not None else float(g_ph_def)
@@ -607,7 +560,8 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
                     g_apo=float(g_apo))
     comps = _compartments()
     env = Environment(E=E_m_mV / 1000.0)
-    model = RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs)
+    model = RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs, phi=float(phi),
+                            T_C_Ph=float(T_C_Ph), s_grain_dry=s_grain_dry)
     sol = model.solve(t)
     C = sol.y                                            # (4, n_t)
     conc = {k: C[i] for i, k in enumerate(TISSUES)}
@@ -718,40 +672,47 @@ def simulate_from_smiles(smiles, *, name=None, f_xy=None, f_xy_override=None, **
     return res
 
 
-def _transport_defaults(c, f_xy_source, lipid_loading, mass_basis=DEFAULT_MASS_BASIS):
+F_XY_SOURCES = ("recommended", "fit")
+
+
+def _fitted_geomean(key):
+    vals = [c[key] for c in PARAMS["congeners"] if c.get(key)]
+    return float(10 ** np.mean(np.log10(vals)))
+
+
+def _transport_defaults(c, f_xy_source, lipid_loading):
     """Resolve the (f_xy, L_Ph, kappa_d, g_xy, g_ph) defaults for a congener record.
 
-    f_xy_source: 'recommended' (monotone physical TSCF), 'W2fit' (per-congener fit on
-    the placeholder/growth_rice driver -- reproduces Yamazaki there; reproduce_demo),
-    or 'oryza' (per-congener fit on the mechanistic ORYZA2000 biomass -- the
-    reproduction calibration for the default driver; validation/refit_oryza.py).
-    'oryza' has one fit per organ-mass basis: `*_oryza` on FRESH mass (the default)
-    and `*_oryza_dry`, the fit made before the dry->fresh fix (`organ_mass`), used when
-    mass_basis='dry' so that legacy run still reproduces.
-    """
+    f_xy_source 'recommended': the monotone physical f_xy (`f_xy_recommended`) with L_Ph and
+        kappa_d fitted to Yamazaki's grain and root GIVEN it (`L_Ph_rec`, `kappa_d_rec`).
+    f_xy_source 'fit': (f_xy, L_Ph, kappa_d) fitted per congener to root, straw and grain
+        (`*_fit`; saturated). Both from validation/refit_site_year.py on the 2020 site-year.
+    lipid_loading: the K_PL-gated lipid model's f_xy and bound terms on the 'recommended'
+        L_Ph / kappa_d (the protocol LIPID_LOADING was fitted with).
+    A record without a fit (GenX, a SMILES-derived structure) takes the geometric mean of the
+    fitted congeners' values -- the same rule the fit uses for PFBS's missing grain."""
+    if f_xy_source not in F_XY_SOURCES:
+        raise ValueError(f"f_xy_source must be one of {F_XY_SOURCES}, got {f_xy_source!r}")
+    sfx = "_fit" if (f_xy_source == "fit" and not lipid_loading) else "_rec"
+    L_Ph = c.get("L_Ph" + sfx) or _fitted_geomean("L_Ph" + sfx)
+    kappa_d = c.get("kappa_d" + sfx) or _fitted_geomean("kappa_d" + sfx)
     if lipid_loading:
-        f_xy, g_xy, g_ph = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"],
-                                                      mass_basis)
-        return f_xy, (c.get("L_Ph_W2fit") or 0.01), (c.get("kappa_d_W2fit") or 2.0), g_xy, g_ph
-    if f_xy_source == "oryza":
-        sfx = "_oryza_dry" if mass_basis == "dry" else "_oryza"
-        return (c.get("f_xy" + sfx) or c["f_xy_recommended"],
-                c.get("L_Ph" + sfx) or (c.get("L_Ph_W2fit") or 0.01),
-                c.get("kappa_d" + sfx) or (c.get("kappa_d_W2fit") or 2.0), 0.0, 0.0)
-    f_xy = c["f_xy_recommended"] if f_xy_source == "recommended" else (c.get("f_xy_W2fit") or c["f_xy_recommended"])
-    return f_xy, (c.get("L_Ph_W2fit") or 0.01), (c.get("kappa_d_W2fit") or 2.0), 0.0, 0.0
+        f_xy, g_xy, g_ph = lipid_loading_conductances(c["n_C"], c["K_PL_Lkg"], c["group"])
+        return f_xy, L_Ph, kappa_d, g_xy, g_ph
+    if f_xy_source == "fit":
+        return (c.get("f_xy_fit") or c["f_xy_recommended"]), L_Ph, kappa_d, 0.0, 0.0
+    return c["f_xy_recommended"], L_Ph, kappa_d, 0.0, 0.0
 
 
 def _compound_for(congener, f_xy_source="recommended", f_xy_override=None,
                   L_Ph_override=None, kappa_d_override=None, lipid_loading=False,
-                  g_xy_override=None, g_ph_override=None, K_cw_organ="stem",
-                  mass_basis=DEFAULT_MASS_BASIS):
+                  g_xy_override=None, g_ph_override=None, K_cw_organ="stem"):
     """Build a Compound for `congener` with the same parameter resolution as
     simulate() (f_xy source / lipid loading / overrides). `K_cw_organ` picks the
     cell-wall K used (the nstem stem segments use the stem cell wall)."""
     c = _CONG[congener]
     f_xy_def, L_Ph_def, kappa_d_def, g_xy_def, g_ph_def = _transport_defaults(
-        c, f_xy_source, lipid_loading, mass_basis)
+        c, f_xy_source, lipid_loading)
     f_xy = float(f_xy_override) if f_xy_override is not None else float(f_xy_def)
     g_xy = float(g_xy_override) if g_xy_override is not None else float(g_xy_def)
     g_ph = float(g_ph_override) if g_ph_override is not None else float(g_ph_def)
@@ -771,7 +732,7 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
                         season=150.0, n_t=361, N=4, stem_transp_frac=0.45,
                         lam_grain=0.05, retention=0.6, biomass_fn=None,
                         k_seq=0.0, k_rel=0.0, K_cw_organ="stem", drivers=None,
-                        mass_basis=DEFAULT_MASS_BASIS, dead_leaf_attached=1.0):
+                        dead_leaf_attached=1.0, scenario=DEFAULT_SCENARIO, scenario_kw=None):
     """Redistributed-shoot uptake run (N stem segments + explicit leaf), the Tang
     2026 over-translocation fix (see `pfas_rice_plant_module_nstem_leaf`).
 
@@ -786,15 +747,17 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
         (the leaf takes the remainder, minus `lam_grain`). Crop-architecture lever.
     retention : fraction of each organ's transpiration deposit that is retained
         (terminal); 1-retention flows on to the grain as residual xylem.
+    scenario : "yamazaki2020" (DEFAULT) runs on the calibration site-year drivers, exactly as
+        `simulate()`; with `biomass_fn` given (or scenario "generic") it runs on forcing_rice
+        transpiration and that biomass driver over `season` days.
     biomass_fn : callable (t, season) -> dict{root,stem,leaf,grain} [kg DRY/hill] for the
-        organ biomass driver. Default None -> the mechanistic ORYZA2000 (`oryza_growth`).
-        Pass `gr.organ_biomass` for the lightweight growth_rice reconstruction. Its DRY
-        matter is converted to the ODE's `mass_basis` (fresh by default; `organ_mass`).
+        generic drivers (default the ORYZA2000 port, `_biomass_fn("oryza2000")`); its dry
+        matter becomes fresh organ mass through `organ_mass`.
     k_seq, k_rel : optional TWO-POOL root (mobile + sequestered) rates [1/day].
-        k_seq=0 (default) keeps the single root pool -- identical to the pre-merge
-        model. With k_seq>0 the reported `root` is mobile+sequestered and the extra
-        keys `root_mobile`/`root_seq`/`seq_fraction` are returned. Use
-        `simulate_twopool_nstem()` to get the fitted two-pool parameter set.
+        k_seq=0 (default) keeps the single root pool. With k_seq>0 the reported `root`
+        is mobile+sequestered and the extra keys `root_mobile`/`root_seq`/`seq_fraction`
+        are returned. No fitted two-pool parameter set ships (the two-pool explorations
+        are archived: validation/archive/README.md).
     K_cw_organ : which tissue's cell-wall K_cw parameterises the binding ('stem'
         default, as before; 'root' matches the two-pool root fit's convention).
     drivers : optional standard driver dict {t, Cwo, Qtp, M} with M as the FOUR
@@ -818,13 +781,18 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
             + [np.maximum(organ_M[:, 1] / N, 1e-9)] * N
             + [np.maximum(organ_M[:, 2], 1e-9), np.maximum(organ_M[:, 3], 1e-9)])
         leaf_loss = drivers.get("leaf_loss")
-        nl_basis = drivers.get("mass_basis", "fresh")
+    elif biomass_fn is None and scenario == "yamazaki2020":
+        d = scenario_drivers(scenario, Cwo=Cwo, **(scenario_kw or {}))
+        t, Qtp, Cwo_series, leaf_loss = d["t"], d["Qtp"], d["Cwo"], d["leaf_loss"]
+        season = float(t[-1])
+        organ_M = d["M"]
+        M = np.column_stack(
+            [organ_M[:, 0]] + [organ_M[:, 1] / N] * N + [organ_M[:, 2], organ_M[:, 3]])
     else:
-        nl_basis = mass_basis
         t = np.linspace(0.0, float(season), int(n_t))
         Qtp = fr.Q_TP(t, season)
-        b = (biomass_fn or _biomass_fn("oryza"))(t, season)  # default: mechanistic ORYZA2000
-        b = om.to_model_mass(b, mass_basis)                  # crop DRY matter -> ODE mass basis
+        b = (biomass_fn or _biomass_fn("oryza2000"))(t, season)
+        b = om.to_model_mass(b)                              # crop DRY matter -> FRESH mass
         M = np.column_stack(
             [np.maximum(b["root"], 1e-9)]
             + [np.maximum(b["stem"] / N, 1e-9)] * N
@@ -839,7 +807,7 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
         N, _kw(g["stem"]), _kw(g["root"]), _kw(g["leaf"]), _kw(g["grain_brown"]))
     cmpd = _compound_for(congener, f_xy_source, f_xy_override, L_Ph_override,
                          kappa_d_override, lipid_loading, g_xy_override, g_ph_override,
-                         K_cw_organ=K_cw_organ, mass_basis=mass_basis)
+                         K_cw_organ=K_cw_organ)
     tau, lam_leaf, lam_grain = split_from_stem_frac(N, stem_transp_frac, lam_grain)
     env = Environment(E=E_m_mV / 1000.0)
     model = NStemLeafModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs, tau=tau,
@@ -862,7 +830,7 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
     M4 = np.column_stack([M[:, 0], np.sum(Mseg, axis=1), M[:, model.LEAF], M[:, model.GRAIN]])
     obs = hv.harvest_observables(
         t, conc, M4, hv.dry_fractions({o: _COMP["grain_brown" if o == "grain" else o]["theta_fw"]
-                                       for o in TISSUES}, nl_basis),
+                                       for o in TISSUES}),
         leaf_loss=leaf_loss, attached=dead_leaf_attached,
         C_leaf_fn=lambda tt: sol.sol(tt)[model.LEAF])
     straw = obs["straw_fw"]
@@ -887,241 +855,6 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
                     kappa_d=float(cmpd.kappa_d), g_xy=float(cmpd.g_xy),
                     g_ph=float(cmpd.g_ph), k_seq=float(k_seq), k_rel=float(k_rel)),
     )
-
-
-# ---------------------------------------------------------------------------
-# SEQUESTRATION two-pool root model (EXPLORATORY, opt-in) -- mobile + sequestered
-#   docs/twopool_root_exploration.md ; validation/twopool_root_exploration.py
-# Splits the root into a MOBILE pool (binding B_m; feeds the xylem via the
-# monotone-physical f_xy + a K_PL-gated lipid term) and a SEQUESTERED pool (an
-# irreversible apoplast/cell-wall/Fe-Mn-plaque terminal sink at rate k_seq, a
-# non-K_PL U-shaped chain/head-group descriptor). The decoupling lets the model
-# hold a HIGH long-chain root BAF *and* deliver to the shoot while KEEPING the
-# monotone physical f_xy. In-sample Yamazaki fit (RMSE 0.251); canonical core and
-# parameters.json are UNCHANGED -- the fitted globals + U-shape come from the
-# cached fit (validation/twopool_fitted_params.json) loaded lazily below.
-# NOTE: distinct from the CARRIER two-pool model (`simulate_twopool_carrier`,
-# src/pfas_rice_two_pool.py) -- that one's second pool is a reversible bound store
-# tuned by carrier/f_xy levers; this one's is an irreversible k_seq sink.
-# ---------------------------------------------------------------------------
-_TP_RM, _TP_RS, _TP_ST, _TP_LF, _TP_GR = 0, 1, 2, 3, 4   # 5-state indices
-_TWOPOOL_SEQ = None                                      # ((p, q), module) cache
-
-
-def _twopool_seq():
-    """Lazily import the two-pool exploration module and load its cached fit.
-
-    Returns ((p, q), TP) where `p` are the fitted GLOBAL params, `q` the U-shaped
-    k_seq coefficients (validation/twopool_fitted_params.json) and `TP` the module
-    (for its pure descriptor functions kseq_ushape/lipid_g). Reusing the cached fit
-    keeps this wrapper byte-consistent with the validation script."""
-    global _TWOPOOL_SEQ
-    if _TWOPOOL_SEQ is None:
-        import sys
-        vdir = os.path.join(_ROOT, "validation")
-        if vdir not in sys.path:
-            sys.path.insert(0, vdir)
-        import twopool_root_exploration as TP
-        _TWOPOOL_SEQ = (TP.load_fit(), TP)
-    return _TWOPOOL_SEQ
-
-
-def _twopool_seq_rhs(t_grid, Cwo_s, Qtp_s, M_s, dM_s, cmpd, comps, B, env,
-                     gxy, gph, kseq, phi=0.1, T_C_Ph=10.0, k_rel=0.0, M_basis=None,
-                     leaf_loss=None):
-    """5-state RHS (mass-conserving; sole source M_root*j_R into the mobile pool).
-
-    Faithful re-implementation of validation/twopool_root_exploration.make_rhs,
-    generalised to arbitrary driver arrays (Cwo, Qtp, M on `t_grid`) so it returns
-    a full time series and supports the standard simulate() driver options. Guarded
-    against drift by tests/test_model_api.py::test_simulate_twopool_seq_matches_validation_and_rmse."""
-    ll_s = np.zeros_like(t_grid) if leaf_loss is None else np.asarray(leaf_loss, float)
-
-    def rhs(t, C):
-        Qtp = float(np.interp(t, t_grid, Qtp_s))
-        Cwo = float(np.interp(t, t_grid, Cwo_s))
-        ll = max(float(np.interp(t, t_grid, ll_s)), 0.0)  # leaf death: the dead blade takes its PFAS
-        M = np.array([np.interp(t, t_grid, M_s[:, k]) for k in range(4)])
-        dM = np.array([np.interp(t, t_grid, dM_s[:, k]) for k in range(4)])
-        M = np.maximum(M, 1e-12)
-        mu = dM / M                                       # growth dilution [1/day]
-        Mr = M[ROOT]
-
-        Cw = np.empty(5)
-        Cw[_TP_RM] = C[_TP_RM] / B[ROOT]                  # mobile-root free conc
-        Cw[_TP_ST] = C[_TP_ST] / B[STEM]
-        Cw[_TP_LF] = C[_TP_LF] / B[LEAF]
-        Cw[_TP_GR] = C[_TP_GR] / B[FRUIT]
-
-        split = xylem_leaf_share(comps, M, M_basis)
-        f3, f4 = split, 1.0 - split
-
-        Q_Phl = max(dM[FRUIT] * T_C_Ph + phi * Qtp, 0.0)
-        C_Phl = cmpd.L_Ph * Cw[_TP_LF] + gph * C[_TP_LF]
-        Cw_xyl = cmpd.f_xy * Cw[_TP_RM] + gxy * C[_TP_RM]
-
-        jR = root_uptake(Cwo, Cw[_TP_RM], cmpd, env)
-        seq = kseq * C[_TP_RM]                            # mobile -> seq
-        rel = k_rel * C[_TP_RS]                           # seq -> mobile (slow desorption)
-
-        dC = np.zeros(5)
-        dC[_TP_RM] = (jR - (Qtp / Mr) * Cw_xyl + phi * (Q_Phl / Mr) * C_Phl
-                      - seq + rel - mu[ROOT] * C[_TP_RM])
-        dC[_TP_RS] = seq - rel - mu[ROOT] * C[_TP_RS]     # near-terminal accumulator
-        dC[_TP_ST] = (Qtp / M[STEM]) * (Cw_xyl - Cw[_TP_ST]) - mu[STEM] * C[_TP_ST]
-        dC[_TP_LF] = (f3 * (Qtp / M[LEAF]) * Cw[_TP_ST]
-                      - (1.0 + phi) * (Q_Phl / M[LEAF]) * C_Phl - mu[LEAF] * C[_TP_LF]
-                      - ll * C[_TP_LF])
-        dC[_TP_GR] = (f4 * (Qtp / M[FRUIT]) * Cw[_TP_ST]
-                      + (Q_Phl / M[FRUIT]) * C_Phl - mu[FRUIT] * C[_TP_GR])
-        return dC
-    return rhs
-
-
-def simulate_twopool_seq(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, season=120.0,
-                         n_t=481, measured_forcing=False, biomass="growth_rice",
-                         drivers=None, k_rel=0.0, kseq_override=None, dead_leaf_attached=1.0,
-                         scenario=DEFAULT_SCENARIO):
-    """Sequestration two-pool root run (mobile + sequestered root pools) -- EXPLORATORY, opt-in.
-
-    Mirrors `simulate()` / `simulate_nstem_leaf()` for the I/O so the app and other
-    validation can treat the two-pool model interchangeably: returns a dict with the
-    SAME tissue keys (root/stem/leaf/grain), where the reported `root` BAF is the
-    SUM of the mobile and sequestered root pools. The transport globals (kappa_d,
-    L_Ph, the lipid conductances) and the non-K_PL U-shaped `k_seq(n, head_group)`
-    come from the cached Yamazaki fit (validation/twopool_fitted_params.json); the
-    xylem free-loading uses the monotone physical `f_xy_recommended`.
-
-    NOTE: distinct from `simulate_twopool_carrier` (the long-chain-closure model,
-    src/pfas_rice_two_pool.py) -- that one's second pool is a reversible bound store
-    tuned by carrier/f_xy levers; here it is an irreversible k_seq sink.
-
-    NOTE the cached fit is on the DEMO forcings, so the defaults
-    (`measured_forcing=False`, `season=120`) reproduce the documented in-sample
-    result (overall log10 RMSE 0.251; PFOS/PFUnDA root separation at identical K_PL).
-    `measured_forcing=True` / `drivers=` / `biomass=` are supported for exploration
-    but pair the demo fit with non-demo forcings (Result 6 has a separate measured
-    re-fit, not auto-loaded). parameters.json is UNCHANGED.
-
-    k_rel : slow seq->mobile desorption rate [1/day]; 0 (default) = irreversible seq
-        sink. kseq_override : bypass the U-shaped descriptor with a fixed k_seq [1/day].
-    """
-    if congener not in _CONG:
-        raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
-    (p, q), TP = _twopool_seq()
-    c = _CONG[congener]
-
-    if drivers is not None:
-        t = np.asarray(drivers["t"], dtype=float)
-        Cwo_series = np.asarray(drivers["Cwo"], dtype=float)
-        Qtp = np.asarray(drivers["Qtp"], dtype=float)
-        M = np.asarray(drivers["M"], dtype=float)
-        leaf_loss = drivers.get("leaf_loss")
-        season = float(t[-1])
-        M_basis = drivers.get("mass_basis", "fresh")
-    else:
-        t, Cwo_series, Qtp, M, leaf_loss, M_basis = _default_drivers(
-            season, n_t, Cwo, measured_forcing, biomass, scenario=scenario)
-        season = float(t[-1])
-
-    comps = _compartments()
-    env = Environment(E=E_m_mV / 1000.0)
-    cmpd = Compound(name=congener, K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
-                    K_cw=c["K_cw_wholecw_Lkg"]["root"], kappa_d=p["kappa_d"],
-                    Vmax_in=_CARR["Vmax_in"], Km_in=_CARR["Km_in"],
-                    Vmax_out=_CARR["Vmax_out"], Km_out=_CARR["Km_out"],
-                    L_Ph=p["L_Ph"], f_xy=c["f_xy_recommended"])
-    B = binding_factors(comps, cmpd)
-    gxy, gph = TP.lipid_g(c["K_PL_Lkg"], c["group"], p["gxy"], p["gph"], p["K_half"], p["pfsa_ln"])
-    kseq = float(kseq_override) if kseq_override is not None else \
-        float(TP.kseq_ushape(c["n_C"], c["group"], q))
-
-    dM = np.gradient(M, t, axis=0)
-    rhs = _twopool_seq_rhs(t, Cwo_series, Qtp, M, dM, cmpd, comps, B, env,
-                           gxy, gph, kseq, k_rel=k_rel, M_basis=M_basis, leaf_loss=leaf_loss)
-    from scipy.integrate import solve_ivp
-    sol = solve_ivp(rhs, (t[0], t[-1]), np.zeros(5), t_eval=t,
-                    method="BDF", rtol=1e-6, atol=1e-9, dense_output=True)
-    Y = sol.y                                            # (5, n_t)
-    root_total = Y[_TP_RM] + Y[_TP_RS]
-    conc = {"root": root_total, "stem": Y[_TP_ST], "leaf": Y[_TP_LF], "grain": Y[_TP_GR],
-            "root_mobile": Y[_TP_RM], "root_seq": Y[_TP_RS]}
-    obs = _harvest(t, conc, M, comps, M_basis, leaf_loss, dead_leaf_attached, sol, _TP_LF)
-    straw = obs["straw_fw"]
-    cwo_ref = float(Cwo_series[-1]) if Cwo_series[-1] > 0 else (
-        float(np.nanmax(Cwo_series)) if np.nanmax(Cwo_series) > 0 else 1.0)
-    baf_final = {k: float(v[-1] / cwo_ref) for k, v in conc.items()}
-    return dict(
-        t=t, congener=congener, success=bool(sol.success), season=float(season),
-        conc=conc, straw=straw,
-        conc_dw=obs["conc_dw"], baf_final_dw={k: float(v[-1] / cwo_ref)
-                                              for k, v in obs["conc_dw"].items()},
-        dead_leaf=dict(burden=obs["dead_burden"], dry=obs["dead_dry"], attached=obs["attached"]),
-        Cwo=Cwo_series, Qtp=Qtp, M=M,
-        baf={k: v / cwo_ref for k, v in conc.items()},
-        baf_final=baf_final,
-        straw_baf=float(straw[-1] / cwo_ref),
-        tf_final={k: baf_final[k] / baf_final["root"] for k in ("root", "stem", "leaf", "grain")},
-        seq_fraction=float(Y[_TP_RS, -1] / max(root_total[-1], 1e-12)),
-        cwo_ref=cwo_ref,
-        B_k={k: float(B[i]) for i, k in enumerate(TISSUES)},
-        N=float(env.N), eN=float(np.exp(env.N)),
-        params=dict(f_xy=float(cmpd.f_xy), L_Ph=float(p["L_Ph"]), kappa_d=float(p["kappa_d"]),
-                    g_xy=float(gxy), g_ph=float(gph), k_seq=kseq, k_rel=float(k_rel),
-                    K_PL=c["K_PL_Lkg"], n_C=c["n_C"], group=c["group"]),
-    )
-
-
-def twopool_seq_params(congener, kseq_override=None):
-    """Fitted two-pool ROOT parameter set for `congener` (from the cached Yamazaki fit).
-
-    Returns dict(kappa_d, L_Ph, g_xy, g_ph, k_seq) -- the transport globals plus the
-    non-K_PL U-shaped k_seq(n, head_group). Pure lookup, no ODE: it is what makes the
-    root mechanism portable onto another shoot model (see `simulate_twopool_nstem`).
-    """
-    if congener not in _CONG:
-        raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
-    (p, q), TP = _twopool_seq()
-    c = _CONG[congener]
-    gxy, gph = TP.lipid_g(c["K_PL_Lkg"], c["group"], p["gxy"], p["gph"],
-                          p["K_half"], p["pfsa_ln"])
-    kseq = float(kseq_override) if kseq_override is not None else \
-        float(TP.kseq_ushape(c["n_C"], c["group"], q))
-    return dict(kappa_d=float(p["kappa_d"]), L_Ph=float(p["L_Ph"]),
-                g_xy=float(gxy), g_ph=float(gph), k_seq=kseq)
-
-
-def simulate_twopool_nstem(congener="PFOA", kseq_override=None, k_rel=0.0,
-                           f_xy_source="recommended", K_cw_organ="root", **kw):
-    """MERGED model: two-pool sequestration ROOT + redistributed (N-stem+leaf) SHOOT.
-
-    The structural merge the Tang per-organ OOS asked for. The two model halves were
-    developed against different defects and, until now, could not be tested together:
-
-      * `simulate_twopool_seq` fixes the ROOT (mobile/sequestered split, non-K_PL
-        U-shaped k_seq) but keeps the basic 4pool PASS-THROUGH stem, so its stalk TF
-        collapses and a per-organ comparison is unfair (validation/twopool_root_oos_tang.py);
-      * `simulate_nstem_leaf` fixes the SHOOT (transpiration deposition + retention
-        across N stem segments) but keeps a single root pool, so it cannot hold a high
-        long-chain root BAF while still delivering to the shoot.
-
-    This runs the redistributed shoot with the root mechanism switched on, using the
-    two-pool root parameters (kappa_d, L_Ph, the K_PL-gated lipid conductances and
-    k_seq) from the cached Yamazaki fit and the monotone physical `f_xy_recommended`.
-    Returns the `simulate_nstem_leaf` dict (+ root_mobile/root_seq/seq_fraction).
-
-    EXPLORATORY / opt-in: `parameters.json`, `simulate()` and `reproduce_demo` are
-    UNCHANGED. The cached fit was made against the 4pool shoot, so transferring it
-    here is itself an approximation -- see validation/twopool_nstem_merge.py, which
-    re-fits the merged model on Yamazaki before the Tang per-organ OOS.
-    """
-    tp = twopool_seq_params(congener, kseq_override)
-    kw.setdefault("kappa_d_override", tp["kappa_d"])
-    kw.setdefault("L_Ph_override", tp["L_Ph"])
-    kw.setdefault("g_xy_override", tp["g_xy"])
-    kw.setdefault("g_ph_override", tp["g_ph"])
-    return simulate_nstem_leaf(congener, f_xy_source=f_xy_source, K_cw_organ=K_cw_organ,
-                               k_seq=tp["k_seq"], k_rel=float(k_rel), **kw)
 
 
 # ---------------------------------------------------------------------------
@@ -1183,8 +916,7 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
                      tscf=None, lipid_source=None,
                      pKa=None, is_acid=True, pH=6.5, g_apo=0.0,
                      cwo_profile="constant", cwo_kw=None, Koc=None,
-                     mass_basis=DEFAULT_MASS_BASIS, dead_leaf_attached=1.0,
-                     scenario=DEFAULT_SCENARIO, scenario_kw=None):
+                     dead_leaf_attached=1.0, scenario=DEFAULT_SCENARIO, scenario_kw=None):
     """Run the 4-compartment DPU for a NEUTRAL (non-ionised) organic.
 
     The neutral analogue of `simulate()`: same driver machinery, same result-dict
@@ -1246,7 +978,7 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
         input the shapes need, and the PFAS chain-length Koc QSPR does not apply to a
         neutral, so it comes from `log_kow` via the PROVISIONAL Karickhoff QSPR unless
         an explicit measured `Koc` [L/kg] is given -- prefer the measurement.
-    drivers / biomass / measured_forcing / mass_basis : exactly as `simulate()`.
+    drivers / biomass / measured_forcing / scenario : exactly as `simulate()`.
     """
     import neutral_dpu as ND
 
@@ -1260,7 +992,7 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
         M_basis = drivers.get("mass_basis", "fresh")
     else:
         t, Cwo_series, Qtp, M, leaf_loss, M_basis = _default_drivers(
-            season, n_t, Cwo, measured_forcing, biomass, mass_basis, scenario, scenario_kw)
+            season, n_t, Cwo, measured_forcing, biomass, scenario, scenario_kw)
         season = float(t[-1])
         if cwo_profile != "constant":
             Cwo_series = cwo_profile_series(
@@ -1304,48 +1036,53 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
 #   (2) HYDRUS / CSV   : drivers_from_arrays / load_driver_csv  (one-way coupling)
 #   (3) SOIL INVENTORY : pore_water_from_inventory (Freundlich) + measured Q/M
 # ---------------------------------------------------------------------------
-def measured_forcing(t, season=None, biomass="oryza", mass_basis=DEFAULT_MASS_BASIS):
-    """The measured transpiration Q_TP(t) [L/d/hill] and the selected biomass driver's
-    organ mass M(t) [kg/hill, (n,4)] on grid `t`. Reused by the HYDRUS/soil modes when
-    the user supplies only a concentration series (Q_TP and M are crop physiology, not
-    PFAS). `biomass` selects the organ-mass driver (ORYZA2000 by default, matching
-    `simulate`); pass "growth_rice" for the lightweight logistic reconstruction. M is
-    on the ODE's `mass_basis` (FRESH by default -- `organ_mass`)."""
+def crop_on_grid(t, scenario=DEFAULT_SCENARIO, biomass="oryza2000", season=None):
+    """The crop physiology -- transpiration Q_TP [L/d/hill], FRESH organ mass M [kg/hill,
+    (n,4)] and the leaf death rate (or None) -- on an arbitrary grid `t` [days after
+    transplanting]. "yamazaki2020" interpolates the calibration site-year (held at its
+    harvest values beyond its season); "generic" is forcing_rice + the `biomass` driver."""
     t = np.asarray(t, float)
+    if scenario == "yamazaki2020":
+        d = scenario_drivers(scenario)
+        Qtp = np.interp(t, d["t"], d["Qtp"])
+        M = np.column_stack([np.interp(t, d["t"], d["M"][:, k]) for k in range(4)])
+        ll = np.interp(t, d["t"], d["leaf_loss"], right=0.0)
+        return Qtp, M, ll
+    if scenario != "generic":
+        raise ValueError(f"scenario must be one of {SCENARIOS}, got {scenario!r}")
     season = float(t[-1]) if season is None else float(season)
-    Qtp = fr.Q_TP(t, season)
     b = _biomass_fn(biomass)(t, season)
-    M = om.organ_matrix(b, mass_basis)
+    return fr.Q_TP(t, season), om.organ_matrix(b), b.get("leaf_death_rate")
+
+
+def measured_forcing(t, season=None, biomass="oryza2000", scenario=DEFAULT_SCENARIO):
+    """Transpiration Q_TP(t) [L/d/hill] and FRESH organ mass M(t) [kg/hill, (n,4)] on grid
+    `t` -- the crop physiology of `scenario` (`crop_on_grid`). Reused by the HYDRUS/soil
+    modes when the user supplies only a concentration series."""
+    Qtp, M, _ = crop_on_grid(t, scenario, biomass, season)
     return Qtp, M
 
 
-def drivers_from_arrays(t, Cwo, Qtp=None, M=None, season=None, biomass="oryza",
-                        mass_basis=DEFAULT_MASS_BASIS):
+def drivers_from_arrays(t, Cwo, Qtp=None, M=None, season=None, biomass="oryza2000",
+                        scenario=DEFAULT_SCENARIO):
     """Assemble a `drivers` dict for `simulate(drivers=...)`.
 
-    Only `Cwo(t)` is PFAS-specific (from HYDRUS / soil inversion / a probe). If
-    `Qtp`/`M` are omitted they default to the measured crop-physiology forcings
-    (transpiration + the selected `biomass` driver's organ mass, ORYZA2000 by
-    default — matching `simulate`), so a bare concentration series is enough to run
-    the plant model. When M is built from the senescing ORYZA driver its leaf-death
-    rate is attached as `leaf_loss`, so the leaf senescence correction still applies.
-    A supplied `M` is taken as the ODE's FRESH organ mass as-is; a defaulted one is the
-    biomass driver's dry matter converted to `mass_basis` (`organ_mass`).
+    Only `Cwo(t)` is PFAS-specific (from HYDRUS / soil inversion / a probe). If `Qtp`/`M`
+    are omitted they default to the crop physiology of `scenario` (`crop_on_grid`; the
+    calibration site-year by default), so a bare concentration series is enough to run the
+    plant model; a defaulted M brings its leaf death rate as `leaf_loss`. A supplied `M` is
+    taken as FRESH organ mass as-is.
     """
     t = np.asarray(t, float)
     Cwo = np.asarray(Cwo, float)
-    season = float(t[-1]) if season is None else float(season)
+    q, m, ll = crop_on_grid(t, scenario, biomass, season)
     leaf_loss = None
-    basis = "fresh"                                   # a supplied M is fresh as-is
     if Qtp is None:
-        Qtp = fr.Q_TP(t, season)
+        Qtp = q
     if M is None:
-        b = _biomass_fn(biomass)(t, season)
-        M = om.organ_matrix(b, mass_basis)
-        basis = mass_basis
-        leaf_loss = b.get("leaf_death_rate")          # only the senescing ORYZA driver supplies it
+        M, leaf_loss = m, ll
     drv = dict(t=t, Cwo=Cwo, Qtp=np.asarray(Qtp, float), M=np.asarray(M, float),
-               mass_basis=basis)
+               mass_basis=MASS_BASIS)
     if leaf_loss is not None:
         drv["leaf_loss"] = np.asarray(leaf_loss, float)
     return drv
@@ -1359,14 +1096,14 @@ DEFAULT_TISSUE_DENSITY = {"root": 1.0, "stem": 0.30, "leaf": 0.30, "grain": 1.20
 
 
 def drivers_from_tables(growth=None, cwo=None, *, growth_units="g/hill", Cwo_const=1.0,
-                        n_t=241, season=None, Qtp=None, biomass="oryza",
-                        plants_per_hill=None, hills_per_m2=25.0):
+                        n_t=241, season=None, Qtp=None, biomass="oryza2000",
+                        plants_per_hill=None, hills_per_m2=25.0, scenario=DEFAULT_SCENARIO):
     """Build a `simulate(drivers=...)` dict from user-entered TABLES.
 
     growth : dict with 'day' + any of root/stem/leaf/grain -- organ **fresh-weight**
         mass in `growth_units` (g/hill, kg/hill, g/m2, kg/ha, t/ha, ... per
-        `measured_biomass.to_kg_per_hill`). None/empty -> M falls back to the selected
-        `biomass` driver (so a Cwᵒ table alone still runs).
+        `measured_biomass.to_kg_per_hill`). None/empty -> M falls back to the crop
+        physiology of `scenario` (`crop_on_grid`; so a Cwᵒ table alone still runs).
     cwo : dict with 'day' + 'Cwo' -- the **absolute** pore-water concentration [µg/L].
         None/empty -> a flat `Cwo_const` series.
 
@@ -1406,19 +1143,20 @@ def drivers_from_tables(growth=None, cwo=None, *, growth_units="g/hill", Cwo_con
         M = mb.biomass_matrix(t, g_day, organs_kg)
     Cwo_arr = (np.interp(t, c_day, c_vals) if c_day is not None
                else np.full_like(t, float(Cwo_const)))
-    return drivers_from_arrays(t, Cwo_arr, Qtp=Qtp, M=M, season=season, biomass=biomass)
+    return drivers_from_arrays(t, Cwo_arr, Qtp=Qtp, M=M, season=season, biomass=biomass,
+                               scenario=scenario)
 
 
 _DRIVER_COLS = ("t", "Cwo", "Qtp", "M_root", "M_stem", "M_leaf", "M_grain")
 
 
-def load_driver_csv(path_or_buffer, biomass="oryza"):
+def load_driver_csv(path_or_buffer, biomass="oryza2000", scenario=DEFAULT_SCENARIO):
     """Load a HYDRUS/external driver table into a `drivers` dict.
 
     Required columns: t, Cwo, Qtp, M_root, M_stem, M_leaf, M_grain (see
     `docs/visualization_tool.md` for the HYDRUS-1D output mapping). Accepts a path
-    or any file-like object. Missing Qtp/M columns fall back to the measured forcings
-    (the `biomass` driver's organ mass, ORYZA2000 by default).
+    or any file-like object. Missing Qtp/M columns fall back to the crop physiology of
+    `scenario` (`crop_on_grid`; the calibration site-year by default).
     """
     data = np.genfromtxt(path_or_buffer, delimiter=",", names=True)
     cols = data.dtype.names or ()
@@ -1430,7 +1168,7 @@ def load_driver_csv(path_or_buffer, biomass="oryza"):
     M = (np.column_stack([data["M_root"], data["M_stem"], data["M_leaf"], data["M_grain"]]).astype(float)
          if have_M else None)
     Qtp = np.atleast_1d(data["Qtp"]).astype(float) if "Qtp" in cols else None
-    return drivers_from_arrays(t, Cwo, Qtp=Qtp, M=M, biomass=biomass)
+    return drivers_from_arrays(t, Cwo, Qtp=Qtp, M=M, biomass=biomass, scenario=scenario)
 
 
 def pore_water_from_inventory(t, C_total, K_F=2.0, n=0.85, theta_g=0.35,
@@ -1504,13 +1242,14 @@ def build_hydrus_engine():
 
 def hydrus_drivers(congener=None, season=120.0, Cwo_ref=1.0, f_oc=0.02, n_t=241,
                    qtp_from_hydrus=True, biomass="oryza", Kd=None, log_kow=None,
-                   mass_basis=DEFAULT_MASS_BASIS, **run_kw):
+                   scenario=DEFAULT_SCENARIO, **run_kw):
     """Run a real HYDRUS-1D paddy soil model for `congener` and return a `drivers`
     dict (+ the raw PaddyResult) for `simulate(drivers=…)`.
 
     HYDRUS supplies the congener-dependent pore-water `Cwᵒ(t)` (short chains leach
     under flooding, long chains stay buffered) and the actual root water uptake
-    `Q_TP(t)`; `M(t)` is the selected `biomass` driver (ORYZA2000 by default).
+    `Q_TP(t)`; the crop side (transpiration driving the soil run, `M(t)`) is `scenario`'s
+    -- the calibration site-year by default (`soil_hydrus.inputs_from_hydrus`).
     `Cwᵒ(t)` is normalised to season-mean `Cwo_ref` so the average exposure matches a
     constant-Cwo run. Extra `run_kw` (flood_until, percolation, …) pass through to
     `soil_hydrus.run_paddy_hydrus`.
@@ -1531,7 +1270,7 @@ def hydrus_drivers(congener=None, season=120.0, Cwo_ref=1.0, f_oc=0.02, n_t=241,
     pin, res = sh.inputs_from_hydrus(n_C, group, season=season,
                                      Cwo_ref=Cwo_ref, f_oc=f_oc, n_t=n_t, Kd=Kd,
                                      qtp_from_hydrus=qtp_from_hydrus, biomass=biomass,
-                                     mass_basis=mass_basis, **run_kw)
+                                     scenario=scenario, **run_kw)
     drivers = dict(t=np.asarray(pin.t, float), Cwo=np.asarray(pin.Cwo, float),
                    Qtp=np.asarray(pin.Qtp, float), M=np.asarray(pin.M, float),
                    mass_basis=pin.M_basis)
@@ -1645,13 +1384,13 @@ _ESTIMATE_MAX_SOLVES = 8
 
 def estimate_exposure_bayesian(congener=None, measured_conc=None, *, sigma_log10=0.15,
                                season=120.0, E_m_mV=-120.0, f_xy_source="recommended",
-                               biomass="oryza", measured_forcing=True, n_plot=121,
+                               biomass="oryza2000", measured_forcing=True, n_plot=121,
                                progress=None, log_kow=None, neutral_kw=None, **sim_kw):
     """Bayesian estimate of the soil-water contamination level Cwᵒ [µg/L] that best
     explains measured rice tissue concentrations.
 
     The inverse of the forward question (contamination -> tissue): given measured
-    `measured_conc` (a dict with any of root/straw/grain in µg/kg), infer the
+    `measured_conc` (a dict with any of root/straw/grain in µg/kg DRY weight), infer the
     pore-water Cwᵒ. Because root uptake is saturable (GHK + carrier), tissue conc is
     a NONLINEAR, monotone function of Cwᵒ, so this is a real inverse, not a division.
 
@@ -1709,8 +1448,9 @@ def estimate_exposure_bayesian(congener=None, measured_conc=None, *, sigma_log10
                 progress(min(n_eval[0], _ESTIMATE_MAX_SOLVES), _ESTIMATE_MAX_SOLVES)
             except Exception:                              # noqa: BLE001 (UI cb never breaks the fit)
                 pass
-        return {"root": float(r["conc"]["root"][-1]), "straw": float(r["straw"][-1]),
-                "grain": float(r["conc"]["grain"][-1])}
+        dw = r["conc_dw"]                      # harvest values, DRY weight (as tissue data are reported)
+        return {"root": float(dw["root"][-1]), "straw": float(dw["straw"][-1]),
+                "grain": float(dw["grain"][-1])}
 
     def neg_loglike(L):
         c = conc_at(10.0 ** L)
