@@ -94,6 +94,33 @@
 #               stream to the grain at mid-filling; 2.0 = the original S read per kg dry,
 #               ~14%; 0.2 ~2%) -- not measured
 #
+#   Amendment-1 run (recorded in CLAUDE.md before this amendment): Fit A 0.121, Fit B straw
+#   1.372; E4 wrong, E5 partly wrong; consequential: dead blades, E_m, Km, phi, s_grain.
+#
+# AMENDMENT 2 (before any result of it was seen). The full test suite on the amendment-1
+#   parameters showed the grain concentration peaking at formation (0.67 at day 74) above
+#   its harvest value (0.39). The cause is the phloem allocation: the model gave the grain
+#   Q_Phl = grain dry growth x T_C_Ph + phi x Q_TP and the root phi x Q_Phl, while phi is
+#   defined (code and parameters) as the phloem RECIRCULATION FRACTION TO ROOTS. So the
+#   recirculation term went to the grain -- while the grain exists it delivered 2.1x the sap
+#   volume the grain's growth draws (1.11 vs 0.52 L per hill on the site-year), independent
+#   of grain growth -- and phi was applied a second time to the root. The model report's
+#   eq. (Qphl) carries the same conflation. DECISION P1 (structural, holds whatever the fit
+#   quality): the grain receives Q_g = grain dry growth x T_C_Ph (gated by formation), the
+#   root receives Q_r = phi x Q_TP, and the leaf exports (gam x Q_g + Q_r) x C_Phl; mass
+#   conservation unchanged. Applied to every module carrying the phloem (4pool_surf, 4pool,
+#   5pool, nstem, nstem_leaf, apportionment) and to the report. Then this script is re-run
+#   unchanged and D1/D2 applied.
+#   EXPECTATIONS (before running)
+#     P1  L_Ph_fit rises for the congeners whose grain is phloem-fed (less sap volume reaches
+#         the grain): median ratio new/old between 1.5 and 4 over the congeners not at a bound.
+#     P2  PFBA and PFPeA stay at the L_Ph floor with grain over (their excess is xylem-fed).
+#     P3  PFDoDA stays at f_xy = L_Ph = 1 with straw and grain under; its grain falls further.
+#     P4  Fit A overall RMSE between 0.10 and 0.20; root and straw essentially unchanged.
+#     P5  the grain concentration no longer rises above 1.5x its harvest value after formation.
+#     P6  phi stays consequential for the grain and is not consequential for the root.
+#     P7  Fit B's a-priori straw RMSE within 0.1 of 1.372 (straw does not see the phloem).
+#
 #   python validation/refit_site_year.py            # fits + sensitivity, prints the verdicts
 #   python validation/refit_site_year.py --write    # ... and applies D1 to parameters.json
 # =============================================================================
