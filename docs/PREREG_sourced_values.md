@@ -221,6 +221,30 @@ Expectations added before the fit:
   waters of 0.90-0.94. Restating them at the sourced, drier root needs a dry-basis lipid source
   and goes to amendment 2. No expectation is attached to the scores.
 
+### 5.9 Addendum (committed before the transfer runs; no transfer score of amendment 1 computed)
+- **Li 2025 stage -> model day, from sources instead of chosen DVS.** The Li endpoints enter the
+  honesty band, and `li2025_stage_resolved.STAGE_DVS` (tillering 0.4, heading 1.0, filling 1.25,
+  milk 1.5, ripening 2.0) had no source (`value_provenance.csv` tr_li_dvs). Li et al. 2025 sampled
+  five stages without dates, in this order: tillering, heading, filling, milk-ripening, ripening
+  (main text p.3). The mapping now uses only what sources fix:
+  - heading = DVS 1. ORYZA's DVS 1 is flowering, and 50 % heading precedes anthesis by about 2 d
+    (Counce et al. 2000 R3 -> R4, as reproduced in the Arkansas Rice Production Handbook MP192
+    ch. 2);
+  - ripening = DVS 2, physiological maturity, the end of the season;
+  - tillering lies between transplanting and panicle initiation (DVS 0.65). Tillering ends at
+    jointing, which coincides with panicle initiation (CMA agrometeorological observation
+    criteria, as quoted by Li R. et al. 2018; MP192 ch. 2). It runs at the midpoint of
+    [DVS at transplanting on the run, 0.65];
+  - filling and milk-ripening lie between heading and ripening, in that order; no source found
+    fixes them closer for Li's site. They run at the centre of that ordered range,
+    1 + 1/3 and 1 + 2/3: the centroid of the region 1 < filling < milk < 2. As a check, the one
+    dated japonica record found (Nanjing; Li R. et al. 2018, Table 2) puts filling 14-20 d after
+    heading start; the script prints that span's DVS on the run, but does not use it.
+- The fixed +-0.15 DVS sensitivity is replaced by the range ends: tillering at both ends;
+  (filling, milk) at the corners of the ordered region, (1, 1), (1, 2) and (2, 2). The score
+  reported is the midpoint run; the ends are printed next to it.
+- No expectation is attached.
+
 ## 6. Outcome
 
 (appended after the runs)
