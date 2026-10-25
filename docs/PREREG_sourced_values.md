@@ -197,6 +197,17 @@ Expectations added before the fit:
   root values differ 5.8x, 3.6x, 3.1x and 2.4x between the cultivars (Tables S18/S19), and stays
   within a factor of 2 for the others.
 
+### 5.7 Addendum (committed before the transfer runs; the re-fit was running, no transfer score computed)
+- **Kim 2019 grain on the dry basis.** The Kim endpoints compared the model's FRESH grain BAF (at
+  harvest moisture) with Kim's ng/g. Kim freeze-dried the grain at -30 C before dehusking and
+  weighing 2 g for extraction (main p.715-716; `Sampling_Protocols.csv`), so the reported mass is
+  dry mass. Every Kim comparison (`transfer_sourced.py`, `kim2019_censored.py`,
+  `kim2019_pfoa_anchor.py`) now uses `baf_final_dw`. At the sourced grain water (0.21) this
+  raises the model by log10(1/0.79) = 0.10 against the old comparison. The inverse
+  (`estimate_exposure_bayesian`) already read Kim's value as dry.
+- No expectation is attached. The shift is the same 0.10 log10 for every congener and variant, and
+  the sign of the re-fitted variants' Kim errors is not known yet.
+
 ## 6. Outcome
 
 (appended after the runs)
