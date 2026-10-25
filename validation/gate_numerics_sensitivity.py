@@ -44,10 +44,10 @@ def _patch(floor, ramp):
     import model_api as api
     import organ_mass as om
     import pfas_rice_plant_module_nstem_leaf as NL
-    orig_matrix = om.organ_matrix
+    orig_matrix = om.__dict__.setdefault("_orig_organ_matrix", om.organ_matrix)   # patch once
     om.organ_matrix = functools.wraps(orig_matrix)(lambda b: orig_matrix(b, floor=floor))
     api._SITE_RUN = None                     # drop the cached site runs built on the old floor
-    orig_post = NL.PlantInputsNL.__post_init__
+    orig_post = NL.__dict__.setdefault("_orig_post_init", NL.PlantInputsNL.__post_init__)
 
     def post(self):
         orig_post(self)
@@ -81,8 +81,8 @@ def run(name):
 
 
 def main():
-    with mp.get_context("fork").Pool(len(VARIANTS)) as pool:
-        out = pool.map(run, list(VARIANTS))
+    with mp.get_context("fork").Pool(len(VARIANTS), maxtasksperchild=1) as pool:   # one unpatched child per variant
+        out = pool.map(run, list(VARIANTS), chunksize=1)
     base = out[0]
     short = ("Tang", "Kim pt", "Kim int", "Li shoot", "Li grain")
     print("Grain formation gate numerics (default configuration; descriptive)")

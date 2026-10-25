@@ -1,0 +1,88 @@
+# Provenance of every value the tool runs on. Rule (user, 2026-10-25): no value may be chosen without a source.
+# status (what it is now): measured | derived | fitted | inherited (crop/ET model, verbatim) | numerical | structural | convention | chosen (no source) | untraceable (cited source does not resolve) | decision (analysis threshold)
+# action (what makes it admissible): keep | literature | fit (identifiable; checked on data not used to fit) | simplify (remove the mechanism / the bound) | range (run over the physically possible range; report the range) | converge (show results invariant at reporting precision) | bootstrap (replace a fixed margin by a confidence interval from the data)
+# scope: default = simulate() as shipped and the Yamazaki observable; 4pool / generic / neutral / soil / app = other paths
+# done = yes once the action is completed and the result recorded; tests/test_value_provenance.py fails while a default-scope row is chosen/untraceable/decision without done=yes
+id,quantity,value,unit,location,scope,status,basis,action,done,note
+site_weather,daily + hourly weather,JMA Tsukuba 2020,-,docs/literature_db/raw_si/jma_tsukuba_2020.csv,default,measured,JMA station records,keep,yes,
+site_lat,latitude,36.057,deg N,site_scenario.TSUKUBA_LAT,default,measured,JMA station metadata,keep,yes,
+site_elev,elevation,25,m,site_scenario.TSUKUBA_ELEV_M,default,measured,JMA station metadata,keep,yes,
+site_anemometer,anemometer height,10.6,m,site_scenario.TSUKUBA_ANEMOMETER_M,default,measured,JMA station metadata,keep,yes,
+site_transplant,transplanting date,2020-05-11,date,site_scenario.YAMAZAKI_TRANSPLANT,default,measured,Yamazaki 2023 SI p.S2 (earlier audit; SI not re-read),literature,no,re-read the SI
+site_harvests,harvest dates,2020-09-01 / 2020-09-10,date,site_scenario.YAMAZAKI_HARVESTS,default,measured,Yamazaki 2023 SI p.S3 (earlier audit; SI not re-read),literature,no,re-read the SI
+site_heading,heading to harvest,30.5,d,site_scenario.DAYS_HEADING_TO_HARVEST,default,derived,paper states 30-31 d; both ends run (default_sensitivity),range,yes,effect <= 0.004 log
+site_sbdur,nursery duration,23,d after emergence,site_scenario.SBDUR,default,chosen,Kim 2003 median (another site),literature,no,Yamazaki SI or Ibaraki practice
+site_tmpsb,seedbed type,open (TMPSB 0),-,site_scenario.TMPSB,default,chosen,none,literature,no,
+site_nh,planting density,19.05,hills m-2,site_scenario NH,default,chosen,Japanese machine spacing (no citation),literature,no,
+site_nplh,plants per hill,3,-,site_scenario NPLH,default,chosen,none,literature,no,
+site_co2,CO2,414,ppm,site_scenario.CO2_2020,default,measured,Mauna Loa 2020 annual mean,keep,yes,
+crop_params,ORYZA crop parameters,IR72.D92 verbatim,-,src/oryza2000.py + raw_si/oryza_ir72_d92_params.csv,default,inherited,ORYZA2000 manual (Bouman et al. 2001),keep,yes,cultivar substitution: Koshihikari/Kasalath have no ORYZA file here
+crop_cultivar,cultivar substitution,IR72 for Koshihikari/Kasalath,-,site_scenario,default,convention,no ORYZA crop file for the cultivars in the repo,literature,no,look for a published ORYZA calibration of Koshihikari
+crop_phenology,development-rate calibration,one factor on DVRJ/I/P; DVRR,-,site_scenario,default,fitted,fitted to the reported heading and harvest dates,keep,yes,
+crop_harvest_dvs,harvest at DVS 2,-,-,site_scenario,default,convention,alternative (IR72 grain-fill rate) run,range,yes,effect <= 0.002 log
+crop_timestep,driver time step,1,d,site_scenario,default,inherited,ORYZA2000 integrates daily,keep,yes,
+et_terms,FAO-56 radiation/aerodynamic terms + constants,-,-,src/fao56.py,default,inherited,FAO-56 (Allen et al. 1998),keep,yes,
+et_rfs,reflection of standing water,0.05,-,src/fao56.py / oryza,default,inherited,ORYZA2000 manual eq. 4.2,keep,yes,
+obs_basis,Yamazaki tissue values,dry weight,pg/g dw,data_obs/obs_baf_Yamazaki.csv,default,measured,Yamazaki 2023,keep,yes,
+obs_exposure_time,exposure held constant over the season,one grab 2020-06-08,-,data_obs/obs_baf_Yamazaki.csv,default,convention,seasonal course not reported,range,no,run the seasonal shapes the data allow
+obs_brown,brown rice reconstruction,0.88 white + 0.12 bran,-,data_obs,default,derived,white:brown 86-90 % (SI p.S3),keep,yes,midpoint of a reported range
+obs_mql,< MQL cells,MQL/2,-,data_obs (upstream),default,convention,which cells is unrecorded,literature,no,Yamazaki SI S18/S19
+obs_sigma,observation sigma,0.4,log10,data_obs/obs_baf_Yamazaki.csv,default,chosen,none (n = 1 composite),simplify,no,not used by the RMSE scores; check every use
+obs_dead_blades,dead blades kept in straw,1 (all),-,harvest.py dead_leaf_attached,default,convention,whole-plant harvest; 0 run,range,yes,straw 0.045 log
+tis_theta,organ water content theta_fw,0.90/0.83/0.78/0.14,-,params/parameters.json tissue_composition_recommended,default,untraceable,source keys in rice_tissue_params.csv resolve to nothing,literature,no,
+tis_fprot,organ protein f_prot,0.07/0.05/0.10/0.09,kg/kg dw,params/parameters.json,default,untraceable,as above,literature,no,
+tis_fpl,organ phospholipid f_PL,0.015/0.005/0.01/0.003,kg/kg dw,params/parameters.json,default,untraceable,as above,literature,no,
+tis_fcw,organ cell wall f_cw,0.50/0.72/0.56/0.035,kg/kg dw,params/parameters.json,default,untraceable,as above,literature,no,
+bind_kpl,K_PL per congener,-,L/kg,params/parameters.json,default,measured,Chen 2025 SSLM,keep,yes,
+bind_kprot,K_prot per congener,-,L/kg,params/parameters.json,default,measured,Zhou 2025,keep,yes,
+bind_kcw,K_cw per organ and congener,-,L/kg,params/parameters.json,default,derived,Guo 2025 DFT ladder + Mel 2024 lignin anchor (docs/DELIVERABLE_GAP_A_Kcw.md),keep,yes,no direct measurement
+bind_kcw_organ,K_cw organ used by the redistributed shoot,stem K_cw in every compartment,-,model_api.simulate (kcw_organ),default,convention,"""its own convention, as scored""",simplify,no,use each organ's own K_cw
+mem_em,root membrane potential,-120,mV,literature_params.EM_RICE_ROOT_V,default,measured,Wang 1994 (-116..-140 mV),keep,yes,
+mem_pka,head-group pKa,0.5 / -3.0,-,literature_params.PKA,default,measured,Goss 2008 / Torralba 2023,keep,yes,
+mem_ph,pore-water pH,6.5,-,literature_params.PADDY_PH,default,chosen,"""range 5-7"" without source",range,no,f_d = 1 across 5-7: show invariance
+carrier,"carrier Vmax_in, Km_in, Vmax_out, Km_out",20 / 5 / 8 / 5,ug/(d kg) ; ug/L,params/parameters.json carrier_MichaelisMenten,default,chosen,none,literature,no,"else simplify to a linear entry (Tang dose series: Km >= 150-500 ug/L)"
+fit_kappa,kappa_d per congener,-,L/(d kg),params/parameters.json,default,fitted,Yamazaki 2020 site-year,keep,yes,depends on the carrier constants
+fit_lph,L_Ph per congener (rec),-,-,params/parameters.json,default,fitted,Yamazaki 2020 site-year,keep,no,AT the 1e-5 floor (PFBA-PFHxA) and the upper bound 1 (PFOA-PFOS): bound values are not fits
+fit_lph_upper,L_Ph upper bound,1,-,refit_site_year.py,default,convention,"""no active concentrating"" (no source)",simplify,no,binds for 7 congeners: remove or source
+fit_lph_lower,L_Ph lower bound,1e-5,-,refit_site_year.py,default,numerical,effectively zero phloem loading,converge,no,show 1e-5 == 0 at reporting precision
+fit_kappa_bounds,kappa_d bounds,0.01-50,L/(d kg),refit_site_year.py,default,numerical,no fitted value at a bound,keep,yes,non-binding
+fit_lipid,lipid-loading globals (6),a 0.1177 b 0.0905 g_xy 0.0158 g_ph 0.0050 K_half 800 pfsa_ln 0.621,-,model_api.LIPID_LOADING,default,fitted,Yamazaki 2020 site-year (PFDoDA excluded),keep,yes,no value at its bound
+fit_lipid_excl,PFDoDA excluded from the lipid fit,-,-,refit_site_year.LIPID_EXCLUDED,default,convention,none recorded here,fit,no,state the reason or include it
+phl_phi,phloem stream to root,0.1,x Q_TP,model_api.simulate phi,default,chosen,none,literature,no,
+phl_tc,phloem sap per grain dry matter,10,L/kg dw,model_api.simulate T_C_Ph,default,chosen,"""order of magnitude"" without citation",literature,no,
+sh_lam_grain,panicle share of the shoot stream,0.05,-,model_api.simulate lam_grain,default,chosen,none,literature,no,
+sh_stem_frac,stem share of the shoot stream,0.45,-,model_api.simulate stem_transp_frac,default,chosen,none,literature,no,
+sh_retention,retention of deposited solute,0.6,-,model_api.simulate retention,default,chosen,none,literature,no,else fit if identifiable (straw height bands)
+sh_n,stem segments,4,-,model_api.simulate N,default,numerical,configuration scored,converge,no,
+sh_seg_mass,stem mass split evenly over segments,-,-,model_api._run_redistributed,default,convention,band masses not reported,converge,no,
+sh_grain_share,panicle routing of the residual stream,gate,-,model_api.DEFAULT_GRAIN_SHARE,default,structural,pre-registered amendment (gate kept),converge,no,gate peak depends on the mass floor
+num_floor,organ-mass floor,1e-4,kg,organ_mass.organ_matrix,default,numerical,keeps the ODE off zero mass,converge,no,
+num_floor_inner,inner mass floor,1e-9,kg,model_api._run_redistributed,default,numerical,inactive under the 1e-4 floor,converge,no,
+num_gate_ramp,gate fully open at,1.5 x floor,-,PlantInputsNL / PlantInputs,default,numerical,none,converge,no,
+num_gate_cond,floor period exists if min < 0.05 max,0.05,-,PlantInputsNL / PlantInputs,default,numerical,none,converge,no,
+num_tol,BDF tolerances,rtol 1e-6 atol 1e-9,-,NStemLeafModel.solve,default,numerical,none,converge,no,
+num_refine,harvest sub-daily grid,24,per day,harvest.REFINE_PER_DAY,default,numerical,none,converge,no,
+str_ksurf,root plaque sorption pool,0 (off),-,simulate K_surf,default,structural,not identifiable (no dataset removed plaque),simplify,yes,mechanism off
+str_gamma,metabolism,0,1/d,model,default,structural,PFAA recalcitrant (citation needed),literature,no,
+str_kaw,air exchange,0,-,model,default,structural,PFAA non-volatile anions (citation needed),literature,no,
+x4_sleaf,leaf transpiring surface,20,m2/kg dw,pfas_rice_plant_module_4pool_surf.S_XYLEM_DRY,4pool,chosen,original S read as SLA (IR72 SLA is 24-45),literature,no,use the crop model's own SLA
+x4_sgrain,grain transpiring surface,0.5116,m2/kg dw,pfas_rice_plant_module_4pool_surf.S_XYLEM_DRY,4pool,chosen,back-computed from an older split,literature,no,
+soil_foc,soil organic carbon fraction,0.02,-,soil_hydrus / literature_params,soil,chosen,none,literature,no,
+soil_rho,bulk density,1.3,g/cm3,soil_hydrus,soil,chosen,none,literature,no,
+soil_depth,profile depth,100,cm,soil_hydrus,soil,chosen,none,literature,no,
+soil_disp,dispersivity,5,cm,soil_hydrus,soil,chosen,none,literature,no,
+soil_perc,percolation,0.30,cm/d,soil_hydrus,soil,chosen,none,literature,no,
+soil_flood,flooding until,90,d,soil_hydrus,soil,chosen,none,literature,no,
+soil_dx,HYDRUS node spacing,2,cm,soil_hydrus,soil,numerical,none,converge,no,
+soil_kleach_max,k_leach cap,0.15,1/d,model_api._KLEACH_MAX,soil,numerical,none,converge,no,
+app_density,tissue density for per-volume reporting,1.0/0.30/0.30/1.20,kg/L,model_api.DEFAULT_TISSUE_DENSITY,app,chosen,none,literature,no,or drop per-volume reporting
+app_hills,hills per m2 when a table is per hill,25,hills m-2,model_api.drivers_from_tables,app,chosen,IRRI value used as a default,simplify,no,make it a required input
+inv_sigma,inverse measurement sigma,0.15,log10,model_api.estimate_exposure_bayesian,default,chosen,none,simplify,no,use the model's transfer error (APRIORI_LOG10_RMSE) instead
+neu_surface,neutral path leaf/grain surface,20 / 2,m2/kg,neutral_dpu.RICE_SURFACE,neutral,chosen,none,literature,no,
+neu_water,neutral path organ water,0.90/0.83/0.78/0.14,-,neutral_dpu.RICE_WATER,neutral,untraceable,same as tis_theta,literature,no,
+neu_leafexp,leaf sorption exponent,0.95,-,neutral_dpu.LEAF_SORPTION_EXPONENT,neutral,chosen,check source,literature,no,
+neu_kaw_cut,volatility threshold,1e-4,-,neutral_dpu.K_AW_VOLATILE,neutral,chosen,none,literature,no,
+tr_li_dvs,Li 2025 stage -> ORYZA DVS mapping,tillering 0.4 / heading 1.0 / filling 1.25 / milk 1.5 / ripening 2.0,-,validation/li2025_stage_resolved.STAGE_DVS,analysis,chosen,stage dates not reported; +-0.15 run,literature,no,map the stage names through a published staging system
+tr_li_grain_from,Li grain scored from filling on,-,-,validation/li2025_stage_resolved.GRAIN_FROM,analysis,convention,pre-registered (gate barely open at heading),converge,no,depends on the gate structure
+tr_drivers,transfer datasets run on the Yamazaki site-year drivers,-,-,validation (Tang / Kim / Li),analysis,convention,their sites and dates are not in the repo,literature,no,each dataset's own site and calendar
+dec_margins,decision margins,"0.10, 0.3, 0.05/0.10, 1.5x, bootstrap 0.9",-,validation scripts,analysis,decision,fixed before each run; no source,bootstrap,no,docs/ASSUMPTIONS.md section 8
