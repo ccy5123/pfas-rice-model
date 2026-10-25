@@ -88,6 +88,11 @@ DEFAULT_SHOOT = "redistributed"
 DEFAULT_LIPID_LOADING = True
 # the configuration every calibration record and 4-pool mechanism analysis was run on
 FOUR_POOL_FREE = dict(shoot="4pool", lipid_loading=False)
+# How the redistributed shoot hands the residual xylem stream to the grain: "gate" (all of
+# it once the panicle forms) or "size" (a share growing with the panicle's mass). Decided by
+# the pre-registered rule in validation/panicle_share_amendment.py.
+GRAIN_SHARES = ("gate", "size")
+DEFAULT_GRAIN_SHARE = "gate"
 
 UPTAKE_MODES = {
     "carrier": dict(vmax_scale=1.0, g_apo=0.0),                 # incumbent = shipped
@@ -308,7 +313,7 @@ TANG_SHOOTS = ("redistributed", "4pool")
 
 def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
                        dose="mean", lipid_loading=None, endosperm="brown", scenario=DEFAULT_SCENARIO,
-                       shoot=None):
+                       shoot=None, grain_share=None):
     """Model per-organ transfer factor (DRY weight) vs Tang 2026, for a Tang congener.
 
     Tang's TF is tissue/root on dry weight; the model's is formed the same way from the
@@ -343,7 +348,8 @@ def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
         kcw_organ = "root"              # simulate() binds every compartment with the root K_cw
     else:
         r = simulate_nstem_leaf(congener, Cwo=1.0, f_xy_source=f_xy_source, f_xy_override=fxy,
-                                lipid_loading=lipid_loading, scenario=scenario)
+                                lipid_loading=lipid_loading, scenario=scenario,
+                                grain_share=grain_share)
         kcw_organ = "stem"              # simulate_nstem_leaf's default K_cw_organ
     dw = r["baf_final_dw"]
     model = {org: dw[mk] / dw["root"] for mk, org, _ in _TANG_ORGANS}
@@ -497,7 +503,7 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
              uptake=DEFAULT_UPTAKE, vmax_scale=None, g_apo=None, km_scale=1.0,
              dead_leaf_attached=1.0, scenario=DEFAULT_SCENARIO, scenario_kw=None,
              phi=0.1, T_C_Ph=10.0, s_grain_dry=None, shoot=None,
-             N=4, stem_transp_frac=0.45, lam_grain=0.05, retention=0.6):
+             N=4, stem_transp_frac=0.45, lam_grain=0.05, retention=0.6, grain_share=None):
     """Run the 4-compartment ODE for one congener and scenario.
 
     Parameters
@@ -560,6 +566,9 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         lam_grain, so `s_grain_dry` (the 4-pool's grain surface) does not apply to it.
     lipid_loading : None -> `DEFAULT_LIPID_LOADING`. f_xy_source="fit" is a free-anion fit
         and raises when combined with lipid loading (the lipid model supplies its own f_xy).
+    grain_share : the redistributed shoot's routing of the residual xylem stream to the grain,
+        "gate" or "size" (None -> `DEFAULT_GRAIN_SHARE`); see `GRAIN_SHARES`. The 4-pool core
+        splits by dry matter already and refuses a non-default value.
 
     Returns a dict with t, per-compartment conc & BAF time series (FRESH weight; the green
     leaf), finals, straw (with attached dead blades), the dry-basis harvest values
@@ -575,6 +584,12 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     if lipid_loading and f_xy_source == "fit":
         raise ValueError("f_xy_source='fit' is a free-anion fit; pass lipid_loading=False "
                          "(the lipid model supplies its own f_xy)")
+    grain_share = DEFAULT_GRAIN_SHARE if grain_share is None else grain_share
+    if grain_share not in GRAIN_SHARES:
+        raise ValueError(f"unknown grain_share {grain_share!r}; expected one of {GRAIN_SHARES}")
+    if shoot == "4pool" and grain_share != DEFAULT_GRAIN_SHARE:
+        raise ValueError("grain_share applies to the redistributed shoot; the 4-pool core splits "
+                         "the xylem by dry matter")
     if shoot == "redistributed" and s_grain_dry is not None:
         raise ValueError("s_grain_dry is the 4-pool's grain xylem surface; the redistributed "
                          "shoot splits the stream by lam_grain")
@@ -632,7 +647,7 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
             congener, cmpd, t, Cwo_series, Qtp, M, leaf_loss, season, E_m_mV,
             N=N, stem_transp_frac=stem_transp_frac, lam_grain=lam_grain,
             retention=retention, dead_leaf_attached=dead_leaf_attached,
-            phi=phi, T_C_Ph=T_C_Ph)
+            phi=phi, T_C_Ph=T_C_Ph, grain_share=grain_share)
         res["params"].update(
             K_PL=c["K_PL_Lkg"], K_prot=c["K_prot_Lkg"], K_cw=K_cw, K_surf=float(K_surf),
             n_C=c["n_C"], group=c["group"], uptake=uptake, vmax_scale=float(vmax_scale),
@@ -688,7 +703,7 @@ def apportionment(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommen
                   f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
                   lipid_loading=None, g_xy_override=None, g_ph_override=None,
                   season=None, n_t=241, measured_forcing=True, biomass="growth_rice",
-                  scenario=DEFAULT_SCENARIO, shoot=None):
+                  scenario=DEFAULT_SCENARIO, shoot=None, grain_share=None):
     """Source apportionment for one congener -- the PFAS analog of dynamiCROP's Fig. 2.
 
     Builds the SAME model as ``simulate()`` (identical compound / composition / driver
@@ -719,7 +734,7 @@ def apportionment(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommen
                              kappa_d_override, lipid_loading, g_xy_override, g_ph_override,
                              K_cw_organ="stem")
         run = _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M, leaf_loss,
-                                 float(t[-1]), E_m_mV, _keep_model=True)
+                                 float(t[-1]), E_m_mV, grain_share=grain_share, _keep_model=True)
         res = ap.apportion_redistributed(run["_model"], run["_sol"])
         res.update(congener=congener, success=bool(run["success"]), shoot=shoot,
                    params=dict(f_xy=float(cmpd.f_xy), L_Ph=float(cmpd.L_Ph),
@@ -831,7 +846,8 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
                         season=None, n_t=361, N=4, stem_transp_frac=0.45,
                         lam_grain=0.05, retention=0.6, biomass_fn=None,
                         k_seq=0.0, k_rel=0.0, K_cw_organ="stem", drivers=None,
-                        dead_leaf_attached=1.0, scenario=DEFAULT_SCENARIO, scenario_kw=None):
+                        dead_leaf_attached=1.0, scenario=DEFAULT_SCENARIO, scenario_kw=None,
+                        grain_share=None):
     """Redistributed-shoot uptake run (N stem segments + explicit leaf), the Tang
     2026 over-translocation fix (see `pfas_rice_plant_module_nstem_leaf`).
 
@@ -896,13 +912,13 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
                               E_m_mV, N=N, stem_transp_frac=stem_transp_frac,
                               lam_grain=lam_grain, retention=retention, k_seq=k_seq,
                               k_rel=k_rel, dead_leaf_attached=dead_leaf_attached,
-                              segments_in_M=True)
+                              grain_share=grain_share, segments_in_M=True)
 
 
 def _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M4, leaf_loss, season, E_m_mV,
                        N=4, stem_transp_frac=0.45, lam_grain=0.05, retention=0.6,
                        k_seq=0.0, k_rel=0.0, dead_leaf_attached=1.0, phi=0.1, T_C_Ph=10.0,
-                       segments_in_M=False, _keep_model=False):
+                       grain_share=None, segments_in_M=False, _keep_model=False):
     """Solve the redistributed-shoot model on prepared drivers and a built Compound.
 
     M4 is the FRESH organ-mass matrix with the four organ columns [root, stem, leaf, grain];
@@ -924,10 +940,11 @@ def _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M4, leaf_loss, season
         N, _kw(g["stem"]), _kw(g["root"]), _kw(g["leaf"]), _kw(g["grain_brown"]))
     tau, lam_leaf, lam_grain = split_from_stem_frac(N, stem_transp_frac, lam_grain)
     env = Environment(E=E_m_mV / 1000.0)
+    grain_share = DEFAULT_GRAIN_SHARE if grain_share is None else grain_share
     model = NStemLeafModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs, tau=tau,
                            lam_leaf=lam_leaf, lam_grain=lam_grain, retention=retention,
                            phi=float(phi), T_C_Ph=float(T_C_Ph),
-                           k_seq=float(k_seq), k_rel=float(k_rel))
+                           k_seq=float(k_seq), k_rel=float(k_rel), grain_share=grain_share)
     sol = model.solve(t)
     Y = sol.y                                            # (N+3 [+1 if two-pool], n_t)
     seg = slice(1, N + 1)
@@ -973,7 +990,8 @@ def _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M4, leaf_loss, season
                     lam_grain=float(lam_grain), n_C=rec.get("n_C"),
                     group=rec.get("group"), L_Ph=float(cmpd.L_Ph),
                     kappa_d=float(cmpd.kappa_d), g_xy=float(cmpd.g_xy),
-                    g_ph=float(cmpd.g_ph), k_seq=float(k_seq), k_rel=float(k_rel)),
+                    g_ph=float(cmpd.g_ph), k_seq=float(k_seq), k_rel=float(k_rel),
+                    grain_share=grain_share),
         **({"_model": model, "_sol": sol} if _keep_model else {}),
     )
 

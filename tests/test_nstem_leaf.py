@@ -25,7 +25,7 @@ from pfas_rice_plant_module_4pool_surf import (
 N = 4
 
 
-def _setup(retention=0.6, k_seq=0.0, k_rel=0.0):
+def _setup(retention=0.6, k_seq=0.0, k_rel=0.0, grain_share="gate"):
     t = np.linspace(0.0, 150.0, 481)
     Qtp = 0.02 + 0.10 * np.exp(-((t - 95.0) ** 2) / (2 * 30.0 ** 2))
     stem = _logistic(t, 1e-3, 0.060, 0.11, 30.0)
@@ -44,7 +44,7 @@ def _setup(retention=0.6, k_seq=0.0, k_rel=0.0):
     tau, lam_leaf, lam_grain = split_from_stem_frac(N, 0.45, lam_grain=0.05)
     m = NStemLeafModel(env=Environment(), cmpd=cmpd, comps=comps, inputs=inputs,
                        tau=tau, lam_leaf=lam_leaf, lam_grain=lam_grain, retention=retention,
-                       k_seq=k_seq, k_rel=k_rel)
+                       k_seq=k_seq, k_rel=k_rel, grain_share=grain_share)
     return t, m
 
 
@@ -62,10 +62,26 @@ def _mass_residual(m, t, ti=70.0):
 
 
 @pytest.mark.parametrize("retention", [0.0, 0.6, 1.0])
-def test_mass_conservation(retention):
-    t, m = _setup(retention)
-    dmass, src = _mass_residual(m, t)
-    assert dmass == pytest.approx(src, rel=1e-6, abs=1e-9)
+@pytest.mark.parametrize("grain_share", ["gate", "size"])
+def test_mass_conservation(retention, grain_share):
+    t, m = _setup(retention, grain_share=grain_share)
+    for ti in (70.0, 110.0):                 # before and during grain filling
+        dmass, src = _mass_residual(m, t, ti)
+        assert dmass == pytest.approx(src, rel=1e-6, abs=1e-9)
+
+
+def test_grain_share_size_takes_less_while_the_panicle_is_small():
+    """'size' routes the residual xylem stream to the grain in proportion to the panicle's
+    size, so the young panicle takes less than under the gate and the rest stays in the leaf
+    (validation/panicle_share_amendment.py); an unknown mode is refused."""
+    t, g = _setup(grain_share="gate")
+    _, z = _setup(grain_share="size")
+    yg, yz = g.solve(t).y, z.solve(t).y
+    i = int(np.searchsorted(t, 110.0))
+    assert yz[g.GRAIN, i] < yg[g.GRAIN, i]
+    assert yz[g.LEAF, i] > yg[g.LEAF, i]
+    with pytest.raises(ValueError):
+        _setup(grain_share="bogus")
 
 
 def test_transpiration_split_must_close_to_one():

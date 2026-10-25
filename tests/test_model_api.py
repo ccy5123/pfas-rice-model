@@ -480,10 +480,11 @@ def test_grain_formation_gate():
     """The grain takes NO PFAS before the panicle forms, then accumulates to its harvest
     value; a constant-mass driver still loads the grain (gate=1). In the 4-pool the grain's
     xylem share scales with its dry matter, so its concentration rises monotonically (no
-    early spike). The DEFAULT (redistributed) shoot gives the formed panicle a constant share
-    of the stream (lam_grain), so its concentration PEAKS in the young panicle ~2 weeks
+    early spike). The DEFAULT (redistributed) shoot gives the formed panicle the whole residual
+    xylem stream (grain_share="gate"), so its concentration PEAKS in the young panicle ~2 weeks
     before heading (PFOA ~3.3x the harvest value) and dilutes as it grows -- a property of
-    the default recorded here (CLAUDE.md section 9), not a gate failure."""
+    the default, not a gate failure. The size-scaled alternative removes it but was not adopted
+    (validation/panicle_share_amendment.py; test_grain_share_option_and_the_recorded_decision)."""
     run = api.site_run()
     t_head = float(np.interp(1.0, run["dvs"], run["t"]))
     four = api.simulate("PFOA", **api.FOUR_POOL_FREE)
@@ -500,6 +501,28 @@ def test_grain_formation_gate():
     Mc = np.tile([0.003, 0.02, 0.013, 0.03], (121, 1))
     rc = api.simulate("PFOA", drivers=api.drivers_from_arrays(t2, np.ones(121), M=Mc))
     assert rc["baf_final"]["grain"] > 0.0
+
+
+def test_grain_share_option_and_the_recorded_decision():
+    """The redistributed shoot's routing of the residual xylem stream to the grain.
+    validation/panicle_share_amendment.py (pre-registered) kept "gate" as the default: "size"
+    removes the young-panicle maximum and improves Yamazaki, but fails transfer non-inferiority
+    on Kim's [0, MDL] interval and Li's grain TF. "gate" must stay bit-identical to the default
+    and "size" must keep doing what it was scored for."""
+    assert api.DEFAULT_GRAIN_SHARE == "gate" and api.GRAIN_SHARES == ("gate", "size")
+    a = api.simulate("PFOA")
+    b = api.simulate("PFOA", grain_share="gate")
+    assert all(a["baf_final_dw"][k] == b["baf_final_dw"][k] for k in a["baf_final_dw"])
+    z = api.simulate("PFOA", grain_share="size")
+    cg = np.asarray(z["conc"]["grain"])
+    assert cg.max() <= 1.5 * cg[-1]                                  # no young-panicle peak
+    assert z["baf_final_dw"]["grain"] == pytest.approx(0.970, rel=0.01)
+    assert abs(np.log10(z["baf_final_dw"]["root"] / a["baf_final_dw"]["root"])) < 0.01
+    assert z["params"]["grain_share"] == "size"
+    with pytest.raises(ValueError):
+        api.simulate("PFOA", shoot="4pool", lipid_loading=False, grain_share="size")
+    with pytest.raises(ValueError):
+        api.simulate("PFOA", grain_share="bogus")
 
 
 def test_simulate_nstem_leaf_k_seq_off_by_default_and_drivers_path():

@@ -126,6 +126,14 @@ class PlantInputsNL:
         gate = (np.clip((gm - glo) / (0.5 * glo + 1e-30), 0.0, 1.0)
                 if (ghi > 0.0 and glo < 0.05 * ghi) else np.ones(len(self.t)))
         self._grain_gate = interp1d(self.t, gate, **kw)
+        # grain SIZE weight w(t) for grain_share="size": the panicle's share of the residual
+        # xylem stream scales with its size relative to the crop's mature panicle,
+        # (Mg - Mg_min) / (Mg_max - Mg_min) over the driver series (grain theta is constant,
+        # so this is the dry-matter ratio); 1 throughout for a driver with no floor period,
+        # exactly like the gate (validation/panicle_share_amendment.py).
+        size = (np.clip((gm - glo) / max(ghi - glo, 1e-30), 0.0, 1.0)
+                if (ghi > 0.0 and glo < 0.05 * ghi) else np.ones(len(self.t)))
+        self._grain_size = interp1d(self.t, size, **kw)
 
     def Cwo_(self, t): return float(self._Cwo(t))
     def Qtp_(self, t): return float(self._Qtp(t))
@@ -133,6 +141,10 @@ class PlantInputsNL:
     def dM_(self, t):  return np.asarray(self._dM(t), dtype=float)
     def leaf_loss_(self, t):  return max(float(self._leaf_loss(t)), 0.0)
     def grain_gate_(self, t):  return min(1.0, max(0.0, float(self._grain_gate(t))))
+    def grain_size_(self, t):  return min(1.0, max(0.0, float(self._grain_size(t))))
+
+
+GRAIN_SHARES = ("gate", "size")
 
 
 @dataclass
@@ -149,6 +161,12 @@ class NStemLeafModel:
         pool (state vector unchanged, pre-merge model recovered exactly); >0 adds
         a sequestered root state (index `SEQ`, appended last) fed at k_seq*C_root.
     k_rel : slow seq->mobile desorption rate [1/day] (0 = irreversible sink).
+    grain_share : how much of the residual xylem stream (the panicle's own deposit plus every
+        non-retained share) the grain takes. "gate" -- all of it once the panicle has formed
+        (the formation gate), so a tiny young panicle takes 0.43 of the export and its
+        concentration peaks before heading; "size" -- a share w(t) that grows with the panicle's
+        mass up to the crop's mature size (PlantInputsNL.grain_size_), the rest going to the leaf
+        as before formation. The phloem stream is gated as before in both.
     """
     env: Environment
     cmpd: Compound
@@ -162,6 +180,7 @@ class NStemLeafModel:
     T_C_Ph: float = 10.0              # phloem flux per unit grain dry-mass gain [L/kg]
     k_seq: float = 0.0                # root mobile -> sequestered rate [1/day]
     k_rel: float = 0.0                # sequestered -> mobile desorption [1/day]
+    grain_share: str = "gate"         # "gate" | "size" (see GRAIN_SHARES)
 
     def __post_init__(self):
         self.N = len(self.comps) - 3          # number of stem segments
@@ -182,6 +201,8 @@ class NStemLeafModel:
             f"transpiration split must sum to 1 (sum(tau)+lam_leaf+lam_grain={tot:.6f})")
         assert self.tau.min() >= 0 and self.lam_leaf >= 0 and self.lam_grain >= 0
         assert 0.0 <= self.retention <= 1.0
+        if self.grain_share not in GRAIN_SHARES:
+            raise ValueError(f"grain_share must be one of {GRAIN_SHARES}, got {self.grain_share!r}")
         # binding + metabolism depend only on (comps, cmpd), both fixed at
         # construction -- hoist them out of the RHS (called ~3k times per solve).
         self._B = binding_factors(self.comps, self.cmpd)
@@ -223,17 +244,19 @@ class NStemLeafModel:
         # exported, so the balance closes (DPU-consistent).
         gam = self.inputs.grain_gate_(t)
         residual = (self.lam_grain + (1.0 - r) * (self.tau.sum() + self.lam_leaf)) * xyl_flux
+        # the grain's share of that residual: the gate, or the panicle's relative size
+        wx = gam if self.grain_share == "gate" else self.inputs.grain_size_(t)
 
         # --- leaf: own deposit (+ the grain's rerouted residual pre-formation); phloem
         #     source (gated grain share + root recirc); senescence loss carries PFAS away ---
         dC[leaf] = (r * self.lam_leaf * xyl_flux / M[leaf]
-                    + (1.0 - gam) * residual / M[leaf]
+                    + (1.0 - wx) * residual / M[leaf]
                     - ((gam * Q_g + Q_r) / M[leaf]) * C_Phl
                     - g[leaf] * C[leaf] - mu[leaf] * C[leaf]
                     - self.inputs.leaf_loss_(t) * C[leaf])
 
         # --- grain (formation-gated): panicle deposit + non-retained residual xylem + phloem ---
-        dC[grain] = (gam * residual / M[grain]
+        dC[grain] = (wx * residual / M[grain]
                      + gam * (Q_g / M[grain]) * C_Phl
                      - g[grain] * C[grain] - mu[grain] * C[grain])
 

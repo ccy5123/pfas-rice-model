@@ -91,8 +91,232 @@
 #   E7 A4 passes (the routing only redistributes the same xylem export between leaf and
 #      grain, so the balance still telescopes).
 #
-#   python validation/panicle_share_amendment.py
+#   python validation/panicle_share_amendment.py   (~5 min)
+#
+# -----------------------------------------------------------------------------
+# OUTCOME (appended after the run; the rule above is unchanged)
+#   A1 PASS: with "size" no congener's grain exceeds its harvest value (max/harvest 1.00 for
+#      all 13; "gate" 3.21-3.82, maximum at day 73-74, heading day 87.0).
+#   A2 FAIL on two endpoints (gate -> size, log10 RMSE): Tang 0.640 -> 0.708 (+0.069, ok);
+#      Kim point 0.469 -> 0.421 (-0.048, ok); Kim interval 0.154 -> 0.267 (+0.113, FAIL);
+#      Li shoot 0.358 -> 0.398 (+0.040, ok); Li grain 0.510 -> 0.940 (+0.430, FAIL).
+#   A3 PASS: Yamazaki 0.380 -> 0.254 (root 0.090 -> 0.088, straw 0.253 -> 0.233, grain
+#      0.619 -> 0.372).
+#   A4 PASS: 13/13 finite and positive; worst mass residual 8e-16.
+#   => KEEP grain_share="gate" as the default; "size" stays runnable
+#      (simulate(grain_share="size"), simulate_nstem_leaf, tang_tf_validation, apportionment).
+#   Expectations: E1 held. E2 mostly held -- grain fell for every congener, by 1.48-2.29x
+#      (-0.171..-0.360 log; PFOA 1.48x, just under the stated 1.5x), root moved < 0.01 log
+#      (max +0.008), but straw rose by up to 0.104 log (stated < 0.1) and the Yamazaki PFOA
+#      grain landed at 1.16 L/kg (stated 0.4-1.1). E3 held (0.254; grain 0.372). E4: Tang
+#      +0.069, Kim point -0.048, Kim interval 0.267 and Li shoot +0.040 all inside their stated
+#      ranges, but Li grain WRONG -- +0.430 against "up to +-0.15". E5 held in substance: A2 failed
+#      (on Kim interval, as expected, and on Li grain, which was not), so the default stays.
+#      E6 slightly wrong: PFOA grain xylem share 80.3 % -> 71.2 % (stated 55-70 %). E7 held.
+#   NOT FORESEEN, and the reason the default stays: Li 2025 scores the grain from the filling
+#      stage (model day ~78), when the "gate" panicle is still near its early maximum; with
+#      "size" the young grain holds much less, and the grain/root TF at filling-milk falls
+#      well below Li's. Li's field data therefore favour EARLY loading of the panicle over the
+#      size-scaled share -- the young-panicle maximum may be partly real, not only an artefact
+#      of the routing (the mechanism is not identified; Li's grain is not defined in the paper).
+#      Yamazaki, which sees only the harvest, prefers "size". The two datasets pull in opposite
+#      directions on the timing of grain loading, and harvest-only data cannot decide it.
+#   DESCRIPTIVE heading-referenced size: harvest grain BAF (FRESH, Cwo = 1) between the two
+#      (PFOA 1.11 vs gate 1.24 / size 0.83 fresh); max/harvest <= 1.10 for all congeners.
 # =============================================================================
 """Pre-registered amendment: panicle-size-scaled grain share (see the header)."""
-raise SystemExit("pre-registration only: the amendment is implemented and run after this "
-                 "header is committed")
+import os
+import sys
+from concurrent.futures import ProcessPoolExecutor
+
+import numpy as np
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "src"))
+sys.path.insert(0, HERE)
+import model_api as api            # noqa: E402
+import default_switch as DS        # noqa: E402  (the Yamazaki observable, used cells)
+
+SHARES = ("gate", "size")
+BASE = dict(shoot="redistributed", lipid_loading=True)
+MARGIN_TRANSFER, MARGIN_YAMAZAKI, PEAK_MAX = 0.10, 0.10, 1.5
+ENDPOINTS = ("Tang 2026 per-organ TF", "Kim 2019 grain, point", "Kim 2019 grain, interval",
+             "Li 2025 shoot TF", "Li 2025 grain TF")
+
+
+def t_heading():
+    run = api.site_run()
+    return float(np.interp(1.0, run["dvs"], run["t"]))
+
+
+# ---------------------------------------------------------------------------- A1
+def peak_table(share):
+    """max grain concentration / harvest value, and the day of the maximum, per congener."""
+    out = {}
+    for c in api.CONGENERS:
+        r = api.simulate(c, grain_share=share, **BASE)
+        cg = np.asarray(r["conc"]["grain"], float)
+        i = int(np.argmax(cg))
+        out[c] = dict(ratio=float(cg[i] / cg[-1]), t_max=float(r["t"][i]),
+                      grain=float(r["baf_final_dw"]["grain"]), root=float(r["baf_final_dw"]["root"]),
+                      straw=float(r["baf_final_dw"]["straw"]))
+    return out
+
+
+# ---------------------------------------------------------------------------- A2
+def transfer_scores(share):
+    import oos_tang_lipid as T
+    import kim2019_censored as K
+    import li2025_stage_resolved as L
+    import literature_params as lp
+    tang = T._rmse("low", grain_share=share, **BASE)[0]
+    b = lp.kim2019_grain_baf_bounds()
+    pred = {nm: float(api.simulate_nstem_leaf(nm, Cwo=1.0, lipid_loading=True,
+                                              grain_share=share)["baf_final"]["grain"])
+            for nm in K.SCORED}
+    ep = [K.point_error(pred[nm], b[nm]) for nm in K.SCORED]
+    ei = [K.interval_error(pred[nm], b[nm]) for nm in K.SCORED]
+    data = L.load_data()
+    days = L.stage_days()
+    model = {c: L.model_tf(api.simulate_nstem_leaf(c, Cwo=1.0, lipid_loading=True,
+                                                   grain_share=share), days)
+             for c in L.CONGENERS}
+    li = L.score(data, model, np.random.default_rng(0))
+    return {ENDPOINTS[0]: tang,
+            ENDPOINTS[1]: float(np.sqrt(np.mean(np.square(ep)))),
+            ENDPOINTS[2]: float(np.sqrt(np.mean(np.square(ei)))),
+            ENDPOINTS[3]: li["rmse"]["shoot"], ENDPOINTS[4]: li["rmse"]["grain"]}, pred
+
+
+# ---------------------------------------------------------------------------- A4
+def mass_check(share):
+    """default_switch G2 on the given share: finite positive BAFs on 13 congeners and the
+    mass balance (d/dt of the total burden == root uptake - leaf senescence loss)."""
+    from pfas_rice_plant_module_4pool_surf import binding_factors, root_uptake
+    bad, worst = [], 0.0
+    drv = api.scenario_drivers(Cwo=1.0)
+    for c in api.CONGENERS:
+        r = api.simulate(c, grain_share=share, **BASE)
+        vals = list(r["baf_final_dw"].values()) + list(r["baf_final"].values())
+        if not (r["success"] and np.all(np.isfinite(vals)) and min(vals) > 0):
+            bad.append(c)
+        cmpd = api._compound_for(c, "recommended", lipid_loading=True, K_cw_organ="stem")
+        m = api._run_redistributed(c, cmpd, drv["t"], drv["Cwo"], drv["Qtp"], drv["M"],
+                                   drv["leaf_loss"], float(drv["t"][-1]), -120.0,
+                                   grain_share=share, _keep_model=True)
+        mod, sol = m["_model"], m["_sol"]
+        B = binding_factors(mod.comps, mod.cmpd)
+        for ti in (40.0, 60.0, 80.0, 110.0):
+            C = sol.sol(ti); dC = mod.rhs(ti, C)
+            M = mod.inputs.M_(ti); dM = mod.inputs.dM_(ti)
+            jR = root_uptake(mod.inputs.Cwo_(ti), (C / B)[0], mod.cmpd, mod.env)
+            dmass = float(np.sum(dM * C + M * dC))
+            src = float(M[0] * jR - mod.inputs.leaf_loss_(ti) * M[mod.LEAF] * C[mod.LEAF])
+            worst = max(worst, abs(dmass - src) / max(abs(src), 1e-30))
+    return bad, worst
+
+
+# ---------------------------------------------------------------------------- descriptive
+def heading_referenced(t_head):
+    """DESCRIPTIVE ONLY: w = min(1, Mg(t)/Mg(heading)) -- the 'transpires little inside the
+    boot' reading. Built by re-pointing the size weight of a "size" model; harvest grain BAF
+    (fresh, at Cwo = 1) and max/harvest per congener."""
+    from scipy.interpolate import interp1d
+    drv = api.scenario_drivers(Cwo=1.0)
+    out = {}
+    for c in api.CONGENERS:
+        cmpd = api._compound_for(c, "recommended", lipid_loading=True, K_cw_organ="stem")
+        m = api._run_redistributed(c, cmpd, drv["t"], drv["Cwo"], drv["Qtp"], drv["M"],
+                                   drv["leaf_loss"], float(drv["t"][-1]), -120.0,
+                                   grain_share="size", _keep_model=True)
+        mod = m["_model"]
+        inp = mod.inputs
+        gm = inp.M[:, -1]
+        glo = float(gm.min())
+        gh = float(np.interp(t_head, inp.t, gm))
+        w = np.clip((gm - glo) / max(gh - glo, 1e-30), 0.0, 1.0)
+        inp._grain_size = interp1d(inp.t, w, kind="linear", bounds_error=False,
+                                   fill_value="extrapolate")
+        sol = mod.solve(inp.t)
+        cg = sol.y[mod.GRAIN]
+        out[c] = dict(grain=float(cg[-1]), ratio=float(cg.max() / cg[-1]))
+    return out
+
+
+def _apportion(share):
+    a = api.apportionment("PFOA", grain_share=share, **BASE)
+    return a["fraction"]["grain"]
+
+
+def main():
+    print("=" * 88)
+    print("PANICLE-SIZE-SCALED GRAIN SHARE -- pre-registered (see header)")
+    print("=" * 88)
+    th = t_heading()
+    peaks = {s: peak_table(s) for s in SHARES}
+    print(f"\nA1  grain max / harvest value (heading at day {th:.1f}); the rule needs <= {PEAK_MAX}")
+    print(f"    {'congener':8s}{'gate':>16s}{'size':>16s}{'grain BAF dw gate -> size':>30s}")
+    for c in api.CONGENERS:
+        g, z = peaks["gate"][c], peaks["size"][c]
+        print(f"    {c:8s}{g['ratio']:8.2f} @{g['t_max']:5.1f}{z['ratio']:8.2f} @{z['t_max']:5.1f}"
+              f"{g['grain']:14.3g} -> {z['grain']:<8.3g}({np.log10(z['grain'] / g['grain']):+.3f} log)")
+    a1 = all(peaks["size"][c]["ratio"] <= PEAK_MAX for c in api.CONGENERS)
+    print(f"    A1: {'PASS' if a1 else 'FAIL'}")
+    dr = {k: [np.log10(peaks['size'][c][k] / peaks['gate'][c][k]) for c in api.CONGENERS]
+          for k in ("root", "straw", "grain")}
+    print("    change, size vs gate (log10, over 13 congeners): "
+          + "; ".join(f"{k} {min(v):+.3f}..{max(v):+.3f}" for k, v in dr.items()))
+
+    sc = {s: transfer_scores(s) for s in SHARES}
+    print("\nA2  transfer (log10 RMSE)                  gate     size    size-gate  pass")
+    a2 = True
+    for k in ENDPOINTS:
+        g, z = sc["gate"][0][k], sc["size"][0][k]
+        ok = (z - g) <= MARGIN_TRANSFER
+        a2 &= ok
+        print(f"    {k:36s}{g:8.3f}{z:9.3f}{z - g:+10.3f}   {ok}")
+    print(f"    A2: {'PASS' if a2 else 'FAIL'}")
+    print("    Kim grain BAF predictions (L/kg): "
+          + ", ".join(f"{nm} {sc['gate'][1][nm]:.3g}->{sc['size'][1][nm]:.3g}" for nm in sc["gate"][1]))
+
+    with ProcessPoolExecutor(max_workers=os.cpu_count() or 2) as pool:
+        yam = {}
+        for s in SHARES:
+            _, geo = DS.observable(pool, dict(BASE, grain_share=s))
+            res = DS.residuals(geo)
+            yam[s] = (DS.rmse(res), {k: DS.rmse(res, (k,)) for k in DS.TISS}, geo)
+    a3 = yam["size"][0] - yam["gate"][0] <= MARGIN_YAMAZAKI
+    print(f"\nA3  Yamazaki observable (used cells): gate {yam['gate'][0]:.3f} "
+          f"(root {yam['gate'][1]['root']:.3f}, straw {yam['gate'][1]['straw']:.3f}, grain "
+          f"{yam['gate'][1]['grain']:.3f}) -> size {yam['size'][0]:.3f} (root {yam['size'][1]['root']:.3f}, "
+          f"straw {yam['size'][1]['straw']:.3f}, grain {yam['size'][1]['grain']:.3f}) -> "
+          f"{'PASS' if a3 else 'FAIL'}")
+    print(f"    {'congener':8s}{'grain obs':>10s}{'gate':>9s}{'size':>9s}")
+    for c in DS.YCONG:
+        d = DS.OBS[c]
+        print(f"    {c:8s}{d['baf_dw']['grain']:10.3g}{yam['gate'][2][c]['grain']:9.3g}"
+              f"{yam['size'][2][c]['grain']:9.3g}" + ("" if d["use"]["grain"] else "   (unused)"))
+
+    bad, worst = mass_check("size")
+    a4 = (not bad) and worst < 1e-6
+    print(f"\nA4  size: failures {bad or 'none'}; worst mass residual {worst:.1e} -> "
+          f"{'PASS' if a4 else 'FAIL'}")
+
+    adopt = a1 and a2 and a3 and a4
+    print(f"\nVERDICT: {'ADOPT grain_share=\'size\' as the default' if adopt else 'KEEP grain_share=\'gate\' (size stays an option)'}")
+
+    fg = {s: _apportion(s) for s in SHARES}
+    print("\nE6  PFOA grain influx shares (apportionment): "
+          + "; ".join(f"{s}: " + ", ".join(f"{k} {v:.1%}" for k, v in fg[s].items()) for s in SHARES))
+
+    hr = heading_referenced(th)
+    print("\nDESCRIPTIVE (cannot change the decision): heading-referenced size, w = min(1, Mg/Mg(heading))")
+    print(f"    {'congener':8s}{'grain BAF fw, Cwo=1':>22s}{'max/harvest':>13s}")
+    for c in api.CONGENERS:
+        print(f"    {c:8s}{hr[c]['grain']:22.3g}{hr[c]['ratio']:13.2f}")
+    return dict(peaks=peaks, a1=a1, transfer=sc, a2=a2, yamazaki=yam, a3=a3, a4=(bad, worst),
+                adopt=adopt, apportion=fg, heading=hr)
+
+
+if __name__ == "__main__":
+    main()
