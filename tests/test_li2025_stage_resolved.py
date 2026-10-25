@@ -61,9 +61,9 @@ def test_the_pre_registered_verdict(result):
     sc = result["scores"]
     assert result["winner"] == "nstem_lipid"
     assert sc["nstem_lipid"]["rmse"]["shoot"] == pytest.approx(0.43, abs=0.02)
-    assert sc["nstem_lipid"]["rmse"]["grain"] == pytest.approx(0.52, abs=0.02)
-    assert sc["lipid"]["rmse"]["shoot"] == pytest.approx(0.81, abs=0.02)
-    assert sc["lipid"]["rmse"]["grain"] == pytest.approx(1.52, abs=0.03)
+    assert sc["nstem_lipid"]["rmse"]["grain"] == pytest.approx(0.55, abs=0.02)
+    assert sc["lipid"]["rmse"]["shoot"] == pytest.approx(0.95, abs=0.02)
+    assert sc["lipid"]["rmse"]["grain"] == pytest.approx(1.17, abs=0.03)
 
 
 def test_posthoc_estimators_and_decomposition(result):

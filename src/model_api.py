@@ -219,7 +219,7 @@ def yamazaki_harvest_baf(congener, runs="both", dead_leaf_attached=1.0, scenario
 TANG_CONGENERS = ("PFOA", "PFOS", "GenX")
 # f_xy re-fit to Tang TF at the 0.1 ug/g dose (OVERRIDE-only; validation/tang2026_fxy_refit.py),
 # on the same drivers `tang_tf_validation` runs (the calibration site-year).
-TANG_REFIT_FXY = {"PFOA": 0.570, "PFOS": 0.999, "GenX": 0.089}
+TANG_REFIT_FXY = {"PFOA": 0.457, "PFOS": 0.999, "GenX": 0.056}
 _TANG_TF_ENDPOINT = {"TF_stalk": "stalk", "TF_leaf": "leaf", "TF_endosperm": "endosperm"}
 # (model grain pool, Tang organ name, theta key) for the fresh->dry conversion
 _TANG_ORGANS = (("stem", "stalk", "stem"), ("leaf", "leaf", "leaf"), ("grain", "endosperm", "grain_brown"))
