@@ -278,7 +278,7 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, depth: float = 100.0,
 # ---------------------------------------------------------------------------
 # coupling: HYDRUS soil -> PlantInputs
 # ---------------------------------------------------------------------------
-def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season: float = 120.0,
+def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season: float | None = None,
                        Cwo_ref: float = 1.0, f_oc: float = 0.02,
                        qtp_from_hydrus: bool = True, area_per_hill_m2: float | None = None,
                        n_t: int = 241, biomass: str = "oryza", Kd: float | None = None,
@@ -289,10 +289,10 @@ def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season:
     scenario "yamazaki2020" (default): the crop side is the calibration site-year
         (`site_scenario`): the soil run is driven by its ORYZA2000 potential transpiration
         over its season (transplanting to harvest), ``M`` is its fresh organ mass and the
-        area per hill is 1/density; ``season``, ``n_t``, ``biomass`` and
-        ``area_per_hill_m2`` do not apply.
-    scenario "generic": ``forcing_rice`` transpiration over ``season`` days and the
-        selected ``biomass`` driver (alternative drivers).
+        area per hill is 1/density; ``n_t``, ``biomass`` and ``area_per_hill_m2`` do not
+        apply, and an explicit ``season`` other than the site's is an error.
+    scenario "generic": ``forcing_rice`` transpiration over ``season`` days (default 120)
+        and the selected ``biomass`` driver (alternative drivers).
 
     The HYDRUS pore-water series is normalised to season-mean ``Cwo_ref`` so the
     average exposure matches a constant-Cwo run -- the difference is purely the
@@ -320,10 +320,13 @@ def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season:
     if scenario == "yamazaki2020":
         import site_scenario as ss
         site = ss.yamazaki2020_mean_run()
+        ss.check_season(season, site["t"], "inputs_from_hydrus")
         season = float(site["t"][-1])
         area_per_hill_m2 = 1.0 / ss.NH
     elif scenario != "generic":
         raise ValueError(f"unknown scenario {scenario!r}")
+    else:
+        season = 120.0 if season is None else float(season)
     if area_per_hill_m2 is None:
         area_per_hill_m2 = fr.AREA_PER_HILL_M2
 

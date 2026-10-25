@@ -36,7 +36,7 @@ def test_simulate_structure_and_units():
     r = api.simulate("PFOA", Cwo=1.0)
     # Cwo=1 -> tissue conc equals BAF at final time
     assert r["conc"]["root"][-1] == pytest.approx(r["baf_final"]["root"], rel=1e-6)
-    assert r["t"][0] == 0.0 and r["t"][-1] == pytest.approx(120.0)
+    assert r["t"][0] == 0.0 and r["t"][-1] == pytest.approx(api.site_season())
 
 
 def test_membrane_potential_lever():
@@ -218,8 +218,8 @@ def test_estimate_exposure_bayesian_recovers_and_brackets():
     95% credible interval, and reproduce the inputs at the MAP."""
     truth = 2.5
     r = api.simulate("PFOA", Cwo=truth)
-    meas = {"root": r["conc"]["root"][-1], "straw": r["straw"][-1],
-            "grain": r["conc"]["grain"][-1]}
+    dw = r["conc_dw"]                                   # the inverse takes DRY-weight data
+    meas = {"root": dw["root"][-1], "straw": dw["straw"][-1], "grain": dw["grain"][-1]}
     est = api.estimate_exposure_bayesian("PFOA", meas)
     assert est["median"] == pytest.approx(truth, rel=0.10)        # MAP recovers the level
     lo, hi = est["ci95"]
@@ -244,7 +244,7 @@ def test_estimate_exposure_bayesian_runs_under_the_selected_mechanism():
     to the shipped one: the app passes the sidebar's mechanism switches straight
     through. The bypass takes up more anion per unit exposure, so explaining the same
     measured tissue needs a LOWER Cwᵒ than the carrier does."""
-    meas = {"grain": api.simulate("PFOA", Cwo=2.0)["conc"]["grain"][-1]}
+    meas = {"grain": api.simulate("PFOA", Cwo=2.0)["conc_dw"]["grain"][-1]}
     carrier = api.estimate_exposure_bayesian("PFOA", meas, uptake="carrier")
     bypass = api.estimate_exposure_bayesian("PFOA", meas, uptake="bypass")
     assert carrier["median"] == pytest.approx(2.0, rel=0.10)       # default is unchanged
@@ -280,7 +280,9 @@ def test_predictive_band_and_uncertainty_factor():
     predictive log10 RMSE (~7×), symmetric in log space, with graceful NaN edges."""
     f = api.uncertainty_factor()
     assert f == pytest.approx(10.0 ** api.APRIORI_LOG10_RMSE)
-    assert 5.0 < f < 10.0                                  # ~7x at the 0.85 default
+    assert api.APRIORI_LOG10_RMSE == pytest.approx(
+        float(np.median(list(api.APRIORI_OOS_SCORES.values()))))
+    assert f > 10.0                     # the default model is more than 10x off out of sample
     b = api.predictive_band(2.0)
     assert b["factor"] == pytest.approx(f)
     assert b["lo"] == pytest.approx(2.0 / f) and b["hi"] == pytest.approx(2.0 * f)
@@ -557,7 +559,7 @@ def test_cwo_profile_flooded_matches_hydrus_direction():
     """The engine-free analytic 'flooded' shape reproduces the HYDRUS-1D DIRECTION:
     a short chain leaches (declines) under BOTH, a long chain stays buffered (~flat)
     under BOTH. (Quantitative k_leach calibration: validation/cwo_profile_check.py.)"""
-    t = np.linspace(0.0, 120.0, 121)
+    t = api.scenario_drivers()["t"]                       # the site-year grid (its HYDRUS run)
     for cong, declines in (("PFBA", True), ("PFDoDA", False)):
         c = api._CONG[cong]
         hyd = api.cwo_profile_series(t, 1.0, "hydrus", n_C=c["n_C"], group=c["group"],

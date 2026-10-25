@@ -175,7 +175,7 @@ def fig_where_plain(res, lang="en", band=False):
     A jargon-free read of where the chemical ends up at harvest (the same numbers
     as the BAF bars, but labelled as a concentration build-up, no 'BAF' symbol).
     `lang="ko"` renders Korean. `band=True` overlays the coarse a-priori predictive
-    uncertainty (`model_api.predictive_band`, a ×/÷ ~7 honesty band) as error bars,
+    uncertainty (`model_api.predictive_band`, a ×/÷ honesty band) as error bars,
     so the general-audience view never shows an absolute number without a spread."""
     nm = _plain(lang)
     ko = lang == "ko"
@@ -186,7 +186,7 @@ def fig_where_plain(res, lang="en", band=False):
     ys = [float(vals[t_]) for t_ in order]
     cols = [_COL.get(t_, "#1f77b4") for t_ in order]
     if band:
-        # The band is multiplicative (×/÷ ~7). On a LOG y-axis its up/down whiskers
+        # The band is multiplicative (×/÷). On a LOG y-axis its up/down whiskers
         # are symmetric (log(v·7)−log(v) == log(v)−log(v/7)) instead of the lop-sided
         # look a linear axis gives, so we plot the estimate as a MARKER with error
         # bars (bars read wrong on a log scale — their baseline is arbitrary).

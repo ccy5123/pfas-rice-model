@@ -408,18 +408,18 @@ def test_lipid_source_reaches_the_forward_run_and_the_public_api():
     not -- the Kow dependence is the point (see LIPID_SOURCES)."""
     import model_api as api
 
-    hi = [api.simulate_neutral(4.0, season=60.0, n_t=61, lipid_source=s)
+    hi = [api.simulate_neutral(4.0, lipid_source=s)
           for s in ("measured", "briggs_anchor")]
     assert hi[1]["baf_final"]["root"] / hi[0]["baf_final"]["root"] > 2.0
     assert hi[0]["params"]["lipid_source"] == "measured"
     assert hi[1]["params"]["lipid_source"] == "briggs_anchor"
 
-    lo = [api.simulate_neutral(0.0, season=60.0, n_t=61, lipid_source=s)
+    lo = [api.simulate_neutral(0.0, lipid_source=s)
           for s in ("measured", "briggs_anchor")]
     assert lo[1]["baf_final"]["root"] / lo[0]["baf_final"]["root"] < 1.1
 
     # and omitting it is the default, bit-identical
-    dflt = api.simulate_neutral(4.0, season=60.0, n_t=61)
+    dflt = api.simulate_neutral(4.0)
     assert dflt["baf_final"]["root"] == hi[0]["baf_final"]["root"]
 
 
@@ -636,7 +636,10 @@ def test_neutral_soil_side_plumbing_is_koc_driven_and_pfas_defaults_are_untouche
     Koc = float(lp.koc_neutral(2.45))
     # k_leach: the HYDRUS-calibrated per-congener TABLE is PFAS-only; a neutral takes
     # the log10(Koc) fallback fit, which is a property of the leaching model, not of PFAS
-    assert api.default_k_leach("PFOA") == pytest.approx(0.05)          # unchanged
+    rows = {r["congener"]: float(r["k_leach"]) for r in csv.DictReader(
+        l for l in open(os.path.join(os.path.dirname(__file__), "..", "params", "cwo_kleach.csv"))
+        if not l.startswith("#"))}
+    assert api.default_k_leach("PFOA") == pytest.approx(rows["PFOA"])  # the PFAS table answers
     kn = api.default_k_leach(Koc=Koc)
     assert 0.0 <= kn <= 0.15 and kn != pytest.approx(0.02)             # not the flat placeholder
     # the flooded shape runs off log_kow with no congener at all, and is mean-normalised
@@ -658,7 +661,7 @@ def test_neutral_bayesian_inverse_recovers_a_known_exposure():
     import model_api as api
     truth = 3.0
     fwd = api.simulate_neutral(2.45, half_life=7.0, Cwo=truth)
-    meas = {"root": fwd["conc"]["root"][-1], "grain": fwd["conc"]["grain"][-1]}
+    meas = {"root": fwd["conc_dw"]["root"][-1], "grain": fwd["conc_dw"]["grain"][-1]}
     est = api.estimate_exposure_bayesian(log_kow=2.45, measured_conc=meas,
                                          neutral_kw=dict(half_life=7.0))
     assert est["median"] == pytest.approx(truth, rel=0.10)
@@ -666,5 +669,5 @@ def test_neutral_bayesian_inverse_recovers_a_known_exposure():
     assert lo < truth < hi
     # the PFAS entry point is unchanged (congener positional, no log_kow)
     pf = api.simulate("PFOA", Cwo=2.0)
-    epf = api.estimate_exposure_bayesian("PFOA", {"grain": pf["conc"]["grain"][-1]})
+    epf = api.estimate_exposure_bayesian("PFOA", {"grain": pf["conc_dw"]["grain"][-1]})
     assert epf["median"] == pytest.approx(2.0, rel=0.10)

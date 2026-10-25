@@ -76,3 +76,20 @@ def test_water_terms(runs):
         assert np.allclose(r["Qtp"], r["Tp"] / S.NH)              # mm/d x m2/hill = L/d/hill
         assert 6.0 < r["Tp"].max() < 8.0
         assert np.all(r["Ep"] >= 0) and np.all(np.diff(r["dvs"]) >= -1e-12)
+
+
+def test_an_explicit_season_is_refused_not_ignored():
+    """The site scenario sets its own season (transplanting to harvest). A different
+    explicit season used to be ignored silently -- the caller believed they ran 60 days
+    and got the site-year. It must raise; the site's own value and None are accepted."""
+    import model_api as api
+    site = api.site_season()
+    with pytest.raises(ValueError, match="does not apply"):
+        api.simulate("PFOA", season=60.0)
+    with pytest.raises(ValueError, match="does not apply"):
+        api.simulate_neutral(2.45, season=120.0)
+    with pytest.raises(ValueError, match="does not apply"):
+        api.simulate_nstem_leaf("PFOA", season=150.0)
+    assert api.simulate("PFOA", season=site)["season"] == pytest.approx(site)
+    g = api.simulate("PFOA", season=90.0, scenario="generic")       # generic: season applies
+    assert g["season"] == pytest.approx(90.0)

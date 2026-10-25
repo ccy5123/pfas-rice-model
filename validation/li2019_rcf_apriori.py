@@ -376,9 +376,9 @@ def section4_scan(drv, fast=False):
     print("=" * 84)
     if fast:
         print("   [--fast: skipped. Recorded result from the full run:]")
-        for L, a, b, c in ((0.0050, 0.818, 0.382, 0.902), (0.0100, 0.598, 0.281, 0.783),
-                           (0.0150, 0.471, 0.257, 0.719), (0.0200, 0.386, 0.267, 0.678),
-                           (0.0247, 0.331, 0.288, 0.651), (0.0300, 0.290, 0.316, 0.629)):
+        for L, a, b, c in ((0.0050, 0.766, 0.305, 0.418), (0.0100, 0.546, 0.213, 0.311),
+                           (0.0150, 0.422, 0.214, 0.278), (0.0200, 0.344, 0.247, 0.277),
+                           (0.0248, 0.297, 0.284, 0.288), (0.0300, 0.268, 0.324, 0.307)):
             print(f"      L={L:.4f}   li2019 {a:.3f}   liu2023 {b:.3f}   ge2017 {c:.3f}")
         return
     orig = ND.TRAPP1994_LIPID_FW["root"]
@@ -394,9 +394,10 @@ def section4_scan(drv, fast=False):
             print(f"   {L:>8.4f}{vals[0]:>14.3f}{vals[1]:>14.3f}{vals[2]:>13.3f}{tag}")
     finally:
         ND.TRAPP1994_LIPID_FW["root"] = orig
-    print("\n   Li 2019 and Ge 2017 improve monotonically toward the Briggs anchor;")
-    print("   Liu 2023 -- the rice table -- has its optimum near L = 0.015 and gets")
-    print("   worse beyond it. No single value is best for all three.")
+    print("\n   Li 2019 improves monotonically toward (and past) the Briggs anchor;")
+    print("   Ge 2017 has a shallow optimum near L = 0.015-0.02; Liu 2023 -- the rice")
+    print("   table -- is best at L = 0.010-0.015 and gets worse beyond it. No single")
+    print("   value is best for all three.")
 
 
 def main(fast=False):
@@ -413,8 +414,8 @@ def main(fast=False):
     print("\n" + "=" * 84)
     print("VERDICT")
     print("=" * 84)
-    print(f"   a-priori log10 RMSE on 29 out-of-sample rows = {rmse:.3f}, against 0.281")
-    print("   for Liu 2023 (rice, narrower Kow range) and 0.191 for Kodesova 2019.")
+    print(f"   a-priori log10 RMSE on 29 out-of-sample rows = {rmse:.3f}, against 0.213")
+    print("   for Liu 2023 (rice, narrower Kow range) and 0.216 for Kodesova 2019.")
     print("   What is SOLID: the error is one direction, not scatter -- all 11 species")
     print("   and all 10 source studies are biased low -- and it is absent below log")
     print("   Kow 2, where the water floor dominates and there is no lipid term to be")

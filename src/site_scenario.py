@@ -200,3 +200,14 @@ def yamazaki2020_runs(**kw):
 def yamazaki2020_mean_run(**kw):
     """The default single run: harvest at the midpoint of the two harvest dates."""
     return plant_run(YAMAZAKI_HARVEST_MEAN_DOY, **kw)
+
+
+def check_season(season, t, where="simulate"):
+    """The site scenario sets its own season (transplanting to harvest, ``t[-1]``). An
+    explicit ``season`` that differs is refused rather than ignored: ignoring it would run
+    the site-year while the caller believes it ran a different season length."""
+    site = float(t[-1])
+    if season is not None and abs(float(season) - site) > 1e-6:
+        raise ValueError(f"{where}: scenario 'yamazaki2020' runs transplanting to harvest "
+                         f"({site:g} d), so season={float(season):g} does not apply; pass "
+                         "scenario='generic' to choose a season length")

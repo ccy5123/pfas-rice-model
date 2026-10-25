@@ -59,7 +59,9 @@ def test_mass_balance_with_dead_blades():
     # compared as increments after day 1: the root fills within hours, faster than the grid
     k = int(np.searchsorted(t, 1.0))
     assert total[-1] - total[k] == pytest.approx(uptake[-1] - uptake[k], rel=1e-4)
-    assert r["dead_leaf"]["burden"][-1] / total[-1] > 0.2
+    # the dead blades hold what the leaf lost at the death rate: integral of k * C_leaf * M_leaf
+    lost = np.trapezoid(0.02 * r["conc"]["leaf"] * M[:, 2], t)
+    assert r["dead_leaf"]["burden"][-1] == pytest.approx(lost, rel=1e-3)
     # the dead blades' dry mass grows at the death rate times the leaf's dry matter
     assert r["dead_leaf"]["dry"][-1] == pytest.approx(0.02 * 0.03 * (1 - api._COMP["leaf"]["theta_fw"]) * 60, rel=1e-6)
 

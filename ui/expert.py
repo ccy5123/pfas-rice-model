@@ -77,10 +77,11 @@ def render(cfg):
                 "published QSPRs, so this is the one setting where the DPU *backbone* is exposed "
                 "without the fitted PFAS transport behind it.")
             st.markdown(
-                f"- a-priori vs measured rice: **log10 RMSE 0.281** root partition (Liu 2023) and "
-                f"**0.783** per-organ TF (Ge 2017) — on the season-ODE basis this run uses; on the "
-                f"equilibrium basis proper to a root-partition measurement Liu is **0.206**. "
-                f"Expect roughly a **2–6× error**, with the ordering far more reliable than the level.\n"
+                f"- a-priori vs measured rice: **log10 RMSE 0.213** root partition (Liu 2023) and "
+                f"**0.311** per-organ TF (Ge 2017) — on the season-ODE basis this run uses; on the "
+                f"equilibrium basis proper to a root-partition measurement Liu is **0.206**. Across "
+                f"the five tables it has been scored on the error is log10 0.21–0.64 (**×1.6–4**), "
+                f"with the ordering more reliable than the level.\n"
                 f"- `TSCF` = **{res['TSCF']:.3f}** ({p['tscf_model']} QSPR) · `K_PW` root "
                 f"**{res['K_PW']['root']:.2f}** / stem {res['K_PW']['stem']:.2f} / leaf "
                 f"{res['K_PW']['leaf']:.2f} L/kg · Briggs barley RCF at this log Kow "

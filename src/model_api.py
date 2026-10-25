@@ -23,6 +23,7 @@ import forcing_rice as fr
 import growth_rice as gr
 import organ_mass as om
 import harvest as hv
+import site_scenario as ss
 from organ_mass import MASS_BASIS          # crop-model DRY matter -> ODE FRESH mass (tag)
 from soil_paddy import FreundlichSoil
 from soil_paddy_redox_corrected import PaddyRedoxCorrected
@@ -44,20 +45,21 @@ DEFAULT_SCENARIO = "yamazaki2020"
 #
 # docs/theory_anchor.tex marks the Michaelis-Menten CARRIER as one of only three
 # things this repo adds to the Trapp (2000, 2004) ionizable-compound cell model,
-# and it was FITTED (parameters.json: "fixed during W2 fit"). validation/
+# and its constants were never measured (parameters.json carrier block). validation/
 # carrier_vs_bypass.py compared it, on identical everything else, with a passive
 # APOPLASTIC BYPASS of the DPU base's own Fickian form -- one global parameter
 # each -- and with membrane depolarisation, which adds no term at all:
 #
-#     nothing (Trapp's PFAS limit)      log10 RMSE 2.640
-#     carrier  (incumbent)                        1.035
-#     bypass   (one global g_apo = 20)            0.996
-#     depolarisation (E_m = -90 mV)               2.289
+#     nothing (Trapp's PFAS limit)      log10 RMSE 2.209
+#     depolarisation (E_m = -90 mV)               1.800
+#     carrier  (fixed Vmax)                       1.131
+#     carrier  (global Vmax re-fitted, x4)        1.009
+#     bypass   (one global g_apo = 20)            1.030
 #
 # So an addition IS necessary (depolarisation is REFUTED), but WHICH addition is
-# not decided by that data: 0.04 log units over 33 observations, bootstrap
-# P(bypass beats carrier) = 0.749, and the bypass cannot claim parsimony either
-# (Vmax_in is a single global 20.0, not per-congener -- checked, not assumed).
+# not decided by that data: bootstrap P(bypass beats the re-fitted carrier) = 0.258,
+# and the bypass cannot claim parsimony either (Vmax_in is a single global, not
+# per-congener -- checked, not assumed).
 #
 # THE CARRIER IS THE DEFAULT BY DEFAULT, NOT BY EVIDENCE. It is the incumbent and
 # every published number runs on it; the bypass is kept RUNNABLE rather than
@@ -405,17 +407,20 @@ def _default_drivers(season, n_t, Cwo, measured_forcing, biomass="oryza2000",
     """The built-in drivers: (t, Cwo, Qtp, M, leaf_loss, M_basis).
 
     measured_forcing and scenario "yamazaki2020" (DEFAULT): the calibration site-year
-        (`scenario_drivers`); `season`, `n_t` and `biomass` do not apply -- the scenario sets
-        the season (transplanting to harvest) and the crop model.
+        (`scenario_drivers`); the scenario sets the season (transplanting to harvest) and the
+        crop model, so `n_t` and `biomass` do not apply and an explicit `season` other than the
+        site's is an error (`site_scenario.check_season`).
     measured_forcing and scenario "generic": `forcing_rice` transpiration and the `biomass`
-        driver over `season` days (alternative drivers, for sensitivity).
+        driver over `season` days (default 120; alternative drivers, for sensitivity).
     not measured_forcing: the illustrative placeholder logistics (no basis of their own)."""
     if scenario not in SCENARIOS:
         raise ValueError(f"scenario must be one of {SCENARIOS}, got {scenario!r}")
     if measured_forcing and scenario == "yamazaki2020":
         d = scenario_drivers(scenario, Cwo=Cwo, **(scenario_kw or {}))
+        ss.check_season(season, d["t"])
         return d["t"], d["Cwo"], d["Qtp"], d["M"], d["leaf_loss"], d["mass_basis"]
-    t = np.linspace(0.0, float(season), int(n_t))
+    season = 120.0 if season is None else float(season)
+    t = np.linspace(0.0, season, int(n_t))
     if measured_forcing:
         Qtp = fr.Q_TP(t, season)
         b = _biomass_fn(biomass)(t, season)
@@ -446,7 +451,7 @@ def _harvest(t, conc, M, comps, M_basis, leaf_loss, attached, sol, leaf_index):
 def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
              f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
              lipid_loading=False, g_xy_override=None, g_ph_override=None,
-             season=120.0, n_t=241, measured_forcing=True, biomass="oryza2000",
+             season=None, n_t=241, measured_forcing=True, biomass="oryza2000",
              drivers=None, K_surf=0.0, record=None,
              cwo_profile="constant", cwo_kw=None,
              uptake=DEFAULT_UPTAKE, vmax_scale=None, g_apo=None, km_scale=1.0,
@@ -498,8 +503,8 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         'carrier' (default; the fitted Michaelis-Menten carrier, the incumbent
         every published number runs on) or 'bypass' (carrier off, one global
         passive apoplastic conductance g_apo). The two are INDISTINGUISHABLE on
-        the only dataset that has been asked (1.035 vs 0.996 log10 RMSE,
-        bootstrap 0.749), so the carrier is the default by default, not by
+        the only dataset that has been asked (re-fitted carrier 1.009 vs bypass
+        1.030 log10 RMSE, bootstrap 0.258), so the carrier is the default by default, not by
         evidence -- see UPTAKE_MODES and validation/carrier_vs_bypass.py.
     vmax_scale, g_apo : explicit overrides of the carrier capacity multiplier /
         apoplastic conductance. Either one given wins over `uptake`, so a scan
@@ -541,7 +546,8 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         if cwo_profile != "constant":
             Cwo_series = cwo_profile_series(
                 t, level=Cwo, profile=cwo_profile, n_C=c["n_C"], group=c["group"],
-                congener=congener, **(cwo_kw or {}))
+                congener=congener,
+                scenario=scenario if measured_forcing else "generic", **(cwo_kw or {}))
     inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss,
                          M_basis=M_basis)
 
@@ -605,7 +611,7 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
 def apportionment(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
                   f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
                   lipid_loading=False, g_xy_override=None, g_ph_override=None,
-                  season=120.0, n_t=241, measured_forcing=True, biomass="growth_rice",
+                  season=None, n_t=241, measured_forcing=True, biomass="growth_rice",
                   scenario=DEFAULT_SCENARIO):
     """Source apportionment for one congener -- the PFAS analog of dynamiCROP's Fig. 2.
 
@@ -666,8 +672,7 @@ def simulate_from_smiles(smiles, *, name=None, f_xy=None, f_xy_override=None, **
         record = {"name": cmpd.name, "n_C": d.n_C, "group": group,
                   "K_prot_Lkg": cmpd.K_prot, "K_PL_Lkg": cmpd.K_PL,
                   "K_cw_wholecw_Lkg": {"root": cmpd.K_cw},
-                  "f_xy_recommended": cmpd.f_xy, "f_xy_W2fit": None,
-                  "kappa_d_W2fit": cmpd.kappa_d, "L_Ph_W2fit": cmpd.L_Ph}
+                  "f_xy_recommended": cmpd.f_xy}   # no fit: L_Ph/kappa_d -> fitted geomean
         res = simulate(cmpd.name, record=record, f_xy_override=fxy_ov, **kw)
     res["descriptors"] = d
     res["provisional"] = (d.matched_name is None) or (not d.is_linear)
@@ -731,7 +736,7 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
                         f_xy_source="recommended", f_xy_override=None,
                         L_Ph_override=None, kappa_d_override=None,
                         lipid_loading=False, g_xy_override=None, g_ph_override=None,
-                        season=150.0, n_t=361, N=4, stem_transp_frac=0.45,
+                        season=None, n_t=361, N=4, stem_transp_frac=0.45,
                         lam_grain=0.05, retention=0.6, biomass_fn=None,
                         k_seq=0.0, k_rel=0.0, K_cw_organ="stem", drivers=None,
                         dead_leaf_attached=1.0, scenario=DEFAULT_SCENARIO, scenario_kw=None):
@@ -785,13 +790,15 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
         leaf_loss = drivers.get("leaf_loss")
     elif biomass_fn is None and scenario == "yamazaki2020":
         d = scenario_drivers(scenario, Cwo=Cwo, **(scenario_kw or {}))
+        ss.check_season(season, d["t"], "simulate_nstem_leaf")
         t, Qtp, Cwo_series, leaf_loss = d["t"], d["Qtp"], d["Cwo"], d["leaf_loss"]
         season = float(t[-1])
         organ_M = d["M"]
         M = np.column_stack(
             [organ_M[:, 0]] + [organ_M[:, 1] / N] * N + [organ_M[:, 2], organ_M[:, 3]])
     else:
-        t = np.linspace(0.0, float(season), int(n_t))
+        season = 150.0 if season is None else float(season)
+        t = np.linspace(0.0, season, int(n_t))
         Qtp = fr.Q_TP(t, season)
         b = (biomass_fn or _biomass_fn("oryza2000"))(t, season)
         b = om.to_model_mass(b)                              # crop DRY matter -> FRESH mass
@@ -910,7 +917,7 @@ def schematic_values(res, metric="conc", t_index=-1):
 # nothing to tune, which is what makes it the one setting where the DPU BACKBONE
 # is testable apart from the fitted PFAS transport.
 # ---------------------------------------------------------------------------
-def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
+def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=None, n_t=241,
                      MW=float("nan"), K_AW=0.0, kappa_d=20.0, half_life=None,
                      tscf_model="briggs", phloem=False, L_Ph=1.0,
                      air=False, air_kw=None, waters=None, lipids=None,
@@ -999,7 +1006,7 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
         if cwo_profile != "constant":
             Cwo_series = cwo_profile_series(
                 t, level=Cwo, profile=cwo_profile, log_kow=float(log_kow), Koc=Koc,
-                **(cwo_kw or {}))
+                scenario=scenario if measured_forcing else "generic", **(cwo_kw or {}))
     drv = dict(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss, mass_basis=M_basis)
 
     gam = float(np.log(2.0) / half_life) if half_life else 0.0
@@ -1038,6 +1045,11 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=120.0, n_t=241,
 #   (2) HYDRUS / CSV   : drivers_from_arrays / load_driver_csv  (one-way coupling)
 #   (3) SOIL INVENTORY : pore_water_from_inventory (Freundlich) + measured Q/M
 # ---------------------------------------------------------------------------
+def site_season(scenario_kw=None):
+    """The calibration site-year's season [days, transplanting to harvest]."""
+    return float(scenario_drivers("yamazaki2020", **(scenario_kw or {}))["t"][-1])
+
+
 def crop_on_grid(t, scenario=DEFAULT_SCENARIO, biomass="oryza2000", season=None):
     """The crop physiology -- transpiration Q_TP [L/d/hill], FRESH organ mass M [kg/hill,
     (n,4)] and the leaf death rate (or None) -- on an arbitrary grid `t` [days after
@@ -1242,7 +1254,7 @@ def build_hydrus_engine():
     return sh.build_hydrus_engine()
 
 
-def hydrus_drivers(congener=None, season=120.0, Cwo_ref=1.0, f_oc=0.02, n_t=241,
+def hydrus_drivers(congener=None, season=None, Cwo_ref=1.0, f_oc=0.02, n_t=241,
                    qtp_from_hydrus=True, biomass="oryza", Kd=None, log_kow=None,
                    scenario=DEFAULT_SCENARIO, **run_kw):
     """Run a real HYDRUS-1D paddy soil model for `congener` and return a `drivers`
@@ -1298,7 +1310,7 @@ _HEADGROUP = {"PFCA": "carboxylate", "PFSA": "sulfonate", "ether": "ether"}
 def cwo_profile_series(t, level=1.0, profile="constant", *, n_C=8, group="PFCA",
                        congener=None, flood_fraction=1.0, k_leach=None, f_oc=0.02,
                        C_total=5.0, theta_g_drained=0.35, theta_g_flooded=0.60,
-                       log_kow=None, Koc=None, **hydrus_kw):
+                       log_kow=None, Koc=None, scenario=DEFAULT_SCENARIO, **hydrus_kw):
     """Time-resolved pore-water C_w^o(t) on grid `t`, normalised to mean == `level`.
 
     profile:
@@ -1312,8 +1324,10 @@ def cwo_profile_series(t, level=1.0, profile="constant", *, n_C=8, group="PFCA",
                     `k_leach` defaults (None) to the per-congener value CALIBRATED to a
                     real HYDRUS-1D run (`default_k_leach`); pass a float to override.
       'hydrus'   -> the Cwᵒ(t) shape from a real HYDRUS-1D run (needs the built
-                    engine; raises if absent). Only the Cwᵒ shape is taken (Qtp/M
-                    stay the caller's), so the three profiles are directly comparable.
+                    engine; raises if absent) whose crop side is `scenario`'s; under
+                    "yamazaki2020" `t` must end at the site's harvest. Only the Cwᵒ shape
+                    is taken (Qtp/M stay the caller's), so the three profiles are
+                    directly comparable.
 
     `flood_fraction` of the season is flooded (remainder drained -> terminal
     concentration). Defaults give continuous flooding (=1.0): a monotone leaching
@@ -1337,7 +1351,7 @@ def cwo_profile_series(t, level=1.0, profile="constant", *, n_C=8, group="PFCA",
             raise ValueError("cwo_profile='hydrus' needs the congener name, "
                              "or log_kow=/Koc= for a neutral organic")
         hd, _ = hydrus_drivers(congener, season=season, Cwo_ref=float(level),
-                               f_oc=f_oc, n_t=len(t),
+                               f_oc=f_oc, n_t=len(t), scenario=scenario,
                                Kd=(None if Koc is None else float(Koc) * float(f_oc)),
                                **hydrus_kw)
         return np.interp(t, hd["t"], hd["Cwo"])
@@ -1385,7 +1399,7 @@ _ESTIMATE_MAX_SOLVES = 8
 
 
 def estimate_exposure_bayesian(congener=None, measured_conc=None, *, sigma_log10=0.15,
-                               season=120.0, E_m_mV=-120.0, f_xy_source="recommended",
+                               season=None, E_m_mV=-120.0, f_xy_source="recommended",
                                biomass="oryza2000", measured_forcing=True, n_plot=121,
                                progress=None, log_kow=None, neutral_kw=None, **sim_kw):
     """Bayesian estimate of the soil-water contamination level Cwᵒ [µg/L] that best
@@ -1511,21 +1525,28 @@ def estimate_exposure_bayesian(congener=None, measured_conc=None, *, sigma_log10
 # ---------------------------------------------------------------------------
 # Predictive uncertainty -- the "honesty band" for the general-audience view
 # ---------------------------------------------------------------------------
-# Documented a-priori predictive error of the model: with the monotone, physical
-# (NOT fitted) f_xy the out-of-sample BAF error is log10 RMSE ~0.84-0.95 (single-
-# straw / redistributed-shoot; docs §6, reproduce_demo.py --rec, validation/
-# apriori_prediction.py). We take ~0.85 as a representative value -> a ×/÷ ~7 band.
-# This exists so the Simple (general-audience) view never shows a precise-looking
-# absolute number without a reminder that the model's out-of-sample predictions
-# routinely differ from measurements by several fold. It is an HONESTY reminder,
-# NOT a calibrated confidence interval (the headline 0.029 RMSE is an in-sample,
-# SATURATED fit -- reproduction, not prediction).
-APRIORI_LOG10_RMSE = 0.85
+# The out-of-sample (a-priori) error of the DEFAULT configuration -- the one the general-
+# audience view runs: monotone physical f_xy with L_Ph/kappa_d_rec, free anion (no lipid
+# loading), the 4-pool core, the calibration site-year. log10 RMSE per transfer test, each
+# from the script named (none of these observations entered the fit):
+APRIORI_OOS_SCORES = {
+    "Yamazaki straw (root+grain fitted, straw predicted)": 1.372,   # refit_site_year.py, fit B
+    "Tang 2026 per-organ TF, 0.1 ug/g": 1.413,                     # oos_tang_lipid.py, free anion
+    "Kim 2019 grain BAF excl PFOA (point)": 2.06,                  # kim2019_censored.py, mono
+    "Li 2025 shoot/root TF by stage": 1.26,                        # li2025_stage_resolved.py, mono
+    "Li 2025 grain/root TF by stage": 1.44,                        # li2025_stage_resolved.py, mono
+}
+# The band uses their MEDIAN (no single test speaks for the others). This exists so the
+# Simple view never shows a precise-looking absolute number without a reminder of how far
+# the default model's predictions sit from measurements. It is an HONESTY reminder, NOT a
+# calibrated confidence interval; the lipid-loading / redistributed-shoot variants do
+# better out of sample (CLAUDE.md section 6) but are not the default.
+APRIORI_LOG10_RMSE = float(np.median(list(APRIORI_OOS_SCORES.values())))
 
 
 def uncertainty_factor(log10_rmse=None):
-    """Multiplicative (×/÷) uncertainty factor from the documented a-priori
-    predictive log10 RMSE (~7× at the 0.85 default = 10**0.85). A coarse honesty
+    """Multiplicative (×/÷) uncertainty factor from the a-priori predictive log10 RMSE
+    of the default configuration (`APRIORI_LOG10_RMSE`, 10**that). A coarse honesty
     reminder for the general-audience view, NOT a calibrated CI. Pure."""
     r = APRIORI_LOG10_RMSE if log10_rmse is None else float(log10_rmse)
     return float(10.0 ** max(r, 0.0))
@@ -1534,8 +1555,8 @@ def uncertainty_factor(log10_rmse=None):
 def predictive_band(value, log10_rmse=None):
     """A coarse ×/÷ uncertainty band around a forward model estimate.
 
-    From the documented a-priori predictive error (log10 RMSE ~0.85 ⇒ a factor of
-    ~7×; see `APRIORI_LOG10_RMSE`). The model's out-of-sample predictions routinely
+    From the a-priori predictive error of the default configuration (see
+    `APRIORI_OOS_SCORES` / `APRIORI_LOG10_RMSE`). The model's out-of-sample predictions routinely
     differ from measurements by several fold, so a single decimal figure overstates
     the precision -- this returns a band to show alongside the number for a general
     audience. It is an HONESTY band, NOT a calibrated confidence interval. Pure;

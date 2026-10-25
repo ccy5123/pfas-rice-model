@@ -8,7 +8,7 @@ Two things have to hold at once, and they pull in opposite directions:
     equation set in docs/dpu_model_summary_corrected.tex sec:permeability;
   * the term must be ABSENT for PFAS -- `K_AW = 0` has to give not "small" but
     exactly zero, and the core's default (`air=None`) must not evaluate it at all,
-    so every existing number and `reproduce_demo`'s RMSE 0.029 are untouched.
+    so every PFAS number is untouched.
 
 The unit bridge is the other thing worth pinning: the published correlations are
 SI (m/s, g/mol) while the model runs in day/L/kg/ug, so the tests below check the

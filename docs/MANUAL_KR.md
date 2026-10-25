@@ -146,16 +146,16 @@ PFSA C4/C6/C8: PFBS·PFHxS·PFOS, 에터 PFAS: GenX)이며, 전문가 모드에�
 
 ### 5.3 모델 파라미터(사이드바)
 - **E_m [mV]** (root membrane potential): GHK 음이온 배제 레버(벼 −116…−140 mV). 음전위가 셀수록 음이온 흡수가 억제됨.
-- **f_xy source**: `recommended`(monotone, 물리적 TSCF) / `W2 fit`(Yamazaki 재현 보정).
-- **Biomass driver M(t)**: `ORYZA2000`(메커니즘 탄소수지, 기본) / `growth_rice`(IR72 분배 × 로지스틱).
+- **f_xy source**: `recommended`(기본; 단조 물리적 TSCF, L_Ph·κ_d는 Yamazaki의 뿌리·낟알에 맞춤 — 짚은 예측) / `fit`(세 파라미터 모두 2020 사이트-연도에 congener별 적합 — 포화된 재현).
+- **작물 드라이버(증산 + 기관 질량)**: **보정 사이트-연도**(기본: JMA 쓰쿠바 2020 기상, Yamazaki 이앙일에 맞춘 ORYZA2000 포트, ORYZA2000 증산; 시즌은 이앙~수확이라 시즌 슬라이더 없음) / **일반 기후값**(`forcing_rice` 증산) + 바이오매스 드라이버(ORYZA2000 포트, 축약 ORYZA, `growth_rice`)를 시즌 슬라이더 기간으로.
 - **⚙️ Mechanism (advanced)** — 아직 *열려 있는* 두 질문을 기본값 없이 숨기지 않고 **모드로** 노출합니다(둘 다 기본값 = 배포 모델, `parameters.json` 불변). 켜면 헤드라인 위에 경고 배너가 뜹니다.
-  - **Root entry**: `carrier`(기본) vs `bypass`(아포플라스트 우회). Michaelis–Menten carrier는 이 레포가 Trapp 세포 모델에 **추가한 유일한 물리**인데, Yamazaki에서 carrier(1.035)와 단일 전역 `g_apo`=20(0.996)은 **구별 불가**(bootstrap 0.749)이고 아무것도 안 넣으면 실패(2.640)입니다 — 즉 *추가는 필요*하지만 *어느 쪽인지는 미결*. 그래서 carrier는 **근거가 아니라 기본값으로** 유지됩니다(`validation/carrier_vs_bypass.py`).
-  - **Lipid-facilitated loading**: K_PL-게이트 B-독립 적재항(`g_xy·C`/`g_ph·C`). Tang에 **아무것도 재적합하지 않고** per-organ 1.232 → 0.516 — 레포에서 가장 강한 교차 데이터셋(OOS) 결과. 단, 자체 `f_xy`를 공급하므로 켜져 있는 동안 위의 f_xy 선택은 무시됩니다. 탐색적/기본 꺼짐.
-  - **Override the entry constants**: `Vmax ×`, `Km ×`, `g_apo` 직접 지정(carrier-vs-bypass 스캔 및 용량 시리즈의 레버; 용량 시리즈의 결론은 사후 하한 `Km ≥ 500 µg/L` = 적합값의 100배).
+  - **Root entry**: `carrier`(기본) vs `bypass`(아포플라스트 우회). Michaelis–Menten carrier는 이 레포가 Trapp 세포 모델에 **추가한 유일한 물리**인데, Yamazaki에서 Vmax를 다시 맞춘 carrier(1.009)와 단일 전역 `g_apo`=20(1.030)은 **구별 불가**(bootstrap 0.258)이고 아무것도 안 넣으면 실패(2.209)입니다 — 즉 *추가는 필요*하지만 *어느 쪽인지는 미결*. 그래서 carrier는 **근거가 아니라 기본값으로** 유지됩니다(`validation/carrier_vs_bypass.py`).
+  - **Lipid-facilitated loading**: K_PL-게이트 B-독립 적재항(`g_xy·C`/`g_ph·C`), Yamazaki에만 적합. Tang에 **아무것도 재적합하지 않고** per-organ 전이 오차 1.413 → 0.655. 자체 `f_xy`를 공급하므로 켜져 있는 동안 위의 f_xy 선택은 무시됩니다. 기본 꺼짐.
+  - **Override the entry constants**: `Vmax ×`, `Km ×`, `g_apo` 직접 지정(carrier-vs-bypass 스캔 및 용량 시리즈의 레버; 용량 시리즈의 결론은 사후 하한 `Km ≥ 150–500 µg/L` = 고정값의 30–100배).
   - 이 스위치들은 모든 탭·congener 비교·**베이지안 역추정**까지 함께 적용됩니다(역추정만 다른 모델로 도는 일이 없도록).
 
 ### 5.4 시나리오 (3 · Scenario) — 모드별 컨트롤
-- **Model (parametric)**: `Pore-water Cwᵒ [µg/L]`, `Season length [days]`, `Cwᵒ(t) shape`(constant / flooded(dilution+leaching), per-congener `k_leach` HYDRUS-보정 기본), `Measured forcings` 토글.
+- **Model (parametric)**: `Pore-water Cwᵒ [µg/L]`, `Season length [days]`(일반 드라이버에서만), `Cwᵒ(t) shape`(constant / flooded(dilution+leaching), per-congener `k_leach` HYDRUS-보정 기본), `Measured forcings` 토글.
 - **Custom tables**: 본문 패널에서 표 입력(아래 6.2).
 - **HYDRUS/CSV**: 드라이버 CSV 업로드 또는 번들 예시. 컬럼은 [7장](#7-입력-데이터-형식-csv).
 - **Run HYDRUS-1D (live)**: `f_oc`, `Flooded until [day]`, `Percolation [cm/day]`. 엔진 미빌드 시 "Build the engine" 버튼.
@@ -262,12 +262,13 @@ day,Cwo
   단쇄는 짚이 뿌리보다 높을 수 있고, 장쇄는 뿌리 우세 경향.
 - **낟알 형성 게이트**: 낟알은 개화 무렵 형성된 뒤부터 흡수→축적. 그 전 구간은 그리지 않습니다(물리적으로 기관이 없음).
 - **불확실성(역추정)**: 사후분포 곡선의 퍼짐이 불확실성. 95% 구간이 넓으면 데이터가 노출을 덜 좁힌 것.
-- **dry vs fresh**: 모델은 신선중(fw) 기준. 건조중(dw) 보고 데이터와 비교 시 `C_dw = C_fw/(1−θ_fw)` 환산 필요(전문가).
+- **dry vs fresh**: 모델 상태는 신선중(fw)이고, 데이터 비교는 수확 관측 연산자(죽은 잎을 잎·짚에 포함)를 거친 건조중(dw)으로 합니다(`baf_final_dw`).
 
 > [!IMPORTANT]
 > Yamazaki 등 관측 막대는 **고정된 실측치**입니다 — 사이드바를 바꿔도 움직이지 않습니다.
-> 모델이 그 실험을 재현하도록 보정된 **특정 설정**(Model parametric, Cwᵒ=1, f_xy=W2 fit, E_m −120, season ~120d)에서만
-> like-for-like 비교가 됩니다. 다른 설정/모드는 참조 추세이지 보정된 매칭이 아닙니다.
+> 옆의 모델 막대는 그 관측을 모델로 재구성한 값(2020 사이트-연도, 두 번의 수확, 건조중, 해당 congener의 관개수 농도)이며
+> 사이드바의 수송·메커니즘 선택을 따르고 노출 설정은 따르지 않습니다. `f_xy source = fit`이면 재현(이 막대에 맞춘 값),
+> `recommended`이면 짚은 예측입니다.
 
 ---
 
@@ -285,10 +286,10 @@ day,Cwo
 - **토양 결합(Method A, 단방향)**: HYDRUS-1D/Phydrus → Cwᵒ(t), Q_TP(t)를 받아 식물 ODE는 Python에서 품. HYDRUS는 미수정.
 
 **알려진 한계(정직한 명시)**
-- demo의 W2 fit RMSE 0.029는 **포화된 재현**(파라미터=관측 수)이라 예측 검증이 아님. a-priori 예측오차는 log10 RMSE ~0.84–0.95(장쇄 collapse).
-- **장쇄(C10–C12) 지상부 과소예측**: 지질 매개 적재/2-pool 분리/장쇄 운반체 용량 등으로 일부 개선되나 PFDoDA 잔차 남음(탐색적).
+- 적합 재현(log10 RMSE 0.121)은 **포화된 재현**(파라미터 3개 / 관측 3개)이라 예측 검증이 아님. 기본 설정의 독립 데이터 전이 오차는 log10 1.26–2.06이고, 지질 적재 + 재분배 지상부가 가장 잘 전이됨(0.43–0.66). 측정값이 없는 입력과 그 민감도는 `docs/ASSUMPTIONS.md`.
+- **장쇄(C10–C12) 지상부 과소예측**: 지질 적재로 개선되나 PFDoDA는 f_xy = L_Ph = 1에서도 과소.
 - `K_cw`(세포벽 분배)는 측정 계수가 문헌에 없어 placeholder. 에터/술폰아미드 Koc는 GAP.
-- 자세한 검증·반증(sci-adk)은 `docs/VALIDATION_KR.md`, `sci_adk_review/` 참조.
+- 현재 결과와 그 스크립트: `CLAUDE.md` §6.
 
 ---
 
@@ -328,12 +329,12 @@ day,Cwo
 ## 12. 재현·검증·테스트
 
 ```bash
-python reproduce_demo.py          # Yamazaki BAF 전체 ODE 재현(W2 fit, log10 RMSE ≈ 0.029)
-python reproduce_demo.py --rec    # monotone 물리적 f_xy(a-priori; 단일-짚 불일치 — 정직한 예측오차)
+python reproduce_demo.py          # Yamazaki 2020 사이트-연도, 적합 수송(재현, log10 RMSE 0.121)
+python reproduce_demo.py --rec    # 단조 물리적 f_xy: 짚은 예측(log10 1.37)
 python build_parameters.py        # params/parameters.json 재조립
 pip install pytest && pytest      # 전체 테스트(구조/질량보존/QSPR/보정/API/플롯/역추정/표입력 …)
 ```
-- 검증 문서: `docs/VALIDATION_KR.md`, `docs/VALIDATION_TANG2026_*_KR.md`, `validation/*.py`.
+- 검증: `CLAUDE.md` §6(현재 결과), `validation/*.py`; 대체된 분석은 `validation/archive/`.
 - 앱 계산/그림은 head-less 테스트됨: `tests/test_model_api.py`, `tests/test_plots.py`.
 
 ---

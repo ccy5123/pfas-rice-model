@@ -35,8 +35,8 @@ from conftest import SOLVE_INVARIANCE_REL                       # noqa: E402
 def test_new_overrides_default_to_the_shipped_model():
     """vmax_scale=1 and g_apo=0 must reach the same solve as passing neither --
     same Compound, same RHS, so this is case 1 in conftest and exact."""
-    a = api.simulate("PFOA", season=120.0, n_t=121)
-    b = api.simulate("PFOA", season=120.0, n_t=121, vmax_scale=1.0, g_apo=0.0)
+    a = api.simulate("PFOA")
+    b = api.simulate("PFOA", vmax_scale=1.0, g_apo=0.0)
     for k in api.TISSUES:
         assert a["baf_final"][k] == b["baf_final"][k], k
 
@@ -56,8 +56,8 @@ def test_uptake_mode_default_is_the_shipped_carrier():
     published PFAS number still describes what simulate() returns."""
     assert api.DEFAULT_UPTAKE == "carrier"
     assert api.UPTAKE_MODES["carrier"] == dict(vmax_scale=1.0, g_apo=0.0)
-    a = api.simulate("PFOA", season=120.0, n_t=121)
-    b = api.simulate("PFOA", season=120.0, n_t=121, uptake="carrier")
+    a = api.simulate("PFOA")
+    b = api.simulate("PFOA", uptake="carrier")
     for k in api.TISSUES:
         assert a["baf_final"][k] == b["baf_final"][k], k
     assert a["params"]["uptake"] == "carrier"
@@ -66,10 +66,10 @@ def test_uptake_mode_default_is_the_shipped_carrier():
 def test_uptake_bypass_mode_turns_the_carrier_off_and_the_conductance_on():
     """The mode has to BE the arm it names -- carrier off, one global g_apo --
     or the runnable alternative is not the thing that was scored."""
-    r = api.simulate("PFOA", season=120.0, n_t=121, uptake="bypass")
+    r = api.simulate("PFOA", uptake="bypass")
     assert r["params"]["vmax_scale"] == 0.0
     assert r["params"]["g_apo"] == api.UPTAKE_MODES["bypass"]["g_apo"] > 0.0
-    explicit = api.simulate("PFOA", season=120.0, n_t=121, vmax_scale=0.0,
+    explicit = api.simulate("PFOA", vmax_scale=0.0,
                             g_apo=api.UPTAKE_MODES["bypass"]["g_apo"])
     for k in api.TISSUES:
         assert r["baf_final"][k] == explicit["baf_final"][k], k
@@ -78,9 +78,9 @@ def test_uptake_bypass_mode_turns_the_carrier_off_and_the_conductance_on():
 def test_explicit_overrides_still_win_over_the_named_mode():
     """A scan must be able to move one term while the mode sets the other --
     otherwise naming the mode would take the scan away from carrier_vs_bypass."""
-    r = api.simulate("PFOA", season=120.0, n_t=121, uptake="bypass", g_apo=5.0)
+    r = api.simulate("PFOA", uptake="bypass", g_apo=5.0)
     assert (r["params"]["g_apo"], r["params"]["vmax_scale"]) == (5.0, 0.0)
-    r2 = api.simulate("PFOA", season=120.0, n_t=121, uptake="carrier", vmax_scale=0.0)
+    r2 = api.simulate("PFOA", uptake="carrier", vmax_scale=0.0)
     assert (r2["params"]["vmax_scale"], r2["params"]["g_apo"]) == (0.0, 0.0)
 
 
@@ -105,8 +105,8 @@ def test_the_carrier_has_one_global_parameter_not_one_per_congener():
 def test_turning_the_carrier_off_opens_a_large_gap():
     """The size of what the carrier is doing -- Trapp's PFAS limit with nothing
     added. Order of magnitude, not a pinned value."""
-    on = api.simulate("PFOA", season=120.0, n_t=121)["baf_final"]["root"]
-    off = api.simulate("PFOA", season=120.0, n_t=121, vmax_scale=0.0)["baf_final"]["root"]
+    on = api.simulate("PFOA")["baf_final"]["root"]
+    off = api.simulate("PFOA", vmax_scale=0.0)["baf_final"]["root"]
     assert off < on / 5.0, (on, off)
 
 
@@ -116,7 +116,7 @@ def test_depolarisation_alone_cannot_replace_the_carrier():
     in for the carrier, this repo would not need to have extended him at all. It
     cannot: at -90 mV with the carrier off the root is still far below the
     carrier's."""
-    kw = dict(season=120.0, n_t=121)
+    kw = {}
     carrier = api.simulate("PFOA", **kw)["baf_final"]["root"]
     depol = api.simulate("PFOA", vmax_scale=0.0, E_m_mV=-90.0, **kw)["baf_final"]["root"]
     assert depol < carrier / 3.0, (carrier, depol)
@@ -129,7 +129,7 @@ def test_a_bypass_large_enough_to_replace_the_carrier_exists():
     """Arm B reaches the carrier's ballpark -- which is WHY the two are not
     separable. Deliberately a bracket, not an equality: the finding is that they
     are indistinguishable, so asserting a winner either way would contradict it."""
-    kw = dict(season=120.0, n_t=121)
+    kw = {}
     carrier = api.simulate("PFOA", **kw)["baf_final"]["root"]
     bypass = api.simulate("PFOA", vmax_scale=0.0, g_apo=20.0, **kw)["baf_final"]["root"]
     assert 0.2 * carrier < bypass < 5.0 * carrier, (carrier, bypass)

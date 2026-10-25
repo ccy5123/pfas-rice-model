@@ -33,8 +33,8 @@ import dose_series_carrier as DS                                 # noqa: E402
 # the API contract
 # ---------------------------------------------------------------------------
 def test_km_scale_defaults_to_the_shipped_carrier():
-    a = api.simulate("PFOA", season=120.0, n_t=121)
-    b = api.simulate("PFOA", season=120.0, n_t=121, km_scale=1.0)
+    a = api.simulate("PFOA")
+    b = api.simulate("PFOA", km_scale=1.0)
     for k in api.TISSUES:
         assert a["baf_final"][k] == b["baf_final"][k], k
     assert b["params"]["Km_in"] == api._CARR["Km_in"]
@@ -46,7 +46,7 @@ def test_km_scale_makes_the_carrier_more_linear_not_merely_stronger():
     Cwo >> Km it lowers it, since the term sits further below Vmax). It flattens
     the DOSE RESPONSE -- the BAF ratio between two exposures goes to 1 -- which
     is the whole basis for reading a large Km as "linear over the span"."""
-    kw = dict(season=120.0, n_t=121, f_xy_source="recommended")
+    kw = dict(f_xy_source="recommended")
     ratio = lambda ks: (api.simulate("PFOS", Cwo=10.0, km_scale=ks, **kw)["baf_final"]["root"]
                         / api.simulate("PFOS", Cwo=10000.0, km_scale=ks, **kw)["baf_final"]["root"])
     tight, loose = ratio(1.0), ratio(1000.0)
@@ -62,12 +62,12 @@ def test_the_carrier_is_the_only_nonlinearity_in_exposure():
     (GHK and the bypass are both linear), so any curvature in a dose series is
     the carrier's. If this fails, the dose series stops being a clean structural
     discriminator and the B1 result must be re-derived, not repaired."""
-    kw = dict(uptake="bypass", season=120.0, n_t=121, f_xy_source="recommended")
+    kw = dict(uptake="bypass", f_xy_source="recommended")
     lo = api.simulate("PFOA", Cwo=1.0, **kw)["baf_final"]["root"]
     hi = api.simulate("PFOA", Cwo=1000.0, **kw)["baf_final"]["root"]
     assert lo == pytest.approx(hi, rel=1e-3), (lo, hi)
     # and with the carrier ON it must NOT be linear, or there is nothing to test
-    con = dict(season=120.0, n_t=121, f_xy_source="recommended")
+    con = dict(f_xy_source="recommended")
     clo = api.simulate("PFOA", Cwo=1.0, **con)["baf_final"]["root"]
     chi = api.simulate("PFOA", Cwo=1000.0, **con)["baf_final"]["root"]
     assert chi < 0.9 * clo, (clo, chi)

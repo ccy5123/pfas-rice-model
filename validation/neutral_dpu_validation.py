@@ -21,8 +21,8 @@
 # measured plant data. Section 5 is that comparison, and section 6 scans the two
 # inputs the strict a-priori run does not have (in-planta half-life, TSCF QSPR).
 # Two measured rice tables ship with the repo:
-#   data_obs/neutral_obs_liu2023.csv  root partition, 14 compounds  (RMSE 0.281)
-#   data_obs/neutral_obs_ge2017.csv   per-organ TF, 3 compounds     (RMSE 0.783)
+#   data_obs/neutral_obs_liu2023.csv  root partition, 14 compounds  (RMSE 0.213)
+#   data_obs/neutral_obs_ge2017.csv   per-organ TF, 3 compounds     (RMSE 0.311)
 # both predicted with NOTHING fitted. `data_obs/neutral_obs_template.csv` is the
 # schema for adding your own. See docs/neutral_dpu_validation.md.
 #
@@ -188,7 +188,7 @@ def check_air_exchange(drv=None, log_kow=2.42, MW=131.4):
     print("\n   The K_AW = 0 row is the PFAS constraint: the air pathway is")
     print("   STRUCTURALLY absent, not numerically small — P_air and P_S are both")
     print("   proportional to K_AW, and the core leaves `air=None` by default, so no")
-    print("   PFAS number moves (reproduce_demo stays at log10 RMSE 0.029).")
+    print("   PFAS number moves (an air term at K_AW = 0 is bit-identical to none).")
     print("   The root never volatilises (below ground), so it is flat across the")
     print("   ladder while the leaf, the terminal accumulator, is bounded by it.")
     print(f"   -> {'PASS' if ok else 'FAIL'} (leaf falls monotonically, root invariant)")
@@ -286,7 +286,7 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
     in the same file (data_obs/neutral_obs_li2019_rcf.csv carries the 18 Briggs
     1982 barley rows the RCF QSPR was fitted to). Pass subset=None to score
     everything. Files WITHOUT the column -- liu2023, ge2017 -- are unaffected, so
-    the published 0.281 / 0.783 cannot move because of this argument.
+    the published 0.213 / 0.311 cannot move because of this argument.
 
     `group_by` names a column to also report per-group RMSE for (e.g. "species").
 
@@ -410,8 +410,9 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
                   f"   mean log10 bias {bias:+.3f}")
     print("   NOTE: zero parameters were fitted to this table -- K_PW and TSCF come")
     print("   from log Kow alone, so this is a genuine a-priori prediction, and it is")
-    print("   the only such test in this repo. Interpret it against the PFAS side's")
-    print("   a-priori error (log10 RMSE ~0.84-0.95, CLAUDE.md section 6).")
+    print("   the cleanest such test in this repo. Interpret it against the PFAS side's")
+    print("   a-priori error (default configuration, model_api.APRIORI_OOS_SCORES:")
+    print("   log10 RMSE 1.26-2.06 across the transfer tests).")
     return rmse
 
 
@@ -547,8 +548,8 @@ def main(obs_path=None):
         print("  => These structural checks show the path IS the published Briggs core and")
         print("     reproduces the qualitative Kow law with zero fitted parameters. For the")
         print("     a-priori predictions against measured rice data, re-run with")
-        print("       --obs data_obs/neutral_obs_liu2023.csv   (root partition, RMSE 0.281)")
-        print("       --obs data_obs/neutral_obs_ge2017.csv    (per-organ TF,  RMSE 0.783)")
+        print("       --obs data_obs/neutral_obs_liu2023.csv   (root partition, RMSE 0.213)")
+        print("       --obs data_obs/neutral_obs_ge2017.csv    (per-organ TF,  RMSE 0.311)")
     else:
         print(f"  measured-data comparison: log10 RMSE {rmse:.3f} (a-priori, nothing fitted)")
     return ok1 and ok2 and ok4

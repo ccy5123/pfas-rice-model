@@ -49,7 +49,7 @@ def _ctx_lookup_panel():
       to it, and Kodesova measured it varying 4.8x between species for one compound;
     * it does not hide PROVENANCE. CompTox serves experimental and OPERA-PREDICTED
       values side by side, and every a-priori number this path advertises (Liu
-      0.206/0.281, Ge 0.783) was computed on a MEASURED log Kow. Experimental wins
+      0.206/0.213, Ge 0.311) was computed on a MEASURED log Kow. Experimental wins
       when both exist, and each filled field is shown with its badge, because a
       prediction quietly standing in for a measurement would make those numbers
       describe something the app is no longer doing.
@@ -91,8 +91,8 @@ def _ctx_lookup_panel():
                      "corresponding term off.")
         if predicted:
             st.warning("**Predicted (not measured): " + ", ".join(predicted) + ".** Filled in "
-                       "anyway and marked — but this path's published a-priori errors (Liu 0.281, "
-                       "Ge 0.783) are on MEASURED log Kow, so replace it with a measured value "
+                       "anyway and marked — but this path's published a-priori errors (Liu 0.213, "
+                       "Ge 0.311) are on MEASURED log Kow, so replace it with a measured value "
                        "when you have one before quoting them for this run.")
         if "pKa" in kw:
             import literature_params as LP
@@ -311,9 +311,9 @@ def _mechanism_panel():
             help="How the anion gets past the inside-negative membrane. The "
                  "Michaelis–Menten CARRIER is this repo's one addition to the Trapp "
                  "cell model — and it keeps its place by DEFAULT, NOT BY EVIDENCE: "
-                 "on Yamazaki the carrier (1.035) and a single global apoplastic "
-                 "bypass g_apo=20 (0.996) are indistinguishable (bootstrap 0.749), "
-                 "while adding nothing at all fails (2.640). See "
+                 "on Yamazaki the carrier with its Vmax re-fitted (1.009) and a single "
+                 "global apoplastic bypass g_apo=20 (1.030) are indistinguishable "
+                 "(bootstrap 0.258), while adding nothing at all fails (2.209). See "
                  "validation/carrier_vs_bypass.py.")
         uptake = "carrier" if up_label.startswith("carrier") else "bypass"
         lipid_loading = st.checkbox(
@@ -322,8 +322,8 @@ def _mechanism_panel():
                  "anion Cw=C/B starves high-binding long chains, but the membrane-lipid-"
                  "bound pool still rides the transpiration stream. Constants were fit on "
                  "YAMAZAKI, so transferring them is genuine out-of-sample — and it is the "
-                 "repo's strongest cross-dataset result (Tang per-organ 1.48→0.52 on fresh "
-                 "organ mass; best on Kim 2019 grain too). EXPLORATORY, default off. NOTE it supplies its "
+                 "repo's strongest cross-dataset result (Tang per-organ 1.41→0.66, Kim 2019 "
+                 "grain 2.06→0.50, nothing re-fit to either). Default off. NOTE it supplies its "
                  "own f_xy, so the 'Root→shoot f_xy' choice above is ignored while it is on.")
         st.caption("Both default to the shipped model; turning either on changes every "
                    "tab (map, dynamics, BAF), never `parameters.json`.")
@@ -342,8 +342,8 @@ def _mechanism_panel():
             km_scale = st.number_input(
                 "Km ×", 0.01, 1000.0, 1.0, 1.0,
                 help="Half-saturation multiplier — the model's ONLY nonlinearity in "
-                     "exposure. Tang's 5-dose series needs Km ≥ 500 µg/L (100× the fitted "
-                     "5) to be as flat as measured, i.e. linear over the whole span, which "
+                     "exposure. Tang's 5-dose series needs Km ≥ 150–500 µg/L (30–100× the "
+                     "fixed 5) to be as flat as measured, i.e. linear over the whole span, which "
                      "IS the bypass's functional form (validation/dose_series_carrier.py).")
             g_apo = st.number_input(
                 "g_apo  [L/kg/d]", 0.0, 100.0, float(api.UPTAKE_MODES[uptake]["g_apo"]), 0.5,
@@ -368,7 +368,7 @@ def build():
         drivers = None
         measured = True
         Cwo_const = 1.0
-        season = 120.0
+        season = api.site_season()    # the default crop (site2020) sets its own season
         soil_obj = None
         profile = None
         measured_bio = None
@@ -502,6 +502,9 @@ def build():
                                      "matures 12 d late on its own calibration experiment, growth_rice has no "
                                      "leaf death). Ignored when a driver CSV supplies M.")
             biomass = _bm[bm_label]
+            # the site-year sets its own season (transplanting to harvest); the slider below
+            # applies only to the generic drivers
+            season = api.site_season() if biomass == "site2020" else 120.0
 
             # PFAS mechanism switches (carrier/bypass, lipid loading) -- see _mechanism_panel
             if not neutral:
@@ -603,7 +606,6 @@ def build():
                                           "value in the compound panel above.")
                     flood_until = st.slider("Flooded until  [day]", 30, 120, 90, 5)
                     percolation = st.slider("Percolation excess  [cm/day]", 0.0, 1.0, 0.30, 0.05)
-                    season = 120.0
                     kd_n = float(neutral["Koc"]) * float(f_oc)
                     try:
                         drivers = _hydrus_drivers_cached(None, season, f_oc, flood_until, percolation,
@@ -629,7 +631,6 @@ def build():
                                             help="Continuous flooding (clean irrigation) until this day, then drainage.")
                     percolation = st.slider("Percolation excess  [cm/day]", 0.0, 1.0, 0.30, 0.05,
                                             help="Clean-water through-flow that leaches the dissolved pool.")
-                    season = 120.0
                     try:
                         drivers = _hydrus_drivers_cached(soil_cong, season, f_oc, flood_until, percolation,
                                                          crop=biomass)
@@ -646,7 +647,6 @@ def build():
                 n_F = st.slider("Freundlich exponent n", 0.6, 1.0, 0.85, 0.01)
                 theta_g = st.slider("Drained water content θ_g  [L/kg]", 0.2, 0.6, 0.35, 0.01)
                 flood = st.checkbox("Flooded early season (dilution + leaching)", value=True)
-                season = (float(api.scenario_drivers()["t"][-1]) if biomass == "site2020" else 120.0)
                 t = np.linspace(0.0, season, 241)
                 flooded = t < (0.75 * season) if flood else None
                 # Unified with the parametric flooded mode: default to the per-congener

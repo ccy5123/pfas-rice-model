@@ -18,8 +18,8 @@
 # f_n -> 0 limit predicts almost no uptake while PFAS demonstrably accumulates.
 # Measured here: switching the carrier off takes PFOA root BAF 0.479 -> 0.038.
 #
-# But the carrier has never been compared with an alternative. It was FITTED
-# (parameters.json: "fixed during W2 fit"), and docs/neutral_dpu_validation.md
+# But the carrier has never been compared with an alternative. Its constants were
+# never measured (parameters.json carrier block), and docs/neutral_dpu_validation.md
 # section 4m has since shown that on the neutral side the same anion-entry gap is
 # substantially closable by a PASSIVE apoplastic bypass. So the question is not
 # "does the carrier work" but "did the extension have to be made at all".
@@ -43,8 +43,8 @@
 # HELD FIXED ACROSS ARMS so that only the uptake term differs: the monotone
 # physical `f_xy_source="recommended"` (a-priori, NOT fitted to Yamazaki), B_k,
 # the biomass driver and the measured forcings. The absolute level is therefore
-# a-priori-limited for every arm -- the documented a-priori error is ~0.84-0.98
-# log10 RMSE -- and NO arm will look good. That is expected and it is not what is
+# a-priori-limited for every arm -- the a-priori straw error of this configuration
+# is log10 RMSE ~1.4 (refit_site_year.py, Fit B) -- and NO arm will look good. That is expected and it is not what is
 # being measured: the comparison is BETWEEN arms, on identical everything else,
 # exactly as section 4l's driver mismatch cancels in an ON-vs-OFF comparison.
 #

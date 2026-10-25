@@ -278,9 +278,10 @@ def posthoc_pfas():
     import model_api as api
     t = np.linspace(0.0, 120.0, 481)
     t_mat = float(t[np.argmax(O2K.organ_biomass(t, 120.0)["dvs"] >= 2.0)])
-    cases = (("oryza, 120 d", dict(biomass="oryza", season=120.0)),
-             ("oryza2000, 120 d", dict(biomass="oryza2000", season=120.0)),
-             (f"oryza2000, {t_mat:.0f} d", dict(biomass="oryza2000", season=t_mat)))
+    g = dict(scenario="generic")                 # the climatology, not the calibration site-year
+    cases = (("oryza, 120 d", dict(g, biomass="oryza", season=120.0)),
+             ("oryza2000, 120 d", dict(g, biomass="oryza2000", season=120.0)),
+             (f"oryza2000, {t_mat:.0f} d", dict(g, biomass="oryza2000", season=t_mat)))
     print("\n" + "=" * 92)
     print(f"POST-HOC -- PFAS harvest BAF [L/kg fw] under each driver (port matures at t = {t_mat:.0f} d "
           "in the PFAS climatology)")

@@ -380,7 +380,7 @@ def _default_growth_df(season, crop, n_rows=7):
     import pandas as pd
     kw = crop_kw(crop)
     if kw["scenario"] == "yamazaki2020":
-        season = float(api.scenario_drivers()["t"][-1])
+        season = api.site_season()
     t = np.linspace(0.0, float(season), n_rows)
     _, M, _ = api.crop_on_grid(t, season=season, **kw)      # FRESH organ mass [kg/hill]
     return pd.DataFrame({"day": np.round(t, 0),

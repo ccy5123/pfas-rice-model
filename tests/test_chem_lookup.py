@@ -265,7 +265,7 @@ def test_neutral_kwargs_maps_onto_simulate_neutral_and_omits_half_life():
     assert "half_life" not in nk
     api = pytest.importorskip("model_api")
     res = api.simulate_neutral(nk["log_kow"], MW=nk["MW"], K_AW=nk["K_AW"],
-                               air=False, half_life=7.0, season=60.0, n_t=61)
+                               air=False, half_life=7.0)
     assert res["baf_final"]["root"] > 0
 
 

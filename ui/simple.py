@@ -35,7 +35,7 @@ def render(cfg):
     tops = {"roots": root_c, "straw (stems + leaves)": straw_c, "grain": grain_c}
     where_most = max(tops, key=tops.get)
 
-    # Honest a-priori predictive band (×/÷ ~7): the model's out-of-sample error is
+    # Honest a-priori predictive band (×/÷ api.uncertainty_factor()): the out-of-sample error is
     # large, so every absolute number is shown with a range + a several-fold caveat
     # rather than a precise-looking single figure (HANDOFF P1).
     bands = {k: api.predictive_band(v) for k, v in

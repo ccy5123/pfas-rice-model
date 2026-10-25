@@ -92,8 +92,8 @@ def test_fxy_grounded_in_parameters_json():
 def test_simulate_from_smiles_matches_canonical():
     """simulate_from_smiles on a known structure == simulate on the named congener."""
     for name in ("PFOA", "PFOS"):
-        a = api.simulate(name, season=150.0)
-        b = api.simulate_from_smiles(ps.KNOWN_SMILES[name], season=150.0)
+        a = api.simulate(name)
+        b = api.simulate_from_smiles(ps.KNOWN_SMILES[name])
         assert b["provisional"] is False
         for k in a["baf_final"]:
             assert b["baf_final"][k] == pytest.approx(a["baf_final"][k], rel=1e-6)
@@ -101,7 +101,7 @@ def test_simulate_from_smiles_matches_canonical():
 
 def test_simulate_from_smiles_runs_novel():
     """A novel PFAS (not in the curated set) runs end-to-end from SMILES."""
-    r = api.simulate_from_smiles("OC(=O)" + "C(F)(F)" * 11 + "C(F)(F)F", season=150.0)  # C13
+    r = api.simulate_from_smiles("OC(=O)" + "C(F)(F)" * 11 + "C(F)(F)F")  # C13
     assert r["success"] and r["provisional"] is True
     assert r["baf_final"]["root"] > 0 and r["descriptors"].n_perfluoroC == 12
 

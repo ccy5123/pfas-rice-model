@@ -80,20 +80,20 @@ import pfas_rice_plant_module_4pool_surf as P4  # noqa: E402
 # are set out in tests/conftest.py, which now owns that rule.
 GOLDEN_REL = 1e-3
 
+# Goldens on the current model (calibration site-year, fresh organ mass, harvest at the
+# mean date). Regenerate them only when the model itself is deliberately changed.
 PFAS_GOLDEN = {
-    ("PFOA", "recommended"): {"root": 0.47898212697156994, "grain": 0.14758130345806664},
-    ("PFOS", "W2fit"): {"root": 5.631003583042794, "grain": 0.46877406867211824},
-    ("PFBA", "recommended"): {"root": 0.2221500526752143, "grain": 3.4768563854305996},
+    ("PFOA", "recommended"): {"root": 0.4127282751512177, "grain": 0.3866981693189278},
+    ("PFOS", "fit"): {"root": 5.045413353005666, "grain": 1.6276145756028206},
+    ("PFBA", "recommended"): {"root": 0.5752512784634323, "grain": 3.805393210653735},
 }
 
 
 @pytest.mark.parametrize("key,expected", list(PFAS_GOLDEN.items()))
 def test_pfas_path_is_unmoved(key, expected):
-    """The PORT must not move the PFAS path. The goldens predate the dry->fresh organ-mass
-    fix (src/organ_mass.py), so the comparison runs on mass_basis="dry" -- this test is
-    about the weak-electrolyte port, not about the mass basis (tests/test_organ_mass.py)."""
+    """The speciation terms must not move the PFAS path (a permanent anion, pKa None)."""
     cong, src = key
-    r = api.simulate(cong, f_xy_source=src, season=120.0, n_t=121, mass_basis="dry")
+    r = api.simulate(cong, f_xy_source=src)
     for tissue, want in expected.items():
         assert r["baf_final"][tissue] == pytest.approx(want, rel=GOLDEN_REL), tissue
 
@@ -107,12 +107,9 @@ def test_neutral_path_is_unmoved():
     with no solver in it, so it is exactly reproducible and stays an exact `==`.
     Do not "tidy" the second one onto approx: it is the control showing the
     tolerance above is about the solver and not about the partition core.
-    The published neutral RMSEs predate the dry->fresh organ-mass fix, so the golden
-    runs on mass_basis="dry" (K_PW, closed-form, has no mass in it at all).
     """
-    r = api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0,
-                             season=120.0, n_t=121, mass_basis="dry")
-    assert r["baf_final"]["root"] == pytest.approx(1.2139709581034162, rel=GOLDEN_REL)
+    r = api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0)
+    assert r["baf_final"]["root"] == pytest.approx(1.688863308015264, rel=GOLDEN_REL)
     assert r["K_PW"]["root"] == 1.8394200621153844
     # the compound the neutral path builds must carry NO speciation fields
     core = ND.neutral_compound(ND.NeutralCompound("x", 2.45))
@@ -150,7 +147,7 @@ def test_weak_acid_far_above_its_pKa_reproduces_the_neutral_path():
     the same molecule as the neutral one -- so the two code paths must agree there.
     If they diverge, `pKa=` is a second model rather than an extension of this one,
     and `P_n = kappa_d` in `_weak_electrolyte_kw` is the choice that guarantees it."""
-    kw = dict(name="x", season=60.0, n_t=61)
+    kw = dict(name="x")
     neutral = api.simulate_neutral(2.45, **kw)
     almost = api.simulate_neutral(2.45, pKa=12.0, **kw)
     for tissue in ("root", "stem", "leaf", "grain"):
@@ -161,7 +158,7 @@ def test_weak_acid_far_above_its_pKa_reproduces_the_neutral_path():
 def test_uptake_falls_monotonically_as_the_acid_gets_stronger():
     """As pKa drops the compound loses the fast neutral route AND gains anion
     exclusion, so root uptake must fall monotonically towards the PFAS-like limit."""
-    kw = dict(name="x", season=60.0, n_t=61)
+    kw = dict(name="x")
     roots = [api.simulate_neutral(2.45, pKa=p, **kw)["baf_final"]["root"]
              for p in (12.0, 8.0, 6.5, 4.5, -3.0)]
     assert all(a > b for a, b in zip(roots, roots[1:])), roots
@@ -176,18 +173,14 @@ def test_a_weak_base_is_a_cation_and_is_not_excluded():
     (anion, z=-1) is excluded by the inside-negative membrane while a base (cation,
     z=+1) is attracted -- one global `Environment.z` cannot say both.
 
-    Magnitude: ~19x on the pre-fix DRY organ mass, ~3.7x on FRESH mass -- with uptake now
-    scaling with the (10x larger) fresh root mass the base reaches its partition ceiling
-    and the acid climbs toward its own, so the contrast compresses; the SIGN is the claim."""
-    kw = dict(name="x", season=60.0, n_t=61, pKa=4.5)
+    Magnitude ~9x on the site-year (the base reaches its partition ceiling); the SIGN is
+    the claim."""
+    kw = dict(name="x", pKa=4.5)
     acid = api.simulate_neutral(2.45, is_acid=True, **kw)["baf_final"]["root"]
     base_r = api.simulate_neutral(2.45, is_acid=False, **kw)
     base = base_r["baf_final"]["root"]
     assert base > 3.0 * acid
     assert base == pytest.approx(base_r["K_PW"]["root"], rel=0.1)   # the cation is not excluded
-    dry = dict(kw, mass_basis="dry")
-    assert (api.simulate_neutral(2.45, is_acid=False, **dry)["baf_final"]["root"]
-            > 10.0 * api.simulate_neutral(2.45, is_acid=True, **dry)["baf_final"]["root"])
 
 
 def test_speciation_spans_the_whole_range():
@@ -217,7 +210,7 @@ def test_the_ion_trap_does_not_switch_off_thermodynamically():
 def test_phloem_trap_is_off_for_pfas_by_construction():
     """Not a numerical coincidence: the PFAS path sets neither a compound pKa nor a
     leaf pH, and the factor returns `L_Ph` from the branch before any arithmetic."""
-    res = api.simulate("PFOA", season=60.0, n_t=61)      # smoke: PFAS still runs
+    res = api.simulate("PFOA")                          # smoke: PFAS still runs
     assert res["baf_final"]["root"] > 0
 
     comps = ND.rice_compartments()

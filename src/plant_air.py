@@ -43,8 +43,7 @@ Three things the derivation flags, and how they are handled here
    to `K_AW`.  Both pathways therefore vanish, and the volatilisation term carries
    a further factor `K_AW` through `1/K_PA`.  On top of that the core keeps
    `air=None` as its default, so the terms are not merely zero but never evaluated
-   -- every existing PFAS number, and `reproduce_demo`'s RMSE 0.029, is
-   bit-identical.  (Same discipline as `k_seq=0` in the two-pool merge.)
+   -- every PFAS number is bit-identical with and without the hook.  (Same discipline as `k_seq=0` in the two-pool merge.)
 
 Modelling assumptions, quoted from the derivation
 -------------------------------------------------

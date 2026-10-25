@@ -129,7 +129,7 @@ doc = {
     },
     "carrier_MichaelisMenten": {
         "Vmax_in": 20.0, "Km_in": 5.0, "Vmax_out": 8.0, "Km_out": 5.0,
-        "note": "fixed values (not fitted to any dataset here; the per-congener kappa_d fit absorbs root-entry magnitude); carrier overcomes GHK anion exclusion (e^N≈107). validation/dose_series_carrier.py bounds Km >= 500 ug/L from Tang's dose series.",
+        "note": "fixed values (not fitted to any dataset here; the per-congener kappa_d fit absorbs root-entry magnitude); carrier overcomes GHK anion exclusion (e^N≈107). validation/dose_series_carrier.py bounds Km >= 150 (PFOA) - 500 (PFOS) ug/L from Tang's dose series.",
     },
     "f_xy_functional_form": {
         "form": "logistic", "expression": "f_xy(n) = eta / (1 + 10^(s*(n - n0)))",

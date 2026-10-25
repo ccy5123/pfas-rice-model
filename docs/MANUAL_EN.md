@@ -147,16 +147,16 @@ Three classes, chosen in the sidebar because the compound is a scenario input, n
 
 ### 5.3 Model parameters (sidebar)
 - **E_m [mV]** (root membrane potential): the GHK anion-exclusion lever (rice −116…−140 mV). More negative → more anion exclusion.
-- **f_xy source**: `recommended` (monotone, physical TSCF) / `W2 fit` (reproduces Yamazaki).
-- **Biomass driver M(t)**: `ORYZA2000` (mechanistic carbon balance, default) / `growth_rice` (IR72 partitioning × logistic).
+- **f_xy source**: `recommended` (default; monotone physical TSCF, with L_Ph and κ_d fitted to Yamazaki's root and grain — straw is a prediction) / `fit` (all three fitted per congener on the 2020 site-year — a saturated reproduction).
+- **Crop drivers (transpiration + organ mass)**: the **calibration site-year** (default: JMA Tsukuba 2020 weather, the ORYZA2000 port transplanted on Yamazaki's date, ORYZA2000 transpiration; the season is transplanting to harvest, so there is no season slider) / a **generic climatology** (`forcing_rice` transpiration) with a biomass driver — the ORYZA2000 port, the reduced ORYZA re-coding, or `growth_rice` — over the season slider.
 - **⚙️ Mechanism (advanced)** — two questions that are still *open* are exposed as modes rather than buried constants (both default to the shipped model; `parameters.json` untouched). A banner appears next to the headline metrics whenever one is on.
-  - **Root entry**: `carrier` (default) vs `bypass` (apoplastic). The Michaelis–Menten carrier is the **one piece of physics this repo adds** to the Trapp cell model — yet on Yamazaki the carrier (1.035) and a single global `g_apo`=20 (0.996) are **indistinguishable** (bootstrap 0.749) while adding nothing at all fails (2.640): *an* addition is necessary, *which* is undecided, so the carrier keeps its place **by default, not by evidence** (`validation/carrier_vs_bypass.py`).
-  - **Lipid-facilitated loading**: the K_PL-gated, B-independent loading term (`g_xy·C`/`g_ph·C`). With **nothing re-fit to Tang** it moves the per-organ OOS 1.232 → 0.516 — the repo's strongest cross-dataset result. It supplies its own `f_xy`, so the f_xy choice above is ignored while it is on. Exploratory, default off.
-  - **Override the entry constants**: `Vmax ×`, `Km ×`, `g_apo` — the levers of that scan and of the dose series (whose result is the post-hoc bound `Km ≥ 500 µg/L`, 100× the fitted value).
+  - **Root entry**: `carrier` (default) vs `bypass` (apoplastic). The Michaelis–Menten carrier is the **one piece of physics this repo adds** to the Trapp cell model — yet on Yamazaki the carrier with its Vmax re-fitted (1.009) and a single global `g_apo`=20 (1.030) are **indistinguishable** (bootstrap 0.258) while adding nothing at all fails (2.209): *an* addition is necessary, *which* is undecided, so the carrier keeps its place **by default, not by evidence** (`validation/carrier_vs_bypass.py`).
+  - **Lipid-facilitated loading**: the K_PL-gated, B-independent loading term (`g_xy·C`/`g_ph·C`), fitted on Yamazaki only. With **nothing re-fit to Tang** it moves the per-organ transfer error 1.413 → 0.655. It supplies its own `f_xy`, so the f_xy choice above is ignored while it is on. Default off.
+  - **Override the entry constants**: `Vmax ×`, `Km ×`, `g_apo` — the levers of that scan and of the dose series (whose result is the post-hoc bound `Km ≥ 150–500 µg/L`, 30–100× the fixed value).
   - The switches propagate to every tab, the congener comparison and the **Bayesian inverse**, so the inverse is never run under a different model than the forward tabs.
 
 ### 5.4 Scenario (3 · Scenario) — per-mode controls
-- **Model (parametric)**: `Pore-water Cwᵒ [µg/L]`, `Season length [days]`, `Cwᵒ(t) shape` (constant / flooded(dilution+leaching), per-congener HYDRUS-calibrated `k_leach`), `Measured forcings` toggle.
+- **Model (parametric)**: `Pore-water Cwᵒ [µg/L]`, `Season length [days]` (generic drivers only), `Cwᵒ(t) shape` (constant / flooded(dilution+leaching), per-congener HYDRUS-calibrated `k_leach`), `Measured forcings` toggle.
 - **Custom tables**: the tables are entered in the main panel ([6.2](#62-your-own-data-tables-growth--pore-water)).
 - **HYDRUS/CSV**: upload a driver CSV or use the bundled example. Columns in [§7](#7-input-data-formats-csv).
 - **Run HYDRUS-1D (live)**: `f_oc`, `Flooded until [day]`, `Percolation [cm/day]`. A "Build the engine" button appears if unbuilt.
@@ -260,13 +260,14 @@ day,Cwo
 - **Where it goes**: usually **the roots hold the most**; how much reaches straw/grain is **congener-dependent** (short chains can put straw above root; long chains are root-dominated).
 - **Grain formation gate**: the grain only takes up → accumulates PFAS after it forms (around flowering); the pre-formation period is not drawn (the organ physically does not exist yet).
 - **Uncertainty (inverse)**: the spread of the posterior curve is the uncertainty. A wide 95% interval means the data did not pin down the exposure.
-- **fresh vs dry**: the model is fresh-weight (fw). To compare with dry-weight (dw) data, use `C_dw = C_fw/(1−θ_fw)` (expert).
+- **fresh vs dry**: the model state is fresh weight (fw); comparisons with data are on dry weight (dw) through the harvest operator, which keeps the dead leaf blades in the leaf and straw (`baf_final_dw`).
 
 > [!IMPORTANT]
 > Observed bars (e.g. Yamazaki) are **fixed measurements** — they do **not** move when you change the sidebar.
-> The model was calibrated to reproduce that experiment at one **specific setting** (Model parametric, Cwᵒ=1,
-> f_xy=W2 fit, E_m −120, season ~120 d); only there is the overlay a like-for-like match. Other settings/modes
-> are a reference trend, not a calibrated match.
+> The model bars next to them are the model's own version of that observation (the 2020 site-year, both
+> harvest runs, dry basis, the congener's irrigation-water level) under the sidebar's transport/mechanism
+> choice; they do not follow the exposure settings. With `f_xy source = fit` the match is a reproduction
+> (fitted to these bars); with `recommended` the straw is a prediction.
 
 ---
 
@@ -284,10 +285,10 @@ Full derivation: `docs/pfas_rice_compartmental_model.{tex,pdf}`; the overview en
 - **Soil coupling (Method A, one-way)**: HYDRUS-1D/Phydrus → Cwᵒ(t), Q_TP(t); the plant ODE is solved in Python. HYDRUS is unmodified.
 
 **Known limitations (stated honestly)**
-- The demo W2-fit RMSE 0.029 is a **saturated reproduction** (params = observations), not predictive validation. The a-priori predictive error is log10 RMSE ~0.84–0.95 (long chains collapse).
-- **Long-chain (C10–C12) shoot under-prediction**: lipid-facilitated loading / a 2-pool split / enhanced long-chain carrier capacity each help, but a PFDoDA residual remains (exploratory).
+- The fitted reproduction (log10 RMSE 0.121) is **saturated** (3 parameters per 3 observations), not predictive validation. The default configuration's error on independent datasets is log10 1.26–2.06; lipid loading with the redistributed shoot transfers best (0.43–0.66). Every input without a measurement is listed with its sensitivity in `docs/ASSUMPTIONS.md`.
+- **Long-chain (C10–C12) shoot under-prediction**: lipid-facilitated loading helps; PFDoDA stays under even with f_xy = L_Ph = 1.
 - `K_cw` (cell-wall partition) has no measured coefficient in the literature (placeholder). Ether/sulfonamide Koc is a gap.
-- Detailed validation/refutation (sci-adk): see `docs/VALIDATION_KR.md`, `sci_adk_review/`.
+- Current results and the scripts behind them: `CLAUDE.md` §6.
 
 ---
 
@@ -326,12 +327,12 @@ Full derivation: `docs/pfas_rice_compartmental_model.{tex,pdf}`; the overview en
 ## 12. Reproduce / validate / test
 
 ```bash
-python reproduce_demo.py          # Yamazaki BAF full-ODE reproduction (W2 fit, log10 RMSE ≈ 0.029)
-python reproduce_demo.py --rec    # monotone physical f_xy (a-priori; single-straw mismatch — the honest error)
+python reproduce_demo.py          # Yamazaki 2020 site-year, fitted transport (a reproduction, log10 RMSE 0.121)
+python reproduce_demo.py --rec    # monotone physical f_xy: straw is a prediction (log10 1.37)
 python build_parameters.py        # rebuild params/parameters.json
 pip install pytest && pytest      # full test suite (structure/mass-conservation/QSPR/calibration/API/plots/inverse/tables …)
 ```
-- Validation docs: `docs/VALIDATION_KR.md`, `docs/VALIDATION_TANG2026_*_KR.md`, `validation/*.py`.
+- Validation: `CLAUDE.md` §6 (current results), `validation/*.py`; `validation/archive/` holds superseded analyses.
 - App compute/figures are head-less tested: `tests/test_model_api.py`, `tests/test_plots.py`.
 
 ---
