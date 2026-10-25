@@ -284,8 +284,12 @@ def tang_observed_tf(congener, dose="mean"):
     return {o: float(np.mean(list(v.values()))) for o, v in by.items()}
 
 
+TANG_SHOOTS = ("redistributed", "4pool")
+
+
 def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
-                       dose="mean", lipid_loading=False, endosperm="brown", scenario=DEFAULT_SCENARIO):
+                       dose="mean", lipid_loading=False, endosperm="brown", scenario=DEFAULT_SCENARIO,
+                       shoot="redistributed"):
     """Model per-organ transfer factor (DRY weight) vs Tang 2026, for a Tang congener.
 
     Tang's TF is tissue/root on dry weight; the model's is formed the same way from the
@@ -298,23 +302,34 @@ def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
     ``endosperm`` -- 'brown' (default; the whole-caryopsis grain) or 'white' (milled rice;
     see TANG_ENDOSPERM). NOTE Tang's roots were rinsed only, so its root -- the TF
     denominator -- may carry surface-sorbed PFAS (no Fe/Mn plaque removal; same confound as
-    Li 2025), which would bias every Tang TF low. Returns None for non-Tang congeners.
+    Li 2025), which would bias every Tang TF low. ``shoot`` -- 'redistributed' (default;
+    `simulate_nstem_leaf`) or '4pool' (the single-straw core `simulate()`), so each shoot
+    model can be scored on the same data. Returns None for non-Tang congeners.
     """
     if congener not in TANG_CONGENERS:
         return None
     if endosperm not in TANG_ENDOSPERM:
         raise ValueError(f"unknown endosperm {endosperm!r}; expected one of {TANG_ENDOSPERM}")
+    if shoot not in TANG_SHOOTS:
+        raise ValueError(f"unknown shoot {shoot!r}; expected one of {TANG_SHOOTS}")
     fxy = TANG_REFIT_FXY[congener] if use_refit else None
-    r = simulate_nstem_leaf(congener, Cwo=1.0, f_xy_source=f_xy_source, f_xy_override=fxy,
-                            lipid_loading=lipid_loading, scenario=scenario)
+    if shoot == "4pool":
+        r = simulate(congener, Cwo=1.0, f_xy_source=f_xy_source, f_xy_override=fxy,
+                     lipid_loading=lipid_loading, scenario=scenario)
+        kcw_organ = "root"              # simulate() binds every compartment with the root K_cw
+    else:
+        r = simulate_nstem_leaf(congener, Cwo=1.0, f_xy_source=f_xy_source, f_xy_override=fxy,
+                                lipid_loading=lipid_loading, scenario=scenario)
+        kcw_organ = "stem"              # simulate_nstem_leaf's default K_cw_organ
     dw = r["baf_final_dw"]
     model = {org: dw[mk] / dw["root"] for mk, org, _ in _TANG_ORGANS}
-    if endosperm == "white":            # simulate_nstem_leaf's default K_cw_organ is "stem"
-        model["endosperm"] *= endosperm_white_factor(congener, K_cw_organ="stem")
+    if endosperm == "white":
+        model["endosperm"] *= endosperm_white_factor(congener, K_cw_organ=kcw_organ)
     return dict(congener=congener, organs=[o for _, o, _ in _TANG_ORGANS],
                 model_tf=model, tang_tf=tang_observed_tf(congener, dose),
                 f_xy=float(r["params"]["f_xy"]), use_refit=bool(use_refit), dose=dose,
-                scenario=scenario, refit_fxy=TANG_REFIT_FXY[congener], endosperm=endosperm)
+                scenario=scenario, refit_fxy=TANG_REFIT_FXY[congener], endosperm=endosperm,
+                shoot=shoot)
 
 
 def chain_table():
@@ -1532,7 +1547,7 @@ def estimate_exposure_bayesian(congener=None, measured_conc=None, *, sigma_log10
 # from the script named (none of these observations entered the fit):
 APRIORI_OOS_SCORES = {
     "Yamazaki straw (root+grain fitted, straw predicted)": 1.401,   # refit_site_year.py, fit B
-    "Tang 2026 per-organ TF, 0.1 ug/g": 1.496,                     # oos_tang_lipid.py, free anion
+    "Tang 2026 per-organ TF, 0.1 ug/g": 1.714,                     # oos_tang_lipid.py, 4-pool free anion
     "Kim 2019 grain BAF excl PFOA (point)": 2.33,                  # kim2019_censored.py, mono
     "Li 2025 shoot/root TF by stage": 1.26,                        # li2025_stage_resolved.py, mono
     "Li 2025 grain/root TF by stage": 1.68,                        # li2025_stage_resolved.py, mono

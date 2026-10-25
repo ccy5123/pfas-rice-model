@@ -323,7 +323,7 @@ def render(cfg):
                     help="Turn on the K_PL-gated lipid-facilitated loading. Its constants were fit on "
                          "YAMAZAKI and nothing here is re-fit to Tang, so this is a genuine "
                          "out-of-sample prediction — and it is the one that works: Tang per-organ "
-                         "log10 RMSE 1.50 (free anion) → 0.64 (calibration site-year drivers, 0.1 µg/g, "
+                         "log10 RMSE 1.50 (free anion) → 0.64 on the redistributed shoot this tab runs (calibration site-year drivers, 0.1 µg/g, "
                          "fresh organ mass); the in-sample Tang refit reaches 0.34. See validation/oos_tang_lipid.py.")
                 val = api.tang_tf_validation(congener, dose=dose)
                 valr = api.tang_tf_validation(congener, dose=dose, use_refit=True)

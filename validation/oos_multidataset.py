@@ -28,17 +28,18 @@ import li2025_stage_resolved as li     # noqa: E402
 def main(verbose=True):
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf if not verbose else sys.stdout):
-        free_tang, lip_tang = tang.main(dose="low")
+        tg = tang.main(dose="low")
         print()
         kim = cross.kim_grain()
         print()
         lio = li.main(sensitivity=False)
-    out = dict(tang=dict(free=free_tang, lipid=lip_tang), kim=kim, li=lio)
+    out = dict(tang=tg, kim=kim, li=lio)
     if verbose:
         print("\n" + "=" * 72)
         print("SUMMARY  (OOS log10 RMSE; lower = better)")
         print("=" * 72)
-        print(f"{'Tang 2026 per-organ TF (dw)':40} free anion {free_tang:.2f}   lipid {lip_tang:.2f}")
+        print(f"{'Tang 2026 per-organ TF (dw)':40} " + "   ".join(
+            f"{n} {v:.2f}" for n, v in tg.items() if "refit" not in n))
         print(f"{'Kim 2019 grain, excl PFOA':40} " + "   ".join(f"{m} {kim[m][0]:.2f}" for m in cross.MODES))
         sc = lio["scores"]
         print(f"{'Li 2025 stage TF, shoot / grain':40} " + "   ".join(

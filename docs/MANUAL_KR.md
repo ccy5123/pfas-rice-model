@@ -150,7 +150,7 @@ PFSA C4/C6/C8: PFBS·PFHxS·PFOS, 에터 PFAS: GenX)이며, 전문가 모드에�
 - **작물 드라이버(증산 + 기관 질량)**: **보정 사이트-연도**(기본: JMA 쓰쿠바 2020 기상, Yamazaki 이앙일에 맞춘 ORYZA2000 포트, ORYZA2000 증산; 시즌은 이앙~수확이라 시즌 슬라이더 없음) / **일반 기후값**(`forcing_rice` 증산) + 바이오매스 드라이버(ORYZA2000 포트, 축약 ORYZA, `growth_rice`)를 시즌 슬라이더 기간으로.
 - **⚙️ Mechanism (advanced)** — 아직 *열려 있는* 두 질문을 기본값 없이 숨기지 않고 **모드로** 노출합니다(둘 다 기본값 = 배포 모델, `parameters.json` 불변). 켜면 헤드라인 위에 경고 배너가 뜹니다.
   - **Root entry**: `carrier`(기본) vs `bypass`(아포플라스트 우회). Michaelis–Menten carrier는 이 레포가 Trapp 세포 모델에 **추가한 유일한 물리**인데, Yamazaki에서 Vmax를 다시 맞춘 carrier(1.078)와 단일 전역 `g_apo`=50(1.093)은 **구별 불가**(bootstrap 0.368)이고 아무것도 안 넣으면 실패(2.301)입니다 — 즉 *추가는 필요*하지만 *어느 쪽인지는 미결*. 그래서 carrier는 **근거가 아니라 기본값으로** 유지됩니다(`validation/carrier_vs_bypass.py`).
-  - **Lipid-facilitated loading**: K_PL-게이트 B-독립 적재항(`g_xy·C`/`g_ph·C`), Yamazaki에만 적합. Tang에 **아무것도 재적합하지 않고** per-organ 전이 오차 1.50 → 0.64. 자체 `f_xy`를 공급하므로 켜져 있는 동안 위의 f_xy 선택은 무시됩니다. 기본 꺼짐.
+  - **Lipid-facilitated loading**: K_PL-게이트 B-독립 적재항(`g_xy·C`/`g_ph·C`), Yamazaki에만 적합. Tang에 **아무것도 재적합하지 않고** per-organ 전이 오차가 Tang 탭이 쓰는 재분배 지상부에서 1.50 → 0.64(4구획 코어에서는 1.71 → 0.99). 자체 `f_xy`를 공급하므로 켜져 있는 동안 위의 f_xy 선택은 무시됩니다. 기본 꺼짐.
   - **Override the entry constants**: `Vmax ×`, `Km ×`, `g_apo` 직접 지정(carrier-vs-bypass 스캔 및 용량 시리즈의 레버; 용량 시리즈의 결론은 사후 하한 `Km ≥ 150–500 µg/L` = 고정값의 30–100배).
   - 이 스위치들은 모든 탭·congener 비교·**베이지안 역추정**까지 함께 적용됩니다(역추정만 다른 모델로 도는 일이 없도록).
 

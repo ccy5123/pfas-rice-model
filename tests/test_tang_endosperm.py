@@ -62,5 +62,18 @@ def test_the_white_reading_makes_the_grain_gap_worse():
     assert _rmse(lipid_loading=True, endosperm="white") == pytest.approx(0.831, abs=0.03)
 
 
+def test_the_honesty_band_uses_the_default_shoot_on_tang():
+    """The band's Tang entry must be the DEFAULT configuration's score (the 4-pool core,
+    free anion). It once held the redistributed shoot's 1.496, which the Tang check runs
+    unless told otherwise -- the two shoot models score differently on the same data."""
+    key = [k for k in api.APRIORI_OOS_SCORES if k.startswith("Tang")][0]
+    four = _rmse(shoot="4pool")
+    assert api.APRIORI_OOS_SCORES[key] == pytest.approx(four, abs=0.005)
+    assert _rmse() == pytest.approx(1.496, abs=0.01)           # redistributed shoot, free anion
+    assert four > _rmse() + 0.1
+    with pytest.raises(ValueError):
+        api.tang_tf_validation("PFOA", shoot="two-pool")
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

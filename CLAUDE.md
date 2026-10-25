@@ -165,14 +165,15 @@ log10 RMSE; "default" = the configuration the app runs (`recommended`, free anio
 
 | dataset (script) | default | fit | lipid (4-pool) | redistributed shoot + lipid |
 |---|---|---|---|---|
-| Tang 2026 per-organ TF, 0.1 µg/g (`oos_tang_lipid.py`) | 1.496 | — | **0.640** | — |
+| Tang 2026 per-organ TF, 0.1 µg/g (`oos_tang_lipid.py`) | 1.714 | — | 0.992 | **0.640** |
 | Kim 2019 grain BAF excl PFOA, point / [0,MDL] interval (`kim2019_censored.py`) | 2.33 / 2.05 | 0.73 / 0.55 | 0.56 / 0.38 | 0.47 / 0.15 |
 | Li 2025 TF by stage, shoot / grain (`li2025_stage_resolved.py`) | 1.26 / 1.68 | 0.96 / 1.30 | 0.90 / 1.24 | **0.36 / 0.51** |
 
 - **Lipid loading transfers; the free anion does not.** Lipid loading (fitted on Yamazaki only)
-  more than halves the Tang and Kim errors; with the redistributed shoot (`simulate_nstem_leaf`) it
-  wins the Li stage test beyond the pre-registered margin on both endpoints, robust to the DVS
-  mapping and the estimator.
+  cuts every transfer error, and with the redistributed shoot (`simulate_nstem_leaf`) it is best on
+  all three datasets; it wins the Li stage test beyond the pre-registered margin on both endpoints,
+  robust to the DVS mapping and the estimator. (`tang_tf_validation` runs the redistributed shoot
+  unless `shoot="4pool"`; the free anion on the redistributed shoot scores 1.496 on Tang.)
 - **Kim**: no robust winner between the two lipid variants (point margin 0.09 < 0.10); the C11
   grain rise survives the non-detects, the C12 level does not. **PFOA per site**
   (`kim2019_pfoa_anchor.py`): censored per-site geomean **9.94 L/kg** [4.57, 20.16] (the published
@@ -182,8 +183,9 @@ log10 RMSE; "default" = the configuration the app runs (`recommended`, free anio
   PFOS 0.999 — at the ceiling —, GenX 0.059; override only). Reading the endosperm as milled rice
   worsens the lipid score (0.640 → 0.831): composition does not close the grain gap.
 - **Honesty band**: `model_api.APRIORI_OOS_SCORES` lists the default configuration's transfer
-  errors (Yamazaki straw 1.40, Tang 1.50, Kim 2.33, Li 1.26 / 1.68); their median, log10 1.50
-  (×31), is the band the Simple view shows.
+  errors (Yamazaki straw 1.40, Tang 1.71, Kim 2.33, Li 1.26 / 1.68); their median, log10 1.68
+  (×48), is the band the Simple view shows. (Until 2026-10-25 the Tang entry was the redistributed
+  shoot's 1.496, not the default's, which gave ×31.)
 - Every transfer dataset runs on the calibration site-year drivers (Tang/Kim/Li sites and dates
   are not in the repo) — see `docs/ASSUMPTIONS.md` §5.
 

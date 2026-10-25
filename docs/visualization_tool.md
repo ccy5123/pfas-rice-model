@@ -74,7 +74,8 @@ sidebar expander is collapsed and the run would otherwise look like the shipped 
   have `Km ≥ 150–500 µg/L`, 30–100× the fixed 5, to be as flat as Tang's 5 doses measure).
 - **Lipid-facilitated loading** (`simulate(lipid_loading=True)`) — the K_PL-gated,
   B-independent `g_xy·C` / `g_ph·C` term, fitted on Yamazaki only. It transfers far better than
-  the free anion (Tang per-organ 1.50 → 0.64, Kim grain 2.33 → 0.56, with **nothing re-fit**
+  the free anion (on the 4-pool core Tang per-organ 1.71 → 0.99, Kim grain 2.33 → 0.56; on the
+  redistributed shoot the Tang tab runs, 1.50 → 0.64 — with **nothing re-fit**
   to either), but it supplies its own `f_xy`, so the sidebar's `f_xy` choice is ignored while it
   is on, and against the *Yamazaki* bars it is in-sample. Default off.
 
@@ -297,7 +298,8 @@ operator on dry basis, like the data.
   0.059) is fitted to these bars (overall log10 RMSE 0.339); it is an override, `parameters.json`
   is unchanged.
 - A **lipid loading (OOS)** checkbox adds the K_PL-gated lipid model, whose constants were fitted
-  on **Yamazaki** and transferred untouched: log10 RMSE **0.640** vs the free anion's **1.496**
+  on **Yamazaki** and transferred untouched: log10 RMSE **0.640** vs the free anion's **1.496** (both on
+  the redistributed shoot; the 4-pool core scores 0.992 vs 1.714)
   (`validation/oos_tang_lipid.py`).
 - **The grain is under-predicted**; reading the endosperm as milled rice
   (`tang_tf_validation(endosperm="white")`) makes it worse (0.640 → 0.831), so composition does
