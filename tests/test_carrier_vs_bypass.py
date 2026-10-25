@@ -131,7 +131,7 @@ def test_a_bypass_large_enough_to_replace_the_carrier_exists():
     are indistinguishable, so asserting a winner either way would contradict it."""
     kw = {}
     carrier = api.simulate("PFOA", **kw)["baf_final"]["root"]
-    bypass = api.simulate("PFOA", vmax_scale=0.0, g_apo=20.0, **kw)["baf_final"]["root"]
+    bypass = api.simulate("PFOA", vmax_scale=0.0, g_apo=api.UPTAKE_MODES["bypass"]["g_apo"], **kw)["baf_final"]["root"]
     assert 0.2 * carrier < bypass < 5.0 * carrier, (carrier, bypass)
 
 

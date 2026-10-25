@@ -66,15 +66,15 @@ sidebar expander is collapsed and the run would otherwise look like the shipped 
 - **Root entry — carrier (default) vs apoplastic bypass** (`simulate(uptake=…)`,
   `model_api.UPTAKE_MODES`). The Michaelis–Menten carrier is this repo's one addition to the
   Trapp cell model, and it keeps its place **by default, not by evidence**: on Yamazaki the
-  carrier with its Vmax re-fitted (log10 RMSE 1.009) and one global bypass `g_apo`=20 (1.030)
-  are indistinguishable (bootstrap 0.258), while adding nothing at all fails (2.209) — so *an*
+  carrier with its Vmax re-fitted (log10 RMSE 1.078) and one global bypass `g_apo`=50 (1.093)
+  are indistinguishable (bootstrap 0.368), while adding nothing at all fails (2.301) — so *an*
   addition is necessary and *which* is undecided (`validation/carrier_vs_bypass.py`). An
   "Override the entry constants" checkbox exposes `Vmax ×`, `Km ×` and `g_apo` — the levers of
   that scan and of the dose series (whose durable result is a POST-HOC bound: the carrier must
   have `Km ≥ 150–500 µg/L`, 30–100× the fixed 5, to be as flat as Tang's 5 doses measure).
 - **Lipid-facilitated loading** (`simulate(lipid_loading=True)`) — the K_PL-gated,
   B-independent `g_xy·C` / `g_ph·C` term, fitted on Yamazaki only. It transfers far better than
-  the free anion (Tang per-organ 1.413 → 0.655, Kim grain 2.06 → 0.50, with **nothing re-fit**
+  the free anion (Tang per-organ 1.50 → 0.64, Kim grain 2.33 → 0.56, with **nothing re-fit**
   to either), but it supplies its own `f_xy`, so the sidebar's `f_xy` choice is ignored while it
   is on, and against the *Yamazaki* bars it is in-sample. Default off.
 
@@ -139,7 +139,7 @@ exclusion; the lipid term is K_PL-gated on PFAS binding), and the four PFAS-only
 headline's `eᴺ` metric is replaced by **TSCF**, since `eᴺ` is 1 by construction there.
 
 The scope panel above the tabs states, in-UI, what the run is and is not: nothing is fitted;
-a-priori log10 RMSE **0.281** (Liu 2023 root partition) and **0.783** (Ge 2017 per-organ TF)
+a-priori log10 RMSE **0.213** (Liu 2023 root partition) and **0.311** (Ge 2017 per-organ TF)
 on the season-ODE basis, **0.206** for Liu on the equilibrium basis proper to a root-partition
 measurement; the **grain compartment is UNTESTED** for neutrals; stem/leaf lipid are still
 Trapp 1994's soybean values; and with `half_life = 0` the leaf is an unbounded terminal
@@ -155,7 +155,7 @@ since the CTX chemical search has no structure route.
 
 Three rules the module enforces, all for the same reason — this path's whole claim
 is that **nothing in it is fitted**, and its published a-priori errors (Liu
-0.206/0.281, Ge 0.783, Briggs stem 0.299) are on *measured* log Kow:
+0.206/0.213, Ge 0.311, Briggs stem 0.299) are on *measured* log Kow:
 
 1. **Experimental beats predicted.** CompTox serves measured values and OPERA
    predictions side by side; when both exist the measured one is used.
@@ -183,7 +183,7 @@ warnings**.
 2. **The pKa is predicted** — a statement about the *source*, and **carbamazepine is
    the in-repo counterexample**: CompTox's OPERA returns an acidic pKa of **5.07**
    (→ f_n 0.036, 96% ionised at pH 6.5) while the measured value this repo's own
-   best-conditioned table is built on — Kodešová 2019 (§4f), whose a-priori 0.191/0.237
+   best-conditioned table is built on — Kodešová 2019 (§4f), whose a-priori 0.216/0.237
    assumes CAR is **un-ionised everywhere** — is **13.9** (f_n 1.00). Nine log units
    apart, on the very compound the neutral path is validated with, and only the
    measured one reproduces the published result.
@@ -293,14 +293,14 @@ paddy pot, Nipponbare; PFOA/PFOS/GenX): the per-organ transfer factor **TF = C_o
 calibration site-year (Tang's site and dates are not in the repo) and is read through the harvest
 operator on dry basis, like the data.
 
-- **The refit is in-sample.** `TANG_REFIT_FXY` (PFOA 0.457, PFOS 0.999 — at the ceiling —, GenX
-  0.056) is fitted to these bars (overall log10 RMSE 0.285); it is an override, `parameters.json`
+- **The refit is in-sample.** `TANG_REFIT_FXY` (PFOA 0.930, PFOS 0.999 — at the ceiling —, GenX
+  0.059) is fitted to these bars (overall log10 RMSE 0.339); it is an override, `parameters.json`
   is unchanged.
 - A **lipid loading (OOS)** checkbox adds the K_PL-gated lipid model, whose constants were fitted
-  on **Yamazaki** and transferred untouched: log10 RMSE **0.655** vs the free anion's **1.413**
+  on **Yamazaki** and transferred untouched: log10 RMSE **0.640** vs the free anion's **1.496**
   (`validation/oos_tang_lipid.py`).
 - **The grain is under-predicted**; reading the endosperm as milled rice
-  (`tang_tf_validation(endosperm="white")`) makes it worse (0.655 → 0.856), so composition does
+  (`tang_tf_validation(endosperm="white")`) makes it worse (0.640 → 0.831), so composition does
   not close the gap.
 
 ---

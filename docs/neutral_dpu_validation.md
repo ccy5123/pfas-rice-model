@@ -1,13 +1,33 @@
 # Neutral-organic (Briggs/Kow) path — implementation and validation status
 
 > `src/neutral_dpu.py` · `validation/neutral_dpu_validation.py` · `tests/test_neutral_dpu.py`
-> **Status: IMPLEMENTED, anchors verified at source, and validated a-priori
-> against four measured datasets** — root partition on rice at log10 RMSE **0.281**
-> (Liu 2023, n=14), per-organ transfer factors at **0.783** (Ge 2017), a second
-> root-partition table over 11 species at **0.598** (Li 2019, n=29, §4d) and
-> carbamazepine from three soils at **0.191** (Kodešová 2019, n=21, §4f) — all with
-> nothing fitted — plus TSCF tested on its own for the first time (§4e).
-> §4–§5 record what those numbers mean and what is left.
+> **Status: IMPLEMENTED, anchors verified at source, validated a-priori (nothing fitted).**
+>
+> **Current numbers** (generic rice drivers — `forcing_rice` + `growth_rice`, 120 d — on FRESH organ
+> mass, `lipid_source="measured"`;
+> `python validation/neutral_dpu_validation.py --lipid-source both [--mode equilibrium]`):
+>
+> | table | n | log10 RMSE (ODE) | (equilibrium) |
+> |---|---|---|---|
+> | Liu 2023, rice root partition | 14 | **0.213** | **0.206** |
+> | Ge 2017, per-organ TF at 60 d | 6 | **0.311** | — (the season is the endpoint) |
+> | Li 2019 hydroponic RCF, 11 species | 29 | 0.546 | 0.541 |
+> | Kodešová 2019 carbamazepine, 3 soils | 21 | 0.216 | 0.237 |
+> | Li 2019 soil RCF, 13 crops | 376 | 0.550 | 0.639 |
+> | Briggs 1983 barley central stem (SCF) | 30 | 0.299 | (driver-free) |
+> | Schriever 2020 TSCF, un-ionised rows | 30 | RMSE 0.310 (linear) | (driver-free) |
+>
+> Weak electrolytes (§4l, Schriever's 67 ionisable rows; run through `model_api.simulate_neutral`, i.e.
+> the calibration site-year): Spearman(f_n, TSCF) +0.480; speciation ON
+> lifts the model's rank +0.284 → +0.514 (acid reading) and under-delivers (bias −0.164). Bypass
+> `g_apo` (§4m): ordering peak at 0.1 (rank +0.599), RMSE optimum at 1.0 (rank +0.453).
+>
+> **Read the body as the derivation record.** §2–§4 were written before the organ-mass fix (crop
+> dry matter was used as the fresh organ mass), so the numbers quoted inside them (Liu 0.281, Ge 0.783, Kodešová 0.191, ...) are superseded by the table above.
+> What they establish structurally — the `z=0` reduction, the Briggs anchors, the fw lipid basis,
+> the Li 2019 hydroponic/soil sign flip, the measured-`K_om` result, the leaf terminal-accumulator
+> signature — does not depend on that error. The Ge "~7-d in-planta half-life" was absorbing the
+> dry-as-fresh mass error and is withdrawn.
 
 ---
 

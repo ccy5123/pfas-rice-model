@@ -50,14 +50,14 @@ DEFAULT_SCENARIO = "yamazaki2020"
 # APOPLASTIC BYPASS of the DPU base's own Fickian form -- one global parameter
 # each -- and with membrane depolarisation, which adds no term at all:
 #
-#     nothing (Trapp's PFAS limit)      log10 RMSE 2.209
-#     depolarisation (E_m = -90 mV)               1.800
-#     carrier  (fixed Vmax)                       1.131
-#     carrier  (global Vmax re-fitted, x4)        1.009
-#     bypass   (one global g_apo = 20)            1.030
+#     nothing (Trapp's PFAS limit)      log10 RMSE 2.301
+#     depolarisation (E_m = -90 mV)               1.890
+#     carrier  (fixed Vmax)                       1.227
+#     carrier  (global Vmax re-fitted, x8)        1.078
+#     bypass   (one global g_apo = 50)            1.093
 #
 # So an addition IS necessary (depolarisation is REFUTED), but WHICH addition is
-# not decided by that data: bootstrap P(bypass beats the re-fitted carrier) = 0.258,
+# not decided by that data: bootstrap P(bypass beats the re-fitted carrier) = 0.368,
 # and the bypass cannot claim parsimony either (Vmax_in is a single global, not
 # per-congener -- checked, not assumed).
 #
@@ -67,13 +67,13 @@ DEFAULT_SCENARIO = "yamazaki2020"
 # (`lipid_source`, `f_xy_source`, `cwo_profile`, `biomass`, `tscf_model`).
 #
 # Against the bypass specifically: fitted per congener, g_apo trends with chain
-# length (corr +0.832, spread 25x) where theory_anchor.tex says eta -- which
+# length (corr +0.898, spread 100x) where theory_anchor.tex says eta -- which
 # contains the apoplastic bypass -- is "essentially independent of tail length".
 # On its own criterion that is a relabelled carrier. The bypass value below is
 # the single global optimum from that scan, NOT a calibrated parameter.
 UPTAKE_MODES = {
     "carrier": dict(vmax_scale=1.0, g_apo=0.0),                 # incumbent = shipped
-    "bypass":  dict(vmax_scale=0.0, g_apo=20.0),                # carrier off, one global g_apo
+    "bypass":  dict(vmax_scale=0.0, g_apo=50.0),                # carrier off, one global g_apo
 }
 DEFAULT_UPTAKE = "carrier"
 
@@ -504,8 +504,8 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         'carrier' (default; the fitted Michaelis-Menten carrier, the incumbent
         every published number runs on) or 'bypass' (carrier off, one global
         passive apoplastic conductance g_apo). The two are INDISTINGUISHABLE on
-        the only dataset that has been asked (re-fitted carrier 1.009 vs bypass
-        1.030 log10 RMSE, bootstrap 0.258), so the carrier is the default by default, not by
+        the only dataset that has been asked (re-fitted carrier 1.078 vs bypass
+        1.093 log10 RMSE, bootstrap 0.368), so the carrier is the default by default, not by
         evidence -- see UPTAKE_MODES and validation/carrier_vs_bypass.py.
     vmax_scale, g_apo : explicit overrides of the carrier capacity multiplier /
         apoplastic conductance. Either one given wins over `uptake`, so a scan
@@ -977,9 +977,9 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=None, n_t=241,
         TESTED, and BOUNDED by that test (validation/weak_electrolyte_tscf.py, docs
         section 4l): on Schriever 2020's 67 ionisable TSCF rows the DIRECTION is
         supported -- measured transfer rises with f_n (Spearman +0.480) and turning
-        speciation on nearly doubles the model's rank correlation (+0.284 -> +0.520)
+        speciation on nearly doubles the model's rank correlation (+0.284 -> +0.514)
         -- but the MAGNITUDE is refuted: the influx conductance moves ~1.6e4-fold
-        where the measurements move ~3-fold, so it under-delivers (bias -0.203) and
+        where the measurements move ~3-fold, so it under-delivers (bias -0.164) and
         predicts ~nothing below f_n ~ 1e-3. Use it for the direction of a speciation
         effect, not its size. Still no measured weak-electrolyte RICE dataset (that
         table is 16 species, none of them rice).

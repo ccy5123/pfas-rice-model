@@ -323,8 +323,8 @@ def render(cfg):
                     help="Turn on the K_PL-gated lipid-facilitated loading. Its constants were fit on "
                          "YAMAZAKI and nothing here is re-fit to Tang, so this is a genuine "
                          "out-of-sample prediction — and it is the one that works: Tang per-organ "
-                         "log10 RMSE 1.48 (free anion) → 0.52 (ORYZA biomass, 0.1 µg/g, fresh organ "
-                         "mass); the in-sample Tang refit reaches 0.33. See validation/oos_tang_lipid.py.")
+                         "log10 RMSE 1.50 (free anion) → 0.64 (calibration site-year drivers, 0.1 µg/g, "
+                         "fresh organ mass); the in-sample Tang refit reaches 0.34. See validation/oos_tang_lipid.py.")
                 val = api.tang_tf_validation(congener, dose=dose)
                 valr = api.tang_tf_validation(congener, dose=dose, use_refit=True)
                 vall = (api.tang_tf_validation(congener, dose=dose, lipid_loading=True)
@@ -334,15 +334,15 @@ def render(cfg):
                     st.success(
                         "**The purple bars are a prediction, not a fit.** The green refit bars were "
                         "calibrated ON these measurements; the lipid mechanism was calibrated on "
-                        "Yamazaki and transferred here untouched: 0.52 across Tang's three congeners "
-                        "against 1.48 for the free anion (the in-sample refit reaches 0.33). The "
-                        "dominant free-anion failure — PFOS, the high-K_PL sulfonate, ~100–300× under — "
-                        "is cut at the mechanism level (stalk 0.002 → 0.11 vs Tang 0.571, still ~5× "
+                        "Yamazaki and transferred here untouched: 0.64 across Tang's three congeners "
+                        "against 1.50 for the free anion (the in-sample refit reaches 0.34). The "
+                        "dominant free-anion failure — PFOS, the high-K_PL sulfonate, ~75–300× under — "
+                        "is cut at the mechanism level (stalk 0.005 → 0.16 vs Tang 0.571, still ~4× "
                         "under). Residuals it does NOT fix: GenX (provisional ether f_xy, over) and "
                         "the PFOS shoot/endosperm (under).")
-                _verdict = {"GenX": "GenX: the provisional 0.233 is ~2.6× above the Tang refit (0.089 on fresh organ mass; the dry-mass fit gave 0.017).",
-                            "PFOS": "PFOS: the free-anion refit sits at the **f_xy = 1 ceiling** on fresh organ mass — the free anion cannot deliver Tang's PFOS shoot even unrestricted; the K_PL-gated lipid term is what carries it.",
-                            "PFOA": "PFOA f_xy is dose-sensitive (0.38 across-dose mean → 0.57 at 0.1 µg/g, fresh organ mass)."}[congener]
+                _verdict = {"GenX": "GenX: the provisional 0.233 is ~4× above the Tang refit (0.059 at 0.1 µg/g; 0.066 on the across-dose mean).",
+                            "PFOS": "PFOS: the free-anion refit sits at the **f_xy = 1 ceiling** — the free anion cannot deliver Tang's PFOS shoot even unrestricted; the K_PL-gated lipid term is what carries it.",
+                            "PFOA": "PFOA f_xy is dose-sensitive (0.61 across-dose mean → 0.93 at 0.1 µg/g)."}[congener]
                 st.markdown(
                     f"- **f_xy**: recommended **{val['f_xy']:.3g}** → Tang-refit **{valr['f_xy']:.3g}**. {_verdict}\n"
                     f"- **Dry-weight basis** — `TF_dw = TF_fw·(1−θ_root)/(1−θ_tissue)`; comparing the model's "

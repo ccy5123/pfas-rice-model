@@ -12,7 +12,7 @@ values by a stated rule; *convention* = a modelling choice with a stated reason;
 |Δ log10 BAF| (root / straw / grain, dry basis) when the input is moved to the end of its
 range with the fitted transport parameters held fixed (`validation/refit_site_year.py`,
 "Unknown inputs"). The yardstick is the model difference between the two observed harvest
-runs (two cultivars, nine days apart): **0.003 / 0.033 / 0.055**. An input that moves a
+runs (two cultivars, nine days apart): **0.003 / 0.027 / 0.067**. An input that moves a
 tissue by more than that is marked **consequential** (bold) and was re-fitted at both ends;
 the re-fit column gives the median (range) change of the fitted parameters.
 
@@ -23,14 +23,14 @@ the re-fit column gives the median (range) change of the fitted parameters.
 | weather | JMA Tsukuba 2020 daily + hourly | measured | `raw_si/jma_tsukuba_2020.csv` (radiation = sum of hourly, vapour pressure = mean of hourly) |
 | transplanting | 2020-05-11 | measured | Yamazaki SI p.S2 |
 | harvests | 2020-09-01 and 2020-09-10 (two cultivars) | measured | Yamazaki SI p.S3 |
-| heading | harvest − 30.5 d | derived | the paper states 30–31 d; 30 / 31 d: effect 0.000 / 0.004 / 0.008 |
+| heading | harvest − 30.5 d | derived | the paper states 30–31 d; 30 / 31 d: effect 0.000 / 0.003 / 0.009 |
 | harvest = physiological maturity (DVS 2) | — | convention | IR72's own grain-fill rate kept instead: 0.000 / 0.001 / 0.002 |
 | phenology calibration | one factor on DVRJ/DVRI/DVRP → heading; DVRR → harvest | convention | ORYZA2000 manual §8.2 (DRATES); the juvenile/photoperiod split is not observable from two dates |
 | crop parameters | IR72.D92 verbatim | convention | the cultivars (Kasalath, Koshihikari) have no ORYZA crop file; IR72.D92 fits IR72DS92 and is closer than the shipped driver on the Wuxi partitioning check |
-| two cultivars → two runs, geometric mean | — | convention | the observations are the cultivar geometric mean; the single mean-date run (the app default): 0.000 / 0.003 / 0.010 |
-| nursery (SBDUR) | 23 d after emergence, open seedbed | unmeasured | Kim 2003 nurseries 14/23/24 d; 14 / 30 d: 0.001 / 0.010 / 0.027; covered seedbed (TMPSB 9 °C): 0.002 / 0.017 / 0.051 |
-| planting density | 19.05 hills m⁻², 3 plants hill⁻¹ | unmeasured | Japanese machine spacing 30 × 15–22 cm; 15 / 22 hills m⁻²: 0.001 / 0.008 / 0.026; 5 plants hill⁻¹: 0.002 / 0.016 / 0.048 |
-| CO₂ | 414 ppm | measured (global) | Mauna Loa 2020 annual mean; 400 / 430: 0.000 / 0.007 / 0.012 |
+| two cultivars → two runs, geometric mean | — | convention | the observations are the cultivar geometric mean; the single mean-date run (the app default): 0.000 / 0.003 / 0.008 |
+| nursery (SBDUR) | 23 d after emergence, open seedbed | unmeasured | Kim 2003 nurseries 14/23/24 d; 14 / 30 d: 0.001 / 0.008 / 0.025; covered seedbed (TMPSB 9 °C): 0.002 / 0.014 / 0.048 |
+| planting density | 19.05 hills m⁻², 3 plants hill⁻¹ | unmeasured | Japanese machine spacing 30 × 15–22 cm; 15 / 22 hills m⁻²: 0.001 / 0.006 / 0.024; 5 plants hill⁻¹: 0.001 / 0.014 / 0.046 |
+| CO₂ | 414 ppm | measured (global) | Mauna Loa 2020 annual mean; 400 / 430: 0.000 / 0.006 / 0.008 |
 | reference ET terms | FAO-56 Penman–Monteith radiation / aerodynamic terms | convention | the ORYZA2000 manual does not print its Penman routine; FAO-56 is the definition it cites |
 | field reflection | ORYZA eq. 4.2 with RFS 0.05 under standing water | measured (manual) | manual §4.1 |
 | transpiration | ORYZA eq. 4.4, actual = potential | convention | continuous flooding except a midsummer drainage; no water stress modelled |
@@ -47,7 +47,7 @@ the re-fit column gives the median (range) change of the fitted parameters.
 | PFBS grain | not used | — | wholly imputed (< MQL) |
 | other < MQL cells | MQL/2 upstream | unknown which | needs SI S18/S19 |
 | σ | 0.4 log10 | unmeasured | n = 1 composite per tissue |
-| dead blades in straw / leaf | all kept (attached = 1) | unmeasured | ORYZA's WAGT convention and a whole-plant harvest; all lost: **straw 0.174** (root, grain 0); re-fit f_xy ×1.41 (1.00–1.53), L_Ph ×0.73 (0.45–1.00) |
+| dead blades in straw / leaf | all kept (attached = 1) | unmeasured | ORYZA's WAGT convention and a whole-plant harvest; all lost: **straw 0.174** (root, grain 0); re-fit f_xy ×1.31 (1.00–1.53), L_Ph ×1.00 (0.44–1.00) |
 | dead tissue exchange | none after death | convention | no wash-off, no remobilisation |
 
 ## 3. Plant model constants
@@ -59,15 +59,15 @@ the re-fit column gives the median (range) change of the fitted parameters.
 | K_PL, K_prot | Chen 2025, Zhou 2025 | measured | |
 | K_cw | GAP A deliverable | derived | no measured coefficient exists |
 | E_m | −120 mV | measured (Wang 1994) | −90 mV (NH₄⁺ depolarisation): **0.128 / 0.126 / 0.127**; re-fit κ_d ×1.46 (1.33–2.29), f_xy and L_Ph unchanged |
-| carrier Vmax_in / Km / Vmax_out | 20 / 5 µg L⁻¹ / 8 | **unmeasured, fixed** | Km × 100 (the dose-series lower bound ≥ 500 µg/L): **1.26 / 1.26 / 1.26**; re-fit: κ_d → ~0 (the now-linear carrier takes over), f_xy ×3.9 (1.0–30), L_Ph ×1.8 (1.0–3300). The level of every fitted transport parameter depends on this unmeasured constant. |
-| φ (phloem recirculation) | 0.1 | unmeasured | 0.05 / 0.2: 0.000 / 0.028 / **0.129**; re-fit L_Ph ×1.5 / ×0.6 |
-| T_C,Ph (phloem flow per kg grain DM) | 10 L/kg | literature order of magnitude | 4 / 12 L/kg (sap 100–300 g/L sugar + grain water): 0.000 / 0.006 / 0.053 |
-| grain xylem surface | 0.5116 m² per kg DM (~6 % of the stream during filling on the site-year) | unmeasured | 0.2 (~2.5 %) / 2.0 (~18 %): 0.000 / **0.041 / 0.235**; re-fit L_Ph ×1.37 (up to ×104) / ×0.16 (down to the floor) |
+| carrier Vmax_in / Km / Vmax_out | 20 / 5 µg L⁻¹ / 8 | **unmeasured, fixed** | Km × 100 (the dose-series lower bound ≥ 500 µg/L): **1.26 / 1.26 / 1.26**; re-fit: κ_d → ~0 (the now-linear carrier takes over), f_xy ×3.9 (1.0–28), L_Ph ×1.1 (1.0–9000). The level of every fitted transport parameter depends on this unmeasured constant. |
+| φ (phloem recirculation to the root) | 0.1 | unmeasured | 0.05 / 0.2: 0.001 / **0.048** / 0.026 (straw, through the root's recirculated burden); re-fit f_xy ×0.94 / ×1.11 (up to ×5.7) |
+| T_C,Ph (phloem flow per kg grain DM) | 10 L/kg | literature order of magnitude | 4 / 12 L/kg (sap 100–300 g/L sugar + grain water): 0.000 / 0.012 / **0.160** — it now sets the whole grain phloem volume; re-fit L_Ph to its bound or ×0.85 |
+| grain xylem surface | 0.5116 m² per kg DM (~6 % of the stream during filling on the site-year) | unmeasured | 0.2 (~2.5 %) / 2.0 (~18 %): 0.000 / **0.044 / 0.280**; re-fit L_Ph ×1.31 (up to ×300) / ×0.15 (down to the floor) |
 | leaf xylem surface | 20 m² per kg DM | convention (SLA reading) | |
 | grain formation gate | mass leaves its floor | convention | |
 | root surface / plaque pool K_surf | 0 | convention | no dataset removed plaque; absorbed by κ_d in the fit |
 | f_xy bounds | ≤ 1 | physical | |
-| L_Ph, κ_d bounds | [1e-5, 1], [1e-2, 50] | inherited | as every earlier fit |
+| L_Ph, κ_d bounds | [1e-5, 1], [1e-2, 50] | convention | L_Ph = 1 means sieve-tube sap at the leaf's free concentration (no active concentrating); the upper bound BINDS for PFDA, PFUnDA, PFOS and PFDoDA, whose grain stays under -- whether phloem loading can concentrate PFAS is unmeasured |
 
 ## 4. Transport fit — `validation/refit_site_year.py` (pre-registered, amendment 1)
 
@@ -79,13 +79,15 @@ the re-fit column gives the median (range) change of the fitted parameters.
 | GenX / SMILES records | geometric mean of the fitted congeners' L_Ph, κ_d | convention |
 | lipid globals | six, on the `*_rec` L_Ph/κ_d, PFDoDA excluded | fitted |
 
-Fit A reproduces the 32 used cells at log10 RMSE 0.121 (root 0.000, straw 0.034, grain
-0.213; saturated -- a reproduction). PFBA and PFPeA sit at the L_Ph floor with their grain
-over; PFDoDA at f_xy = 1 with its straw and grain under. Fit B's straw (a prediction) is at
-log10 RMSE 1.372. The lipid globals reach 0.214 over 29 cells (g_ph at its lower bound).
+Fit A reproduces the 32 used cells at log10 RMSE 0.162 (root 0.000, straw 0.035, grain
+0.287; saturated -- a reproduction). PFBA and PFPeA sit at the L_Ph floor with their grain
+over (xylem-fed); PFDA, PFUnDA and PFOS reach the L_Ph upper bound (1) with their grain
+under, and PFDoDA sits at f_xy = L_Ph = 1 with straw and grain under: with the grain drawing
+only its growth sap, the free anion cannot carry the mid/long-chain grain. Fit B's straw (a
+prediction) is at log10 RMSE 1.401. The lipid globals reach 0.207 over 29 cells.
 
 **Reading the consequential inputs together**: the fitted (f_xy, L_Ph, κ_d) are conditional
-on the carrier constants (Km above all), E_m, φ and the grain xylem surface, none of which is
+on the carrier constants (Km above all), E_m, φ, T_C,Ph and the grain xylem surface, none of which is
 measured for rice. A fit that reproduces Yamazaki does not pin them; a transfer test does
 not either, because each transfer dataset also runs on borrowed drivers (section 5).
 

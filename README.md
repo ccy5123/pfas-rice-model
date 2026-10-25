@@ -53,15 +53,17 @@ api.simulate_neutral(2.45, name="carbamazepine")      # a neutral organic by log
 
 ## Results in brief (details and scripts: `CLAUDE.md` §6)
 
-- **Reproduction** (Fit A, saturated): log10 RMSE 0.121 on Yamazaki's root/straw/grain.
-  With the monotone f_xy the straw is a prediction and misses by log10 1.37.
+- **Reproduction** (Fit A, saturated): log10 RMSE 0.162 on Yamazaki's root/straw/grain.
+  With the monotone f_xy the straw is a prediction and misses by log10 1.40.
 - **Transfer to independent data** (no parameter fitted to them): the default configuration
-  is log10 1.26–2.06 off (Tang 2026 per-organ TF, Kim 2019 grain, Li 2025 TF by stage). The
-  K_PL-gated **lipid loading** roughly halves that, and with the **redistributed shoot** it is
-  best on all three (Li 0.43 / 0.55; Kim 0.43; the Kim winner is not robust to the non-detects).
-- **Unmeasured inputs that matter**: the carrier constants (Km above all), E_m, phloem
-  recirculation φ, the grain's share of the transpiration stream, and whether dead blades stay
-  in the harvested straw (`docs/ASSUMPTIONS.md`).
+  is log10 1.26–2.33 off (Tang 2026 per-organ TF 1.50, Kim 2019 grain 2.33, Li 2025 TF by
+  stage 1.26 / 1.68). The K_PL-gated **lipid loading** cuts that (Tang 0.64, Kim 0.56, Li
+  0.90 / 1.24), and with the **redistributed shoot** it is best on Li (0.36 / 0.51) and Kim
+  (0.47; not robust to the non-detects, where the interval score is 0.15 vs 0.38).
+- **Unmeasured inputs that matter**: the carrier constants (Km above all), E_m, the grain's
+  share of the transpiration stream, the phloem sap per unit grain growth (T_C,Ph), phloem
+  recirculation φ (straw), and whether dead blades stay in the harvested straw
+  (`docs/ASSUMPTIONS.md`).
 - **Neutral organics** (nothing fitted): rice root partition log10 0.21 (Liu 2023), per-organ TF
   0.31 (Ge 2017), barley stem 0.30 (Briggs 1983).
 

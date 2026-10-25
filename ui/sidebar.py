@@ -246,7 +246,7 @@ def _neutral_panel():
                    "case at f_n→0)." if n["is_acid"] else
                    "The ion is a CATION: ATTRACTED by the inside-negative membrane, not "
                    "excluded — at pKa 4.5 / pH 6.5 / log Kow 2.45 the base's root BAF is "
-                   "1.51 against the acid's 0.079 (~19×)."))
+                   "1.70 against the acid's 0.18 (~9×)."))
             # The tested-floor warning lives HERE, where the path is actually switched
             # on, so it also covers a hand-typed pKa and a predicted one the user chose
             # to enable -- not only the ones a lookup turned on.
@@ -263,9 +263,9 @@ def _neutral_panel():
             help="A route AROUND the membrane, so it feels neither speciation nor GHK. "
                  "0 = structurally absent (the default — NOTHING is adopted).")
         st.caption("Speciation is TESTED and BOUNDED: direction supported (Spearman +0.480 on "
-                   "Schriever's 67 ionisable rows; rank +0.284 → +0.520), magnitude refuted "
-                   "(bias −0.203, ~nothing predicted below f_n ≈ 1e−3). A small g_apo ≈ 0.5–1 "
-                   "improves rank AND scale; the RMSE-optimal 5 wrecks the ordering, so do not "
+                   "Schriever's 67 ionisable rows; rank +0.284 → +0.514), magnitude refuted "
+                   "(bias −0.164, ~nothing predicted below f_n ≈ 1e−3). A small g_apo ≈ 0.1 "
+                   "improves rank AND scale; the RMSE-optimal 1 degrades the ordering, so do not "
                    "fit it on RMSE. §4l–4m of docs/neutral_dpu_validation.md.")
     # Soil sorption: needed only by the exposure modes that model the soil. The PFAS
     # chain-length Koc QSPR does not apply, so it comes from log Kow (Karickhoff 1981,
@@ -311,9 +311,9 @@ def _mechanism_panel():
             help="How the anion gets past the inside-negative membrane. The "
                  "Michaelis–Menten CARRIER is this repo's one addition to the Trapp "
                  "cell model — and it keeps its place by DEFAULT, NOT BY EVIDENCE: "
-                 "on Yamazaki the carrier with its Vmax re-fitted (1.009) and a single "
-                 "global apoplastic bypass g_apo=20 (1.030) are indistinguishable "
-                 "(bootstrap 0.258), while adding nothing at all fails (2.209). See "
+                 "on Yamazaki the carrier with its Vmax re-fitted (1.078) and a single "
+                 "global apoplastic bypass g_apo=50 (1.093) are indistinguishable "
+                 "(bootstrap 0.368), while adding nothing at all fails (2.301). See "
                  "validation/carrier_vs_bypass.py.")
         uptake = "carrier" if up_label.startswith("carrier") else "bypass"
         lipid_loading = st.checkbox(

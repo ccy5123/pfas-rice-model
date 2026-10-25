@@ -49,7 +49,15 @@ api.simulate_neutral(2.45, name="carbamazepine")      # log Kow로 주는 중성
 
 ## 결과 요약 (자세한 내용과 스크립트: `CLAUDE.md` §6)
 
-{RESULTS_KR}
+- **재현**(Fit A, 포화): Yamazaki 뿌리/짚/낟알에서 log10 RMSE 0.162. 단조 f_xy를 쓰면 짚은 예측이 되고
+  log10 1.40만큼 빗나갑니다.
+- **독립 데이터로의 전이**(그 데이터에 맞춘 파라미터 없음): 기본 설정은 log10 1.26–2.33 차이가 납니다
+  (Tang 2026 기관별 TF 1.50, Kim 2019 낟알 2.33, Li 2025 생육단계별 TF 1.26 / 1.68). K_PL 게이트 **지질 적재**가
+  이를 줄이고(Tang 0.64, Kim 0.56, Li 0.90 / 1.24), **재분배 지상부**와 함께 쓰면 Li(0.36 / 0.51)와 Kim(0.47)에서
+  가장 낫습니다. 다만 Kim에서는 불검출 처리에 따라 순위가 바뀝니다(구간 점수 0.15 대 0.38).
+- **결과를 크게 움직이는 미측정 입력**: carrier 상수(특히 Km), E_m, 증산류 중 낟알 몫, 낟알 생장당 체관 수액량
+  (T_C,Ph), 체관 재순환 φ(짚), 죽은 잎이 수확 짚에 남는지 여부(`docs/ASSUMPTIONS.md`).
+- **중성 유기물**(적합 없음): 벼 뿌리 분배 log10 0.21(Liu 2023), 기관별 TF 0.31(Ge 2017), 보리 줄기 0.30(Briggs 1983).
 
 일반인 화면은 모든 절대 수치에 ×/÷ 밴드를 함께 보여주며, 그 폭은 기본 설정의 전이 오차
 (`model_api.APRIORI_OOS_SCORES`)에서 정해집니다.
@@ -66,7 +74,7 @@ pip install phydrus
 python validation/hydrus_coupled_run.py
 ```
 
-흡착이 약한 단쇄는 담수기에 용탈되고({HYDRUS_KR}), 장쇄는 완충됩니다. `simulate(cwo_profile="flooded")`는
+흡착이 약한 단쇄는 담수기에 용탈되고(일정 노출일 때 PFBA 낟알 BAF 4.42 → 0.54), 장쇄는 완충됩니다. `simulate(cwo_profile="flooded")`는
 엔진 없이 쓰는 해석적 형상이며, `k_leach`는 congener별로 HYDRUS 결과에 맞춰 보정돼 있습니다. 웹의
 Claude Code에서는 SessionStart 훅이 엔진을 빌드합니다.
 

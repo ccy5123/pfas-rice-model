@@ -149,8 +149,8 @@ PFSA C4/C6/C8: PFBS·PFHxS·PFOS, 에터 PFAS: GenX)이며, 전문가 모드에�
 - **f_xy source**: `recommended`(기본; 단조 물리적 TSCF, L_Ph·κ_d는 Yamazaki의 뿌리·낟알에 맞춤 — 짚은 예측) / `fit`(세 파라미터 모두 2020 사이트-연도에 congener별 적합 — 포화된 재현).
 - **작물 드라이버(증산 + 기관 질량)**: **보정 사이트-연도**(기본: JMA 쓰쿠바 2020 기상, Yamazaki 이앙일에 맞춘 ORYZA2000 포트, ORYZA2000 증산; 시즌은 이앙~수확이라 시즌 슬라이더 없음) / **일반 기후값**(`forcing_rice` 증산) + 바이오매스 드라이버(ORYZA2000 포트, 축약 ORYZA, `growth_rice`)를 시즌 슬라이더 기간으로.
 - **⚙️ Mechanism (advanced)** — 아직 *열려 있는* 두 질문을 기본값 없이 숨기지 않고 **모드로** 노출합니다(둘 다 기본값 = 배포 모델, `parameters.json` 불변). 켜면 헤드라인 위에 경고 배너가 뜹니다.
-  - **Root entry**: `carrier`(기본) vs `bypass`(아포플라스트 우회). Michaelis–Menten carrier는 이 레포가 Trapp 세포 모델에 **추가한 유일한 물리**인데, Yamazaki에서 Vmax를 다시 맞춘 carrier(1.009)와 단일 전역 `g_apo`=20(1.030)은 **구별 불가**(bootstrap 0.258)이고 아무것도 안 넣으면 실패(2.209)입니다 — 즉 *추가는 필요*하지만 *어느 쪽인지는 미결*. 그래서 carrier는 **근거가 아니라 기본값으로** 유지됩니다(`validation/carrier_vs_bypass.py`).
-  - **Lipid-facilitated loading**: K_PL-게이트 B-독립 적재항(`g_xy·C`/`g_ph·C`), Yamazaki에만 적합. Tang에 **아무것도 재적합하지 않고** per-organ 전이 오차 1.413 → 0.655. 자체 `f_xy`를 공급하므로 켜져 있는 동안 위의 f_xy 선택은 무시됩니다. 기본 꺼짐.
+  - **Root entry**: `carrier`(기본) vs `bypass`(아포플라스트 우회). Michaelis–Menten carrier는 이 레포가 Trapp 세포 모델에 **추가한 유일한 물리**인데, Yamazaki에서 Vmax를 다시 맞춘 carrier(1.078)와 단일 전역 `g_apo`=50(1.093)은 **구별 불가**(bootstrap 0.368)이고 아무것도 안 넣으면 실패(2.301)입니다 — 즉 *추가는 필요*하지만 *어느 쪽인지는 미결*. 그래서 carrier는 **근거가 아니라 기본값으로** 유지됩니다(`validation/carrier_vs_bypass.py`).
+  - **Lipid-facilitated loading**: K_PL-게이트 B-독립 적재항(`g_xy·C`/`g_ph·C`), Yamazaki에만 적합. Tang에 **아무것도 재적합하지 않고** per-organ 전이 오차 1.50 → 0.64. 자체 `f_xy`를 공급하므로 켜져 있는 동안 위의 f_xy 선택은 무시됩니다. 기본 꺼짐.
   - **Override the entry constants**: `Vmax ×`, `Km ×`, `g_apo` 직접 지정(carrier-vs-bypass 스캔 및 용량 시리즈의 레버; 용량 시리즈의 결론은 사후 하한 `Km ≥ 150–500 µg/L` = 고정값의 30–100배).
   - 이 스위치들은 모든 탭·congener 비교·**베이지안 역추정**까지 함께 적용됩니다(역추정만 다른 모델로 도는 일이 없도록).
 
@@ -169,7 +169,7 @@ PFSA C4/C6/C8: PFBS·PFHxS·PFOS, 에터 PFAS: GenX)이며, 전문가 모드에�
 4. **📊 BAF vs observed** — 모델 vs Yamazaki 2023 막대. (선택) **two-pool(seq)** 및 **뿌리+지상부 병합**(`simulate_twopool_nstem`) 탐색 모델 오버레이. Yamazaki 조건/매칭 설명.
 5. **🔗 Chain-length trends** — 사슬 길이 vs 파라미터(K_PL/K_prot/K_cw/f_xy/B_root/B_grain).
 6. **⚖️ Compare congeners** — 사이드바에서 고른 여러 congener의 조직별 BAF 비교.
-7. **✅ Tang TF (OOS)** — Tang 2026 per-organ TF(out-of-sample) 검증(PFOA/PFOS/GenX, dw 기준, f_xy refit 비교). **lipid loading (OOS)** 체크박스로 세 번째 계열 추가 — 초록(refit)은 이 측정에 맞춘 것이고 보라(지질)는 Yamazaki에서 적합한 상수를 그대로 옮긴 **예측**인데 같은 자리에 떨어집니다(0.516 vs 0.519).
+7. **✅ Tang TF (OOS)** — Tang 2026 per-organ TF(out-of-sample) 검증(PFOA/PFOS/GenX, dw 기준, f_xy refit 비교). **lipid loading (OOS)** 체크박스로 세 번째 계열 추가 — 초록(refit)은 이 측정에 맞춘 것이고 보라(지질)는 Yamazaki에서 적합한 상수를 그대로 옮긴 **예측**인데 차이의 대부분을 줄입니다(자유 음이온 1.50 → 0.64; 이 측정에 맞춘 refit은 0.34).
 8. **🔎 Inverse (Bayesian)** — 조직 농도 → 노출 Cwᵒ 역추정(식별성 caveat 포함) → [6.1](#61-거꾸로-추정-베이지안-역추정).
 9. **ℹ️ About / coupling** — 6개 모드 설명, HYDRUS-1D 입출력 매핑, 용어집.
 
@@ -286,7 +286,7 @@ day,Cwo
 - **토양 결합(Method A, 단방향)**: HYDRUS-1D/Phydrus → Cwᵒ(t), Q_TP(t)를 받아 식물 ODE는 Python에서 품. HYDRUS는 미수정.
 
 **알려진 한계(정직한 명시)**
-- 적합 재현(log10 RMSE 0.121)은 **포화된 재현**(파라미터 3개 / 관측 3개)이라 예측 검증이 아님. 기본 설정의 독립 데이터 전이 오차는 log10 1.26–2.06이고, 지질 적재 + 재분배 지상부가 가장 잘 전이됨(0.43–0.66). 측정값이 없는 입력과 그 민감도는 `docs/ASSUMPTIONS.md`.
+- 적합 재현(log10 RMSE 0.162)은 **포화된 재현**(파라미터 3개 / 관측 3개)이라 예측 검증이 아님. 기본 설정의 독립 데이터 전이 오차는 log10 1.26–2.33이고, 지질 적재 + 재분배 지상부가 가장 잘 전이됨(Li 0.36 / 0.51, Kim 0.47). 측정값이 없는 입력과 그 민감도는 `docs/ASSUMPTIONS.md`.
 - **장쇄(C10–C12) 지상부 과소예측**: 지질 적재로 개선되나 PFDoDA는 f_xy = L_Ph = 1에서도 과소.
 - `K_cw`(세포벽 분배)는 측정 계수가 문헌에 없어 placeholder. 에터/술폰아미드 Koc는 GAP.
 - 현재 결과와 그 스크립트: `CLAUDE.md` §6.
@@ -329,8 +329,8 @@ day,Cwo
 ## 12. 재현·검증·테스트
 
 ```bash
-python reproduce_demo.py          # Yamazaki 2020 사이트-연도, 적합 수송(재현, log10 RMSE 0.121)
-python reproduce_demo.py --rec    # 단조 물리적 f_xy: 짚은 예측(log10 1.37)
+python reproduce_demo.py          # Yamazaki 2020 사이트-연도, 적합 수송(재현, log10 RMSE 0.162)
+python reproduce_demo.py --rec    # 단조 물리적 f_xy: 짚은 예측(log10 1.40)
 python build_parameters.py        # params/parameters.json 재조립
 pip install pytest && pytest      # 전체 테스트(구조/질량보존/QSPR/보정/API/플롯/역추정/표입력 …)
 ```

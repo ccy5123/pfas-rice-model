@@ -150,8 +150,8 @@ Three classes, chosen in the sidebar because the compound is a scenario input, n
 - **f_xy source**: `recommended` (default; monotone physical TSCF, with L_Ph and κ_d fitted to Yamazaki's root and grain — straw is a prediction) / `fit` (all three fitted per congener on the 2020 site-year — a saturated reproduction).
 - **Crop drivers (transpiration + organ mass)**: the **calibration site-year** (default: JMA Tsukuba 2020 weather, the ORYZA2000 port transplanted on Yamazaki's date, ORYZA2000 transpiration; the season is transplanting to harvest, so there is no season slider) / a **generic climatology** (`forcing_rice` transpiration) with a biomass driver — the ORYZA2000 port, the reduced ORYZA re-coding, or `growth_rice` — over the season slider.
 - **⚙️ Mechanism (advanced)** — two questions that are still *open* are exposed as modes rather than buried constants (both default to the shipped model; `parameters.json` untouched). A banner appears next to the headline metrics whenever one is on.
-  - **Root entry**: `carrier` (default) vs `bypass` (apoplastic). The Michaelis–Menten carrier is the **one piece of physics this repo adds** to the Trapp cell model — yet on Yamazaki the carrier with its Vmax re-fitted (1.009) and a single global `g_apo`=20 (1.030) are **indistinguishable** (bootstrap 0.258) while adding nothing at all fails (2.209): *an* addition is necessary, *which* is undecided, so the carrier keeps its place **by default, not by evidence** (`validation/carrier_vs_bypass.py`).
-  - **Lipid-facilitated loading**: the K_PL-gated, B-independent loading term (`g_xy·C`/`g_ph·C`), fitted on Yamazaki only. With **nothing re-fit to Tang** it moves the per-organ transfer error 1.413 → 0.655. It supplies its own `f_xy`, so the f_xy choice above is ignored while it is on. Default off.
+  - **Root entry**: `carrier` (default) vs `bypass` (apoplastic). The Michaelis–Menten carrier is the **one piece of physics this repo adds** to the Trapp cell model — yet on Yamazaki the carrier with its Vmax re-fitted (1.078) and a single global `g_apo`=50 (1.093) are **indistinguishable** (bootstrap 0.368) while adding nothing at all fails (2.301): *an* addition is necessary, *which* is undecided, so the carrier keeps its place **by default, not by evidence** (`validation/carrier_vs_bypass.py`).
+  - **Lipid-facilitated loading**: the K_PL-gated, B-independent loading term (`g_xy·C`/`g_ph·C`), fitted on Yamazaki only. With **nothing re-fit to Tang** it moves the per-organ transfer error 1.50 → 0.64. It supplies its own `f_xy`, so the f_xy choice above is ignored while it is on. Default off.
   - **Override the entry constants**: `Vmax ×`, `Km ×`, `g_apo` — the levers of that scan and of the dose series (whose result is the post-hoc bound `Km ≥ 150–500 µg/L`, 30–100× the fixed value).
   - The switches propagate to every tab, the congener comparison and the **Bayesian inverse**, so the inverse is never run under a different model than the forward tabs.
 
@@ -170,7 +170,7 @@ Three classes, chosen in the sidebar because the compound is a scenario input, n
 4. **📊 BAF vs observed** — model vs Yamazaki 2023 bars. Optional **two-pool (seq)** and **merged root+shoot** (`simulate_twopool_nstem`) exploratory overlays. Yamazaki conditions/matching explained.
 5. **🔗 Chain-length trends** — chain length vs a parameter (K_PL/K_prot/K_cw/f_xy/B_root/B_grain).
 6. **⚖️ Compare congeners** — per-tissue BAF across the congeners selected in the sidebar.
-7. **✅ Tang TF (OOS)** — Tang 2026 per-organ TF (out-of-sample) check (PFOA/PFOS/GenX, dry-weight, with the f_xy refit). A **lipid loading (OOS)** checkbox adds a third series: the green refit was calibrated *on* these measurements, the purple lipid run was calibrated on Yamazaki and transferred untouched — and lands in the same place (0.516 vs 0.519).
+7. **✅ Tang TF (OOS)** — Tang 2026 per-organ TF (out-of-sample) check (PFOA/PFOS/GenX, dry-weight, with the f_xy refit). A **lipid loading (OOS)** checkbox adds a third series: the green refit was calibrated *on* these measurements, the purple lipid run was calibrated on Yamazaki and transferred untouched — and closes most of the gap (0.64 vs the free anion's 1.50; the in-sample refit reaches 0.34).
 8. **🔎 Inverse (Bayesian)** — tissue concentrations → exposure Cwᵒ, with the identifiability caveat → [6.1](#61-work-backwards-bayesian-inverse).
 9. **ℹ️ About / coupling** — the six modes, the HYDRUS-1D input/output mapping, and the glossary.
 
@@ -285,7 +285,7 @@ Full derivation: `docs/pfas_rice_compartmental_model.{tex,pdf}`; the overview en
 - **Soil coupling (Method A, one-way)**: HYDRUS-1D/Phydrus → Cwᵒ(t), Q_TP(t); the plant ODE is solved in Python. HYDRUS is unmodified.
 
 **Known limitations (stated honestly)**
-- The fitted reproduction (log10 RMSE 0.121) is **saturated** (3 parameters per 3 observations), not predictive validation. The default configuration's error on independent datasets is log10 1.26–2.06; lipid loading with the redistributed shoot transfers best (0.43–0.66). Every input without a measurement is listed with its sensitivity in `docs/ASSUMPTIONS.md`.
+- The fitted reproduction (log10 RMSE 0.162) is **saturated** (3 parameters per 3 observations), not predictive validation. The default configuration's error on independent datasets is log10 1.26–2.33; lipid loading with the redistributed shoot transfers best (Li 0.36 / 0.51, Kim 0.47). Every input without a measurement is listed with its sensitivity in `docs/ASSUMPTIONS.md`.
 - **Long-chain (C10–C12) shoot under-prediction**: lipid-facilitated loading helps; PFDoDA stays under even with f_xy = L_Ph = 1.
 - `K_cw` (cell-wall partition) has no measured coefficient in the literature (placeholder). Ether/sulfonamide Koc is a gap.
 - Current results and the scripts behind them: `CLAUDE.md` §6.
@@ -327,8 +327,8 @@ Full derivation: `docs/pfas_rice_compartmental_model.{tex,pdf}`; the overview en
 ## 12. Reproduce / validate / test
 
 ```bash
-python reproduce_demo.py          # Yamazaki 2020 site-year, fitted transport (a reproduction, log10 RMSE 0.121)
-python reproduce_demo.py --rec    # monotone physical f_xy: straw is a prediction (log10 1.37)
+python reproduce_demo.py          # Yamazaki 2020 site-year, fitted transport (a reproduction, log10 RMSE 0.162)
+python reproduce_demo.py --rec    # monotone physical f_xy: straw is a prediction (log10 1.40)
 python build_parameters.py        # rebuild params/parameters.json
 pip install pytest && pytest      # full test suite (structure/mass-conservation/QSPR/calibration/API/plots/inverse/tables …)
 ```
