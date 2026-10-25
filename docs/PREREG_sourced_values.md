@@ -208,6 +208,19 @@ Expectations added before the fit:
 - No expectation is attached. The shift is the same 0.10 log10 for every congener and variant, and
   the sign of the re-fitted variants' Kim errors is not known yet.
 
+### 5.8 Addendum (committed before the neutral-path re-runs)
+- **One water content per organ on the neutral path too.** Amendment 1 made the organ water
+  `theta_fw` the sourced one (`params/rice_composition_sourced.csv`: root 0.713, stem 0.7095,
+  leaf 0.695, grain 0.21). The dry -> fresh mass conversion (`organ_mass`) reads it, but the
+  neutral path's own copy `neutral_dpu.RICE_WATER` (0.90/0.83/0.78/0.14, source unresolved:
+  `value_provenance.csv` neu_water) was left. `tests/test_organ_mass.py` requires the copies to
+  agree. `RICE_WATER` now reads `organ_mass.THETA_FW`. Found by a diagnostic run of the Liu 2023
+  table with only the mass conversion changed: 0.213 -> 0.226.
+- The neutral validation tables are re-run on this and their scores replace the old ones,
+  whatever they are. The neutral lipid fractions are fresh-weight values reported next to root
+  waters of 0.90-0.94. Restating them at the sourced, drier root needs a dry-basis lipid source
+  and goes to amendment 2. No expectation is attached to the scores.
+
 ## 6. Outcome
 
 (appended after the runs)
