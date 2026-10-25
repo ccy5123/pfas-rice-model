@@ -1,9 +1,11 @@
 """Tests for the Bayesian inverse demo (validation/bayesian_inverse_demo.py).
 
-Locks in the identifiability result discussed in the modelling notes: from tissue
-C(t) the exposure (Q_TP scale, Cwo level) IS jointly identifiable when transport
-is fixed, but Q_TP and f_xy collapse onto a product ridge (only their product is
-constrained). Run noise-free for determinism.
+Locks in the identifiability result on the calibration site-year with the harvest
+operator: from tissue concentrations the exposure (Q_TP scale, Cwo level) IS jointly
+identifiable when transport is fixed; Q_TP and f_xy trade off strongly (they share the
+root->shoot flux) but stay separable with root, straw and grain observed, because Q_TP
+alone also sets the advection inside the shoot; Cwo and the root-uptake conductance
+form a ridge. Run noise-free for determinism; each scenario is solved once.
 """
 import os
 import sys
@@ -14,24 +16,39 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "validation"))
 import bayesian_inverse_demo as bid  # noqa: E402
 
 
-def test_exposure_identifiable_when_transport_fixed():
-    """(A) Q_TP-scale & Cwo-level recover from tissue C(t) with transport fixed, and
-    are far better conditioned than the transport ridges (B/C)."""
-    a = bid.run_scenario("A", ["qtp_scale", "cwo_level"], noise=False)
-    b = bid.run_scenario("B", ["qtp_scale", "f_xy_mult"], noise=False)
+@pytest.fixture(scope="module")
+def scenarios():
+    return dict(
+        A=bid.run_scenario("A", ["qtp_scale", "cwo_level"], noise=False),
+        B=bid.run_scenario("B", ["qtp_scale", "f_xy_mult"], noise=False),
+        C=bid.run_scenario("C", ["cwo_level", "kappa_d_mult"], noise=False),
+    )
+
+
+def test_exposure_identifiable_when_transport_fixed(scenarios):
+    """(A) Q_TP-scale & Cwo-level recover from the tissue data with transport fixed."""
+    a = scenarios["A"]
     assert abs(a["corr"]) < 0.95                         # not a hard ridge
-    assert a["cond"] < 0.3 * b["cond"]                   # much better conditioned than the ridge
     assert a["recovered"]["qtp_scale"] == pytest.approx(1.0, abs=0.12)
     assert a["recovered"]["cwo_level"] == pytest.approx(1.0, abs=0.12)
 
 
-def test_qtp_fxy_is_a_product_ridge():
-    """(B) Q_TP and f_xy collapse onto a product ridge: strong correlation, ill-
-    conditioned, and only the PRODUCT Q_TP·f_xy is recovered."""
-    r = bid.run_scenario("B", ["qtp_scale", "f_xy_mult"], noise=False)
-    assert abs(r["corr"]) > 0.9                          # near-±1 ridge
-    assert r["cond"] > 100                               # ill-conditioned
-    assert r["product"] == pytest.approx(1.0, abs=0.15)  # only the PRODUCT is recovered
+def test_qtp_fxy_trade_off_but_separable(scenarios):
+    """(B) Q_TP and f_xy are strongly anti-correlated (they share the root->shoot flux),
+    their product is pinned, and noise-free each one is still recovered."""
+    b = scenarios["B"]
+    assert b["corr"] < -0.9
+    assert b["product"] == pytest.approx(1.0, abs=0.15)
+    assert b["recovered"]["qtp_scale"] == pytest.approx(1.0, abs=0.12)
+    assert b["recovered"]["f_xy_mult"] == pytest.approx(1.0, abs=0.12)
+
+
+def test_cwo_conductance_is_a_ridge(scenarios):
+    """(C) Cwo and the root-uptake conductance are degenerate: far worse conditioned
+    than either other pair, correlation ~ -1."""
+    a, b, c = scenarios["A"], scenarios["B"], scenarios["C"]
+    assert abs(c["corr"]) > 0.99
+    assert c["cond"] > 1e3 * max(a["cond"], b["cond"])
 
 
 def test_emcee_posterior_recovers_well_posed():

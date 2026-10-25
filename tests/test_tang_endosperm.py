@@ -8,7 +8,7 @@ the grain_brown row counts it.
 
 Pinned: the default is unchanged; the white composition is derived as documented; and
 the finding -- the white reading LOWERS the model endosperm 1.5-4x, so the documented
-grain under-prediction gets WORSE, not better (lipid OOS 0.520 -> 0.700).
+grain under-prediction gets WORSE, not better (lipid OOS 0.655 -> 0.856).
 """
 import os
 import sys
@@ -58,8 +58,8 @@ def test_white_lowers_the_endosperm_most_for_the_high_kpl_sulfonate():
 
 
 def test_the_white_reading_makes_the_grain_gap_worse():
-    assert _rmse(lipid_loading=True) == pytest.approx(0.520, abs=0.02)
-    assert _rmse(lipid_loading=True, endosperm="white") == pytest.approx(0.700, abs=0.03)
+    assert _rmse(lipid_loading=True) == pytest.approx(0.655, abs=0.02)
+    assert _rmse(lipid_loading=True, endosperm="white") == pytest.approx(0.856, abs=0.03)
 
 
 if __name__ == "__main__":

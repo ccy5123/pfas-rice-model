@@ -262,6 +262,7 @@ def main(fast=False):
     print(f"   {'congener':9s}{'carrier':>10s}{'bypass':>9s}{'midpoint':>10s}"
           f"{'observed':>10s}{'P(obs<mid)':>12s}   verdict")
     votes = 0
+    rule = {}
     for nm in CONGENERS:
         dc, db = decline(pred[nm, "carrier"]), decline(pred[nm, "bypass"])
         mid = float(np.sqrt(dc * db))                       # geometric midpoint
@@ -269,6 +270,7 @@ def main(fast=False):
         p = _boot_below(obs[nm][0], obs[nm][1], mid)
         ok = (do < mid) and (p >= BOOT_MIN)
         votes += ok
+        rule[nm] = dict(carrier=dc, bypass=db, mid=mid, obs=do, p=p, below=bool(ok))
         print(f"   {nm:9s}{dc:10.2f}{db:9.2f}{mid:10.2f}{do:10.2f}{p:12.3f}   "
               f"{'below (against carrier)' if ok else 'not below'}")
     print(f"   {votes}/3 congeners below the midpoint with bootstrap >= {BOOT_MIN:g}")
@@ -303,6 +305,7 @@ def main(fast=False):
     print(f"   ordering by decline — carrier predicts {rank_pred}, observed {rank_obs}")
 
     # -- 6 -------------------------------------------------------------------
+    kd_hold = {nm: [] for nm in CONGENERS}           # does the rule's verdict hold per Kd combination
     if not fast:
         print("\n6. Kd SENSITIVITY — does any plausible exposure mapping flip it?")
         print(f"   {'f_oc':>6s}{'Koc x':>7s}   " +
@@ -314,6 +317,7 @@ def main(fast=False):
                     c2 = [pore_water(nm, d, f_oc=f_oc, koc_scale=ks) for d in doses]
                     dc = decline([whole_plant_baf(nm, c, "carrier") for c in c2])
                     cells.append(f"{dc:8.2f}/{decline(obs[nm][0]):6.2f}")
+                    kd_hold[nm].append(decline(obs[nm][0]) < float(np.sqrt(dc)))
                 print(f"   {f_oc:6.2f}{ks:7.1f}   " + "".join(f"{c:>16s}" for c in cells))
 
     # -- 7 -------------------------------------------------------------------
@@ -358,56 +362,45 @@ def main(fast=False):
     print("\n" + "=" * 84)
     print("VERDICT")
     print("=" * 84)
-    print(f"   THE PRE-REGISTERED RULE IS NOT MET: {votes}/3 congeners, not 2/3.")
-    print("   The carrier is NOT refuted on the rule as written, and this is")
-    print("   reported first because it is what was agreed in advance.")
+    met = votes >= 2
+    print(f"   THE PRE-REGISTERED RULE IS {'MET' if met else 'NOT MET'}: {votes}/3 congeners "
+          f"below the midpoint with bootstrap >= {BOOT_MIN:g} (needed 2/3).")
+    if not met:
+        print("   The carrier is NOT refuted on the rule as written; that is reported first")
+        print("   because it is what was agreed in advance.")
     print()
-    print("   BUT ONLY ONE CONGENER IS ACTUALLY WELL-CONDITIONED, and the gate")
-    print("   should have been PER CONGENER rather than across them — a flaw in")
-    print("   this file's own pre-registration, exposed by running it:")
-    print("      GenX  NON-INFORMATIVE. Cwo/Km = 465 at the LOWEST dose, so the")
-    print("            carrier is saturated at every dose and the two arms differ")
-    print("            by 7% (1.07 vs 1.00). This is failure mode G1 for GenX")
-    print("            alone. Its 'not below' is NOT evidence for the carrier.")
-    print("      PFOA  INCONCLUSIVE. Observed 1.33 IS below the 1.48 midpoint, but")
-    print("            the bootstrap over Tang's SDs is 0.671, under the 0.90 bar.")
-    print("            Also Kd-limited: at f_oc 0.01 x Koc/10 the carrier predicts")
-    print("            1.05, i.e. below the observation, so the sign can flip.")
-    print("      PFOS  WELL-CONDITIONED AND IT REFUTES. Lowest pore water of the")
-    print("            three (Cwo/Km 1.7 at the bottom dose, 1729 at the top), so")
-    print("            it is the one compound that actually crosses Km inside the")
-    print("            series. Carrier predicts a 6.28x decline; measured is 1.17x;")
-    print("            bootstrap 1.000; and it holds in 8 of 9 Kd combinations")
-    print("            (only f_oc 0.01 x Koc/10 softens it to 1.38).")
+    print("   PER CONGENER (the gate should have been per congener -- a flaw in this file's")
+    print("   own pre-registration, exposed by running it):")
+    for nm in CONGENERS:
+        r = rule[nm]
+        ratio = cw[nm][0] / api._CARR["Km_in"]
+        if r["carrier"] / r["bypass"] < GATE_MIN_DECLINE:
+            what = (f"NON-INFORMATIVE: Cwo/Km {ratio:.3g} at the lowest dose, the arms differ by "
+                    f"{100 * (r['carrier'] / r['bypass'] - 1):.0f}% -- 'not below' is no evidence for the carrier.")
+        elif r["below"]:
+            hold = (f"; holds in {sum(kd_hold[nm])} of {len(kd_hold[nm])} Kd combinations"
+                    if kd_hold[nm] else "")
+            what = (f"AGAINST THE CARRIER: predicts {r['carrier']:.2f}x, measured {r['obs']:.2f}x, "
+                    f"bootstrap {r['p']:.3f}{hold}.")
+        else:
+            what = (f"INCONCLUSIVE: measured {r['obs']:.2f}x vs midpoint {r['mid']:.2f}x, "
+                    f"bootstrap {r['p']:.3f} (bar {BOOT_MIN:g}).")
+        print(f"      {nm:5s} {what}")
     print()
-    print("   THE ENDPOINT TEST POINTS THE SAME WAY, and it is independent of Kd.")
-    print("   The model confirms entry magnitude divides out of TF (dose-invariant")
-    print("   to 3 decimals in BOTH arms), so a carrier CANNOT produce a TF trend.")
-    print("   Yet PFOA's TF falls 2.1-2.3x across the span while its BCF falls only")
-    print("   1.33x: the dose response sits in TRANSLOCATION, where entry cannot")
-    print("   put it, and is LARGER than the whole uptake signal. Something other")
-    print("   than the entry term is operating — the documented toxicity is the")
-    print("   candidate — and per pre-registered item (b) that makes PFOA's BCF")
-    print("   decline unattributable, which is how it is scored above.")
+    print("   THE ENDPOINT TEST (Kd-independent): entry magnitude divides out of TF in the model")
+    print("   (section 4), so a carrier cannot produce a TF trend; where Tang's TF falls more")
+    print("   than its BCF, the dose response sits in translocation (the documented toxicity),")
+    print("   which makes that congener's BCF decline unattributable (pre-registered item b).")
     print()
-    print("   AND THE BOUND IS THE SAME FOR BOTH INFORMATIVE CONGENERS: PFOA and")
-    print("   PFOS each need Km >= 500 ug/L — 100x the fitted 5 — for the carrier to")
-    print("   be as flat as measured. Two compounds with a ~6x difference in pore")
-    print("   water landing on the same bound is what a real constraint looks like.")
+    if kmin:
+        print("   POST-HOC BOUND (section 7): to be as flat as measured the carrier needs " +
+              ", ".join(f"{nm} Km >= {kmin[nm]:.0f} ug/L" for nm in kmin) +
+              f" (shipped Km {api._CARR['Km_in']:g}). A carrier that linear over the span is the")
+        print("   bypass's functional form, with Vmax/Km as its conductance.")
     print()
-    print("   NET. The dose series was the right instrument and it did separate the")
-    print("   mechanisms where it could: on the single congener whose exposure")
-    print("   crosses Km, the saturating carrier predicts a decline five times")
-    print("   larger than the measurement. That is one congener, so it does not")
-    print("   carry the pre-registered 2/3 bar, and the honest statement is that")
-    print("   the carrier is DISFAVOURED here rather than refuted. Section 7's")
-    print("   bound is the durable result: to survive the series the carrier must")
-    print("   be linear across it, which is the bypass's functional form.")
-    print()
-    print("   NOTHING IS ADOPTED. parameters.json, simulate() defaults and")
-    print("   reproduce_demo (0.029) are unchanged; Km is not re-fitted on the back")
-    print("   of a bound derived from three congeners in one soil.")
-    return dict(cw=cw, pred=pred, obs=obs, gate=gate, votes=votes, km_min=kmin)
+    print("   NOTHING IS ADOPTED here: Km is not re-fitted on a bound from three congeners in one soil.")
+    return dict(cw=cw, pred=pred, obs=obs, gate=gate, votes=votes, km_min=kmin, rule=rule,
+                kd_hold=kd_hold)
 
 
 if __name__ == "__main__":

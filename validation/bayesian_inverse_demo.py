@@ -12,12 +12,14 @@ This demo answers it concretely on synthetic data, and — more importantly —
 EXPOSES THE STRUCTURAL IDENTIFIABILITY of the problem, which is the real
 subtlety:
 
-  * `qtp_scale` (a multiplicative transpiration scale on the measured FAO-56
-    shape) and `f_xy` (the root->xylem loading factor) enter the SHOOT only
-    through their PRODUCT `qtp_scale * f_xy`. So from tissue concentrations they
-    are NOT separately identifiable — the posterior collapses onto a ridge
-    (correlation ~ -1).  To get Q_TP absolutely you must fix f_xy independently
-    (xylem-sap), or vice versa.
+  * `qtp_scale` (a multiplicative scale on the site-year transpiration) and `f_xy`
+    (the root->xylem loading factor) enter the root->shoot flux through their
+    PRODUCT, so they trade off strongly (posterior correlation ~ -0.95). Q_TP also
+    sets the advection inside the shoot (stem -> leaf / grain), which f_xy does not,
+    so with root, straw and grain observed the two are not a strict ridge: on the
+    site-year with the harvest operator the correlation sits just inside the script's
+    0.95 ridge threshold and the pair is (barely) separable at sigma 0.05 log10. To
+    pin Q_TP absolutely, measure it (or f_xy) independently.
   * `cwo_level` and the root-uptake conductance `kappa_d` trade off the same way
     (the linear-regime influx is ~ g_in * C_w^o), another ridge.
   * With the TRANSPORT parameters held fixed, `(qtp_scale, cwo_level)` IS
@@ -191,14 +193,14 @@ def emcee_posterior(free, truth=None, nstep=600, nwalk=16, discard=200, seed=0):
 
 
 def maybe_emcee(nstep=120, nwalk=8):
-    """Run the MCMC cross-check on BOTH the well-posed case (A) and the product
-    ridge (B), confirming the Laplace verdicts with a real sampled posterior.
+    """Run the MCMC cross-check on BOTH the well-posed case (A) and the strong
+    Q_TP-f_xy trade-off (B), confirming the Laplace verdicts with a sampled posterior.
     OPT-IN (the forward ODE is ~0.7 s/eval, so a chain is minutes): only invoked by
     the `--emcee` flag."""
     a = emcee_posterior(["qtp_scale", "cwo_level"], nstep=nstep, nwalk=nwalk)  # recovers
     if a is None:
         return None
-    emcee_posterior(["qtp_scale", "f_xy_mult"], nstep=nstep, nwalk=nwalk)      # ridge
+    emcee_posterior(["qtp_scale", "f_xy_mult"], nstep=nstep, nwalk=nwalk)      # trade-off
     return a
 
 
@@ -209,7 +211,7 @@ def run(do_emcee=False):
     results = [
         run_scenario("A  WELL-POSED: exposure, transport fixed",
                      ["qtp_scale", "cwo_level"]),
-        run_scenario("B  RIDGE: transpiration vs root->xylem loading",
+        run_scenario("B  transpiration vs root->xylem loading",
                      ["qtp_scale", "f_xy_mult"]),
         run_scenario("C  RIDGE: pore water vs root-uptake conductance",
                      ["cwo_level", "kappa_d_mult"]),
@@ -219,16 +221,15 @@ def run(do_emcee=False):
     else:
         print("\n(Laplace posterior above; pass --emcee for the full-MCMC cross-check "
               "— a few minutes, the ODE is ~0.7 s/sample.)")
-    print("\nTakeaway: (A) with transport fixed, Q_TP-scale & Cwo-level are the BEST-"
-          "conditioned (cond ~90) and recover from tissue C(t) -- they act on different "
-          "directions (Cwo sets the root level, Q_TP the shoot/root ratio). (B) Q_TP & "
-          "f_xy collapse onto a product ridge (corr ~-1, cond ~500): only the PRODUCT "
-          "Q_TP·f_xy is constrained. (C) Cwo & root-uptake conductance are even more "
-          "degenerate (cond ~1e5) but, uptake being nonlinear, with no clean product "
-          "invariant. So pinning Q_TP or Cwo absolutely needs an independent measurement "
-          "(xylem sap / a pore-water probe), exactly as the model notes. Multi-compartment "
-          "data (root vs straw vs grain) only PARTIALLY break B, because Q_TP also sets the "
-          "intra-shoot advection rates that f_xy does not.")
+    ra, rb, rc = results
+    print(f"\nTakeaway: (A) with transport fixed, Q_TP-scale and Cwo-level recover from the "
+          f"tissue data (corr {ra['corr']:+.2f}, cond {ra['cond']:.0f}). (B) Q_TP and f_xy trade "
+          f"off strongly (corr {rb['corr']:+.2f}, cond {rb['cond']:.0f}): they share the "
+          f"root->shoot flux, and only the intra-shoot advection that Q_TP alone sets keeps "
+          f"them apart. (C) Cwo and the root-uptake conductance are degenerate (corr "
+          f"{rc['corr']:+.2f}, cond {rc['cond']:.1e}) with no clean product invariant (uptake is "
+          f"nonlinear). Pinning Cwo absolutely needs an independent pore-water measurement; "
+          f"pinning Q_TP needs a measured transpiration or xylem-sap ratio.")
     return results
 
 

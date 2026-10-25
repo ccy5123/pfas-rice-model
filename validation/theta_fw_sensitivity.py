@@ -171,8 +171,9 @@ def xylem_split_note():
             share = 1.0 - xylem_leaf_share(api._compartments(), r["M"][-1], "fresh")
             print(f"  grain theta {th:.2f}: grain share of the xylem at harvest {share:.3f}; "
                   f"PFOA grain BAF (dw) {r['conc']['grain'][-1] / (1 - th) / r['cwo_ref']:.3f}")
-    print("  (Reading the original grain S=2 as per kg DRY instead would give 0.343 at harvest,")
-    print("  ~14% during filling: docs/HANDOFF_mass_basis_refit.md section 2.)")
+    print("  (The grain surface itself is unmeasured: ~6% of the stream during filling on the")
+    print("  site-year, 2.5% / 18% at 0.2 / 2.0 m2/kg -- run as a sensitivity in")
+    print("  validation/refit_site_year.py.)")
 
 
 if __name__ == "__main__":
