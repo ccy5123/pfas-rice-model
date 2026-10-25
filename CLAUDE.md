@@ -144,8 +144,9 @@ with its source or its sensitivity range, is in **`docs/ASSUMPTIONS.md`**.
   `L_Ph` floor with grain over (1.89 vs 1.23, 0.46 vs 0.31): their xylem alone over-delivers.
   PFDA/PFUnDA/PFOS sit at `L_Ph` = 1 with grain under (PFDA 2.7 vs 3.9, PFOS 1.7 vs 2.3), and
   PFDoDA at f_xy = L_Ph = 1 (straw 190 vs 249, grain 7.6 vs 52.9).
-- **Fit B** (`"recommended"`): straw — a prediction — at **1.401**; long-chain grain unreachable at
-  the L_Ph bound (grain 1.560).
+- **Fit B** (`"recommended"`): straw — a prediction — at **1.401** (short chains over, C8 and up under);
+  grain 1.560: from PFOA (C8) up, and PFOS, the grain is out of reach at `L_Ph` = 1 (PFOA −0.20, PFDoDA
+  −3.36 log), and PFBA/PFPeA sit at the `L_Ph` floor with grain over (+0.63/+0.60).
 - **Lipid globals** (`LIPID_LOADING`): 0.207 over 29 cells (PFDoDA excluded).
 - **Unmeasured inputs** (fitted parameters held fixed; yardstick = the two harvest runs' model
   difference, root/straw/grain 0.003/0.027/0.067): consequential are carrier Km ×100 (1.26
@@ -282,7 +283,7 @@ K_AW = 0. Details: `docs/neutral_dpu_validation.md`.
   Code on the web the SessionStart hook builds the engine.
 - **Compound lookup** (EPA CompTox): `python src/chem_lookup.py carbamazepine` (needs `CTX_API_KEY`;
   base URL `https://comptox.epa.gov/ctx-api`).
-- **Tests**: `pytest` ({SUITE}). CI (`.github/workflows/tests.yml`) runs the whole suite;
+- **Tests**: `pytest` (424 collected; all pass with the full stack, plus 1 module-level skip for `test_sci_adk_rigor.py` without sci-adk; ~17 min). CI (`.github/workflows/tests.yml`) runs the whole suite;
   `rigor.yml` runs the sci-adk over-claim guard on the frozen `runs/` records.
 
 ## 8. Conventions

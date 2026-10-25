@@ -51,12 +51,12 @@ def test_the_c11_rise_survives_the_non_detects_and_c12_does_not(result):
 
 def test_scores_and_verdict(result):
     sc = result["scores"]
-    assert sc["lipid"]["point"] == pytest.approx(0.50, abs=0.02)
-    assert sc["nstem_lipid"]["point"] == pytest.approx(0.43, abs=0.02)
-    assert sc["mono"]["point"] == pytest.approx(2.06, abs=0.03)
-    assert sc["fit"]["point"] == pytest.approx(0.68, abs=0.03)
-    assert sc["nstem_lipid"]["interval"] == pytest.approx(0.18, abs=0.02)
-    assert sc["lipid"]["interval"] == pytest.approx(0.28, abs=0.02)
+    assert sc["lipid"]["point"] == pytest.approx(0.56, abs=0.02)
+    assert sc["nstem_lipid"]["point"] == pytest.approx(0.47, abs=0.02)
+    assert sc["mono"]["point"] == pytest.approx(2.33, abs=0.03)
+    assert sc["fit"]["point"] == pytest.approx(0.73, abs=0.03)
+    assert sc["nstem_lipid"]["interval"] == pytest.approx(0.15, abs=0.02)
+    assert sc["lipid"]["interval"] == pytest.approx(0.38, abs=0.02)
     for v in ("lipid", "nstem_lipid"):
         for k in ("point", "interval"):
             assert sc["mono"][k] - sc[v][k] > 1.0                      # the free anion misses

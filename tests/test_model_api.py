@@ -170,7 +170,7 @@ def test_export_csv_helpers():
     # each data row has exactly 5 fields and the model BAF parses back to the result
     root_row = lines[1].split(",")
     assert len(root_row) == 5
-    assert float(root_row[1]) == pytest.approx(res["baf_final"]["root"], rel=1e-6)
+    assert float(root_row[1]) == pytest.approx(res["baf_final"]["root"], rel=1e-5)  # written as %.6g
     # measured column is blank without a biomonitoring dict; populated with one
     assert root_row[4] == ""
     summ_m = api.summary_csv(res, obs, {"root": 0.47}).splitlines()
@@ -435,14 +435,19 @@ def test_scenarios():
 def test_fit_source_reproduces_yamazaki():
     """f_xy_source='fit' (validation/refit_site_year.py) reproduces the Yamazaki dry-basis
     observation for a congener that sits off the bounds; 'recommended' keeps the monotone
-    f_xy and reproduces root and grain only."""
+    f_xy and reproduces root and grain only -- and only where L_Ph is off its bounds:
+    from PFOA (C8) up the monotone f_xy leaves the grain short even at L_Ph = 1, so the
+    'recommended' check uses PFHpA (off every bound in both fits)."""
     o = api.observed_baf("PFOA")
     fit = api.yamazaki_harvest_baf("PFOA", f_xy_source="fit")
     for k in ("root", "straw", "grain"):
         assert abs(np.log10(fit[k] / o[k])) < 0.01
-    rec = api.yamazaki_harvest_baf("PFOA", f_xy_source="recommended")
-    assert abs(np.log10(rec["root"] / o["root"])) < 0.01
-    assert abs(np.log10(rec["grain"] / o["grain"])) < 0.01
+    o7 = api.observed_baf("PFHpA")
+    rec = api.yamazaki_harvest_baf("PFHpA", f_xy_source="recommended")
+    assert abs(np.log10(rec["root"] / o7["root"])) < 0.01
+    assert abs(np.log10(rec["grain"] / o7["grain"])) < 0.01
+    short = api.yamazaki_harvest_baf("PFOA", f_xy_source="recommended")
+    assert short["grain"] < o["grain"]          # at the L_Ph bound, grain under
     p = {s: api._transport_defaults(api._CONG["PFOA"], s, False) for s in api.F_XY_SOURCES}
     assert p["recommended"][0] == api._CONG["PFOA"]["f_xy_recommended"]
     assert p["fit"][0] == api._CONG["PFOA"]["f_xy_fit"]
