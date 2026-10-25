@@ -183,12 +183,12 @@ def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=C
     return out
 
 
-def drivers_from_run(run, Cwo=1.0, mass_basis="fresh"):
+def drivers_from_run(run, Cwo=1.0):
     """A `model_api.simulate(drivers=...)` dict from one plant run (fresh organ mass)."""
     b = {k: run[k] for k in ("root", "stem", "leaf", "grain")}
     return dict(t=run["t"], Cwo=np.full_like(run["t"], float(Cwo)), Qtp=run["Qtp"],
-                M=om.organ_matrix(b, mass_basis), leaf_loss=run["leaf_death_rate"],
-                mass_basis=mass_basis)
+                M=om.organ_matrix(b), leaf_loss=run["leaf_death_rate"],
+                mass_basis=om.MASS_BASIS)
 
 
 def yamazaki2020_runs(**kw):

@@ -46,16 +46,17 @@ SEASON, NT = 120.0, 241
 TISSUES = ("root", "stem", "leaf", "grain")
 
 
-def drivers(season=SEASON, n_t=NT, Cwo=1.0, mass_basis="fresh"):
-    """Standard measured forcings (forcing_rice Q_TP + growth_rice organ biomass), with
-    the crop model's DRY matter converted to the FRESH mass the ODE runs on
-    (`organ_mass`; mass_basis="dry" reproduces the numbers published before that fix)."""
+def drivers(season=SEASON, n_t=NT, Cwo=1.0):
+    """Generic rice forcings (forcing_rice Q_TP + growth_rice organ biomass) -- the neutral
+    tables come from other sites and seasons, none with a dated crop record in the repo --
+    with the crop model's DRY matter converted to the FRESH mass the ODE runs on
+    (`organ_mass`)."""
     import organ_mass as om
     t = np.linspace(0.0, float(season), int(n_t))
     b = organ_biomass(t, season)
-    M = om.organ_matrix(b, mass_basis)
+    M = om.organ_matrix(b)
     return dict(t=t, Cwo=np.full(len(t), float(Cwo)), Qtp=fr.Q_TP(t, season), M=M,
-                mass_basis=mass_basis)
+                mass_basis=om.MASS_BASIS)
 
 
 # ---------------------------------------------------------------------------

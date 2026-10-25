@@ -22,8 +22,8 @@
 # the "reliable DF>=15%" Kim score in oos_crossdataset is ONE congener (PFNA) -- the
 # label there says PFHpA+PFNA, but PFHpA's DF is 13%.
 #
-# Model: grain BAF at harvest, Cwo constant 1, default ORYZA2000 biomass + measured Q_TP,
-# fresh organ mass (as oos_crossdataset). Variants: 4-pool monotone f_xy, 4-pool W2,
+# Model: grain BAF at harvest, Cwo constant 1, the default drivers (the calibration site-year;
+# as oos_crossdataset). Variants: 4-pool monotone f_xy, 4-pool saturated "fit" (was W2),
 # 4-pool lipid loading (the three oos_crossdataset scores), plus nstem_leaf + lipid (the
 # configuration that won Tang and Li). Scored congeners: PFHpA, PFNA, PFDA, PFUnDA, PFDoDA
 # (PFOA stays out, as in oos_crossdataset). Model fresh-weight BAF vs Kim as published
@@ -62,17 +62,16 @@ import model_api as api            # noqa: E402
 
 SCORED = ("PFHpA", "PFNA", "PFDA", "PFUnDA", "PFDoDA")        # PFOA out, as in oos_crossdataset
 CHAIN = ("PFHpA", "PFOA", "PFNA", "PFDA", "PFUnDA", "PFDoDA")
-VARIANTS = ("mono", "W2", "lipid", "nstem_lipid")
+VARIANTS = ("mono", "fit", "lipid", "nstem_lipid")
 MARGIN = 0.10
 
 
 def predict(nm, v):
-    """Harvest grain BAF [L/kg fw], Cwo = 1, default ORYZA2000 biomass + measured Q_TP."""
+    """Harvest grain BAF [L/kg fw at harvest moisture], Cwo = 1, default drivers."""
     if v == "nstem_lipid":
-        r = api.simulate_nstem_leaf(nm, Cwo=1.0, season=120.0, lipid_loading=True,
-                                    biomass_fn=api._biomass_fn("oryza"))
+        r = api.simulate_nstem_leaf(nm, Cwo=1.0, lipid_loading=True)
         return float(r["baf_final"]["grain"])
-    kw = dict(mono=dict(f_xy_source="recommended"), W2=dict(f_xy_source="W2fit"),
+    kw = dict(mono=dict(f_xy_source="recommended"), fit=dict(f_xy_source="fit"),
               lipid=dict(lipid_loading=True))[v]
     return float(api.simulate(nm, **kw)["baf_final"]["grain"])
 

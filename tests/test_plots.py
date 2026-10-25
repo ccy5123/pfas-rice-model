@@ -18,7 +18,6 @@ def test_all_figures_build():
         plots.fig_baf(res, {}),                       # no-obs branch
         plots.fig_chain(rows, "PFOA", "K_PL"),
         plots.fig_chain(rows, "PFOS", "f_xy_recommended"),
-        plots.fig_forcings(res["t"], 120.0),
         plots.fig_compare({n: api.simulate(n) for n in ("PFBA", "PFOA", "PFOS")}, "straw"),
     ]
     for f in figs:
@@ -27,15 +26,17 @@ def test_all_figures_build():
         assert f.layout.title.text
 
 
-def test_fig_baf_extra_overlay():
-    """The optional `extra` overlay (e.g. the two-pool seq model) adds one bar per
-    series alongside the core model and observed; absent -> backward-compatible."""
+def test_fig_baf_plots_the_dry_basis_and_an_extra_overlay():
+    """fig_baf compares the model's DRY-basis values with the dry-basis Yamazaki data; an
+    optional `extra` series adds one bar alongside the model and the observed."""
     res = api.simulate("PFUnDA")
     obs = api.observed_baf("PFUnDA")
     base = plots.fig_baf(res, obs)
-    over = plots.fig_baf(res, obs, extra={"two-pool (seq)": {"root": 15.8, "straw": 6.8, "grain": 6.5}})
+    assert list(base.data[0].y) == [res["baf_final_dw"][k] for k in ("root", "straw", "grain")]
+    assert "dry" in base.layout.yaxis.title.text
+    over = plots.fig_baf(res, obs, extra={"other": {"root": 15.8, "straw": 6.8, "grain": 6.5}})
     names = [tr.name for tr in over.data]
-    assert "two-pool (seq)" in names and "model (4-pool core)" in names and "Yamazaki 2023" in names
+    assert "other" in names and "model" in names and "Yamazaki 2023" in names
     assert len(over.data) == len(base.data) + 1               # exactly one extra series
 
 
@@ -119,19 +120,13 @@ def test_fig_tang_tf_lipid_extra_series():
     fig = plots.fig_tang_tf(val, None, vall)
     assert len(fig.data) == 3                       # Tang + model + lipid (no refit bar)
     assert any("lipid" in (tr.name or "") for tr in fig.data)
-    # the mechanism-level fix on FRESH organ mass: PFOS stalk 0.002 (free anion) -> 0.11
-    # (Tang 0.571; ~5x under but ~50x above the free anion) ...
-    assert vall["model_tf"]["stalk"] > 20 * val["model_tf"]["stalk"]
-    # ... and the documented dry-mass record: 0.013 -> ~0.62
-    vd = api.tang_tf_validation("PFOS", dose="low", mass_basis="dry")
-    vld = api.tang_tf_validation("PFOS", dose="low", lipid_loading=True, mass_basis="dry")
-    assert vd["model_tf"]["stalk"] < 0.1 < vld["model_tf"]["stalk"]
-    assert vld["model_tf"]["stalk"] == pytest.approx(0.62, abs=0.05)
+    # the K_PL-gated lipid term carries the high-K_PL sulfonate into the stalk
+    assert vall["model_tf"]["stalk"] > 3 * val["model_tf"]["stalk"]
 
 
 def test_fig_burden_builds():
     import model_api as api, plots
-    fig = plots.fig_burden(api.simulate("PFOA", biomass="oryza"))
+    fig = plots.fig_burden(api.simulate("PFOA"))
     assert len(fig.data) == 5                                    # 4 organs + whole plant
     assert "µg" in fig.layout.yaxis.title.text                  # PFAS mass (burden), not biomass
 
@@ -164,8 +159,8 @@ def test_fig_baf_korean_variant():
     assert "모델" in names and "Yamazaki 2023 (실측)" in names
     # English default unchanged
     en = plots.fig_baf(res, obs)
-    assert en.layout.yaxis.title.text == "BAF [L/kg]"
-    assert "model (4-pool core)" in {tr.name for tr in en.data}
+    assert en.layout.yaxis.title.text == "BAF [L/kg dry weight]"
+    assert "model" in {tr.name for tr in en.data}
 
 
 def test_plain_language_figures_build():
@@ -269,7 +264,7 @@ def test_fig_cwo_profile_builds():
 
 def test_plant_svg_builds():
     import model_api as api, plot_svg
-    res = api.simulate("PFOA", Cwo=1.0, measured_forcing=True, biomass="oryza")
+    res = api.simulate("PFOA", Cwo=1.0, measured_forcing=True)
     svg = plot_svg.plant_svg_from_res(res, -1, lang="ko")
     assert svg.strip().startswith("<svg") and svg.strip().endswith("</svg>")
     for organ in ("뿌리", "줄기", "잎", "낟알"):

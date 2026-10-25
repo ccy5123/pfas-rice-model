@@ -157,13 +157,13 @@ def organ_biomass(t: np.ndarray, season: float = 120.0,
     return res
 
 
-def M_for_nstem(t: np.ndarray, N: int = 4, season: float = 120.0, mass_basis: str = "fresh"):
+def M_for_nstem(t: np.ndarray, N: int = 4, season: float = 120.0):
     """Mass matrix for NStemModel: columns [root, stem_1..stem_N, grain] [kg/hill].
     Stem segments fold in leaves (Yamazaki convention) and share (M_stem+M_leaf)/N.
     A floor avoids division-by-zero in the ODE before emergence. The organ DRY matter
-    is converted to the ODE's FRESH mass per organ first (`organ_mass`; "dry" = legacy)."""
+    is converted to the ODE's FRESH mass per organ first (`organ_mass`)."""
     import organ_mass as om
-    b = om.to_model_mass(organ_biomass(t, season), mass_basis)
+    b = om.to_model_mass(organ_biomass(t, season))
     straw = b["stem"] + b["leaf"]
     seg = np.maximum(straw / N, 1e-9)
     cols = [np.maximum(b["root"], 1e-9)] + [seg] * N + [np.maximum(b["grain"], 1e-9)]

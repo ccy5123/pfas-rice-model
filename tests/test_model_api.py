@@ -48,18 +48,21 @@ def test_membrane_potential_lever():
 
 def test_forcing_and_fxy_toggles_run():
     a = api.simulate("PFOA", measured_forcing=True, f_xy_source="recommended")
-    b = api.simulate("PFOA", measured_forcing=False, f_xy_source="W2fit")
+    b = api.simulate("PFOA", measured_forcing=False, f_xy_source="fit")
     assert a["success"] and b["success"]
-    # the two f_xy sources differ for a long chain (recommended monotone vs W2 fit)
+    # the two f_xy sources differ for a long chain (recommended monotone vs the fit)
     rec = api.simulate("PFDA", f_xy_source="recommended")["params"]["f_xy"]
-    w2 = api.simulate("PFDA", f_xy_source="W2fit")["params"]["f_xy"]
-    assert rec != w2
+    fit = api.simulate("PFDA", f_xy_source="fit")["params"]["f_xy"]
+    assert rec != fit
 
 
 def test_observed_baf_lookup():
     o = api.observed_baf("PFOA")
     assert {"root", "straw", "grain"} <= set(o)
     assert api.observed_baf("not-a-pfas") == {}
+    assert set(api.observed_baf("PFBS")) == {"root", "straw"}        # imputed grain left out
+    d = api.yamazaki_obs("PFOA")
+    assert d["straw_lo"] < o["straw"] < d["straw_hi"] and d["water_ng_L"] > 0
 
 
 def test_unknown_congener_raises():
@@ -72,7 +75,7 @@ def test_result_carries_drivers_and_baf_series():
     assert r["Cwo"].shape == r["t"].shape == r["Qtp"].shape
     assert r["M"].shape == (len(r["t"]), 4)
     assert set(r["baf"]) == set(api.TISSUES)
-    assert r["season"] == pytest.approx(120.0)
+    assert r["season"] == pytest.approx(api.scenario_drivers()["t"][-1])
     # baf series matches the final BAF at t[-1]
     assert r["baf"]["root"][-1] == pytest.approx(r["baf_final"]["root"], rel=1e-9)
 
@@ -98,35 +101,34 @@ def test_drivers_override_runs_and_sets_season():
     assert r["Cwo"][0] == pytest.approx(2.0)
 
 
-def test_drivers_from_arrays_respects_biomass_selection():
-    """drivers_from_arrays must honour the `biomass` driver (default ORYZA2000) when
-    it fills M, so the soil-inventory / CSV modes are not silently stuck on growth_rice.
-    The ORYZA leaf senesces (peaks mid-season then declines) and carries a leaf-death
-    rate; growth_rice's leaf is monotonic and carries none."""
-    t = np.linspace(0.0, 120.0, 121)
+def test_drivers_from_arrays_respects_the_crop_selection():
+    """drivers_from_arrays fills Qtp/M from the selected crop drivers: the site-year by
+    default (its ORYZA leaf senesces and carries a death rate), the generic drivers with a
+    biomass driver otherwise (growth_rice's leaf is monotonic and carries none)."""
+    t = np.linspace(0.0, 110.0, 111)
     li = api.TISSUES.index("leaf")
-    do = api.drivers_from_arrays(t, np.ones_like(t), season=120.0, biomass="oryza")
-    dg = api.drivers_from_arrays(t, np.ones_like(t), season=120.0, biomass="growth_rice")
-    Mo, Mg = do["M"][:, li], dg["M"][:, li]
-    assert "leaf_loss" in do and Mo[-1] < 0.7 * Mo.max()    # ORYZA leaf senesces
+    ds = api.drivers_from_arrays(t, np.ones_like(t))
+    dg = api.drivers_from_arrays(t, np.ones_like(t), season=110.0, scenario="generic",
+                                 biomass="growth_rice")
+    Ms, Mg = ds["M"][:, li], dg["M"][:, li]
+    site = api.scenario_drivers()
+    assert np.allclose(ds["Qtp"], np.interp(t, site["t"], site["Qtp"]))
+    assert "leaf_loss" in ds and Ms[-1] < 0.7 * Ms.max()    # the ORYZA leaf senesces
     assert "leaf_loss" not in dg and Mg[-1] >= 0.95 * Mg.max()  # growth_rice monotonic
-    assert not np.allclose(do["M"], dg["M"])                # the two drivers differ
-    # default (no biomass arg) is ORYZA, matching simulate's default
-    assert "leaf_loss" in api.drivers_from_arrays(t, np.ones_like(t), season=120.0)
 
 
-def test_load_driver_csv_without_M_uses_biomass():
-    """A driver CSV that omits the M_* columns must fall back to the selected biomass
-    driver (ORYZA2000 default), NOT a hardcoded growth_rice -- the CSV-driver mode
-    honours the sidebar biomass radio just like the soil-inventory mode."""
+def test_load_driver_csv_without_M_uses_the_crop_selection():
+    """A driver CSV that omits the M_* columns falls back to the selected crop drivers --
+    the CSV mode honours the sidebar crop choice like the soil-inventory mode."""
     import io
-    rows = "\n".join(f"{d},1.0,0.05" for d in range(0, 121, 5))
+    rows = "\n".join(f"{d},1.0,0.05" for d in range(0, 111, 5))
     csv = "t,Cwo,Qtp\n" + rows
     li = api.TISSUES.index("leaf")
-    do = api.load_driver_csv(io.StringIO(csv), biomass="oryza")
-    dg = api.load_driver_csv(io.StringIO(csv), biomass="growth_rice")
-    assert "leaf_loss" in do and do["M"][:, li][-1] < 0.7 * do["M"][:, li].max()
+    ds = api.load_driver_csv(io.StringIO(csv))
+    dg = api.load_driver_csv(io.StringIO(csv), scenario="generic", biomass="growth_rice")
+    assert "leaf_loss" in ds and ds["M"][:, li][-1] < 0.7 * ds["M"][:, li].max()
     assert "leaf_loss" not in dg and dg["M"][:, li][-1] >= 0.95 * dg["M"][:, li].max()
+    assert np.allclose(ds["Qtp"], 0.05)                       # a supplied Qtp is kept
 
 
 def test_pore_water_from_inventory_drained_and_flooded():
@@ -198,7 +200,7 @@ def test_drivers_from_tables_growth_and_cwo():
     d2 = api.drivers_from_tables(growth, shuf, growth_units="g/hill")
     assert d2["Cwo"][0] == pytest.approx(2.0) and d2["Cwo"][-1] == pytest.approx(0.5)
     # Cwᵒ table only -> M falls back to the biomass driver (4 organ columns, leaf_loss attached)
-    only_cwo = api.drivers_from_tables(None, cwo, Cwo_const=1.0, biomass="oryza")
+    only_cwo = api.drivers_from_tables(None, cwo, Cwo_const=1.0)
     assert only_cwo["M"].shape[1] == 4 and "leaf_loss" in only_cwo
     # growth table only -> flat Cwo_const series
     only_g = api.drivers_from_tables(growth, None, growth_units="g/hill", Cwo_const=3.0)
@@ -385,26 +387,19 @@ if __name__ == "__main__":
 
 
 def test_nstem_leaf_biomass_fn_override():
-    """simulate_nstem_leaf accepts a custom biomass driver; the two drivers
-    (growth_rice vs ORYZA) give different leaf transfer factors. Driver-explicit on
-    both sides so it is robust to the default (now ORYZA2000)."""
-    import oryza_growth as og
+    """simulate_nstem_leaf runs on the scenario drivers by default; a custom biomass driver
+    switches it to the generic drivers and gives a different leaf transfer factor."""
     import growth_rice as gr2
-    ob = lambda t, s: og.organ_biomass_oryza(t, p=og.OryzaParams(season=s))
+    default = api.simulate_nstem_leaf("PFOA", Cwo=1.0)
     growth = api.simulate_nstem_leaf("PFOA", Cwo=1.0, biomass_fn=gr2.organ_biomass)
-    oryza = api.simulate_nstem_leaf("PFOA", Cwo=1.0, biomass_fn=ob)
-    assert oryza["success"] and growth["success"]
-    assert set(oryza["tf_final"]) == set(growth["tf_final"])
-    # different biomass trajectory -> different leaf transfer factor
-    assert abs(oryza["tf_final"]["leaf"] - growth["tf_final"]["leaf"]) > 1e-3
-    assert all(np.isfinite(v) for v in oryza["tf_final"].values())
-    # the no-arg default now resolves to ORYZA2000
-    assert api.simulate_nstem_leaf("PFOA", Cwo=1.0)["tf_final"]["leaf"] == pytest.approx(
-        oryza["tf_final"]["leaf"], rel=1e-9)
+    assert default["success"] and growth["success"]
+    assert default["season"] == pytest.approx(api.scenario_drivers()["t"][-1])
+    assert abs(default["tf_final"]["leaf"] - growth["tf_final"]["leaf"]) > 1e-3
+    assert all(np.isfinite(v) for v in default["tf_final"].values())
 
 
 def test_tang_tf_validation_and_observed():
-    """Tang per-organ TF (dry weight) for the 3 Tang congeners; None for others."""
+    """Tang per-organ TF (dry weight, harvest operator) for the 3 Tang congeners."""
     assert api.tang_tf_validation("PFNA") is None
     assert api.tang_observed_tf("PFNA") == {}
     for c in api.TANG_CONGENERS:
@@ -414,193 +409,79 @@ def test_tang_tf_validation_and_observed():
         assert v["tang_tf"] and all(t > 0 for t in v["tang_tf"].values())
         assert all(np.isfinite(m) and m >= 0 for m in v["model_tf"].values())
         assert api.tang_tf_validation(c, use_refit=True)["f_xy"] == api.TANG_REFIT_FXY[c]
-    # GenX refit LOWERS f_xy (0.233 -> 0.017, the documented ~12x over-prediction)
-    assert (api.tang_tf_validation("GenX", use_refit=True)["f_xy"]
-            < api.tang_tf_validation("GenX")["f_xy"])
     # Tang TF declines with dose -> 0.1 ug/g (low) value exceeds the across-dose mean
     low, mean = api.tang_observed_tf("PFOA", "low"), api.tang_observed_tf("PFOA", "mean")
     assert low["stalk"] > mean["stalk"]
 
 
-def test_simulate_biomass_driver():
-    """Biomass driver is selectable; DEFAULT == oryza (mechanistic ORYZA2000);
-    growth_rice differs and both stay finite."""
+def test_scenarios():
+    """The default drivers are the calibration site-year; the generic drivers take a
+    biomass driver and a season; an unknown scenario or biomass driver raises."""
     base = api.simulate("PFOA")
-    gr_ = api.simulate("PFOA", biomass="growth_rice")
-    oz = api.simulate("PFOA", biomass="oryza")
-    assert base["baf_final"] == oz["baf_final"]                  # default is ORYZA2000
+    assert base["params"]["scenario"] == "yamazaki2020"
+    assert base["season"] == pytest.approx(api.scenario_drivers()["t"][-1])
+    gr_ = api.simulate("PFOA", scenario="generic", biomass="growth_rice")
+    oz = api.simulate("PFOA", scenario="generic", biomass="oryza2000")
+    assert gr_["season"] == 120.0 and not np.allclose(gr_["M"][-1], oz["M"][-1])
     assert all(np.isfinite(v) and v >= 0 for v in gr_["baf_final"].values())
-    assert not np.allclose(np.asarray(gr_["M"][-1]), np.asarray(oz["M"][-1]))   # different M(t)
-    assert oz["baf_final"]["grain"] != gr_["baf_final"]["grain"]
+    with pytest.raises(ValueError):
+        api.simulate("PFOA", scenario="tsukuba1999")
+    with pytest.raises(ValueError):
+        api.simulate("PFOA", scenario="generic", biomass="sucros")
 
 
-def test_oryza_refit_reproduces():
-    """f_xy_source='oryza' (per-congener transport re-fit on the ORYZA2000 biomass,
-    validation/refit_oryza.py) reproduces the Yamazaki tissue BAFs under the new
-    default biomass -- the W2 fit (placeholder driver) does not."""
+def test_fit_source_reproduces_yamazaki():
+    """f_xy_source='fit' (validation/refit_site_year.py) reproduces the Yamazaki dry-basis
+    observation for a congener that sits off the bounds; 'recommended' keeps the monotone
+    f_xy and reproduces root and grain only."""
     o = api.observed_baf("PFOA")
-    r = api.simulate("PFOA", f_xy_source="oryza", biomass="oryza")
-    # PFOA reproduces to well within a factor of ~1.4 in log space on the ORYZA refit
-    assert abs(np.log10(r["baf_final"]["root"]) - np.log10(o["root"])) < 0.15
-    assert abs(np.log10(r["straw_baf"]) - np.log10(o["straw"])) < 0.15
-    assert api._CONG["PFOA"]["f_xy_oryza"] > 0          # refit fields are present
-    # the three sources resolve to different f_xy (recommended / W2 / oryza)
-    fxy = {s: api.simulate("PFOA", f_xy_source=s)["params"]["f_xy"]
-           for s in ("recommended", "W2fit", "oryza")}
-    assert len({round(v, 4) for v in fxy.values()}) == 3
+    fit = api.yamazaki_harvest_baf("PFOA", f_xy_source="fit")
+    for k in ("root", "straw", "grain"):
+        assert abs(np.log10(fit[k] / o[k])) < 0.01
+    rec = api.yamazaki_harvest_baf("PFOA", f_xy_source="recommended")
+    assert abs(np.log10(rec["root"] / o["root"])) < 0.01
+    assert abs(np.log10(rec["grain"] / o["grain"])) < 0.01
+    p = {s: api._transport_defaults(api._CONG["PFOA"], s, False) for s in api.F_XY_SOURCES}
+    assert p["recommended"][0] == api._CONG["PFOA"]["f_xy_recommended"]
+    assert p["fit"][0] == api._CONG["PFOA"]["f_xy_fit"]
+    with pytest.raises(ValueError):
+        api._transport_defaults(api._CONG["PFOA"], "W2fit", False)
 
 
-def test_oryza_leaf_senescence_loss():
-    """ORYZA exposes a leaf death rate; the leaf senescence-loss flux (-leaf_loss*C) removes
-    the spurious senescence concentration. growth_rice (no senescence) is unaffected."""
-    import oryza_growth as og
-    drv = og.oryza_drivers("PFOA", Cwo=1.0, season=120.0, p=og.OryzaParams(season=120.0))
-    assert "leaf_loss" in drv and float(np.max(drv["leaf_loss"])) > 0.0   # rate exposed
-    leaf_fix = api.simulate("PFOA", drivers=drv)["baf_final"]["leaf"]
-    leaf_nofix = api.simulate(
-        "PFOA", drivers={k: v for k, v in drv.items() if k != "leaf_loss"})["baf_final"]["leaf"]
-    assert leaf_fix < leaf_nofix                              # senescence loss lowers the leaf
-    # the default path is now ORYZA2000 (carries the senescence loss); growth_rice differs
-    assert api.simulate("PFOA")["baf_final"] == api.simulate("PFOA", biomass="oryza")["baf_final"]
+def test_leaf_senescence_loss():
+    """The ORYZA leaf death rate rides on the drivers; the leaf ODE loses -leaf_loss*C (the
+    dead blade takes its PFAS) and the harvest operator keeps those blades in leaf/straw."""
+    drv = api.scenario_drivers()
+    assert float(np.max(drv["leaf_loss"])) > 0.0
+    fix = api.simulate("PFOA", drivers=drv)
+    nofix = api.simulate("PFOA", drivers={k: v for k, v in drv.items() if k != "leaf_loss"})
+    assert fix["baf_final"]["leaf"] < nofix["baf_final"]["leaf"]
+    assert fix["dead_leaf"]["burden"][-1] > 0 and nofix["dead_leaf"]["burden"][-1] == 0
 
 
 def test_grain_formation_gate():
     """The grain takes NO PFAS before the panicle forms (no pre-flowering spike), then
     rises to its harvest value; a constant-mass driver still loads the grain (gate=1)."""
-    r = api.simulate("PFOA", biomass="oryza", season=120.0)
+    r = api.simulate("PFOA")
+    run = api.site_run()
+    t_head = float(np.interp(1.0, run["dvs"], run["t"]))
     t, cg = r["t"], np.asarray(r["conc"]["grain"])
-    assert np.all(cg[t < 45] < 1e-3)                 # ~0 well before flowering (~d66)
+    assert np.all(cg[t < t_head - 25] < 1e-3)         # ~0 well before heading
     assert cg[-1] > 1e-3                              # accumulates by harvest (terminal sink)
     assert cg.max() <= cg[-1] * 1.5                   # NO pre-formation spike above harvest
-    # constant-mass driver (e.g. HYDRUS CSV): grain must still load
     t2 = np.linspace(0, 120, 121)
     Mc = np.tile([0.003, 0.02, 0.013, 0.03], (121, 1))
     rc = api.simulate("PFOA", drivers=api.drivers_from_arrays(t2, np.ones(121), M=Mc))
     assert rc["baf_final"]["grain"] > 0.0
 
 
-# --- sequestration two-pool root model (EXPLORATORY, opt-in) --------------------
-def test_simulate_twopool_seq_structure_and_keys():
-    """Opt-in sequestration two-pool run returns the SAME tissue keys as simulate(), plus the
-    root mobile/seq split; root BAF == mobile + seq; finite and non-negative."""
-    r = api.simulate_twopool_seq("PFOA")
-    assert r["success"]
-    assert set(api.TISSUES) <= set(r["baf_final"])
-    assert all(np.isfinite(v) and v >= 0 for v in r["baf_final"].values())
-    # reported root = mobile + sequestered pool
-    assert r["baf_final"]["root"] == pytest.approx(
-        r["baf_final"]["root_mobile"] + r["baf_final"]["root_seq"], rel=1e-6)
-    assert 0.0 <= r["seq_fraction"] <= 1.0
-    assert r["params"]["k_seq"] > 0 and r["params"]["k_rel"] == 0.0
-    with pytest.raises(KeyError):
-        api.simulate_twopool_seq("not-a-pfas")
-
-
-def test_simulate_twopool_seq_matches_validation_and_rmse():
-    """Drift guard: the model_api wrapper reproduces the standalone validation
-    endpoints (within the ~1% driver-grid difference) AND the documented in-sample
-    headline (overall log10 RMSE ~0.251, root ~0.156, PFOS/PFUnDA k_seq ~3x at
-    identical K_PL) -- all with the MONOTONE physical f_xy_recommended."""
-    (p, q), TP = api._twopool_seq()
-    sq, err = [], {"root": [], "straw": [], "grain": []}
-    for c in TP.CONGENERS:
-        ks = TP.kseq_ushape(c["n_C"], c["group"], q)
-        vr, vs, vg = TP.simulate(c, p, kseq_override=ks)         # standalone (endpoint)
-        r = api.simulate_twopool_seq(c["name"])                      # wrapper (full series)
-        ap = {"root": r["baf_final"]["root"], "straw": r["straw_baf"],
-              "grain": r["baf_final"]["grain"]}
-        for a, b in ((vr, ap["root"]), (vs, ap["straw"]), (vg, ap["grain"])):
-            sq.append((np.log10(max(a, 1e-6)) - np.log10(max(b, 1e-6))) ** 2)
-        o = api.observed_baf(c["name"])
-        for k in err:
-            if k in o:
-                err[k].append((np.log10(max(ap[k], 1e-6)) - np.log10(o[k])) ** 2)
-    assert np.sqrt(np.mean(sq)) < 0.05                            # cross-impl consistency
-    overall = np.sqrt(np.mean(err["root"] + err["straw"] + err["grain"]))
-    assert overall == pytest.approx(0.251, abs=0.02)              # documented headline
-    assert np.sqrt(np.mean(err["root"])) == pytest.approx(0.156, abs=0.02)
-    # monotone PHYSICAL f_xy (not a fitted U-shape) + non-K_PL PFOS/PFUnDA separation
-    pfos, pfunda = api.simulate_twopool_seq("PFOS"), api.simulate_twopool_seq("PFUnDA")
-    assert pfos["params"]["f_xy"] == api._CONG["PFOS"]["f_xy_recommended"]
-    assert pfunda["params"]["k_seq"] / pfos["params"]["k_seq"] == pytest.approx(3.1, abs=0.4)
-
-
-def test_simulate_twopool_seq_krel_drains_root_to_shoot():
-    """A slow seq->mobile desorption (k_rel>0) releases the long-chain root burden:
-    the root BAF falls (the irreversible sink stops retaining). Documented Result 5."""
-    base = api.simulate_twopool_seq("PFUnDA", k_rel=0.0)
-    rel = api.simulate_twopool_seq("PFUnDA", k_rel=0.2)
-    assert rel["baf_final"]["root"] < base["baf_final"]["root"]
-    assert rel["seq_fraction"] < base["seq_fraction"]
-
-
-def test_twopool_simulate_organs_and_tang_passthrough_diagnosis():
-    """Guard the two-pool Tang per-organ OOS diagnosis
-    (validation/twopool_root_oos_tang.py): `simulate_organs` exposes the stem/leaf
-    split on the SAME solve path as `simulate` (root/grain match exactly), and the
-    two-pool's basic-4pool shoot has a PASS-THROUGH stem -- stem conc << leaf conc --
-    so the stalk TF collapses while the leaf TF is reasonable. This is the documented
-    empty-stem defect (`nstem_leaf` fixes it) and is why Tang -- a SHOOT-resolution
-    test -- is NOT a fair OOS of the two-pool ROOT mechanism (overall OOS RMSE ~1.40,
-    leaf-best/stalk-worst per-organ)."""
-    (p, q), TP = api._twopool_seq()
-    c = api._CONG["PFOA"]
-    ks = TP.kseq_ushape(c["n_C"], c["group"], q)
-    org = TP.simulate_organs(c, p, kseq_override=ks)
-    root, _straw, grain = TP.simulate(c, p, kseq_override=ks)
-    # simulate_organs shares simulate's solve path -> root/grain identical
-    assert org["root"] == pytest.approx(root, rel=1e-9)
-    assert org["grain"] == pytest.approx(grain, rel=1e-9)
-    assert org["root"] == pytest.approx(org["root_mobile"] + org["root_seq"], rel=1e-9)
-    # pass-through stem: stalk collapses, leaf carries the shoot burden
-    assert org["stem"] < 0.1 * org["leaf"]
-    assert org["leaf"] / org["root"] > 1.0          # leaf TF order-1
-    assert org["stem"] / org["root"] < 0.1          # stalk TF collapsed
-
-
-def test_simulate_twopool_nstem_fixes_both_defects_at_once():
-    """STRUCTURAL MERGE: two-pool sequestration ROOT + redistributed (N-stem+leaf)
-    SHOOT. Each half fixes what the other leaves broken, and the merge must show
-    BOTH cures simultaneously -- that is the whole point of pairing them:
-      * vs `simulate_twopool_seq` (two-pool root, pass-through stem): the stalk is
-        no longer collapsed relative to the leaf;
-      * vs `simulate_nstem_leaf` (redistributed shoot, ONE root pool): a sequestered
-        root pool now holds burden, so the root rises and the shoot is not overfed.
-    """
-    merged = api.simulate_twopool_nstem("PFOA", season=150.0)
-    shoot_only = api.simulate_nstem_leaf("PFOA", season=150.0)
-    root_only = api.simulate_twopool_seq("PFOA")
-
-    # (a) the SHOOT defect is fixed: the stalk is populated, not a pass-through
-    assert root_only["baf_final"]["stem"] < 0.1 * root_only["baf_final"]["leaf"]
-    assert merged["baf_final"]["stem"] > 0.1 * merged["baf_final"]["leaf"]
-    # (b) the ROOT mechanism is active: a sequestered pool carries the burden
-    assert merged["params"]["k_seq"] > 0.0
-    assert 0.0 < merged["seq_fraction"] < 1.0
-    assert merged["baf_final"]["root"] == pytest.approx(
-        merged["baf_final"]["root_mobile"] + merged["baf_final"]["root_seq"], rel=1e-6)
-    assert shoot_only["seq_fraction"] == 0.0            # single pool, no seq state
-    # (c) sequestration holds root burden back from the shoot
-    assert merged["baf_final"]["root"] > shoot_only["baf_final"]["root"]
-    assert merged["tf_final"]["leaf"] < shoot_only["tf_final"]["leaf"]
-    # transport params come from the cached two-pool fit; f_xy stays MONOTONE physical
-    tp = api.twopool_seq_params("PFOA")
-    assert merged["params"]["f_xy"] == api._CONG["PFOA"]["f_xy_recommended"]
-    for k in ("L_Ph", "kappa_d", "g_xy", "g_ph"):
-        assert merged["params"][k] == pytest.approx(tp[k], rel=1e-9)
-
-
 def test_simulate_nstem_leaf_k_seq_off_by_default_and_drivers_path():
-    """The merge must be inert unless asked for, and the new `drivers=` entry point
-    must reproduce the built-in forcings it mirrors."""
-    base = api.simulate_nstem_leaf("PFOA", season=150.0, n_t=241)
+    """The optional sequestered root pool is inert unless asked for, and the `drivers=`
+    entry point reproduces the built-in scenario it mirrors."""
+    base = api.simulate_nstem_leaf("PFOA")
     assert base["params"]["k_seq"] == 0.0 and base["seq_fraction"] == 0.0
     assert "root_seq" not in base["conc"]
-    # feeding the same drivers back in reproduces the run
-    organ_M = np.column_stack([base["M"][:, 0], base["M"][:, 1:1 + base["N"]].sum(axis=1),
-                               base["M"][:, base["N"] + 1], base["M"][:, base["N"] + 2]])
-    drv = dict(t=base["t"], Cwo=base["Cwo"], Qtp=base["Qtp"], M=organ_M,
-               leaf_loss=base["leaf_loss"])
+    drv = api.scenario_drivers()
     same = api.simulate_nstem_leaf("PFOA", drivers=drv)
     for k in ("root", "stem", "leaf", "grain"):
         assert same["baf_final"][k] == pytest.approx(base["baf_final"][k], rel=1e-6)
@@ -705,12 +586,12 @@ def test_simulate_neutral_matches_the_standalone_module():
 
     lk, season, n_t = 2.45, 120.0, 241
     t = np.linspace(0.0, season, n_t)
-    Qtp, M = api.measured_forcing(t, season, biomass="growth_rice")
+    Qtp, M = api.measured_forcing(t, season, biomass="growth_rice", scenario="generic")
     drv = dict(t=t, Cwo=np.ones(n_t), Qtp=Qtp, M=M)
     ref = ND.simulate_neutral(ND.NeutralCompound("probe", lk), drv)
 
     built_in = api.simulate_neutral(lk, name="probe", biomass="growth_rice",
-                                    season=season, n_t=n_t)
+                                    season=season, n_t=n_t, scenario="generic")
     explicit = api.simulate_neutral(lk, name="probe", drivers=drv)
     for k in api.TISSUES:
         assert np.array_equal(built_in["conc"][k], ref["conc"][k])
@@ -742,7 +623,8 @@ def test_simulate_neutral_returns_the_simulate_contract():
 def test_simulate_neutral_air_is_opt_in_and_zero_for_pfas_like_compounds():
     """Air exchange must stay opt-in through the API too, and must be identically
     zero at K_AW = 0 -- the property that keeps every PFAS number untouched."""
-    kw = dict(name="probe", MW=131.4, biomass="growth_rice", season=120.0, n_t=241)
+    kw = dict(name="probe", MW=131.4, biomass="growth_rice", season=120.0, n_t=241,
+              scenario="generic")
     off = api.simulate_neutral(2.42, K_AW=0.0, **kw)
     on_zero = api.simulate_neutral(2.42, K_AW=0.0, air=True, **kw)
     volatile = api.simulate_neutral(2.42, K_AW=0.1, air=True, **kw)

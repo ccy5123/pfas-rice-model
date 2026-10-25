@@ -67,7 +67,7 @@ def harvest_observables(t, conc, M, dry_fraction, leaf_loss=None, attached=1.0,
 
     conc          dict root/stem/leaf/grain -> concentration series [µg/kg on M's basis]
     M             (n, 4) organ mass [root, stem, leaf, grain] on the ODE's basis
-    dry_fraction  dict organ -> dry matter per unit of M (1 - theta_fw for fresh M; 1 for dry M)
+    dry_fraction  dict organ -> dry matter per unit of M (1 - theta_fw)
 
     Returns dict with conc_dw {root, stem, leaf_green, leaf, grain, straw}, straw_fw (dead blades
     at their dry mass), dead_burden, dead_dry, attached."""
@@ -88,8 +88,7 @@ def harvest_observables(t, conc, M, dry_fraction, leaf_loss=None, attached=1.0,
     return dict(conc_dw=conc_dw, straw_fw=straw_fw, dead_burden=db, dead_dry=dd, attached=a)
 
 
-def dry_fractions(theta, M_basis):
-    """Dry matter per unit of M for each organ: 1 - theta_fw on a fresh M, 1 on a dry M."""
-    if M_basis == "dry":
-        return dict.fromkeys(ORGANS, 1.0)
+def dry_fractions(theta, M_basis="fresh"):
+    """Dry matter per unit of M for each organ: 1 - theta_fw. (The basis-free placeholder,
+    M_basis None, is read as fresh too.)"""
     return {o: 1.0 - float(theta[o]) for o in ORGANS}

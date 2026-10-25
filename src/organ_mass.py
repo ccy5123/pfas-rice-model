@@ -24,14 +24,8 @@ with theta_fw the SAME per-organ water fractions the binding factor uses
 (`params/parameters.json` -> `tissue_composition_recommended`, grain = `grain_brown`),
 so the mass basis and the concentration basis cannot drift apart.
 
-`mass_basis` names the two readings, in the repo's named-mode idiom:
-    "fresh" (DEFAULT) -- the corrected basis above.
-    "dry"             -- the pre-fix behaviour (dry matter used as M). Kept ONLY so the
-                         artifacts fitted on it can be reproduced. Every such fit has been
-                         re-made on fresh mass and the dry one kept beside it, selected by
-                         this mode: `*_oryza_dry`, `TANG_REFIT_FXY_DRY`, `LIPID_LOADING_DRY`,
-                         and the `*_dry.json` two-pool caches (validation scripts take
-                         PFAS_MASS_BASIS=dry). It is not a physically alternative reading.
+Driver dicts carry the tag `mass_basis="fresh"` (MASS_BASIS) so the one place that needs
+dry matter -- the leaf/grain xylem split -- can take it back out (`xylem_leaf_share`).
 
 LIMITATIONS (docs/sampling_protocols_audit_KR.md): theta_fw is held constant over
 the season (grain 0.14 is harvest moisture; filling grain is ~0.5-0.6 water, mature
@@ -48,8 +42,7 @@ import numpy as np
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ORGANS = ("root", "stem", "leaf", "grain")
-MASS_BASES = ("fresh", "dry")
-DEFAULT_MASS_BASIS = "fresh"
+MASS_BASIS = "fresh"          # the tag a driver dict carries for an M built here
 # model organ -> tissue_composition_recommended key (the grain pool is brown rice)
 _COMP_KEY = {"root": "root", "stem": "stem", "leaf": "leaf", "grain": "grain_brown"}
 
@@ -63,29 +56,23 @@ def _load_theta():
 THETA_FW = _load_theta()
 
 
-def _check(mass_basis):
-    if mass_basis not in MASS_BASES:
-        raise ValueError(f"unknown mass_basis {mass_basis!r}; expected one of {MASS_BASES}")
+def fresh_factor(organ):
+    """Multiplier dry -> fresh organ mass: 1/(1-theta_fw)."""
+    return 1.0 / (1.0 - THETA_FW[organ])
 
 
-def fresh_factor(organ, mass_basis=DEFAULT_MASS_BASIS):
-    """Multiplier dry -> model mass for one organ: 1/(1-theta_fw), or 1 for 'dry'."""
-    _check(mass_basis)
-    return 1.0 if mass_basis == "dry" else 1.0 / (1.0 - THETA_FW[organ])
-
-
-def to_model_mass(b, mass_basis=DEFAULT_MASS_BASIS):
-    """Convert a crop-model biomass dict {root,stem,leaf,grain: DRY kg/hill, ...} to the
-    ODE's mass basis. Non-organ keys (e.g. ORYZA's `leaf_death_rate`, a RELATIVE rate
-    that a constant factor leaves unchanged) are passed through untouched."""
+def to_model_mass(b):
+    """Convert a crop-model biomass dict {root,stem,leaf,grain: DRY kg/hill, ...} to FRESH
+    organ mass. Non-organ keys (e.g. ORYZA's `leaf_death_rate`, a RELATIVE rate that a
+    constant factor leaves unchanged) are passed through untouched."""
     out = dict(b)
     for o in ORGANS:
         if o in b and b[o] is not None:
-            out[o] = np.asarray(b[o], float) * fresh_factor(o, mass_basis)
+            out[o] = np.asarray(b[o], float) * fresh_factor(o)
     return out
 
 
-def organ_matrix(b, mass_basis=DEFAULT_MASS_BASIS, floor=1e-4):
-    """(n, 4) mass matrix [root, stem, leaf, grain] on the ODE's basis, floored."""
-    m = to_model_mass(b, mass_basis)
+def organ_matrix(b, floor=1e-4):
+    """(n, 4) FRESH mass matrix [root, stem, leaf, grain], floored."""
+    m = to_model_mass(b)
     return np.maximum(np.column_stack([m[o] for o in ORGANS]), floor)

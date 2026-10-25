@@ -2,64 +2,49 @@
 # =============================================================================
 # validation/oos_multidataset.py
 # -----------------------------------------------------------------------------
-# MULTI-DATASET out-of-sample ROBUSTNESS of the lipid-facilitated loading mechanism.
-#
-# `runs/pfas-rice-oos-lipid` showed the lipid mechanism (LIPID_LOADING constants fit
-# on YAMAZAKI, NOT on the target) recovers OOS prediction on the independent Tang 2026
-# per-organ TF (1.232 free-anion -> 0.516 lipid). But that is only 3 congeners. Is the
-# generalization ROBUST across multiple independent datasets, or a Tang artifact?
-#
-# This consolidates the OOS log10 RMSE of three model variants -- monotone f_xy
-# (free-anion), the saturated per-congener W2 fit, and the K_PL-gated lipid loading --
-# transferred WITHOUT refitting to THREE independent datasets:
-#   * Tang 2026  per-organ TF (dw; PFOA/PFOS/GenX)        -- clean pot study
-#   * Kim 2019   brown-rice grain BAF (porewater; excl PFOA as recorded -- no variant is fitted to it, see kim2019_pfoa_anchor.py) -- clean field
-#   * Li 2025    water-independent tissue ratios (TF)      -- field/surface CONFOUNDED (pre-registered
-#                                                            as a sensitivity check, NOT a primary test)
-#
-# Primary verdict rests on the two CLEAN datasets (Tang, Kim); Li is reported for
-# transparency only. Run: python validation/oos_multidataset.py
+# MULTI-DATASET out-of-sample report: the Yamazaki-fit transport variants transferred
+# WITHOUT refitting (and on the calibration site-year drivers) to three independent
+# datasets:
+#   * Tang 2026  per-organ TF (dw; PFOA/PFOS/GenX, 0.1 ug/g)    validation/oos_tang_lipid.py
+#   * Kim 2019   brown-rice grain BAF (pore water; excl PFOA)   validation/oos_crossdataset.py
+#   * Li 2025    stage-resolved TF (dw)                         validation/li2025_stage_resolved.py
+# Run: python validation/oos_multidataset.py
 # =============================================================================
-import os, sys
-import numpy as np
+import contextlib
+import io
+import os
+import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "src"))
-import model_api as api          # noqa: E402
+sys.path.insert(0, HERE)
 
-import oos_tang_lipid as tang     # noqa: E402  (Tang per-organ TF, lipid off vs on)
-import oos_crossdataset as cross  # noqa: E402  (Kim grain BAF + Li TF, lipid/mono/W2)
+import oos_tang_lipid as tang          # noqa: E402
+import oos_crossdataset as cross       # noqa: E402
+import li2025_stage_resolved as li     # noqa: E402
 
 
-def main():
-    print("=" * 72)
-    print("MULTI-DATASET out-of-sample robustness of lipid-facilitated loading")
-    print("(all params fit on Yamazaki; transferred WITHOUT refit to each target)")
-    print("=" * 72)
-
-    # --- Tang 2026 per-organ TF (clean) -------------------------------------
-    free_tang, lip_tang = tang.main(dose="low")
-    print()
-
-    # --- Kim 2019 grain + Li 2025 TF (clean / confounded) -------------------
-    kim = cross.kim_grain()
-    li = cross.li_tf()
-
-    print("\n" + "=" * 72)
-    print("SUMMARY  (OOS log10 RMSE; lower = better; * primary = CLEAN datasets)")
-    print("=" * 72)
-    print(f"{'dataset':38}{'lipid':>8}{'mono':>8}{'W2':>8}")
-    print(f"{'* Tang 2026 per-organ TF (dw)':38}{lip_tang:>8.2f}{free_tang:>8.2f}{'-':>8}")
-    print(f"{'  (free-anion baseline = mono column)':38}")
-    print(f"{'* Kim 2019 grain, excl PFOA':38}" + "".join(f"{kim[m][0]:>8.2f}" for m in cross.MODES))
-    print(f"{'  Kim, reliable DF>=15% only':38}" + "".join(f"{kim[m][1]:>8.2f}" for m in cross.MODES))
-    print(f"{'  Li 2025 TF straw/root':38}" + "".join(f"{li[m][0]:>8.2f}" for m in cross.MODES))
-    print(f"{'  Li 2025 TF grain/root':38}" + "".join(f"{li[m][1]:>8.2f}" for m in cross.MODES))
-    print(f"  organ mass = {cross.MASS_BASIS}  (PFAS_MASS_BASIS=dry reproduces the pre-fix record:")
-    print("   Tang 0.52<1.23, Kim 0.48<2.05 / reliable 0.20<1.92; Li confounded=mixed).")
-    print("\n=> lipid generalizes OOS across the CLEAN independent datasets (Tang, Kim);")
-    print("   Li (field/group-water/surface-confounded) is inconclusive as pre-registered.")
+def main(verbose=True):
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf if not verbose else sys.stdout):
+        free_tang, lip_tang = tang.main(dose="low")
+        print()
+        kim = cross.kim_grain()
+        print()
+        lio = li.main(sensitivity=False)
+    out = dict(tang=dict(free=free_tang, lipid=lip_tang), kim=kim, li=lio)
+    if verbose:
+        print("\n" + "=" * 72)
+        print("SUMMARY  (OOS log10 RMSE; lower = better)")
+        print("=" * 72)
+        print(f"{'Tang 2026 per-organ TF (dw)':40} free anion {free_tang:.2f}   lipid {lip_tang:.2f}")
+        print(f"{'Kim 2019 grain, excl PFOA':40} " + "   ".join(f"{m} {kim[m][0]:.2f}" for m in cross.MODES))
+        sc = lio["scores"]
+        print(f"{'Li 2025 stage TF, shoot / grain':40} " + "   ".join(
+            f"{v} {sc[v]['rmse']['shoot']:.2f}/{sc[v]['rmse']['grain']:.2f}" for v in li.VARIANTS))
+        print(f"{'Li 2025 pre-registered verdict':40} {lio['winner'] or 'inconclusive'}")
+    return out
 
 
 if __name__ == "__main__":

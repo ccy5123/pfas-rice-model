@@ -82,30 +82,23 @@ sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
 
 import model_api as api                                       # noqa: E402
 
-OBS = os.path.join(ROOT_DIR, "data_obs", "obs_baf_Yamazaki.csv")
 KEYS = ("root", "straw", "grain")
-SEASON = 120.0
 E_M_DEFAULT = -120.0
-# organ-mass basis (src/organ_mass.py). The recorded verdict below was produced on the
-# pre-fix DRY basis; PFAS_MASS_BASIS=dry reproduces it, the default is FRESH.
-MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")
 E_M_PLAUSIBLE = (-120.0, -90.0)      # parameters.json environment.E_m_plausible_range_V
 
 
-def load_obs(path=OBS):
-    obs = {}
-    with open(path) as f:
-        for r in csv.DictReader(f):
-            obs.setdefault(r["compound"], {})[r["tissue"]] = float(r["baf"])
+def load_obs():
+    """Yamazaki dry-basis BAF for the congeners with all three tissues measured."""
+    obs = {c: api.observed_baf(c) for c in api.CONGENERS}
     return {k: v for k, v in obs.items() if all(t in v for t in KEYS)}
 
 
 def predict(name, *, vmax_scale=1.0, g_apo=0.0, E_m_mV=E_M_DEFAULT):
-    """The three tissue BAFs for one congener under one arm's uptake term."""
-    r = api.simulate(name, f_xy_source="recommended", season=SEASON,
-                     vmax_scale=vmax_scale, g_apo=g_apo, E_m_mV=E_m_mV,
-                     mass_basis=MASS_BASIS)
-    return (r["baf_final"]["root"], r["straw_baf"], r["baf_final"]["grain"])
+    """The three tissue BAFs (the model's Yamazaki observable: site-year, dry basis, two
+    harvest runs, the congener's water level) for one congener under one arm's uptake term."""
+    b = api.yamazaki_harvest_baf(name, f_xy_source="recommended", vmax_scale=vmax_scale,
+                                 g_apo=g_apo, E_m_mV=E_m_mV)
+    return (b["root"], b["straw"], b["grain"])
 
 
 def rmse(names, obs, **kw):
@@ -256,8 +249,8 @@ def main(fast=False):
     # -- 6 -------------------------------------------------------------------
     print("\n6. POST-HOC (added with the organ-mass fix, NOT pre-registered) — FAIRNESS")
     print("   Pre-registered item 2 rests on the carrier's Vmax being 'fitted on this very")
-    print("   dataset'. It was fixed in the W2 fit on the pre-fix driver, so on any other")
-    print(f"   basis (here: {MASS_BASIS} organ mass) only arm B is re-fitted. Re-fit the")
+    print("   dataset'. It is a fixed value (parameters.json), not fitted to anything here, so")
+    print("   only arm B is re-fitted. Re-fit the")
     print("   carrier's ONE global parameter (Vmax scale) on the same footing, then compare;")
     print("   and fit it per congener, the same-setup counterpart of section 3.")
     grid_a = ([0.5, 1.0, 2.0, 4.0, 8.0, 16.0] if fast else

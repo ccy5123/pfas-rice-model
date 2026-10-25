@@ -22,9 +22,9 @@
 # especially by fixing the PFOS under-prediction -- the mechanism is REAL (generalizes
 # across datasets), not an in-sample curve-fit.
 #
-# Organ-mass basis (src/organ_mass.py): FRESH by default; PFAS_MASS_BASIS=dry reproduces
-# the pre-fix record (free 1.232 / lipid 0.516 / in-sample refit 0.519) with the dry
-# LIPID_LOADING and TANG_REFIT_FXY tables.
+# Runs on the calibration site-year drivers (Tang's site and dates are not in the repo, so
+# the drivers are transferred along with the parameters) and compares dry-weight TF built
+# from the harvest operator (model_api.tang_tf_validation).
 #
 #   python validation/oos_tang_lipid.py
 # =============================================================================
@@ -34,16 +34,12 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 import model_api as api
 
-MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")
-
-
 def main(dose="low"):
     print("Tang 2026 OUT-OF-SAMPLE: does the lipid-loading mechanism (Yamazaki-fit, NOT")
-    print(f"fit to Tang) generalize to predict the independent Tang per-organ TF (dw)? "
-          f"[{MASS_BASIS} organ mass]\n")
+    print("fit to Tang) generalize to predict the independent Tang per-organ TF (dw)?\n")
     print(f"{'cong':6}{'organ':>11}{'free':>9}{'lipid':>9}{'refit':>9}{'Tang':>9}")
     e_free, e_lip, e_ref = [], [], []
-    kw = dict(f_xy_source="recommended", dose=dose, mass_basis=MASS_BASIS)
+    kw = dict(f_xy_source="recommended", dose=dose)
     for c in api.TANG_CONGENERS:
         v0 = api.tang_tf_validation(c, lipid_loading=False, **kw)
         v1 = api.tang_tf_validation(c, lipid_loading=True, **kw)

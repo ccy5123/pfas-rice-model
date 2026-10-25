@@ -104,15 +104,14 @@ def biomass_matrix(t, day, organs_kg_hill, *, root_shoot_ratio: float | None = N
 
 def biomass_drivers(path_or_table, units, *, season=None, n_t=241, Cwo=1.0,
                     plants_per_hill=None, hills_per_m2=25.0, root_shoot_ratio=None,
-                    Qtp=None, mass_basis="fresh"):
+                    Qtp=None):
     """One-call: measured biomass table -> `drivers` dict for simulate(drivers=...).
 
     `path_or_table` is a CSV path/buffer, or a (day, organs) tuple from
     `load_biomass_table`.  `units` is the reporting unit of the table (see
     `to_kg_per_hill`).  `Qtp` (L/d/hill on the output grid) overrides the modelled
     transpiration; otherwise `forcing_rice.Q_TP` is used.  The table's DRY weights
-    become FRESH organ mass via `organ_mass` (mass_basis="dry" keeps them dry, the
-    pre-fix legacy).  Returns the same dict shape as `model_api.drivers_from_arrays`.
+    become FRESH organ mass via `organ_mass`.  Returns the same dict shape as `model_api.drivers_from_arrays`.
     """
     import organ_mass as om
     if isinstance(path_or_table, tuple):
@@ -125,14 +124,14 @@ def biomass_drivers(path_or_table, units, *, season=None, n_t=241, Cwo=1.0,
     season = float(np.max(day)) if season is None else float(season)
     t = np.linspace(0.0, season, n_t)
     M = biomass_matrix(t, day, organs_kg, root_shoot_ratio=root_shoot_ratio)
-    M = M * np.array([om.fresh_factor(o, mass_basis) for o in ORGANS])
+    M = M * np.array([om.fresh_factor(o) for o in ORGANS])
     Cwo_arr = np.full_like(t, float(Cwo))
     if Qtp is None:
         import forcing_rice as fr
         Qtp = fr.Q_TP(t, season)
     else:
         Qtp = np.asarray(Qtp, float)
-    return dict(t=t, Cwo=Cwo_arr, Qtp=Qtp, M=M, mass_basis=mass_basis)
+    return dict(t=t, Cwo=Cwo_arr, Qtp=Qtp, M=M, mass_basis=om.MASS_BASIS)
 
 
 if __name__ == "__main__":

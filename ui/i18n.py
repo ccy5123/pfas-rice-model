@@ -145,9 +145,9 @@ STRINGS = {
                "모델을 거꾸로 돌려 **토양수가 얼마나 오염됐을지**를 — 하나의 숫자가 아니라 "
                "**불확실성 범위**까지(베이지안 추정) — 추정합니다."),
     },
-    "inv.in_root": {"en": "Measured in roots [µg/kg]", "ko": "뿌리 측정값 [µg/kg]"},
-    "inv.in_straw": {"en": "Measured in straw (stems+leaves) [µg/kg]", "ko": "짚(줄기+잎) 측정값 [µg/kg]"},
-    "inv.in_grain": {"en": "Measured in grain [µg/kg]", "ko": "낟알 측정값 [µg/kg]"},
+    "inv.in_root": {"en": "Measured in roots [µg/kg dry weight]", "ko": "뿌리 측정값 [µg/kg 건물중]"},
+    "inv.in_straw": {"en": "Measured in straw (stems+leaves) [µg/kg dry weight]", "ko": "짚(줄기+잎) 측정값 [µg/kg 건물중]"},
+    "inv.in_grain": {"en": "Measured in grain [µg/kg dry weight]", "ko": "낟알 측정값 [µg/kg 건물중]"},
     "inv.precision_label": {"en": "How precise are the measurements?", "ko": "측정값이 얼마나 정밀한가요?"},
     "inv.precision_help": {
         "en": "Sets the measurement+model uncertainty used in the estimate.",

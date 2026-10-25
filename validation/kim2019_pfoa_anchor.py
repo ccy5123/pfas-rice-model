@@ -23,7 +23,7 @@
 #       range 0.98 at A-2 to 597 at D-7)
 # Also already seen: kim2019_censored.py (step 4a) PRINTED the four variants' PFOA grain
 # BAF as unscored anchor rows, all far below 4.43. Nothing below uses them to choose an
-# estimator. And: no shipped parameter is fitted to Kim PFOA (L_Ph_W2fit, L_Ph_oryza and
+# estimator. And: no shipped parameter is fitted to Kim PFOA (L_Ph_fit, L_Ph_rec and
 # LIPID_LOADING are Yamazaki fits; only the literature_params DEMO fits L_Ph to 4.43), so
 # the "PFOA* used in the L_Ph fit" exclusion in the OOS scripts has no basis.
 #
@@ -240,10 +240,9 @@ def profile_interval(d, level=LEVEL):
 def model_baf(v, cwo=1.0):
     """Harvest PFOA grain BAF [L/kg fw] at constant Cwo (as kim2019_censored.predict)."""
     if v == "nstem_lipid":
-        r = api.simulate_nstem_leaf("PFOA", Cwo=cwo, season=120.0, lipid_loading=True,
-                                    biomass_fn=api._biomass_fn("oryza"))
+        r = api.simulate_nstem_leaf("PFOA", Cwo=cwo, lipid_loading=True)
     else:
-        kw = dict(mono=dict(f_xy_source="recommended"), W2=dict(f_xy_source="W2fit"),
+        kw = dict(mono=dict(f_xy_source="recommended"), fit=dict(f_xy_source="fit"),
                   lipid=dict(lipid_loading=True))[v]
         r = api.simulate("PFOA", Cwo=cwo, **kw)
     return float(r["baf_final"]["grain"])

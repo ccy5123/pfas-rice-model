@@ -7,7 +7,7 @@
 #   K_prot(n), K_PL(n)         <- params/Bk_table_S5.csv     (Zhou2025, Chen2025)
 #   K_cw whole-cw per organ    <- params/Kcw_Klignin_params_v2.csv  (GAP A, Prompt2)
 #   f_xy_recommended(n)        <- params/Bk_table_S5.csv f_xy (= S4/theory_anchor, MONOTONE)
-#   f_xy_W2fit(n), L_Ph, kappa_d <- params/W2_transport_fit.csv (S6 transport fit; long-chain NON-physical)
+#   *_fit, *_rec (transport)  <- params/refit_site_year.csv (validation/refit_site_year.py; Yamazaki 2020 site-year)
 #   tissue composition         <- params/rice_tissue_params.csv (recommended)
 #   B_k(n) per organ (basis-A) <- recomputed here (self-consistent)
 # Emits: params/parameters.json, params/f_xy_recommended.csv
@@ -23,7 +23,6 @@ def rd(name):
 
 S5  = rd("Bk_table_S5.csv")
 KCW = {r["pfas"]: r for r in rd("Kcw_Klignin_params_v2.csv")}
-W2  = {r["congener"]: r for r in rd("W2_transport_fit.csv")}
 RT  = rd("rice_tissue_params.csv")
 
 ORGANS = ["root", "stem", "leaf", "grain_brown"]   # grain_brown == model "grain"
@@ -56,7 +55,6 @@ for r in S5:
     Kcw_org = {o: float(k[f"K_cw_wholecw_{o}"]) for o in ORGANS}
     Bk = {("grain" if o == "grain_brown" else o):
           Bk_basisA(composition[o], K_prot, K_PL, Kcw_org[o]) for o in ORGANS}
-    w = W2.get(name, {})
     congeners.append({
         "name": name, "n_C": int(r["n_C"]),
         "group": "PFCA" if r["group"] == "CA" else "PFSA",
@@ -65,9 +63,6 @@ for r in S5:
         "K_cw_poly_rec_Lkg": float(k["K_cw_poly_rec"]),
         "K_lignin_rec_Lkg": float(k["K_lignin_rec"]),
         "f_xy_recommended": float(r["f_xy"]),                  # MONOTONE (S4/theory) — USE THIS
-        "f_xy_W2fit": float(w["f_xy_fit"]) if w else None,     # transport-fit (long-chain artifact)
-        "L_Ph_W2fit": float(w["L_Ph_fit"]) if w else None,
-        "kappa_d_W2fit": float(w["kappa_d_fit"]) if w else None,
         "B_k_basisA_Lkg_fw": Bk,
     })
 
@@ -92,37 +87,23 @@ congeners.append({
     "K_cw_poly_rec_Lkg": float(_pe_kcw["K_cw_poly_rec"]),
     "K_lignin_rec_Lkg": float(_pe_kcw["K_lignin_rec"]),
     "f_xy_recommended": _gx_fxy,
-    "f_xy_W2fit": None, "L_Ph_W2fit": None, "kappa_d_W2fit": None,
     "B_k_basisA_Lkg_fw": {("grain" if o == "grain_brown" else o):
                           Bk_basisA(composition[o], _gx_kprot, _gx_kpl, _gx_kcw[o]) for o in ORGANS},
     "provisional": "ether-PFAS (HFPO-DA/GenX): K_PL measured (Chen2025), K_prot/K_cw≈PFPeA (matched K_MW), "
                    "f_xy=PFCA(nPFC5)·exp(-0.7) (Tang2026 ether offset); NOT calibrated to BAF data.",
 })
 
-# --- merge the ORYZA2000 transport re-fit (validation/refit_oryza.py) if present ---
-# f_xy_oryza/L_Ph_oryza/kappa_d_oryza are the per-congener transport params fit to
-# Yamazaki on the MECHANISTIC ORYZA2000 biomass (the default driver). They are kept in
-# params/refit_oryza.csv so a rebuild here re-attaches them (the W2 fields above were
-# tuned on the placeholder driver and stay for reproduce_demo). Re-run refit_oryza.py
-# to regenerate after a model/biomass change.
-_refit_path = os.path.join(P, "refit_oryza.csv")
+# --- merge the transport fit (validation/refit_site_year.py) if present ---
+# *_fit = (f_xy, L_Ph, kappa_d) per congener, saturated; *_rec = (L_Ph, kappa_d) with the
+# monotone f_xy_recommended fixed. Fitted to Yamazaki 2023 on the 2020 Tsukuba site-year,
+# dry-basis data, harvest operator. Re-run refit_site_year.py --write after a model change.
+_refit_path = os.path.join(P, "refit_site_year.csv")
 if os.path.exists(_refit_path):
-    _refit = {r["compound"]: r for r in rd("refit_oryza.csv")}
+    _refit = {r["compound"]: r for r in rd("refit_site_year.csv")}
     for cg in congeners:
         rr = _refit.get(cg["name"])
         if rr:
-            cg["f_xy_oryza"] = round(float(rr["f_xy_oryza"]), 6)
-            cg["L_Ph_oryza"] = round(float(rr["L_Ph_oryza"]), 6)
-            cg["kappa_d_oryza"] = round(float(rr["kappa_d_oryza"]), 6)
-# ... and the same fit made BEFORE the dry->fresh organ-mass fix (src/organ_mass.py),
-# kept so f_xy_source='oryza' with mass_basis='dry' still reproduces the pre-fix runs.
-_refit_dry_path = os.path.join(P, "refit_oryza_dry.csv")
-if os.path.exists(_refit_dry_path):
-    _refit_dry = {r["compound"]: r for r in rd("refit_oryza_dry.csv")}
-    for cg in congeners:
-        rr = _refit_dry.get(cg["name"])
-        if rr:
-            for k in ("f_xy_oryza_dry", "L_Ph_oryza_dry", "kappa_d_oryza_dry"):
+            for k in ("f_xy_fit", "L_Ph_fit", "kappa_d_fit", "L_Ph_rec", "kappa_d_rec"):
                 cg[k] = round(float(rr[k]), 6)
 
 doc = {
@@ -135,11 +116,11 @@ doc = {
             "K_PL": "Chen2025 SSLM", "K_prot": "Zhou2025",
             "K_cw": "GAP A / Prompt2 v2 (Guo2025 Fig.3f DFT + Mel2024 lignin anchor; rice whole-cw per organ)",
             "f_xy_recommended": "GAP B / S4 + docs/theory_anchor.tex (Trapp+Briggs LFER: MONOTONE logistic)",
-            "f_xy_W2fit": "S6 W2 transport fit to Yamazaki (SATURATED 3param/3obs; long-chain values NON-physical, see docs/DELIVERABLE_GAP_B_fxy.md)",
-            "f_xy_oryza": "per-congener (f_xy,L_Ph,kappa_d) re-fit to Yamazaki on the MECHANISTIC ORYZA2000 biomass (the default driver), organ mass on the FRESH basis (src/organ_mass.py); validation/refit_oryza.py, params/refit_oryza.csv (reproduction log10 RMSE 0.283; PFBA/PFOS/PFDoDA at f_xy=1, PFDoDA long-chain outlier). The pre-fix DRY-basis fit (RMSE 0.236) is kept as *_oryza_dry / params/refit_oryza_dry.csv. Use model_api f_xy_source='oryza'.",
+            "f_xy_fit": "per-congener (f_xy, L_Ph, kappa_d) fitted to Yamazaki 2023 on the 2020 Tsukuba site-year (src/site_scenario.py), dry-basis data, harvest operator with attached dead blades (src/harvest.py); validation/refit_site_year.py, params/refit_site_year.csv. Saturated (3 params / 3 cells) -> reproduction, not prediction. model_api f_xy_source='fit'.",
+            "L_Ph_rec": "(L_Ph, kappa_d) fitted to Yamazaki root + grain with f_xy_recommended FIXED (straw a prediction); used by f_xy_source='recommended' and the lipid model. Same script.",
             "composition": "rice_tissue package (recommended anchors)",
         },
-        "WARNING_f_xy": "Use f_xy_recommended (monotone). f_xy_W2fit rises spuriously for C10+ (single-straw-compartment entanglement, H7 §7.2); theory + cross-field TF both require monotone decline.",
+        "WARNING_f_xy": "f_xy_recommended is the monotone a-priori value; f_xy_fit is a saturated reproduction fit (one value per congener per dataset) and is not a transferable property.",
     },
     "environment": {
         "E_m_V": -0.120, "E_m_plausible_range_V": [-0.120, -0.090],
@@ -148,7 +129,7 @@ doc = {
     },
     "carrier_MichaelisMenten": {
         "Vmax_in": 20.0, "Km_in": 5.0, "Vmax_out": 8.0, "Km_out": 5.0,
-        "note": "fixed during W2 fit; carrier overcomes GHK anion exclusion (e^N≈107).",
+        "note": "fixed values (not fitted to any dataset here; the per-congener kappa_d fit absorbs root-entry magnitude); carrier overcomes GHK anion exclusion (e^N≈107). validation/dose_series_carrier.py bounds Km >= 500 ug/L from Tang's dose series.",
     },
     "f_xy_functional_form": {
         "form": "logistic", "expression": "f_xy(n) = eta / (1 + 10^(s*(n - n0)))",
@@ -164,7 +145,7 @@ doc = {
     "status": {
         "GAP_A_Kcw": "CLOSED (docs/DELIVERABLE_GAP_A_Kcw.md)",
         "GAP_B_fxy": "CLOSED (docs/DELIVERABLE_GAP_B_fxy.md; H7 §7.2 entanglement resolved by theory)",
-        "validation": "Yamazaki full-ODE reproduced (log10 RMSE 0.029); cross-field TF (water-independent) confirms monotone f_xy; see docs/H8_handoff_S6_final.md",
+        "validation": "see CLAUDE.md section 6 and validation/refit_site_year.py (Yamazaki 2020 site-year fit; reproduce_demo.py prints the reproduction RMSE)",
         "open_data_limited": [
             "rice (not wheat) per-congener root subcellular -> alpha/QC1 point estimate",
             "reliable per-congener pore-water OR hydroponic RCF -> surface test + f_xy absolute",
@@ -186,14 +167,14 @@ with open(os.path.join(P, "parameters.json"), "w") as f:
 # flat f_xy table for quick reference
 with open(os.path.join(P, "f_xy_recommended.csv"), "w", newline="") as f:
     wr = csv.writer(f)
-    wr.writerow(["pfas", "n_C", "group", "f_xy_recommended_monotone", "f_xy_W2fit_nonphysical_longchain"])
+    wr.writerow(["pfas", "n_C", "group", "f_xy_recommended_monotone", "f_xy_fit_site_year"])
     for c in congeners:
-        wr.writerow([c["name"], c["n_C"], c["group"], c["f_xy_recommended"], c["f_xy_W2fit"]])
+        wr.writerow([c["name"], c["n_C"], c["group"], c["f_xy_recommended"], c.get("f_xy_fit")])
 
 print("[written] params/parameters.json  (%d congeners)" % len(congeners))
 print("[written] params/f_xy_recommended.csv")
-print("\nf_xy_recommended (monotone)  vs  f_xy_W2fit (long-chain artifact):")
+print("\nf_xy_recommended (monotone)  vs  f_xy_fit (site-year reproduction fit):")
 for c in congeners:
-    w2 = f"{c['f_xy_W2fit']:.4f}" if c['f_xy_W2fit'] is not None else "  ND "
+    ft = f"{c['f_xy_fit']:.4f}" if c.get('f_xy_fit') is not None else "  ND "
     print(f"  {c['name']:7}(C{c['n_C']:>2}) {c['group']}  rec={c['f_xy_recommended']:.4f}"
-          f"   W2={w2}   B_root={c['B_k_basisA_Lkg_fw']['root']:.2f}")
+          f"   fit={ft}   B_root={c['B_k_basisA_Lkg_fw']['root']:.2f}")

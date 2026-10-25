@@ -91,37 +91,12 @@ def test_more_retention_sends_more_to_stalk():
     assert stalk_hi > stalk_lo            # retention accumulates the stalk
 
 
-def test_cures_over_translocation_vs_single_straw():
-    """The redistribution must fill the stem and de-monopolize the leaf.
-
-    Pinned to mass_basis="dry": the levers (retention 0.6, stem_transp_frac 0.45) and
-    the O(1) band below were set when the biomass driver's DRY matter was used as M
-    (src/organ_mass.py). The structural claim on the corrected FRESH basis is checked
-    separately below; re-setting the levers is part of the re-fit
-    (docs/sampling_protocols_audit_KR.md section 5)."""
+def test_redistribution_fills_the_stem():
+    """The redistributed shoot fills the stalk the single-straw 4-pool leaves as a
+    pass-through, and the leaf loses its monopoly (default drivers)."""
     import model_api as api
-    base = api.simulate("PFOA", f_xy_source="recommended", measured_forcing=True, season=150.0, n_t=361,
-                        mass_basis="dry")
-    nl = api.simulate_nstem_leaf("PFOA", retention=0.6, stem_transp_frac=0.45, season=150.0,
-                                 mass_basis="dry")
-    b_root = base["baf_final"]["root"]
-    base_stalk_tf = base["baf_final"]["stem"] / b_root
-    base_leaf_tf = base["baf_final"]["leaf"] / b_root
-    nl_stalk_tf = nl["tf_final"]["stem"]; nl_leaf_tf = nl["tf_final"]["leaf"]
-    # stem filled (was a near-empty pass-through), leaf no longer runs away
-    assert nl_stalk_tf > 10 * base_stalk_tf
-    assert nl_leaf_tf < 0.5 * base_leaf_tf
-    # PFOA lands at O(1) across stalk/leaf/grain (Tang ~ 1.45/1.66/0.95)
-    for k in ("stem", "leaf", "grain"):
-        assert 0.3 < nl["tf_final"][k] < 3.5
-
-
-def test_redistribution_still_fills_the_stem_on_fresh_mass():
-    """The structure, on the corrected basis: the stalk still fills (~4x the single-straw
-    pass-through, vs >10x on the dry basis) and the leaf still loses its monopoly (~0.4x)."""
-    import model_api as api
-    base = api.simulate("PFOA", f_xy_source="recommended", measured_forcing=True, season=150.0, n_t=361)
-    nl = api.simulate_nstem_leaf("PFOA", retention=0.6, stem_transp_frac=0.45, season=150.0)
+    base = api.simulate("PFOA", f_xy_source="recommended")
+    nl = api.simulate_nstem_leaf("PFOA", retention=0.6, stem_transp_frac=0.45)
     b_root = base["baf_final"]["root"]
     assert nl["tf_final"]["stem"] > 3.0 * base["baf_final"]["stem"] / b_root
     assert nl["tf_final"]["leaf"] < 0.5 * base["baf_final"]["leaf"] / b_root

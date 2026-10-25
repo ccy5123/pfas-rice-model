@@ -14,8 +14,6 @@ from plotly.subplots import make_subplots
 from plotly.colors import sample_colorscale
 
 import model_api as api
-import forcing_rice as fr
-import growth_rice as gr
 
 _COL = {"root": "#8c564b", "stem": "#2ca02c", "leaf": "#1f77b4", "grain": "#ff7f0e"}
 # plain-language tissue names for the general-audience (Simple) views
@@ -117,22 +115,21 @@ _BAF_EXTRA_COLORS = ["#2ca02c", "#9467bd", "#8c564b", "#17becf"]
 
 
 def fig_baf(res, obs, extra=None, lang="en"):
-    """Predicted vs observed (Yamazaki) root/straw/grain BAF, grouped bars.
+    """Predicted vs observed (Yamazaki) root/straw/grain BAF on the DRY-weight basis.
 
-    `extra` optionally overlays additional model series (e.g. the EXPLORATORY
-    two-pool model): a dict {label: {"root","straw","grain"}} (values may be None);
-    each is added as its own grouped bar so the canonical core, the overlay model(s)
-    and the observed data are compared side by side. `lang="ko"` localises the axis,
-    title and the core/observed legend names for the Simple (general-audience) view.
+    `res` needs `baf_final_dw` (a `simulate()` result, or `{"congener", "baf_final_dw"}` built
+    from `model_api.yamazaki_harvest_baf`, the model's version of the observation); `obs` is
+    `model_api.observed_baf` (dry basis). `extra` optionally overlays more model series:
+    {label: {"root","straw","grain"}}. `lang="ko"` localises the labels.
     """
     ko = lang == "ko"
     nm = _plain(lang)
     tis = ["root", "straw", "grain"]
     x = [nm[t_] for t_ in tis]
-    pred = [res["baf_final"]["root"], res["straw_baf"], res["baf_final"]["grain"]]
+    pred = [res["baf_final_dw"][t_] for t_ in tis]
     fig = go.Figure()
-    fig.add_bar(x=x, y=pred, name="모델" if ko else "model (4-pool core)", marker_color="#1f77b4",
-                hovertemplate="core %{x}: %{y:.3g}<extra></extra>")
+    fig.add_bar(x=x, y=pred, name="모델" if ko else "model", marker_color="#1f77b4",
+                hovertemplate="model %{x}: %{y:.3g}<extra></extra>")
     for i, (label, vals) in enumerate(dict(extra or {}).items()):
         fig.add_bar(x=x, y=[vals.get(t_) for t_ in tis], name=label,
                     marker_color=_BAF_EXTRA_COLORS[i % len(_BAF_EXTRA_COLORS)],
@@ -146,7 +143,7 @@ def fig_baf(res, obs, extra=None, lang="en"):
         barmode="group",
         title=(f"{res['congener']} — 모델 예측 vs 실측 (Yamazaki)" if ko
                else f"{res['congener']} — predicted vs observed BAF"),
-        yaxis_title="축적 배수 [L/kg]" if ko else "BAF [L/kg]", **_LAYOUT)
+        yaxis_title="축적 배수 [L/kg 건물중]" if ko else "BAF [L/kg dry weight]", **_LAYOUT)
     return fig
 
 
@@ -332,7 +329,7 @@ def fig_tang_tf(val, val_refit=None, val_extra=None, extra_label="model · lipid
     return fig
 
 
-_CHAIN_LOG = {"K_PL", "K_prot", "f_xy_recommended", "f_xy_W2fit", "B_root", "B_grain"}
+_CHAIN_LOG = {"K_PL", "K_prot", "f_xy_recommended", "f_xy_fit", "B_root", "B_grain"}
 
 
 def fig_chain(rows, congener, key="K_PL"):
@@ -351,22 +348,6 @@ def fig_chain(rows, congener, key="K_PL"):
     fig.update_layout(title=f"{key} vs chain length", xaxis_title="perfluoro-C", yaxis_title=key,
                       yaxis_type="log" if key in _CHAIN_LOG else "linear",
                       hovermode="closest", **_LAYOUT)
-    return fig
-
-
-def fig_forcings(t, season):
-    """Measured transpiration Q_TP(t) and ORYZA organ biomass (dual y-axis)."""
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
-    fig.add_scatter(x=t, y=fr.Q_TP(t, season), name="Q_TP", line=dict(color="royalblue", width=2.5),
-                    hovertemplate="Q_TP: %{y:.3f} L/d/hill<extra></extra>", secondary_y=False)
-    b = gr.organ_biomass(t, season)
-    for k in api.TISSUES:
-        fig.add_scatter(x=t, y=b[k], name=k, line=dict(color=_COL[k]),
-                        hovertemplate=f"{k}: %{{y:.4f}} kg/hill<extra></extra>", secondary_y=True)
-    fig.update_layout(title="Measured forcings (Q_TP, M_s)", xaxis_title="days",
-                      hovermode="x unified", **_LAYOUT)
-    fig.update_yaxes(title_text="Q_TP [L/day/hill]", secondary_y=False)
-    fig.update_yaxes(title_text="dry biomass [kg DM/hill]", secondary_y=True)
     return fig
 
 

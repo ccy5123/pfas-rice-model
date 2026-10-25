@@ -40,14 +40,8 @@ from scipy.optimize import least_squares
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 import model_api as api          # noqa: E402
-import forcing_rice as fr        # noqa: E402
-import growth_rice as gr         # noqa: E402
-import organ_mass as om          # noqa: E402
-MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")   # organ_mass; "dry" = the pre-fix record
 
 CONGENER = "PFOA"
-SEASON = 120.0
-N_T = 161
 SIGMA = 0.05                      # log10 observation noise / weight
 _RNG = np.random.default_rng(0)
 
@@ -55,10 +49,8 @@ _RNG = np.random.default_rng(0)
 _c = api._CONG[CONGENER]
 _BASE_FXY, _, _BASE_KD, _, _ = api._transport_defaults(_c, "recommended", False)
 
-_T = np.linspace(0.0, SEASON, N_T)
-_BASE_Q = fr.Q_TP(_T, SEASON)
-_b = gr.organ_biomass(_T, SEASON)
-_M = om.organ_matrix(_b, MASS_BASIS)          # crop DRY matter -> ODE mass basis
+_D = api.scenario_drivers()                    # the calibration site-year (default drivers)
+_T, _BASE_Q, _M, _LL = _D["t"], _D["Qtp"], _D["M"], _D["leaf_loss"]
 
 DEFAULTS = dict(qtp_scale=1.0, cwo_level=1.0, f_xy_mult=1.0, kappa_d_mult=1.0)
 
@@ -67,11 +59,12 @@ def predict(knobs):
     """Final root/straw/grain BAF for a set of exposure/transport knobs."""
     k = {**DEFAULTS, **knobs}
     drivers = dict(t=_T, Cwo=np.full_like(_T, k["cwo_level"]),
-                   Qtp=k["qtp_scale"] * _BASE_Q, M=_M, mass_basis=MASS_BASIS)
+                   Qtp=k["qtp_scale"] * _BASE_Q, M=_M, leaf_loss=_LL, mass_basis="fresh")
     r = api.simulate(CONGENER, drivers=drivers,
                      f_xy_override=_BASE_FXY * k["f_xy_mult"],
                      kappa_d_override=_BASE_KD * k["kappa_d_mult"])
-    return np.array([r["baf_final"]["root"], r["straw_baf"], r["baf_final"]["grain"]])
+    dw = r["baf_final_dw"]
+    return np.array([dw["root"], dw["straw"], dw["grain"]])
 
 
 def _jacobian_at(free, point):

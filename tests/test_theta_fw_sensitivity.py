@@ -62,24 +62,24 @@ def test_the_xylem_split_runs_on_dry_matter_and_is_theta_free():
     assert S_XYLEM_DRY[LEAF] == 20.0 and S_XYLEM_DRY[FRUIT] == 0.5116
 
 
-def test_the_rejected_reading_sends_three_times_more_of_the_stream_to_the_grain():
-    """Reading the original grain S=2 as per kg DRY was option A as first proposed: the
-    grain then takes ~14% of the transpiration stream during filling against ~4% now
-    (nstem_leaf assumes 5%), and 8 of 11 Yamazaki grains fall out of reach of the
-    oryza re-fit (RMSE 0.283 -> 0.394). Pinned so the reason for 0.5116 stays checkable."""
-    import forcing_rice as fr
+def test_the_grain_share_of_the_transpiration_stream():
+    """The grain xylem surface S_XYLEM_DRY[grain] = 0.5116 m2/kg dry is unmeasured: on the
+    site-year it sends ~6% of the transpiration stream to the grain during filling; the
+    original S = 2 read per kg dry would send ~18%. (validation/refit_site_year.py runs
+    0.2 / 2.0 as a sensitivity.)"""
+    import site_scenario as ss
     from pfas_rice_plant_module_4pool_surf import PlantInputs
-    t = np.linspace(0.0, 120.0, 241)
-    Q = fr.Q_TP(t, 120.0)
-    Md = T.om.organ_matrix(T.api._biomass_fn("oryza")(t, 120.0), "dry")
+    run = ss.yamazaki2020_mean_run()
+    t, Q = run["t"], run["Qtp"]
+    Md = np.maximum(np.column_stack([run[o] for o in ("root", "stem", "leaf", "grain")]), 1e-4)
     gate = PlantInputs(t=t, Cwo=np.ones_like(t), Qtp=Q, M=Md)._grain_gate(t)
     fill = gate > 0.5
 
     def filling_share(S_grain):
         g = S_grain * Md[:, 3] / (20.0 * Md[:, 2] + S_grain * Md[:, 3]) * gate
         return np.trapezoid((g * Q)[fill], t[fill]) / np.trapezoid(Q[fill], t[fill])
-    now, rejected = filling_share(0.5116), filling_share(2.0)
-    assert 0.03 < now < 0.06 and 0.12 < rejected < 0.16, (now, rejected)
+    now, s2 = filling_share(0.5116), filling_share(2.0)
+    assert 0.05 < now < 0.07 and 0.16 < s2 < 0.20, (now, s2)
 
 
 if __name__ == "__main__":

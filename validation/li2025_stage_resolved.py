@@ -22,11 +22,12 @@
 # irrigation-water denominator is Li's documented weak point); the root-surface confound
 # stays (roots washed with distilled water, no plaque removal).
 #
-# Model: the dynamic run on the default ORYZA2000 biomass + measured Q_TP, Cwo constant 1;
-# model fresh-weight concentration -> dry weight with the binding factor's theta. Stage ->
-# model day by ORYZA DVS: tillering 0.4, heading 1.0, filling 1.25, milk 1.5, ripening
-# 2.0 (first day it is reached). Variants as in oos_crossdataset (4-pool: monotone f_xy,
-# W2 fit, lipid loading) plus nstem_leaf with lipid loading, because Li reports stem and
+# Model: the dynamic run on the default drivers (the calibration site-year; Li's own site
+# drivers are not in the repo), Cwo constant 1; dry-weight concentrations from the harvest
+# operator (src/harvest.py: leaf = green + attached dead blades at that time). Stage ->
+# model day by the ORYZA2000 DVS of that run: tillering 0.4, heading 1.0, filling 1.25,
+# milk 1.5, ripening 2.0. Variants as in oos_crossdataset (4-pool: monotone f_xy,
+# saturated "fit", lipid loading) plus nstem_leaf with lipid loading, because Li reports stem and
 # leaf separately and the 4-pool stem is a pass-through. Congeners PFBA, PFHxA, PFOA,
 # PFBS, PFOS (PFHpA is ND in every tissue). Grain is scored from FILLING on: at heading
 # the model's grain-formation gate has barely opened (structural; the value is printed).
@@ -68,7 +69,6 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "src"))
 
 import model_api as api            # noqa: E402
-import oryza_growth as og          # noqa: E402
 
 DATA = os.path.join(ROOT, "docs", "literature_db", "raw_si", "li2025_stage_conc.csv")
 STAGES = ("tillering", "heading", "filling", "milk", "ripening")
@@ -76,10 +76,7 @@ STAGE_DVS = (0.4, 1.0, 1.25, 1.5, 2.0)
 CONGENERS = ("PFBA", "PFHxA", "PFOA", "PFBS", "PFOS")
 SHOOT, GRAIN = ("stem", "leaf"), "grain"
 GRAIN_FROM = STAGES.index("filling")          # grain scored from filling on (pre-registered)
-VARIANTS = ("mono", "W2", "lipid", "nstem_lipid")
-SEASON, N_T = 120.0, 241
-THETA = {"root": api._COMP["root"]["theta_fw"], "stem": api._COMP["stem"]["theta_fw"],
-         "leaf": api._COMP["leaf"]["theta_fw"], "grain": api._COMP["grain_brown"]["theta_fw"]}
+VARIANTS = ("mono", "fit", "lipid", "nstem_lipid")
 NOISE_LIMIT, MARGIN, ALPHA, N_PERM = 3.0, 0.10, 0.05, 5000
 
 
@@ -124,26 +121,30 @@ def estimators(data, c, k):
 
 
 # ---------------------------------------------------------------------------- model
-def stage_days(dvs_targets=STAGE_DVS, season=SEASON):
-    sim = og.simulate_oryza(og.OryzaParams(season=season))
-    t, dvs = np.asarray(sim["t"], float), np.asarray(sim["dvs"], float)
-    return np.array([t[np.argmax(dvs >= d)] if d >= dvs.max() else float(np.interp(d, dvs, t))
-                     for d in dvs_targets])
+def stage_days(dvs_targets=STAGE_DVS):
+    """Model day of each stage DVS on the default drivers' ORYZA2000 run."""
+    run = api.site_run()
+    t, dvs = np.asarray(run["t"], float), np.asarray(run["dvs"], float)
+    return np.array([t[np.argmax(dvs >= d - 1e-9)] if d >= dvs.max() - 1e-9
+                     else float(np.interp(d, dvs, t)) for d in dvs_targets])
 
 
 def run_variant(c, v):
     if v == "nstem_lipid":
-        return api.simulate_nstem_leaf(c, Cwo=1.0, season=SEASON, n_t=N_T, lipid_loading=True,
-                                       biomass_fn=api._biomass_fn("oryza"))
-    kw = dict(mono=dict(f_xy_source="recommended"), W2=dict(f_xy_source="W2fit"),
+        return api.simulate_nstem_leaf(c, Cwo=1.0, lipid_loading=True)
+    kw = dict(mono=dict(f_xy_source="recommended"), fit=dict(f_xy_source="fit"),
               lipid=dict(lipid_loading=True))[v]
-    return api.simulate(c, Cwo=1.0, season=SEASON, n_t=N_T, **kw)
+    return api.simulate(c, Cwo=1.0, **kw)
+
+
+def _dw_at(res, days):
+    t = np.asarray(res["t"], float)
+    return {k: np.interp(days, t, res["conc_dw"][k]) for k in ("root", "stem", "leaf", "grain")}
 
 
 def model_tf(res, days):
-    """Per-stage model TF (dry weight) at the given days, for stem/leaf/grain."""
-    t = np.asarray(res["t"], float)
-    dw = {k: np.interp(days, t, res["conc"][k]) / (1.0 - THETA[k]) for k in THETA}
+    """Per-stage model TF (dry weight, harvest operator) at the given days."""
+    dw = _dw_at(res, days)
     return {k: dw[k] / dw["root"] for k in ("stem", "leaf", "grain")}
 
 
@@ -323,9 +324,7 @@ def posthoc(data, runs, days):
     (b) is the winner's advantage the redistributed SHOOT or the lipid term? -- the
         same nstem_leaf shoot with the free anion only (no lipid loading)."""
     runs = dict(runs)
-    runs["nstem_mono"] = {c: api.simulate_nstem_leaf(c, Cwo=1.0, season=SEASON, n_t=N_T,
-                                                     biomass_fn=api._biomass_fn("oryza"))
-                          for c in CONGENERS}
+    runs["nstem_mono"] = {c: api.simulate_nstem_leaf(c, Cwo=1.0) for c in CONGENERS}
     out = {}
     print("\nPOST-HOC (not pre-registered; not used for the verdict)")
     print("  (a) Q3 with the other estimators, applied identically to model and data:")
@@ -334,9 +333,7 @@ def posthoc(data, runs, days):
         for v in VARIANTS:
             model = {}
             for c in CONGENERS:
-                t = np.asarray(runs[v][c]["t"], float)
-                dw = {k: np.interp(days, t, runs[v][c]["conc"][k]) / (1.0 - THETA[k]) for k in THETA}
-                model[c] = {**model_tf(runs[v][c], days), "_dw": dw}
+                model[c] = {**model_tf(runs[v][c], days), "_dw": _dw_at(runs[v][c], days)}
             row[v] = level_rmse(data, model, est)
         out[est] = row
         print(f"    {est:15}" + "  ".join(f"{v} {row[v]['shoot']:.2f}/{row[v]['grain']:.2f}"

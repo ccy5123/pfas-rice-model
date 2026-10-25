@@ -67,6 +67,19 @@ def _simulate(congener, **kw):
     return api.simulate(congener, **kw)
 
 
+CROPS = {"site2020": "Yamazaki 2020 site-year (Tsukuba; ORYZA2000 port) — default",
+         "oryza2000": "generic climatology: ORYZA2000 port",
+         "oryza": "generic climatology: ORYZA Level-1, reduced",
+         "growth_rice": "generic climatology: growth_rice (partition + logistic)"}
+
+
+def crop_kw(crop):
+    """The sidebar crop choice -> simulate()'s (scenario, biomass) pair."""
+    if crop == "site2020":
+        return dict(scenario="yamazaki2020", biomass="oryza2000")
+    return dict(scenario="generic", biomass=crop)
+
+
 def _drivers_tuple(d):
     """A driver dict as a hashable tuple for the run caches. It must carry EVERY key the
     model reads: dropping `leaf_loss` silently turned off the ORYZA leaf-senescence
@@ -102,36 +115,12 @@ def _simulate_neutral(**kw):
     return api.simulate_neutral(log_kow, **kw)
 
 
-@st.cache_data(show_spinner=False)
-def _simulate_twopool_seq(congener):
-    """Cache the EXPLORATORY sequestration two-pool run (curated congener only).
-
-    Run at the model's calibrated operating point (defaults: Cwo=1, season=120,
-    demo forcings) so it reproduces the documented Yamazaki headline -- an
-    apples-to-apples reference against the fixed observed bars. Returns the
-    root/straw/grain BAF, or None if the run fails."""
-    try:
-        r = api.simulate_twopool_seq(congener)
-        return {"root": r["baf_final"]["root"], "straw": r["straw_baf"],
-                "grain": r["baf_final"]["grain"]}
-    except Exception:                                        # noqa: BLE001
-        return None
-
-
-@st.cache_data(show_spinner=False)
-def _simulate_twopool_nstem(congener):
-    """Cache the MERGED model: two-pool sequestration root + redistributed shoot.
-
-    The structural merge the Tang per-organ OOS asked for (docs/twopool_root_exploration.md
-    Result 8). Run at the two-pool's calibrated point like `_simulate_twopool_seq`, so the
-    two overlays are comparable with each other and with the fixed observed bars. Returns
-    the root/straw/grain BAF, or None if the run fails."""
-    try:
-        r = api.simulate_twopool_nstem(congener)
-        return {"root": r["baf_final"]["root"], "straw": r["straw_baf"],
-                "grain": r["baf_final"]["grain"]}
-    except Exception:                                        # noqa: BLE001
-        return None
+@st.cache_data(show_spinner="Running the Yamazaki site-year (two harvests)…")
+def _yamazaki_observable(congener, **kw):
+    """The model's version of the Yamazaki 2023 observation (dry basis, the two harvest
+    runs, the congener's irrigation-water level) under the sidebar's transport/mechanism
+    settings `kw` -- what the BAF tab compares with the observed bars."""
+    return {"congener": congener, "baf_final_dw": api.yamazaki_harvest_baf(congener, **kw)}
 
 
 @st.cache_data(show_spinner="Parameterising structure (RDKit)…")
@@ -169,13 +158,13 @@ def _mol_svg(smiles, w=290, h=170):
 
 
 @st.cache_data(show_spinner="Running HYDRUS-1D…")
-def _hydrus_drivers_cached(congener, season, f_oc, flood_until, percolation, biomass="oryza",
+def _hydrus_drivers_cached(congener, season, f_oc, flood_until, percolation, crop="site2020",
                            Kd=None):
     """Cache a real HYDRUS-1D paddy run (a few seconds) per parameter set.
 
     `Kd` [L/kg] bypasses the PFAS chain-length Koc QSPR — the route a NEUTRAL organic
     takes (congener is then None) and the way in for a measured sorption value."""
-    drv, _ = api.hydrus_drivers(congener, season=season, f_oc=f_oc, biomass=biomass, Kd=Kd,
+    drv, _ = api.hydrus_drivers(congener, season=season, f_oc=f_oc, Kd=Kd, **crop_kw(crop),
                                 flood_until=float(flood_until), percolation=float(percolation))
     return drv
 
@@ -356,7 +345,7 @@ def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, si
         try:
             est = api.estimate_exposure_bayesian(
                 congener, meas, sigma_log10=sigma, E_m_mV=E_m_mV,
-                f_xy_source=f_xy_source, biomass=biomass, progress=_cb, **mech)
+                f_xy_source=f_xy_source, progress=_cb, **crop_kw(biomass), **mech)
         except Exception as e:                               # noqa: BLE001
             prog.empty()
             st.error(_t("inv.error", lang, e=e))
@@ -386,14 +375,16 @@ def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, si
 _ORGANS4 = ("root", "stem", "leaf", "grain")
 
 
-def _default_growth_df(season, biomass, n_rows=7):
-    """Editable growth table seeded from the selected biomass driver (FRESH g/hill)."""
+def _default_growth_df(season, crop, n_rows=7):
+    """Editable growth table seeded from the selected crop drivers (FRESH g/hill)."""
     import pandas as pd
+    kw = crop_kw(crop)
+    if kw["scenario"] == "yamazaki2020":
+        season = float(api.scenario_drivers()["t"][-1])
     t = np.linspace(0.0, float(season), n_rows)
-    # the driver returns DRY matter; the table (and the ODE's M) is FRESH weight
-    b = api.om.to_model_mass(api._biomass_fn(biomass)(t, float(season)))
+    _, M, _ = api.crop_on_grid(t, season=season, **kw)      # FRESH organ mass [kg/hill]
     return pd.DataFrame({"day": np.round(t, 0),
-                         **{o: np.round(np.asarray(b[o], float) * 1e3, 2) for o in _ORGANS4}})
+                         **{o: np.round(M[:, i] * 1e3, 2) for i, o in enumerate(_ORGANS4)}})
 
 
 def _default_cwo_df(season, level, n_rows=4):
@@ -421,6 +412,7 @@ def _clean_table(df, value_cols):
 
 
 def _render_custom_tables(*, biomass, Cwo_const, season0, key, ko=False):
+    # `biomass` is the sidebar crop choice (see CROPS / crop_kw)
     """Editable growth + pore-water tables (+ per-compartment density). Returns
     (drivers_dict_or_None, density_dict). Used by both Simple (Korean) and Expert."""
     import pandas as pd
@@ -452,7 +444,7 @@ def _render_custom_tables(*, biomass, Cwo_const, season0, key, ko=False):
         growth = _clean_table(gdf, list(_ORGANS4))
         cwo = _clean_table(cdf, ["Cwo"])
         drivers = api.drivers_from_tables(growth, cwo, growth_units=gunit,
-                                          Cwo_const=Cwo_const, biomass=biomass)
+                                          Cwo_const=Cwo_const, **crop_kw(biomass))
     except Exception as e:                                   # noqa: BLE001
         st.warning(_t("ct.read_error", lang, e=e))
         return None, density
@@ -713,7 +705,7 @@ def run_model(cfg):
     fxy_source = cfg.fxy_source
     biomass = cfg.biomass
     measured_bio = cfg.measured_bio
-    sim_kw = dict(E_m_mV=E_m, f_xy_source=fxy_source, biomass=biomass,
+    sim_kw = dict(E_m_mV=E_m, f_xy_source=fxy_source, **crop_kw(biomass),
                   uptake=getattr(cfg, "uptake", api.DEFAULT_UPTAKE),
                   lipid_loading=bool(getattr(cfg, "lipid_loading", False)),
                   km_scale=float(getattr(cfg, "km_scale", 1.0) or 1.0))
@@ -735,9 +727,9 @@ def run_model(cfg):
         with st.spinner("Running the model…"):
             if drivers is not None:
                 res = _simulate_neutral(drivers_tuple=_drivers_tuple(drivers),
-                                        biomass=biomass, **nk)
+                                        **crop_kw(biomass), **nk)
             else:
-                res = _simulate_neutral(Cwo=Cwo_const, season=season, biomass=biomass,
+                res = _simulate_neutral(Cwo=Cwo_const, season=season, **crop_kw(biomass),
                                         measured_forcing=measured, cwo_profile=cwo_profile,
                                         cwo_k_leach=cwo_kleach, Koc=neutral.get("Koc"), **nk)
         congener = res["congener"]

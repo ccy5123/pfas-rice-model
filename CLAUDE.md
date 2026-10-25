@@ -32,51 +32,45 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ```
 .
 ├── CLAUDE.md  README.md  requirements.txt  requirements-app.txt
-├── reproduce_demo.py                 # entry point: Yamazaki BAF via full ODE (W2 fit)
-├── build_parameters.py               # (re)assembles params/parameters.json from source tables
-├── app.py                            # Streamlit visualization tool (plant/soil map + 4 input modes)
+├── reproduce_demo.py                 # entry point: Yamazaki 2020 site-year, dry basis (f_xy_source fit | --rec)
+├── build_parameters.py               # (re)assembles params/parameters.json from source tables + refit_site_year.csv
+├── app.py                            # Streamlit visualization tool (plant/soil map + exposure modes)
 ├── src/
-│   ├── pfas_rice_plant_module_4pool.py       # basis-A 4-compartment ODE (CANONICAL core)
-│   ├── pfas_rice_plant_module_4pool_surf.py  #  + K_surf (Fe/Mn-plaque dead-end pool)
-│   ├── pfas_rice_plant_module_5pool.py       #  + explicit lignin pool
-│   ├── pfas_rice_plant_module_nstem.py       # N serial stem segments (multi-height MIXER; Yamazaki gradient)
-│   ├── pfas_rice_plant_module_nstem_leaf.py  # N stem segs + explicit leaf (transpiration deposition+RETENTION; Tang over-translocation fix)
-│   ├── pfas_rice_plant_module.py             # import alias → 4pool_surf (basis-A); legacy name
-│   ├── neutral_dpu.py                        # NEUTRAL-organic (Briggs/Kow) path: same ODE with z=0 (no exclusion/carrier)
-│   ├── plant_air.py                          # plant-AIR exchange: volatilisation + gaseous uptake (opt-in; 0 at K_AW=0)
-│   ├── soil_paddy.py                         # Freundlich soil → C_w^o(t) (legacy redox sign)
-│   ├── soil_paddy_redox_corrected.py         # W3-corrected redox (dilution+leaching; USE THIS)
-│   ├── soil_hydrus.py                        # REAL HYDRUS-1D run via phydrus → Cwo(t),Qtp(t) (Method A; wired + app live mode)
-│   ├── calibration.py                        # Tier-1 calibration (scipy)
-│   ├── literature_params.py                  # literature QSPRs/anchors (cited) + Kim2019 BAF
-│   ├── model_api.py                          # UI-agnostic wrapper: simulate(), simulate_from_smiles(), driver/soil/biomon helpers
-│   ├── pfas_structure.py                      # SMILES (structure) → Compound adapter (RDKit; read-across + QSPR)
-│   ├── plots.py                              # Plotly builders: fig_plant_schematic (colormap), drivers, ...
-│   ├── forcing_rice.py                       # measured transpiration Q_TP(t) (FAO-56 dual-Kc; Kumari2022 + NayHtoon2018)
-│   ├── growth_rice.py                        # ORYZA IR72 partitioning on a logistic → organ M_s(t) (DEFAULT biomass driver)
-│   ├── oryza_growth.py                       # REDUCED re-coding of the ORYZA2000 Level-1 carbon balance → M_s(t) (the biomass="oryza" DEFAULT)
-│   ├── oryza2000.py                          # ORYZA2000 potential production ported line by line from the manual, IR72.D92 verbatim (biomass="oryza2000", opt-in)
-│   ├── measured_biomass.py                   # ingest a MEASURED per-organ biomass table → M(t) driver (units→kg/hill; Tang etc.)
-│   └── organ_mass.py                         # crop-model DRY matter → the FRESH organ mass the ODE runs on (mass_basis)
-├── examples/                         # ready-to-load CSVs for app.py (HYDRUS drivers + biomonitoring)
-├── params/                           # parameters.json (CANONICAL) + source CSVs (Bk, f_xy, Kcw, ...)
-├── data_obs/                         # observed BAF/TF (Yamazaki, Li2025) + yamazaki_stem_height.csv
-│                                     #  + NEUTRAL: liu2023/ge2017 (rice) · li2019_rcf (48 hydroponic RCF, 11 spp,
-│                                     #    `subset` col holds Briggs' own rows out) · tscf_obs_schriever2020 (97 TSCF)
-├── validation/                       # S6 + nstem + hydrus_coupled_run reproduction scripts + figures
+│   ├── pfas_rice_plant_module_4pool_surf.py  # basis-A 4-compartment ODE (CANONICAL core; + K_surf)
+│   ├── pfas_rice_plant_module_4pool.py / _5pool.py  # variants (no K_surf / explicit lignin pool)
+│   ├── pfas_rice_plant_module_nstem.py       # N serial stem segments (multi-height mixer; Yamazaki gradient)
+│   ├── pfas_rice_plant_module_nstem_leaf.py  # N stem segs + explicit leaf (transpiration deposition + retention)
+│   ├── pfas_rice_plant_module.py             # import alias -> 4pool_surf
+│   ├── harvest.py                            # observation operator: dead blades kept in leaf/straw; dry-basis values
+│   ├── site_scenario.py                      # Yamazaki 2020 site-year drivers (JMA Tsukuba, ORYZA2000 port, ORYZA Tp)
+│   ├── fao56.py                              # FAO-56 Penman-Monteith terms + ORYZA2000 Tp/Ep (eqs 4.2-4.4)
+│   ├── oryza2000.py                          # ORYZA2000 potential production ported from the manual, IR72.D92 verbatim
+│   ├── organ_mass.py                         # crop-model DRY matter -> the FRESH organ mass the ODE runs on
+│   ├── neutral_dpu.py                        # NEUTRAL-organic (Briggs/Kow) path: same ODE with z=0
+│   ├── plant_air.py                          # plant-air exchange (opt-in; 0 at K_AW=0)
+│   ├── soil_paddy.py / soil_paddy_redox_corrected.py  # Freundlich soil -> C_w^o(t)
+│   ├── soil_hydrus.py                        # REAL HYDRUS-1D run via phydrus -> Cwo(t), Qtp(t) (Method A)
+│   ├── calibration.py                        # Tier-1 calibration machinery (synthetic recovery)
+│   ├── literature_params.py                  # literature QSPRs/anchors (cited) + Kim 2019 tables
+│   ├── model_api.py                          # UI-agnostic API: simulate(), scenario_drivers(), yamazaki_harvest_baf(), ...
+│   ├── pfas_structure.py                     # SMILES -> Compound (RDKit; read-across + QSPR)
+│   ├── plots.py                              # Plotly builders
+│   ├── forcing_rice.py / growth_rice.py / oryza_growth.py  # generic-climatology drivers (scenario="generic")
+│   └── measured_biomass.py                   # ingest a MEASURED per-organ biomass table -> M(t)
+├── examples/                         # ready-to-load CSVs for app.py
+├── params/                           # parameters.json (CANONICAL) + source CSVs + refit_site_year.csv
+├── data_obs/                         # observed tables: Yamazaki (DRY basis), Li 2025, neutral tables
+├── validation/                       # maintained analyses (refit_site_year, OOS, ORYZA checks, neutral, HYDRUS)
+│   └── archive/                      # superseded analyses kept as the record (README says why)
 ├── docs/
-│   ├── OVERVIEW_KR.md                # ★ 종합 진입점: 기능·검증·데이터공백·필요실험·notation 표 (+모식도)
-│   ├── pfas_rice_compartmental_model.tex / dpu_model_summary_corrected.tex
-│   ├── DELIVERABLE_GAP_A_Kcw.md / DELIVERABLE_GAP_B_fxy.md / theory_anchor.tex / H8_handoff_S6_final.md / sources.csv
-│   ├── neutral_dpu_validation.md     # NEUTRAL path: anchors, a-priori results (Liu/Ge/Hwang), open gaps
-│   ├── HANDOFF_neutral_next.md       # ★ NEXT SESSION: A1 air exchange -> A3 Hwang -> A2 API
-│   ├── visualization_tool.md         # app.py guide: plant/soil map, 4 modes, HYDRUS I/O, biomonitoring
-│   └── literature_db/                # curated parameter DB (.xlsx + per-sheet .csv) + raw_si/ SI extractions
-├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (de-submoduled from phydrus/source_code; binary gitignored)
-├── .claude/                          # SessionStart hook (hooks/session-start.sh): web deps + HYDRUS engine build
-├── data/                             # (gitignored)
-└── tests/                            # pytest (437 collected): plant, soil, hydrus, calibration, lit params, API (+two-pool, cwo_profile, k_leach), plots, structure(SMILES), oryza, measured-biomass, organ-mass basis (+fresh-basis re-fits), bayesian-inverse, NEUTRAL-organic (Briggs/Kow), twopool-nstem merge
-
+│   ├── ASSUMPTIONS.md                # ★ every input: source, or unmeasured + the range it is run over
+│   ├── OVERVIEW_KR.md                # 종합 진입점
+│   ├── pfas_rice_compartmental_model.tex / dpu_model_summary_corrected.tex / theory_anchor.tex
+│   ├── neutral_dpu_validation.md / visualization_tool.md / sampling_protocols_audit_KR.md
+│   └── literature_db/                # curated parameter DB + raw_si/ extractions (weather, SI tables)
+├── external/hydrus_source/           # VENDORED HYDRUS-1D 4.08 source (binary gitignored)
+├── .claude/                          # SessionStart hook: web deps + HYDRUS engine build
+└── tests/                            # pytest
 ```
 
 ## 4. Coupling strategy

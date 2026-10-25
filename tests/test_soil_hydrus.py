@@ -46,7 +46,8 @@ def test_run_paddy_long_chain_buffered():
 
 @hydrus
 def test_inputs_from_hydrus_normalised_and_shaped():
-    inp, res = sh.inputs_from_hydrus(8, "PFCA", season=60.0, Cwo_ref=2.0, n_t=121)
+    inp, res = sh.inputs_from_hydrus(8, "PFCA", season=60.0, Cwo_ref=2.0, n_t=121,
+                                     scenario="generic")
     assert inp.Cwo.shape == inp.t.shape == (121,)
     assert np.mean(inp.Cwo) == pytest.approx(2.0, rel=1e-6)  # normalised to ref
     assert inp.M.shape == (121, 4)
@@ -54,29 +55,30 @@ def test_inputs_from_hydrus_normalised_and_shaped():
 
 
 @hydrus
-def test_inputs_from_hydrus_honours_biomass_selection():
-    """The HYDRUS coupling must build M from the selected biomass driver (ORYZA2000
-    by default, not silently growth_rice): the ORYZA leaf senesces (peaks mid-season
-    then declines) and the leaf-death rate is carried as PlantInputs.leaf_loss so the
-    leaf-senescence correction applies; growth_rice's leaf is monotonic and carries
-    none. (Regression for the driver-builder biomass bug.)"""
-    t = np.linspace(0.0, 120.0, 121)
+def test_inputs_from_hydrus_honours_the_crop_selection():
+    """The HYDRUS coupling builds the crop side from the selected scenario: the site-year
+    by default (the ORYZA leaf senesces and carries its death rate as leaf_loss), the
+    generic drivers with a biomass driver otherwise (growth_rice: monotonic leaf, no rate)."""
+    import site_scenario as ss
     li = 2                                                   # root,stem,leaf,grain
-    io_, _ = sh.inputs_from_hydrus(8, "PFCA", season=120.0, n_t=121, biomass="oryza")
-    ig, _ = sh.inputs_from_hydrus(8, "PFCA", season=120.0, n_t=121, biomass="growth_rice")
+    io_, _ = sh.inputs_from_hydrus(8, "PFCA")
+    assert io_.t[-1] == pytest.approx(ss.yamazaki2020_mean_run()["t"][-1])
+    ig, _ = sh.inputs_from_hydrus(8, "PFCA", season=120.0, n_t=121, biomass="growth_rice",
+                                  scenario="generic")
     Lo, Lg = io_.M[:, li], ig.M[:, li]
     assert io_.leaf_loss is not None and Lo[-1] < 0.7 * Lo.max()      # ORYZA senesces
     assert ig.leaf_loss is None and Lg[-1] >= 0.95 * Lg.max()         # growth_rice monotonic
-    assert not np.allclose(io_.M, ig.M)
 
 
 @hydrus
-def test_hydrus_qtp_matches_measured_forcing_when_unstressed():
-    """qtp_from_hydrus (default) must reproduce the measured forcing_rice Q_TP in
-    a well-watered flooded paddy (no soil-water stress) -- it is consistent with,
-    not a regression from, the measured crop physiology."""
-    import forcing_rice as fr
-    inp, _ = sh.inputs_from_hydrus(8, "PFCA", season=120.0, n_t=241)
-    q_meas = fr.Q_TP(inp.t, 120.0)
-    assert inp.Qtp.max() == pytest.approx(q_meas.max(), rel=0.10)   # peak within 10%
-    assert np.corrcoef(inp.Qtp, q_meas)[0, 1] > 0.98               # same shape
+def test_hydrus_qtp_matches_the_crop_transpiration_when_unstressed():
+    """qtp_from_hydrus (default): HYDRUS's actual root water uptake reproduces the crop's
+    potential transpiration (the site-year's ORYZA2000 Tp) in a well-watered flooded paddy
+    -- consistent with, not a regression from, the crop physiology."""
+    import site_scenario as ss
+    run = ss.yamazaki2020_mean_run()
+    inp, _ = sh.inputs_from_hydrus(8, "PFCA")
+    wet = (inp.t >= 1.0) & (inp.t <= 90.0)               # flooded (flood_until); HYDRUS starts on day 1
+    assert np.allclose(inp.Qtp[wet], run["Qtp"][wet], rtol=0.02, atol=1e-3)
+    # after drainage the drying soil limits uptake below the potential
+    assert inp.Qtp[-1] < run["Qtp"][-1]

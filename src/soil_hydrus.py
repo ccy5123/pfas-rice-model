@@ -237,7 +237,7 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, depth: float = 100.0,
         ml.add_obs_nodes([-abs(obs_depth)])
         ml.add_root_uptake(model=0, poptm=[-25.0])
 
-        days = np.arange(1, int(season) + 1)
+        days = np.arange(1, int(np.ceil(season)) + 1)
         if tpot_fn is not None:
             tpot = np.maximum(np.asarray(tpot_fn(days), float), 0.0)   # [cm/day]
         else:
@@ -282,10 +282,17 @@ def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season:
                        Cwo_ref: float = 1.0, f_oc: float = 0.02,
                        qtp_from_hydrus: bool = True, area_per_hill_m2: float | None = None,
                        n_t: int = 241, biomass: str = "oryza", Kd: float | None = None,
-                       mass_basis: str = "fresh", **run_kw):
+                       scenario: str = "yamazaki2020", **run_kw):
     """Build a :class:`PlantInputs` whose ``Cwo`` AND ``Q_TP`` come from a real
-    HYDRUS-1D paddy run for the congener, with growth ``M`` from the selected
-    ``biomass`` driver (ORYZA2000 by default; ``"growth_rice"`` for the logistic).
+    HYDRUS-1D paddy run for the congener.
+
+    scenario "yamazaki2020" (default): the crop side is the calibration site-year
+        (`site_scenario`): the soil run is driven by its ORYZA2000 potential transpiration
+        over its season (transplanting to harvest), ``M`` is its fresh organ mass and the
+        area per hill is 1/density; ``season``, ``n_t``, ``biomass`` and
+        ``area_per_hill_m2`` do not apply.
+    scenario "generic": ``forcing_rice`` transpiration over ``season`` days and the
+        selected ``biomass`` driver (alternative drivers).
 
     The HYDRUS pore-water series is normalised to season-mean ``Cwo_ref`` so the
     average exposure matches a constant-Cwo run -- the difference is purely the
@@ -298,8 +305,6 @@ def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season:
         paddy is unstressed and only diverges under soil-water limitation. If
         False, the measured ``forcing_rice.Q_TP`` is used directly (soil run uses
         the default gaussian potential transpiration).
-    mass_basis : "fresh" (default) converts the biomass driver's DRY organ matter to the
-        FRESH mass the plant ODE is defined on; "dry" is the pre-fix legacy (`organ_mass`).
     Kd : pass a linear sorption coefficient [L/kg] directly instead of deriving it
         from the PFAS chain-length Koc QSPR. This is what a NEUTRAL organic needs --
         `paddy_kd` is a per-CF2 group contribution and has no meaning for one -- and
@@ -309,7 +314,16 @@ def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season:
     """
     from pfas_rice_plant_module_4pool_surf import PlantInputs
     import forcing_rice as fr
+    import organ_mass as om
 
+    site = None
+    if scenario == "yamazaki2020":
+        import site_scenario as ss
+        site = ss.yamazaki2020_mean_run()
+        season = float(site["t"][-1])
+        area_per_hill_m2 = 1.0 / ss.NH
+    elif scenario != "generic":
+        raise ValueError(f"unknown scenario {scenario!r}")
     if area_per_hill_m2 is None:
         area_per_hill_m2 = fr.AREA_PER_HILL_M2
 
@@ -318,32 +332,40 @@ def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season:
             raise ValueError("give either congener_n_C (PFAS) or an explicit Kd [L/kg]")
         Kd = paddy_kd(congener_n_C, group, f_oc)
     Kd = float(Kd)
-    # drive the soil run with the measured transpiration shape (mm/day -> cm/day)
-    tpot_fn = (lambda d: fr.transpiration_mm_d(d, season) / 10.0) if qtp_from_hydrus else None
+    # drive the soil run with the crop's potential transpiration (mm/day -> cm/day)
+    if site is not None:
+        tpot_fn = (lambda d: np.interp(d, site["t"], site["Tp"]) / 10.0) if qtp_from_hydrus else None
+    else:
+        tpot_fn = (lambda d: fr.transpiration_mm_d(d, season) / 10.0) if qtp_from_hydrus else None
     res = run_paddy_hydrus(Kd, season=season, tpot_fn=tpot_fn, **run_kw)
 
-    t = np.linspace(0.0, season, n_t)
+    if site is not None:
+        t = np.asarray(site["t"], float)
+        b = {k: site[k] for k in ("root", "stem", "leaf", "grain")}
+        leaf_loss = site["leaf_death_rate"]
+        q_direct = site["Qtp"]
+    else:
+        t = np.linspace(0.0, season, n_t)
+        if biomass == "oryza":
+            import oryza_growth as og
+            b = og.organ_biomass_oryza(t, p=og.OryzaParams(season=season))
+        else:
+            import growth_rice as gr
+            b = gr.organ_biomass(t, season)
+        leaf_loss = b.get("leaf_death_rate")          # only the senescing ORYZA driver supplies it
+        q_direct = fr.Q_TP(t, season)
     Cw_h = np.interp(t, res.t, res.Cw)
     Cw_h = Cw_h * (Cwo_ref / np.mean(Cw_h))          # normalise to mean = Cwo_ref
-
-    if biomass == "oryza":
-        import oryza_growth as og
-        b = og.organ_biomass_oryza(t, p=og.OryzaParams(season=season))
-    else:
-        import growth_rice as gr
-        b = gr.organ_biomass(t, season)
-    import organ_mass as om
-    M = om.organ_matrix(b, mass_basis)                # crop DRY matter -> ODE FRESH mass (default)
-    leaf_loss = b.get("leaf_death_rate")              # only the senescing ORYZA driver supplies it
+    M = om.organ_matrix(b)                            # crop DRY matter -> ODE FRESH mass
 
     if qtp_from_hydrus:
         # vRoot [cm/day] over the surface -> volumetric uptake per hill [L/day]:
         # vRoot * area[cm^2] / 1000[cm^3/L] = vRoot * (area_m2 * 1e4) / 1e3
         Qtp = np.maximum(np.interp(t, res.t, res.vroot), 0.0) * area_per_hill_m2 * 10.0
     else:
-        Qtp = fr.Q_TP(t, season)
+        Qtp = q_direct
 
-    return PlantInputs(t=t, Cwo=Cw_h, Qtp=Qtp, M=M, leaf_loss=leaf_loss, M_basis=mass_basis), res
+    return PlantInputs(t=t, Cwo=Cw_h, Qtp=Qtp, M=M, leaf_loss=leaf_loss, M_basis=om.MASS_BASIS), res
 
 
 # ---------------------------------------------------------------------------

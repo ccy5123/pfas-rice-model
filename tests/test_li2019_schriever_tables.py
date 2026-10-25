@@ -309,24 +309,18 @@ def test_the_rice_ode_discounts_the_root_in_a_kow_dependent_way():
     Kodesova sits at log Kow 2.25, close to the worst point -- so its ODE-basis
     score is flattered. Pinned so the artifact cannot be forgotten again.
 
-    MOSTLY A MASS-BASIS ARTIFACT (src/organ_mass.py): that ~0.25-log discount was
-    measured with the biomass driver's DRY matter as the root mass, i.e. a root 10x
-    too light to keep up with its own xylem export. On the corrected FRESH mass the
-    ODE root sits within ~8% of K_PW everywhere -- both readings are pinned."""
+    MOSTLY A MASS-BASIS ARTIFACT (src/organ_mass.py): the large discount appeared with
+    crop dry matter used as the root mass, a root 10x too light to keep up with its own
+    xylem export. On fresh organ mass the ODE root sits within ~12% of K_PW everywhere."""
     import neutral_dpu_validation as V
 
-    for basis in ("dry", "fresh"):
-        drv = V.drivers(mass_basis=basis)
-        disc = {}
-        for lk in (-0.5, 1.78, 2.25, 5.0):
-            m = ND.simulate_neutral(ND.NeutralCompound("x", lk), drv)
-            disc[lk] = m["baf_final"]["root"] / V.equilibrium_rcf(lk)
-        assert disc[-0.5] > 0.85 and disc[5.0] > 0.95  # ~no discount at the ends
-        if basis == "dry":
-            assert disc[1.78] < 0.60                    # ~0.25 log at the peak
-            assert disc[2.25] < 0.65                    # and Kodesova sat there
-        else:
-            assert min(disc.values()) > 0.88            # the artifact is ~gone
+    drv = V.drivers()
+    disc = {}
+    for lk in (-0.5, 1.78, 2.25, 5.0):
+        m = ND.simulate_neutral(ND.NeutralCompound("x", lk), drv)
+        disc[lk] = m["baf_final"]["root"] / V.equilibrium_rcf(lk)
+    assert disc[-0.5] > 0.85 and disc[5.0] > 0.95      # ~no discount at the ends
+    assert min(disc.values()) > 0.88                    # and little anywhere
 
 
 def test_equilibrium_mode_changes_the_root_tables_and_not_ge2017():
@@ -543,40 +537,30 @@ def test_metabolism_is_measured_not_fitted_and_is_species_dependent():
     assert radish / lettuce > 3.0
 
 
-def test_metabolism_alone_cannot_close_the_leaf_root_gap():
-    """Section 6, and the warning it carries for Ge 2017: even a 1.5-day
-    half-life leaves the model far above the measured leaf/root, so a half-life
-    fitted to leaf data is absorbing the driver mismatch, not just metabolism.
-
-    TRUE ONLY ON THE PRE-FIX DRY ORGAN MASS (src/organ_mass.py). With the leaf mass on
-    the fresh basis the no-metabolism leaf/root falls 181 -> ~35 and a 1.5-d half-life
-    brings it to ~1.4x the measurement -- so most of the 55x excess was the mass basis,
-    and metabolism (which Kodesova MEASURED: leaf parent fraction 0.49) can account for
-    much of the rest. A rice-driver mismatch of ~10x without metabolism remains."""
+def test_metabolism_and_the_leaf_root_gap():
+    """Kodesova's leaf/root on fresh organ mass: without metabolism the model's leaf/root
+    is far above the measurement (a rice-driver mismatch remains), and a short in-planta
+    half-life -- which Kodesova MEASURED in effect (leaf parent fraction 0.49) -- closes
+    most of it. (With crop dry matter used as fresh mass the gap had looked like 55x and
+    metabolism-proof; that was the mass basis.)"""
     import kodesova2019_carbamazepine as K
     import neutral_dpu_validation as V
 
-    for basis in ("dry", "fresh"):
-        drv = V.drivers(mass_basis=basis)
-        t = np.asarray(drv["t"])
-        i = int(np.argmin(np.abs(t - K.HARVEST_D)))
-        obs = np.median([l / r for r, l in K.KOD_LEAF_ROOT])
-        assert 2.0 < obs < 5.0
+    drv = V.drivers()
+    t = np.asarray(drv["t"])
+    i = int(np.argmin(np.abs(t - K.HARVEST_D)))
+    obs = np.median([l / r for r, l in K.KOD_LEAF_ROOT])
+    assert 2.0 < obs < 5.0
 
-        def model_leaf_root(half_life):
-            g = 0.0 if half_life is None else float(np.log(2.0) / half_life)
-            comps = ND.rice_compartments(gammas={k: g for k in
-                                                 ("root", "stem", "leaf", "grain")})
-            m = ND.simulate_neutral(ND.NeutralCompound("carbamazepine", K.LOG_KOW),
-                                    drv, comps=comps)
-            return m["conc"]["leaf"][i] / m["conc"]["root"][i]
+    def model_leaf_root(half_life):
+        g = 0.0 if half_life is None else float(np.log(2.0) / half_life)
+        comps = ND.rice_compartments(gammas={k: g for k in ("root", "stem", "leaf", "grain")})
+        m = ND.simulate_neutral(ND.NeutralCompound("carbamazepine", K.LOG_KOW), drv, comps=comps)
+        return m["conc"]["leaf"][i] / m["conc"]["root"][i]
 
-        assert model_leaf_root(1.5) < model_leaf_root(7.0)   # shorter does help
-        if basis == "dry":
-            assert model_leaf_root(1.5) > 5.0 * obs          # still far above at 1.5 d
-        else:
-            assert model_leaf_root(None) > 5.0 * obs         # no metabolism: still far above
-            assert model_leaf_root(1.5) < 2.0 * obs          # a 1.5-d half-life ~closes it
+    assert model_leaf_root(1.5) < model_leaf_root(7.0)   # shorter does help
+    assert model_leaf_root(None) > 5.0 * obs             # no metabolism: still far above
+    assert model_leaf_root(1.5) < 2.0 * obs              # a 1.5-d half-life ~closes it
 
 
 # --------------------------------------------------------------------------

@@ -73,16 +73,11 @@ def theta(organ, value):
 
 
 def pfas_bafs(name):
-    """Root/straw/grain BAF on the fresh basis and on the dry basis."""
+    """Root/straw/grain BAF on the fresh basis and on the dry basis (harvest operator)."""
     r = api.simulate(name)
-    th = {o: om.THETA_FW[o] for o in om.ORGANS}
-    Mf = r["M"][-1]
     C = {k: r["conc"][k][-1] / r["cwo_ref"] for k in api.TISSUES}
     fw = dict(root=C["root"], straw=r["straw_baf"], grain=C["grain"])
-    dry_mass = {o: Mf[i] * (1.0 - th[o]) for i, o in enumerate(api.TISSUES)}
-    dw = dict(root=C["root"] / (1.0 - th["root"]),
-              straw=(C["stem"] * Mf[1] + C["leaf"] * Mf[2]) / (dry_mass["stem"] + dry_mass["leaf"]),
-              grain=C["grain"] / (1.0 - th["grain"]))
+    dw = {k: r["baf_final_dw"][k] for k in ("root", "straw", "grain")}
     return fw, dw
 
 

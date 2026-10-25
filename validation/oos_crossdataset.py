@@ -1,34 +1,21 @@
 #!/usr/bin/env python3
 """
-Out-of-sample cross-dataset test: does the K_PL-gated lipid mechanism (fit to
-Yamazaki 2023) PREDICT independent data without refitting?
+Out-of-sample test on Kim 2019 brown-rice grain: do the Yamazaki-fit transport variants
+PREDICT an independent dataset without refitting?
 =========================================================================
 
-The transport parameters are fit to Yamazaki 2023 only. This script transfers
-three model variants -- monotone `f_xy_recommended`, the saturated per-congener
-W2 fit, and this session's K_PL-gated lipid loading (`lipid_loading=True`) -- to
-two datasets they were NOT fit on and compares the predictions.
+The transport parameters are fit to Yamazaki 2023 only (validation/refit_site_year.py).
+This script transfers three variants -- the monotone a-priori f_xy ("mono"), the
+saturated per-congener fit ("fit") and the K_PL-gated lipid loading ("lipid") -- to Kim
+2019's brown-rice (grain) BAF, pore-water basis, on the default drivers (the calibration
+site-year; Kim's 30 fields have no dated crop record). Grain is compared on the model's
+fresh basis (theta 0.14, harvest moisture, = the as-sold brown rice Kim measured).
+PFOA is left out of the RMSE (its per-site check is validation/kim2019_pfoa_anchor.py);
+the long chains have low rice detection frequency (validation/kim2019_censored.py scores
+them with their non-detects). The Li 2025 comparison is validation/li2025_stage_resolved.py.
 
-Targets (and why each is/ isn't usable):
-  (1) Kim 2019 brown-rice (grain) BAF, porewater basis -- the cleaner test.
-      PFOA was used to fit L_Ph, so it is flagged and excluded from the score;
-      the long chains have low rice detection frequency (DF) and are unreliable.
-  (2) Li 2025 (Tianjin field) -- only the WATER-INDEPENDENT tissue ratios (TF)
-      are usable: the reported BAFs scale inversely with water quality (PFOS
-      "poor 0.3-1.6%" -> BAF 250; PFOA "good" -> BAF ~2), i.e. the group-water
-      denominator is unreliable. Even the TF carries a root surface-sorption
-      confound, so Li is expected to be inconclusive.
-
-Headline result: the lipid mechanism predicts the Kim grain chain-length pattern
-(including the long-chain RISE the monotone/W2 models structurally miss) far
-better out-of-sample -- the project's first genuine predictive signal. Li does
-not discriminate. Run: python validation/oos_crossdataset.py
-
-Organ-mass basis (src/organ_mass.py): FRESH by default. The record made before that fix
-(dry matter used as M; Kim excl PFOA lipid 0.48 / mono 2.05 / W2 1.07) is reproduced with
-PFAS_MASS_BASIS=dry, which also selects the dry LIPID_LOADING constants.
+Run: python validation/oos_crossdataset.py
 """
-import csv
 import os
 import sys
 
@@ -40,18 +27,13 @@ sys.path.insert(0, os.path.join(ROOT, "src"))
 import model_api as api          # noqa: E402
 import literature_params as lp   # noqa: E402
 
-MODES = ("lipid", "mono", "W2")
-MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")
+MODES = ("lipid", "mono", "fit")
 
 
 def predict(nm, mode):
-    if mode == "lipid":
-        r = api.simulate(nm, lipid_loading=True, measured_forcing=True, mass_basis=MASS_BASIS)
-    elif mode == "mono":
-        r = api.simulate(nm, f_xy_source="recommended", measured_forcing=True,
-                         mass_basis=MASS_BASIS)
-    else:
-        r = api.simulate(nm, f_xy_source="W2fit", measured_forcing=True, mass_basis=MASS_BASIS)
+    kw = dict(lipid=dict(lipid_loading=True), mono=dict(f_xy_source="recommended"),
+              fit=dict(f_xy_source="fit"))[mode]
+    r = api.simulate(nm, **kw)
     return {"root": r["baf_final"]["root"], "straw": r["straw_baf"], "grain": r["baf_final"]["grain"]}
 
 
@@ -62,16 +44,15 @@ def kim_grain():
     literature_params demo is); its per-site check is validation/kim2019_pfoa_anchor.py."""
     kim = lp.kim2019_grain_baf("porewater")
     DF = {"PFHpA": 13, "PFOA": 57, "PFNA": 20, "PFDA": 6.7, "PFUnDA": 13, "PFDoDA": 3.3}
-    print(f"=== (1) Kim 2019 grain BAF [porewater]  (OUT-OF-SAMPLE; * = not in the RMSE, see kim2019_pfoa_anchor; "
-          f"{MASS_BASIS} organ mass) ===")
-    print(f"{'PFAS':7}{'DF%':>5}{'obs':>9}{'lipid':>9}{'mono':>9}{'W2':>9}")
+    print("=== Kim 2019 grain BAF [porewater]  (OUT-OF-SAMPLE; * = not in the RMSE, see kim2019_pfoa_anchor) ===")
+    print(f"{'PFAS':7}{'DF%':>5}{'obs':>9}" + "".join(f"{m:>9}" for m in MODES))
     rows = []
     for nm, o in kim.items():
         if nm not in api.CONGENERS:
             continue
         p = {m: predict(nm, m)["grain"] for m in MODES}
         print(f"{nm:6}{'*' if nm=='PFOA' else ' '}{DF.get(nm,0):>5.0f}{o:>9.2f}"
-              f"{p['lipid']:>9.2f}{p['mono']:>9.2f}{p['W2']:>9.2f}")
+              + "".join(f"{p[m]:>9.2f}" for m in MODES))
         rows.append((nm, o, p, DF.get(nm, 0)))
 
     def rmse(mode, hiDF=False):
@@ -84,42 +65,5 @@ def kim_grain():
     return {m: (rmse(m), rmse(m, True)) for m in MODES}
 
 
-def li_tf():
-    """(2) Li 2025 water-independent tissue ratios (TF) — the only usable Li signal.
-
-    Kept as the record the multi-dataset OOS report was made with. It sets the model's
-    HARVEST-day BAF against the data's 5-STAGE MEAN, on fresh weight. The time-matched,
-    dry-weight comparison with a stated TF estimator is validation/li2025_stage_resolved.py,
-    and it is not inconclusive: the redistributed shoot + lipid loading wins there."""
-    obs = {}
-    with open(os.path.join(ROOT, "data_obs", "obs_baf_Li2025.csv")) as f:
-        for r in csv.DictReader(f):
-            obs.setdefault(r["compound"], {})[r["tissue"]] = float(r["baf"])
-    print("\n=== (2) Li 2025 TF = tissue/tissue (WATER-INDEPENDENT) ===")
-    print(f"{'PFAS':7}{'straw/root o':>13}{'lipid':>7}{'mono':>7}{'W2':>7}"
-          f"   {'grain/root o':>13}{'lipid':>7}{'mono':>7}{'W2':>7}")
-    es = {m: [] for m in MODES}
-    eg = {m: [] for m in MODES}
-    for nm in ("PFBA", "PFHxA", "PFOA", "PFBS", "PFOS"):
-        o = obs[nm]
-        P = {m: predict(nm, m) for m in MODES}
-        ts_o = o["straw"] / o["root"]
-        tg_o = o.get("grain", np.nan) / o["root"] if "grain" in o else np.nan
-        ts = {m: P[m]["straw"] / P[m]["root"] for m in MODES}
-        tg = {m: P[m]["grain"] / P[m]["root"] for m in MODES}
-        for m in MODES:
-            es[m].append((np.log10(ts[m]) - np.log10(ts_o)) ** 2)
-            if not np.isnan(tg_o):
-                eg[m].append((np.log10(max(tg[m], 1e-6)) - np.log10(tg_o)) ** 2)
-        print(f"{nm:7}{ts_o:>13.2f}{ts['lipid']:>7.2f}{ts['mono']:>7.2f}{ts['W2']:>7.2f}"
-              f"   {tg_o:>13.2f}{tg['lipid']:>7.2f}{tg['mono']:>7.2f}{tg['W2']:>7.2f}")
-    out = {m: (float(np.sqrt(np.mean(es[m]))), float(np.sqrt(np.mean(eg[m])))) for m in MODES}
-    print("log10 RMSE TF straw/root: " + "  ".join(f"{m}={out[m][0]:.2f}" for m in MODES))
-    print("log10 RMSE TF grain/root: " + "  ".join(f"{m}={out[m][1]:.2f}" for m in MODES))
-    print("(Li is field/group-water/surface-confounded -> expected to be inconclusive.)")
-    return out
-
-
 if __name__ == "__main__":
     kim_grain()
-    li_tf()

@@ -93,16 +93,16 @@ def test_the_pre_registered_verdict(verdict):
     assert prim["B"]["sc"]["WAGT"] == pytest.approx(0.236, abs=0.01)
 
 
-def test_model_api_mode_is_opt_in():
+def test_model_api_generic_biomass_modes():
+    """On the generic drivers the port and the reduced driver are both selectable and give
+    different crops; an unknown name raises instead of falling back silently. (The default
+    scenario runs the port on the Yamazaki site-year -- tests/test_site_scenario.py.)"""
     import model_api as api
-    default = api.simulate("PFOA")
-    shipped = api.simulate("PFOA", biomass="oryza")
-    assert default["baf_final"] == shipped["baf_final"]                      # default untouched
-    port = api.simulate("PFOA", biomass="oryza2000")
-    assert port["baf_final"]["root"] == pytest.approx(default["baf_final"]["root"], rel=0.01)
-    assert port["baf_final"]["grain"] > 1.5 * default["baf_final"]["grain"]
+    port = api.simulate("PFOA", scenario="generic", biomass="oryza2000")
+    reduced = api.simulate("PFOA", scenario="generic", biomass="oryza")
+    assert not np.allclose(port["M"][-1], reduced["M"][-1])
     with pytest.raises(ValueError):
-        api.simulate("PFOA", biomass="ORYZA2000")                            # no silent fallback
+        api.simulate("PFOA", scenario="generic", biomass="ORYZA2000")
 
 
 if __name__ == "__main__":

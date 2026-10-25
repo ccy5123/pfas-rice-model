@@ -379,7 +379,7 @@ def build():
         spec = "Curated congener"
         E_m = -120
         fxy_source = "recommended"
-        biomass = "oryza"
+        biomass = "site2020"      # crop scenario key: ui.common.CROPS / crop_kw
         uptake = api.DEFAULT_UPTAKE
         lipid_loading = False
         vmax_scale = None
@@ -485,26 +485,22 @@ def build():
                 E_m = st.slider("Root membrane potential E_m  [mV]", -160, -90, -120, 5,
                                 help="GHK anion-exclusion lever (rice −116…−140 mV; NH₄⁺ depolarises).")
                 fxy_label = st.radio("Root→shoot loading f_xy",
-                                     ["recommended (monotone, physical)", "W2 fit (reproduces Yamazaki)"])
-                fxy_source = "recommended" if fxy_label.startswith("recommended") else "W2fit"
-            _bm = {"ORYZA Level-1, reduced (default)": "oryza",
-                   "ORYZA2000 IR72.D92 (faithful port)": "oryza2000",
-                   "growth_rice (partition + logistic)": "growth_rice"}
-            bm_label = st.radio("Biomass driver M(t)", list(_bm),
-                                help="ORYZA Level-1 = a reduced re-coding of the ORYZA2000 carbon balance with "
-                                     "'IR72 order of magnitude' parameters, anchored to 1740 g/m2 (the default; "
-                                     "the ORYZA-based fits were made on it). ORYZA2000 IR72.D92 = the potential-"
-                                     "production model ported line by line from the ORYZA2000 manual with the "
-                                     "IR72 crop file verbatim: it reproduces the manual's IR72DS92 experiment "
-                                     "(phenology within 2 d, biomass within ~6%) where the reduced one matures "
-                                     "12 d late (that is its own calibration experiment). On an independent "
-                                     "temperate one (Shizukuishi FACE, Akitakomachi) the reduced one never matures "
-                                     "at 39.6 N; with both drivers' phenology calibrated to the cultivar the port "
-                                     "fits the organ shapes better overall but still over-states dead leaves. It "
-                                     "matures earlier, so a 120-d season runs past maturity. "
-                                     "growth_rice = ORYZA IR72 partitioning imposed on a logistic (lightweight; "
-                                     "the historical calibration basis). Drives M(t) when the scenario uses "
-                                     "built-in forcings (ignored if a driver CSV supplies M).")
+                                     ["recommended (monotone, a priori)", "fit (reproduces Yamazaki)"],
+                                     help="recommended: the monotone physical f_xy, with L_Ph and κ_d fitted to "
+                                          "Yamazaki's root and grain given it — straw is a prediction. fit: all "
+                                          "three fitted per congener on the 2020 site-year (a saturated "
+                                          "reproduction). validation/refit_site_year.py.")
+                fxy_source = "recommended" if fxy_label.startswith("recommended") else "fit"
+            _bm = {v: k for k, v in _CM.CROPS.items()}
+            bm_label = st.radio("Crop drivers (transpiration + organ mass)", list(_bm),
+                                help="DEFAULT: the calibration site-year — JMA Tsukuba 2020 weather, the "
+                                     "ORYZA2000 port (IR72.D92) transplanted on Yamazaki's date with phenology "
+                                     "on its heading/harvest dates, ORYZA2000 transpiration (FAO-56 terms); the "
+                                     "season is transplanting to harvest. The transport parameters are fitted on "
+                                     "it. 'generic climatology' = forcing_rice transpiration + a biomass driver "
+                                     "over the season slider (alternatives for sensitivity; the reduced ORYZA "
+                                     "matures 12 d late on its own calibration experiment, growth_rice has no "
+                                     "leaf death). Ignored when a driver CSV supplies M.")
             biomass = _bm[bm_label]
 
             # PFAS mechanism switches (carrier/bypass, lipid loading) -- see _mechanism_panel
@@ -515,7 +511,8 @@ def build():
             if mode == "Model (parametric)":
                 Cwo_const = st.number_input("Pore-water Cwᵒ  [µg/L]", min_value=0.0, value=1.0, step=0.1,
                                             help="Free anion conc. driving root uptake. 1.0 → tissue conc equals BAF.")
-                season = float(st.slider("Season length  [days]", 90, 160, 120, 5))
+                if biomass != "site2020":
+                    season = float(st.slider("Season length  [days]", 90, 160, 120, 5))
                 cwo_label = st.radio("Pore-water Cwᵒ(t) shape",
                                      ["constant (flat)", "flooded (dilution + leaching)"],
                                      help="constant → Cwᵒ held flat (tissue conc == BAF). flooded → analytic "
@@ -538,9 +535,9 @@ def build():
                                         width="stretch", theme=None)
                     except Exception:                               # noqa: BLE001 (preview is non-essential)
                         pass
-                measured = st.checkbox("Measured forcings (Q_TP, M_s)", value=True,
-                                       help="On: transpiration from Kumari/NayHtoon, biomass M(t) from the "
-                                            "sidebar biomass driver (ORYZA Level-1, ORYZA2000 IR72.D92, or growth_rice).")
+                measured = st.checkbox("Crop drivers on (off = illustrative placeholder logistics)", value=True,
+                                       help="On: the crop drivers chosen above. Off: the illustrative logistic "
+                                            "placeholders (no basis; for structure only).")
 
             elif mode == "Custom tables (Cwᵒ + growth)":
                 st.caption("Enter the **growth** and **pore-water Cwᵒ(t)** tables in the main panel → "
@@ -562,11 +559,11 @@ def build():
                         Q = df[cols["qtp"]].to_numpy(float) if "qtp" in cols else None
                         M = (df[[cols["m_root"], cols["m_stem"], cols["m_leaf"], cols["m_grain"]]].to_numpy(float)
                              if all(k in cols for k in ("m_root", "m_stem", "m_leaf", "m_grain")) else None)
-                        drivers = api.drivers_from_arrays(t, Cwo, Qtp=Q, M=M, biomass=biomass)
+                        drivers = api.drivers_from_arrays(t, Cwo, Qtp=Q, M=M, **_CM.crop_kw(biomass))
                         st.success(f"Loaded {len(t)} rows from {up.name}.")
                     elif use_ex:
                         drivers = api.load_driver_csv(os.path.join(_EX, "hydrus_drivers_example.csv"),
-                                                      biomass=biomass)
+                                                      **_CM.crop_kw(biomass))
                         st.info("Using examples/hydrus_drivers_example.csv (synthetic HYDRUS-style run).")
                 except Exception as e:                                  # noqa: BLE001
                     st.error(f"Could not read drivers: {e}")
@@ -610,7 +607,7 @@ def build():
                     kd_n = float(neutral["Koc"]) * float(f_oc)
                     try:
                         drivers = _hydrus_drivers_cached(None, season, f_oc, flood_until, percolation,
-                                                         biomass=biomass, Kd=kd_n)
+                                                         crop=biomass, Kd=kd_n)
                         st.success(f"HYDRUS-1D run complete — Kd = {kd_n:.3g} L/kg "
                                    f"(Koc {neutral['Koc']:.1f} × f_oc {f_oc:g}; mean-normalised).")
                     except Exception as e:                                  # noqa: BLE001
@@ -635,7 +632,7 @@ def build():
                     season = 120.0
                     try:
                         drivers = _hydrus_drivers_cached(soil_cong, season, f_oc, flood_until, percolation,
-                                                         biomass=biomass)
+                                                         crop=biomass)
                         st.success(f"HYDRUS-1D run complete — Cwᵒ(t) for {soil_cong} "
                                    f"(Kd-retarded; mean-normalised).")
                     except Exception as e:                                  # noqa: BLE001
@@ -649,7 +646,7 @@ def build():
                 n_F = st.slider("Freundlich exponent n", 0.6, 1.0, 0.85, 0.01)
                 theta_g = st.slider("Drained water content θ_g  [L/kg]", 0.2, 0.6, 0.35, 0.01)
                 flood = st.checkbox("Flooded early season (dilution + leaching)", value=True)
-                season = 120.0
+                season = (float(api.scenario_drivers()["t"][-1]) if biomass == "site2020" else 120.0)
                 t = np.linspace(0.0, season, 241)
                 flooded = t < (0.75 * season) if flood else None
                 # Unified with the parametric flooded mode: default to the per-congener
@@ -661,7 +658,7 @@ def build():
                                          "fast, long chains stay buffered ≈0).") if flood else 0.0
                 Cwo, soil_obj = api.pore_water_from_inventory(
                     t, C_total, K_F=K_F, n=n_F, theta_g=theta_g, flooded=flooded, k_leach=k_leach)
-                drivers = api.drivers_from_arrays(t, Cwo, season=season, biomass=biomass)
+                drivers = api.drivers_from_arrays(t, Cwo, season=season, **_CM.crop_kw(biomass))
 
             else:  # Biomonitoring
                 st.caption("Enter MEASURED tissue concentrations + the pore-water/soil-solution Cwᵒ. "

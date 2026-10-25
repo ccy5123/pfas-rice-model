@@ -9,7 +9,8 @@ The 4-pool model mal-distributes the shoot (stem pass-through ~0, leaf-sink huge
 so fitting f_xy to per-organ TF there is ill-posed (see tang2026_fxy_TF_validation
 and the documented finding in docs/VALIDATION_TANG2026_KR.md).  The redistributed-
 shoot model (`simulate_nstem_leaf`) restores a sensible stem~leaf split, so here we:
-  (B) drive nstem_leaf with the MECHANISTIC ORYZA biomass (biomass_fn=ORYZA), and
+  (B) drive nstem_leaf with the default drivers (the calibration site-year; Tang's own site
+      and dates are not in the repo), and
   (A) re-calibrate f_xy per congener to the MEASURED Tang TF, holding the crop-
       architecture levers (stem_transp_frac/retention) and L_Ph fixed.
 This EXTENDS docs/VALIDATION_TANG2026_NSTEM_KR.md (which already recalibrated f_xy to
@@ -28,18 +29,16 @@ grain/endosperm is phloem-fed (L_Ph) and only reported -- and NOTE that L_Ph CAN
 close the grain gap: even maxed (and with the lipid g_ph term) grain TF_dw ceilings at
 ~0.3-0.7 vs Tang's 0.9-1.6, so the grain under-prediction is STRUCTURAL on a dry-weight
 basis, not an L_Ph calibration issue (docs/tang2026_grain_units_exploration.md).  TF is
-dw-converted to match Tang: TF_dw = TF_fw * (1-theta_root)/(1-theta_organ).
+formed on dry weight from the harvest operator (src/harvest.py; leaf = green + attached dead
+blades), as Tang's is.
 
 Provenance: the fitted f_xy is reported as an OVERRIDE only -- params/parameters.json
 is NOT modified (same policy as the existing Tang nstem validation).
 
-Organ-mass basis (src/organ_mass.py): the ORYZA dry matter becomes the ODE's FRESH mass by
-default. The fit made before that fix (dry matter used as M) is kept as
-`model_api.TANG_REFIT_FXY_DRY`; reproduce it with PFAS_MASS_BASIS=dry.
+The 0.1 ug/g fit is model_api.TANG_REFIT_FXY.
 
 Run:  python validation/tang2026_fxy_refit.py
       -> table (current vs fitted f_xy, RMSE before/after) + figure
-      PFAS_MASS_BASIS=dry python validation/tang2026_fxy_refit.py   (the pre-fix record)
 """
 import csv
 import json
@@ -56,19 +55,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "src"))
 import model_api as api            # noqa: E402
-import oryza_growth as og          # noqa: E402
 
 CONGENERS = ["PFOA", "PFOS", "GenX"]
-MASS_BASIS = os.environ.get("PFAS_MASS_BASIS", "fresh")   # organ_mass.MASS_BASES
-SEASON = 150.0                                    # Tang growth cycle
 # model organ -> (theta key, Tang organ); fit on the shoot pair, report grain
 SHOOT = {"stem": ("stem", "stalk"), "leaf": ("leaf", "leaf")}
 ALL = {**SHOOT, "grain": ("grain_brown", "endosperm")}
 # CLAUDE.md-documented recalibration targets (for context only)
-DOC_RECAL = {"PFOS": 0.142, "GenX": 0.013}
-
-_OB = lambda t, s: og.organ_biomass_oryza(t, p=og.OryzaParams(season=s))
-
 
 def load_theta():
     tc = json.load(open(os.path.join(ROOT, "params", "parameters.json")))["tissue_composition_recommended"]
@@ -99,11 +91,10 @@ def tang_agg(dd, mode):
 
 
 def model_tf_dw(cong, theta, f_xy=None):
-    """nstem_leaf + ORYZA biomass -> dw TF dict over model organs (stem/leaf/grain)."""
-    r = api.simulate_nstem_leaf(cong, Cwo=1.0, season=SEASON, biomass_fn=_OB,
-                                f_xy_override=f_xy, mass_basis=MASS_BASIS)
-    froot = 1.0 - theta["root"]
-    return {mk: r["tf_final"][mk] * froot / (1.0 - theta[tk]) for mk, (tk, _) in ALL.items()}
+    """nstem_leaf on the default drivers -> dw TF over model organs (harvest operator)."""
+    r = api.simulate_nstem_leaf(cong, Cwo=1.0, f_xy_override=f_xy)
+    dw = r["baf_final_dw"]
+    return {mk: dw[mk] / dw["root"] for mk in ALL}
 
 
 def _shoot_logresid(cong, theta, tang, f_xy):
@@ -140,27 +131,31 @@ def run_mode(theta, dd, mode):
 
 def main():
     theta = load_theta()
+    out = {}
     dd = load_tang_dose()
     cur = {c: api._CONG[c]["f_xy_recommended"] for c in CONGENERS}
     results = {m: run_mode(theta, dd, m) for m in ("low", "mean")}
 
-    print(f"{'cong':6}{'f_xy_cur':>10}{'fit@0.1':>9}{'fit@mean':>10}{'doc_recal':>11}"
+    print(f"{'cong':6}{'f_xy_cur':>10}{'fit@0.1':>9}{'fit@mean':>10}"
           f"{'  RMSE@0.1 b->a':>16}")
     for c in CONGENERS:
         rl, rm = results["low"][1][c], results["mean"][1][c]
         print(f"{c:6}{cur[c]:>10.4f}{rl['fxy']:>9.4f}{rm['fxy']:>10.4f}"
-              f"{DOC_RECAL.get(c, float('nan')):>11.4f}   {rl['rb']:>5.2f} -> {rl['ra']:<5.2f}")
+              f"   {rl['rb']:>5.2f} -> {rl['ra']:<5.2f}")
     for m in ("low", "mean"):
         res = results[m][1]
         rb = np.sqrt(np.mean([res[c]["rb"] ** 2 for c in CONGENERS]))
         ra = np.sqrt(np.mean([res[c]["ra"] ** 2 for c in CONGENERS]))
         print(f"  overall log10 RMSE @ dose={m:4}:  before {rb:.2f} -> after {ra:.2f}")
-    print(f"(organ mass = {MASS_BASIS}. PRIMARY = 0.1 ug/g dose; mean = sensitivity. f_xy fit to stalk+leaf;")
+    print("(PRIMARY = 0.1 ug/g dose; mean = sensitivity. f_xy fit to stalk+leaf;")
     print(" grain phloem-fed (reported, not fit). OVERRIDE-only; parameters.json unchanged.)")
 
     tang_low, res_low = results["low"]
+    out = {m: {c: dict(fxy=results[m][1][c]["fxy"], before=results[m][1][c]["rb"],
+                       after=results[m][1][c]["ra"]) for c in CONGENERS} for m in results}
     _figure(theta, tang_low, cur, {c: res_low[c]["fxy"] for c in CONGENERS},
             {c: res_low[c]["tfb"] for c in CONGENERS}, {c: res_low[c]["tfa"] for c in CONGENERS})
+    return out
 
 
 def _figure(theta, tang, cur, fitted, tf_before, tf_after):
@@ -180,11 +175,10 @@ def _figure(theta, tang, cur, fitted, tf_before, tf_after):
         ax.set_title(c); ax.grid(axis="y", alpha=0.25, which="both")
         ax.legend(fontsize=7.5, loc="upper right")
     axes[0].set_ylabel("transfer factor TF$_{dw}$ = C$_{organ}$/C$_{root}$")
-    fig.suptitle("Tang 2026 TF — f_xy re-calibration on nstem_leaf + ORYZA biomass "
-                 f"({MASS_BASIS} organ mass; shoot fit; grain phloem-fed)", fontsize=12)
+    fig.suptitle("Tang 2026 TF — f_xy re-calibration on nstem_leaf, site-year drivers "
+                 "(shoot fit; grain phloem-fed)", fontsize=12)
     fig.tight_layout(rect=[0, 0, 1, 0.96])
-    sfx = "_dry" if MASS_BASIS == "dry" else ""
-    out = os.path.join(HERE, "figures", f"tang2026_fxy_refit{sfx}.png")
+    out = os.path.join(HERE, "figures", "tang2026_fxy_refit.png")
     fig.savefig(out, dpi=140)
     print(f"\n[written] {out}")
 

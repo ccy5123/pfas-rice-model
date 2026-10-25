@@ -322,21 +322,20 @@ def M_matrix_oryza(t: np.ndarray, p: OryzaParams | None = None, weather: dict | 
 
 def oryza_drivers(congener: str = "PFOA", Cwo: float = 1.0, season: float = 120.0,
                   n_t: int = 241, p: OryzaParams | None = None, weather: dict | None = None,
-                  Qtp=None, mass_basis: str = "fresh"):
+                  Qtp=None):
     """Build a `drivers` dict for model_api.simulate(drivers=...) with ORYZA biomass.
 
     Cwo is held constant (so conc==BAF at Cwo=1); Q_TP defaults to the measured
     forcing_rice transpiration; M is the mechanistic ORYZA biomass, converted from DRY
-    matter to the FRESH mass the plant ODE runs on (`organ_mass`; mass_basis="dry"
-    reproduces the pre-fix drivers)."""
+    matter to the FRESH mass the plant ODE runs on (`organ_mass`)."""
     import forcing_rice as fr
     import organ_mass as om
     t = np.linspace(0.0, season, n_t)
     b = organ_biomass_oryza(t, p, weather)
-    M = om.organ_matrix(b, mass_basis, floor=1e-9)
+    M = om.organ_matrix(b, floor=1e-9)
     Qtp = fr.Q_TP(t, season) if Qtp is None else np.asarray(Qtp, float)
     return dict(t=t, Cwo=np.full_like(t, float(Cwo)), Qtp=Qtp, M=M,
-                leaf_loss=b["leaf_death_rate"], mass_basis=mass_basis)
+                leaf_loss=b["leaf_death_rate"], mass_basis=om.MASS_BASIS)
 
 
 if __name__ == "__main__":

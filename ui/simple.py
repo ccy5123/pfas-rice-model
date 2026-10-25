@@ -8,6 +8,7 @@ import plot_svg
 from ui.common import (_DISCLAIMER_KO, _cong_label_ko, _nearest_index, _simulate,
                        _render_inverse_estimator, _glossary_md, _png_bytes, _html_bytes,
                        _summary_html, signal_badge_html)
+from ui.common import crop_kw as _crop_kw, _yamazaki_observable
 
 
 def render(cfg):
@@ -123,7 +124,7 @@ def render(cfg):
         try:
             _cmp = {c: _simulate(c, Cwo=cfg.Cwo_const, season=cfg.season,
                                  measured_forcing=cfg.measured, E_m_mV=E_m,
-                                 f_xy_source=fxy_source, biomass=biomass) for c in _rep}
+                                 f_xy_source=fxy_source, **_crop_kw(biomass)) for c in _rep}
             st.plotly_chart(plots.fig_congener_compare(_cmp, lang="ko", order=_rep),
                             width="stretch")
             st.caption(
@@ -192,7 +193,7 @@ def render(cfg):
             "|---|---|---|\n"
             "| 음이온 배제(뿌리 흡수 장벽) · 질량보존 | 🟢 **구조적으로 검증** | "
             "막전위 기반 물리(eᴺ≈107); 모델이 반드시 만족 |\n"
-            "| 짧은사슬 PFAS 이행 **방향** | 🟢 **실측과 일치** | Yamazaki 2023 온실 벼 |\n"
+            "| 짧은사슬 PFAS 이행 **방향** | 🟢 **실측과 일치** | Yamazaki 2023 논 현장 (쓰쿠바) |\n"
             "| 토양→공극수 결합 | 🟢 **실제 HYDRUS-1D 엔진 연동** | Method A (일방향) |\n"
             f"| **절대 농도**(예측력) | 🟡 **대략치 (실측과 약 ×{api.uncertainty_factor():.0f})** | "
             "미보정 예측 오차 log10 RMSE ≈0.85 |\n"
@@ -201,9 +202,13 @@ def render(cfg):
         st.caption("🟢 검증됨 · 🟡 대략치/조건의존 · 🔴 미해결(연구 진행 중). 절대 수치보다 **부위 간 "
                    "상대 비교**와 **물질 간 경향**을 신뢰하세요.")
         if obs:
-            st.markdown("**실제 측정값과의 비교 (Yamazaki 2023 온실 벼)** — 막대가 비슷할수록 이 물질에 "
+            st.markdown("**실제 측정값과의 비교 (Yamazaki 2023 논 현장, 쓰쿠바)** — 막대가 비슷할수록 이 물질에 "
                         "대해 모델이 데이터와 잘 맞습니다.")
-            st.plotly_chart(plots.fig_baf(res, obs, lang="ko"), width="stretch", key="baf_trust")
+            # the model's version of the observation (dry weight, the 2020 site-year, two harvests,
+            # the congener's irrigation-water level) -- not the sidebar scenario
+            st.plotly_chart(plots.fig_baf(_yamazaki_observable(congener, f_xy_source=fxy_source,
+                                                               E_m_mV=E_m), obs, lang="ko"),
+                            width="stretch", key="baf_trust")
         else:
             st.caption(f"{congener}에 대한 공개 실측 BAF가 없어 이 물질은 모델 예측만 표시됩니다.")
         st.info(
