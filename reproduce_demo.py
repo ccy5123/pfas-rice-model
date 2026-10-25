@@ -39,7 +39,7 @@ def main(source=SOURCE, verbose=True):
         o = api.observed_baf(c)
         if not o:
             continue
-        pr = api.yamazaki_harvest_baf(c, f_xy_source=source)
+        pr = api.yamazaki_harvest_baf(c, f_xy_source=source, **api.FOUR_POOL_FREE)
         out[c] = pr
         for k in o:
             err[k].append(np.log10(pr[k] / o[k]))

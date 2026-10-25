@@ -208,7 +208,8 @@ def predict(c, f_xy, L_Ph, kappa_d, unknowns=None, attached=1.0, runs="both", li
     for h in hs:
         d = api.scenario_drivers(Cwo=cwo, harvest=h, **unknowns)
         r = api.simulate(c, drivers=d, f_xy_override=f_xy, L_Ph_override=L_Ph,
-                         kappa_d_override=kappa_d, dead_leaf_attached=attached, **kw, **model_kw)
+                         kappa_d_override=kappa_d, dead_leaf_attached=attached, **kw, **model_kw,
+                         **api.FOUR_POOL_FREE)     # the 4-pool fits (lipid via explicit overrides)
         b = r["baf_final_dw"]
         for k in TISS:
             logs[k].append(np.log10(max(b[k], 1e-30)))
@@ -327,7 +328,7 @@ def _per_run(args):
     for h in HARVESTS:
         d = api.scenario_drivers(Cwo=OBS[c]["water_ng_L"] / 1000.0, harvest=h)
         r = api.simulate(c, drivers=d, f_xy_override=p["f_xy"], L_Ph_override=p["L_Ph"],
-                         kappa_d_override=p["kappa_d"])
+                         kappa_d_override=p["kappa_d"], **api.FOUR_POOL_FREE)
         out.append({k: r["baf_final_dw"][k] for k in TISS})
     return c, out
 

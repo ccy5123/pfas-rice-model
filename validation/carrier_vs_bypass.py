@@ -97,7 +97,7 @@ def predict(name, *, vmax_scale=1.0, g_apo=0.0, E_m_mV=E_M_DEFAULT):
     """The three tissue BAFs (the model's Yamazaki observable: site-year, dry basis, two
     harvest runs, the congener's water level) for one congener under one arm's uptake term."""
     b = api.yamazaki_harvest_baf(name, f_xy_source="recommended", vmax_scale=vmax_scale,
-                                 g_apo=g_apo, E_m_mV=E_m_mV)
+                                 g_apo=g_apo, E_m_mV=E_m_mV, **api.FOUR_POOL_FREE)
     return (b["root"], b["straw"], b["grain"])
 
 

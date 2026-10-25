@@ -168,7 +168,7 @@ def whole_plant_baf(name, Cwo, uptake="carrier", km_scale=1.0):
     """Mass-weighted whole-plant BAF -- Tang's BCF endpoint (C_rice/C_soil) up to
     the dose-independent factor 1/Kd, which cancels in every shape used here."""
     r = api.simulate(name, Cwo=Cwo, uptake=uptake, f_xy_source="recommended",
-                     km_scale=km_scale)
+                     km_scale=km_scale, **api.FOUR_POOL_FREE)
     Mf = r["M"][-1]
     C = np.array([r["conc"][k][-1] for k in api.TISSUES])
     dry = np.array([1.0 - api._COMP["grain_brown" if k == "grain" else k]["theta_fw"]
@@ -179,7 +179,7 @@ def whole_plant_baf(name, Cwo, uptake="carrier", km_scale=1.0):
 
 def model_tf(name, Cwo, uptake="carrier"):
     """Shoot/root ratio -- the model's analogue of Tang's TF, for section 4."""
-    r = api.simulate(name, Cwo=Cwo, uptake=uptake, f_xy_source="recommended")
+    r = api.simulate(name, Cwo=Cwo, uptake=uptake, f_xy_source="recommended", **api.FOUR_POOL_FREE)
     dw = r["baf_final_dw"]
     return float(dw["straw"] / max(dw["root"], 1e-12))
 

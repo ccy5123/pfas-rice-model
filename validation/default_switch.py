@@ -88,6 +88,227 @@
 #   python validation/default_switch.py
 # =============================================================================
 """Pre-registered decision on the default configuration (see the header)."""
+import os
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+
+import numpy as np
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "src"))
+sys.path.insert(0, HERE)
+import model_api as api            # noqa: E402
+import site_scenario as ss         # noqa: E402
+
+CAND = dict(shoot="redistributed", lipid_loading=True)
+CURRENT = dict(api.FOUR_POOL_FREE, f_xy_source="recommended")
+TISS = ("root", "straw", "grain")
+OBS = api.yamazaki_obs()
+YCONG = [c for c in api.CONGENERS if c in OBS]
+FIT_B = 1.198                       # reproduce_demo.py --rec (current default, used cells)
+MARGIN_DEFAULT, MARGIN_LIPID = 0.3, 0.1
+SENS = {                            # name -> settings (pre-registered ranges)
+    "E_m": [dict(E_m_mV=-90.0)],
+    "Km": [dict(km_scale=100.0)],
+    "phi": [dict(phi=0.05), dict(phi=0.2)],
+    "T_C_Ph": [dict(T_C_Ph=4.0), dict(T_C_Ph=12.0)],
+    "dead_blades_lost": [dict(dead_leaf_attached=0.0)],
+    "stem_transp_frac": [dict(stem_transp_frac=0.30), dict(stem_transp_frac=0.60)],
+    "retention": [dict(retention=0.40), dict(retention=0.80)],
+    "lam_grain": [dict(lam_grain=0.025), dict(lam_grain=0.18)],
+}
+
+
+# ---------------------------------------------------------------------------- D1
+def transfer_scores():
+    import oos_tang_lipid as T
+    import kim2019_censored as K
+    import li2025_stage_resolved as L
+    tang = {n: T._rmse("low", **kw)[0] for n, kw in (
+        ("current", dict(shoot="4pool", lipid_loading=False)),
+        ("lipid4", dict(shoot="4pool", lipid_loading=True)),
+        ("candidate", dict(shoot="redistributed", lipid_loading=True)))}
+    kim = K.main(verbose=False) if "verbose" in K.main.__code__.co_varnames else K.main()
+    li = L.main(sensitivity=False) if "sensitivity" in L.main.__code__.co_varnames else L.main()
+    ksc, lsc = kim["scores"], li["scores"]
+    rows = {
+        "Tang 2026 per-organ TF": (tang["current"], tang["lipid4"], tang["candidate"]),
+        "Kim 2019 grain, point": (ksc["mono"]["point"], ksc["lipid"]["point"], ksc["nstem_lipid"]["point"]),
+        "Kim 2019 grain, interval": (ksc["mono"]["interval"], ksc["lipid"]["interval"],
+                                     ksc["nstem_lipid"]["interval"]),
+        "Li 2025 shoot TF": (lsc["mono"]["rmse"]["shoot"], lsc["lipid"]["rmse"]["shoot"],
+                             lsc["nstem_lipid"]["rmse"]["shoot"]),
+        "Li 2025 grain TF": (lsc["mono"]["rmse"]["grain"], lsc["lipid"]["rmse"]["grain"],
+                             lsc["nstem_lipid"]["rmse"]["grain"]),
+    }
+    return rows
+
+
+def d1(rows):
+    ok = {k: (cur - cand > MARGIN_DEFAULT) and (cand - lip <= MARGIN_LIPID)
+          for k, (cur, lip, cand) in rows.items()}
+    return all(ok.values()), ok
+
+
+# ---------------------------------------------------------------------------- G4
+def g4():
+    """simulate()'s redistributed path must BE the scored configuration: compare it with
+    simulate_nstem_leaf (what the transfer scripts ran) on every curated congener."""
+    worst = 0.0
+    for c in api.CONGENERS:
+        a = api.simulate(c, **CAND)["baf_final_dw"]
+        b = api.simulate_nstem_leaf(c, lipid_loading=True)["baf_final_dw"]
+        worst = max(worst, max(abs(np.log10(a[k] / b[k])) for k in a))
+    return worst
+
+
+# ---------------------------------------------------------------------------- G1 / sensitivity
+def _per_run(args):
+    c, kw = args
+    cwo = OBS[c]["water_ng_L"] / 1000.0
+    out = []
+    for h in ss.YAMAZAKI_HARVESTS:
+        drv = api.scenario_drivers(Cwo=cwo, harvest=h)
+        r = api.simulate(c, drivers=drv, **kw)
+        out.append({k: r["baf_final_dw"][k] for k in TISS})
+    return c, out
+
+
+def observable(pool, kw):
+    runs = dict(pool.map(_per_run, [(c, kw) for c in YCONG]))
+    geo = {c: {k: float(10 ** np.mean([np.log10(r[k]) for r in runs[c]])) for k in TISS}
+           for c in YCONG}
+    return runs, geo
+
+
+def residuals(geo):
+    res = {}
+    for c in YCONG:
+        d = OBS[c]
+        res[c] = {k: float(np.log10(geo[c][k] / d["baf_dw"][k])) for k in TISS if d["use"][k]}
+    return res
+
+
+def rmse(res, tissues=TISS):
+    e = [v[k] for v in res.values() for k in v if k in tissues]
+    return float(np.sqrt(np.mean(np.square(e))))
+
+
+def sensitivity(pool, base_runs, base_geo):
+    ref = {k: float(np.median([abs(np.log10(base_runs[c][0][k] / base_runs[c][1][k]))
+                               for c in YCONG])) for k in TISS}
+    eff = {}
+    for name, settings in SENS.items():
+        per = []
+        for st in settings:
+            _, geo = observable(pool, {**CAND, **st})
+            per.append({c: {k: float(np.log10(geo[c][k] / base_geo[c][k])) for k in TISS}
+                        for c in YCONG})
+        med = {k: float(np.median([max(abs(p[c][k]) for p in per) for c in YCONG])) for k in TISS}
+        eff[name] = dict(median_abs_delta=med, consequential={k: med[k] > ref[k] for k in TISS})
+    return ref, eff
+
+
+# ---------------------------------------------------------------------------- G2 / G3
+def g2():
+    bad = []
+    worst_mass = 0.0
+    from pfas_rice_plant_module_4pool_surf import binding_factors, root_uptake
+    drv = api.scenario_drivers(Cwo=1.0)
+    for c in api.CONGENERS:
+        r = api.simulate(c, **CAND)
+        vals = [v for v in r["baf_final_dw"].values()] + [v for v in r["baf_final"].values()]
+        if not (r["success"] and np.all(np.isfinite(vals)) and min(vals) > 0):
+            bad.append(c)
+        cmpd = api._compound_for(c, "recommended", lipid_loading=True, K_cw_organ="stem")
+        m = api._run_redistributed(c, cmpd, drv["t"], drv["Cwo"], drv["Qtp"], drv["M"],
+                                   drv["leaf_loss"], float(drv["t"][-1]), -120.0, _keep_model=True)
+        mod, sol = m["_model"], m["_sol"]
+        B = binding_factors(mod.comps, mod.cmpd)
+        for ti in (40.0, 80.0, 110.0):
+            C = sol.sol(ti); dC = mod.rhs(ti, C)
+            M = mod.inputs.M_(ti); dM = mod.inputs.dM_(ti)
+            jR = root_uptake(mod.inputs.Cwo_(ti), (C / B)[0], mod.cmpd, mod.env)
+            dmass = float(np.sum(dM * C + M * dC))
+            src = float(M[0] * jR - mod.inputs.leaf_loss_(ti) * M[mod.LEAF] * C[mod.LEAF])
+            worst_mass = max(worst_mass, abs(dmass - src) / max(abs(src), 1e-30))
+    return bad, worst_mass
+
+
+def g3():
+    t0 = time.time()
+    api.simulate("PFOA", **CAND)
+    return time.time() - t0
+
+
+# ---------------------------------------------------------------------------- E6
+def inverse_check():
+    truth = 0.0787
+    cur = api.estimate_exposure_bayesian("PFOA", {"grain": 0.349}, **CURRENT)
+    cand = api.estimate_exposure_bayesian("PFOA", {"grain": 0.349}, **CAND)
+    return truth, cur["median"], cand["median"], cand["ci95"]
+
+
+def main():
+    print("=" * 88)
+    print("DEFAULT SWITCH -- pre-registered (see header)")
+    print("=" * 88)
+    rows = transfer_scores()
+    ok1, per = d1(rows)
+    print("\nD1  transfer scores (log10 RMSE)        current   4-pool lipid   candidate   pass")
+    for k, (cur, lip, cand) in rows.items():
+        print(f"    {k:34s} {cur:8.3f} {lip:12.3f} {cand:11.3f}   {per[k]}")
+    print(f"    D1: {'PASS' if ok1 else 'FAIL'}")
+
+    w4 = g4()
+    print(f"\nG4  simulate(shoot='redistributed', lipid_loading=True) vs the scored runs: "
+          f"worst |log10| difference {w4:.2e} -> {'PASS' if w4 < 0.005 else 'FAIL'}")
+
+    with ProcessPoolExecutor(max_workers=os.cpu_count() or 2) as pool:
+        base_runs, base_geo = observable(pool, CAND)
+        res = residuals(base_geo)
+        overall = rmse(res)
+        per_t = {k: rmse(res, (k,)) for k in TISS}
+        ok_g1 = overall <= FIT_B
+        print(f"\nG1  Yamazaki two-harvest observable, used cells: candidate {overall:.3f} "
+              f"(root {per_t['root']:.3f}, straw {per_t['straw']:.3f}, grain {per_t['grain']:.3f}) "
+              f"vs current Fit B {FIT_B:.3f} -> {'PASS' if ok_g1 else 'FAIL'}")
+        print(f"    {'congener':8s}" + "".join(f"{k:>18s}" for k in TISS))
+        for c in YCONG:
+            d = OBS[c]
+            print(f"    {c:8s}" + "".join(
+                (f"{base_geo[c][k]:9.3g}/{d['baf_dw'][k]:<8.3g}" if d["use"][k] else f"{base_geo[c][k]:9.3g}/{'--':<8s}")
+                for k in TISS))
+        bad, mass = g2()
+        print(f"\nG2  13 congeners: failures {bad or 'none'}; worst mass residual {mass:.1e} "
+              f"-> {'PASS' if not bad and mass < 1e-6 else 'FAIL'}")
+        tt = g3()
+        print(f"G3  one PFOA run {tt:.2f} s -> {'PASS' if tt < 5.0 else 'FAIL'}")
+        switch = ok1 and ok_g1 and (not bad and mass < 1e-6) and tt < 5.0 and w4 < 0.005
+        print(f"\nVERDICT: {'SWITCH' if switch else 'KEEP THE CURRENT DEFAULT'}")
+
+        band = [rows["Tang 2026 per-organ TF"][2], rows["Kim 2019 grain, point"][2],
+                rows["Li 2025 shoot TF"][2], rows["Li 2025 grain TF"][2]]
+        med = float(np.median(band))
+        print(f"\nE4  band from the candidate's transfer errors {[round(b, 3) for b in band]}: "
+              f"median {med:.3f} -> x{10 ** med:.1f}")
+        truth, cur_m, cand_m, ci = inverse_check()
+        print(f"E6  inverse, Kim PFOA brown rice 0.349 ug/kg (void water {truth} ug/L): current "
+              f"{cur_m:.3f} ({cur_m / truth:.1f}x), candidate {cand_m:.3f} ({cand_m / truth:.1f}x; "
+              f"95% {ci[0]:.3f}-{ci[1]:.3f})")
+
+        ref, eff = sensitivity(pool, base_runs, base_geo)
+        print("\nSENSITIVITY of the candidate (median |log10| change; yardstick = two harvest runs "
+              f"root {ref['root']:.3f} / straw {ref['straw']:.3f} / grain {ref['grain']:.3f})")
+        for n, e in eff.items():
+            m = e["median_abs_delta"]
+            print(f"    {n:18s} root {m['root']:.3f}  straw {m['straw']:.3f}  grain {m['grain']:.3f}"
+                  f"   consequential: {[k for k, v in e['consequential'].items() if v] or 'none'}")
+    return dict(rows=rows, d1=ok1, g4=w4, g1=overall, g1_tissue=per_t, residuals=res,
+                g2=(bad, mass), g3=tt, switch=switch, band=band, band_median=med,
+                inverse=(truth, cur_m, cand_m, ci), sens=(ref, eff))
+
 
 if __name__ == "__main__":
-    raise SystemExit("pre-registration only; the analysis is added after this commit is pushed")
+    main()

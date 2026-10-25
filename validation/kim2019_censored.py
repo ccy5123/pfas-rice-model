@@ -71,8 +71,9 @@ def predict(nm, v):
     if v == "nstem_lipid":
         r = api.simulate_nstem_leaf(nm, Cwo=1.0, lipid_loading=True)
         return float(r["baf_final"]["grain"])
-    kw = dict(mono=dict(f_xy_source="recommended"), fit=dict(f_xy_source="fit"),
-              lipid=dict(lipid_loading=True))[v]
+    kw = dict(mono=dict(f_xy_source="recommended", **api.FOUR_POOL_FREE),
+              fit=dict(f_xy_source="fit", **api.FOUR_POOL_FREE),
+              lipid=dict(lipid_loading=True, shoot="4pool"))[v]
     return float(api.simulate(nm, **kw)["baf_final"]["grain"])
 
 

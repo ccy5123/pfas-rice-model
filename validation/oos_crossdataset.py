@@ -31,8 +31,9 @@ MODES = ("lipid", "mono", "fit")
 
 
 def predict(nm, mode):
-    kw = dict(lipid=dict(lipid_loading=True), mono=dict(f_xy_source="recommended"),
-              fit=dict(f_xy_source="fit"))[mode]
+    kw = dict(lipid=dict(lipid_loading=True, shoot="4pool"),
+              mono=dict(f_xy_source="recommended", **api.FOUR_POOL_FREE),
+              fit=dict(f_xy_source="fit", **api.FOUR_POOL_FREE))[mode]
     r = api.simulate(nm, **kw)
     return {"root": r["baf_final"]["root"], "straw": r["straw_baf"], "grain": r["baf_final"]["grain"]}
 

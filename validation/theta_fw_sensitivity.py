@@ -74,7 +74,7 @@ def theta(organ, value):
 
 def pfas_bafs(name):
     """Root/straw/grain BAF on the fresh basis and on the dry basis (harvest operator)."""
-    r = api.simulate(name)
+    r = api.simulate(name, **api.FOUR_POOL_FREE)
     C = {k: r["conc"][k][-1] / r["cwo_ref"] for k in api.TISSUES}
     fw = dict(root=C["root"], straw=r["straw_baf"], grain=C["grain"])
     dw = {k: r["baf_final_dw"][k] for k in ("root", "straw", "grain")}
@@ -167,7 +167,7 @@ def xylem_split_note():
           "longer moves it")
     for th in (RANGES["grain"][1], RANGES["grain"][2]):
         with theta("grain", th):
-            r = api.simulate("PFOA")
+            r = api.simulate("PFOA", **api.FOUR_POOL_FREE)
             share = 1.0 - xylem_leaf_share(api._compartments(), r["M"][-1], "fresh")
             print(f"  grain theta {th:.2f}: grain share of the xylem at harvest {share:.3f}; "
                   f"PFOA grain BAF (dw) {r['conc']['grain'][-1] / (1 - th) / r['cwo_ref']:.3f}")

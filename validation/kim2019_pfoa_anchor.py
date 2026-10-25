@@ -242,8 +242,9 @@ def model_baf(v, cwo=1.0):
     if v == "nstem_lipid":
         r = api.simulate_nstem_leaf("PFOA", Cwo=cwo, lipid_loading=True)
     else:
-        kw = dict(mono=dict(f_xy_source="recommended"), fit=dict(f_xy_source="fit"),
-                  lipid=dict(lipid_loading=True))[v]
+        kw = dict(mono=dict(f_xy_source="recommended", **api.FOUR_POOL_FREE),
+                  fit=dict(f_xy_source="fit", **api.FOUR_POOL_FREE),
+                  lipid=dict(lipid_loading=True, shoot="4pool"))[v]
         r = api.simulate("PFOA", Cwo=cwo, **kw)
     return float(r["baf_final"]["grain"])
 

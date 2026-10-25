@@ -71,6 +71,20 @@ DEFAULT_SCENARIO = "yamazaki2020"
 # contains the apoplastic bypass -- is "essentially independent of tail length".
 # On its own criterion that is a relabelled carrier. The bypass value below is
 # the single global optimum from that scan, NOT a calibrated parameter.
+# ---------------------------------------------------------------------------
+# SHOOT MODEL -- which shoot structure carries the xylem-delivered solute.
+#   "4pool"         the single-straw core (`RiceUptakeModel`): one stem pool, the leaf/grain
+#                   xylem split by dry-matter surface (`xylem_leaf_share`).
+#   "redistributed" N stem segments + leaf, each organ retaining the solute its own
+#                   transpiration deposits (`simulate_nstem_leaf`, the Tang over-translocation
+#                   fix; architecture levers stem_transp_frac / retention / lam_grain).
+# validation/default_switch.py decides which one is the default (pre-registered).
+SHOOTS = ("4pool", "redistributed")
+DEFAULT_SHOOT = "4pool"
+DEFAULT_LIPID_LOADING = False
+# the configuration every calibration record and 4-pool mechanism analysis was run on
+FOUR_POOL_FREE = dict(shoot="4pool", lipid_loading=False)
+
 UPTAKE_MODES = {
     "carrier": dict(vmax_scale=1.0, g_apo=0.0),                 # incumbent = shipped
     "bypass":  dict(vmax_scale=0.0, g_apo=50.0),                # carrier off, one global g_apo
@@ -315,7 +329,7 @@ def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
     fxy = TANG_REFIT_FXY[congener] if use_refit else None
     if shoot == "4pool":
         r = simulate(congener, Cwo=1.0, f_xy_source=f_xy_source, f_xy_override=fxy,
-                     lipid_loading=lipid_loading, scenario=scenario)
+                     lipid_loading=lipid_loading, scenario=scenario, shoot="4pool")
         kcw_organ = "root"              # simulate() binds every compartment with the root K_cw
     else:
         r = simulate_nstem_leaf(congener, Cwo=1.0, f_xy_source=f_xy_source, f_xy_override=fxy,
@@ -466,13 +480,14 @@ def _harvest(t, conc, M, comps, M_basis, leaf_loss, attached, sol, leaf_index):
 
 def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
              f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
-             lipid_loading=False, g_xy_override=None, g_ph_override=None,
+             lipid_loading=None, g_xy_override=None, g_ph_override=None,
              season=None, n_t=241, measured_forcing=True, biomass="oryza2000",
              drivers=None, K_surf=0.0, record=None,
              cwo_profile="constant", cwo_kw=None,
              uptake=DEFAULT_UPTAKE, vmax_scale=None, g_apo=None, km_scale=1.0,
              dead_leaf_attached=1.0, scenario=DEFAULT_SCENARIO, scenario_kw=None,
-             phi=0.1, T_C_Ph=10.0, s_grain_dry=None):
+             phi=0.1, T_C_Ph=10.0, s_grain_dry=None, shoot=None,
+             N=4, stem_transp_frac=0.45, lam_grain=0.05, retention=0.6):
     """Run the 4-compartment ODE for one congener and scenario.
 
     Parameters
@@ -529,6 +544,12 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
         efflux). 1.0 (default) is the shipped Km. This is the knob a DOSE series
         acts on -- Km is what decides WHERE the carrier stops being linear, and
         `validation/dose_series_carrier.py` uses it to bound Km from below.
+    shoot : "4pool" or "redistributed" (None -> `DEFAULT_SHOOT`); see `SHOOTS`. The
+        redistributed shoot takes its own architecture levers N, stem_transp_frac,
+        lam_grain and retention (ignored by the 4-pool core) and splits the xylem by
+        lam_grain, so `s_grain_dry` (the 4-pool's grain surface) does not apply to it.
+    lipid_loading : None -> `DEFAULT_LIPID_LOADING`. f_xy_source="fit" is a free-anion fit
+        and raises when combined with lipid loading (the lipid model supplies its own f_xy).
 
     Returns a dict with t, per-compartment conc & BAF time series (FRESH weight; the green
     leaf), finals, straw (with attached dead blades), the dry-basis harvest values
@@ -537,6 +558,16 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     """
     if uptake not in UPTAKE_MODES:
         raise ValueError(f"unknown uptake {uptake!r}; expected one of {sorted(UPTAKE_MODES)}")
+    shoot = DEFAULT_SHOOT if shoot is None else shoot
+    if shoot not in SHOOTS:
+        raise ValueError(f"unknown shoot {shoot!r}; expected one of {SHOOTS}")
+    lipid_loading = DEFAULT_LIPID_LOADING if lipid_loading is None else bool(lipid_loading)
+    if lipid_loading and f_xy_source == "fit":
+        raise ValueError("f_xy_source='fit' is a free-anion fit; pass lipid_loading=False "
+                         "(the lipid model supplies its own f_xy)")
+    if shoot == "redistributed" and s_grain_dry is not None:
+        raise ValueError("s_grain_dry is the 4-pool's grain xylem surface; the redistributed "
+                         "shoot splits the stream by lam_grain")
     _up = UPTAKE_MODES[uptake]
     vmax_scale = _up["vmax_scale"] if vmax_scale is None else float(vmax_scale)
     g_apo = _up["g_apo"] if g_apo is None else float(g_apo)
@@ -574,14 +605,32 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
     g_ph = float(g_ph_override) if g_ph_override is not None else float(g_ph_def)
     kappa_d = float(kappa_d_override) if kappa_d_override is not None else float(kappa_d_def)
     L_Ph = float(L_Ph_override) if L_Ph_override is not None else float(L_Ph_def)
+    # the redistributed shoot binds every compartment with the STEM cell-wall K (its own
+    # convention, as scored); the 4-pool core with the root's
+    kcw_organ = "stem" if shoot == "redistributed" else "root"
+    K_cw = c["K_cw_wholecw_Lkg"].get(kcw_organ, c["K_cw_wholecw_Lkg"]["root"])
     cmpd = Compound(name=congener, K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
-                    K_cw=c["K_cw_wholecw_Lkg"]["root"], kappa_d=kappa_d,
+                    K_cw=K_cw, kappa_d=kappa_d,
                     Vmax_in=_CARR["Vmax_in"] * vmax_scale,
                     Km_in=_CARR["Km_in"] * float(km_scale),
                     Vmax_out=_CARR["Vmax_out"] * vmax_scale,
                     Km_out=_CARR["Km_out"] * float(km_scale),
                     L_Ph=L_Ph, f_xy=f_xy, g_xy=g_xy, g_ph=g_ph, K_surf=float(K_surf),
                     g_apo=float(g_apo))
+    if shoot == "redistributed":
+        res = _run_redistributed(
+            congener, cmpd, t, Cwo_series, Qtp, M, leaf_loss, season, E_m_mV,
+            N=N, stem_transp_frac=stem_transp_frac, lam_grain=lam_grain,
+            retention=retention, dead_leaf_attached=dead_leaf_attached,
+            phi=phi, T_C_Ph=T_C_Ph)
+        res["params"].update(
+            K_PL=c["K_PL_Lkg"], K_prot=c["K_prot_Lkg"], K_cw=K_cw, K_surf=float(K_surf),
+            n_C=c["n_C"], group=c["group"], uptake=uptake, vmax_scale=float(vmax_scale),
+            g_apo=float(g_apo), Km_in=float(_CARR["Km_in"] * km_scale), mass_basis=M_basis,
+            scenario=(None if drivers is not None or not measured_forcing else scenario),
+            shoot=shoot, lipid_loading=lipid_loading)
+        res["root_baf_total"] = float(res["baf_final"]["root"] + cmpd.K_surf)
+        return res
     comps = _compartments()
     env = Environment(E=E_m_mV / 1000.0)
     model = RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs, phi=float(phi),
@@ -620,7 +669,8 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
                     uptake=uptake, vmax_scale=float(vmax_scale), g_apo=float(g_apo),
                     Km_in=float(_CARR["Km_in"] * km_scale),
                     mass_basis=M_basis,
-                    scenario=(None if drivers is not None or not measured_forcing else scenario)),
+                    scenario=(None if drivers is not None or not measured_forcing else scenario),
+                    shoot=shoot, lipid_loading=lipid_loading),
     )
 
 
@@ -788,8 +838,6 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
         over the N segments), plus optional 'leaf_loss'. Overrides season/n_t/
         biomass_fn -- used to run this model on another script's forcings.
     """
-    from pfas_rice_plant_module_nstem_leaf import (
-        NStemLeafModel, PlantInputsNL, make_stem_leaf_compartments, split_from_stem_frac)
     if congener not in _CONG:
         raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
 
@@ -798,45 +846,61 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
         season = float(t[-1])
         Qtp = np.asarray(drivers["Qtp"], dtype=float)
         Cwo_series = np.asarray(drivers["Cwo"], dtype=float)
-        organ_M = np.asarray(drivers["M"], dtype=float)      # (n_t, 4) organ columns
-        M = np.column_stack(
-            [np.maximum(organ_M[:, 0], 1e-9)]
-            + [np.maximum(organ_M[:, 1] / N, 1e-9)] * N
-            + [np.maximum(organ_M[:, 2], 1e-9), np.maximum(organ_M[:, 3], 1e-9)])
+        M4 = np.asarray(drivers["M"], dtype=float)           # (n_t, 4) organ columns
         leaf_loss = drivers.get("leaf_loss")
     elif biomass_fn is None and scenario == "yamazaki2020":
         d = scenario_drivers(scenario, Cwo=Cwo, **(scenario_kw or {}))
         ss.check_season(season, d["t"], "simulate_nstem_leaf")
         t, Qtp, Cwo_series, leaf_loss = d["t"], d["Qtp"], d["Cwo"], d["leaf_loss"]
         season = float(t[-1])
-        organ_M = d["M"]
-        M = np.column_stack(
-            [organ_M[:, 0]] + [organ_M[:, 1] / N] * N + [organ_M[:, 2], organ_M[:, 3]])
+        M4 = d["M"]
     else:
         season = 150.0 if season is None else float(season)
         t = np.linspace(0.0, season, int(n_t))
         Qtp = fr.Q_TP(t, season)
         b = (biomass_fn or _biomass_fn("oryza2000"))(t, season)
         b = om.to_model_mass(b)                              # crop DRY matter -> FRESH mass
-        M = np.column_stack(
-            [np.maximum(b["root"], 1e-9)]
-            + [np.maximum(b["stem"] / N, 1e-9)] * N
-            + [np.maximum(b["leaf"], 1e-9), np.maximum(b["grain"], 1e-9)])
+        M4 = np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]])
         Cwo_series = np.full_like(t, float(Cwo))
         leaf_loss = b.get("leaf_death_rate")
-    inputs = PlantInputsNL(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
+    cmpd = _compound_for(congener, f_xy_source, f_xy_override, L_Ph_override,
+                         kappa_d_override, lipid_loading, g_xy_override, g_ph_override,
+                         K_cw_organ=K_cw_organ)
+    return _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M4, leaf_loss, season,
+                              E_m_mV, N=N, stem_transp_frac=stem_transp_frac,
+                              lam_grain=lam_grain, retention=retention, k_seq=k_seq,
+                              k_rel=k_rel, dead_leaf_attached=dead_leaf_attached,
+                              segments_in_M=True)
 
+
+def _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M4, leaf_loss, season, E_m_mV,
+                       N=4, stem_transp_frac=0.45, lam_grain=0.05, retention=0.6,
+                       k_seq=0.0, k_rel=0.0, dead_leaf_attached=1.0, phi=0.1, T_C_Ph=10.0,
+                       segments_in_M=False, _keep_model=False):
+    """Solve the redistributed-shoot model on prepared drivers and a built Compound.
+
+    M4 is the FRESH organ-mass matrix with the four organ columns [root, stem, leaf, grain];
+    the stem column is split evenly over the N segments. Shared by `simulate_nstem_leaf`
+    and `simulate(shoot="redistributed")`, so both run the identical solve. The returned
+    `M` is the segment matrix when `segments_in_M` (simulate_nstem_leaf's contract) and the
+    four-organ matrix otherwise (simulate()'s contract; the segments are in `M_segments`)."""
+    from pfas_rice_plant_module_nstem_leaf import (
+        NStemLeafModel, PlantInputsNL, make_stem_leaf_compartments, split_from_stem_frac)
+    M4 = np.asarray(M4, dtype=float)
+    M = np.column_stack(
+        [np.maximum(M4[:, 0], 1e-9)]
+        + [np.maximum(M4[:, 1] / N, 1e-9)] * N
+        + [np.maximum(M4[:, 2], 1e-9), np.maximum(M4[:, 3], 1e-9)])
+    inputs = PlantInputsNL(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss)
     g = _COMP
     _kw = lambda d: dict(theta=d["theta_fw"], f_prot=d["f_prot"], f_PL=d["f_PL"], f_cw=d["f_cw"])
     comps = make_stem_leaf_compartments(
         N, _kw(g["stem"]), _kw(g["root"]), _kw(g["leaf"]), _kw(g["grain_brown"]))
-    cmpd = _compound_for(congener, f_xy_source, f_xy_override, L_Ph_override,
-                         kappa_d_override, lipid_loading, g_xy_override, g_ph_override,
-                         K_cw_organ=K_cw_organ)
     tau, lam_leaf, lam_grain = split_from_stem_frac(N, stem_transp_frac, lam_grain)
     env = Environment(E=E_m_mV / 1000.0)
     model = NStemLeafModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs, tau=tau,
                            lam_leaf=lam_leaf, lam_grain=lam_grain, retention=retention,
+                           phi=float(phi), T_C_Ph=float(T_C_Ph),
                            k_seq=float(k_seq), k_rel=float(k_rel))
     sol = model.solve(t)
     Y = sol.y                                            # (N+3 [+1 if two-pool], n_t)
@@ -852,13 +916,15 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
         float(np.nanmax(Cwo_series)) if np.nanmax(Cwo_series) > 0 else 1.0)
     baf_final = {k: float(v[-1] / cwo_ref) for k, v in conc.items()}
     # straw = stem segments + green leaf + attached dead blades (the harvest operator)
-    M4 = np.column_stack([M[:, 0], np.sum(Mseg, axis=1), M[:, model.LEAF], M[:, model.GRAIN]])
+    Mo = np.column_stack([M[:, 0], np.sum(Mseg, axis=1), M[:, model.LEAF], M[:, model.GRAIN]])
     obs = hv.harvest_observables(
-        t, conc, M4, hv.dry_fractions({o: _COMP["grain_brown" if o == "grain" else o]["theta_fw"]
+        t, conc, Mo, hv.dry_fractions({o: _COMP["grain_brown" if o == "grain" else o]["theta_fw"]
                                        for o in TISSUES}),
         leaf_loss=leaf_loss, attached=dead_leaf_attached,
         C_leaf_fn=lambda tt: sol.sol(tt)[model.LEAF])
     straw = obs["straw_fw"]
+    B = binding_factors(comps, cmpd)
+    rec = _CONG.get(congener, {})
     return dict(
         t=t, congener=congener, success=bool(sol.success), season=float(season),
         conc=conc, Cwo=Cwo_series, Qtp=Qtp, leaf_loss=leaf_loss,
@@ -872,13 +938,17 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0, E_m_mV=-120.0,
                   for k in ("root", "stem", "leaf", "grain")},
         seq_fraction=(float(Y[model.SEQ, -1] / max(conc["root"][-1], 1e-12))
                       if model.two_pool else 0.0),
-        M=M, N=N,
+        M=(M if segments_in_M else Mo), M_segments=M, N_segments=N, N=float(env.N),
+        eN=float(np.exp(env.N)),
+        B_k={"root": float(B[0]), "stem": float(B[1]), "leaf": float(B[model.LEAF]),
+             "grain": float(B[model.GRAIN])},
         params=dict(f_xy=float(cmpd.f_xy), retention=float(retention),
                     stem_transp_frac=float(stem_transp_frac), lam_leaf=float(lam_leaf),
-                    lam_grain=float(lam_grain), n_C=_CONG[congener]["n_C"],
-                    group=_CONG[congener]["group"], L_Ph=float(cmpd.L_Ph),
+                    lam_grain=float(lam_grain), n_C=rec.get("n_C"),
+                    group=rec.get("group"), L_Ph=float(cmpd.L_Ph),
                     kappa_d=float(cmpd.kappa_d), g_xy=float(cmpd.g_xy),
                     g_ph=float(cmpd.g_ph), k_seq=float(k_seq), k_rel=float(k_rel)),
+        **({"_model": model, "_sol": sol} if _keep_model else {}),
     )
 
 

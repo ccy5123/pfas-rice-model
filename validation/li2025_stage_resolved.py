@@ -132,8 +132,9 @@ def stage_days(dvs_targets=STAGE_DVS):
 def run_variant(c, v):
     if v == "nstem_lipid":
         return api.simulate_nstem_leaf(c, Cwo=1.0, lipid_loading=True)
-    kw = dict(mono=dict(f_xy_source="recommended"), fit=dict(f_xy_source="fit"),
-              lipid=dict(lipid_loading=True))[v]
+    kw = dict(mono=dict(f_xy_source="recommended", **api.FOUR_POOL_FREE),
+              fit=dict(f_xy_source="fit", **api.FOUR_POOL_FREE),
+              lipid=dict(lipid_loading=True, shoot="4pool"))[v]
     return api.simulate(c, Cwo=1.0, **kw)
 
 

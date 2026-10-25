@@ -63,7 +63,7 @@ def predict(knobs):
                    Qtp=k["qtp_scale"] * _BASE_Q, M=_M, leaf_loss=_LL, mass_basis="fresh")
     r = api.simulate(CONGENER, drivers=drivers,
                      f_xy_override=_BASE_FXY * k["f_xy_mult"],
-                     kappa_d_override=_BASE_KD * k["kappa_d_mult"])
+                     kappa_d_override=_BASE_KD * k["kappa_d_mult"], **api.FOUR_POOL_FREE)
     dw = r["baf_final_dw"]
     return np.array([dw["root"], dw["straw"], dw["grain"]])
 

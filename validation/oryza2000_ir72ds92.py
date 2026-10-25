@@ -292,7 +292,7 @@ def posthoc_pfas():
     for c in POSTHOC_CONGENERS:
         row = []
         for lab, kw in cases:
-            r = api.simulate(c, **kw)
+            r = api.simulate(c, **kw, **api.FOUR_POOL_FREE)
             row.append((r["baf_final"]["root"], r["straw_baf"], r["baf_final"]["grain"]))
         out[c] = row
         ratio = [row[1][i] / row[0][i] for i in range(3)]
