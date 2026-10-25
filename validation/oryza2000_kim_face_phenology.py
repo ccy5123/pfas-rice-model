@@ -124,7 +124,6 @@ TREATMENTS = {"primary": dict(source="station", dT=0.0, sbdur=30),
               "S_sbdur40": dict(source="station", dT=0.0, sbdur=40),
               "S_power+1.7C": dict(source="power", dT=1.7, sbdur=30)}
 SCORE_GROUPS = ("Q1", "Q2x", "Q3", "Q4", "Q5")
-UNCALIBRATED_PORT_Q2X = 0.328     # oryza2000_kim_face.py, station weather (recomputed below)
 
 
 def base_rates(arm):
@@ -212,7 +211,7 @@ def calendar_scores(runs, obs, root_obs):
             for s, o in qo[g].items():
                 if g == "Q2" and s == "anthesis":
                     continue
-                err[g].append(np.log10(max(qm[g][s], 1e-12)) - np.log10(o))
+                err[g].append(K.point_error(g, qm[g][s], o))
     rm = {("Q2x" if g == "Q2" else g): float(np.sqrt(np.mean(np.square(e)))) for g, e in err.items()}
     rm["POOLEDx"] = float(np.mean([rm[g] for g in SCORE_GROUPS]))
     return rm
@@ -222,13 +221,6 @@ def phenology_errors(runs, obs):
     return {y: {s: (None if crossing(runs[y], lim) is None
                     else crossing(runs[y], lim) - obs[y][s]["dat"]) for s, lim in STAGE_DVS}
             for y in YEARS}
-
-
-def c1(ra, rb, reached_a):
-    a = ra["POOLEDx"] <= rb["POOLEDx"] + 0.05
-    b = (ra["Q1"] <= rb["Q1"] + 0.05) and (ra["Q2x"] <= rb["Q2x"] + 0.05)
-    c = all(reached_a)
-    return dict(a=a, b=b, c=c, passed=a and b and c)
 
 
 def run_treatment(tr, obs, root_obs):
@@ -243,32 +235,26 @@ def run_treatment(tr, obs, root_obs):
         out[arm] = dict(own=own, loyo_rates=lr, runs=runs_l, rmse=rl, bias=bl, detail=dl,
                         own_rmse=ro, own_detail=do, phen=phenology_errors(runs_l, obs),
                         cal=calendar_scores(runs_l, obs, root_obs))
-    reached = [out["A"]["detail"][y]["reached"]["maturity"] for y in YEARS]
-    out["c1"] = c1(out["A"]["rmse"], out["B"]["rmse"], reached)
-    reached_own = [out["A"]["own_detail"][y]["reached"]["maturity"] for y in YEARS]
-    out["c1_own"] = c1(out["A"]["own_rmse"], out["B"]["own_rmse"], reached_own)
+    out["c1"] = K.switch_rule(out["A"]["detail"], out["B"]["detail"])          # AMENDMENT 2 rule
+    out["c1_own"] = K.switch_rule(out["A"]["own_detail"], out["B"]["own_detail"])
     return out
 
 
 def main(verbose=True):
     obs, root_obs = K.load_obs()
     res = {name: run_treatment(tr, obs, root_obs) for name, tr in TREATMENTS.items()}
-    unc = K.run_treatment(obs, root_obs, dT=0.0, sbdur=30, source="station")
-    q2x_unc = unc["A"]["rmse"]["Q2x"]
     P = res["primary"]
-    drop = q2x_unc - P["A"]["rmse"]["Q2x"]
     phen = P["A"]["phen"]
     c3 = all(abs(phen[y]["anthesis"]) <= 5 and phen[y]["maturity"] is not None
              and abs(phen[y]["maturity"]) <= 7 for y in YEARS)
-    flips = [n for n, R in res.items() if R["c1"]["passed"] != P["c1"]["passed"]]
-    out = dict(res=res, obs=obs, root_obs=root_obs, q2x_uncal=q2x_unc, unc=unc,
-               c1=P["c1"], c2_drop=drop, c2_phenological=drop >= 0.10, c3=c3, flips=flips)
+    flips = [n for n, R in res.items() if R["c1"]["verdict"] != P["c1"]["verdict"]]
+    out = dict(res=res, obs=obs, root_obs=root_obs, c1=P["c1"], c3=c3, flips=flips)
     if not verbose:
         return out
 
     print("=" * 78)
     print("OPTION C -- both drivers' development rates calibrated to Akitakomachi (DRATES-style),")
-    print("Shizukuishi FACE, leave-one-year-out; station weather primary")
+    print("Shizukuishi FACE, leave-one-year-out; station weather primary; AMENDMENT 2 scoring")
     print("=" * 78)
     print("\n1. Calibrated rates per year (own-year), relative to each driver's base values")
     for arm in ARMS:
@@ -287,8 +273,8 @@ def main(verbose=True):
     print(f"    C3 (port; |anthesis| <= 5 d, |maturity| <= 7 d every year): {'adequate' if c3 else 'NOT adequate'}")
 
     print("\n3. Stage-matched ratios, LOYO, primary (observed | A | B)")
-    labels = {"Q1": "GL(s)/GL(anthesis)", "Q2": "SL/(GL+SL)", "Q3": "GL/TOT",
-              "Q4": "TOT(s)/TOT(maturity)", "Q5": "root/total (1999)"}
+    labels = {"Q1": "GL(s)/GL(anthesis)", "Q2": "SL/(GL+SL) [floor]", "Q3": "GL/(TOT-SL)",
+              "Q4": "(TOT-SL)(s)/(TOT-SL)(maturity)", "Q5": "root/(total-SL) (1999)"}
     for g in K.GROUPS:
         print(f"  {g} {labels[g]}" + ("   [anthesis point reported, not scored]" if g == "Q2" else ""))
         for y in YEARS:
@@ -315,23 +301,17 @@ def main(verbose=True):
         r = P[arm]["cal"]
         print(f"    {arm} calendar" + "".join(f" {r[g]:6.3f}          " for g in SCORE_GROUPS)
               + f" {r['POOLEDx']:6.3f}")
-    print("    (own-yr: phenology exact by construction; calendar: LOYO ratios read on the observed days)")
 
-    print("\n5. Verdicts")
+    print("\n5. Decision (AMENDMENT 2: paired bootstrap of POOLEDx(B) - POOLEDx(A), 95 % interval)")
     for name, R in res.items():
-        d = R["c1"]
-        print(f"    {name:<13} pooled A {R['A']['rmse']['POOLEDx']:.3f} vs B {R['B']['rmse']['POOLEDx']:.3f}"
-              f"  Q1 {R['A']['rmse']['Q1']:.3f}/{R['B']['rmse']['Q1']:.3f}"
-              f"  Q2x {R['A']['rmse']['Q2x']:.3f}/{R['B']['rmse']['Q2x']:.3f}"
-              f" | (a) {d['a']} (b) {d['b']} (c) {d['c']} -> {'PASS' if d['passed'] else 'FAIL'}")
-    print(f"  C1 (primary, LOYO): {'PASSES' if P['c1']['passed'] else 'FAILS'}"
-          + (f"; sensitive to {', '.join(flips)}" if flips else "; unchanged under every sensitivity"))
-    d = P["c1_own"]
-    print(f"     same rule with own-year rates: (a) {d['a']} (b) {d['b']} (c) {d['c']} -> "
-          f"{'PASS' if d['passed'] else 'FAIL'}")
-    print(f"  C2: port Q2x {q2x_unc:.3f} (IR72 phenology, station) -> {P['A']['rmse']['Q2x']:.3f}; "
-          f"drop {drop:+.3f} -> " + ("largely PHENOLOGICAL" if drop >= 0.10 else
-                                   "mostly IR72's leaf-death table (DRLVT)"))
+        c = R["c1"]
+        print(f"    {name:<13} A {R['A']['rmse']['POOLEDx']:.3f} vs B {R['B']['rmse']['POOLEDx']:.3f}"
+              f"  B-A {c['delta']:+.3f} [{c['lo']:+.3f}, {c['hi']:+.3f}] -> {c['verdict']}"
+              f"; port matures every year: {c['reached']}")
+    c = P["c1_own"]
+    print(f"    own-year rates: B-A {c['delta']:+.3f} [{c['lo']:+.3f}, {c['hi']:+.3f}] -> {c['verdict']}")
+    print("    " + (f"verdict differs under {', '.join(flips)}" if flips else "same verdict under every sensitivity"))
+    print("    (C2 is void under AMENDMENT 2: its premise -- a dead-leaf ERROR -- is removed by the floor)")
     return out
 
 

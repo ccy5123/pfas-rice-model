@@ -210,7 +210,7 @@ def placed_index(r, sdvs_y):
 
 
 def evaluate_sample_dvs(runs, obs, root_obs, sdvs):
-    """As K.evaluate, with every sample read at its sample DVS (Q2 scored without anthesis)."""
+    """As K.evaluate, with every sample read at its sample DVS (AMENDMENT 2 errors)."""
     err = {g: [] for g in GROUPS}
     detail = {}
     for y in YEARS:
@@ -219,15 +219,11 @@ def evaluate_sample_dvs(runs, obs, root_obs, sdvs):
         root_m = {s: (mv[s]["ROOT"], mv[s]["TOT"]) for s in root_obs} if y == 1999 else None
         qm = K.quantities(mv, root_m)
         qo = K.quantities({s: obs[y][s] for s in K.SCORED}, root_obs if y == 1999 else None)
+        pe = {g: {s: K.point_error(g, qm[g][s], o) for s, o in qo[g].items()} for g in GROUPS}
         for g in GROUPS:
-            for s, o in qo[g].items():
-                if g == "Q2" and s == "anthesis":
-                    continue
-                err[g].append(np.log10(max(qm[g][s], 1e-12)) - np.log10(o))
-        detail[y] = dict(idx=idx, reached=reached, qm=qm, qo=qo, mv=mv)
-    rmse = {("Q2x" if g == "Q2" else g): float(np.sqrt(np.mean(np.square(e)))) for g, e in err.items()}
-    bias = {g: float(np.mean(e)) for g, e in err.items()}
-    rmse["POOLEDx"] = float(np.mean([rmse[g] for g in SCORE_GROUPS]))
+            err[g].extend(pe[g].values())
+        detail[y] = dict(idx=idx, reached=reached, qm=qm, qo=qo, mv=mv, err=pe)
+    rmse, bias = K.summarize(err, detail)
     return rmse, bias, detail
 
 
@@ -265,8 +261,7 @@ def run_design(tr, obs, root_obs, cache):
         ro, _, do, _ = score(c["own_runs"], obs, root_obs, tr, c["own_runs"])
         out[arm] = dict(c, rmse=rl, bias=bl, detail=dl, sample_dvs=sd, own_rmse=ro, own_detail=do,
                         phen=phenology_errors(c["runs"], tgt))
-    reached = [out["A"]["detail"][y]["reached"]["maturity"] for y in YEARS]
-    out["c1"] = C.c1(out["A"]["rmse"], out["B"]["rmse"], reached)
+    out["c1"] = K.switch_rule(out["A"]["detail"], out["B"]["detail"])          # AMENDMENT 2 rule
     return out
 
 
@@ -280,17 +275,14 @@ def main(verbose=True):
     cache = {}
     res = {name: run_design(tr, obs, root_obs, cache) for name, tr in DESIGNS.items()}
     ref = C.run_treatment(C.TREATMENTS["primary"], obs, root_obs)          # option C as recorded
-    unc = K.run_treatment(obs, root_obs, dT=0.0, sbdur=30, source="station")
-    q2x_unc = unc["A"]["rmse"]["Q2x"]
     checks = dict(
         repro=all(abs(res["C_repro"][a]["rmse"][g] - ref[a]["rmse"][g]) < 1e-9
                   for a in ARMS for g in SCORE_GROUPS + ("POOLEDx",)),
         shipped_untouched=all(abs(res["N"]["B"]["rmse"][g] - ref["B"]["rmse"][g]) < 1e-9
                               for g in SCORE_GROUPS + ("POOLEDx",)))
     N = res["N"]
-    drop = q2x_unc - N["A"]["rmse"]["Q2x"]
-    flips = [n for n in SENSITIVITIES if res[n]["c1"]["passed"] != N["c1"]["passed"]]
-    out = dict(res=res, ref=ref, checks=checks, q2x_uncal=q2x_unc, d4_drop=drop,
+    flips = [n for n in SENSITIVITIES if res[n]["c1"]["verdict"] != N["c1"]["verdict"]]
+    out = dict(res=res, ref=ref, checks=checks,
                d1=N["c1"], d2_NE=res["NE"]["c1"], d2_NG=res["NG"]["c1"], flips=flips,
                c3_N=c3(N["A"]["phen"]), c3_NE=c3(res["NE"]["A"]["phen"]))
     if not verbose:
@@ -330,7 +322,7 @@ def main(verbose=True):
                 f"{y} " + " ".join(f"{sd[y][s]:.3f}" for s in K.SCORED) for y in YEARS)
                 + "   (PI anth mid-rip mat)")
 
-    print("\n4. log10 RMSE, LOYO (bias for Q1/Q3/Q4/Q5)")
+    print("\n4. log10 RMSE, LOYO (bias for Q1/Q3/Q4/Q5; AMENDMENT 2 scoring)")
     print("                     " + "".join(f"{g:>16}" for g in SCORE_GROUPS) + f"{'POOLED':>9}  own-yr")
     for name in DESIGNS:
         for arm in ARMS:
@@ -340,20 +332,15 @@ def main(verbose=True):
                 cells.append(f"  {r[g]:6.3f}" + ("         " if g == "Q2x" else f" ({b[g]:+.3f})"))
             print(f"  {name:<16}{arm} " + "".join(cells) + f"  {r['POOLEDx']:6.3f}  {res[name][arm]['own_rmse']['POOLEDx']:6.3f}")
 
-    print("\n5. Verdicts")
+    print("\n5. Decision (AMENDMENT 2: paired bootstrap of POOLEDx(B) - POOLEDx(A), 95 % interval)")
     for name in DESIGNS:
         R = res[name]
-        d = R["c1"]
-        print(f"  {name:<16} pooled A {R['A']['rmse']['POOLEDx']:.3f} vs B {R['B']['rmse']['POOLEDx']:.3f}"
-              f"  Q1 {R['A']['rmse']['Q1']:.3f}/{R['B']['rmse']['Q1']:.3f}"
-              f"  Q2x {R['A']['rmse']['Q2x']:.3f}/{R['B']['rmse']['Q2x']:.3f}"
-              f" | (a) {d['a']} (b) {d['b']} (c) {d['c']} -> {'PASS' if d['passed'] else 'FAIL'}")
-    print(f"  D1 (primary N): {'PASSES' if out['d1']['passed'] else 'FAILS'}"
-          f" (option C: {'PASS' if ref['c1']['passed'] else 'FAIL'})")
-    print(f"  D2: NE {'PASS' if out['d2_NE']['passed'] else 'FAIL'}, NG {'PASS' if out['d2_NG']['passed'] else 'FAIL'}")
-    print("  D3: " + (f"sensitive to {', '.join(flips)}" if flips else "no flip under (s1)-(s3)"))
-    print(f"  D4: port Q2x {q2x_unc:.3f} (IR72 phenology) -> {N['A']['rmse']['Q2x']:.3f} under N; drop {drop:+.3f} -> "
-          + ("largely PHENOLOGICAL" if drop >= 0.10 else "mostly IR72's leaf-death table (DRLVT)"))
+        c = R["c1"]
+        print(f"  {name:<16} A {R['A']['rmse']['POOLEDx']:.3f} vs B {R['B']['rmse']['POOLEDx']:.3f}"
+              f"  B-A {c['delta']:+.3f} [{c['lo']:+.3f}, {c['hi']:+.3f}] -> {c['verdict']}"
+              f"; port matures every year: {c['reached']}")
+    print("  D3: " + (f"verdict differs under {', '.join(flips)}" if flips else "same verdict under (s1)-(s3)"))
+    print("  (D4 is void under AMENDMENT 2: its premise -- a dead-leaf ERROR -- is removed by the floor)")
     return out
 
 

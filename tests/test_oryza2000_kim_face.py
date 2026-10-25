@@ -1,15 +1,13 @@
 """Independent check of the ORYZA2000 port (and the shipped oryza_growth) on the Shizukuishi
-FACE experiment -- validation/oryza2000_kim_face.py, pre-registered in 9f90d55, post-hoc
-addendum (station temperatures, finite Q2) in 4fca549.
+FACE experiment -- validation/oryza2000_kim_face.py (pre-registered 9f90d55; station addendum
+4fca549; AMENDMENT 2 a8d4e0a: corrected observation operator + bootstrap decision).
 
-Pinned: (1) the observations are read and placed by STAGE (five samplings = tillering, PI,
-anthesis, mid-ripening, maturity; mid-ripening fractions from the sampling DATs); (2) the
-station weather is the JMA record, ~1.1-1.45 C warmer than the POWER cell; (3) the
-pre-registered verdict -- D1 FAILS on the primary weather and flips only under S1; (4) the
-post-hoc reading -- on station temperatures the rule as written passes only because the
-shipped driver's senescent share at anthesis is exactly 0 (infinite Q2), and the finite
-variant fails on (b) in every treatment; (5) the shipped driver never matures by Nov 30 at
-39.6 N, the port does once the weather is not the cool grid cell.
+Pinned: (1) the observations are read and placed by STAGE; (2) the station weather is the JMA
+record, ~1.1-1.45 C warmer than the POWER cell; (3) the corrected operator -- the senescent share
+is a floor (only a prediction below it counts) and Q3-Q5 are on living biomass; (4) the decisions
+under it: on the station weather (IR72 phenology) the port and the shipped driver are
+indistinguishable, under S1 the port is better; (5) the shipped driver never matures by Nov 30
+at 39.6 N, the port does once the weather is not the cool grid cell.
 """
 import os
 import sys
@@ -52,26 +50,27 @@ def test_station_weather_is_warmer_than_the_grid_cell():
         V.load_weather(1999, source="jma")
 
 
-def test_the_pre_registered_verdict(out):
-    P = out["res"]["primary"]
-    assert out["verdict"] is False and out["flips"] == ["S1_lapse+1.7C"]
-    assert P["d1"] == {"a": True, "b": False, "c": False, "passed": False}
-    assert P["A"]["rmse"]["Q1"] == pytest.approx(0.457, abs=0.01)
-    assert P["B"]["rmse"]["Q1"] == pytest.approx(0.205, abs=0.01)
-    assert P["A"]["rmse"]["Q4"] == pytest.approx(0.102, abs=0.01)
-    assert np.isinf(P["B"]["rmse"]["Q2"])                                  # zero senescence at anthesis
-    assert out["res"]["S1_lapse+1.7C"]["d1"]["passed"]
+def test_the_corrected_observation_operator():
+    v = {s: {"GL": 2.0, "SL": 1.0, "TOT": 10.0} for s in V.SCORED}
+    q = V.quantities(v, {"panicle_initiation": (1.0, 10.0)})
+    assert q["Q3"]["anthesis"] == pytest.approx(2.0 / 9.0)              # leaf share of the LIVING plant
+    assert q["Q4"]["anthesis"] == pytest.approx(1.0)
+    assert q["Q5"]["panicle_initiation"] == pytest.approx(1.0 / 9.0)
+    assert V.point_error("Q2", 0.8, 0.4) == 0.0                         # above the floor: no error
+    assert V.point_error("Q2", 0.2, 0.4) == pytest.approx(-np.log10(2.0))
+    assert V.point_error("Q3", 0.8, 0.4) == pytest.approx(np.log10(2.0))  # other groups stay two-sided
 
 
-def test_the_post_hoc_station_reading(out):
+def test_the_decisions_under_the_corrected_scoring(out):
     S4 = out["post"]["S4_station"]
-    assert S4["d1"]["passed"]                                              # only because B's Q2 is inf
-    assert S4["d1x"] == {"a": True, "b": False, "c": True, "passed": False}
-    assert S4["A"]["rmse"]["Q2x"] == pytest.approx(0.328, abs=0.01)
-    assert S4["B"]["rmse"]["Q2x"] == pytest.approx(0.172, abs=0.01)
-    assert S4["A"]["rmse"]["Q4"] < S4["B"]["rmse"]["Q4"]                   # port times dry matter better
-    assert S4["A"]["rmse"]["Q3"] > S4["B"]["rmse"]["Q3"]                   # shipped keeps leaf share better
-    assert not any(R["d1x"]["passed"] for R in list(out["res"].values()) + [S4])
+    assert S4["rule"]["verdict"] == "indistinguishable" and S4["rule"]["reached"]
+    assert S4["A"]["rmse"]["Q2x"] == 0.0                                 # the port is above the floor
+    assert S4["A"]["rmse"]["POOLEDx"] == pytest.approx(0.195, abs=0.005)
+    assert S4["B"]["rmse"]["POOLEDx"] == pytest.approx(0.183, abs=0.005)
+    assert S4["A"]["rmse"]["Q4"] < S4["B"]["rmse"]["Q4"]                 # port times dry matter better
+    assert out["res"]["S1_lapse+1.7C"]["rule"]["verdict"] == "A better"
+    assert not out["res"]["primary"]["rule"]["reached"]                  # cool cell: the port never matures
+    assert out["res"]["primary"]["B"]["rmse"]["Q2x"] == pytest.approx(0.079, abs=0.005)
 
 
 def test_who_reaches_maturity(out):

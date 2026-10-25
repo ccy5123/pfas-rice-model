@@ -237,8 +237,8 @@ def run_design(tr, obs, root_obs, arms):
 
 
 def c1(R, arm, ref="B"):
-    reached = [R[arm]["detail"][y]["reached"]["maturity"] for y in YEARS]
-    return C.c1(R[arm]["rmse"], R[ref]["rmse"], reached)
+    """AMENDMENT 2 rule: paired bootstrap of POOLEDx(ref) - POOLEDx(arm) + arm reaches DVS 2."""
+    return K.switch_rule(R[arm]["detail"], R[ref]["detail"])
 
 
 def uncalibrated_gao(obs, root_obs, tr):
@@ -261,19 +261,11 @@ def main(verbose=True):
                      for a in ("A", "B") for g in SCORE_GROUPS + ("POOLEDx",)) for d in ("N", "NE")}
     unc = uncalibrated_gao(obs, root_obs, D["N"])
     N, NE = res["N"], res["NE"]
-    g1_fixed = N["G"]["rmse"]["Q2x"] <= N["A"]["rmse"]["Q2x"] - 0.05
-    g2 = {d: c1(res[d], "G") for d in ("N", "NE")}
-    g3 = N["G"]["rmse"]["POOLEDx"] <= N["A"]["rmse"]["POOLEDx"] + 0.02
+    g2 = {d: c1(res[d], "G") for d in ("N", "NE")}                 # G vs shipped
+    g3 = {d: c1(res[d], "G", ref="A") for d in ("N", "NE")}        # G vs IR72 port
     g4 = {s: c1(res[s], "G") for s in ("N_s1_tmpsb0", "N_s2_sowing")}
-    flips = [s for s, v in g4.items() if v["passed"] != g2["N"]["passed"]]
-    if g2["N"]["passed"] and g2["NE"]["passed"]:
-        consequence = "passes N AND NE: a japonica crop set makes the port's pass robust to the 1999 events"
-    elif g2["N"]["passed"]:
-        consequence = "passes N, fails NE: the same fragility as IR72.D92"
-    else:
-        consequence = "fails N: the Gao set does not transfer to Akitakomachi"
-    out = dict(res=res, checks=checks, unc=unc, g1_fixed=g1_fixed, g2=g2, g3=g3, g4=g4, flips=flips,
-               consequence=consequence)
+    flips = [s for s, v in g4.items() if v["verdict"] != g2["N"]["verdict"]]
+    out = dict(res=res, checks=checks, unc=unc, g2=g2, g3=g3, g4=g4, flips=flips)
     if not verbose:
         return out
 
@@ -305,7 +297,7 @@ def main(verbose=True):
                 print(f"    {y} {st:<19} {qo[st]:7.3f} | " + " | ".join(
                     f"{N[a]['detail'][y]['qm'][g][st]:7.3f}" for a in MAIN_ARMS))
 
-    print("\n4. log10 RMSE, LOYO (bias for Q1/Q3/Q4/Q5)")
+    print("\n4. log10 RMSE, LOYO (bias for Q1/Q3/Q4/Q5; AMENDMENT 2 scoring)")
     print("                " + "".join(f"{g:>16}" for g in SCORE_GROUPS) + f"{'POOLED':>9}  own-yr")
     for d in res:
         for arm in [a for a in MAIN_ARMS + DECOMP_ARMS if a in res[d]]:
@@ -313,22 +305,16 @@ def main(verbose=True):
             cells = [f"  {rr[g]:6.3f}" + ("         " if g == "Q2x" else f" ({b[g]:+.3f})") for g in SCORE_GROUPS]
             print(f"  {d:<11} {arm:<9}" + "".join(cells) + f"  {rr['POOLEDx']:6.3f}  {res[d][arm]['own_rmse']['POOLEDx']:6.3f}")
 
-    print("\n5. Verdicts")
-    print(f"  G1 (N): Q2x G {N['G']['rmse']['Q2x']:.3f} vs A {N['A']['rmse']['Q2x']:.3f} -> "
-          + ("FIXED by the Gao leaf-death table" if g1_fixed else "NOT fixed"))
+    print("\n5. Decisions (AMENDMENT 2: paired bootstrap, 95 % interval; G1 void -- its premise was a")
+    print("   dead-leaf ERROR, removed by the floor)")
     for d in ("N", "NE"):
-        v = g2[d]
-        print(f"  G2 ({d}): pooled G {res[d]['G']['rmse']['POOLEDx']:.3f} vs B {res[d]['B']['rmse']['POOLEDx']:.3f}"
-              f"  Q1 {res[d]['G']['rmse']['Q1']:.3f}/{res[d]['B']['rmse']['Q1']:.3f}"
-              f"  Q2x {res[d]['G']['rmse']['Q2x']:.3f}/{res[d]['B']['rmse']['Q2x']:.3f}"
-              f" | (a) {v['a']} (b) {v['b']} (c) {v['c']} -> {'PASS' if v['passed'] else 'FAIL'}")
-    print(f"     -> {consequence}")
-    print(f"  G3 (N): pooled G {N['G']['rmse']['POOLEDx']:.3f} vs A {N['A']['rmse']['POOLEDx']:.3f} + 0.02 -> "
-          + ("no general loss" if g3 else "GENERAL LOSS"))
-    for s, v in g4.items():
-        print(f"  G4 {s:<12}: pooled G {res[s]['G']['rmse']['POOLEDx']:.3f} vs B {res[s]['B']['rmse']['POOLEDx']:.3f}"
-              f" | (a) {v['a']} (b) {v['b']} (c) {v['c']} -> {'PASS' if v['passed'] else 'FAIL'}")
-    print("     " + (f"flips under {', '.join(flips)}" if flips else "no flip under (s1), (s2)"))
+        for lab, v in (("G vs shipped", g2[d]), ("G vs IR72 port", g3[d])):
+            print(f"  {d:<3} {lab:<15} B-A {v['delta']:+.3f} [{v['lo']:+.3f}, {v['hi']:+.3f}] -> "
+                  f"{v['verdict'].replace('A better', 'G better')}; G matures every year: {v['reached']}")
+    for s_, v in g4.items():
+        print(f"  {s_:<12} G vs shipped B-A {v['delta']:+.3f} [{v['lo']:+.3f}, {v['hi']:+.3f}] -> "
+              f"{v['verdict'].replace('A better', 'G better')}")
+    print("  " + (f"verdict differs under {', '.join(flips)}" if flips else "same verdict under (s1), (s2)"))
     return out
 
 

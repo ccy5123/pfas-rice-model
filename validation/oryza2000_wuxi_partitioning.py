@@ -131,6 +131,7 @@ sys.path.insert(0, HERE)
 import oryza2000 as O2K                         # noqa: E402
 import oryza_growth as OG                       # noqa: E402
 import oryza2000_kim_face_phenology as C        # noqa: E402
+import oryza2000_kim_face as K                  # noqa: E402
 import oryza2000_kim_face_gao_japonica as GJ    # noqa: E402
 
 RAW = os.path.join(ROOT, "docs", "literature_db", "raw_si")
@@ -272,14 +273,14 @@ def evaluate(runs, obs, green_only=False):
         idx, reached = stage_index(runs[y], y)
         mv = {s: organs(runs[y], idx[s], green_only) for s in SCORED}
         qm, qo = quantities(mv), quantities(obs[y])
+        pe = {g: {s: float(np.log10(qm[g][s]) - np.log10(o)) for s, o in qo[g].items()} for g in WGROUPS}
         for g in WGROUPS:
-            for s, o in qo[g].items():
-                err[g].append(np.log10(qm[g][s]) - np.log10(o))
+            err[g].extend(pe[g].values())
         dat = {s: float(np.interp(idx[s], np.arange(len(runs[y]["dat"])), runs[y]["dat"]))
                for s in ("heading", "maturity")}
         till = organs(runs[y], float(np.interp(obs[y]["tillering"]["dat"], runs[y]["dat"],
                                                np.arange(len(runs[y]["dat"])))), green_only)
-        detail[y] = dict(idx=idx, reached=reached, qm=qm, qo=qo, mv=mv, dat=dat, tillering=till)
+        detail[y] = dict(idx=idx, reached=reached, qm=qm, qo=qo, mv=mv, dat=dat, tillering=till, err=pe)
     rmse = {g: float(np.sqrt(np.mean(np.square(e)))) for g, e in err.items()}
     bias = {g: float(np.mean(e)) for g, e in err.items()}
     rmse["POOLED"] = float(np.mean([rmse[g] for g in WGROUPS]))
@@ -311,12 +312,15 @@ def calibrate_wp(arm, year, obs, sbdur=SBDUR):
     return {**r1, "DVRP": base["DVRP"] * k, "DVRR": base["DVRR"] * k}, f, k
 
 
-def r1(R, a="A", b="B"):
-    ra, rb = R[a]["rmse"], R[b]["rmse"]
-    ok_a = ra["POOLED"] <= rb["POOLED"] + 0.05
-    ok_b = (ra["W2"] <= rb["W2"] + 0.05) and (ra["W3"] <= rb["W3"] + 0.05)
-    ok_c = all(R[a]["detail"][y]["reached"]["maturity"] for y in YEARS)
-    return dict(a=ok_a, b=ok_b, c=ok_c, passed=ok_a and ok_b and ok_c)
+def errors(detail, groups=WGROUPS):
+    return {g: [(y, st, detail[y]["err"][g][st]) for y in YEARS for st in detail[y]["err"][g]] for g in groups}
+
+
+def r1(R, a="A", b="B", groups=WGROUPS):
+    """AMENDMENT 2: paired bootstrap of POOLED(b) - POOLED(a) over the scored points + a reaches DVS 2."""
+    c = K.compare(errors(R[a]["detail"], groups), errors(R[b]["detail"], groups), groups=groups)
+    c["reached"] = all(R[a]["detail"][y]["reached"]["maturity"] for y in YEARS)
+    return c
 
 
 def design(obs, arms, rates=None, sbdur=SBDUR, dT=None, green_only=False):
@@ -348,8 +352,8 @@ def main(verbose=True):
         res["W_Toffset"] = design(obs, ("A", "B"), dT={y: v["diff"] for y, v in wc.items()})
     verdict = {d: r1(R) for d, R in res.items()}
     W = res["W"]
-    r3 = {arm: W[arm]["rmse"]["PART3"] <= W["A"]["rmse"]["PART3"] - 0.05 for arm in ("A+PART", "G")}
-    flips = [d for d in verdict if d != "W" and verdict[d]["passed"] != verdict["W"]["passed"]]
+    r3 = {arm: r1(W, a=arm, b="A", groups=("W1", "W2", "W3")) for arm in ("A+PART", "G")}
+    flips = [d for d in verdict if d != "W" and verdict[d]["verdict"] != verdict["W"]["verdict"]]
     out = dict(obs=obs, weather=wc, offset_needed=offset_needed, res=res, verdict=verdict,
                r1=verdict["W"], r3=r3, flips=flips, wp_rates=wp_rates, wp_fk=wp_fk)
     if not verbose:
@@ -396,16 +400,16 @@ def main(verbose=True):
             print(f"  {d:<12} {arm:<7}" + "".join(f"  {rr[g]:6.3f} ({b[g]:+.3f})" for g in WGROUPS)
                   + f"  {rr['POOLED']:6.3f}  {rr['PART3']:6.3f}")
 
-    print("\n4. Verdicts")
+    print("\n4. Decisions (AMENDMENT 2: paired bootstrap, 95 % interval)")
     for d, v in verdict.items():
         R = res[d]
-        print(f"  R1 {d:<12} pooled A {R['A']['rmse']['POOLED']:.3f} vs B {R['B']['rmse']['POOLED']:.3f}"
-              f"  W2 {R['A']['rmse']['W2']:.3f}/{R['B']['rmse']['W2']:.3f}  W3 {R['A']['rmse']['W3']:.3f}/{R['B']['rmse']['W3']:.3f}"
-              f" | (a) {v['a']} (b) {v['b']} (c) {v['c']} -> {'PASS' if v['passed'] else 'FAIL'}")
-    print("  R2: " + (f"sensitive to {', '.join(flips)}" if flips else "no flip (Wp and every sensitivity agree)"))
-    for arm, ok in r3.items():
-        print(f"  R3 {arm:<7}: W1-3 {W[arm]['rmse']['PART3']:.3f} vs A {W['A']['rmse']['PART3']:.3f} - 0.05 -> "
-              + ("Gao partitioning fits BETTER" if ok else "not better"))
+        print(f"  R1 {d:<12} POOLED A {R['A']['rmse']['POOLED']:.3f} vs B {R['B']['rmse']['POOLED']:.3f}"
+              f"  B-A {v['delta']:+.3f} [{v['lo']:+.3f}, {v['hi']:+.3f}] -> {v['verdict']}"
+              f"; port matures every year: {v['reached']}")
+    print("  R2: " + (f"verdict differs under {', '.join(flips)}" if flips else "same verdict under Wp and every sensitivity"))
+    for arm, v in r3.items():
+        print(f"  R3 {arm:<7} vs IR72 (W1-3): IR72-{arm} {v['delta']:+.3f} [{v['lo']:+.3f}, {v['hi']:+.3f}] -> "
+              f"{v['verdict'].replace('A better', arm + ' better').replace('B better', 'IR72 better')}")
     return out
 
 

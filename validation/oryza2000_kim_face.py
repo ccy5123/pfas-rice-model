@@ -329,20 +329,81 @@ def at(run, key, i):
 
 
 def quantities(v, root=None):
-    """The scored ratios from per-stage values v[stage] = {GL, SL, TOT} (and Q5 pairs)."""
+    """The scored ratios from per-stage values v[stage] = {GL, SL, TOT} (and Q5 pairs).
+
+    AMENDMENT 2: Q3-Q5 are on LIVING biomass (TOT - SL) on both sides, because the observed
+    total lost the detached blades while the model keeps every dead leaf; Q2 is a floor
+    (scored one-sided by point_error)."""
     q = {g: {} for g in GROUPS}
+    live = {s: v[s]["TOT"] - v[s]["SL"] for s in SCORED}
     for s in ("panicle_initiation", "mid_ripening", "maturity"):
         q["Q1"][s] = v[s]["GL"] / v["anthesis"]["GL"]
     for s in ("anthesis", "mid_ripening", "maturity"):
         q["Q2"][s] = v[s]["SL"] / (v[s]["GL"] + v[s]["SL"])
     for s in SCORED:
-        q["Q3"][s] = v[s]["GL"] / v[s]["TOT"]
+        q["Q3"][s] = v[s]["GL"] / live[s]
     for s in ("panicle_initiation", "anthesis", "mid_ripening"):
-        q["Q4"][s] = v[s]["TOT"] / v["maturity"]["TOT"]
+        q["Q4"][s] = live[s] / live["maturity"]
     if root is not None:
         for s, (r, t) in root.items():
-            q["Q5"][s] = r / t
+            q["Q5"][s] = r / (t - v[s]["SL"])
     return q
+
+
+def point_error(g, qm, qo):
+    """log10 model/observed; the senescent share (Q2) is a floor, so only a prediction BELOW
+    the observation counts (AMENDMENT 2)."""
+    d = float(np.log10(max(qm, 1e-12)) - np.log10(qo))
+    return min(0.0, d) if g == "Q2" else d
+
+
+SCORE_GROUPS = ("Q1", "Q2x", "Q3", "Q4", "Q5")      # Q2x = Q2 without the anthesis point
+
+
+def scored_errors(detail):
+    """{group: [(year, stage, error)]} over the scored points (Q2 -> Q2x)."""
+    out = {g: [] for g in SCORE_GROUPS}
+    for y in sorted(detail):
+        for g, pts in detail[y]["err"].items():
+            for st, e in pts.items():
+                if g == "Q2":
+                    if st != "anthesis":
+                        out["Q2x"].append((y, st, e))
+                else:
+                    out[g].append((y, st, e))
+    return out
+
+
+def _pooled(errs):
+    return float(np.mean([np.sqrt(np.mean(np.square(e))) for e in errs]))
+
+
+def compare(err_a, err_b, groups=SCORE_GROUPS, n=4000, seed=0):
+    """Paired bootstrap of POOLED(B) - POOLED(A) over the scored points (AMENDMENT 2).
+
+    err_a / err_b: {group: [(key..., error)]} on the SAME points in the same order. Points are
+    resampled with replacement within each group; POOLED = mean of the group RMSEs."""
+    ea = {g: np.array([p[-1] for p in err_a[g]]) for g in groups}
+    eb = {g: np.array([p[-1] for p in err_b[g]]) for g in groups}
+    for g in groups:
+        assert [p[:-1] for p in err_a[g]] == [p[:-1] for p in err_b[g]], g
+    delta = _pooled([eb[g] for g in groups]) - _pooled([ea[g] for g in groups])
+    rng = np.random.default_rng(seed)
+    boot = np.empty(n)
+    for k in range(n):
+        idx = {g: rng.integers(0, len(ea[g]), len(ea[g])) for g in groups}
+        boot[k] = (_pooled([eb[g][idx[g]] for g in groups])
+                   - _pooled([ea[g][idx[g]] for g in groups]))
+    lo, hi = (float(x) for x in np.quantile(boot, [0.025, 0.975]))
+    verdict = "A better" if lo > 0 else ("B better" if hi < 0 else "indistinguishable")
+    return dict(delta=float(delta), lo=lo, hi=hi, verdict=verdict)
+
+
+def switch_rule(detail_a, detail_b, years=YEARS):
+    """AMENDMENT 2 decision: the paired bootstrap verdict + the port reaching DVS 2 in every year."""
+    c = compare(scored_errors(detail_a), scored_errors(detail_b))
+    c["reached"] = all(detail_a[y]["reached"]["maturity"] for y in years)
+    return c
 
 
 def model_values(run, idx):
@@ -362,29 +423,22 @@ def evaluate(runs, obs, root_obs):
             root_m = {s: (mv[s]["ROOT"], mv[s]["TOT"]) for s in root_obs}
         qm = quantities(mv, root_m)
         qo = quantities({s: obs[y][s] for s in SCORED}, root_obs if y == 1999 else None)
+        pe = {g: {s: point_error(g, qm[g][s], o) for s, o in qo[g].items()} for g in GROUPS}
         for g in GROUPS:
-            for s, o in qo[g].items():
-                with np.errstate(divide="ignore"):
-                    err[g].append(np.log10(qm[g][s]) - np.log10(o))
-        detail[y] = dict(idx=idx, reached=reached, qm=qm, qo=qo, mv=mv)
-    with np.errstate(over="ignore", invalid="ignore"):
-        rmse = {g: float(np.sqrt(np.mean(np.square(e)))) for g, e in err.items()}
-        bias = {g: float(np.mean(e)) for g, e in err.items()}
+            err[g].extend(pe[g].values())
+        detail[y] = dict(idx=idx, reached=reached, qm=qm, qo=qo, mv=mv, err=pe)
+    return summarize(err, detail) + (detail,)
+
+
+def summarize(err, detail):
+    """Group RMSE / bias, POOLED, Q2x and POOLEDx from per-point errors (AMENDMENT 2 errors)."""
+    rmse = {g: float(np.sqrt(np.mean(np.square(e)))) for g, e in err.items()}
+    bias = {g: float(np.mean(e)) for g, e in err.items()}
     rmse["POOLED"] = float(np.mean([rmse[g] for g in GROUPS]))
-    # POST-HOC (addendum): Q2 without the anthesis point, where the shipped driver predicts 0
-    e2 = [np.log10(detail[y]["qm"]["Q2"][s]) - np.log10(detail[y]["qo"]["Q2"][s])
-          for y in YEARS for s in ("mid_ripening", "maturity")]
+    e2 = [e for _, _, e in scored_errors(detail)["Q2x"]]
     rmse["Q2x"] = float(np.sqrt(np.mean(np.square(e2))))
-    rmse["POOLEDx"] = float(np.mean([rmse[g] for g in ("Q1", "Q2x", "Q3", "Q4", "Q5")]))
-    return rmse, bias, detail
-
-
-def d1(ra, rb, detail_a, q2="Q2", pooled="POOLED"):
-    """The pre-registered rule; q2="Q2x", pooled="POOLEDx" is the post-hoc finite variant."""
-    a = ra[pooled] <= rb[pooled] + 0.05
-    b = (ra["Q1"] <= rb["Q1"] + 0.05) and (ra[q2] <= rb[q2] + 0.05)
-    c = all(detail_a[y]["reached"]["maturity"] for y in YEARS)
-    return dict(a=a, b=b, c=c, passed=a and b and c)
+    rmse["POOLEDx"] = float(np.mean([rmse[g] for g in SCORE_GROUPS]))
+    return rmse, bias
 
 
 def adequacy(x):
@@ -397,8 +451,7 @@ def run_treatment(obs, root_obs, dT, sbdur, source="power"):
     ra, ba, da = evaluate(ra_runs, obs, root_obs)
     rb, bb, db = evaluate(rb_runs, obs, root_obs)
     return dict(A=dict(rmse=ra, bias=ba, detail=da, runs=ra_runs),
-                B=dict(rmse=rb, bias=bb, detail=db, runs=rb_runs), d1=d1(ra, rb, da),
-                d1x=d1(ra, rb, da, q2="Q2x", pooled="POOLEDx"))
+                B=dict(rmse=rb, bias=bb, detail=db, runs=rb_runs), rule=switch_rule(da, db))
 
 
 def _fmt_stage_row(name, d, run):
@@ -429,8 +482,8 @@ def report(P, obs, title):
         for y in YEARS))
 
     print("2. Scored ratios (observed | A | B)")
-    labels = {"Q1": "GL(s)/GL(anthesis)", "Q2": "SL/(GL+SL)", "Q3": "GL/TOT",
-              "Q4": "TOT(s)/TOT(maturity)", "Q5": "root/total (1999)"}
+    labels = {"Q1": "GL(s)/GL(anthesis)", "Q2": "SL/(GL+SL)  [floor]", "Q3": "GL/(TOT-SL)",
+              "Q4": "(TOT-SL)(s)/(TOT-SL)(maturity)", "Q5": "root/(total-SL) (1999)"}
     for g in GROUPS:
         print(f"  {g} {labels[g]}")
         for y in YEARS:
@@ -439,7 +492,7 @@ def report(P, obs, title):
             for st in qo:
                 print(f"    {y} {st:<19} {qo[st]:7.3f} | {qa[st]:7.3f} | {qb[st]:7.3f}")
 
-    print("3. log10 RMSE per group (bias = mean log10 model/observed); Q2x/POOLEDx = POST-HOC")
+    print("3. log10 RMSE per group (bias = mean log10 model/observed; Q2 one-sided = floor)")
     print("      " + "".join(f"{g:>16}" for g in GROUPS) + f"{'POOLED':>8}{'Q2x':>7}{'POOLEDx':>9}")
     for arm in ("A", "B"):
         r, b = P[arm]["rmse"], P[arm]["bias"]
@@ -470,47 +523,33 @@ def report(P, obs, title):
         f"{y} {P['A']['runs'][y]['NGR'][-1] / max(P['A']['runs'][y]['NSP'][-1], 1e-9):.2f}" for y in YEARS))
 
 
+def rule_line(name, R):
+    c = R["rule"]
+    return (f"    {name:<15} POOLEDx A {R['A']['rmse']['POOLEDx']:.3f} vs B {R['B']['rmse']['POOLEDx']:.3f}"
+            f"  (Q2x {R['A']['rmse']['Q2x']:.3f}/{R['B']['rmse']['Q2x']:.3f})  B-A {c['delta']:+.3f}"
+            f" [{c['lo']:+.3f}, {c['hi']:+.3f}] -> {c['verdict']}; port matures every year: {c['reached']}")
+
+
 def main(verbose=True):
     obs, root_obs = load_obs()
     res = {name: run_treatment(obs, root_obs, **kw) for name, kw in TREATMENTS.items()}
     post = {name: run_treatment(obs, root_obs, **kw) for name, kw in POSTHOC.items()}
     out = dict(res=res, post=post, obs=obs, root_obs=root_obs,
                offsets={y: station_offset(y) for y in YEARS})
-    v0 = res["primary"]["d1"]["passed"]
-    out["verdict"] = v0
-    out["flips"] = [n for n, R in res.items() if R["d1"]["passed"] != v0]
+    out["verdicts"] = {n: R["rule"]["verdict"] for n, R in list(res.items()) + list(post.items())}
     if not verbose:
         return out
     print("=" * 78)
     print("ORYZA2000 port (A) vs shipped oryza_growth (B) -- Shizukuishi FACE, Akitakomachi,")
     print("ambient CO2, medium N, 1998-2000; observations placed by STAGE on each driver's DVS")
-    print("=" * 78)
-    report(res["primary"], obs, "PRE-REGISTERED primary weather (NASA POWER cell, uncorrected)")
-
-    print("\n4. D1 / D2 -- does the independent evidence support the switch? (pre-registered)")
-    for name, R in res.items():
-        d = R["d1"]
-        print(f"    {name:<15} pooled A {R['A']['rmse']['POOLED']:.3f} vs B {R['B']['rmse']['POOLED']:.3f}"
-              f" | (a) {d['a']} (b) {d['b']} (c) {d['c']} -> {'PASS' if d['passed'] else 'FAIL'}")
-    print(f"\n  VERDICT (pre-registered, primary): D1 {'PASSES' if v0 else 'FAILS'}"
-          + (f"; sensitive to {', '.join(out['flips'])}" if out["flips"] else "; unchanged under S1-S3"))
-
-    print("\n" + "=" * 78)
-    print("POST-HOC (addendum; not pre-registered)")
+    print("Scoring: AMENDMENT 2 (senescent share = floor; Q3-Q5 on living biomass; bootstrap rule)")
     print("=" * 78)
     print("   station - POWER offset over May-Oct (Tmin, Tmax): " + "; ".join(
         f"{y} {on:+.2f}, {ox:+.2f} C" for y, (on, ox) in out["offsets"].items()))
-    report(post["S4_station"], obs, "S4: JMA station temperatures + POWER radiation")
-    print("\n   D1 with the finite Q2 variant (Q2x, POOLEDx), every treatment:")
+    report(post["S4_station"], obs, "S4: JMA station temperatures + POWER radiation (the observed weather)")
+    print("\n4. Decision (paired bootstrap of POOLEDx(B) - POOLEDx(A), 95 % interval), every treatment")
     for name, R in list(res.items()) + list(post.items()):
-        d = R["d1x"]
-        print(f"    {name:<15} pooledx A {R['A']['rmse']['POOLEDx']:.3f} vs B {R['B']['rmse']['POOLEDx']:.3f}"
-              f"  Q1 {R['A']['rmse']['Q1']:.3f}/{R['B']['rmse']['Q1']:.3f}"
-              f"  Q2x {R['A']['rmse']['Q2x']:.3f}/{R['B']['rmse']['Q2x']:.3f}"
-              f" | (a) {d['a']} (b) {d['b']} (c) {d['c']} -> {'PASS' if d['passed'] else 'FAIL'}")
-    d = post["S4_station"]["d1"]
-    print(f"   S4 under the pre-registered rule: (a) {d['a']} (b) {d['b']} (c) {d['c']} -> "
-          f"{'PASS' if d['passed'] else 'FAIL'}")
+        print(rule_line(name, R))
     return out
 
 

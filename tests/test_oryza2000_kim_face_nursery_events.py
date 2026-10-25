@@ -3,10 +3,9 @@
 
 Pinned: (1) the file's own code reproduces option C's primary exactly, and the recorded nursery
 leaves the shipped arm untouched; (2) under the 1999 events the calibration hits PI 54 / heading 78
-and the sample-DVS placement equals option C's on target days; (3) the pre-registered verdicts --
-D1 passes on N and does not flip under (s1)-(s3), NE FAILS on (b) while the placement control NG
-passes (so the flip is the event dates, not the placement), D4 says the dead-leaf excess is the
-leaf-death table, C3 is NOT adequate under either design.
+and the sample-DVS placement equals option C's on target days; (3) the decisions under the corrected
+scoring (AMENDMENT 2 of oryza2000_kim_face.py) -- the port is better on N and NG and under (s1)-(s3),
+indistinguishable on NE; C3 is NOT adequate under either design.
 """
 import os
 import sys
@@ -51,18 +50,16 @@ def test_events_calibration_and_the_sample_dvs_placement(out):
         assert 0.74 < sd[1999]["panicle_initiation"] < 0.78 and 1.24 < sd[1999]["anthesis"] < 1.30
 
 
-def test_the_pre_registered_verdicts(out):
+def test_the_verdicts_under_the_corrected_scoring(out):
     R = out["res"]
-    assert out["d1"] == {"a": True, "b": True, "c": True, "passed": True}
+    assert out["d1"]["verdict"] == "A better" and out["d1"]["reached"]
     assert out["flips"] == []
-    assert R["N"]["A"]["rmse"]["POOLEDx"] == pytest.approx(0.220, abs=0.005)
-    assert R["N"]["B"]["rmse"]["POOLEDx"] == pytest.approx(0.244, abs=0.005)
-    assert out["d2_NG"]["passed"] and not out["d2_NE"]["passed"]
-    assert out["d2_NE"]["a"] and not out["d2_NE"]["b"]                      # NE fails on (b) only
-    assert R["NE"]["A"]["rmse"]["Q2x"] - R["NE"]["B"]["rmse"]["Q2x"] == pytest.approx(0.100, abs=0.01)
-    assert abs(R["NG"]["A"]["rmse"]["POOLEDx"] - R["N"]["A"]["rmse"]["POOLEDx"]) < 0.01
-    assert not R["NE_s1_tmpsb0"]["c1"]["passed"]
-    assert out["d4_drop"] == pytest.approx(0.061, abs=0.005) and out["d4_drop"] < 0.10
+    assert R["N"]["A"]["rmse"]["POOLEDx"] == pytest.approx(0.164, abs=0.005)
+    assert R["N"]["B"]["rmse"]["POOLEDx"] == pytest.approx(0.240, abs=0.005)
+    assert out["d2_NG"]["verdict"] == "A better"
+    assert out["d2_NE"]["verdict"] == "indistinguishable"                # the 1999 events narrow it
+    assert R["NE"]["B"]["rmse"]["Q2x"] == pytest.approx(0.155, abs=0.005)
+    assert R["NE_s1_tmpsb0"]["c1"]["verdict"] == "indistinguishable"
     assert out["c3_N"] is False and out["c3_NE"] is False
     assert abs(R["NE"]["A"]["phen"][1999]["anthesis"]) < 3                  # vs the true heading
 

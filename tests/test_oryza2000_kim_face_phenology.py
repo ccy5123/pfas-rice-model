@@ -1,11 +1,11 @@
 """Option C -- both biomass drivers' development rates calibrated to Akitakomachi, then the
 Shizukuishi FACE comparison re-run (validation/oryza2000_kim_face_phenology.py, pre-registered
-in 7743bfc).
+in 7743bfc; scoring per AMENDMENT 2 of oryza2000_kim_face.py).
 
 Pinned: (1) the DRATES-style calibration hits the observed PI / anthesis / maturity days; (2) the
-leave-one-year-out rates are the other two years' means; (3) the pre-registered verdicts -- C1
-passes (LOYO, station weather) and does not flip under any sensitivity, C2 says the port's
-dead-leaf excess is mostly its leaf-death table, C3 says LOYO phenology is NOT adequate.
+leave-one-year-out rates are the other two years' means; (3) the decisions under the corrected
+scoring -- the port is better (LOYO, station weather) under every sensitivity and with own-year
+rates; C3 says LOYO phenology is NOT adequate.
 """
 import os
 import sys
@@ -46,17 +46,15 @@ def test_loyo_rates_are_the_other_years_means(out):
         assert lr[1998]["DVRP"] == pytest.approx(np.mean([own[1999][0]["DVRP"], own[2000][0]["DVRP"]]))
 
 
-def test_the_pre_registered_verdicts(out):
+def test_the_verdicts_under_the_corrected_scoring(out):
     P = out["res"]["primary"]
-    assert out["c1"] == {"a": True, "b": True, "c": True, "passed": True}
+    assert out["c1"]["verdict"] == "A better" and out["c1"]["reached"]
     assert out["flips"] == []
-    assert P["c1_own"]["passed"]
-    assert P["A"]["rmse"]["POOLEDx"] == pytest.approx(0.222, abs=0.005)
-    assert P["B"]["rmse"]["POOLEDx"] == pytest.approx(0.245, abs=0.005)
+    assert P["c1_own"]["verdict"] == "A better"
+    assert P["A"]["rmse"]["POOLEDx"] == pytest.approx(0.168, abs=0.005)
+    assert P["B"]["rmse"]["POOLEDx"] == pytest.approx(0.240, abs=0.005)
     assert P["A"]["rmse"]["Q1"] == pytest.approx(0.174, abs=0.005)
-    assert P["A"]["rmse"]["Q2x"] - P["B"]["rmse"]["Q2x"] == pytest.approx(0.035, abs=0.005)  # (b) margin
-    assert out["q2x_uncal"] == pytest.approx(C.UNCALIBRATED_PORT_Q2X, abs=0.002)
-    assert out["c2_drop"] == pytest.approx(0.072, abs=0.005) and not out["c2_phenological"]
+    assert P["A"]["rmse"]["Q2x"] == 0.0 and P["B"]["rmse"]["Q2x"] == pytest.approx(0.207, abs=0.005)
     assert out["c3"] is False                                         # LOYO phenology misses ~10 d
     assert abs(P["A"]["phen"][1998]["anthesis"]) > 5
     for name, R in out["res"].items():

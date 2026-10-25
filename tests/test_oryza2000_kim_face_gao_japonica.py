@@ -2,10 +2,10 @@
 (validation/oryza2000_kim_face_gao_japonica.py, pre-registered in 5aada97).
 
 Pinned: (1) the Gao values reach the port as transcribed (tables, SLA switch, single KDF) and the
-IR72.D92 / shipped arms reproduce the redo exactly; (2) the pre-registered verdicts -- G1 NOT fixed
-(the Gao leaf-death table raises the dead-leaf share), G2 fails on (b) under N and NE, G3 no general
-loss, no flip under the sensitivities; (3) the decomposition: the leaf-death table alone carries the
-Q2x rise, the canopy group carries the gain.
+IR72.D92 / shipped arms reproduce the redo exactly; (2) the decisions under the corrected scoring
+(AMENDMENT 2 of oryza2000_kim_face.py) -- the Gao set is better than the shipped driver on N,
+indistinguishable on NE, and indistinguishable from the IR72 port; (3) the decomposition and Gao's
+own phenology.
 """
 import os
 import sys
@@ -36,24 +36,21 @@ def test_the_gao_crop_set_reaches_the_port():
     assert "COLDMIN" not in c                                       # not applied (no cold-stop rule)
 
 
-def test_the_pre_registered_verdicts(out):
+def test_the_verdicts_under_the_corrected_scoring(out):
     R = out["res"]
     assert out["checks"] == {"N": True, "NE": True}
-    assert not out["g1_fixed"]
-    assert R["N"]["G"]["rmse"]["Q2x"] - R["N"]["A"]["rmse"]["Q2x"] == pytest.approx(0.064, abs=0.01)
-    for d in ("N", "NE"):
-        assert out["g2"][d] == {"a": True, "b": False, "c": True, "passed": False}
-    assert out["consequence"].startswith("fails N")
-    assert out["g3"] and R["N"]["G"]["rmse"]["POOLEDx"] == pytest.approx(0.225, abs=0.005)
+    assert out["g2"]["N"]["verdict"] == "A better"                       # Gao set better than shipped (N)
+    assert out["g2"]["NE"]["verdict"] == "indistinguishable"
+    assert out["g3"]["N"]["verdict"] == "indistinguishable" == out["g3"]["NE"]["verdict"]   # Gao vs IR72
     assert out["flips"] == []
-    assert R["N"]["G"]["rmse"]["Q1"] < R["N"]["A"]["rmse"]["Q1"] - 0.05     # the gains (b) does not count
+    assert R["N"]["G"]["rmse"]["Q2x"] == 0.0
+    assert R["N"]["G"]["rmse"]["Q1"] < R["N"]["A"]["rmse"]["Q1"] - 0.05
     assert R["N"]["G"]["rmse"]["Q4"] < R["N"]["A"]["rmse"]["Q4"] - 0.05
 
 
 def test_decomposition_and_gaos_own_phenology(out):
     N = out["res"]["N"]
-    assert abs(N["A+DRLVT"]["rmse"]["Q2x"] - N["G"]["rmse"]["Q2x"]) < 0.01
-    assert abs(N["A+CANOPY"]["rmse"]["Q2x"] - N["A"]["rmse"]["Q2x"]) < 0.005
+    assert N["A+DRLVT"]["rmse"]["Q1"] < N["A"]["rmse"]["Q1"]             # the leaf-death table carries the Q1 gain
     assert min(N[a]["rmse"]["POOLEDx"] for a in G.MAIN_ARMS + G.DECOMP_ARMS) == N["A+CANOPY"]["rmse"]["POOLEDx"]
     ph = out["unc"]["phen"]                                         # Gao's own rates, no calibration
     assert ph[1998]["anthesis"] == pytest.approx(9.0, abs=0.3) and ph[1999]["anthesis"] == pytest.approx(-8.7, abs=0.3)

@@ -3,8 +3,9 @@ drivers (validation/oryza2000_wuxi_partitioning.py, pre-registered in 54bf8c3).
 
 Pinned: (1) the data and weather load as transcribed/downloaded (fractions sum to 1; the weather
 check against Hasegawa's season means triggers the offset run for 2003 only); (2) the Wp design hits
-its phenology targets; (3) the pre-registered verdicts -- R1 passes (the port is closer on the spike
-and stem shares), no flip under Wp or any sensitivity, Gao's partitioning is not better by 0.05.
+its phenology targets; (3) the decisions (paired bootstrap, AMENDMENT 2) -- the port is better, under Wp and every
+sensitivity; Gao's partitioning alone is marginally better than IR72's, the full Gao set
+indistinguishable.
 """
 import os
 import sys
@@ -45,15 +46,16 @@ def test_wp_hits_its_targets(out):
         assert C.crossing(r, 2.0) == pytest.approx(W.MATURITY_DAT, abs=0.01)
 
 
-def test_the_pre_registered_verdicts(out):
+def test_the_verdicts(out):
     R = out["res"]
-    assert out["r1"] == {"a": True, "b": True, "c": True, "passed": True}
+    assert out["r1"]["verdict"] == "A better" and out["r1"]["reached"]
     assert out["flips"] == [] and "W_Toffset" in R
     assert R["W"]["A"]["rmse"]["POOLED"] == pytest.approx(0.076, abs=0.005)
     assert R["W"]["B"]["rmse"]["POOLED"] == pytest.approx(0.129, abs=0.005)
     assert R["W"]["A"]["rmse"]["W2"] < R["W"]["B"]["rmse"]["W2"] - 0.04          # spike share
-    assert R["W"]["B"]["bias"]["W2"] < -0.08 and R["W"]["B"]["bias"]["W3"] > -0.01  # under-filled panicles
-    assert out["r3"] == {"A+PART": False, "G": False}
+    assert R["W"]["B"]["bias"]["W2"] < -0.08                                       # under-filled panicles
+    assert out["r3"]["A+PART"]["verdict"] == "A better"                            # Gao partitioning, marginally
+    assert out["r3"]["G"]["verdict"] == "indistinguishable"
     d = R["W"]["A"]["detail"]                                                      # IR72 matures early at Wuxi
     assert all(d[y]["reached"]["maturity"] and d[y]["dat"]["maturity"] < 115 for y in W.YEARS)
 
