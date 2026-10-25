@@ -1,0 +1,34 @@
+# Yamazaki et al. 2023, Environ. Sci. Technol. (10.1021/acs.est.2c08767), Supporting Information (figshare 10.1021/acs.est.2c08767.s001). Transcribed from the SI text layer and
+# checked against the printed tables, for the 12 compounds the model runs (11 PFAAs + HFPO-DA).
+# irrigation_ng_L = Table S16 "Irrigation water" column, p.S31 (one grab, 2020-06-08; MQL Table S6: 0.004-0.01 ng/L).
+# Tissue columns = Table S18 (Indica = Kasalath, p.S33) and Table S19 (Japonica = Koshihikari, p.S34), pg/g DRY weight.
+#   "stem" = "stems, including leaves" cut at 0-20, 20-40, 40-60 and >60 cm above ground (SI p.S3).
+#   "<x" = below the method quantification limit x. Rice MQLs (Table S6, p.S20) [pg/g dw]: PFBA 2; PFPeA, PFHxA, PFHpA,
+#   PFOA, PFNA, PFDA, PFUnDA, PFOS, HFPO-DA 1; PFBS, PFDoDA 0.4.
+# Harvest: Kasalath 2020-09-01 (heading 08-03), Koshihikari 2020-09-10 (heading 08-11) (SI p.S3).
+# Milling: "weight ratio of white rice to brown rice ranging from 86-90%" (SI p.S3).
+compound,irrigation_ng_L,cultivar,root,stem_0_20,stem_20_40,stem_40_60,stem_gt60,husk,bran,white_rice
+PFBA,7.41,indica_Kasalath,21,122,368,582,793,118,10,5
+PFBA,7.41,japonica_Koshihikari,121,93,166,395,780,180,28,13
+PFPeA,12.03,indica_Kasalath,17,71,145,282,361,63,9,2
+PFPeA,12.03,japonica_Koshihikari,62,43,85,123,254,65,18,3
+PFHxA,12.13,indica_Kasalath,30,80,89,136,163,47,29,4
+PFHxA,12.13,japonica_Koshihikari,38,25,23,35,80,62,19,3
+PFHpA,7.47,indica_Kasalath,33,58,44,51,111,62,14,5
+PFHpA,7.47,japonica_Koshihikari,103,20,13,22,42,24,4,2
+PFOA,8.61,indica_Kasalath,39,54,35,39,70,55,17,3
+PFOA,8.61,japonica_Koshihikari,45,20,11,29,44,18,9,4
+PFNA,5.96,indica_Kasalath,41,28,12,29,41,16,7,3
+PFNA,5.96,japonica_Koshihikari,28,12,8,14,28,5,5,2
+PFDA,0.54,indica_Kasalath,24,14,6,12,13,11,4,2
+PFDA,0.54,japonica_Koshihikari,21,7,3,7,14,3,2,2
+PFUnDA,0.32,indica_Kasalath,63,26,9,14,16,8,4,1
+PFUnDA,0.32,japonica_Koshihikari,62,17,4,9,12,3,1,1
+PFDoDA,0.02,indica_Kasalath,12,7,2,5,8,3,2,1
+PFDoDA,0.02,japonica_Koshihikari,16,6,2,5,5,1,1,1
+PFBS,0.68,indica_Kasalath,24,5,10,19,15,1,<0.4,<0.4
+PFBS,0.68,japonica_Koshihikari,10,5,4,4,5,0,<0.4,<0.4
+PFOS,1.19,indica_Kasalath,89,25,15,39,36,5,<1,3
+PFOS,1.19,japonica_Koshihikari,56,17,15,20,41,3,1,3
+HFPO-DA,3.79,indica_Kasalath,<1,<1,<1,<1,<1,20,31,2
+HFPO-DA,3.79,japonica_Koshihikari,<1,<1,<1,<1,<1,16,11,1

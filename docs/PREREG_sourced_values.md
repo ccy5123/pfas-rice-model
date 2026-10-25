@@ -129,6 +129,74 @@ scenario; the Simple view shows it next to the transfer band.
   variants does not change.
 - E13 The input-range band on the grain is wider than log10 0.1 for most congeners.
 
+### 5.6 Addendum (committed before the re-fit; no fit had been run)
+Corrections found while implementing 5.1:
+- **TMPSB 0-5.0 C**, not 0-5.5. ORYZA's TMPSB raises the daily *maximum*. The ambient maximum over
+  the seedbed days averages 20.0 C (JMA Tsukuba 2020, emergence to transplanting) and the Ibaraki
+  calendar keeps the seedbed at 15-25 C (greening) and 10-25 C (hardening). So the cover adds
+  between 0 and 25 - 20.0 = 5.0 C. The printed 0-5.5 compared a band midpoint with a mean
+  temperature. Midpoint 2.5.
+- **SBDUR midpoint 25.5** runs as the drivers of the 25-d and 26-d runs, linearly interpolated.
+  ORYZA counts whole days, and the two ends move straw and grain by up to 0.006 log10, so either
+  end alone is not admissible.
+- **Observations built from the SI** (`docs/literature_db/tools/yamazaki_obs_from_si.py`):
+  - water = Table S16 (it was back-calculated);
+  - straw = the band concentrations weighted by each band's share of straw dry mass. The shares
+    come from the stratified cutting of Tanaka et al. 2022 (Fig. 3, 10 and 49 d after heading).
+    These two profiles bracket Yamazaki's harvest and are the range ends; the observation is
+    their mean. The straw was an unweighted band mean, which has no source;
+  - brown-rice milling share and < MQL cells at their midpoints, with both ends kept as `lo`/`hi`.
+
+Fit protocol (`validation/refit_sourced.py`):
+- **Variants**:
+  - `redistributed_lipid` (the default);
+  - `redistributed_free` (monotone `f_xy_recommended`);
+  - `redistributed_fit` (f_xy fitted to straw; a reproduction);
+  - `4pool_lipid`;
+  - `4pool_free`.
+
+  Each variant's fitted values are stored under its own key (parameters.json `r_eq__<v>`,
+  `L_Ph__<v>`, `f_xy__<v>`, `lipid_loading[shoot]`). No fitted number is written in the code.
+- **r_eq** in closed form: the model is linear in the state with zero initial state, so every
+  tissue scales with r_eq. The script checks this numerically.
+- **L_Ph >= 0** solves the grain/root ratio (log10 tolerance 1e-4) with no upper bound. If the
+  model's ratio at L_Ph = 0 already reaches the observed one, then L_Ph = 0 (the physical bound;
+  the 1e-5 floor is gone). A ratio that no L_Ph reaches is recorded as such.
+- **`*_fit`**: f_xy in (0, 1] solves the straw/root ratio, alternating with L_Ph, to the same
+  tolerance.
+- **PFBS** has no grain value. Its L_Ph is the range [0, L_MQL], where L_MQL makes the model
+  grain equal the censoring bound (the obs grain `hi`). It runs at the midpoint, and the range
+  goes into the input-range band.
+- **Per-congener interval**: each cultivar fitted on its own observation with its own harvest
+  run. This is the bootstrap over the two cultivars.
+- **Lipid constants per shoot**: profiled least squares. The per-congener r_eq and L_Ph are
+  re-solved at every evaluation, on the residuals they leave: every congener's straw, plus the
+  grain of any congener at L_Ph = 0.
+  - Start from the current constants.
+  - Physical bounds only: 0 < a <= 1, g >= 0, K_half > 0; b and pfsa_ln are free.
+  - PFDoDA is included.
+- **Identification by backward elimination** (rule 1.3). Each term in turn goes to its bound and
+  the rest is refitted. The candidates are:
+  - g_ph = 0;
+  - g_xy = 0;
+  - gate "none" (K_half -> 0) and gate "linear" (K_half -> infinity, g per L/kg);
+  - pfsa_ln = 0;
+  - b = 0.
+
+  A term is removed when `decide(full, reduced)` on the profiled per-cell errors is not "worse"
+  for the reduced model. Among several removable terms, the one whose removal raises the RMSE
+  least goes first. Repeat until every remaining removal makes the fit "worse". Scoring on data
+  not used to fit (rule 1.2) is the transfer endpoints, as in 5.3.
+- **Read-across** for a record without a fit (GenX, a SMILES structure): the median of the fitted
+  congeners' values. A fitted L_Ph can be exactly 0, so the old geometric mean no longer applies.
+
+Expectations added before the fit:
+- E14 g_ph is removed in both lipid variants: the per-congener L_Ph carries the grain.
+- E15 At least one of PFBA/PFPeA sits at L_Ph = 0 in every variant.
+- E16 The per-cultivar r_eq interval exceeds a factor of 2 for PFBA, PFPeA, PFHpA and PFBS, whose
+  root values differ 5.8x, 3.6x, 3.1x and 2.4x between the cultivars (Tables S18/S19), and stays
+  within a factor of 2 for the others.
+
 ## 6. Outcome
 
 (appended after the runs)
