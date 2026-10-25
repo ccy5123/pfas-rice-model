@@ -319,9 +319,16 @@ K_AW = 0. Details: `docs/neutral_dpu_validation.md`.
   (cd external/hydrus_source/source && make)`; `python src/soil_hydrus.py`;
   `python validation/hydrus_coupled_run.py`; `python validation/cwo_kleach_calibration.py`. On Claude
   Code on the web the SessionStart hook builds the engine.
+- **Policy briefs** (Korean slide scripts, every number from a script): `docs/POLICY_BRIEF_KR.md` (PFAS;
+  `python validation/policy_brief_runs.py` → `docs/policy_brief_results.csv`, ~3 min) and
+  `docs/POLICY_BRIEF_BIOCIDES_KR.md` + `docs/bat_census_biocides.md` (EU biocide census on the neutral path;
+  `python validation/bat_census_biocides.py` then `policy_biocides_figures.py`, ~3 min). Run the census before
+  the PFAS brief (its slide 8 reads the census record). Guards: `test_policy_brief.py`,
+  `test_policy_biocides_figures.py`, `test_bat_census_biocides.py`. Rebuilt on the default configuration; the
+  first version (ccy5123/pfas-rice-model#65) carried pre-correction numbers.
 - **Compound lookup** (EPA CompTox): `python src/chem_lookup.py carbamazepine` (needs `CTX_API_KEY`;
   base URL `https://comptox.epa.gov/ctx-api`).
-- **Tests**: `pytest` (434 collected; all pass with the full stack, plus 1 module-level skip for `test_sci_adk_rigor.py` without sci-adk; ~22 min). CI (`.github/workflows/tests.yml`) runs the whole suite;
+- **Tests**: `pytest` (478 collected; all pass with the full stack, plus 1 module-level skip for `test_sci_adk_rigor.py` without sci-adk; ~22 min). CI (`.github/workflows/tests.yml`) runs the whole suite;
   `rigor.yml` runs the sci-adk over-claim guard on the frozen `runs/` records.
 
 ## 8. Conventions

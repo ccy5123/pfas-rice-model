@@ -142,4 +142,5 @@ content over a season, rice-root cell-wall / plaque sorption) — and, for the d
 `retention` and `lam_grain` levers. The transfer datasets still run on the calibration site-year's
 drivers because their own sites and dates are not in the repo. How the growth and PFAS papers
 physically processed their rice (sampling, organ separation, washing, drying, milling), and a
-checklist for new sampling, is in `docs/rice_sample_processing_KR.md`.
+checklist for new sampling, is in `docs/rice_sample_processing_KR.md`. Korean policy-briefing scripts built
+from script output: `docs/POLICY_BRIEF_KR.md` (PFAS) and `docs/POLICY_BRIEF_BIOCIDES_KR.md` (EU biocides).
