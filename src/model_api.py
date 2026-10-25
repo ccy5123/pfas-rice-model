@@ -137,9 +137,10 @@ STRAW_PARTS = ("stem", "leaf")
 #   Six globals fitted by validation/refit_site_year.py on the Yamazaki 2020 site-year (dry-basis data,
 #   harvest operator), PFDoDA excluded, riding on the per-congener (L_Ph, kappa_d) of the
 #   "recommended" set (L_Ph_rec, kappa_d_rec) -- so it is not a 6-parameter model on its own.
-#   In-sample log10 RMSE 0.214 over 29 cells. g_ph came out at its lower bound (1e-5): on the
-#   site-year the lipid PHLOEM term is not used -- the grain is carried by the free term (L_Ph).
-LIPID_LOADING = dict(a=0.132, b=0.1665, g_xy=0.01115, g_ph=1.173e-05, K_half=3466.0, pfsa_ln=0.6377)
+#   In-sample log10 RMSE 0.207 over 29 cells. With the grain drawing only its growth sap
+#   (separate phloem streams, refit amendment 2) the lipid PHLOEM term is now used
+#   (g_ph 0.005): the free anion alone cannot carry the mid/long-chain grain.
+LIPID_LOADING = dict(a=0.1177, b=0.09053, g_xy=0.01577, g_ph=0.005005, K_half=800.1, pfsa_ln=0.6213)
 
 
 def lipid_loading_conductances(n_C, K_PL, group="PFCA"):
@@ -221,7 +222,7 @@ def yamazaki_harvest_baf(congener, runs="both", dead_leaf_attached=1.0, scenario
 TANG_CONGENERS = ("PFOA", "PFOS", "GenX")
 # f_xy re-fit to Tang TF at the 0.1 ug/g dose (OVERRIDE-only; validation/tang2026_fxy_refit.py),
 # on the same drivers `tang_tf_validation` runs (the calibration site-year).
-TANG_REFIT_FXY = {"PFOA": 0.457, "PFOS": 0.999, "GenX": 0.056}
+TANG_REFIT_FXY = {"PFOA": 0.930, "PFOS": 0.999, "GenX": 0.0585}
 _TANG_TF_ENDPOINT = {"TF_stalk": "stalk", "TF_leaf": "leaf", "TF_endosperm": "endosperm"}
 # (model grain pool, Tang organ name, theta key) for the fresh->dry conversion
 _TANG_ORGANS = (("stem", "stalk", "stem"), ("leaf", "leaf", "leaf"), ("grain", "endosperm", "grain_brown"))
@@ -1530,11 +1531,11 @@ def estimate_exposure_bayesian(congener=None, measured_conc=None, *, sigma_log10
 # loading), the 4-pool core, the calibration site-year. log10 RMSE per transfer test, each
 # from the script named (none of these observations entered the fit):
 APRIORI_OOS_SCORES = {
-    "Yamazaki straw (root+grain fitted, straw predicted)": 1.372,   # refit_site_year.py, fit B
-    "Tang 2026 per-organ TF, 0.1 ug/g": 1.413,                     # oos_tang_lipid.py, free anion
-    "Kim 2019 grain BAF excl PFOA (point)": 2.06,                  # kim2019_censored.py, mono
+    "Yamazaki straw (root+grain fitted, straw predicted)": 1.401,   # refit_site_year.py, fit B
+    "Tang 2026 per-organ TF, 0.1 ug/g": 1.496,                     # oos_tang_lipid.py, free anion
+    "Kim 2019 grain BAF excl PFOA (point)": 2.33,                  # kim2019_censored.py, mono
     "Li 2025 shoot/root TF by stage": 1.26,                        # li2025_stage_resolved.py, mono
-    "Li 2025 grain/root TF by stage": 1.44,                        # li2025_stage_resolved.py, mono
+    "Li 2025 grain/root TF by stage": 1.68,                        # li2025_stage_resolved.py, mono
 }
 # The band uses their MEDIAN (no single test speaks for the others). This exists so the
 # Simple view never shows a precise-looking absolute number without a reminder of how far

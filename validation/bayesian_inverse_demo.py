@@ -14,12 +14,11 @@ subtlety:
 
   * `qtp_scale` (a multiplicative scale on the site-year transpiration) and `f_xy`
     (the root->xylem loading factor) enter the root->shoot flux through their
-    PRODUCT, so they trade off strongly (posterior correlation ~ -0.95). Q_TP also
-    sets the advection inside the shoot (stem -> leaf / grain), which f_xy does not,
-    so with root, straw and grain observed the two are not a strict ridge: on the
-    site-year with the harvest operator the correlation sits just inside the script's
-    0.95 ridge threshold and the pair is (barely) separable at sigma 0.05 log10. To
-    pin Q_TP absolutely, measure it (or f_xy) independently.
+    PRODUCT, so they trade off strongly. Q_TP also sets the advection inside the shoot
+    (stem -> leaf / grain), which f_xy does not, so with root, straw and grain observed
+    the pair sits near the script's 0.95 ridge threshold -- on one side or the other
+    depending on how much of the grain the phloem carries (the printed verdict is the
+    current one). Either way, to pin Q_TP absolutely, measure it (or f_xy) independently.
   * `cwo_level` and the root-uptake conductance `kappa_d` trade off the same way
     (the linear-regime influx is ~ g_in * C_w^o), another ridge.
   * With the TRANSPORT parameters held fixed, `(qtp_scale, cwo_level)` IS
@@ -222,11 +221,12 @@ def run(do_emcee=False):
         print("\n(Laplace posterior above; pass --emcee for the full-MCMC cross-check "
               "— a few minutes, the ODE is ~0.7 s/sample.)")
     ra, rb, rc = results
+    b_txt = ("only their product is constrained" if abs(rb["corr"]) > 0.95 else
+             "only the intra-shoot advection that Q_TP alone sets keeps them apart")
     print(f"\nTakeaway: (A) with transport fixed, Q_TP-scale and Cwo-level recover from the "
           f"tissue data (corr {ra['corr']:+.2f}, cond {ra['cond']:.0f}). (B) Q_TP and f_xy trade "
           f"off strongly (corr {rb['corr']:+.2f}, cond {rb['cond']:.0f}): they share the "
-          f"root->shoot flux, and only the intra-shoot advection that Q_TP alone sets keeps "
-          f"them apart. (C) Cwo and the root-uptake conductance are degenerate (corr "
+          f"root->shoot flux, and {b_txt}. (C) Cwo and the root-uptake conductance are degenerate (corr "
           f"{rc['corr']:+.2f}, cond {rc['cond']:.1e}) with no clean product invariant (uptake is "
           f"nonlinear). Pinning Cwo absolutely needs an independent pore-water measurement; "
           f"pinning Q_TP needs a measured transpiration or xylem-sap ratio.")

@@ -120,6 +120,15 @@
 #     P5  the grain concentration no longer rises above 1.5x its harvest value after formation.
 #     P6  phi stays consequential for the grain and is not consequential for the root.
 #     P7  Fit B's a-priori straw RMSE within 0.1 of 1.372 (straw does not see the phloem).
+#   OUTCOME (amendment-2 run): P1 HELD (median L_Ph ratio 2.68 over the 4 congeners off a
+#   bound); P2 HELD (PFBA/PFPeA at the floor, grain +0.19/+0.18); P3 HELD (PFDoDA grain
+#   -0.84, was -0.62); P4 HELD (0.162; root 0.000, straw 0.035, grain 0.213 -> 0.287);
+#   P5 HELD (grain max = harvest value for PFBA/PFOA/PFOS/PFDoDA); P6 WRONG -- phi is now
+#   consequential for STRAW (0.048 vs reference 0.027) and not for grain (0.026 vs 0.067);
+#   P7 HELD (1.401). Not foreseen: PFDA, PFUnDA and PFOS now also reach the L_Ph upper bound
+#   (1) with grain under (-0.16/-0.05/-0.13): with the grain drawing only its growth sap,
+#   the free-anion phloem cannot carry their grain; and T_C_Ph became consequential for the
+#   grain (0.160).
 #
 #   python validation/refit_site_year.py            # fits + sensitivity, prints the verdicts
 #   python validation/refit_site_year.py --write    # ... and applies D1 to parameters.json
@@ -404,11 +413,8 @@ def main(write=False, verbose=True):
     e1 = [c for c in CONG if max(abs(v) for v in A[c]["res"].values()) > 0.01]
     say("\nE1 cells off by >0.01:", e1 or "none", "| bounds:",
         {c: [v for v, x in A[c]["at_bound"].items() if x] for c in CONG if any(A[c]["at_bound"].values())})
-    lower = [c for c in CONG if A[c]["params"]["f_xy"] < (api._CONG[c].get("f_xy_oryza") or np.inf)]
-    say(f"E2 f_xy below f_xy_oryza: {len(lower)}/{len(CONG)}")
-    say("E3 kappa_d / kappa_d_oryza: " + ", ".join(
-        f"{c} {A[c]['params']['kappa_d'] / api._CONG[c]['kappa_d_oryza']:.2f}" for c in CONG
-        if api._CONG[c].get("kappa_d_oryza")))
+    # (E2/E3 compared with the superseded *_oryza fits, which D1 removed; their outcome is
+    # recorded in the header.)
     say(f"E4 a-priori straw RMSE {rmse(B, ['straw']):.3f} (expected 0.5-1.2)")
     cons = [n for n, e in S["effects"].items() if any(e["consequential"].values())]
     say(f"E5 consequential unknowns: {cons}")

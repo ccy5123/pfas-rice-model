@@ -19,7 +19,7 @@
       "composition": "rice_tissue package (recommended anchors)"
     },
     "WARNING_f_xy": "f_xy_recommended is the monotone a-priori value; f_xy_fit is a saturated reproduction fit (one value per congener per dataset) and is not a transferable property.",
-    "refit_site_year": "Transport parameters fitted to Yamazaki 2023 on the 2020 Tsukuba site-year (src/site_scenario.py), dry-basis tissue data, harvest operator with attached dead blades (src/harvest.py); validation/refit_site_year.py (pre-registered), params/refit_site_year.csv. *_fit: per congener (f_xy, L_Ph, kappa_d), saturated. *_rec: (L_Ph, kappa_d) with the monotone f_xy_recommended fixed, so straw is a prediction. PFBS has no grain value: its L_Ph is the geometric mean of the others'."
+    "refit_site_year": "Transport parameters fitted to Yamazaki 2023 on the 2020 Tsukuba site-year (src/site_scenario.py), dry-basis tissue data, harvest operator with attached dead blades (src/harvest.py); validation/refit_site_year.py. *_fit: per congener (f_xy, L_Ph, kappa_d), saturated (reproduction log10 RMSE 0.162). *_rec: (L_Ph, kappa_d) with the monotone f_xy_recommended fixed, so straw is a prediction (a-priori straw log10 RMSE 1.401). PFBS has no grain value: its L_Ph is the geometric mean of the others'."
   },
   "environment": {
     "E_m_V": -0.12,
@@ -101,11 +101,11 @@
         "leaf": 1.413,
         "grain": 1.179
       },
-      "f_xy_fit": 0.258915,
+      "f_xy_fit": 0.258917,
       "L_Ph_fit": 1e-05,
-      "kappa_d_fit": 1.0135,
+      "kappa_d_fit": 1.013521,
       "L_Ph_rec": 1e-05,
-      "kappa_d_rec": 0.741007
+      "kappa_d_rec": 0.741067
     },
     {
       "name": "PFPeA",
@@ -128,11 +128,11 @@
         "leaf": 1.654,
         "grain": 1.484
       },
-      "f_xy_fit": 0.172861,
+      "f_xy_fit": 0.172863,
       "L_Ph_fit": 1e-05,
-      "kappa_d_fit": 3.87555,
+      "kappa_d_fit": 3.875565,
       "L_Ph_rec": 1e-05,
-      "kappa_d_rec": 3.72066
+      "kappa_d_rec": 3.720692
     },
     {
       "name": "PFHxA",
@@ -155,11 +155,11 @@
         "leaf": 2.127,
         "grain": 2.061
       },
-      "f_xy_fit": 0.090187,
-      "L_Ph_fit": 0.007555,
-      "kappa_d_fit": 4.74672,
+      "f_xy_fit": 0.101878,
+      "L_Ph_fit": 0.02038,
+      "kappa_d_fit": 4.751898,
       "L_Ph_rec": 1e-05,
-      "kappa_d_rec": 4.67998
+      "kappa_d_rec": 4.679993
     },
     {
       "name": "PFHpA",
@@ -182,11 +182,11 @@
         "leaf": 3.211,
         "grain": 3.176
       },
-      "f_xy_fit": 0.044305,
-      "L_Ph_fit": 0.013013,
-      "kappa_d_fit": 2.22048,
-      "L_Ph_rec": 0.001213,
-      "kappa_d_rec": 2.19216
+      "f_xy_fit": 0.050877,
+      "L_Ph_fit": 0.034919,
+      "kappa_d_fit": 2.223461,
+      "L_Ph_rec": 0.003726,
+      "kappa_d_rec": 2.193254
     },
     {
       "name": "PFOA",
@@ -209,11 +209,11 @@
         "leaf": 5.965,
         "grain": 6.24
       },
-      "f_xy_fit": 0.104012,
-      "L_Ph_fit": 0.039194,
-      "kappa_d_fit": 7.47597,
-      "L_Ph_rec": 0.168746,
-      "kappa_d_rec": 7.50963
+      "f_xy_fit": 0.128019,
+      "L_Ph_fit": 0.104612,
+      "kappa_d_fit": 7.485037,
+      "L_Ph_rec": 1.0,
+      "kappa_d_rec": 7.522344
     },
     {
       "name": "PFNA",
@@ -236,11 +236,11 @@
         "leaf": 14.423,
         "grain": 16.251
       },
-      "f_xy_fit": 0.176826,
-      "L_Ph_fit": 0.108005,
-      "kappa_d_fit": 17.0477,
+      "f_xy_fit": 0.222652,
+      "L_Ph_fit": 0.286596,
+      "kappa_d_fit": 17.067418,
       "L_Ph_rec": 1.0,
-      "kappa_d_rec": 17.1432
+      "kappa_d_rec": 17.147231
     },
     {
       "name": "PFDA",
@@ -263,11 +263,11 @@
         "leaf": 35.716,
         "grain": 41.363
       },
-      "f_xy_fit": 0.335697,
-      "L_Ph_fit": 0.55617,
-      "kappa_d_fit": 4.66848,
+      "f_xy_fit": 0.401336,
+      "L_Ph_fit": 1.0,
+      "kappa_d_fit": 4.722372,
       "L_Ph_rec": 1.0,
-      "kappa_d_rec": 4.87872
+      "kappa_d_rec": 4.879845
     },
     {
       "name": "PFUnDA",
@@ -290,11 +290,11 @@
         "leaf": 72.291,
         "grain": 83.997
       },
-      "f_xy_fit": 0.311057,
-      "L_Ph_fit": 0.430038,
-      "kappa_d_fit": 1.62158,
+      "f_xy_fit": 0.345662,
+      "L_Ph_fit": 1.0,
+      "kappa_d_fit": 1.642934,
       "L_Ph_rec": 1.0,
-      "kappa_d_rec": 1.83611
+      "kappa_d_rec": 1.836554
     },
     {
       "name": "PFDoDA",
@@ -319,9 +319,9 @@
       },
       "f_xy_fit": 1.0,
       "L_Ph_fit": 1.0,
-      "kappa_d_fit": 0.143748,
+      "kappa_d_fit": 0.173482,
       "L_Ph_rec": 1.0,
-      "kappa_d_rec": 0.859514
+      "kappa_d_rec": 0.859602
     },
     {
       "name": "PFBS",
@@ -344,11 +344,11 @@
         "leaf": 3.736,
         "grain": 4.644
       },
-      "f_xy_fit": 0.033162,
-      "L_Ph_fit": 0.018793,
-      "kappa_d_fit": 0.548204,
-      "L_Ph_rec": 0.013524,
-      "kappa_d_rec": 0.415917
+      "f_xy_fit": 0.035907,
+      "L_Ph_fit": 0.034112,
+      "kappa_d_fit": 0.549604,
+      "L_Ph_rec": 0.018077,
+      "kappa_d_rec": 0.430707
     },
     {
       "name": "PFHxS",
@@ -393,11 +393,11 @@
         "leaf": 73.101,
         "grain": 84.991
       },
-      "f_xy_fit": 0.525742,
-      "L_Ph_fit": 0.551997,
-      "kappa_d_fit": 6.93231,
+      "f_xy_fit": 0.573448,
+      "L_Ph_fit": 1.0,
+      "kappa_d_fit": 6.986101,
       "L_Ph_rec": 1.0,
-      "kappa_d_rec": 7.2911
+      "kappa_d_rec": 7.292811
     },
     {
       "name": "GenX",

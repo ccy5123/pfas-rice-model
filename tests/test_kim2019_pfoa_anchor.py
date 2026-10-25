@@ -74,7 +74,7 @@ def test_model_is_linear_and_below_the_site_interval(result):
     for v, p in result["pred"].items():
         assert p < lo, v
         assert result["slope_model"][v] == pytest.approx(0.964, abs=0.005), v
-    assert result["pred"]["nstem_lipid"] == pytest.approx(1.009, abs=0.03)
+    assert result["pred"]["nstem_lipid"] == pytest.approx(1.237, abs=0.03)
     assert result["a2_sum17"] == pytest.approx(0.673, abs=0.001)
     assert result["d2"] and result["d4"]
 

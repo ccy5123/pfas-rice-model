@@ -83,9 +83,9 @@ GOLDEN_REL = 1e-3
 # Goldens on the current model (calibration site-year, fresh organ mass, harvest at the
 # mean date). Regenerate them only when the model itself is deliberately changed.
 PFAS_GOLDEN = {
-    ("PFOA", "recommended"): {"root": 0.4127282751512177, "grain": 0.3866981693189278},
-    ("PFOS", "fit"): {"root": 5.045413353005666, "grain": 1.6276145756028206},
-    ("PFBA", "recommended"): {"root": 0.5752512784634323, "grain": 3.805393210653735},
+    ("PFOA", "recommended"): {"root": 0.41267945513714566, "grain": 0.24553875107615294},
+    ("PFOS", "fit"): {"root": 5.037316673047101, "grain": 1.210992611037675},
+    ("PFBA", "recommended"): {"root": 0.575251173798138, "grain": 3.798411995667259},
 }
 
 
