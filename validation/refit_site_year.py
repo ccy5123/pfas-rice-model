@@ -142,6 +142,8 @@ UNKNOWNS = {                                      # name -> (low setting, high s
     "s_grain": ({"s_grain_dry": 0.2}, {"s_grain_dry": 2.0}),
 }
 MODEL_KEYS = ("E_m_mV", "km_scale", "phi", "T_C_Ph", "s_grain_dry")
+# the two settings that are not driver/model inputs, as unknowns dicts (so they can be re-fitted)
+STRING_SETTINGS = {"attached0": {"attached": 0.0}, "mean_run": {"mean_run": True}}
 OUT = os.path.join(HERE, "refit_site_year.json")
 
 
@@ -153,6 +155,8 @@ def used(c):
 def predict(c, f_xy, L_Ph, kappa_d, unknowns=None, attached=1.0, runs="both", lipid=None):
     """Two-run geometric-mean dry-basis harvest BAF {root, straw, grain}."""
     unknowns = dict(unknowns or {})
+    attached = unknowns.pop("attached", attached)
+    runs = "mean" if unknowns.pop("mean_run", False) else runs
     model_kw = {k: unknowns.pop(k) for k in list(unknowns) if k in MODEL_KEYS}
     cwo = OBS[c]["water_ng_L"] / 1000.0
     hs = ["mean"] if runs == "mean" else list(HARVESTS)
@@ -336,8 +340,9 @@ def main(write=False, verbose=True):
             if not any(e["consequential"].values()):
                 continue
             for i, setting in enumerate(UNKNOWNS[name]):
-                if setting is None or isinstance(setting, str):
+                if setting is None:
                     continue
+                setting = STRING_SETTINGS.get(setting, setting) if isinstance(setting, str) else setting
                 refits[f"{name}[{i}]"] = {c: v["params"] for c, v in run_fits(pool, "A", setting)[0].items()}
 
     say("Fit A (f_xy, L_Ph, kappa_d) on the Yamazaki 2020 site-year, dry basis, harvest operator")

@@ -54,7 +54,7 @@ values by a stated rule; *convention* = a modelling choice with a stated reason;
 | carrier Vmax_in / Km / Vmax_out | 20 / 5 µg L⁻¹ / 8 | **unmeasured, fixed** | Km × 100 (the dose-series lower bound ≥ 500 µg/L) |
 | φ (phloem recirculation) | 0.1 | unmeasured | 0.05 / 0.2 |
 | T_C,Ph (phloem flow per kg grain DM) | 10 L/kg | literature order of magnitude | 4 / 12 L/kg (sap 100–300 g/L sugar + grain water) |
-| grain xylem surface | 0.5116 m² per kg DM (~4 % of the stream at mid-filling) | unmeasured | 0.2 (~2 %) / 2.0 (~14 %) |
+| grain xylem surface | 0.5116 m² per kg DM (~6 % of the stream during filling on the site-year) | unmeasured | 0.2 (~2.5 %) / 2.0 (~18 %) |
 | leaf xylem surface | 20 m² per kg DM | convention (SLA reading) | |
 | grain formation gate | mass leaves its floor | convention | |
 | root surface / plaque pool K_surf | 0 | convention | no dataset removed plaque; absorbed by κ_d in the fit |

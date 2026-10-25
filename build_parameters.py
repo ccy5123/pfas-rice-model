@@ -161,6 +161,14 @@ doc = {
     },
 }
 
+if os.path.exists(_refit_path):
+    doc["_meta"]["refit_site_year"] = (
+        "Transport parameters fitted to Yamazaki 2023 on the 2020 Tsukuba site-year (src/site_scenario.py), "
+        "dry-basis tissue data, harvest operator with attached dead blades (src/harvest.py); "
+        "validation/refit_site_year.py (pre-registered), params/refit_site_year.csv. *_fit: per congener "
+        "(f_xy, L_Ph, kappa_d), saturated. *_rec: (L_Ph, kappa_d) with the monotone f_xy_recommended fixed, "
+        "so straw is a prediction. PFBS has no grain value: its L_Ph is the geometric mean of the others'.")
+
 with open(os.path.join(P, "parameters.json"), "w") as f:
     json.dump(doc, f, indent=2, ensure_ascii=False)
 

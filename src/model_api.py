@@ -135,7 +135,9 @@ STRAW_PARTS = ("stem", "leaf")
 #   Six globals fitted by validation/refit_site_year.py on the Yamazaki 2020 site-year (dry-basis data,
 #   harvest operator), PFDoDA excluded, riding on the per-congener (L_Ph, kappa_d) of the
 #   "recommended" set (L_Ph_rec, kappa_d_rec) -- so it is not a 6-parameter model on its own.
-LIPID_LOADING = dict(a=0.2146, b=0.1421, g_xy=0.03315, g_ph=0.02096, K_half=4654.0, pfsa_ln=0.8926)
+#   In-sample log10 RMSE 0.214 over 29 cells. g_ph came out at its lower bound (1e-5): on the
+#   site-year the lipid PHLOEM term is not used -- the grain is carried by the free term (L_Ph).
+LIPID_LOADING = dict(a=0.132, b=0.1665, g_xy=0.01115, g_ph=1.173e-05, K_half=3466.0, pfsa_ln=0.6377)
 
 
 def lipid_loading_conductances(n_C, K_PL, group="PFCA"):

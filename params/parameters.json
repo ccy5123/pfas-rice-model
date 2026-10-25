@@ -14,13 +14,12 @@
       "K_prot": "Zhou2025",
       "K_cw": "GAP A / Prompt2 v2 (Guo2025 Fig.3f DFT + Mel2024 lignin anchor; rice whole-cw per organ)",
       "f_xy_recommended": "GAP B / S4 + docs/theory_anchor.tex (Trapp+Briggs LFER: MONOTONE logistic)",
-      "f_xy_W2fit": "S6 W2 transport fit to Yamazaki (SATURATED 3param/3obs; long-chain values NON-physical, see docs/DELIVERABLE_GAP_B_fxy.md)",
-      "f_xy_oryza": "per-congener (f_xy,L_Ph,kappa_d) re-fit to Yamazaki on the MECHANISTIC ORYZA2000 biomass (the default driver), organ mass on the FRESH basis (src/organ_mass.py); validation/refit_oryza.py, params/refit_oryza.csv (reproduction log10 RMSE 0.283; PFBA/PFOS/PFDoDA at f_xy=1, PFDoDA long-chain outlier). The pre-fix DRY-basis fit (RMSE 0.236) is kept as *_oryza_dry / params/refit_oryza_dry.csv. Use model_api f_xy_source='oryza'.",
+      "f_xy_fit": "per-congener (f_xy, L_Ph, kappa_d) fitted to Yamazaki 2023 on the 2020 Tsukuba site-year (src/site_scenario.py), dry-basis data, harvest operator with attached dead blades (src/harvest.py); validation/refit_site_year.py, params/refit_site_year.csv. Saturated (3 params / 3 cells) -> reproduction, not prediction. model_api f_xy_source='fit'.",
+      "L_Ph_rec": "(L_Ph, kappa_d) fitted to Yamazaki root + grain with f_xy_recommended FIXED (straw a prediction); used by f_xy_source='recommended' and the lipid model. Same script.",
       "composition": "rice_tissue package (recommended anchors)"
     },
-    "WARNING_f_xy": "Use f_xy_recommended (monotone). f_xy_W2fit rises spuriously for C10+ (single-straw-compartment entanglement, H7 §7.2); theory + cross-field TF both require monotone decline.",
-    "refit_oryza": "Per-congener (f_xy, L_Ph, kappa_d) re-fit to Yamazaki on the MECHANISTIC ORYZA2000 biomass (oryza_growth) + measured Q_TP, the default driver, with organ mass on the FRESH basis (src/organ_mass.py; validation/refit_oryza.py; reproduction log10 RMSE 0.283). Saturated per congener (3 params / 3 obs) -> reproduces by construction where the bounds allow; PFBA/PFOS/PFDoDA sit at f_xy=1 and short-chain grain stays high at the L_Ph floor. Use model_api f_xy_source='oryza'.",
-    "refit_oryza_dry": "*_oryza_dry = the same re-fit made BEFORE the dry->fresh organ-mass fix (dry matter used as M; reproduction log10 RMSE 0.236), params/refit_oryza_dry.csv. Used by f_xy_source='oryza' with mass_basis='dry' only, to reproduce pre-fix artifacts."
+    "WARNING_f_xy": "f_xy_recommended is the monotone a-priori value; f_xy_fit is a saturated reproduction fit (one value per congener per dataset) and is not a transferable property.",
+    "refit_site_year": "Transport parameters fitted to Yamazaki 2023 on the 2020 Tsukuba site-year (src/site_scenario.py), dry-basis tissue data, harvest operator with attached dead blades (src/harvest.py); validation/refit_site_year.py (pre-registered), params/refit_site_year.csv. *_fit: per congener (f_xy, L_Ph, kappa_d), saturated. *_rec: (L_Ph, kappa_d) with the monotone f_xy_recommended fixed, so straw is a prediction. PFBS has no grain value: its L_Ph is the geometric mean of the others'."
   },
   "environment": {
     "E_m_V": -0.12,
@@ -39,7 +38,7 @@
     "Km_in": 5.0,
     "Vmax_out": 8.0,
     "Km_out": 5.0,
-    "note": "fixed during W2 fit; carrier overcomes GHK anion exclusion (e^N≈107)."
+    "note": "fixed values (not fitted to any dataset here; the per-congener kappa_d fit absorbs root-entry magnitude); carrier overcomes GHK anion exclusion (e^N≈107). validation/dose_series_carrier.py bounds Km >= 500 ug/L from Tang's dose series."
   },
   "f_xy_functional_form": {
     "form": "logistic",
@@ -96,21 +95,17 @@
       "K_cw_poly_rec_Lkg": 1.6,
       "K_lignin_rec_Lkg": 7.6,
       "f_xy_recommended": 0.79,
-      "f_xy_W2fit": 0.0772,
-      "L_Ph_W2fit": 0.00024,
-      "kappa_d_W2fit": 0.87,
       "B_k_basisA_Lkg_fw": {
         "root": 1.179,
         "stem": 1.296,
         "leaf": 1.413,
         "grain": 1.179
       },
-      "f_xy_oryza": 1.0,
-      "L_Ph_oryza": 1e-05,
-      "kappa_d_oryza": 0.600179,
-      "f_xy_oryza_dry": 0.364652,
-      "L_Ph_oryza_dry": 1e-05,
-      "kappa_d_oryza_dry": 0.265365
+      "f_xy_fit": 0.258915,
+      "L_Ph_fit": 1e-05,
+      "kappa_d_fit": 1.0135,
+      "L_Ph_rec": 1e-05,
+      "kappa_d_rec": 0.741007
     },
     {
       "name": "PFPeA",
@@ -127,21 +122,17 @@
       "K_cw_poly_rec_Lkg": 2.0,
       "K_lignin_rec_Lkg": 9.2,
       "f_xy_recommended": 0.47,
-      "f_xy_W2fit": 0.047,
-      "L_Ph_W2fit": 0.00022,
-      "kappa_d_W2fit": 3.225,
       "B_k_basisA_Lkg_fw": {
         "root": 1.315,
         "stem": 1.44,
         "leaf": 1.654,
         "grain": 1.484
       },
-      "f_xy_oryza": 0.692783,
-      "L_Ph_oryza": 1e-05,
-      "kappa_d_oryza": 3.02471,
-      "f_xy_oryza_dry": 0.142669,
-      "L_Ph_oryza_dry": 1e-05,
-      "kappa_d_oryza_dry": 2.73622
+      "f_xy_fit": 0.172861,
+      "L_Ph_fit": 1e-05,
+      "kappa_d_fit": 3.87555,
+      "L_Ph_rec": 1e-05,
+      "kappa_d_rec": 3.72066
     },
     {
       "name": "PFHxA",
@@ -158,21 +149,17 @@
       "K_cw_poly_rec_Lkg": 2.5,
       "K_lignin_rec_Lkg": 11.0,
       "f_xy_recommended": 0.216,
-      "f_xy_W2fit": 0.0232,
-      "L_Ph_W2fit": 0.0011,
-      "kappa_d_W2fit": 3.943,
       "B_k_basisA_Lkg_fw": {
         "root": 1.603,
         "stem": 1.682,
         "leaf": 2.127,
         "grain": 2.061
       },
-      "f_xy_oryza": 0.334838,
-      "L_Ph_oryza": 0.000789,
-      "kappa_d_oryza": 3.83685,
-      "f_xy_oryza_dry": 0.071375,
-      "L_Ph_oryza_dry": 0.002101,
-      "kappa_d_oryza_dry": 3.68852
+      "f_xy_fit": 0.090187,
+      "L_Ph_fit": 0.007555,
+      "kappa_d_fit": 4.74672,
+      "L_Ph_rec": 1e-05,
+      "kappa_d_rec": 4.67998
     },
     {
       "name": "PFHpA",
@@ -189,21 +176,17 @@
       "K_cw_poly_rec_Lkg": 3.2,
       "K_lignin_rec_Lkg": 14.0,
       "f_xy_recommended": 0.098,
-      "f_xy_W2fit": 0.0113,
-      "L_Ph_W2fit": 0.00182,
-      "kappa_d_W2fit": 1.828,
       "B_k_basisA_Lkg_fw": {
         "root": 2.322,
         "stem": 2.193,
         "leaf": 3.211,
         "grain": 3.176
       },
-      "f_xy_oryza": 0.165158,
-      "L_Ph_oryza": 0.00221,
-      "kappa_d_oryza": 1.7814,
-      "f_xy_oryza_dry": 0.035417,
-      "L_Ph_oryza_dry": 0.004076,
-      "kappa_d_oryza_dry": 1.72181
+      "f_xy_fit": 0.044305,
+      "L_Ph_fit": 0.013013,
+      "kappa_d_fit": 2.22048,
+      "L_Ph_rec": 0.001213,
+      "kappa_d_rec": 2.19216
     },
     {
       "name": "PFOA",
@@ -220,21 +203,17 @@
       "K_cw_poly_rec_Lkg": 4.0,
       "K_lignin_rec_Lkg": 17.0,
       "f_xy_recommended": 0.04,
-      "f_xy_W2fit": 0.0256,
-      "L_Ph_W2fit": 0.00478,
-      "kappa_d_W2fit": 6.205,
       "B_k_basisA_Lkg_fw": {
         "root": 4.174,
         "stem": 3.353,
         "leaf": 5.965,
         "grain": 6.24
       },
-      "f_xy_oryza": 0.359117,
-      "L_Ph_oryza": 0.016283,
-      "kappa_d_oryza": 6.09927,
-      "f_xy_oryza_dry": 0.083361,
-      "L_Ph_oryza_dry": 0.016357,
-      "kappa_d_oryza_dry": 5.91171
+      "f_xy_fit": 0.104012,
+      "L_Ph_fit": 0.039194,
+      "kappa_d_fit": 7.47597,
+      "L_Ph_rec": 0.168746,
+      "kappa_d_rec": 7.50963
     },
     {
       "name": "PFNA",
@@ -251,21 +230,17 @@
       "K_cw_poly_rec_Lkg": 5.0,
       "K_lignin_rec_Lkg": 21.0,
       "f_xy_recommended": 0.014,
-      "f_xy_W2fit": 0.0433,
-      "L_Ph_W2fit": 0.01271,
-      "kappa_d_W2fit": 14.218,
       "B_k_basisA_Lkg_fw": {
         "root": 9.864,
         "stem": 6.747,
         "leaf": 14.423,
         "grain": 16.251
       },
-      "f_xy_oryza": 0.570975,
-      "L_Ph_oryza": 0.060159,
-      "kappa_d_oryza": 14.0461,
-      "f_xy_oryza_dry": 0.138851,
-      "L_Ph_oryza_dry": 0.047578,
-      "kappa_d_oryza_dry": 13.6699
+      "f_xy_fit": 0.176826,
+      "L_Ph_fit": 0.108005,
+      "kappa_d_fit": 17.0477,
+      "L_Ph_rec": 1.0,
+      "kappa_d_rec": 17.1432
     },
     {
       "name": "PFDA",
@@ -282,21 +257,17 @@
       "K_cw_poly_rec_Lkg": 6.3,
       "K_lignin_rec_Lkg": 26.0,
       "f_xy_recommended": 0.0051,
-      "f_xy_W2fit": 0.0817,
-      "L_Ph_W2fit": 0.06687,
-      "kappa_d_W2fit": 3.942,
       "B_k_basisA_Lkg_fw": {
         "root": 24.279,
         "stem": 15.134,
         "leaf": 35.716,
         "grain": 41.363
       },
-      "f_xy_oryza": 0.921901,
-      "L_Ph_oryza": 0.520616,
-      "kappa_d_oryza": 3.68683,
-      "f_xy_oryza_dry": 0.238568,
-      "L_Ph_oryza_dry": 0.306836,
-      "kappa_d_oryza_dry": 2.67194
+      "f_xy_fit": 0.335697,
+      "L_Ph_fit": 0.55617,
+      "kappa_d_fit": 4.66848,
+      "L_Ph_rec": 1.0,
+      "kappa_d_rec": 4.87872
     },
     {
       "name": "PFUnDA",
@@ -313,21 +284,17 @@
       "K_cw_poly_rec_Lkg": 8.0,
       "K_lignin_rec_Lkg": 33.0,
       "f_xy_recommended": 0.0039,
-      "f_xy_W2fit": 0.0933,
-      "L_Ph_W2fit": 0.06291,
-      "kappa_d_W2fit": 1.392,
       "B_k_basisA_Lkg_fw": {
         "root": 49.148,
         "stem": 29.483,
         "leaf": 72.291,
         "grain": 83.997
       },
-      "f_xy_oryza": 0.8754,
-      "L_Ph_oryza": 0.564364,
-      "kappa_d_oryza": 1.1978,
-      "f_xy_oryza_dry": 0.338914,
-      "L_Ph_oryza_dry": 0.151,
-      "kappa_d_oryza_dry": 1.01331
+      "f_xy_fit": 0.311057,
+      "L_Ph_fit": 0.430038,
+      "kappa_d_fit": 1.62158,
+      "L_Ph_rec": 1.0,
+      "kappa_d_rec": 1.83611
     },
     {
       "name": "PFDoDA",
@@ -344,21 +311,17 @@
       "K_cw_poly_rec_Lkg": 10.0,
       "K_lignin_rec_Lkg": 42.0,
       "f_xy_recommended": 0.003,
-      "f_xy_W2fit": 0.6727,
-      "L_Ph_W2fit": 0.5,
-      "kappa_d_W2fit": 0.001,
       "B_k_basisA_Lkg_fw": {
         "root": 100.988,
         "stem": 59.174,
         "leaf": 148.443,
         "grain": 172.989
       },
-      "f_xy_oryza": 1.0,
-      "L_Ph_oryza": 1.0,
-      "kappa_d_oryza": 0.319515,
-      "f_xy_oryza_dry": 1.0,
-      "L_Ph_oryza_dry": 1.0,
-      "kappa_d_oryza_dry": 0.01
+      "f_xy_fit": 1.0,
+      "L_Ph_fit": 1.0,
+      "kappa_d_fit": 0.143748,
+      "L_Ph_rec": 1.0,
+      "kappa_d_rec": 0.859514
     },
     {
       "name": "PFBS",
@@ -375,21 +338,17 @@
       "K_cw_poly_rec_Lkg": 5.0,
       "K_lignin_rec_Lkg": 27.0,
       "f_xy_recommended": 0.26296,
-      "f_xy_W2fit": 0.0083,
-      "L_Ph_W2fit": 0.00063,
-      "kappa_d_W2fit": 0.46,
       "B_k_basisA_Lkg_fw": {
         "root": 2.411,
         "stem": 2.721,
         "leaf": 3.736,
         "grain": 4.644
       },
-      "f_xy_oryza": 0.118004,
-      "L_Ph_oryza": 1e-05,
-      "kappa_d_oryza": 0.429157,
-      "f_xy_oryza_dry": 0.024771,
-      "L_Ph_oryza_dry": 1e-05,
-      "kappa_d_oryza_dry": 0.376051
+      "f_xy_fit": 0.033162,
+      "L_Ph_fit": 0.018793,
+      "kappa_d_fit": 0.548204,
+      "L_Ph_rec": 0.013524,
+      "kappa_d_rec": 0.415917
     },
     {
       "name": "PFHxS",
@@ -406,9 +365,6 @@
       "K_cw_poly_rec_Lkg": 8.0,
       "K_lignin_rec_Lkg": 31.0,
       "f_xy_recommended": 0.07191,
-      "f_xy_W2fit": null,
-      "L_Ph_W2fit": null,
-      "kappa_d_W2fit": null,
       "B_k_basisA_Lkg_fw": {
         "root": 8.529,
         "stem": 6.516,
@@ -431,21 +387,17 @@
       "K_cw_poly_rec_Lkg": 13.0,
       "K_lignin_rec_Lkg": 35.0,
       "f_xy_recommended": 0.01332,
-      "f_xy_W2fit": 0.1419,
-      "L_Ph_W2fit": 0.06194,
-      "kappa_d_W2fit": 5.888,
       "B_k_basisA_Lkg_fw": {
         "root": 49.447,
         "stem": 30.119,
         "leaf": 73.101,
         "grain": 84.991
       },
-      "f_xy_oryza": 1.0,
-      "L_Ph_oryza": 1.0,
-      "kappa_d_oryza": 5.68442,
-      "f_xy_oryza_dry": 0.401896,
-      "L_Ph_oryza_dry": 0.218969,
-      "kappa_d_oryza_dry": 4.54425
+      "f_xy_fit": 0.525742,
+      "L_Ph_fit": 0.551997,
+      "kappa_d_fit": 6.93231,
+      "L_Ph_rec": 1.0,
+      "kappa_d_rec": 7.2911
     },
     {
       "name": "GenX",
@@ -462,9 +414,6 @@
       "K_cw_poly_rec_Lkg": 2.0,
       "K_lignin_rec_Lkg": 9.2,
       "f_xy_recommended": 0.2334,
-      "f_xy_W2fit": null,
-      "L_Ph_W2fit": null,
-      "kappa_d_W2fit": null,
       "B_k_basisA_Lkg_fw": {
         "root": 1.334,
         "stem": 1.451,
@@ -477,7 +426,7 @@
   "status": {
     "GAP_A_Kcw": "CLOSED (docs/DELIVERABLE_GAP_A_Kcw.md)",
     "GAP_B_fxy": "CLOSED (docs/DELIVERABLE_GAP_B_fxy.md; H7 §7.2 entanglement resolved by theory)",
-    "validation": "Yamazaki full-ODE reproduced (log10 RMSE 0.029); cross-field TF (water-independent) confirms monotone f_xy; see docs/H8_handoff_S6_final.md",
+    "validation": "see CLAUDE.md section 6 and validation/refit_site_year.py (Yamazaki 2020 site-year fit; reproduce_demo.py prints the reproduction RMSE)",
     "open_data_limited": [
       "rice (not wheat) per-congener root subcellular -> alpha/QC1 point estimate",
       "reliable per-congener pore-water OR hydroponic RCF -> surface test + f_xy absolute",
