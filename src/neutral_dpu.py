@@ -119,6 +119,8 @@ from dataclasses import dataclass, replace
 
 import numpy as np
 
+import harvest as hv
+
 from pfas_rice_plant_module_4pool_surf import (
     Compartment, Compound, Environment, PlantInputs, RiceUptakeModel,
     binding_factors, ROOT, STEM, LEAF, FRUIT,
@@ -525,7 +527,8 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
                      phloem=False, phi: float = 0.1, T_C_Ph: float = 10.0,
                      L_Ph: float = 1.0, tscf_model=None, C0=None,
                      air=False, air_kw=None,
-                     lipid_source: str = DEFAULT_LIPID_SOURCE):
+                     lipid_source: str = DEFAULT_LIPID_SOURCE,
+                     dead_leaf_attached: float = 1.0):
     """Run the 4-compartment DPU for a NEUTRAL organic.
 
     drivers : {t, Cwo, Qtp, M} on a common grid -- the same driver contract as
@@ -596,11 +599,19 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
     conc = {k: Y[i] for i, k in enumerate(names)}
     ref = float(Cwo[-1]) if Cwo[-1] > 0 else float(np.nanmax(Cwo)) or 1.0
     baf_final = {k: float(v[-1] / ref) for k, v in conc.items()}
-    Mf = M[-1]
-    straw = (conc["stem"] * Mf[STEM] + conc["leaf"] * Mf[LEAF]) / (Mf[STEM] + Mf[LEAF])
+    # harvest operator: attached dead blades stay in the leaf/straw (src/harvest.py)
+    obs = hv.harvest_observables(
+        t, conc, M, hv.dry_fractions({k: comps[i].theta for i, k in enumerate(names)},
+                                     inputs.M_basis),
+        leaf_loss=drivers.get("leaf_loss"), attached=dead_leaf_attached,
+        C_leaf_fn=lambda tt: sol.sol(tt)[LEAF])
+    straw = obs["straw_fw"]
     return dict(
         t=t, compound=cmpd.name, success=bool(sol.success), conc=conc,
         Cwo=Cwo, Qtp=Qtp, M=M, straw=straw,
+        conc_dw=obs["conc_dw"], baf_final_dw={k: float(v[-1] / ref)
+                                              for k, v in obs["conc_dw"].items()},
+        dead_leaf=dict(burden=obs["dead_burden"], dry=obs["dead_dry"], attached=obs["attached"]),
         baf={k: v / ref for k, v in conc.items()}, baf_final=baf_final,
         straw_baf=float(straw[-1] / ref),
         tf_final={k: baf_final[k] / max(baf_final["root"], 1e-12) for k in names},

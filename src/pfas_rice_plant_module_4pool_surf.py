@@ -293,6 +293,22 @@ class PlantInputs:
         gate = (np.clip((gm - glo) / (0.5 * glo + 1e-30), 0.0, 1.0)
                 if (ghi > 0.0 and glo < 0.05 * ghi) else np.ones(len(self.t)))
         self._grain_gate = interp1d(self.t, gate, **kw)
+        # one table of every driver column for the RHS: a single linear interpolation per
+        # call instead of twelve scalar interp1d calls (identical values: same linear
+        # interpolation, same linear extrapolation beyond the ends)
+        self._tg = np.asarray(self.t, dtype=float)
+        self._tab = np.column_stack([np.asarray(self.Cwo, float), np.asarray(self.Qtp, float),
+                                     self.M, dM, ll, gate])
+
+    def drivers_at(self, t):
+        """(Cwo, Qtp, M[4], dM[4], leaf_loss, grain_gate) at time t, by one linear lerp."""
+        tg = self._tg
+        i = int(np.searchsorted(tg, t, side="right")) - 1
+        i = min(max(i, 0), len(tg) - 2)
+        w = (t - tg[i]) / (tg[i + 1] - tg[i])
+        row = self._tab[i] + w * (self._tab[i + 1] - self._tab[i])
+        return (row[0], row[1], row[2:6], row[6:10], max(row[10], 0.0),
+                min(1.0, max(0.0, row[11])))
 
     def Cwo_(self, t):  return float(self._Cwo(t))
     def Qtp_(self, t):  return float(self._Qtp(t))
@@ -436,10 +452,7 @@ class RiceUptakeModel:
 
     def rhs(self, t: float, C: np.ndarray) -> np.ndarray:
         """RHS of dC/dt for the 4 compartments (Eqs. root, stem, leaf, fruit)."""
-        Cwo = self.inputs.Cwo_(t)
-        Qtp = self.inputs.Qtp_(t)
-        M = self.inputs.M_(t)
-        dM = self.inputs.dM_(t)
+        Cwo, Qtp, M, dM, leaf_loss, gam = self.inputs.drivers_at(t)
         M = np.maximum(M, 1e-12)                     # guard against division by zero
         mu = dM / M                                  # growth-dilution rates [1/day]
 
@@ -485,11 +498,10 @@ class RiceUptakeModel:
         # grain FORMATION gate: before the panicle sets (gam~0) the grain takes NO xylem/
         # phloem; its share is rerouted to the leaf (xylem f4 -> leaf; phloem export drops
         # to (gam+phi)) so the balance still closes. gam->1 at formation (DPU-consistent).
-        gam = self.inputs.grain_gate_(t)
         dC[LEAF] = ((f3 + (1.0 - gam) * f4) * (Qtp / M[LEAF]) * Cw[STEM]
                     - (gam + self.phi) * (Q_Phl / M[LEAF]) * C_Phl
                     - g[LEAF] * C[LEAF] - mu[LEAF] * C[LEAF]
-                    - self.inputs.leaf_loss_(t) * C[LEAF])
+                    - leaf_loss * C[LEAF])
         # fruit/grain (small xylem in; phloem-dominated; terminal sink) -- gated by gam
         dC[FRUIT] = (gam * f4 * (Qtp / M[FRUIT]) * Cw[STEM]
                      + gam * (Q_Phl / M[FRUIT]) * C_Phl

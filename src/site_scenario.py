@@ -64,7 +64,15 @@ RATE_KEYS = ("DVRJ", "DVRI", "DVRP", "DVRR")
 
 
 def _doy(d):
+    """Day of year of a date; a number is taken as a (possibly fractional) day of year."""
+    if isinstance(d, (int, float, np.floating, np.integer)):
+        return float(d)
     return d.timetuple().tm_yday
+
+
+# the default single run: harvest at the midpoint of the two harvest dates (fractional day).
+# The calibration itself runs both harvests and combines them as the data are combined.
+YAMAZAKI_HARVEST_MEAN_DOY = sum(_doy(h) for h in YAMAZAKI_HARVESTS) / 2.0
 
 
 def load_tsukuba_2020():
@@ -148,7 +156,9 @@ def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=C
     main = np.where(sta >= 4)[0]
     pltr = mgmt.nplh * mgmt.nh / mgmt.nplsb
     td = np.concatenate([[0.0], r["doy"][main] - tp]).astype(float)
-    t = np.arange(0.0, hv - tp + 1.0)
+    t = np.arange(0.0, np.floor(hv - tp) + 1.0)
+    if t[-1] < hv - tp - 1e-9:                         # fractional harvest day: end exactly there
+        t = np.append(t, hv - tp)
     ha_per_hill = 1.0 / (nh * 1.0e4)
     out = dict(t=t, rates=rates, factor=f, heading_doy=heading, harvest_doy=hv)
     for name, key in (("root", "wrt"), ("stem", "wst"), ("leaf", "wlvg"), ("grain", "wso")):
@@ -159,7 +169,7 @@ def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=C
     out["leaf_death_rate"] = np.where(t > td[-1], 0.0, np.maximum(np.interp(t, td, drlv), 0.0))
     out["dvs"] = np.interp(t, td, np.concatenate([[r["dvs"][i3]], r["dvs"][main]]))
     out["lai"] = lai
-    k = (tp - w["doy0"]) + t.astype(int)
+    k = int(tp - w["doy0"]) + np.floor(t).astype(int)
     doy = tp + t
     alb = F.field_reflection(lai, flooded=True)
     et0, etrd, etae = F.et0_terms(w["tmax"][k], w["tmin"][k], w["rad_mj"][k], w["ea_kpa"][k],
@@ -185,3 +195,8 @@ def yamazaki2020_runs(**kw):
     """The two plant runs (harvest 2020-09-01 and 2020-09-10)."""
     w = load_tsukuba_2020()
     return [plant_run(h, w=w, **kw) for h in YAMAZAKI_HARVESTS]
+
+
+def yamazaki2020_mean_run(**kw):
+    """The default single run: harvest at the midpoint of the two harvest dates."""
+    return plant_run(YAMAZAKI_HARVEST_MEAN_DOY, **kw)
