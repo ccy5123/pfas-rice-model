@@ -3,8 +3,10 @@
 # Read from the source PDFs (supplied by the user, NOT committed - copyright):
 #   Kim et al. 2001 New Phytol. 150:223 (doi 10.1046/j.1469-8137.2001.00111.x; Shizukuishi rice FACE; Akitakomachi; 19.05 hills/m2, 3 seedlings/hill;
 #     flooded except a 5-d mid-July drainage; oven 80 C 1 wk). ROOTS = soil block 30 x 17.5 cm around a hill,
-#     20 cm deep (Kim 2001) / 15 cm (Kim 2003), washed under running water for only part of the hills -> root DW
-#     is a FLOOR. Table 1 values (ambient CO2 column) were checked against the PDF text.
+#     20 cm deep (Kim 2001) / 15 cm (Kim 2003). Only part of the hills were washed, but the others' roots were
+#     estimated from the washed hills' shoot:root DRY-weight ratio (Kim 2003 p.829), so partial washing does not
+#     bias root DW. Roots below the block depth are not sampled, so root DW MAY be a lower bound -- an inference,
+#     the authors do not discuss it. Table 1 values (ambient CO2 column) were checked against the PDF text.
 #   Kim et al. 2003 Glob. Change Biol. 9:826 (doi 10.1046/j.1365-2486.2003.00641.x; same site; Table 2 = leaf blade DW + green LAI, exact; Fig. 2 totals digitised; overlay-verified against the article bitmap, see the Kim2003 Fig2 note below).
 #   Bouman & van Laar 2006 Agric. Syst. 87:249 (doi 10.1016/j.agsy.2004.09.011), Fig. 2b IR72 DS1992 - DIGITISED, no roots.
 #   Nada & Abogadallah 2018 Acta Physiol. Plant. (doi 10.1007/s11738-018-2697-5): FRESH-weight root:shoot only,

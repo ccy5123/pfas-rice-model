@@ -36,13 +36,16 @@ def render(cfg):
     biomass = cfg.biomass
     measured_bio = cfg.measured_bio
     uptake = getattr(cfg, "uptake", api.DEFAULT_UPTAKE)
-    lipid_loading = bool(getattr(cfg, "lipid_loading", False))
+    lipid_loading = bool(getattr(cfg, "lipid_loading", api.DEFAULT_LIPID_LOADING))
+    shoot = getattr(cfg, "shoot", api.DEFAULT_SHOOT)
     # ---------------------------------------------------------------- headline metrics
     # A non-default mechanism has to be visible next to the numbers it moved -- the
     # sidebar expander is collapsed, so the run would otherwise look like the shipped one.
     neutral = getattr(cfg, "neutral", None)
     _mech = ([] if uptake == api.DEFAULT_UPTAKE else [f"uptake: **{uptake}**"]) + \
-            (["**lipid loading ON**"] if lipid_loading else [])
+            ([] if lipid_loading == api.DEFAULT_LIPID_LOADING else
+             [f"**lipid loading {'ON' if lipid_loading else 'OFF'}**"]) + \
+            ([] if shoot == api.DEFAULT_SHOOT else [f"shoot: **{shoot}**"])
     if neutral:
         st.subheader(f"{congener}  (neutral organic · log Kow {p['log_kow']:.2f})  ·  source: {mode}")
     else:
@@ -50,7 +53,7 @@ def render(cfg):
     if _mech and not neutral:
         st.warning("Non-default mechanism — " + " · ".join(_mech) +
                    ". These are EXPLORATORY switches (sidebar → ⚙️ Mechanism); every number "
-                   "on this screen moves with them, and neither is the shipped calibration.")
+                   "on this screen moves with them, and none of them is the default model.")
     c1, c2, c3, c4 = st.columns(4)
     for col, tis in zip((c1, c2, c3), ("root", "straw", "grain")):
         pred = res["straw_baf"] if tis == "straw" else res["baf_final"][tis]
@@ -236,9 +239,9 @@ def render(cfg):
                 st.caption("Measured biomonitoring BAF (tissue conc ÷ pore water) vs the model prediction.")
             else:
                 if lipid_loading:
-                    st.info("**Lipid-facilitated loading is ON**, so the model bar is the "
-                            "K_PL-gated mechanism, not the free-anion model. Against these Yamazaki bars "
-                            "it is *in-sample* — its constants were fit on them.")
+                    st.info("**Lipid-facilitated loading is ON** (the default), so against these "
+                            "Yamazaki bars the model is *in-sample* — its six lipid constants were fit "
+                            "on them. Its out-of-sample record is on Tang, Kim and Li.")
                 if obs and spec == "Curated congener":
                     # the model's version of the observation: dry basis, the two harvest runs of
                     # the 2020 site-year, the congener's irrigation-water level -- it tracks the
@@ -318,28 +321,28 @@ def render(cfg):
                 c1, c3 = st.columns([2, 1])
                 dose = ("low" if c1.radio("Tang dose", ["across-dose mean", "0.1 µg/g (env-closest)"],
                                           horizontal=True).startswith("0.1") else "mean")
-                show_lipid = c3.checkbox(
-                    "lipid loading (OOS)", value=False,
-                    help="Turn on the K_PL-gated lipid-facilitated loading. Its constants were fit on "
-                         "YAMAZAKI and nothing here is re-fit to Tang, so this is a genuine "
-                         "out-of-sample prediction — and it is the one that works: Tang per-organ "
-                         "log10 RMSE 1.50 (free anion) → 0.64 on the redistributed shoot this tab runs (calibration site-year drivers, 0.1 µg/g, "
-                         "fresh organ mass); the in-sample Tang refit reaches 0.34. See validation/oos_tang_lipid.py.")
+                show_free = c3.checkbox(
+                    "free anion (no lipid loading)", value=False,
+                    help="Add the same shoot without the K_PL-gated lipid loading. The grey bars are "
+                         "the default model (redistributed shoot + lipid loading), whose lipid "
+                         "constants were fit on YAMAZAKI with nothing re-fit to Tang — a genuine "
+                         "out-of-sample prediction: Tang per-organ log10 RMSE 0.64, against 1.50 for "
+                         "the free anion on the same shoot and 1.71 for the old 4-pool default "
+                         "(0.1 µg/g; validation/oos_tang_lipid.py). The green bars are in-sample.")
                 val = api.tang_tf_validation(congener, dose=dose)
                 valr = api.tang_tf_validation(congener, dose=dose, use_refit=True)
-                vall = (api.tang_tf_validation(congener, dose=dose, lipid_loading=True)
-                        if show_lipid else None)
-                st.plotly_chart(plots.fig_tang_tf(val, valr, vall), width="stretch")
-                if vall is not None:
-                    st.success(
-                        "**The purple bars are a prediction, not a fit.** The green refit bars were "
-                        "calibrated ON these measurements; the lipid mechanism was calibrated on "
-                        "Yamazaki and transferred here untouched: 0.64 across Tang's three congeners "
-                        "against 1.50 for the free anion (the in-sample refit reaches 0.34). The "
-                        "dominant free-anion failure — PFOS, the high-K_PL sulfonate, ~75–300× under — "
-                        "is cut at the mechanism level (stalk 0.005 → 0.16 vs Tang 0.571, still ~4× "
-                        "under). Residuals it does NOT fix: GenX (provisional ether f_xy, over) and "
-                        "the PFOS shoot/endosperm (under).")
+                vall = (api.tang_tf_validation(congener, dose=dose, lipid_loading=False)
+                        if show_free else None)
+                st.plotly_chart(plots.fig_tang_tf(val, valr, vall, extra_label="model · free anion"),
+                                width="stretch")
+                st.success(
+                    "**The grey bars are a prediction, not a fit.** The green refit bars were "
+                    "calibrated ON these measurements (0.34); the default model was calibrated on "
+                    "Yamazaki and transferred here untouched: 0.64 across Tang's three congeners, "
+                    "against 1.50 for the free anion. The dominant free-anion failure — PFOS, the "
+                    "high-K_PL sulfonate, ~75–300× under — is cut at the mechanism level (stalk "
+                    "0.005 → 0.16 vs Tang 0.571, still ~4× under). Residuals it does NOT fix: GenX "
+                    "(provisional ether f_xy, over) and the PFOS shoot/endosperm (under).")
                 _verdict = {"GenX": "GenX: the provisional 0.233 is ~4× above the Tang refit (0.059 at 0.1 µg/g; 0.066 on the across-dose mean).",
                             "PFOS": "PFOS: the free-anion refit sits at the **f_xy = 1 ceiling** — the free anion cannot deliver Tang's PFOS shoot even unrestricted; the K_PL-gated lipid term is what carries it.",
                             "PFOA": "PFOA f_xy is dose-sensitive (0.61 across-dose mean → 0.93 at 0.1 µg/g)."}[congener]

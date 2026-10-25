@@ -285,6 +285,9 @@ def main(verbose=True):
     out = dict(res=res, ref=ref, checks=checks,
                d1=N["c1"], d2_NE=res["NE"]["c1"], d2_NG=res["NG"]["c1"], flips=flips,
                c3_N=c3(N["A"]["phen"]), c3_NE=c3(res["NE"]["A"]["phen"]))
+    # POST-HOC: the decision under the other Q2 reading (see K's Q2 READING note)
+    out["c1_attached"] = {n: K.switch_rule(res[n]["A"]["detail"], res[n]["B"]["detail"],
+                                           reading="attached") for n in DESIGNS}
     if not verbose:
         return out
 
@@ -341,6 +344,9 @@ def main(verbose=True):
               f"; port matures every year: {c['reached']}")
     print("  D3: " + (f"verdict differs under {', '.join(flips)}" if flips else "same verdict under (s1)-(s3)"))
     print("  (D4 is void under AMENDMENT 2: its premise -- a dead-leaf ERROR -- is removed by the floor)")
+    print("  POST-HOC, Q2 read as 'attached' (no blade had detached; Q2 scored symmetrically):")
+    for name, c in out["c1_attached"].items():
+        print(f"  {name:<16} B-A {c['delta']:+.3f} [{c['lo']:+.3f}, {c['hi']:+.3f}] -> {c['verdict']}")
     return out
 
 

@@ -78,10 +78,14 @@ DEFAULT_SCENARIO = "yamazaki2020"
 #   "redistributed" N stem segments + leaf, each organ retaining the solute its own
 #                   transpiration deposits (`simulate_nstem_leaf`, the Tang over-translocation
 #                   fix; architecture levers stem_transp_frac / retention / lam_grain).
-# validation/default_switch.py decides which one is the default (pre-registered).
+# DEFAULT = the redistributed shoot with K_PL-gated lipid loading, adopted 2026-10-25 by the
+# pre-registered rule in validation/default_switch.py: best transfer on all three independent
+# datasets (Tang 0.640, Kim 0.469, Li 0.358 / 0.510 vs the 4-pool free anion's 1.714 / 2.33 /
+# 1.26 / 1.68), Yamazaki 0.380 (in-sample for the lipid constants). The old default stays
+# runnable as FOUR_POOL_FREE.
 SHOOTS = ("4pool", "redistributed")
-DEFAULT_SHOOT = "4pool"
-DEFAULT_LIPID_LOADING = False
+DEFAULT_SHOOT = "redistributed"
+DEFAULT_LIPID_LOADING = True
 # the configuration every calibration record and 4-pool mechanism analysis was run on
 FOUR_POOL_FREE = dict(shoot="4pool", lipid_loading=False)
 
@@ -242,9 +246,10 @@ _TANG_TF_ENDPOINT = {"TF_stalk": "stalk", "TF_leaf": "leaf", "TF_endosperm": "en
 _TANG_ORGANS = (("stem", "stalk", "stem"), ("leaf", "leaf", "leaf"), ("grain", "endosperm", "grain_brown"))
 
 # What Tang's "endosperm" is compared against. The model's grain pool is the whole
-# caryopsis (BROWN rice). Tang's endosperm is most likely MILLED (white) rice -- its SI
-# cites white-rice moisture -- but the milling method is not reported, so "brown" stays the
-# default and "white" is the named alternative (docs/sampling_protocols_audit_KR.md).
+# caryopsis (BROWN rice). Tang does not report whether its endosperm was dehulled only or
+# milled (the SI's white-rice moisture standard, Text S3, enters its intake calculation and does
+# not describe the analysed sample; docs/rice_sample_processing_KR.md section 4), so "brown"
+# stays the default and "white" is the named alternative.
 #   "white" re-partitions the grain's free concentration into an endosperm of white-rice
 #   composition (params/rice_tissue_params.csv grain_white: theta 0.11, protein 0.075, cell
 #   wall 0.005 + lignin 0.001), assuming bran and endosperm share one free concentration.
@@ -302,8 +307,8 @@ TANG_SHOOTS = ("redistributed", "4pool")
 
 
 def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
-                       dose="mean", lipid_loading=False, endosperm="brown", scenario=DEFAULT_SCENARIO,
-                       shoot="redistributed"):
+                       dose="mean", lipid_loading=None, endosperm="brown", scenario=DEFAULT_SCENARIO,
+                       shoot=None):
     """Model per-organ transfer factor (DRY weight) vs Tang 2026, for a Tang congener.
 
     Tang's TF is tissue/root on dry weight; the model's is formed the same way from the
@@ -316,16 +321,21 @@ def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
     ``endosperm`` -- 'brown' (default; the whole-caryopsis grain) or 'white' (milled rice;
     see TANG_ENDOSPERM). NOTE Tang's roots were rinsed only, so its root -- the TF
     denominator -- may carry surface-sorbed PFAS (no Fe/Mn plaque removal; same confound as
-    Li 2025), which would bias every Tang TF low. ``shoot`` -- 'redistributed' (default;
-    `simulate_nstem_leaf`) or '4pool' (the single-straw core `simulate()`), so each shoot
-    model can be scored on the same data. Returns None for non-Tang congeners.
+    Li 2025), which would bias every Tang TF low. ``shoot`` -- 'redistributed'
+    (`simulate_nstem_leaf`) or '4pool' (the single-straw core), None -> DEFAULT_SHOOT, so
+    each shoot model can be scored on the same data; ``lipid_loading`` None ->
+    DEFAULT_LIPID_LOADING. ``use_refit`` is a FREE-ANION f_xy fitted to Tang, so it runs
+    without lipid loading. Returns None for non-Tang congeners.
     """
     if congener not in TANG_CONGENERS:
         return None
     if endosperm not in TANG_ENDOSPERM:
         raise ValueError(f"unknown endosperm {endosperm!r}; expected one of {TANG_ENDOSPERM}")
+    shoot = DEFAULT_SHOOT if shoot is None else shoot
     if shoot not in TANG_SHOOTS:
         raise ValueError(f"unknown shoot {shoot!r}; expected one of {TANG_SHOOTS}")
+    lipid_loading = (False if use_refit else
+                     DEFAULT_LIPID_LOADING if lipid_loading is None else bool(lipid_loading))
     fxy = TANG_REFIT_FXY[congener] if use_refit else None
     if shoot == "4pool":
         r = simulate(congener, Cwo=1.0, f_xy_source=f_xy_source, f_xy_override=fxy,
@@ -343,7 +353,7 @@ def tang_tf_validation(congener, f_xy_source="recommended", use_refit=False,
                 model_tf=model, tang_tf=tang_observed_tf(congener, dose),
                 f_xy=float(r["params"]["f_xy"]), use_refit=bool(use_refit), dose=dose,
                 scenario=scenario, refit_fxy=TANG_REFIT_FXY[congener], endosperm=endosperm,
-                shoot=shoot)
+                shoot=shoot, lipid_loading=lipid_loading)
 
 
 def chain_table():
@@ -676,9 +686,9 @@ def simulate(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
 
 def apportionment(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommended",
                   f_xy_override=None, L_Ph_override=None, kappa_d_override=None,
-                  lipid_loading=False, g_xy_override=None, g_ph_override=None,
+                  lipid_loading=None, g_xy_override=None, g_ph_override=None,
                   season=None, n_t=241, measured_forcing=True, biomass="growth_rice",
-                  scenario=DEFAULT_SCENARIO):
+                  scenario=DEFAULT_SCENARIO, shoot=None):
     """Source apportionment for one congener -- the PFAS analog of dynamiCROP's Fig. 2.
 
     Builds the SAME model as ``simulate()`` (identical compound / composition / driver
@@ -691,14 +701,30 @@ def apportionment(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommen
     Unlike dynamiCROP (linear -> split by initial source pool), this model is nonlinear
     (GHK + Michaelis-Menten) and continuously sourced, so the decomposition is flux-based
     and by pathway. Returns the ``apportionment.apportion`` dict plus congener/params.
-    Scoped to the canonical 4-compartment core (`simulate`); the redistributed-shoot model
-    (`simulate_nstem_leaf`) would need its own flux map.
+    ``shoot`` (None -> DEFAULT_SHOOT) picks the shoot model; the redistributed shoot uses
+    its own flux map (`apportionment.apportion_redistributed`), with the same root/grain keys.
+    ``lipid_loading=None`` -> DEFAULT_LIPID_LOADING, as in `simulate`.
     """
     import apportionment as ap
     if congener not in _CONG:
         raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
+    shoot = DEFAULT_SHOOT if shoot is None else shoot
+    if shoot not in SHOOTS:
+        raise ValueError(f"unknown shoot {shoot!r}; expected one of {SHOOTS}")
+    lipid_loading = DEFAULT_LIPID_LOADING if lipid_loading is None else bool(lipid_loading)
     t, Cwo_series, Qtp, M, leaf_loss, M_basis = _default_drivers(
         season, n_t, Cwo, measured_forcing, biomass, scenario=scenario)
+    if shoot == "redistributed":
+        cmpd = _compound_for(congener, f_xy_source, f_xy_override, L_Ph_override,
+                             kappa_d_override, lipid_loading, g_xy_override, g_ph_override,
+                             K_cw_organ="stem")
+        run = _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M, leaf_loss,
+                                 float(t[-1]), E_m_mV, _keep_model=True)
+        res = ap.apportion_redistributed(run["_model"], run["_sol"])
+        res.update(congener=congener, success=bool(run["success"]), shoot=shoot,
+                   params=dict(f_xy=float(cmpd.f_xy), L_Ph=float(cmpd.L_Ph),
+                               n_C=_CONG[congener]["n_C"], group=_CONG[congener]["group"]))
+        return res
     inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss,
                          M_basis=M_basis)
     cmpd = _compound_for(congener, f_xy_source, f_xy_override, L_Ph_override,
@@ -709,7 +735,7 @@ def apportionment(congener="PFOA", Cwo=1.0, E_m_mV=-120.0, f_xy_source="recommen
     model = RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs)
     sol = model.solve(t)
     res = ap.apportion(model, sol)
-    res.update(congener=congener, success=bool(sol.success),
+    res.update(congener=congener, success=bool(sol.success), shoot=shoot,
                params=dict(f_xy=float(cmpd.f_xy), L_Ph=float(cmpd.L_Ph),
                            n_C=_CONG[congener]["n_C"], group=_CONG[congener]["group"]))
     return res
@@ -1608,25 +1634,24 @@ def estimate_exposure_bayesian(congener=None, measured_conc=None, *, sigma_log10
               "is held fixed (the exposure level is the well-posed quantity)."))
 
 
-# ---------------------------------------------------------------------------
-# Predictive uncertainty -- the "honesty band" for the general-audience view
-# ---------------------------------------------------------------------------
-# The out-of-sample (a-priori) error of the DEFAULT configuration -- the one the general-
-# audience view runs: monotone physical f_xy with L_Ph/kappa_d_rec, free anion (no lipid
-# loading), the 4-pool core, the calibration site-year. log10 RMSE per transfer test, each
-# from the script named (none of these observations entered the fit):
+# Out-of-sample error of the DEFAULT configuration (the redistributed shoot with K_PL-gated
+# lipid loading, monotone f_xy with L_Ph/kappa_d_rec, the calibration site-year): log10 RMSE
+# on the three independent datasets, none of which entered any fit (validation/
+# default_switch.py, which also records the scripts). They did, however, CHOSE this
+# configuration (the switch scored the candidates on them), so the band built from them may
+# be optimistic. Yamazaki is NOT in the list: the lipid constants were fitted on it, so its
+# 0.380 is in-sample.
 APRIORI_OOS_SCORES = {
-    "Yamazaki straw (root+grain fitted, straw predicted)": 1.401,   # refit_site_year.py, fit B
-    "Tang 2026 per-organ TF, 0.1 ug/g": 1.714,                     # oos_tang_lipid.py, 4-pool free anion
-    "Kim 2019 grain BAF excl PFOA (point)": 2.33,                  # kim2019_censored.py, mono
-    "Li 2025 shoot/root TF by stage": 1.26,                        # li2025_stage_resolved.py, mono
-    "Li 2025 grain/root TF by stage": 1.68,                        # li2025_stage_resolved.py, mono
+    "Tang 2026 per-organ TF, 0.1 ug/g": 0.640,       # oos_tang_lipid.py, redistributed + lipid
+    "Kim 2019 grain BAF excl PFOA (point)": 0.469,   # kim2019_censored.py, nstem_lipid
+    "Li 2025 shoot/root TF by stage": 0.358,         # li2025_stage_resolved.py, nstem_lipid
+    "Li 2025 grain/root TF by stage": 0.510,         # li2025_stage_resolved.py, nstem_lipid
 }
 # The band uses their MEDIAN (no single test speaks for the others). This exists so the
 # Simple view never shows a precise-looking absolute number without a reminder of how far
 # the default model's predictions sit from measurements. It is an HONESTY reminder, NOT a
-# calibrated confidence interval; the lipid-loading / redistributed-shoot variants do
-# better out of sample (CLAUDE.md section 6) but are not the default.
+# calibrated confidence interval. The previous default (4-pool, free anion; FOUR_POOL_FREE)
+# scored Yamazaki straw 1.401, Tang 1.714, Kim 2.33, Li 1.26 / 1.68 (median 1.68, x48).
 APRIORI_LOG10_RMSE = float(np.median(list(APRIORI_OOS_SCORES.values())))
 
 

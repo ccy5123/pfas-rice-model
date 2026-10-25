@@ -27,7 +27,8 @@
 # Kim's maturity samplings within 3-5 d (149-151 d) -- i.e. Wuxi maturity at ~132 days after
 # transplanting; and the season mean temperature and radiation per year.
 #
-# Arms (ambient CO2 per year 354/364/375 umol/mol; 24 hills m-2, 3 plants/hill; sown 18 May,
+# Arms (ambient CO2 per year 354/364/375 umol/mol; 24 hills m-2 as printed -- 17.5 x 30 cm is 19.05, run as a
+# POST-HOC sensitivity -- 3 plants/hill; sown 18 May,
 # transplanted 13 June; lat 31.58 N):
 #   A        the ORYZA2000 port, IR72.D92, its own development rates.
 #   B        the shipped oryza_growth (anchored -- the anchor scales all organs equally, so
@@ -196,10 +197,10 @@ def weather_check():
     return out
 
 
-def run_port(year, crop, sbdur=SBDUR, dT=0.0):
+def run_port(year, crop, sbdur=SBDUR, dT=0.0, nh=NH):
     w = load_weather(year, dT)
     tp = _doy(TRANSPLANT[year])
-    m = O2K.Management(lat=LAT, emd=tp - sbdur, sbdur=sbdur, nplh=NPLH, nh=NH, co2=CO2[year])
+    m = O2K.Management(lat=LAT, emd=tp - sbdur, sbdur=sbdur, nplh=NPLH, nh=nh, co2=CO2[year])
     r = O2K.simulate(w, crop, m, max_days=len(w["rad_mj"]) - (m.emd - w["doy0"]))
     assert r["events"].get("transplanting") == tp
     return {"dat": r["doy"] - tp, "DVS": r["dvs"], "GL": r["wlvg"], "SL": r["wlvd"],
@@ -223,13 +224,13 @@ def base_rates(arm):
     return C.base_rates("B") if arm == "B" else GJ.base_rates("A" if arm == "A+PART" else arm)
 
 
-def run(arm, year, rates=None, sbdur=SBDUR, dT=0.0):
-    if arm == "B":
+def run(arm, year, rates=None, sbdur=SBDUR, dT=0.0, nh=NH):
+    if arm == "B":                       # the shipped driver has no planting-density input
         return run_shipped(year, dict(rates) if rates else None, dT)
     c = GJ.crop(arm)
     if rates:
         c.update(rates)
-    return run_port(year, c, sbdur, dT)
+    return run_port(year, c, sbdur, dT, nh)
 
 
 def stage_index(r, year):
@@ -323,11 +324,11 @@ def r1(R, a="A", b="B", groups=WGROUPS):
     return c
 
 
-def design(obs, arms, rates=None, sbdur=SBDUR, dT=None, green_only=False):
+def design(obs, arms, rates=None, sbdur=SBDUR, dT=None, green_only=False, nh=NH):
     out = {}
     for arm in arms:
         runs = {y: run(arm, y, (rates or {}).get(arm, {}).get(y), sbdur if arm != "B" else SBDUR,
-                       (dT or {}).get(y, 0.0)) for y in YEARS}
+                       (dT or {}).get(y, 0.0), nh) for y in YEARS}
         rm, bi, de = evaluate(runs, obs, green_only)
         out[arm] = dict(runs=runs, rmse=rm, bias=bi, detail=de)
     return out
@@ -350,6 +351,10 @@ def main(verbose=True):
     res["W_greenonly"] = design(obs, ("A", "B"), green_only=True)
     if offset_needed:
         res["W_Toffset"] = design(obs, ("A", "B"), dT={y: v["diff"] for y, v in wc.items()})
+    # POST-HOC sensitivity: Yang 2006 states "17.5 by 30 cm, (equivalent to 24 hills m-2)" (so does
+    # Hasegawa 2017 Table S1), but 17.5 x 30 cm is 19.05 hills m-2 -- the paper is inconsistent and
+    # does not say which number is right. 24 stays the run value; 19.05 is run beside it.
+    res["W_nh19"] = design(obs, ("A", "B"), nh=19.05)
     verdict = {d: r1(R) for d, R in res.items()}
     W = res["W"]
     r3 = {arm: r1(W, a=arm, b="A", groups=("W1", "W2", "W3")) for arm in ("A+PART", "G")}

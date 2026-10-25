@@ -707,7 +707,8 @@ def run_model(cfg):
     measured_bio = cfg.measured_bio
     sim_kw = dict(E_m_mV=E_m, f_xy_source=fxy_source, **crop_kw(biomass),
                   uptake=getattr(cfg, "uptake", api.DEFAULT_UPTAKE),
-                  lipid_loading=bool(getattr(cfg, "lipid_loading", False)),
+                  lipid_loading=bool(getattr(cfg, "lipid_loading", api.DEFAULT_LIPID_LOADING)),
+                  shoot=getattr(cfg, "shoot", api.DEFAULT_SHOOT),
                   km_scale=float(getattr(cfg, "km_scale", 1.0) or 1.0))
     # Only send the entry-constant overrides when the user actually set them --
     # None means "use the uptake mode's own value" (model_api.UPTAKE_MODES).

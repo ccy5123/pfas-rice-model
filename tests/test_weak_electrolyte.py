@@ -80,8 +80,10 @@ import pfas_rice_plant_module_4pool_surf as P4  # noqa: E402
 # are set out in tests/conftest.py, which now owns that rule.
 GOLDEN_REL = 1e-3
 
-# Goldens on the current model (calibration site-year, fresh organ mass, harvest at the
-# mean date). Regenerate them only when the model itself is deliberately changed.
+# Goldens on the 4-pool free-anion core (calibration site-year, fresh organ mass, harvest
+# at the mean date) -- the configuration the transport fits were made on -- and on the
+# DEFAULT configuration (redistributed shoot + lipid loading). Regenerate them only when the
+# model itself is deliberately changed.
 PFAS_GOLDEN = {
     ("PFOA", "recommended"): {"root": 0.41267945513714566, "grain": 0.24553875107615294},
     ("PFOS", "fit"): {"root": 5.037316673047101, "grain": 1.210992611037675},
@@ -93,7 +95,21 @@ PFAS_GOLDEN = {
 def test_pfas_path_is_unmoved(key, expected):
     """The speciation terms must not move the PFAS path (a permanent anion, pKa None)."""
     cong, src = key
-    r = api.simulate(cong, f_xy_source=src)
+    r = api.simulate(cong, f_xy_source=src, **api.FOUR_POOL_FREE)
+    for tissue, want in expected.items():
+        assert r["baf_final"][tissue] == pytest.approx(want, rel=GOLDEN_REL), tissue
+
+
+PFAS_GOLDEN_DEFAULT = {
+    "PFOA": {"root": 0.41000723114202087, "grain": 1.2365932626597504},
+    "PFBA": {"root": 0.7615810257870217, "grain": 5.932552960908893},
+}
+
+
+@pytest.mark.parametrize("cong,expected", list(PFAS_GOLDEN_DEFAULT.items()))
+def test_pfas_path_is_unmoved_in_the_default(cong, expected):
+    """The same backstop on the default configuration (redistributed shoot + lipid)."""
+    r = api.simulate(cong)
     for tissue, want in expected.items():
         assert r["baf_final"][tissue] == pytest.approx(want, rel=GOLDEN_REL), tissue
 

@@ -116,8 +116,10 @@ The ~3–8× figure above is on the pre-fix DRY organ mass. On fresh mass the ga
 model-dependent: with the lipid term the endosperm is 2.8× (PFOA) / 5.8× (PFOS) under,
 with the Tang-refit `f_xy` PFOA closes (1.61 vs 1.37) and PFOS is ~4× under.
 
-Tang's endosperm is most likely MILLED rice (its SI cites white-rice moisture), while the
-model's grain pool is the whole caryopsis. `tang_tf_validation(endosperm="white")`
+Whether Tang's endosperm is dehulled (brown) or MILLED (white) rice is not reported — the SI's
+white-rice moisture standard (Text S3) enters its intake calculation and does not describe the
+analysed sample (`docs/rice_sample_processing_KR.md` §4) — while the model's grain pool is the
+whole caryopsis. `tang_tf_validation(endosperm="white")`
 re-partitions the grain's free concentration into a white-rice composition
 (`model_api.TANG_ENDOSPERM`; membrane phospholipid counted the way the `grain_brown` row
 counts it — the `grain_white` row's own 0.003 is mostly starch-complexed lyso-PL, a pool

@@ -184,3 +184,70 @@ def _demo():
 
 if __name__ == "__main__":
     _demo()
+
+
+# ---------------------------------------------------------------------------
+# The redistributed shoot (pfas_rice_plant_module_nstem_leaf.NStemLeafModel)
+# ---------------------------------------------------------------------------
+def flux_terms_redistributed(model, t, C):
+    """Instantaneous MASS fluxes [ug/day] of the redistributed-shoot model at (t, C),
+    term by term as in NStemLeafModel.rhs. The xylem is not passed stem -> leaf -> grain
+    here: each organ draws its own transpiration share, so the grain's xylem inflow is the
+    panicle draw plus the non-retained residual (formation-gated), and before the panicle
+    forms that residual goes to the leaf."""
+    from pfas_rice_plant_module_4pool_surf import root_uptake as _ru
+    inp = model.inputs
+    Cwo, Q = inp.Cwo_(t), inp.Qtp_(t)
+    M = np.maximum(inp.M_(t), 1e-12)
+    dM = inp.dM_(t)
+    n = model.n_comp
+    Cw = C[:n] / model._B
+    leaf, grain, r = model.LEAF, model.GRAIN, model.retention
+    Q_g = max(dM[grain] * (1.0 - model.comps[grain].theta) * model.T_C_Ph, 0.0)
+    Q_r = max(model.phi * Q, 0.0)
+    C_Phl = model.cmpd.L_Ph * Cw[leaf] + model.cmpd.g_ph * C[leaf]
+    jR = _ru(Cwo, Cw[model.ROOT], model.cmpd, model.env)
+    xyl = Q * (model.cmpd.f_xy * Cw[model.ROOT] + model.cmpd.g_xy * C[model.ROOT])
+    gam = inp.grain_gate_(t)
+    residual = (model.lam_grain + (1.0 - r) * (model.tau.sum() + model.lam_leaf)) * xyl
+    return dict(
+        soil_uptake=float(M[model.ROOT] * jR),
+        xylem_root_out=float(xyl),
+        xylem_to_stem=float(r * model.tau.sum() * xyl),
+        xylem_to_leaf=float(r * model.lam_leaf * xyl + (1.0 - gam) * residual),
+        xylem_to_grain=float(gam * residual),
+        phloem_leaf_grain=float(gam * Q_g * C_Phl),
+        phloem_leaf_root=float(Q_r * C_Phl),
+        leaf_loss=float(inp.leaf_loss_(t) * M[leaf] * C[leaf]),
+    )
+
+
+def apportion_redistributed(model, sol) -> dict:
+    """`apportion` for the redistributed shoot: cumulative pathway masses and per-compartment
+    inflow fractions, with the same keys for the root and the grain as the 4-pool version."""
+    t = sol.t
+    names = ("soil_uptake", "xylem_root_out", "xylem_to_stem", "xylem_to_leaf",
+             "xylem_to_grain", "phloem_leaf_grain", "phloem_leaf_root", "leaf_loss")
+    series = {k: np.empty(len(t)) for k in names}
+    for i, ti in enumerate(t):
+        f = flux_terms_redistributed(model, float(ti), sol.y[:, i])
+        for k in names:
+            series[k][i] = f[k]
+    cum = {k: float(_trapz(series[k], t)) for k in names}
+    inflow = {
+        "root":  {"soil_uptake": cum["soil_uptake"], "phloem_recirc": cum["phloem_leaf_root"]},
+        "stem":  {"xylem_from_root": cum["xylem_to_stem"]},
+        "leaf":  {"xylem_from_root": cum["xylem_to_leaf"]},
+        "grain": {"xylem_from_stem": cum["xylem_to_grain"],
+                  "phloem_from_leaf": cum["phloem_leaf_grain"]},
+    }
+    fraction = {}
+    for k, d in inflow.items():
+        tot = sum(max(v, 0.0) for v in d.values())
+        fraction[k] = {p: (max(v, 0.0) / tot if tot > 0 else float("nan")) for p, v in d.items()}
+    gtot = cum["xylem_to_grain"] + cum["phloem_leaf_grain"]
+    return dict(t_span=(float(t[0]), float(t[-1])), cum=cum, inflow=inflow, fraction=fraction,
+                grain_phloem_fraction=(cum["phloem_leaf_grain"] / gtot if gtot > 0 else float("nan")),
+                delivered_to_shoot=(cum["xylem_root_out"] / cum["soil_uptake"]
+                                    if cum["soil_uptake"] > 0 else float("nan")))
+

@@ -48,12 +48,15 @@ def test_membrane_potential_lever():
 
 def test_forcing_and_fxy_toggles_run():
     a = api.simulate("PFOA", measured_forcing=True, f_xy_source="recommended")
-    b = api.simulate("PFOA", measured_forcing=False, f_xy_source="fit")
+    b = api.simulate("PFOA", measured_forcing=False, f_xy_source="fit", lipid_loading=False)
     assert a["success"] and b["success"]
-    # the two f_xy sources differ for a long chain (recommended monotone vs the fit)
-    rec = api.simulate("PFDA", f_xy_source="recommended")["params"]["f_xy"]
-    fit = api.simulate("PFDA", f_xy_source="fit")["params"]["f_xy"]
+    # the two f_xy sources differ for a long chain (recommended monotone vs the fit); the
+    # f_xy source applies only with lipid loading off (the default lipid model has its own f_xy)
+    rec = api.simulate("PFDA", f_xy_source="recommended", lipid_loading=False)["params"]["f_xy"]
+    fit = api.simulate("PFDA", f_xy_source="fit", lipid_loading=False)["params"]["f_xy"]
     assert rec != fit
+    with pytest.raises(ValueError):
+        api.simulate("PFDA", f_xy_source="fit")
 
 
 def test_observed_baf_lookup():
@@ -249,9 +252,10 @@ def test_estimate_exposure_bayesian_runs_under_the_selected_mechanism():
     bypass = api.estimate_exposure_bayesian("PFOA", meas, uptake="bypass")
     assert carrier["median"] == pytest.approx(2.0, rel=0.10)       # default is unchanged
     assert bypass["median"] < carrier["median"]
-    # lipid loading is likewise honoured (it moves the grain hard, so the level moves)
-    lipid = api.estimate_exposure_bayesian("PFOA", meas, lipid_loading=True)
-    assert lipid["median"] != pytest.approx(carrier["median"], rel=0.05)
+    # lipid loading (on by default) is likewise honoured: switching it off moves the grain
+    # hard, so the level moves
+    free = api.estimate_exposure_bayesian("PFOA", meas, lipid_loading=False)
+    assert free["median"] != pytest.approx(carrier["median"], rel=0.05)
 
 
 def test_estimate_exposure_progress_callback():
@@ -276,13 +280,13 @@ def test_estimate_exposure_progress_callback():
 
 
 def test_predictive_band_and_uncertainty_factor():
-    """The general-audience honesty band: a ×/÷ factor from the documented a-priori
-    predictive log10 RMSE (~7×), symmetric in log space, with graceful NaN edges."""
+    """The general-audience honesty band: a ×/÷ factor from the default configuration's
+    transfer errors (median log10 0.49, ~3.1×), symmetric in log space, graceful NaN edges."""
     f = api.uncertainty_factor()
     assert f == pytest.approx(10.0 ** api.APRIORI_LOG10_RMSE)
     assert api.APRIORI_LOG10_RMSE == pytest.approx(
         float(np.median(list(api.APRIORI_OOS_SCORES.values()))))
-    assert f > 10.0                     # the default model is more than 10x off out of sample
+    assert f == pytest.approx(3.09, abs=0.05)   # Tang 0.640, Kim 0.469, Li 0.358 / 0.510
     b = api.predictive_band(2.0)
     assert b["factor"] == pytest.approx(f)
     assert b["lo"] == pytest.approx(2.0 / f) and b["hi"] == pytest.approx(2.0 * f)
@@ -354,12 +358,18 @@ def test_summary_report_md():
 
 
 def test_lipid_loading_off_matches_baseline():
-    """lipid_loading=False must recover the free-only model exactly (g=0)."""
-    for nm in ("PFBA", "PFOA", "PFDA"):
-        off = api.simulate(nm, lipid_loading=False, measured_forcing=True)
-        assert off["params"]["g_xy"] == 0.0 and off["params"]["g_ph"] == 0.0
-        rec = api.simulate(nm, f_xy_source="recommended", measured_forcing=True)
-        assert off["baf_final"]["grain"] == pytest.approx(rec["baf_final"]["grain"], rel=1e-9)
+    """lipid_loading=False must recover the free-only model exactly (g = 0, the monotone
+    f_xy), on either shoot: the lipid path with its bound terms zeroed and its f_xy set to
+    the monotone value IS the free model."""
+    for shoot in api.SHOOTS:
+        for nm in ("PFBA", "PFOA", "PFDA"):
+            off = api.simulate(nm, lipid_loading=False, measured_forcing=True, shoot=shoot)
+            assert off["params"]["g_xy"] == 0.0 and off["params"]["g_ph"] == 0.0
+            assert off["params"]["f_xy"] == api._CONG[nm]["f_xy_recommended"]
+            zeroed = api.simulate(nm, lipid_loading=True, measured_forcing=True, shoot=shoot,
+                                  g_xy_override=0.0, g_ph_override=0.0,
+                                  f_xy_override=api._CONG[nm]["f_xy_recommended"])
+            assert off["baf_final"]["grain"] == pytest.approx(zeroed["baf_final"]["grain"], rel=1e-9)
 
 
 def test_lipid_loading_rescues_longchain_grain():
@@ -439,14 +449,14 @@ def test_fit_source_reproduces_yamazaki():
     from PFOA (C8) up the monotone f_xy leaves the grain short even at L_Ph = 1, so the
     'recommended' check uses PFHpA (off every bound in both fits)."""
     o = api.observed_baf("PFOA")
-    fit = api.yamazaki_harvest_baf("PFOA", f_xy_source="fit")
+    fit = api.yamazaki_harvest_baf("PFOA", f_xy_source="fit", **api.FOUR_POOL_FREE)   # the fits are 4-pool
     for k in ("root", "straw", "grain"):
         assert abs(np.log10(fit[k] / o[k])) < 0.01
     o7 = api.observed_baf("PFHpA")
-    rec = api.yamazaki_harvest_baf("PFHpA", f_xy_source="recommended")
+    rec = api.yamazaki_harvest_baf("PFHpA", f_xy_source="recommended", **api.FOUR_POOL_FREE)
     assert abs(np.log10(rec["root"] / o7["root"])) < 0.01
     assert abs(np.log10(rec["grain"] / o7["grain"])) < 0.01
-    short = api.yamazaki_harvest_baf("PFOA", f_xy_source="recommended")
+    short = api.yamazaki_harvest_baf("PFOA", f_xy_source="recommended", **api.FOUR_POOL_FREE)
     assert short["grain"] < o["grain"]          # at the L_Ph bound, grain under
     p = {s: api._transport_defaults(api._CONG["PFOA"], s, False) for s in api.F_XY_SOURCES}
     assert p["recommended"][0] == api._CONG["PFOA"]["f_xy_recommended"]
@@ -467,15 +477,25 @@ def test_leaf_senescence_loss():
 
 
 def test_grain_formation_gate():
-    """The grain takes NO PFAS before the panicle forms (no pre-flowering spike), then
-    rises to its harvest value; a constant-mass driver still loads the grain (gate=1)."""
-    r = api.simulate("PFOA")
+    """The grain takes NO PFAS before the panicle forms, then accumulates to its harvest
+    value; a constant-mass driver still loads the grain (gate=1). In the 4-pool the grain's
+    xylem share scales with its dry matter, so its concentration rises monotonically (no
+    early spike). The DEFAULT (redistributed) shoot gives the formed panicle a constant share
+    of the stream (lam_grain), so its concentration PEAKS in the young panicle ~2 weeks
+    before heading (PFOA ~3.3x the harvest value) and dilutes as it grows -- a property of
+    the default recorded here (CLAUDE.md section 9), not a gate failure."""
     run = api.site_run()
     t_head = float(np.interp(1.0, run["dvs"], run["t"]))
-    t, cg = r["t"], np.asarray(r["conc"]["grain"])
+    four = api.simulate("PFOA", **api.FOUR_POOL_FREE)
+    t, cg = four["t"], np.asarray(four["conc"]["grain"])
     assert np.all(cg[t < t_head - 25] < 1e-3)         # ~0 well before heading
     assert cg[-1] > 1e-3                              # accumulates by harvest (terminal sink)
-    assert cg.max() <= cg[-1] * 1.5                   # NO pre-formation spike above harvest
+    assert cg.max() <= cg[-1] * 1.5                   # NO early spike above harvest
+    r = api.simulate("PFOA")
+    t, cg = r["t"], np.asarray(r["conc"]["grain"])
+    assert np.all(cg[t < t_head - 25] < 1e-3)         # the gate holds in the default too
+    i = int(np.argmax(cg))
+    assert t[i] < t_head and 2.5 < cg[i] / cg[-1] < 4.5   # the young-panicle peak
     t2 = np.linspace(0, 120, 121)
     Mc = np.tile([0.003, 0.02, 0.013, 0.03], (121, 1))
     rc = api.simulate("PFOA", drivers=api.drivers_from_arrays(t2, np.ones(121), M=Mc))

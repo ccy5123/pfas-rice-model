@@ -266,6 +266,12 @@ def main(verbose=True):
     g4 = {s: c1(res[s], "G") for s in ("N_s1_tmpsb0", "N_s2_sowing")}
     flips = [s for s, v in g4.items() if v["verdict"] != g2["N"]["verdict"]]
     out = dict(res=res, checks=checks, unc=unc, g2=g2, g3=g3, g4=g4, flips=flips)
+    # POST-HOC: the decisions under the other Q2 reading (see K's Q2 READING note)
+    out["attached"] = {(d, lab): K.switch_rule(res[d][arm]["detail"], res[d][ref]["detail"],
+                                               reading="attached")
+                       for d in ("N", "NE")
+                       for lab, arm, ref in (("G vs shipped", "G", "B"), ("G vs IR72 port", "G", "A"),
+                                             ("IR72 port vs shipped", "A", "B"))}
     if not verbose:
         return out
 
@@ -315,6 +321,11 @@ def main(verbose=True):
         print(f"  {s_:<12} G vs shipped B-A {v['delta']:+.3f} [{v['lo']:+.3f}, {v['hi']:+.3f}] -> "
               f"{v['verdict'].replace('A better', 'G better')}")
     print("  " + (f"verdict differs under {', '.join(flips)}" if flips else "same verdict under (s1), (s2)"))
+    print("  POST-HOC, Q2 read as 'attached' (no blade had detached; Q2 scored symmetrically):")
+    for (d, lab), v in out["attached"].items():
+        first, second = lab.split(" vs ")
+        verdict = v["verdict"].replace("A better", first + " better").replace("B better", second + " better")
+        print(f"  {d:<3} {lab:<21} B-A {v['delta']:+.3f} [{v['lo']:+.3f}, {v['hi']:+.3f}] -> {verdict}")
     return out
 
 

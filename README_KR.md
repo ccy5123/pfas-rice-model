@@ -25,12 +25,11 @@ pytest                            # 테스트
 
 ```python
 import model_api as api                       # (src/를 경로에)
-r = api.simulate("PFOA")                      # 보정 사이트-연도, 평균 수확일
+r = api.simulate("PFOA")                      # 기본: 재분배 지상부 + 지질 적재, 보정 사이트-연도
 r["baf_final_dw"]                             # 뿌리/줄기/잎/낟알/짚, 건물중
 api.yamazaki_harvest_baf("PFOA")              # 관측 대응값: 두 번의 수확, 기하평균
 api.simulate("PFOA", scenario="generic", season=120.0, biomass="oryza2000")   # 다른 드라이버
-api.simulate("PFOA", lipid_loading=True)      # K_PL 게이트 지질 적재(선택)
-api.simulate_nstem_leaf("PFOA", lipid_loading=True)   # 재분배 지상부 + 지질
+api.simulate("PFOA", **api.FOUR_POOL_FREE)    # 이전 기본: 4구획, 자유 음이온
 api.simulate_neutral(2.45, name="carbamazepine")      # log Kow로 주는 중성 유기물
 ```
 
@@ -43,24 +42,28 @@ api.simulate_neutral(2.45, name="carbamazepine")      # log Kow로 주는 중성
 - **기관 질량은 생체중(fresh)** 입니다. 작물 모델은 건물을 내므로 변환합니다(`src/organ_mass.py`).
 - **수확 관측 연산자**(`src/harvest.py`): 작물 모델의 잎 고사로부터 죽은 잎을 재구성해 잎과 짚에
   포함하고, 결과를 건물중으로 비교합니다.
-- **수송 파라미터**는 사이트-연도에서 적합합니다(`validation/refit_site_year.py`, 사전 등록).
-  `f_xy_source="recommended"`(기본; 단조 물리적 f_xy, L_Ph와 κ_d는 뿌리·낟알에 맞춤) 또는 `"fit"`(세
-  파라미터 모두 congener별 적합; 포화된 재현).
+- **기본 구성**(사전 등록한 전환, `validation/default_switch.py`): **재분배 지상부**(줄기 4구간 + 잎; 지상부
+  기관마다 자기 증산이 가져온 물질의 일부를 붙잡음)에 **K_PL 게이트 지질 적재**와 carrier 뿌리 유입을 씁니다.
+  `shoot="4pool"`은 단일 짚 구조, `api.FOUR_POOL_FREE`는 이전 기본입니다.
+- **수송 파라미터**는 사이트-연도에서 4구획 지상부로 적합했습니다(`validation/refit_site_year.py`, 사전 등록).
+  `f_xy_source="recommended"`(단조 물리적 f_xy, L_Ph와 κ_d는 뿌리·낟알에 맞춤) 또는 `"fit"`(세 파라미터
+  모두 congener별 적합; 포화된 재현; 자유 음이온 전용). 지질 적재는 자체 f_xy를 씁니다(Yamazaki에 맞춘 전역 상수 6개).
 
 ## 결과 요약 (자세한 내용과 스크립트: `CLAUDE.md` §6)
 
-- **재현**(Fit A, 포화): Yamazaki 뿌리/짚/낟알에서 log10 RMSE 0.162. 단조 f_xy를 쓰면 짚은 예측이 되고
+- **재현**(4구획 Fit A, 포화): Yamazaki 뿌리/짚/낟알에서 log10 RMSE 0.162. 단조 f_xy를 쓰면 짚은 예측이 되고
   log10 1.40만큼 빗나갑니다.
-- **독립 데이터로의 전이**(그 데이터에 맞춘 파라미터 없음): 기본 설정은 log10 1.26–2.33 차이가 납니다
-  (Tang 2026 기관별 TF 1.71, Kim 2019 낟알 2.33, Li 2025 생육단계별 TF 1.26 / 1.68). K_PL 게이트 **지질 적재**가
-  이를 줄이고(Tang 0.99, Kim 0.56, Li 0.90 / 1.24), **재분배 지상부**와 함께 쓰면 세 데이터 모두에서 가장 낫습니다
-  (Tang 0.64, Kim 0.47, Li 0.36 / 0.51). 다만 Kim에서 두 지질 변형의 순위는 불검출 처리에 따라 바뀝니다.
-- **결과를 크게 움직이는 미측정 입력**: carrier 상수(특히 Km), E_m, 증산류 중 낟알 몫, 낟알 생장당 체관 수액량
-  (T_C,Ph), 체관 재순환 φ(짚), 죽은 잎이 수확 짚에 남는지 여부(`docs/ASSUMPTIONS.md`).
+- **독립 데이터로의 전이**(그 데이터에 맞춘 파라미터 없음): 기본 구성은 Tang 2026 기관별 TF에서 log10 0.64,
+  Kim 2019 낟알에서 0.47, Li 2025 생육단계별 TF에서 0.36 / 0.51 빗나갑니다. 이전 기본(4구획 자유 음이온)은
+  1.71, 2.33, 1.26 / 1.68이었습니다. Kim에서 두 지질 변형의 순위는 불검출 처리에 따라 바뀝니다.
+- 이 세 자료에 파라미터를 맞추지는 않았지만 기본 구성을 고르는 데 썼으므로, 그 점수와 ×3.1 범위는 낙관적일 수 있습니다.
+- **Yamazaki**(지질 상수는 표본 내)에서 기본 구성은 0.380이고, 대부분 congener의 낟알을 2–7배 높게 계산합니다.
+- **기본 구성의 결과를 크게 움직이는 미측정 입력**: carrier 상수(특히 Km), E_m, 지상부 레버 `retention`과
+  `lam_grain`(증산류 중 낟알 몫), 죽은 잎이 수확 짚에 남는지 여부(`docs/ASSUMPTIONS.md`).
 - **중성 유기물**(적합 없음): 벼 뿌리 분배 log10 0.21(Liu 2023), 기관별 TF 0.31(Ge 2017), 보리 줄기 0.30(Briggs 1983).
 
-일반인 화면은 모든 절대 수치에 ×/÷ 밴드를 함께 보여주며, 그 폭은 기본 설정의 전이 오차
-(`model_api.APRIORI_OOS_SCORES`)에서 정해집니다.
+일반인 화면은 모든 절대 수치에 ×/÷ 밴드를 함께 보여주며, 그 폭은 기본 구성의 전이 오차
+(`model_api.APRIORI_OOS_SCORES`, 중앙값 log10 0.49, ×3.1)에서 정해집니다.
 
 ## 토양 측 — HYDRUS-1D (Method A)
 
@@ -74,7 +77,7 @@ pip install phydrus
 python validation/hydrus_coupled_run.py
 ```
 
-흡착이 약한 단쇄는 담수기에 용탈되고(일정 노출일 때 PFBA 낟알 BAF 4.42 → 0.54), 장쇄는 완충됩니다. `simulate(cwo_profile="flooded")`는
+흡착이 약한 단쇄는 담수기에 용탈되고(기본 구성, 일정 노출일 때 PFBA 낟알 BAF 6.90 → 0.69), 장쇄는 완충됩니다. `simulate(cwo_profile="flooded")`는
 엔진 없이 쓰는 해석적 형상이며, `k_leach`는 congener별로 HYDRUS 결과에 맞춰 보정돼 있습니다. 웹의
 Claude Code에서는 SessionStart 훅이 엔진을 빌드합니다.
 
@@ -87,7 +90,7 @@ streamlit run app.py
 
 농도로 색칠한 식물·토양 지도, 조직 동역학, 드라이버, Yamazaki 비교, Tang 점검, 베이지안 역추정(측정한
 조직 농도로부터 노출 추정), 6가지 노출 모드(파라메트릭, 사용자 표, HYDRUS CSV, 실시간 HYDRUS-1D, 토양
-재고량, 바이오모니터링), 메커니즘 스위치(carrier/bypass, 지질 적재), 세 가지 화합물 종류(congener,
+재고량, 바이오모니터링), 메커니즘 스위치(지상부 모델, carrier/bypass, 지질 적재), 세 가지 화합물 종류(congener,
 SMILES, 중성 log Kow — EPA CompTox 조회 선택)를 제공합니다. 일반 모드는 한국어, 전문가 모드는 영어입니다.
 `docs/visualization_tool.md`와 매뉴얼을 참고하세요.
 
@@ -111,11 +114,14 @@ B_k = θ_fw + (1 − θ_fw) · ( f_prot·K_prot + f_PL·K_PL + f_cw·K_cw )     
 ```
 
 뿌리 유입 = GHK 전기확산(E_m = −120 mV에서 음이온 배제 e^N ≈ 107) + 포화 Michaelis–Menten carrier.
-물관 적재 `f_xy · C_root/B_root`(+ 선택적 지질항). 체관은 두 흐름입니다: 낟알로는 건물 생장에 필요한
-수액, 뿌리로는 증산의 φ 비율. 낟알과 잎은 종단 축적체라 모델은 동역학이어야 합니다.
+물관 적재 `f_xy · C_root/B_root` + K_PL 게이트 지질항 `g_xy · C_root`(기본 켜짐). 체관은 두 흐름입니다: 낟알로는
+건물 생장에 필요한 수액, 뿌리로는 증산의 φ 비율. 기본(재분배) 지상부에서는 증산류가 줄기 N구간, 잎, 낟알을 지나고
+기관마다 자기 증산이 가져온 물질의 일부를 붙잡습니다. 낟알과 잎은 종단 축적체라 모델은 동역학이어야 합니다.
 
 ## 남은 과제
 
 가정을 대체할 측정은 `docs/ASSUMPTIONS.md` §7에 있습니다(Yamazaki SI 원자료, carrier 동역학, 이삭의
-증산 분담, 벼 체관 수액량, 생육기 기관 수분, 벼 뿌리 세포벽·plaque 흡착). 전이 데이터셋은 자체 장소·
-일정이 레포에 없어 보정 사이트-연도 드라이버로 돌고 있습니다.
+증산 분담, 벼 체관 수액량, 생육기 기관 수분, 벼 뿌리 세포벽·plaque 흡착), 그리고 기본 지상부의 `retention`·
+`lam_grain` 레버입니다. 전이 데이터셋은 자체 장소·일정이 레포에 없어 보정 사이트-연도 드라이버로 돌고 있습니다.
+생장·PFAS 논문들이 벼를 실제로 어떻게 처리했는지(채취, 기관 분리, 세척, 건조, 도정)와 새 채취를 위한 체크리스트는
+`docs/rice_sample_processing_KR.md`에 있습니다.

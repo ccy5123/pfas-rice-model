@@ -1,6 +1,6 @@
 # Gao et al. 2021 (doi:10.1016/j.agwat.2021.106864), Table 2 crop growth stages (dates d/m) for both years, Section 2.1.1 and
 # Table A1. Sown 15 April, transplanted 16 May in both years (20 hills m-2, 5 plants/hill); harvested 18 Sep 2018 and 21 Sep 2019.
-# Table A1 gives the 2018 events as day of year: emergence 111, transplanting 136, panicle initiation 191 (= start of jointing),
+# Table A1 gives the events as day of year (its year is not printed; maturity DOY 261 = 18 Sep 2018, so 2018 is inferred): emergence 111, transplanting 136, panicle initiation 191 (= start of jointing),
 # flowering 214 (inside "blooming"), maturity 261 (= harvest). 2019 has stage windows only (no single event days).
 # Daily weather came from the Tieli station (monthly means in their Fig. 1; daily values not published).
 year,stage,start_dm,end_dm,days

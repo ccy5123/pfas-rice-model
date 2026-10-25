@@ -249,6 +249,9 @@ def main(verbose=True):
              and abs(phen[y]["maturity"]) <= 7 for y in YEARS)
     flips = [n for n, R in res.items() if R["c1"]["verdict"] != P["c1"]["verdict"]]
     out = dict(res=res, obs=obs, root_obs=root_obs, c1=P["c1"], c3=c3, flips=flips)
+    # POST-HOC: the decision under the other Q2 reading (see K's Q2 READING note)
+    out["c1_attached"] = {n: K.switch_rule(R["A"]["detail"], R["B"]["detail"], reading="attached")
+                          for n, R in res.items()}
     if not verbose:
         return out
 
@@ -312,6 +315,9 @@ def main(verbose=True):
     print(f"    own-year rates: B-A {c['delta']:+.3f} [{c['lo']:+.3f}, {c['hi']:+.3f}] -> {c['verdict']}")
     print("    " + (f"verdict differs under {', '.join(flips)}" if flips else "same verdict under every sensitivity"))
     print("    (C2 is void under AMENDMENT 2: its premise -- a dead-leaf ERROR -- is removed by the floor)")
+    print("   POST-HOC, Q2 read as 'attached' (no blade had detached; Q2 scored symmetrically):")
+    for name, c in out["c1_attached"].items():
+        print(f"    {name:<13} B-A {c['delta']:+.3f} [{c['lo']:+.3f}, {c['hi']:+.3f}] -> {c['verdict']}")
     return out
 
 

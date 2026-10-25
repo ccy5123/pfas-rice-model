@@ -111,17 +111,18 @@ def test_fig_tang_tf_builds():
 
 
 def test_fig_tang_tf_lipid_extra_series():
-    """The app's third Tang bar: the lipid-loading run, which is OOS here (its
-    constants were fit on Yamazaki, not on Tang) and so is drawn as its own series
-    rather than replacing the Tang-refit bar."""
+    """The app's Tang tab: the default model (lipid loading on; OOS here -- its constants
+    were fit on Yamazaki, not on Tang) is the main model bar, and the free anion on the same
+    shoot is drawn as its own third series rather than replacing the Tang-refit bar."""
     import model_api as api, plots
     val = api.tang_tf_validation("PFOS", dose="low")
-    vall = api.tang_tf_validation("PFOS", dose="low", lipid_loading=True)
-    fig = plots.fig_tang_tf(val, None, vall)
-    assert len(fig.data) == 3                       # Tang + model + lipid (no refit bar)
-    assert any("lipid" in (tr.name or "") for tr in fig.data)
+    vfree = api.tang_tf_validation("PFOS", dose="low", lipid_loading=False)
+    assert val["lipid_loading"] and not vfree["lipid_loading"]
+    fig = plots.fig_tang_tf(val, None, vfree, extra_label="model · free anion")
+    assert len(fig.data) == 3                       # Tang + model + free anion (no refit bar)
+    assert any("free anion" in (tr.name or "") for tr in fig.data)
     # the K_PL-gated lipid term carries the high-K_PL sulfonate into the stalk
-    assert vall["model_tf"]["stalk"] > 3 * val["model_tf"]["stalk"]
+    assert val["model_tf"]["stalk"] > 3 * vfree["model_tf"]["stalk"]
 
 
 def test_fig_burden_builds():
@@ -191,9 +192,12 @@ def test_fig_congener_compare_builds():
     assert isinstance(fig, go.Figure) and len(fig.data) == 3      # root / straw / grain
     assert list(fig.data[0].x) == order                          # respects the order
     assert {tr.name for tr in fig.data} == {"뿌리", "짚", "낟알"}
-    # short-chain PFBA reaches the grain far more than long-chain PFDoDA
-    grain = dict(zip(order, fig.data[2].y))
-    assert grain["PFBA"] > grain["PFDoDA"]
+    # long-chain PFDoDA is taken up far more and is higher in every tissue, the grain included
+    # (as Yamazaki measured: grain BAF 52.9 vs PFBA 1.23); short-chain PFBA moves a larger
+    # share of its root burden on to the grain
+    root, grain = dict(zip(order, fig.data[0].y)), dict(zip(order, fig.data[2].y))
+    assert grain["PFDoDA"] > grain["PFBA"]
+    assert grain["PFBA"] / root["PFBA"] > grain["PFDoDA"] / root["PFDoDA"]
     # English variant uses friendly English names and no Korean in the title
     en = plots.fig_congener_compare(results, lang="en", order=order)
     assert {tr.name for tr in en.data} == {"Roots", "Straw", "Grain"}

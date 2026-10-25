@@ -3,9 +3,9 @@
 HYDRUS-1D -> plant coupling: full Method-A soil->plant run
 ==========================================================
 
-Drives the 4-compartment plant ODE with a REAL HYDRUS-1D pore-water trajectory
-C_w^o(t) (built in ``src/soil_hydrus.py`` from the compiled HYDRUS engine via
-phydrus) and contrasts it with the constant-Cwo baseline.
+Drives the plant model (the default configuration: redistributed shoot + lipid loading)
+with a REAL HYDRUS-1D pore-water trajectory C_w^o(t) (built in ``src/soil_hydrus.py`` from
+the compiled HYDRUS engine via phydrus) and contrasts it with the constant-Cwo baseline.
 
 Both runs share the SAME crop drivers -- the calibration site-year (src/site_scenario.py;
 the HYDRUS soil run is driven by its ORYZA2000 transpiration) -- and the HYDRUS pore water
@@ -13,7 +13,7 @@ is normalised to the same season-mean exposure (1.0) as the baseline -- so the o
 difference is the realistic soil temporal structure: weakly-sorbed short chains leach
 during flooding (pore water collapses, so the late-filling grain sees little),
 strongly-sorbed long chains stay buffered (BAF ~ unchanged). Values are dry-basis harvest
-BAF (src/harvest.py) with the monotone a-priori f_xy (f_xy_source="recommended").
+BAF (src/harvest.py) of the default configuration (`model_api.simulate` defaults).
 
 Run:  python validation/hydrus_coupled_run.py
 Saves: validation/figures/hydrus_coupled.png, validation/hydrus_coupled.csv

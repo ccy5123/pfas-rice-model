@@ -6,7 +6,8 @@ Pinned: (1) the observations are read and placed by STAGE; (2) the station weath
 record, ~1.1-1.45 C warmer than the POWER cell; (3) the corrected operator -- the senescent share
 is a floor (only a prediction below it counts) and Q3-Q5 are on living biomass; (4) the decisions
 under it: on the station weather (IR72 phenology) the port and the shipped driver are
-indistinguishable, under S1 the port is better; (5) the shipped driver never matures by Nov 30
+indistinguishable, under S1 the port is better (and, POST-HOC, under the 'attached' Q2 reading the
+shipped driver is better on the primary weather); (5) the shipped driver never matures by Nov 30
 at 39.6 N, the port does once the weather is not the cool grid cell.
 """
 import os
@@ -59,6 +60,21 @@ def test_the_corrected_observation_operator():
     assert V.point_error("Q2", 0.8, 0.4) == 0.0                         # above the floor: no error
     assert V.point_error("Q2", 0.2, 0.4) == pytest.approx(-np.log10(2.0))
     assert V.point_error("Q3", 0.8, 0.4) == pytest.approx(np.log10(2.0))  # other groups stay two-sided
+
+
+def test_the_attached_reading_scores_q2_symmetrically_and_reuses_the_ratios(out):
+    """Kim 2003 does not say whether detached blades were lost, so the floor is one end; the
+    other ('attached': nothing detached) scores Q2 like every other group. Same ratios, no re-run."""
+    assert V.point_error("Q2", 0.8, 0.4, reading="attached") == pytest.approx(np.log10(2.0))
+    with pytest.raises(ValueError):
+        V.point_error("Q2", 0.8, 0.4, reading="lost")
+    d = out["res"]["primary"]["A"]["detail"]
+    r = V.reread(d, "attached")
+    assert r[1999]["qm"] is d[1999]["qm"] and r[1999]["err"]["Q3"] == d[1999]["err"]["Q3"]
+    assert V.reread(r, "floor")[1999]["err"] == d[1999]["err"]
+    att = out["verdicts_attached"]
+    assert att["primary"]["verdict"] == "B better"                      # IR72 phenology, cool cell
+    assert att["S4_station"]["verdict"] == "indistinguishable"
 
 
 def test_the_decisions_under_the_corrected_scoring(out):

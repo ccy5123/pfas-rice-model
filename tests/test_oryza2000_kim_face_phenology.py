@@ -62,5 +62,12 @@ def test_the_verdicts_under_the_corrected_scoring(out):
         assert all(R["B"]["detail"][y]["reached"]["maturity"] for y in C.YEARS), name
 
 
+def test_under_the_attached_reading_the_port_is_not_better(out):
+    """POST-HOC: with Q2 scored symmetrically (no blade had detached) the port's advantage on
+    the FACE data is not resolved under any treatment -- it is indistinguishable, never worse."""
+    assert {c["verdict"] for c in out["c1_attached"].values()} == {"indistinguishable"}
+    assert out["c1_attached"]["primary"]["delta"] == pytest.approx(0.023, abs=0.005)
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

@@ -295,9 +295,9 @@ def _neutral_panel():
 
 
 def _mechanism_panel():
-    """The PFAS mechanism switches (sidebar expander) -> (uptake, lipid_loading,
-    vmax_scale, g_apo, km_scale). Both switches are OPEN questions, so they are named
-    modes with the shipped model as the default, never silent constants.
+    """The PFAS mechanism switches (sidebar expander) -> (uptake, lipid_loading, shoot,
+    vmax_scale, g_apo, km_scale). They are OPEN questions, so they are named modes with the
+    default model as the default, never silent constants.
 
     PFAS-ONLY, and not by omission: the carrier exists to overcome anion exclusion and
     the lipid term is K_PL-gated on PFAS binding, so neither has a neutral counterpart
@@ -316,17 +316,27 @@ def _mechanism_panel():
                  "(bootstrap 0.368), while adding nothing at all fails (2.301). See "
                  "validation/carrier_vs_bypass.py.")
         uptake = "carrier" if up_label.startswith("carrier") else "bypass"
+        sh_label = st.radio(
+            "Shoot model", ["redistributed shoot (default)", "single-straw 4-pool"],
+            help="Redistributed: N stem segments + leaf, each organ retaining the solute its own "
+                 "transpiration deposits (architecture levers retention / lam_grain / "
+                 "stem_transp_frac, none measured). 4-pool: one straw pool, the leaf/grain xylem "
+                 "split by dry-matter surface — the previous default. The switch was decided by "
+                 "the pre-registered rule in validation/default_switch.py.")
+        shoot = "redistributed" if sh_label.startswith("redistributed") else "4pool"
         lipid_loading = st.checkbox(
-            "Lipid-facilitated loading (K_PL-gated)", value=False,
-            help="Adds the B-independent bound-loading term g_xy·C / g_ph·C: the free "
-                 "anion Cw=C/B starves high-binding long chains, but the membrane-lipid-"
-                 "bound pool still rides the transpiration stream. Constants were fit on "
-                 "YAMAZAKI, so transferring them is genuine out-of-sample — and it is the "
-                 "repo's strongest cross-dataset result (Tang per-organ 1.41→0.66, Kim 2019 "
-                 "grain 2.06→0.50, nothing re-fit to either). Default off. NOTE it supplies its "
-                 "own f_xy, so the 'Root→shoot f_xy' choice above is ignored while it is on.")
-        st.caption("Both default to the shipped model; turning either on changes every "
-                   "tab (map, dynamics, BAF), never `parameters.json`.")
+            "Lipid-facilitated loading (K_PL-gated)", value=api.DEFAULT_LIPID_LOADING,
+            help="Adds the B-independent bound-loading term g_xy·C / g_ph·C: the free anion "
+                 "Cw=C/B starves high-binding long chains, but the membrane-lipid-bound pool "
+                 "still rides the transpiration stream. Constants were fit on YAMAZAKI only, so "
+                 "on other datasets it is out-of-sample. With the redistributed shoot (the "
+                 "default) it is best on all three independent datasets: Tang 0.64, Kim 0.47, "
+                 "Li 0.36 / 0.51, against 1.71 / 2.33 / 1.26 / 1.68 for the old 4-pool free "
+                 "anion. Default ON. It supplies its own f_xy, so the 'Root→shoot f_xy' choice "
+                 "above applies only with it off.")
+        st.caption("Defaults = the default model (redistributed shoot, lipid loading on, carrier). "
+                   "Changing any switch moves every tab (map, dynamics, BAF), never "
+                   "`parameters.json`.")
         adv = st.checkbox("Override the entry constants", value=False,
                           help="Scan levers from validation/carrier_vs_bypass.py and "
                                "validation/dose_series_carrier.py. Leave off to use the "
@@ -352,7 +362,7 @@ def _mechanism_panel():
                      "speciation nor the GHK factor. 0 = structurally absent (the default; "
                      "nothing is adopted).")
 
-    return uptake, lipid_loading, vmax_scale, g_apo, km_scale
+    return uptake, lipid_loading, shoot, vmax_scale, g_apo, km_scale
 
 
 def build():
@@ -381,7 +391,8 @@ def build():
         fxy_source = "recommended"
         biomass = "site2020"      # crop scenario key: ui.common.CROPS / crop_kw
         uptake = api.DEFAULT_UPTAKE
-        lipid_loading = False
+        lipid_loading = api.DEFAULT_LIPID_LOADING
+        shoot = api.DEFAULT_SHOOT
         vmax_scale = None
         g_apo = None
         km_scale = 1.0
@@ -486,10 +497,12 @@ def build():
                                 help="GHK anion-exclusion lever (rice −116…−140 mV; NH₄⁺ depolarises).")
                 fxy_label = st.radio("Root→shoot loading f_xy",
                                      ["recommended (monotone, a priori)", "fit (reproduces Yamazaki)"],
-                                     help="recommended: the monotone physical f_xy, with L_Ph and κ_d fitted to "
-                                          "Yamazaki's root and grain given it — straw is a prediction. fit: all "
-                                          "three fitted per congener on the 2020 site-year (a saturated "
-                                          "reproduction). validation/refit_site_year.py.")
+                                     help="Applies only with lipid loading OFF (⚙️ Mechanism below; on by "
+                                          "default), which supplies its own K_PL-gated f_xy. recommended: the "
+                                          "monotone physical f_xy, with L_Ph and κ_d fitted to Yamazaki's root "
+                                          "and grain given it — straw is a prediction. fit: all three fitted per "
+                                          "congener on the 2020 site-year (a saturated reproduction). "
+                                          "validation/refit_site_year.py.")
                 fxy_source = "recommended" if fxy_label.startswith("recommended") else "fit"
             _bm = {v: k for k, v in _CM.CROPS.items()}
             bm_label = st.radio("Crop drivers (transpiration + organ mass)", list(_bm),
@@ -508,7 +521,11 @@ def build():
 
             # PFAS mechanism switches (carrier/bypass, lipid loading) -- see _mechanism_panel
             if not neutral:
-                uptake, lipid_loading, vmax_scale, g_apo, km_scale = _mechanism_panel()
+                uptake, lipid_loading, shoot, vmax_scale, g_apo, km_scale = _mechanism_panel()
+                if lipid_loading and fxy_source == "fit":
+                    st.warning("f_xy 'fit' is a free-anion fit and applies only with lipid loading "
+                               "off (⚙️ Mechanism); this run uses lipid loading's own f_xy.")
+                    fxy_source = "recommended"
 
             st.header("3 · Scenario")
             if mode == "Model (parametric)":
@@ -707,6 +724,7 @@ def build():
     cfg.biomass = biomass
     cfg.uptake = uptake
     cfg.lipid_loading = lipid_loading
+    cfg.shoot = shoot
     cfg.vmax_scale = vmax_scale
     cfg.g_apo = g_apo
     cfg.km_scale = km_scale

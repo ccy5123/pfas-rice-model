@@ -28,11 +28,16 @@
 #                      (+-40 g m-2); root inclusion implied by the Methods (Kim 2001 Table
 #                      1's whole-plant total at PI, 425.9, matches the 1999 point, 435).
 #   Kim 2001 Table 1   root and total dry matter at PI and maturity, 1999 -- exact; roots
-#                      from a 30 x 17.5 x 20 cm soil block, washed, so root is a FLOOR.
+#                      from a 30 x 17.5 x 20 cm soil block around the hill. Roots below the
+#                      block are not sampled, so the value may be a lower bound (an inference;
+#                      the authors do not discuss it). Partial washing does not bias it: the
+#                      unwashed hills' roots were estimated from the washed hills' shoot:root
+#                      dry-weight ratio (Kim 2003 Methods, p. 829).
 # The five samplings are, in order, tillering, panicle initiation (PI), anthesis,
 # mid-ripening and grain maturity (Kim 2003 abstract, read via OpenAlex). ORYZA leaves
-# are leaf BLADES (sheaths are in stems), so GL ~ WLVG and SL ~ WLVD; SL is a FLOOR for
-# WLVD because detached dead blades are not recovered.
+# are leaf BLADES (sheaths are in stems), so GL ~ WLVG and SL ~ WLVD. Whether blades that had
+# already detached were collected is NOT reported (the Methods describe only the dug-up hill);
+# see the Q2 READING note under AMENDMENT 2.
 #
 # THE CULTIVAR PROBLEM, and how it is handled. Both drivers carry IR72 (tropical indica)
 # phenology, so neither is expected to time Akitakomachi's stages; comparing on calendar
@@ -162,6 +167,23 @@
 #     POOLEDx(A); "A better" if the 95 % interval is above 0, "B better" if below 0, otherwise
 #     "indistinguishable". The port must still reach DVS 2 in every held-out year (logical
 #     requirement, unchanged).
+#   Q2 READING (POST-HOC note, added after a source re-read; docs/rice_sample_processing_KR.md
+#   section 4). The premise above -- that detached blades are MISSING from the samples -- is an
+#   inference: Kim 2003 neither describes litter collection nor says that blades were lost.
+#   What is certain is weaker: a sample can miss blades but cannot add them, so the observed SL
+#   is a lower bound of the crop's dead-leaf mass, EQUAL to it if no blade had detached. The
+#   one-sided Q2 is therefore the lenient reading (it never penalises a model above the
+#   observation); the symmetric Q2 (reading "attached": no blade detached) is the other end.
+#   Neither is measured, so every script prints its decision under BOTH readings: the
+#   pre-registered one ("floor") and, labelled POST-HOC, the "attached" one. Q3-Q5 are on living
+#   biomass, which is valid under either reading, and do not change.
+#   RESULT (port A vs shipped B). Cultivar phenology (option C, N, NG and their sensitivities):
+#   "A better" under floor, "indistinguishable" under attached. 1999 event dates (NE):
+#   indistinguishable under both. IR72 phenology: primary / S2 / S3 "B better" under attached
+#   (floor: indistinguishable / indistinguishable / B better), S1 indistinguishable (floor: A
+#   better), S4 station weather indistinguishable under both. Gao set vs IR72 port:
+#   indistinguishable under both. => with cultivar phenology the port is never worse on the
+#   FACE data, but whether it is BETTER depends on the unreported fate of detached blades.
 #   EXPECTATION (stated before running; from the per-point values already printed by the old
 #   scorer): the port lies above the floor at every mid-ripening/maturity point, so its Q2x
 #   error becomes ~0; the shipped driver lies below it at mid-ripening every year (0.18/0.13/
@@ -350,11 +372,25 @@ def quantities(v, root=None):
     return q
 
 
-def point_error(g, qm, qo):
-    """log10 model/observed; the senescent share (Q2) is a floor, so only a prediction BELOW
-    the observation counts (AMENDMENT 2)."""
+Q2_READINGS = ("floor", "attached")
+
+
+def point_error(g, qm, qo, reading="floor"):
+    """log10 model/observed. Q2 (senescent share) under the "floor" reading (AMENDMENT 2,
+    pre-registered) counts only a prediction BELOW the observation; under "attached" (no blade
+    had detached -- see the Q2 READING note) it is scored symmetrically like every other group."""
+    if reading not in Q2_READINGS:
+        raise ValueError(f"reading must be one of {Q2_READINGS}, got {reading!r}")
     d = float(np.log10(max(qm, 1e-12)) - np.log10(qo))
-    return min(0.0, d) if g == "Q2" else d
+    return min(0.0, d) if (g == "Q2" and reading == "floor") else d
+
+
+def reread(detail, reading):
+    """`detail` with its per-point errors recomputed under another Q2 reading (the model and
+    observed ratios qm / qo are reused; nothing is re-run)."""
+    return {y: dict(d, err={g: {s: point_error(g, d["qm"][g][s], o, reading)
+                                for s, o in d["qo"][g].items()} for g in d["qo"]})
+            for y, d in detail.items()}
 
 
 SCORE_GROUPS = ("Q1", "Q2x", "Q3", "Q4", "Q5")      # Q2x = Q2 without the anthesis point
@@ -399,8 +435,11 @@ def compare(err_a, err_b, groups=SCORE_GROUPS, n=4000, seed=0):
     return dict(delta=float(delta), lo=lo, hi=hi, verdict=verdict)
 
 
-def switch_rule(detail_a, detail_b, years=YEARS):
-    """AMENDMENT 2 decision: the paired bootstrap verdict + the port reaching DVS 2 in every year."""
+def switch_rule(detail_a, detail_b, years=YEARS, reading="floor"):
+    """AMENDMENT 2 decision: the paired bootstrap verdict + the port reaching DVS 2 in every year.
+    `reading` = the Q2 reading ("floor" = pre-registered; "attached" = POST-HOC other end)."""
+    if reading != "floor":
+        detail_a, detail_b = reread(detail_a, reading), reread(detail_b, reading)
     c = compare(scored_errors(detail_a), scored_errors(detail_b))
     c["reached"] = all(detail_a[y]["reached"]["maturity"] for y in years)
     return c
@@ -537,6 +576,9 @@ def main(verbose=True):
     out = dict(res=res, post=post, obs=obs, root_obs=root_obs,
                offsets={y: station_offset(y) for y in YEARS})
     out["verdicts"] = {n: R["rule"]["verdict"] for n, R in list(res.items()) + list(post.items())}
+    out["verdicts_attached"] = {
+        n: switch_rule(R["A"]["detail"], R["B"]["detail"], reading="attached")
+        for n, R in list(res.items()) + list(post.items())}
     if not verbose:
         return out
     print("=" * 78)
@@ -550,6 +592,9 @@ def main(verbose=True):
     print("\n4. Decision (paired bootstrap of POOLEDx(B) - POOLEDx(A), 95 % interval), every treatment")
     for name, R in list(res.items()) + list(post.items()):
         print(rule_line(name, R))
+    print("   POST-HOC, Q2 read as 'attached' (no blade had detached; Q2 scored symmetrically):")
+    for name, c in out["verdicts_attached"].items():
+        print(f"    {name:<15} B-A {c['delta']:+.3f} [{c['lo']:+.3f}, {c['hi']:+.3f}] -> {c['verdict']}")
     return out
 
 

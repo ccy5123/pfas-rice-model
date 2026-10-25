@@ -58,10 +58,18 @@ The compute is UI-agnostic and unit-tested head-less:
 
 ## Mechanism switches (sidebar → ⚙️ Mechanism, Expert only)
 
-Two of the model's open questions are *named modes*, not buried constants — the repo's idiom
-(`lipid_source`, `f_xy_source`, `cwo_profile`, `biomass`, `uptake`). Both default to the
-shipped model and, when either is on, a banner sits next to the headline metrics, because the
-sidebar expander is collapsed and the run would otherwise look like the shipped one.
+The model's open questions are *named modes*, not buried constants — the repo's idiom
+(`lipid_source`, `f_xy_source`, `cwo_profile`, `biomass`, `uptake`, `shoot`). All default to the
+default model (redistributed shoot, lipid loading on, carrier) and, when one differs from it, a
+banner sits next to the headline metrics, because the sidebar expander is collapsed and the run
+would otherwise look like the default one.
+
+- **Shoot model — redistributed (default) vs single-straw 4-pool** (`simulate(shoot=…)`,
+  `model_api.SHOOTS`). The redistributed shoot (N = 4 stem segments + leaf; each organ retains
+  part of the solute its own transpiration deposits; `retention` 0.6, `lam_grain` 0.05,
+  `stem_transp_frac` 0.45 — none measured) became the default by the pre-registered rule in
+  `validation/default_switch.py`; the 4-pool is the previous default, on which every transport
+  parameter was fitted (`model_api.FOUR_POOL_FREE` = 4-pool + free anion).
 
 - **Root entry — carrier (default) vs apoplastic bypass** (`simulate(uptake=…)`,
   `model_api.UPTAKE_MODES`). The Michaelis–Menten carrier is this repo's one addition to the
@@ -72,12 +80,12 @@ sidebar expander is collapsed and the run would otherwise look like the shipped 
   "Override the entry constants" checkbox exposes `Vmax ×`, `Km ×` and `g_apo` — the levers of
   that scan and of the dose series (whose durable result is a POST-HOC bound: the carrier must
   have `Km ≥ 150–500 µg/L`, 30–100× the fixed 5, to be as flat as Tang's 5 doses measure).
-- **Lipid-facilitated loading** (`simulate(lipid_loading=True)`) — the K_PL-gated,
+- **Lipid-facilitated loading** (`simulate(lipid_loading=…)`, default **on**) — the K_PL-gated,
   B-independent `g_xy·C` / `g_ph·C` term, fitted on Yamazaki only. It transfers far better than
   the free anion (on the 4-pool core Tang per-organ 1.71 → 0.99, Kim grain 2.33 → 0.56; on the
-  redistributed shoot the Tang tab runs, 1.50 → 0.64 — with **nothing re-fit**
-  to either), but it supplies its own `f_xy`, so the sidebar's `f_xy` choice is ignored while it
-  is on, and against the *Yamazaki* bars it is in-sample. Default off.
+  redistributed shoot Tang 1.50 → 0.64, and the default is best on Kim 0.47 and Li 0.36 / 0.51 —
+  with **nothing re-fit** to any of them), but it supplies its own `f_xy`, so the sidebar's
+  `f_xy` choice applies only with it off, and against the *Yamazaki* bars it is in-sample.
 
 Both switches propagate to every tab, the congener comparison **and** the Bayesian inverse
 (`estimate_exposure_bayesian(**sim_kw)`), so the inverse is never run under a different model
@@ -297,10 +305,10 @@ operator on dry basis, like the data.
 - **The refit is in-sample.** `TANG_REFIT_FXY` (PFOA 0.930, PFOS 0.999 — at the ceiling —, GenX
   0.059) is fitted to these bars (overall log10 RMSE 0.339); it is an override, `parameters.json`
   is unchanged.
-- A **lipid loading (OOS)** checkbox adds the K_PL-gated lipid model, whose constants were fitted
-  on **Yamazaki** and transferred untouched: log10 RMSE **0.640** vs the free anion's **1.496** (both on
-  the redistributed shoot; the 4-pool core scores 0.992 vs 1.714)
-  (`validation/oos_tang_lipid.py`).
+- The default-model bars (grey) are the K_PL-gated lipid model on the redistributed shoot, whose
+  constants were fitted on **Yamazaki** and transferred untouched: log10 RMSE **0.640**. A **free
+  anion (no lipid loading)** checkbox adds the same shoot without the lipid term (**1.496**; the
+  4-pool core scores 0.992 with lipid vs 1.714 without) (`validation/oos_tang_lipid.py`).
 - **The grain is under-predicted**; reading the endosperm as milled rice
   (`tang_tf_validation(endosperm="white")`) makes it worse (0.640 → 0.831), so composition does
   not close the gap.

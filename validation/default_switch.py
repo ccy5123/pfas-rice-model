@@ -86,6 +86,26 @@
 #      the candidate's PFOA grain BAF is ~5x the current default's.
 #
 #   python validation/default_switch.py
+#
+# -----------------------------------------------------------------------------
+# OUTCOME (appended after the run; the rule above is unchanged)
+#   D1 PASS on all five endpoints (table above; recomputed: 1.714/0.992/0.640,
+#      2.329/0.563/0.469, 2.052/0.376/0.154, 1.260/0.896/0.358, 1.682/1.241/0.510).
+#   G4 PASS: simulate(shoot="redistributed", lipid_loading=True) is bit-identical to the
+#      scored simulate_nstem_leaf runs on all 13 congeners (worst |log10| 0).
+#   G1 PASS: Yamazaki 0.380 (root 0.090, straw 0.253, grain 0.619) vs Fit B 1.198.
+#   G2 PASS: 13/13 congeners finite and positive; worst mass residual 5e-16.
+#   G3 PASS: 1.71 s per run.
+#   => SWITCH. DEFAULT_SHOOT = "redistributed", DEFAULT_LIPID_LOADING = True.
+#   E1 held. E2 held on its stated terms (0.380; root 0.090; straw 0.253; PFBA 6.6x and PFPeA
+#      7.1x over), BUT NOT FORESEEN: the candidate over-predicts Yamazaki grain for nearly every
+#      congener (PFHpA 6.9x, PFUnDA 7.3x, PFOA 3.2x, PFNA 2.9x, PFOS 2.3x, PFDA 1.9x; PFDoDA 1.1x),
+#      so its in-sample grain error (0.619) is larger than its transfer grain errors (Kim 0.47,
+#      Li 0.51). E3 held. E4 held (x3.1). E5 partly wrong: Km (1.27), E_m (0.13), retention
+#      (straw 0.11, grain 0.23) and lam_grain (grain 0.063) are consequential, but stem_transp_frac
+#      is NOT (straw 0.011 against a 0.036 yardstick); dead blades lost moves straw 0.045; phi and
+#      T_C_Ph are not consequential for this shoot. E6 held: the Kim PFOA inverse is 2.7x over
+#      (0.214 ug/L, 95% 0.106-0.433) against 16.4x for the old default.
 # =============================================================================
 """Pre-registered decision on the default configuration (see the header)."""
 import os

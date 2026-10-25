@@ -95,7 +95,7 @@ def test_redistribution_fills_the_stem():
     """The redistributed shoot fills the stalk the single-straw 4-pool leaves as a
     pass-through, and the leaf loses its monopoly (default drivers)."""
     import model_api as api
-    base = api.simulate("PFOA", f_xy_source="recommended")
+    base = api.simulate("PFOA", f_xy_source="recommended", **api.FOUR_POOL_FREE)
     nl = api.simulate_nstem_leaf("PFOA", retention=0.6, stem_transp_frac=0.45)
     b_root = base["baf_final"]["root"]
     assert nl["tf_final"]["stem"] > 3.0 * base["baf_final"]["stem"] / b_root

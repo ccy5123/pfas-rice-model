@@ -1,7 +1,7 @@
 """What Tang 2026's "endosperm" is compared against (model_api.TANG_ENDOSPERM).
 
-The model's grain pool is the whole caryopsis (brown rice); Tang's endosperm is most
-likely milled white rice, but the milling method is not reported. So "brown" stays the
+The model's grain pool is the whole caryopsis (brown rice); whether Tang's endosperm was
+dehulled only or milled is not reported. So "brown" stays the
 default and "white" is the named alternative, which re-partitions the grain's free
 concentration into a white-rice composition with membrane phospholipid counted the way
 the grain_brown row counts it.
@@ -58,19 +58,22 @@ def test_white_lowers_the_endosperm_most_for_the_high_kpl_sulfonate():
 
 
 def test_the_white_reading_makes_the_grain_gap_worse():
-    assert _rmse(lipid_loading=True) == pytest.approx(0.640, abs=0.02)
+    assert _rmse() == pytest.approx(0.640, abs=0.02)      # the default is lipid loading on
     assert _rmse(lipid_loading=True, endosperm="white") == pytest.approx(0.831, abs=0.03)
 
 
-def test_the_honesty_band_uses_the_default_shoot_on_tang():
-    """The band's Tang entry must be the DEFAULT configuration's score (the 4-pool core,
-    free anion). It once held the redistributed shoot's 1.496, which the Tang check runs
-    unless told otherwise -- the two shoot models score differently on the same data."""
+def test_the_honesty_band_uses_the_default_configuration_on_tang():
+    """The band's Tang entry must be the DEFAULT configuration's score. Since the
+    pre-registered switch (validation/default_switch.py) that is the redistributed shoot +
+    lipid loading (0.640). It once held a different shoot's score than the default ran --
+    the shoot models and the lipid term score differently on the same data, so each is
+    pinned here."""
     key = [k for k in api.APRIORI_OOS_SCORES if k.startswith("Tang")][0]
-    four = _rmse(shoot="4pool")
-    assert api.APRIORI_OOS_SCORES[key] == pytest.approx(four, abs=0.005)
-    assert _rmse() == pytest.approx(1.496, abs=0.01)           # redistributed shoot, free anion
-    assert four > _rmse() + 0.1
+    default = _rmse()
+    assert api.APRIORI_OOS_SCORES[key] == pytest.approx(default, abs=0.005)
+    assert default == pytest.approx(_rmse(shoot="redistributed", lipid_loading=True))
+    assert _rmse(lipid_loading=False) == pytest.approx(1.496, abs=0.01)   # same shoot, free anion
+    assert _rmse(shoot="4pool", lipid_loading=False) == pytest.approx(1.714, abs=0.01)  # old default
     with pytest.raises(ValueError):
         api.tang_tf_validation("PFOA", shoot="two-pool")
 

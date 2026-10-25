@@ -40,18 +40,23 @@ def test_dead_pool_closed_form():
     assert np.allclose(b, k * C * Ml * t) and np.allclose(m, k * Ml * d * t)
 
 
-def test_mass_balance_with_dead_blades():
+@pytest.mark.parametrize("config, kcw", [(dict(api.FOUR_POOL_FREE), "root"),
+                                         (dict(shoot="redistributed", lipid_loading=True), "stem")])
+def test_mass_balance_with_dead_blades(config, kcw):
     # constant organ masses (no growth-dilution term) and a constant leaf death rate: the burden
-    # in the living organs plus the dead blades must equal the cumulative root uptake
+    # in the living organs plus the dead blades must equal the cumulative root uptake -- for the
+    # 4-pool core and for the default (redistributed shoot + lipid loading, whose compound takes
+    # the stem cell-wall K everywhere, as in every scored redistributed run)
     t = np.linspace(0.0, 60.0, 1201)
     M = np.tile([0.05, 0.10, 0.03, 0.04], (len(t), 1))
     drv = dict(t=t, Cwo=np.ones_like(t), Qtp=np.full_like(t, 0.2), M=M,
                leaf_loss=np.full_like(t, 0.02), mass_basis="fresh")
-    r = api.simulate("PFOA", drivers=drv)
+    r = api.simulate("PFOA", drivers=drv, **config)
     assert r["dead_leaf"]["burden"][-1] > 0
     living = sum(r["conc"][k] * M[:, i] for i, k in enumerate(api.TISSUES))
     total = living + r["dead_leaf"]["burden"]
-    cmpd = api._compound_for("PFOA", "recommended", K_cw_organ="root")
+    cmpd = api._compound_for("PFOA", "recommended", K_cw_organ=kcw,
+                             lipid_loading=config["lipid_loading"])
     B = binding_factors(api._compartments(), cmpd)
     env = Environment(E=-0.120)
     j = np.array([root_uptake(1.0, cr / B[0], cmpd, env) for cr in r["conc"]["root"]]) * M[:, 0]
