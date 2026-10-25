@@ -226,7 +226,7 @@ Expectations added before the fit:
   honesty band, and `li2025_stage_resolved.STAGE_DVS` (tillering 0.4, heading 1.0, filling 1.25,
   milk 1.5, ripening 2.0) had no source (`value_provenance.csv` tr_li_dvs). Li et al. 2025 sampled
   five stages without dates, in this order: tillering, heading, filling, milk-ripening, ripening
-  (main text p.3). The mapping now uses only what sources fix:
+  (main text p.2). The mapping now uses only what sources fix:
   - heading = DVS 1. ORYZA's DVS 1 is flowering, and 50 % heading precedes anthesis by about 2 d
     (Counce et al. 2000 R3 -> R4, as reproduced in the Arkansas Rice Production Handbook MP192
     ch. 2);
