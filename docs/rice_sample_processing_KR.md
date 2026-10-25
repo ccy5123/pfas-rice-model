@@ -6,8 +6,8 @@
 > - 모든 내용은 논문 원문(본문과, 있는 경우 SI)을 직접 읽고 적었다. 쪽 번호를 붙였고, 핵심 문장은 원문을 그대로(영문, 25단어 이하) 인용했다.
 > - 원문에 없는 항목은 **"보고 안 함"** 으로 적었다. 일반 지식으로 채우거나 추측하지 않았다.
 > - 쪽 번호는 학술지에 인쇄된 쪽이다. Kim 2003은 826–837쪽, Yang 2006은 12–19쪽, Sasaki 2005는 1704–1712쪽이다. Gao 2021, Tang 2026, Li 2025는 논문 번호 체계라 PDF 쪽(1–12)이 곧 논문 쪽이다. ORYZA2000 매뉴얼은 인쇄 쪽이고 PDF 쪽은 인쇄 쪽 + 9다. Tang·Li의 SI는 Word 파일이라 고정된 쪽 번호가 없어서 Text/Table 번호로 인용했다.
-> - 항목별 전체 표(논문 × 항목, 237행)는 `docs/literature_db/Growth_Sampling_Protocols.csv`에 있다. CSV의 인용문은 모두 PDF 텍스트와 대조해 확인했다(다단 편집 때문에 텍스트로 대조할 수 없었던 1건은 페이지 이미지로 확인).
-> - Yamazaki 2023, Kim 2019, Liu 2023은 처음에 이전 세션의 감사(`docs/sampling_protocols_audit_KR.md`, `docs/literature_db/Sampling_Protocols.csv`)에서 가져왔고, **2026-10-25에 받은 본문 PDF로 다시 확인했다**(§1.9). 같은 날 Kim 2001, Okada 2001, Hasegawa 2017 본문, Bouman & van Laar 2006도 받아 읽었다(§1.10–1.12). Kropff et al. 1994a(ORYZA1 책)는 Wageningen 대학 공개 저장소(https://edepot.wur.nl/297737)에서 전문을 받아 읽었다(§1.5). 이 책의 쪽은 인쇄 쪽이다(스캔에 빈 쪽이 빠져 있어 PDF 쪽과의 차이가 일정하지 않다). Yamazaki와 Liu의 SI는 이번에 받지 않았으므로, SI에만 있는 항목은 이전 감사 기록(†)으로 남겨 두었다.
+> - 항목별 전체 표(논문 × 항목, 247행)는 `docs/literature_db/Growth_Sampling_Protocols.csv`에 있다. CSV의 인용문은 모두 PDF 텍스트와 대조해 확인했다(다단 편집 때문에 텍스트로 대조할 수 없었던 1건은 페이지 이미지로 확인).
+> - Yamazaki 2023, Kim 2019, Liu 2023은 처음에 이전 세션의 감사(`docs/sampling_protocols_audit_KR.md`, `docs/literature_db/Sampling_Protocols.csv`)에서 가져왔고, **2026-10-25에 받은 본문 PDF로 다시 확인했다**(§1.9). 같은 날 Kim 2001, Okada 2001, Hasegawa 2017 본문, Bouman & van Laar 2006도 받아 읽었다(§1.10–1.12). Kropff et al. 1994a(ORYZA1 책)는 Wageningen 대학 공개 저장소(https://edepot.wur.nl/297737)에서 전문을 받아 읽었다(§1.5). 그 책이 출처로 드는 Kropff et al. 1993과 Matthews 외 편 1995(3장)는 사용자가 Google Drive로 제공해 읽었다(§1.5). 이 책의 쪽은 인쇄 쪽이다(스캔에 빈 쪽이 빠져 있어 PDF 쪽과의 차이가 일정하지 않다). Yamazaki와 Liu의 SI는 이번에 받지 않았으므로, SI에만 있는 항목은 이전 감사 기록(†)으로 남겨 두었다.
 > - 원문 PDF는 저작권 때문에 레포에 넣지 않았다.
 
 ---
@@ -133,6 +133,8 @@
 | 시험의 정체(Kropff 1994a) | ORYZA1 매개변수는 IRRI 1992 건기 IR72 225 kg N 처리에서 왔다. 매뉴얼의 IR72DS92 파일과 같은 처리다 | Kropff 43 | "Oryza sativa cv. IR72, IRRI, Dry Season (M10) at 225 kg N" |
 | 설계·육묘(Kropff 1994a) | 4반복 분할구(N 처리가 주구, 품종이 세구). 트레이에서 기른 12일묘 | Kropff 57 | "Treatments were laid out in four replicates in a split plot design" / "Twelve-days-old seedlings grown in trays were used." |
 | 채취(Kropff 1994a) | 주요 생육단계와 그 사이에 **회당 12–14포기**를 채취해 LAI와 기관 건물중을 쟀다. Bouman & van Laar 2006은 14포기라고 쓴다(§1.11). 어느 기관을 쟀는지는 나열하지 않는다 | Kropff 57 | "At the major phenological stages and in between, 12-14 hills were sampled and analysed for LAI and dry weights of the organs." |
+| 채취(Kropff et al. 1995, Matthews 외 편 책 3장) | 1992 건기 1월 16일 이앙, 분할구 4반복. 정기적으로 **구당 12포기**를 채취해 LAI, 건물중, 질소를 **잎몸·줄기·이삭**에서 쟀다. 측정 기관에 뿌리는 없다. 포기 수는 12(이 책), 12–14(Kropff 1994a), 14(Bouman & van Laar 2006)로 문헌마다 다르다 | Matthews 1995, 47·49 | "12-hill samples nwe taken from each plot to monitor LAI, dry matter, and N content in the leaf blades, stems, and panicles"(원문 오식 nwe = were) |
+| 출처 사슬의 끝(Kropff et al. 1993) | 매뉴얼 → Kropff 1994a → Kropff et al. 1993으로 이어지는 마지막 문헌도 "기관 건물중과 조직 질소를 주기적으로 쟀다"고만 쓴다. **건조 온도와 뿌리 처리는 이 시험의 어느 문헌에도 없다** | *J. Agr. Met.* 48:796 | "Dry weights of organs and N concentration of tissue were measured periodically." |
 | 분배계수(Kropff 1994a) | 연속한 두 채취 사이 새 건물이 기관별로 얼마씩 갔는지로 구한다. 그림(Fig. 3.4)은 잎·줄기·이삭만 다루고, 뿌리 분배표(FRTTB)는 값만 있고 출처를 쓰지 않는다 | Kropff 49 | "These fractions are derived by analysing the fractions of new dry matter production allocated to the plant organs between two subsequent harvests." |
 | 자료 요건(매뉴얼 지침) | 분배계수를 구하려면 무게 관측을 모두 같은 날 해야 하고, LAI도 가능하면 같은 날 잰다. 고사엽을 재지 않으면 개화 후 감소를 반영할 수 없다. 정조 수량은 14% 수분 기준(WRR14 = WRR/0.86)이다 | 164, 172, 74 | "all the weight observations should be made on the same dates and preferably also for the leaf area index" / "this maximum value is used for partitioning calculations when dead leaves are not measured" |
 
@@ -265,7 +267,7 @@ IR72DS92(1992 건기, IR72)는 이 논문의 보정 자료 4개 시험 가운데
 | Sasaki 2005 | 논, 19.05 hills m⁻², 3본 | 4포기(¹³C 공급 포기), LAI 16포기 | 흐르는 물 세척 후 동결건조. 부피·체 NR | 잎집→줄기(줄기 = 잎집 + 稈) / 구분 NR | −80 °C 보관 후 동결건조 | NR | NR | 방법 NR |
 | Yang 2006 | 논, 24 hills m⁻²로 기재(산술 19.05), 3본 | 평균 줄기 수 5포기/소구, 보호구 보식 | 뿌리 NR | 잎집→줄기 / 녹색·고사 분리(표에서 합쳤는지 NR) | 80 °C 오븐, 항량 | NR | 2 m², 14% 수분 생중량 기준. HI = 이삭 비율 | 2/5포기, 방법 NR |
 | Gao 2021 | 논, 20 hills m⁻², 5본 | 3지점, 약 10일 간격, 9–10회. 포기 수 NR | 분리했다고만 씀. 방법·값 NR | 잎집 NR / 녹색·고사 분리(고사엽 값은 미제시) | 80 °C 오븐, 항량 | NR | 1 m² × 6, "dry grain yield". 수분 기준 NR | 잎 길이 × 너비 × 0.75 |
-| IR72DS92(매뉴얼 + Kropff 1994a + Bouman & van Laar 2006) | 논, 25 hills m⁻², 트레이 12일묘 5본 | 12–14포기/회(Bouman 2006은 14), 4반복 분할구 | 뿌리 관측 없음 | NR / 녹색·고사 잎 분리(WLVG·WLVD) | NR | NR | WSO = 이삭. 낟알 1개 무게 측정(값 미게재). 모델 WRR14는 14% | NR |
+| IR72DS92(매뉴얼 + Kropff 1993·1994a·1995 + Bouman & van Laar 2006) | 논, 25 hills m⁻², 트레이 12일묘 5본 | 12포기(1995 책)·12–14(1994a)·14(Bouman 2006)/회, 4반복 분할구. 측정 기관 잎몸·줄기·이삭 | 뿌리 관측 없음 | NR / 녹색·고사 잎 분리(WLVG·WLVD) | NR | NR | WSO = 이삭. 낟알 1개 무게 측정(값 미게재). 모델 WRR14는 14% | NR |
 | Tang 2026 | 포트(2.5 kg, 20본), 3반복 | 매월. 회당 본수 NR | 탈이온수 헹굼. 횟수·피막 NR | 잎집 NR / NR. chaff·endosperm 정의 NR | −80 °C 동결건조 → 분말 | 분리 직후 칭량(값 미공개) | 정의·도정 NR | – |
 | Li 2025 | 농가 논. 재식 NR | 3반복 × 부분시료 5(20×20 m) | 증류수 세척. 부피·피막 NR | 방법 "잎(줄기 포함)"이지만 표는 분리 / NR | 동결건조 → 전동 분쇄 | NR | grains·paddy rice라는 용어의 정의 NR | – |
 | Yamazaki 2023 | Andosol 노지 논 | 필지 전체 부분시료의 혼합 1점/조직/품종 | 수돗물 → Milli-Q, 피막 제거 없음† | 높이 구간(잎 포함), 잎집·잎몸 미분리 | 70 °C 1주(전체 건조 후 분리)† | NR | 왕겨/쌀겨/백미(현미 미측정†) | – |
@@ -403,7 +405,7 @@ IR72DS92(1992 건기, IR72)는 이 논문의 보정 자료 4개 시험 가운데
 ### 5.1 확인하지 못한 자료
 
 - **2026-10-25에 받아 읽은 것**: Kim et al. 2001, Okada et al. 2001, Hasegawa et al. 2017 본문, Bouman & van Laar 2006, Yamazaki 2023 본문, Kim 2019 본문, Liu 2023 본문(§1.9–1.12).
-- **Kropff et al. 1994a**(ORYZA1 책)는 2026-10-25에 공개 저장소에서 받아 읽었다(§1.5). 반복·포기 수·트레이 육묘는 있지만, **건조 온도와 뿌리 처리는 이 책에도 없다**. 이 책은 시험 자료의 출처로 Kropff, Cassman, Penning de Vries & van Laar 1993, *J. Agric. Meteorol.* 48:795–798(4쪽 학회 논문)을 든다. 남은 후보는 이 논문이다.
+- **Kropff et al. 1994a**(ORYZA1 책)는 2026-10-25에 공개 저장소에서 받아 읽었다(§1.5). 반복·포기 수·트레이 육묘는 있지만, **건조 온도와 뿌리 처리는 이 책에도 없다**. 이 책이 시험 자료의 출처로 드는 Kropff, Cassman, Penning de Vries & van Laar 1993, *J. Agr. Met.* 48:795–798과, 같은 시험을 다시 기술한 Matthews, Kropff, Bachelet & van Laar (eds) 1995, *Modeling the Impact of Climate Change on Rice Production in Asia*(CAB International/IRRI) 3장도 사용자가 제공해 읽었다(§1.5). **두 문헌에도 건조 온도와 뿌리 처리가 없으므로, 이 시험에서 두 항목은 출처가 없다.**
 - **Liu et al. 2002**(Wuxi FACE 시스템, 중국어), **Han et al. 2009**(Gao의 LAI 식 출처, 중국어). 구하지 못했다.
 - **Yamazaki 2023 SI.** 뿌리 세척, 70 °C 건조 후 분리, 제현·도정, 이앙·수확일이 SI에만 있다(†).
 - **Liu 2023 SI.** Table S3(분획 질량비)와 Table S4(분획 농도)의 단위·기준을 확인해야 재구성 RCF의 기준(생체/건물)이 원문으로 확정된다.
