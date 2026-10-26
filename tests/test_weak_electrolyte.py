@@ -83,12 +83,12 @@ GOLDEN_REL = 1e-3
 
 # Goldens on two fitted variants (calibration site-year, fresh organ mass, harvest at the mean
 # date) and on the DEFAULT configuration (redistributed shoot + lipid loading), regenerated for
-# amendment 1 (docs/PREREG_sourced_values.md). Regenerate them only when the model itself is
-# deliberately changed.
+# amendment 2a (docs/PREREG_sourced_values.md section 7: staged organ water, brown-rice grain,
+# re-fit). Regenerate them only when the model itself is deliberately changed.
 PFAS_GOLDEN = {
-    ("PFOA", "4pool_free"): {"root": 1.3964242626962549, "grain": 0.2608010314137209},
-    ("PFOS", "redistributed_fit"): {"root": 17.026443688382177, "grain": 1.8044310983194625},
-    ("PFBA", "4pool_free"): {"root": 1.952386051986818, "grain": 14.238026150588324},
+    ("PFOA", "4pool_free"): {"root": 1.7687909048265118, "grain": 0.19963128941571007},
+    ("PFOS", "redistributed_fit"): {"root": 21.569014730269302, "grain": 1.811277985219705},
+    ("PFBA", "4pool_free"): {"root": 2.4728430009933478, "grain": 0.9654560104245904},
 }
 _VARIANT_KW = {"4pool_free": dict(api.FOUR_POOL_FREE),
                "redistributed_fit": dict(f_xy_source="fit", lipid_loading=False)}
@@ -104,8 +104,8 @@ def test_pfas_path_is_unmoved(key, expected):
 
 
 PFAS_GOLDEN_DEFAULT = {
-    "PFOA": {"root": 1.396424254905138, "grain": 0.4241424722203747},
-    "PFBA": {"root": 1.9523863460568354, "grain": 1.1322229267521402},
+    "PFOA": {"root": 1.7689643602154441, "grain": 0.4245762337693362},
+    "PFBA": {"root": 2.4730429956925484, "grain": 0.9672440874466282},
 }
 
 
