@@ -158,9 +158,9 @@ def main():
                     c, v = next(it)
                     d[c] = {k: v[k] - base[c][k] for k in TISS}
                 delta[name].append(d)
-        band, attrib = {}, {}
+        band, attrib, counted = {}, {}, {}
         for c in CONG:
-            band[c], attrib[c] = {}, {}
+            band[c], attrib[c], counted[c] = {}, {}, {}
             for k in TISS:
                 dn = up = 0.0
                 contrib = {}
@@ -173,6 +173,7 @@ def main():
                     contrib[name] = max(abs(x) for x in ds)
                 band[c][k] = [dn, up]
                 attrib[c][k] = dict(sorted(contrib.items(), key=lambda z: -z[1])[:5])
+                counted[c][k] = sorted(contrib)           # every input that entered
         # corner check: every counted input at the end that moved this number this way
         corner_jobs, keys = [], []
         for c in CONG:
@@ -207,7 +208,7 @@ def main():
     with open(OUT, "w") as f:
         json.dump(dict(source="validation/input_range_band.py (PREREG 5.4)",
                        variant=api.variant_key(), units="log10 [down, up] around the default",
-                       band=band, corner=corner, attribution=attrib,
+                       band=band, corner=corner, attribution=attrib, counted=counted,
                        inputs=[n for n, _ in ins], base=base), f, indent=1)
     print(f"[written] {os.path.relpath(OUT, ROOT)}")
 
