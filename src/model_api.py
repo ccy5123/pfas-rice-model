@@ -1156,6 +1156,24 @@ def schematic_values(res, metric="conc", t_index=-1):
 # nothing to tune, which is what makes it the one setting where the DPU BACKBONE
 # is testable apart from the fitted PFAS transport.
 # ---------------------------------------------------------------------------
+def neutral_forms(drivers):
+    """A driver dict on the neutral path's forms (PREREG 7.9: constant organ water, whole panicle).
+    An amendment-2a dict (fresh M at the staged water, `theta`; brown rice plus `husk`) is turned
+    back exactly: dry matter = M (1 - theta), the grain's dry matter + the husk = the panicle, then
+    fresh at the constant water. A dict without those keys is returned as it is."""
+    if drivers.get("theta") is None and drivers.get("husk") is None:
+        return drivers
+    M = np.asarray(drivers["M"], float)
+    th = (np.asarray(drivers["theta"], float) if drivers.get("theta") is not None
+          else np.broadcast_to([om.THETA_FW[o] for o in TISSUES], M.shape))
+    dry = M * (1.0 - th)
+    if drivers.get("husk") is not None:
+        dry = dry.copy()
+        dry[:, 3] = dry[:, 3] + np.asarray(drivers["husk"], float)
+    Mc = np.maximum(dry / (1.0 - np.array([om.THETA_FW[o] for o in TISSUES])), om.MASS_FLOOR)
+    return {k: v for k, v in dict(drivers, M=Mc).items() if k not in ("theta", "husk", "panicle")}
+
+
 def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=None, n_t=241,
                      MW=float("nan"), K_AW=0.0, kappa_d=20.0, half_life=None,
                      tscf_model="briggs", phloem=False, L_Ph=1.0,
@@ -1228,6 +1246,7 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=None, n_t=241,
     import neutral_dpu as ND
 
     if drivers is not None:
+        drivers = neutral_forms(drivers)
         t = np.asarray(drivers["t"], dtype=float)
         season = float(t[-1])
         Cwo_series = np.asarray(drivers["Cwo"], dtype=float)
@@ -1296,28 +1315,34 @@ def crop_on_grid(t, scenario=DEFAULT_SCENARIO, biomass="oryza2000", season=None)
     grid `t` [days after transplanting]. "yamazaki2020" interpolates the calibration
     site-year (held at its harvest values beyond its season); "generic" is forcing_rice +
     the `biomass` driver."""
-    d = _crop_grid(t, scenario, biomass, season)
+    d = _crop_grid(t, scenario, biomass, season, crop=_A1_FORMS)
     return d["Qtp"], d["M"], d["leaf_loss"], d["dvs"]
 
 
-def _crop_grid(t, scenario=DEFAULT_SCENARIO, biomass="oryza2000", season=None):
+# a bare (Qtp, M) tuple cannot carry the organ water theta(t) or the husk mass that 2a's fresh M
+# is built with, so the tuple helpers return the self-consistent amendment-1 forms (constant water,
+# whole panicle); `drivers_from_arrays` returns the full 2a dict
+_A1_FORMS = {"organ_water": "constant", "grain_basis": "panicle"}
+
+
+def _crop_grid(t, scenario=DEFAULT_SCENARIO, biomass="oryza2000", season=None, crop=None):
     """`crop_on_grid` as a dict, with the organ water theta(t) and the husk mass that the fresh
     M was built with (PREREG 7.1/7.2), so a driver set built from it stays self-consistent."""
     t = np.asarray(t, float)
+    crop = dict(crop or {})
     if scenario == "yamazaki2020":
-        d = scenario_drivers(scenario)
+        d = scenario_drivers(scenario, **crop)
         lerp = lambda a: (np.column_stack([np.interp(t, d["t"], a[:, k]) for k in range(a.shape[1])])
                           if np.ndim(a) == 2 else np.interp(t, d["t"], a))
         out = dict(Qtp=lerp(d["Qtp"]), M=lerp(d["M"]),
                    leaf_loss=np.interp(t, d["t"], d["leaf_loss"], right=0.0), dvs=lerp(d["dvs"]))
-        out.update({k: lerp(d[k]) for k in ("theta", "husk") if k in d})
+        out.update({k: lerp(d[k]) for k in ("theta", "husk", "panicle") if k in d})
         return out
     if scenario != "generic":
         raise ValueError(f"scenario must be one of {SCENARIOS}, got {scenario!r}")
     season = float(t[-1]) if season is None else float(season)
     b = _biomass_fn(biomass)(t, season)
-    M, extras = _crop_drivers(t, b, _crop_kw({}))
-    extras.pop("panicle", None)
+    M, extras = _crop_drivers(t, b, _crop_kw(crop))
     return dict(Qtp=fr.Q_TP(t, season), M=M, leaf_loss=b.get("leaf_death_rate"),
                 dvs=b["dvs"], **extras)
 
@@ -1350,7 +1375,7 @@ def drivers_from_arrays(t, Cwo, Qtp=None, M=None, season=None, biomass="oryza200
         Qtp = crop["Qtp"]
     if M is None:            # the crop's own mass: with its water by stage and its husk pool
         M, leaf_loss = crop["M"], crop["leaf_loss"]
-        extras = {k: crop[k] for k in ("theta", "husk") if k in crop}
+        extras = {k: crop[k] for k in ("theta", "husk", "panicle") if k in crop}
     drv = dict(t=t, Cwo=Cwo, Qtp=np.asarray(Qtp, float), M=np.asarray(M, float),
                mass_basis=MASS_BASIS, dvs=np.asarray(crop["dvs"] if dvs is None else dvs, float),
                **extras)
