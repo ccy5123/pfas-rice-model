@@ -26,7 +26,7 @@ manuscript from the Kanazawa repository; husk vs brown arsenic).
 
 | DOI | paper | needed for | why it failed |
 |---|---|---|---|
-| (no DOI found) | Tournebize et al. 2006, NIAES Tsukuba paddy percolation | plough-pan Ks of the Tsukuba Andosol paddy (otherwise fitted to the percolation range) | paywalled / not indexed |
+| 10.1007/s10333-005-0028-0 | Tournebize, Watanabe, Takagi & Nishimura 2006, "The development of a coupled model (PCPF-SWMS) to simulate water flow and pollutant transport in Japanese paddy fields", Paddy Water Environ. 4(1):39-51 | plough-pan Ks of the Tsukuba Andosol paddy (otherwise fitted to the percolation range) | paywalled (OpenAlex: closed, no abstract). Identified by author/year/topic from the earlier "Tournebize 2006 NIAES" lead; not confirmed to hold the pan Ks until read |
 
 ## Older (CLAUDE.md §6, long-chain literature)
 | DOI | why it failed |
