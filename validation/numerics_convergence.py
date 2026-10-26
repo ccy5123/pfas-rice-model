@@ -63,7 +63,8 @@ def _patch(s):
     om.MASS_FLOOR = s["floor"]                      # model_api's inner floors read it at call time
     P4.MASS_FLOOR = NL.MASS_FLOOR = s["floor"]      # the RHS floors (imported by value)
     orig_matrix = om.__dict__.setdefault("_orig_organ_matrix", om.organ_matrix)   # patch once
-    om.organ_matrix = functools.wraps(orig_matrix)(lambda b: orig_matrix(b, floor=s["floor"]))
+    om.organ_matrix = functools.wraps(orig_matrix)(
+        lambda b, **kw: orig_matrix(b, **{**kw, "floor": s["floor"]}))
     orig_formed = P4.__dict__.setdefault("_orig_grain_formed", P4.grain_formed)
     formed = lambda gm, floor=s["floor"]: orig_formed(gm, floor=floor)
     P4.grain_formed = NL.grain_formed = formed
