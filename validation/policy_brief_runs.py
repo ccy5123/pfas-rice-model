@@ -11,9 +11,9 @@
 # the report is printed here, written to `docs/policy_brief_results.csv`, and
 # pinned by `tests/test_policy_brief.py`.
 #
-# WHICH MODEL. The DEFAULT configuration -- the redistributed shoot with lipid loading (the
-# form the amendment-1 fit kept: one f_xy and one g_xy for every chain) (`model_api.DEFAULT_SHOOT` / `DEFAULT_LIPID_LOADING`, adopted by the
-# pre-registered rule in validation/default_switch.py) -- on the calibration
+# WHICH MODEL. The DEFAULT configuration -- the redistributed shoot, free anion with f_xy fitted
+# per congener (`model_api.variant_key()` = redistributed_fit, chosen after the amendment-2a
+# re-fit by the pre-registered rule, docs/PREREG_sourced_values.md section 8) -- on the calibration
 # site-year. The previous default (4-pool, free anion: `model_api.FOUR_POOL_FREE`) is
 # computed beside it wherever the briefing contrasts the two. All tissue values are
 # DRY basis (as the measurements are reported) except the grain "as eaten" used for
@@ -177,6 +177,9 @@ def section2(quiet=False, cwo=KIM_PFOA_POREWATER, tag="2_pfoa"):
 # ---------------------------------------------------------------------------
 def section3(quiet=False):
     import kim2019_censored as K
+    # the kim2019_censored variant that is model_api's default
+    KIM_DEFAULT = next(v for v, kw in K.VARIANT_KW.items()
+                       if api.variant_key(**kw) == api.variant_key())
     with contextlib.redirect_stdout(io.StringIO()):
         res = K.main()
     b, preds, scores = res["bounds"], res["preds"], res["scores"]
@@ -186,17 +189,17 @@ def section3(quiet=False):
         lo, pub, hi = b[nm]
         rows.append(dict(name=nm, porewater_ngL=pw, brownrice_ugkg=rice, DF_pct=df,
                          obs_baf=pub, lo=lo, hi=hi,
-                         base=preds["nstem_lipid"][nm], prev=preds["mono"][nm]))
+                         base=preds[KIM_DEFAULT][nm], prev=preds["mono"][nm]))
         rec("3_kim2019", f"{nm}.porewater", pw, "ng/L", "Kim 2019 field mean (ND as 0)")
         rec("3_kim2019", f"{nm}.brownrice", rice, "ug/kg", "Kim 2019 field mean (ND as 0); freeze-dried grain (dry basis)")
         rec("3_kim2019", f"{nm}.detection_freq", df, "%", "brown rice, 30 fields")
         rec("3_kim2019", f"{nm}.obs_grain_baf", pub, "L/kg")
         rec("3_kim2019", f"{nm}.obs_lo", lo, "L/kg", "every non-detect at 0")
         rec("3_kim2019", f"{nm}.obs_hi", hi, "L/kg", "every non-detect at the MDL")
-        rec("3_kim2019", f"{nm}.model_grain_baf", preds["nstem_lipid"][nm], "L/kg",
+        rec("3_kim2019", f"{nm}.model_grain_baf", preds[KIM_DEFAULT][nm], "L/kg",
             "pore water 1 ug/L, dry basis")
         rec("3_kim2019", f"{nm}.model_grain_baf_prev", preds["mono"][nm], "L/kg")
-    s, p = scores["nstem_lipid"], scores["mono"]
+    s, p = scores[KIM_DEFAULT], scores["mono"]
     rec("3_kim2019", "rmse_point_default", s["point"], "log10", "PFOA excluded")
     rec("3_kim2019", "rmse_interval_default", s["interval"], "log10", "PFOA excluded")
     rec("3_kim2019", "rmse_point_prev", p["point"], "log10", "PFOA excluded")
@@ -349,14 +352,14 @@ def figures(cong, kim):
     ax.plot(x, [d["obs_grain"] for d in pfca], "o", color=OBS, ms=8, mec="white", mew=1.2,
             label="measured, Yamazaki 2023 (paddy field, Tsukuba)", zorder=3)
     ax.plot(x, [d["yz_grain"] for d in pfca], "s-", color=BASE, lw=1.8, ms=6,
-            label="model, default (redistributed shoot + lipid loading)")
+            label="model, default (redistributed shoot, f_xy fitted per congener)")
     ax.plot(x, [d["yz_grain_prev"] for d in pfca], "o--", color=PREVC, lw=1.4, ms=5, mfc="white",
             label="model, previous default (4-pool, free anion)")
     ax.set_yscale("log")
     ax.set_xlabel("perfluorocarbon chain length  (n C)")
     ax.set_ylabel("brown-rice BAF  [L/kg dry]  (log scale)")
     ax.set_title("Grain BAF along the PFCA series: the default follows the long-chain rise\n"
-                 "but sits about 2-7x above most measured values (in-sample for its lipid constants)",
+                 "(in-sample: its L_Ph is fitted to these grain cells; PFDoDA is out of reach)",
                  fontsize=10.5)
     ax.legend(frameon=False, fontsize=9, loc="upper left")
     ax.grid(alpha=.25, which="both")
@@ -403,6 +406,7 @@ def write_csv(path=OUT_CSV):
 def main(fast=False):
     rec("0_config", "shoot", api.DEFAULT_SHOOT, "-")
     rec("0_config", "lipid_loading", float(api.DEFAULT_LIPID_LOADING), "-")
+    rec("0_config", "variant", api.variant_key(), "-")
     rec("0_config", "band_log10", api.APRIORI_LOG10_RMSE, "log10")
     cong = section1()
     section2()
