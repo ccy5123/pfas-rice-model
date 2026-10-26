@@ -1,0 +1,237 @@
+From ca4751c294c13320dc0080f80302c1587e7160fa Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 25 Oct 2026 22:46:33 +0000
+Subject: [PATCH 3/4] A2 prototype: published japonica crop sets as a
+ categorical band input
+
+---
+ .../raw_si/wu2022_liaoning_oryza_params.csv   | 13 ++++
+ src/crop_sets.py                              | 70 +++++++++++++++++++
+ src/site_scenario.py                          | 25 ++++---
+ validation/input_range_band.py                |  9 ++-
+ 4 files changed, 105 insertions(+), 12 deletions(-)
+ create mode 100644 docs/literature_db/raw_si/wu2022_liaoning_oryza_params.csv
+ create mode 100644 src/crop_sets.py
+
+diff --git a/docs/literature_db/raw_si/wu2022_liaoning_oryza_params.csv b/docs/literature_db/raw_si/wu2022_liaoning_oryza_params.csv
+new file mode 100644
+index 0000000..67a3cf3
+--- /dev/null
++++ b/docs/literature_db/raw_si/wu2022_liaoning_oryza_params.csv
+@@ -0,0 +1,13 @@
++# Wu et al. 2022, "Evaluation and application of the ORYZA (v3) rice model under different nitrogen levels in Liaoning
++# Province, China", Appl. Ecol. Environ. Res. 20(1):633-651, doi:10.15666/aeer/2001_633651 (open access; PDF read in
++# full by the main session, NOT committed). Table 3 (development rates) and Table 4 (partitioning to stem/leaf/panicle
++# vs DVS; specific leaf area vs DVS), as printed. Five sites, one japonica cultivar each. "The bulk of our model
++# parameters were taken from IR72" (p.639): every parameter not listed here is IR72's. Table 3 heads the Liaozhong
++# column "Liaoning" (a typo; Table 4 says Liaozhong). Kaiyuan's partitioning equals Donggang's as printed. Units are
++# not printed (ORYZA convention: DVR per degree-day, SLA ha/kg). Tables as "DVS:value;...".
++site,cultivar,DVRJ,DVRI,DVRP,DVRR,FSTTB,FLVTB,FSOTB,SLATB
++Huanren,Shendao 529,0.0007932,0.0008976,0.0004741,0.0019309,0.00:0.60;0.50:0.60;0.75:0.85;1.00:0.11;1.20:0.00,0.00:0.40;0.50:0.40;0.75:0.05;1.00:0.00;1.20:0.00,0.00:0.00;0.50:0.00;0.75:0.10;1.00:0.89;1.20:1.00,0.16:0.0055;0.33:0.0040;0.65:0.0028;0.79:0.0025;2.10:0.0025
++Donggang,Shendao 505,0.0008890,0.0008076,0.0005630,0.0016590,0.00:0.31;0.50:0.33;0.75:0.55;1.00:0.02;1.20:0.00,0.00:0.69;0.50:0.67;0.75:0.15;1.00:0.00;1.20:0.00,0.00:0.00;0.50:0.00;0.75:0.30;1.00:0.98;1.20:1.00,0.16:0.0036;0.33:0.0035;0.65:0.0033;0.79:0.0032;2.10:0.0024
++Liaozhong,Beijing 1,0.0008969,0.0007696,0.0008544,0.0019500,0.00:0.42;0.50:0.43;0.75:0.65;1.00:0.085;1.20:0.00,0.00:0.58;0.50:0.57;0.75:0.25;1.00:0.00;1.20:0.00,0.00:0.00;0.50:0.00;0.75:0.10;1.00:0.915;1.20:1.00,0.16:0.0054;0.33:0.0047;0.65:0.0038;0.79:0.0038;2.10:0.0026
++Kaiyuan,Tiejing 7,0.0007960,0.0008976,0.0005990,0.0016710,0.00:0.31;0.50:0.33;0.75:0.55;1.00:0.02;1.20:0.00,0.00:0.69;0.50:0.67;0.75:0.15;1.00:0.00;1.20:0.00,0.00:0.00;0.50:0.00;0.75:0.30;1.00:0.98;1.20:1.00,0.16:0.0040;0.33:0.0035;0.65:0.0033;0.79:0.0032;2.10:0.0024
++Dawa,Yanfeng 47,0.0008860,0.0007576,0.0005420,0.0013030,0.00:0.62;0.50:0.62;0.75:0.85;1.00:0.11;1.20:0.00,0.00:0.38;0.50:0.38;0.75:0.05;1.00:0.00;1.20:0.00,0.00:0.00;0.50:0.00;0.75:0.10;1.00:0.89;1.20:1.00,0.16:0.0045;0.33:0.0030;0.65:0.0026;0.79:0.0026;2.10:0.0023
+diff --git a/src/crop_sets.py b/src/crop_sets.py
+new file mode 100644
+index 0000000..38b9774
+--- /dev/null
++++ b/src/crop_sets.py
+@@ -0,0 +1,70 @@
++"""
++crop_sets.py -- published ORYZA crop parameter sets for temperate japonica, as overrides on IR72.D92
++===================================================================================================
++
++No ORYZA crop set has been published for Koshihikari or Kasalath (the Yamazaki cultivars;
++docs/literature_db/sourced_inputs.csv crop_cultivar_search). The site-year therefore runs IR72.D92
++verbatim (the only complete published set) and carries the published japonica sets as the range of
++the crop parameters:
++
++  gao2021        Gao et al. 2021 Agric. Water Manag. 250:106864, Table 3 (cold-region japonica,
++                 Heilongjiang): FLVTB, FSTTB, FSOTB, DRLVT, SLATB (table), KDF, RGRLMX, FRPAR, DVR*;
++                 COLDMIN is not applied (the port has no cold-stop rule).
++  wu2022_<site>  Wu et al. 2022 Appl. Ecol. Environ. Res. 20:633, Tables 3-4 (five Liaoning sites,
++                 ORYZA v3): DVR*, FSTTB, FLVTB, FSOTB, SLATB (table).
++
++Everything a paper does not list stays IR72's, as in the papers' own crop files. The development
++rates of every set are re-calibrated to the measured heading and harvest dates on the site-year
++(`site_scenario.calibrate_rates`), so a set enters through its partitioning, leaf area and leaf death.
++"""
++from __future__ import annotations
++
++import csv
++import os
++
++import numpy as np
++
++_RAW = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
++                    "docs", "literature_db", "raw_si")
++RATE_KEYS = ("DVRJ", "DVRI", "DVRP", "DVRR")
++WU_SITES = ("huanren", "donggang", "liaozhong", "kaiyuan", "dawa")
++CROP_SETS = ("IR72", "gao2021") + tuple(f"wu2022_{s}" for s in WU_SITES)
++
++
++def _table(v):
++    pairs = [p.split(":") for p in v.split(";")]
++    return np.array([float(a) for a, _ in pairs]), np.array([float(b) for _, b in pairs])
++
++
++def _rows(name):
++    with open(os.path.join(_RAW, name)) as f:
++        return list(csv.DictReader(l for l in f if not l.startswith("#")))
++
++
++def _gao():
++    rows = {r["parameter"]: r["calibrated"] for r in _rows("gao2021_cold_japonica_oryza_params.csv")}
++    out = {k: _table(rows[k]) for k in ("FLVTB", "FSTTB", "FSOTB", "DRLVT", "SLATB")}
++    out["SWISLA"] = "TABLE"
++    out["KDFTB"] = (np.array([0.0, 2.5]), np.array([float(rows["KDF"])] * 2))   # a single KDF
++    for k in ("RGRLMX", "FRPAR") + RATE_KEYS:
++        out[k] = float(rows[k])
++    return out
++
++
++def _wu(site):
++    r = next(r for r in _rows("wu2022_liaoning_oryza_params.csv") if r["site"].lower() == site)
++    out = {k: _table(r[k]) for k in ("FSTTB", "FLVTB", "FSOTB", "SLATB")}
++    out["SWISLA"] = "TABLE"
++    out.update({k: float(r[k]) for k in RATE_KEYS})
++    return out
++
++
++def overrides(name="IR72"):
++    """Crop-dict overrides on IR72.D92 for a published set (empty for IR72 itself)."""
++    if name == "IR72":
++        return {}
++    if name == "gao2021":
++        return _gao()
++    if name.startswith("wu2022_") and name[7:] in WU_SITES:
++        return _wu(name[7:])
++    raise ValueError(f"unknown crop set {name!r}; expected one of {CROP_SETS}")
+diff --git a/src/site_scenario.py b/src/site_scenario.py
+index 6d0c1f9..f496d5a 100644
+--- a/src/site_scenario.py
++++ b/src/site_scenario.py
+@@ -114,8 +114,10 @@ def _mgmt(sbdur, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=CO2_2020):
+                           tmpsb=tmpsb)
+ 
+ 
+-def _run(w, rates, mgmt):
++def _run(w, rates, mgmt, crop_set="IR72"):
++    import crop_sets as CS
+     crop = O2K.load_crop()
++    crop.update(CS.overrides(crop_set))      # a published japonica set (src/crop_sets.py)
+     crop.update(rates)
+     return O2K.simulate(w, crop, mgmt, max_days=len(w["rad_mj"]) - (mgmt.emd - w["doy0"]))
+ 
+@@ -132,9 +134,12 @@ def _crossing(r, lim):
+     return float(t[i - 1] + (lim - d[i - 1]) / (d[i] - d[i - 1]) * (t[i] - t[i - 1]))
+ 
+ 
+-def calibrate_rates(w, heading_doy, harvest_doy, mgmt):
+-    """Common factor on DVRJ/DVRI/DVRP -> DVS 1 on heading_doy; DVRR -> DVS 2 on harvest_doy."""
++def calibrate_rates(w, heading_doy, harvest_doy, mgmt, crop_set="IR72"):
++    """Common factor on DVRJ/DVRI/DVRP -> DVS 1 on heading_doy; DVRR -> DVS 2 on harvest_doy
++    (starting from the crop set's own rates)."""
++    import crop_sets as CS
+     base = {k: float(O2K.load_crop()[k]) for k in RATE_KEYS}
++    base.update({k: v for k, v in CS.overrides(crop_set).items() if k in RATE_KEYS})
+ 
+     def solve(fun, lo, hi):
+         for _ in range(6):
+@@ -144,7 +149,7 @@ def calibrate_rates(w, heading_doy, harvest_doy, mgmt):
+         raise RuntimeError("no bracket")
+ 
+     def miss(rates, lim, day):
+-        x = _crossing(_run(w, rates, mgmt), lim)
++        x = _crossing(_run(w, rates, mgmt, crop_set), lim)
+         return (x if x is not None else 1.0e4) - day
+ 
+     f = solve(lambda x: miss({**base, **{k: base[k] * x for k in ("DVRJ", "DVRI", "DVRP")}}, 1.0,
+@@ -168,7 +173,7 @@ def heading_for(harvest):
+ 
+ 
+ def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=CO2_2020,
+-              heading_doy=None, harvest_is_maturity=True):
++              heading_doy=None, harvest_is_maturity=True, crop_set="IR72"):
+     """One cultivar's season: daily main-field states from transplanting to harvest.
+ 
+     Returns t (days after transplanting), dry organ mass [kg/hill], LAI, leaf death rate, and the
+@@ -182,7 +187,7 @@ def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=C
+     if abs(sbdur - lo) > 1e-12:
+         frac = float(sbdur - lo)
+         kw = dict(w=w, tmpsb=tmpsb, nh=nh, nplh=nplh, co2=co2, heading_doy=heading_doy,
+-                  harvest_is_maturity=harvest_is_maturity)
++                  harvest_is_maturity=harvest_is_maturity, crop_set=crop_set)
+         a, b = plant_run(harvest, sbdur=lo, **kw), plant_run(harvest, sbdur=lo + 1, **kw)
+         out = {k: ((1.0 - frac) * a[k] + frac * b[k]
+                    if isinstance(a[k], np.ndarray) and k != "t" else a[k]) for k in a}
+@@ -194,12 +199,12 @@ def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=C
+     tp, hv = _doy(YAMAZAKI_TRANSPLANT), _doy(harvest)
+     heading = heading_for(harvest) if heading_doy is None else float(heading_doy)
+     if harvest_is_maturity:
+-        rates, f = calibrate_rates(w, heading, hv, mgmt)
++        rates, f = calibrate_rates(w, heading, hv, mgmt, crop_set)
+     else:                                   # sensitivity: IR72 grain-filling rate kept
+         base = {k: float(O2K.load_crop()[k]) for k in RATE_KEYS}
+-        rates, f = calibrate_rates(w, heading, hv, mgmt)
++        rates, f = calibrate_rates(w, heading, hv, mgmt, crop_set)
+         rates["DVRR"] = base["DVRR"]
+-    r = _run(w, rates, mgmt)
++    r = _run(w, rates, mgmt, crop_set)
+     sta = r["cropsta"]
+     i3 = int(np.where(sta == 3)[0][0])
+     main = np.where(sta >= 4)[0]
+@@ -209,7 +214,7 @@ def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=C
+     if t[-1] < hv - tp - 1e-9:                         # fractional harvest day: end exactly there
+         t = np.append(t, hv - tp)
+     ha_per_hill = 1.0 / (nh * 1.0e4)
+-    out = dict(t=t, rates=rates, factor=f, heading_doy=heading, harvest_doy=hv)
++    out = dict(t=t, rates=rates, factor=f, heading_doy=heading, harvest_doy=hv, crop_set=crop_set)
+     for name, key in (("root", "wrt"), ("stem", "wst"), ("leaf", "wlvg"), ("grain", "wso")):
+         v = np.concatenate([[r[key][i3] * pltr], r[key][main]])
+         out[name] = np.interp(t, td, v * ha_per_hill)     # crop model's own value; held after maturity
+diff --git a/validation/input_range_band.py b/validation/input_range_band.py
+index e017d39..ebfb091 100644
+--- a/validation/input_range_band.py
++++ b/validation/input_range_band.py
+@@ -13,6 +13,9 @@
+ # against the corner runs: per congener, tissue and direction, every input at the end that
+ # moved that number that way, all at once.
+ #
++# A categorical input (the crop parameter set: IR72 and the published japonica sets,
++# src/crop_sets.py) has more than two "ends"; its deviation per direction is the largest.
++#
+ # Inputs: the shoot and phloem shares (model_api.RANGE_INPUTS: stem_transp_frac,
+ # lam_grain at heading and at maturity, phi, T_C_Ph), the site inputs (sbdur, tmpsb, nplh;
+ # the crop is re-run), every organ-composition cell with a range (f_prot, f_PL, f_cw, lignin
+@@ -58,6 +61,8 @@ def inputs():
+                                             for v in R["lam_grain_maturity"])))
+     for k in ("sbdur", "tmpsb", "nplh"):
+         out.append((k, tuple({"site": {k: v}} for v in R[k])))
++    import crop_sets as CS                     # categorical: every published japonica set
++    out.append(("crop_set", tuple({"site": {"crop_set": n}} for n in CS.CROP_SETS if n != "IR72")))
+     rng = api.PARAMS["tissue_composition_ranges"]
+     for organ in ORGAN_OF:
+         for q, (lo, hi) in rng[organ].items():
+@@ -154,7 +159,7 @@ def main():
+                 dn = up = 0.0
+                 contrib = {}
+                 for name in delta:
+-                    ds = [delta[name][i][c][k] for i in (0, 1)]
++                    ds = [delta[name][i][c][k] for i in range(len(delta[name]))]
+                     if max(abs(x) for x in ds) < PRECISION:
+                         continue
+                     dn += min(0.0, *ds)
+@@ -169,7 +174,7 @@ def main():
+                 for sgn in (-1, 1):
+                     sts = []
+                     for name, ends in ins:
+-                        ds = [delta[name][i][c][k] for i in (0, 1)]
++                        ds = [delta[name][i][c][k] for i in range(len(ends))]
+                         if max(abs(x) for x in ds) < PRECISION:
+                             continue
+                         i = int(np.argmin(ds)) if sgn < 0 else int(np.argmax(ds))
+-- 
+2.43.0
+

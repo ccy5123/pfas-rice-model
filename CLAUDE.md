@@ -360,7 +360,7 @@ is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested agains
    (0.103) but under-predicts Li's grain by stage (1.019; the panicle's share is 0 before heading) and
    PFBA/PFPeA/PFHpA/PFUnDA stay over at L_Ph = 0. The timing of grain loading is open; harvest-only
    data cannot decide it.
-4. **Amendment 2** (pre-register first): organ water θ(t) by stage; the grain pool as brown rice
+4. **Amendment 2** (pre-register first; draft, prototypes and a Korean handoff in `docs/amendment2/`): organ water θ(t) by stage; the grain pool as brown rice
    (hull share sourced); the measured-table leaf loss; one density constant; japonica crop sets as a
    band; SMILES K_cw; the neutral path's composition basis per dataset; site-sourced paddy soil; a
    volatile-compound data search; then the final re-fit and a docs sweep.

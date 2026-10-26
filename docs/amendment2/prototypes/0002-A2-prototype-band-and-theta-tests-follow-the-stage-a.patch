@@ -1,0 +1,96 @@
+From b67ad9351466ac0b2f755168317f475568cf6895 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 25 Oct 2026 22:43:19 +0000
+Subject: [PATCH 2/4] A2 prototype: band and theta tests follow the stage
+ anchors
+
+---
+ tests/test_theta_fw_sensitivity.py | 10 +++++++---
+ validation/input_range_band.py     | 23 +++++++++++++++++++----
+ 2 files changed, 26 insertions(+), 7 deletions(-)
+
+diff --git a/tests/test_theta_fw_sensitivity.py b/tests/test_theta_fw_sensitivity.py
+index 22f4173..8ed0bad 100644
+--- a/tests/test_theta_fw_sensitivity.py
++++ b/tests/test_theta_fw_sensitivity.py
+@@ -28,14 +28,18 @@ KEY = {"root": "root", "stem": "stem", "leaf": "leaf", "grain": "grain_brown"}
+ 
+ @contextlib.contextmanager
+ def theta(organ, value):
+-    """Set one organ's theta_fw everywhere it is read, then restore it."""
++    """Set one organ's theta_fw everywhere it is read -- every stage anchor (flat at `value`)
++    and the constant fallback -- then restore it."""
+     key = KEY[organ]
+-    saved = (api._COMP[key]["theta_fw"], om.THETA_FW[organ], ND.RICE_WATER[organ])
++    saved = (api._COMP[key]["theta_fw"], om.THETA_FW[organ], ND.RICE_WATER[organ],
++             om.THETA_STAGE[organ][:, 1].copy())
+     api._COMP[key]["theta_fw"] = om.THETA_FW[organ] = ND.RICE_WATER[organ] = float(value)
++    om.THETA_STAGE[organ][:, 1] = float(value)
+     try:
+         yield
+     finally:
+-        api._COMP[key]["theta_fw"], om.THETA_FW[organ], ND.RICE_WATER[organ] = saved
++        api._COMP[key]["theta_fw"], om.THETA_FW[organ], ND.RICE_WATER[organ] = saved[:3]
++        om.THETA_STAGE[organ][:, 1] = saved[3]
+ 
+ 
+ def _bafs(organ, value, name="PFOA"):
+diff --git a/validation/input_range_band.py b/validation/input_range_band.py
+index b363bf2..e017d39 100644
+--- a/validation/input_range_band.py
++++ b/validation/input_range_band.py
+@@ -15,8 +15,9 @@
+ #
+ # Inputs: the shoot and phloem shares (model_api.RANGE_INPUTS: stem_transp_frac,
+ # lam_grain at heading and at maturity, phi, T_C_Ph), the site inputs (sbdur, tmpsb, nplh;
+-# the crop is re-run), every organ-composition cell with a range (theta_fw, f_prot, f_PL,
+-# f_cw, lignin share -> K_cw; parameters.json tissue_composition_ranges), and PFBS's L_Ph
++# the crop is re-run), every organ-composition cell with a range (f_prot, f_PL, f_cw, lignin
++# share -> K_cw; parameters.json tissue_composition_ranges), each stage anchor of each organ's
++# water (parameters.json theta_stage), and PFBS's L_Ph
+ # range [0, L_MQL] (its grain is censored).
+ #
+ #   python validation/input_range_band.py     (writes params/input_range_band.json)
+@@ -60,8 +61,13 @@ def inputs():
+     rng = api.PARAMS["tissue_composition_ranges"]
+     for organ in ORGAN_OF:
+         for q, (lo, hi) in rng[organ].items():
+-            if hi > lo:
++            if hi > lo and q != "theta_fw":   # water: the stage anchors below
+                 out.append((f"{organ}.{q}", tuple({"comp": (organ, q, v)} for v in (lo, hi))))
++    for organ, anchors in api.PARAMS["theta_stage"]["anchors"].items():
++        for i, (dvs, _mid, lo, hi) in enumerate(anchors):
++            if hi > lo:
++                out.append((f"{organ}.theta@DVS{dvs:g}",
++                            tuple({"theta": (ORGAN_OF[organ], i, v)} for v in (lo, hi))))
+     out.append(("PFBS.L_Ph", ({"pfbs_L": 0.0}, {"pfbs_L": "mql"})))
+     return out
+ 
+@@ -104,6 +110,11 @@ def observable(job):
+         if "comp" in st:
+             organ, q, v = st["comp"]
+             patched.append((organ, _apply_comp(organ, q, v)))
++        if "theta" in st:                      # one stage anchor of one organ's water
++            o, i, v = st["theta"]
++            arr = om.THETA_STAGE[o]
++            patched.append(("theta", (o, i, float(arr[i, 1]))))
++            arr[i, 1] = v
+         if "pfbs_L" in st and c == "PFBS":
+             v = st["pfbs_L"]
+             sim["L_Ph_override"] = (api._CONG["PFBS"]["L_Ph_MQL__" + api.variant_key()]
+@@ -112,7 +123,11 @@ def observable(job):
+         b = api.yamazaki_harvest_baf(c, scenario_kw=site or None, **sim)
+     finally:
+         for organ, saved in reversed(patched):
+-            _restore(organ, saved)
++            if organ == "theta":
++                o, i, v = saved
++                om.THETA_STAGE[o][i, 1] = v
++            else:
++                _restore(organ, saved)
+     return c, {k: float(np.log10(b[k])) for k in TISS}
+ 
+ 
+-- 
+2.43.0
+
