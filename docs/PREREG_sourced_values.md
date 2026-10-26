@@ -693,7 +693,12 @@ Section 7.8 (written for the incumbent default; read on its records):
 
 Band (`input_range_band`, median over 11 congeners, down / up): on the incumbent, root ÷1.29 / ×1.29,
 straw ÷1.86 / ×2.43, grain ÷3.80 / ×6.49 (amendment 1: ÷1.27 / ×1.25, ÷1.35 / ×1.32, ÷2.54 / ×2.07); the
-crop sets lead the straw band for 11/11. BAND_FIT_PLACEHOLDER
+crop sets lead the straw band for 11/11. On the chosen default (redistributed_fit; the band the app
+and `ASSUMPTIONS.md` carry): root ÷1.29 / ×1.29, straw ÷1.40 / ×1.90, grain ÷2.98 / ×3.63; the crop sets
+lead the straw band 11/11 and the grain band 7/11 (phi 3/11, PFBS's L_Ph range 1/11), root composition
+(f_cw 6/11, f_PL 5/11) the root band. The envelope covers the all-corner run in 38/66 cases (incumbent
+39/66; amendment 1 53/66): with the crop sets in, the inputs interact more than the one-at-a-time
+envelope assumes.
 
 Numerics and recorded deviations:
 - Brown rice's equation has no term in its own free concentration, so its pre-harvest water moves no
