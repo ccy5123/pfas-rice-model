@@ -159,17 +159,17 @@ def test_schriever_refit_is_the_same_form_and_reproduces_briggs_paper():
         ND.tscf(2.0, "nope")
 
 
-def test_lipid_defaults_are_the_cited_trapp1994_values():
-    """The lipid contents must stay traceable to Trapp 1994 (root 1%, stem/leaf 3%
-    fresh weight), not drift back to unsourced guesses."""
-    assert ND.TRAPP1994_LIPID_FW["root"] == 0.01
-    assert ND.TRAPP1994_LIPID_FW["stem"] == ND.TRAPP1994_LIPID_FW["leaf"] == 0.03
+def test_lipid_defaults_are_the_sourced_dry_basis_values():
+    """The lipid contents must stay traceable to their sources (PREREG 5.10;
+    params/neutral_composition_sourced.csv), carried dry and restated at the organ water."""
+    import neutral_composition as NC
+    for organ in ("root", "stem", "leaf", "grain"):
+        lo, hi, src = NC.TABLE[("rice", organ, "lipid_dw")]
+        assert src and ND.RICE_LIPID_DW[organ] == pytest.approx(0.5 * (lo + hi))
     comps = {c.name: c for c in ND.rice_compartments()}
-    # FRESH-weight basis, same as W -- required for K_PW = W + L*a*Kow^b to add up.
-    # (Treating them as dry-weight understates K_PW ~10x; the Liu 2023 root data
-    # caught that error, log10 RMSE 0.605 -> 0.198.)
+    # FRESH-weight basis, same as W -- required for K_PW = W + L*a*Kow^b to add up
     fw_root = comps["root"].f_PL * (1.0 - comps["root"].theta)
-    assert fw_root == pytest.approx(0.01, rel=1e-9)
+    assert fw_root == pytest.approx(ND.RICE_LIPID_DW["root"] * (1 - ND.RICE_WATER["root"]))
     # and Briggs' own barley anchor is likewise ~2.5% of FRESH weight
     assert 10.0 ** ND.RCF_INTERCEPT / ND.LIPID_OCTANOL_A == pytest.approx(0.0247, abs=0.001)
 
@@ -198,8 +198,9 @@ def test_ge2017_apriori_prediction():
     rmse = V.compare_to_obs(path, drv, quiet=True)
     assert rmse == pytest.approx(_SCORES["Ge 2017 per-organ TF"], abs=1e-3)   # the record
     errs = {h: V.compare_to_obs(path, drv, half_life=h, quiet=True) for h in (30.0, 7.0, 3.0)}
-    # under PREREG 5.8 (root water 0.713) a ~7-d half-life helps a little and 3 d hurts
-    assert errs[3.0] > errs[30.0] > errs[7.0]
+    # PREREG 5.10 (only the leaf rows scored, on the table's own rice waters): the leaf is
+    # over without metabolism, a 30-d half-life helps, shorter ones over-correct
+    assert errs[30.0] < rmse and errs[3.0] > errs[7.0] > errs[30.0]
 
 
 def test_liu2023_root_partition_apriori():

@@ -35,6 +35,7 @@ ROOT_DIR = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
 
 import neutral_dpu as ND                                       # noqa: E402
+import neutral_composition as NC                                       # noqa: E402
 
 OBS = os.path.join(ROOT_DIR, "data_obs", "neutral_obs_briggs1983_shoot.csv")
 
@@ -55,12 +56,19 @@ def briggs_eq3(log_kow):
     return ND.briggs_stem_xylem_partition(log_kow) * ND.tscf(log_kow)
 
 
-def repo_scf(log_kow):
-    """What THIS repo predicts for a stem, with nothing fitted: its own neutral
-    composition (Trapp 1994 stem lipid, conventional a, Briggs' ROOT exponent)
-    through k_pw, times the same Briggs TSCF."""
-    return ND.k_pw(log_kow, W=ND.RICE_WATER["stem"],
-                   L=ND.TRAPP1994_LIPID_FW["stem"]) * ND.tscf(log_kow)
+def barley_shoot(organ, corner=NC.MID):
+    """(W, L_fw) of an 11-d barley shoot organ (PREREG 5.10): barley stem + leaf water
+    (Wang 2017) and barley straw ether extract restated at that water."""
+    W, L = NC.spec("briggs1983", corner=corner)
+    return W[organ], L[organ]
+
+
+def repo_scf(log_kow, corner=NC.MID):
+    """What THIS repo predicts for a stem, with nothing fitted: the neutral K_PW form
+    (conventional a, Briggs' ROOT exponent) on the barley shoot's sourced composition,
+    times the same Briggs TSCF."""
+    W, L = barley_shoot("stem", corner)
+    return ND.k_pw(log_kow, W=W, L=L) * ND.tscf(log_kow)
 
 
 def _score(rows, tissue, fn, hours=None, equilibrated_only=True):
@@ -121,16 +129,8 @@ def section2(rows):
     print(f"\n   THE RESULT: on the clean section the repo predicts measured SCF at")
     print(f"   RMSE {rc[2]:.3f} (bias {rc[1]:+.3f}) -- indistinguishable from the")
     print(f"   paper's OWN FITTED equation at {bc[2]:.3f} ({bc[1]:+.3f}), which had this")
-    print("   very data to fit. For scale, the root tables run 0.281 (Liu) to")
-    print("   0.598 (Li 2019 hydroponic), both on the same a-priori footing.")
-    print("\n   This settles section 4j empirically. That section found the repo's")
-    print("   stem lipid term 4.1x ABOVE Briggs' and argued the gap 'largely")
-    print("   cancels' against his steeper exponent, leaving the observable SCF")
-    print("   nearly unchanged -- but it argued it equation-against-equation. The")
-    print("   measurements now say the same thing: the two predictions are equally")
-    print("   good, so the 4.1x is a PROVENANCE problem, not a prediction problem.")
-    print("   The composition is still unsourced for rice; it is just not wrong")
-    print("   where it can be checked.")
+    print("   very data to fit. The composition is the barley shoot's own (PREREG 5.10):")
+    print("   water from Wang 2017 (34-d plants), lipid = barley straw ether extract.")
     return out
 
 
@@ -164,8 +164,8 @@ def section3(rows):
     print("   leaf does not. Scoring the leaf as if it were an equilibrium:\n")
     for h in (24, 48):
         n, b, e = _score(rows, "leaf",
-                         lambda x: ND.k_pw(x, W=ND.RICE_WATER["leaf"],
-                                           L=ND.TRAPP1994_LIPID_FW["leaf"],
+                         lambda x: ND.k_pw(x, W=barley_shoot("leaf")[0],
+                                           L=barley_shoot("leaf")[1],
                                            b=ND.LEAF_SORPTION_EXPONENT) * ND.tscf(x),
                          hours=h)
         print(f"     {h} h   n={n}   bias {b:+.3f}   RMSE {e:.3f}")

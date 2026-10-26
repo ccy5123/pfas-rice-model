@@ -106,8 +106,8 @@ def render(cfg):
                            "in-planta half-life in the sidebar.")
             st.caption("Scope: the **grain compartment is UNTESTED** for neutrals (no dataset "
                        "reports a neutral Kow series in grain under root-only exposure) — read it "
-                       "as a structural output. Stem/leaf lipid are still Trapp 1994's soybean "
-                       "values (the root is corroborated by measured cereal roots). This is a "
+                       "as a structural output. Organ lipid is sourced on a dry basis (root: measured "
+                       "cereal roots; stem/leaf: rice straw; grain: brown rice). This is a "
                        "RICE model: rice composition and rice crop drivers (by default the Tsukuba "
                        "2020 site-year) — another crop needs its own composition and drivers, not "
                        "just a log Kow.")

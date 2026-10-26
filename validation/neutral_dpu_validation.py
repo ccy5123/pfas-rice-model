@@ -41,20 +41,21 @@ import forcing_rice as fr                                    # noqa: E402
 from growth_rice import organ_biomass                        # noqa: E402
 from pfas_rice_plant_module_4pool_surf import binding_factors  # noqa: E402
 import neutral_dpu as ND                                     # noqa: E402
+import neutral_composition as NC                             # noqa: E402
 
 SEASON, NT = 120.0, 241
 TISSUES = ("root", "stem", "leaf", "grain")
 
 
-def drivers(season=SEASON, n_t=NT, Cwo=1.0):
+def drivers(season=SEASON, n_t=NT, Cwo=1.0, waters=None):
     """Generic rice forcings (forcing_rice Q_TP + growth_rice organ biomass) -- the neutral
     tables come from other sites and seasons, none with a dated crop record in the repo --
     with the crop model's DRY matter converted to the FRESH mass the ODE runs on
-    (`organ_mass`)."""
+    (`organ_mass`), at the organ waters `waters` (default: the rice organ water)."""
     import organ_mass as om
     t = np.linspace(0.0, float(season), int(n_t))
     b = organ_biomass(t, season)
-    M = om.organ_matrix(b)
+    M = om.organ_matrix(b, theta=waters)
     return dict(t=t, Cwo=np.full(len(t), float(Cwo)), Qtp=fr.Q_TP(t, season), M=M,
                 mass_basis=om.MASS_BASIS)
 
@@ -269,15 +270,29 @@ def equilibrium_rcf(log_kow, lipids=None, waters=None, tissue="root",
     This is what a SHORT-EXPOSURE root concentration factor actually measures.
     See `compare_to_obs(mode="equilibrium")` for why that distinction matters.
     """
-    W = dict(ND.RICE_WATER, **(waters or {}))[tissue]
-    L = dict(ND.LIPID_SOURCES[lipid_source], **(lipids or {}))[tissue]
+    comp = ND.rice_compartments(waters=waters, lipids=lipids, lipid_source=lipid_source)
+    c = comp[TISSUES.index(tissue)]
+    W, L = c.theta, c.f_PL * (1.0 - c.theta)
     b = ND.LEAF_SORPTION_EXPONENT if tissue == "leaf" else ND.RCF_SLOPE
     return ND.k_pw(log_kow, W=W, L=L, b=b)
 
 
+# file stem -> the composition table of neutral_composition.spec (PREREG 5.10)
+OBS_TABLE = {"neutral_obs_liu2023": "liu2023", "neutral_obs_ge2017": "ge2017",
+             "neutral_obs_kodesova2019": "kodesova2019", "neutral_obs_li2019_rcf": "li2019_rcf",
+             "neutral_obs_li2019_soil": "li2019_soil"}
+# rows a table cannot score from sources: Ge 2017's stem (no rice stem water at the vegetative
+# stage was found; PREREG 5.10)
+UNSCORED = {("ge2017", "stem")}
+
+
+def table_of(path):
+    return OBS_TABLE.get(os.path.splitext(os.path.basename(str(path)))[0], "rice")
+
+
 def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=False,
                    subset="apriori", group_by=None, mode="ode",
-                   lipid_source=ND.DEFAULT_LIPID_SOURCE):
+                   lipid_source=ND.DEFAULT_LIPID_SOURCE, corner=NC.MID, read_as=None):
     """Compare the model to a measured table. `half_life` (d) overrides the
     per-row half_life_d for a sensitivity scan; `tscf_model` selects the QSPR.
 
@@ -313,6 +328,12 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
     Liu 2023, Kodesova 2019 and Li 2019's 376-row soil table worse. Run
     `--lipid-source both` to see that trade-off on any table instead of taking
     the docs' word for it.
+
+    Composition (PREREG 5.10): each table runs on its own plant's water and lipid
+    (`neutral_composition.spec`), and its dry-weight observations are converted with that
+    same water; `drv` is then rebuilt at those waters (only its season is read). `corner`
+    moves the sourced ranges to their ends. `read_as="dw"` reads a table whose basis is
+    unstated (Liu 2023) as dry weight instead of the file's basis.
     """
     if mode not in ("ode", "equilibrium"):
         raise ValueError(f"mode must be 'ode' or 'equilibrium', got {mode!r}")
@@ -332,32 +353,55 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
         if not quiet:
             print("   (no rows) — supply a measured table to turn this into validation.")
         return None
-    drv = drv or drivers()
-    waters = ND.RICE_WATER
+    table = table_of(path)
+    season = float((drv or {}).get("t", [SEASON])[-1]) if drv else SEASON
+    drv_cache = {}
+
+    def drv_at(W):
+        key = tuple(sorted(W.items()))
+        if key not in drv_cache:
+            drv_cache[key] = drivers(season=season, waters=W)
+        return drv_cache[key]
+
+    def comp_of(r):
+        return NC.spec(table, species=r.get("species"), corner=corner, f_lip=r.get("f_lip"))
+
     by_cmpd = {}
+    skipped = 0
     for r in obs:
-        by_cmpd.setdefault((r["compound"], r["log_kow"]), []).append(r)
+        if (table, r["tissue"]) in UNSCORED:
+            skipped += 1
+            continue
+        W, L = comp_of(r)
+        key = (r["compound"], r["log_kow"], tuple(sorted(W.items())), tuple(sorted(L.items())))
+        by_cmpd.setdefault(key, []).append(r)
+    if skipped and not quiet:
+        print(f"   [{skipped} row(s) not scored: {sorted(t for tb, t in UNSCORED if tb == table)}"
+              " -- no sourced water for that organ (PREREG 5.10)]")
 
     pairs, tagged = [], []
     if not quiet:
         print(f"{'compound':16}{'logKow':>8}{'tissue':>8}{'obs':>10}{'model':>10}{'ratio':>9}")
-    for (name, lk), rs in sorted(by_cmpd.items(), key=lambda x: x[0][1]):
+    for (name, lk, Wk, Lk), rs in sorted(by_cmpd.items(), key=lambda x: (x[0][1], x[0][0])):
+        waters, lipids = dict(Wk), dict(Lk)
+        if lipid_source != "measured":
+            lipids = dict(lipids, root=ND.LIPID_SOURCES[lipid_source]["root"])
         hl = half_life if half_life is not None else next(
             (float(r["half_life_d"]) for r in rs
              if r.get("half_life_d") not in (None, "")), None)
         gam = float(np.log(2.0) / hl) if hl else 0.0
-        comps = ND.rice_compartments(gammas={k: gam for k in TISSUES},
-                                     lipid_source=lipid_source)
+        comps = ND.rice_compartments(gammas={k: gam for k in TISSUES}, waters=waters,
+                                     lipids=lipids)
         # in equilibrium mode a root-only compound needs no ODE solve at all
         if mode == "equilibrium" and all(r["tissue"] == "root" for r in rs):
             m = None
         else:
-            m = ND.simulate_neutral(ND.NeutralCompound(name, lk), drv, comps=comps,
+            m = ND.simulate_neutral(ND.NeutralCompound(name, lk), drv_at(waters), comps=comps,
                                     tscf_model=tscf_model)
         for r in rs:
-            tis, ep, basis = r["tissue"], r["endpoint"], r["basis"]
+            tis, ep, basis = r["tissue"], r["endpoint"], (read_as or r["basis"])
             if mode == "equilibrium" and tis == "root" and ep in ("baf", "conc"):
-                pred = equilibrium_rcf(lk, tissue="root", lipid_source=lipid_source)
+                pred = equilibrium_rcf(lk, tissue="root", waters=waters, lipids=lipids)
             elif tis == "straw":
                 pred = m["straw_baf"] if ep != "tf" else m["straw_baf"] / m["baf_final"]["root"]
             elif ep == "tf":
@@ -379,13 +423,11 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
             elif ep not in ("baf", "tf"):
                 raise ValueError(f"{name}/{tis}: unknown endpoint {ep!r} "
                                  "(expected baf, conc or tf)")
-            if basis == "dw":     # dw -> fw on the model's own water contents
+            if basis == "dw":     # dw -> fw on the table's own organ waters
                 if ep == "tf":
-                    wt = waters["grain"] if tis == "grain" else waters.get(tis, 0.80)
-                    o = o * (1.0 - wt) / (1.0 - waters["root"])
+                    o = o * (1.0 - waters[tis]) / (1.0 - waters["root"])
                 else:
-                    wt = waters.get(tis, 0.80)
-                    o = o * (1.0 - wt)
+                    o = o * (1.0 - waters[tis])
             pairs.append((pred, o))
             tagged.append((pred, o, r))
             ratio = pred / o if o > 0 else float("inf")

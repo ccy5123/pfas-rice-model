@@ -358,3 +358,18 @@ Addenda:
   `validation/li2025_stage_resolved.py`.
 - Reopened (`params/value_provenance.csv` tis_theta): organ water falls with stage (root 0.76-0.89
   vegetative, 0.51-0.77 at maturity); a constant theta is amendment 2.
+
+### Addendum 5.10 outcome (2026-10-26; record: `params/neutral_scores.json`)
+Scores at the midpoints, log10 RMSE, [min, max] over the range corners; equilibrium basis in brackets:
+Liu 2023 0.212 [0.208, 0.278] (0.204) · Ge 2017 0.631 [0.568, 0.724] (leaf rows only) · Kodesova 2019
+0.157 [0.160, 0.193] (0.172) · Li 2019 hydroponic 0.677 [0.525, 1.115] · Li 2019 soil 0.418 (each row's own
+lipid; no range) (0.461) · Briggs 1983 barley stem 0.357 [0.317, 0.417]. Liu read as dry weight: 0.821.
+- N1 WRONG. Li hydroponic 0.677 (+0.131 against 0.546) and Li soil 0.418 (-0.132 against 0.550) both
+  moved by more than 0.05, in opposite directions. Not foreseen: the hydroponic species without a value in
+  Li's list run at the 13-crop range midpoint, and the hydroponic half is under-predicted (mean bias
+  -0.56); Briggs' fitted root term scores it 0.297.
+- N2 HELD. Liu 0.212 (5.8: 0.256), Kodesova 0.157 (5.8: 0.469).
+- N3 HELD. The rice root runs L_fw 2.40 % (Briggs anchor 2.47 %).
+- N4 (no expectation): Ge 0.631 (leaf 2.5-5.8x over without metabolism), Briggs stem 0.357 (the
+  model 1.8x under on average).
+- Liu's fresh-weight reading (0.212) fits far better than the dry-weight one (0.821).

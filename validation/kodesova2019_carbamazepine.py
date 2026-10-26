@@ -13,8 +13,9 @@
 # the root partition core is too LOW. This is the direct measurement that
 # question was asking for, on the same compound.
 #
-# It also lands on the anchor decision, and well-conditioned: carbamazepine sits
-# at log Kow 2.25, where the shipped and anchored compositions differ by 1.6x.
+# Composition (PREREG 5.10): each plant's own root water and lipid
+# (params/neutral_composition_sourced.csv; radish from Ievinsh 2023, the others at Li
+# 2019's 0.90 convention), and the dry-weight RCFs are converted with that same water.
 #
 # Sections 6 and 7 use the LEAF half of the same table, which the root comparison
 # leaves untouched. Section 6 tests TRANSLOCATION with the exposure cancelled
@@ -48,6 +49,7 @@ sys.path.insert(0, HERE)
 
 import neutral_dpu as ND                                       # noqa: E402
 import neutral_dpu_validation as V                             # noqa: E402
+import neutral_composition as NC                               # noqa: E402
 
 TISSUES = ("root", "stem", "leaf", "grain")
 
@@ -66,6 +68,28 @@ def rows():
         return [r for r in csv.DictReader(x for x in f
                                           if not x.lstrip().startswith("#"))
                 if r.get("compound")]
+
+
+def species_comp(sp, corner=NC.MID, lipid_source="measured"):
+    """(W, L_fw) of one plant's root (PREREG 5.10); "briggs_anchor" swaps in Briggs'
+    fitted lipid term."""
+    W, L = NC.spec("kodesova2019", species=sp, corner=corner)
+    Lr = ND.LIPID_SOURCES["briggs_anchor"]["root"] if lipid_source != "measured" else L["root"]
+    return W["root"], Lr
+
+
+def rcf_fw(rs=None, theta=None):
+    """Measured RCFs on fresh weight: each dry-weight value times (1 - its plant's root
+    water), or (1 - theta) when a water is given."""
+    rs = rows() if rs is None else rs
+    return np.array([float(r["value"]) * (1.0 - (species_comp(r["species"])[0]
+                                                if theta is None else theta)) for r in rs])
+
+
+def kpw_rows(rs=None, lipid_source="measured"):
+    rs = rows() if rs is None else rs
+    return np.array([ND.k_pw(LOG_KOW, *species_comp(r["species"], lipid_source=lipid_source))
+                     for r in rs])
 
 
 def section1_isotherm():
@@ -105,64 +129,41 @@ def section2_apriori(drv):
 
 
 def section3_anchor(drv):
-    """The decision this table was fetched to inform."""
+    """The sourced composition against Briggs' fitted root lipid term."""
     print("\n" + "=" * 84)
-    print("3. WHICH WAY DOES IT VOTE ON THE BRIGGS ANCHOR?")
+    print("3. SOURCED COMPOSITION vs THE BRIGGS ANCHOR")
     print("=" * 84)
-    orig = ND.TRAPP1994_LIPID_FW["root"]
-    out = {}
-    try:
-        for lab, L in (("shipped  L=0.010", orig),
-                       ("anchored L=0.0247", ND.BRIGGS_ANCHORED_LIPID_FW["root"])):
-            ND.TRAPP1994_LIPID_FW["root"] = L
-            out[lab] = [V.compare_to_obs(p, drv, quiet=True)
-                        for p in (OBS, LIU, LI2019)]
-    finally:
-        ND.TRAPP1994_LIPID_FW["root"] = orig
-    print(f"   {'composition':22}{'Kodesova n=21':>15}{'Liu rice n=14':>15}{'Li2019 n=29':>14}")
+    out = {lab: [V.compare_to_obs(p, drv, quiet=True, lipid_source=src)
+                 for p in (OBS, LIU, LI2019)]
+           for lab, src in (("sourced (PREREG 5.10)", "measured"),
+                            ("Briggs anchor", "briggs_anchor"))}
+    print(f"   {'root lipid':22}{'Kodesova n=21':>15}{'Liu rice n=14':>15}{'Li2019 n=29':>14}")
     for lab, v in out.items():
         print(f"   {lab:22}{v[0]:>15.3f}{v[1]:>15.3f}{v[2]:>14.3f}")
-    print("\n   Carbamazepine at log Kow 2.25 separates the two compositions by 1.6x,")
-    print("   so this is a well-conditioned vote rather than a marginal one -- and it")
-    print("   votes with Liu (the rice table) and against Li 2019.")
-    print("   With Li 2019's SOIL table added (validation/li2019_soil_table.py, 356")
-    print("   rows, +0.250 shipped vs +0.637 anchored) the tally is THREE tables")
-    print("   against restoring the anchor and ONE for it -- and the one for it is")
-    print("   the hydroponic half of a paper whose own soil half says the opposite.")
-
-    # driver-free cross-check: the ODE root BAF is not K_PW, so show both framings
-    obs = np.array([float(r["value"]) for r in rows()]) * (1.0 - ND.RICE_WATER["root"])
-    kpw_ship = ND.k_pw(LOG_KOW, W=ND.RICE_WATER["root"], L=ND.TRAPP1994_LIPID_FW["root"])
-    kpw_anch = ND.k_pw(LOG_KOW, W=ND.RICE_WATER["root"],
-                       L=ND.BRIGGS_ANCHORED_LIPID_FW["root"])
-    print("\n   Driver-free cross-check (equilibrium K_PW, no ODE, so no rice drivers):")
+    obs = rcf_fw()
+    print("\n   Driver-free cross-check (equilibrium K_PW per plant, no ODE):")
     print(f"      measured RCF_fw   median {np.median(obs):.2f}   range "
           f"{obs.min():.2f}-{obs.max():.2f}")
-    for lab, k in (("shipped K_PW", kpw_ship), ("anchored K_PW", kpw_anch)):
+    for lab, src in (("sourced K_PW", "measured"), ("anchored K_PW", "briggs_anchor")):
+        k = kpw_rows(lipid_source=src)
         b = float(np.mean(np.log10(k) - np.log10(obs)))
-        print(f"      {lab:16} {k:.2f}   mean log10 bias {b:+.3f}")
-    print("   The absolute numbers differ from section 2 -- the ODE's root BAF sits")
-    print("   below K_PW because the xylem drains it, and log Kow 2.25 is near the")
-    print("   TSCF peak where that drain is largest -- but the ORDERING is the same")
-    print("   under both framings, which is what the decision rests on.")
+        print(f"      {lab:16} median {np.median(k):.2f}   mean log10 bias {b:+.3f}")
 
 
 def section4_brunetti():
     print("\n" + "=" * 84)
     print("4. THE BRUNETTI QUESTION, WHICH IS WHAT THIS PAPER WAS FETCHED FOR")
     print("=" * 84)
-    obs = np.array([float(r["value"]) for r in rows()]) * (1.0 - ND.RICE_WATER["root"])
+    obs = rcf_fw()
+    kpw = kpw_rows()
     print(f"   Brunetti 2021, calibrated green-pea root K_RW   {BRUNETTI_K_RW:.1f} L/kg fw")
     print(f"   Kodesova 2019, MEASURED, 4 plants x 3 soils     {np.median(obs):.2f} "
           f"(range {obs.min():.2f}-{obs.max():.2f})")
-    print(f"   Briggs K_PW as this model runs it               "
-          f"{ND.k_pw(LOG_KOW, W=ND.RICE_WATER['root'], L=ND.TRAPP1994_LIPID_FW['root']):.2f}")
-    print(f"\n   Brunetti's value is ~{BRUNETTI_K_RW / np.median(obs):.0f}x ABOVE a direct measurement of the")
-    print("   same compound, while Briggs lands within a factor of ~1.5 of it. So the")
-    print("   disagreement is far more likely to be in Brunetti's calibration -- a")
-    print("   posterior that can absorb whatever else the model was missing -- than in")
-    print("   the partition core. Sighting 1 of the four in section 5 of the validation")
-    print("   doc WEAKENS, and this table is a COUNTER-EXAMPLE to the group.")
+    print(f"   Briggs K_PW on each plant's sourced composition {np.median(kpw):.2f} (median)")
+    print(f"\n   Brunetti's value is {BRUNETTI_K_RW / np.median(obs):.0f}x the direct measurement of the")
+    print(f"   same compound; the a-priori K_PW is {np.median(kpw) / np.median(obs):.2f}x it. A calibrated")
+    print("   posterior can absorb whatever else the model was missing; the partition core")
+    print("   here has nothing fitted.")
     print("\n   Note the species caveat both ways: Brunetti is green pea, this is four")
     print("   leafy/root vegetables, and neither is rice.")
 
@@ -171,27 +172,19 @@ def section5_sensitivity():
     print("\n" + "=" * 84)
     print("5. WHAT THE CONCLUSION RESTS ON")
     print("=" * 84)
-    raw = np.array([float(r["value"]) for r in rows()])          # L/kg DRY
-    kpw_ship = ND.k_pw(LOG_KOW, W=ND.RICE_WATER["root"], L=ND.TRAPP1994_LIPID_FW["root"])
-    kpw_anch = ND.k_pw(LOG_KOW, W=ND.RICE_WATER["root"],
-                       L=ND.BRIGGS_ANCHORED_LIPID_FW["root"])
-    print("   The dw->fw conversion is a real lever, so it is scanned rather than")
-    print("   asserted. Root water content assumed:")
-    print(f"   {'theta':>8}{'median RCF_fw':>16}{'shipped bias':>15}{'anchored bias':>16}")
-    for th in (0.85, 0.90, 0.93, 0.95):
-        v = raw * (1.0 - th)
-        print(f"   {th:>8.2f}{np.median(v):>16.2f}"
-              f"{float(np.mean(np.log10(kpw_ship) - np.log10(v))):>+15.3f}"
-              f"{float(np.mean(np.log10(kpw_anch) - np.log10(v))):>+16.3f}")
-    print("\n   Across the whole plausible range the anchored composition is further")
-    print("   from the data than the shipped one, by a constant 0.21 log. The lever")
-    print("   moves both together, so it cannot flip the comparison -- only the")
-    print("   absolute verdict on whether the model is high or low.")
-    print("\n   What COULD flip it: the isotherm unit reading in section 1. Reading KF")
-    print("   in g/cm3 lowers the derived pore water ~6x, raises every RCF ~6x, and")
-    print("   would put the data ABOVE both compositions -- reversing the vote. That")
-    print("   reading is rejected on the Koc evidence, but it is the assumption to")
-    print("   attack if this result is ever doubted.")
+    rs = rows()
+    print("   The root water converts the dry-weight RCF and sets K_PW (with the lipid")
+    print("   restated at it), so the sourced range ends are run, not asserted:")
+    print(f"   {'corner (water, lipid)':24}{'equilibrium bias':>18}")
+    for c in ((NC.MID,) + NC.CORNERS):
+        obs = np.array([float(r["value"]) * (1.0 - species_comp(r["species"], c)[0])
+                        for r in rs])
+        k = np.array([ND.k_pw(LOG_KOW, *species_comp(r["species"], c)) for r in rs])
+        print(f"   {str(c):24}{float(np.mean(np.log10(k) - np.log10(obs))):>+18.3f}")
+    print("\n   What COULD flip the verdict: the isotherm unit reading in section 1.")
+    print("   Reading KF in g/cm3 lowers the derived pore water ~6x and raises every")
+    print("   RCF ~6x. That reading is rejected on the Koc evidence, but it is the")
+    print("   assumption to attack if this result is ever doubted.")
 
 
 # SI Table S2, carbamazepine and its four measured metabolites, ng/g dry weight.
@@ -268,9 +261,10 @@ def section6_translocation(drv):
         mm = ND.simulate_neutral(ND.NeutralCompound("carbamazepine", LOG_KOW), drv,
                                  comps=comps)
         lab = "none (recalcitrant)" if hl is None else f"{hl} d"
-        print(f"   {lab:>22}{mm['conc']['leaf'][i] / mm['conc']['root'][i]:>18.1f}")
+        last = mm['conc']['leaf'][i] / mm['conc']['root'][i]
+        print(f"   {lab:>22}{last:>18.1f}")
     print(f"\n   Metabolism CANNOT close it: even a 1.5-day half-life leaves the model")
-    print(f"   ~9x above the measured median of {np.median(obs):.2f}. So the leaf excess is")
+    print(f"   {last / np.median(obs):.0f}x above the measured median of {np.median(obs):.2f}. So the leaf excess is")
     print("   NOT only the missing gamma -- most of it is the driver mismatch, a rice")
     print("   season's transpiration per unit leaf mass applied to a 340 cm3 pot of")
     print("   lettuce. That is a WARNING about the Ge 2017 result: its half-life")
@@ -333,25 +327,17 @@ def main():
     print("\n" + "=" * 84)
     print("VERDICT")
     print("=" * 84)
-    print(f"   a-priori log10 RMSE {rmse:.3f} on 21 rows through the ODE, nothing fitted --")
-    print("   but on the appropriate EQUILIBRIUM basis it is 0.237 (see section 4g of")
-    print("   docs/neutral_dpu_validation.md): this table sits at log Kow 2.25, almost")
-    print("   exactly where the rice season's xylem drain is largest, so the ODE score")
-    print("   flatters it. Liu 2023 at 0.206 is the repo's best a-priori root result,")
-    print("   not this one.")
+    eq = V.compare_to_obs(OBS, drv, quiet=True, mode="equilibrium")
+    print(f"   a-priori log10 RMSE {rmse:.3f} on 21 rows through the ODE, {eq:.3f} on the")
+    print("   equilibrium basis, nothing fitted, each plant on its own sourced root.")
     print("\n   What this table does settle:")
-    print("     * it WEAKENS the Brunetti sighting -- measuring ~1.1 for the compound")
-    print("       Brunetti calibrated 13.3 for;")
-    print("     * it votes AGAINST restoring the Briggs anchor, joining Liu and Li")
-    print("       2019's SOIL table -- three tables against, one for;")
-    print("     * section 7 measures in-planta transformation instead of fitting it,")
-    print("       and finds carbamazepine is NOT recalcitrant in the shoot (leaf")
-    print("       parent fraction 0.49, as low as 0.17) even though its soil DT50")
-    print("       exceeds 1000 d. Soil persistence does not imply plant persistence.")
+    print("     * the Brunetti sighting weakens: a direct measurement of the compound")
+    print("       Brunetti calibrated 13.3 for (section 4);")
+    print("     * section 7 measures in-planta transformation instead of fitting it:")
+    print("       carbamazepine is NOT recalcitrant in the shoot even though its soil")
+    print("       DT50 exceeds 1000 d. Soil persistence does not imply plant persistence.")
     print("\n   And what it does NOT settle: four leafy/root vegetables, one compound,")
-    print("   one lipophilicity, no rice. It says nothing about the high-Kow end where")
-    print("   the Li 2019 hydroponic deficit lives, and section 6 shows the leaf side")
-    print("   is dominated by the rice-driver mismatch rather than by the model.")
+    print("   one lipophilicity, no rice; the leaf side (section 6) runs on rice drivers.")
     return rmse
 
 

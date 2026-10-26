@@ -56,6 +56,7 @@ sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
 
 import model_api as api                                       # noqa: E402
 import neutral_dpu as ND                                      # noqa: E402
+import neutral_composition as NC                              # noqa: E402
 
 TABLE = os.path.join(ROOT_DIR, "data_obs", "biocides_bat_census.csv")
 OUT_CSV = os.path.join(HERE, "bat_census_biocides.csv")
@@ -323,14 +324,16 @@ def overlap_check(quiet=False):
 
     Scored in EQUILIBRIUM mode. Both endpoints are equilibrium root partitions
     measured over hours to weeks, and reading them off a rice season (the site-year, 117.5 d)
-    imposes a Kow-dependent, purely model-side discount (docs section 4g)."""
+    imposes a Kow-dependent, purely model-side discount (docs section 4g). Each table runs on
+    its own plant's sourced composition (PREREG 5.10)."""
     res = {}
     liu = [r for r in _obs_rows(os.path.join(ROOT_DIR, "data_obs", "neutral_obs_liu2023.csv"))
            if r["compound"].strip().lower() == "propiconazole" and r["tissue"] == "root"]
     if liu:
         lk = float(liu[0]["log_kow"])
         obs = float(liu[0]["value"])
-        pred = ND.k_pw(lk, **_root_wl())
+        W, L = NC.spec("liu2023")          # the table's own plant (PREREG 5.10)
+        pred = ND.k_pw(lk, W=W["root"], L=L["root"])
         res["propiconazole"] = dict(log_kow=lk, obs=obs, pred=pred,
                                     err=math.log10(pred / obs), n=len(liu),
                                     src="Liu 2023 rice root RCF, hydroponic 72 h")
@@ -340,8 +343,10 @@ def overlap_check(quiet=False):
     if soil:
         lk = float(soil[0]["log_kow"])
         obs = np.array([float(r["value"]) for r in soil])
-        pred = ND.k_pw(lk, **_root_wl())
-        errs = np.log10(pred / obs)
+        comp = [NC.spec("li2019_soil", f_lip=float(r["f_lip"])) for r in soil]
+        preds = np.array([ND.k_pw(lk, W=W["root"], L=L["root"]) for W, L in comp])
+        pred = float(np.median(preds))
+        errs = np.log10(preds / obs)
         res["triclosan"] = dict(log_kow=lk, obs=float(np.median(obs)), pred=pred,
                                 err=float(np.mean(errs)),
                                 rmse=float(np.sqrt(np.mean(errs ** 2))), n=len(obs),
@@ -362,15 +367,15 @@ def overlap_check(quiet=False):
         if t:
             print(f"  triclosan (log Kow {t['log_kow']}) -- {t['src']}")
             print(f"    measured root BAF {t['lo']:.1f} to {t['hi']:.1f} "
-                  f"(median {t['obs']:.1f}, n={t['n']})   model K_PW {t['pred']:.1f}")
+                  f"(median {t['obs']:.1f}, n={t['n']})   model K_PW {t['pred']:.1f} (median, "
+                  "each row's own crop lipid)")
             print(f"    mean bias {t['err']:+.3f} log10, RMSE {t['rmse']:.3f}")
             print(f"    (Li 2019's own log Kow is {t['log_kow']}, against the report's")
             print("     audited 4.76 -- two independent sourcings 0.04 log apart, which")
             print("     is the one place the report's property audit can be checked")
-            print("     against something already in this repo. The bias is the same")
-            print("     sign and larger than that whole soil table's +0.260 (docs 4h),")
-            print("     and triclosan is an ACID, so part of it is speciation the")
-            print("     equilibrium K_PW cannot see -- see section 5(b).)")
+            print("     against something already in this repo. Triclosan is an ACID,")
+            print("     so part of the residual is speciation the equilibrium K_PW")
+            print("     cannot see -- see section 5(b).)")
         print()
         print("  Two substances is not a validation and neither is a rice/biocide")
         print("  result: propiconazole IS rice but is one hydroponic point, and the")

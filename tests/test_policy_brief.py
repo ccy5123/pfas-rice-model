@@ -174,10 +174,10 @@ def test_the_biocide_slide_quotes_the_biocide_record(brief, results):
     """Slide 8 quotes numbers made by another script; section 6 reads them back."""
     if ("6_biocides", "rho_fishBCF_root") not in results:
         pytest.skip("docs/policy_biocides_results.csv was absent when the brief ran")
-    assert round(v(results, "6_biocides", "rho_fishBCF_root"), 2) == 0.89
+    assert round(v(results, "6_biocides", "rho_fishBCF_root"), 2) == 0.90
     assert round(v(results, "6_biocides", "rho_fishBCF_straw"), 2) == -0.78
     assert v(results, "6_biocides", "max_tscf_bioaccumulative") < 0.021
-    assert "+0.89" in brief and "−0.78" in brief and "0.021" in brief
+    assert "+0.90" in brief and "−0.78" in brief and "0.021" in brief
     assert "**1.03배**" in brief
     assert v(results, "6_biocides", "n_runnable") == 117
 

@@ -153,10 +153,15 @@ def drivers(level: int, season: float = 40.0, n_t: int = 161,
 
 
 def lettuce_compartments(half_life: float | None = None, waters: dict | None = None):
-    """Briggs composition on lettuce water contents, Trapp 1994 lipids."""
+    """Briggs composition on lettuce water contents. Root lipid: Li 2019's 13-crop root
+    range (lettuce is not in their list; PREREG 5.10), restated at the root water; the shoot
+    keeps the rice dry-basis lipid restated at the lettuce water (no lettuce source)."""
+    import neutral_composition as NC
     gam = 0.0 if not half_life else float(np.log(2.0) / half_life)
-    return ND.rice_compartments(waters=dict(LETTUCE_WATER, **(waters or {})),
-                                gammas=dict.fromkeys(LETTUCE_WATER, gam))
+    W = dict(LETTUCE_WATER, **(waters or {}))
+    return ND.rice_compartments(
+        waters=W, lipids={"root": NC.value("crop", "root", "lipid_dw") * (1.0 - W["root"])},
+        gammas=dict.fromkeys(LETTUCE_WATER, gam))
 
 
 def predict(level: int, half_life: float | None = None, growth_form: str = "log10",

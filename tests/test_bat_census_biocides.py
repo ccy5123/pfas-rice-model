@@ -231,13 +231,14 @@ def test_overlap_apriori_predictions(tmp_path):
     p = ov["propiconazole"]
     assert p["log_kow"] == 3.72
     assert p["obs"] == pytest.approx(9.323, rel=1e-6)
-    # a-priori: log Kow in, K_PW out. Within a factor of ~1.1 of the measured rice root.
+    # a-priori: log Kow in, K_PW out (Liu's hydroponic seedling root, PREREG 5.10). Within a
+    # factor of ~1.25 of the measured rice root.
     assert abs(p["err"]) < 0.10
     t = ov["triclosan"]
     assert t["n"] == 14
-    # the model runs HIGH on the Li 2019 soil table (docs section 4h) and higher
-    # still on this acid; the SIGN is the finding, not the size
-    assert t["err"] > 0.2
+    # on each row's own crop lipid (PREREG 5.10: radish/carrot roots are lipid-poor) the
+    # model runs LOW on this acid
+    assert t["err"] < -0.1
     # and the two independent log Kow sourcings agree: Li 2019's 4.8 against the
     # report's audited 4.76
     assert abs(t["log_kow"] - 4.76) < 0.10

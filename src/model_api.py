@@ -1113,17 +1113,14 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=None, n_t=241,
     tscf : override the QSPR with a MEASURED TSCF; `tscf_model` selects between the
         Briggs 1982 bell (default) and the broader Schriever 2020 refit.
     lipid_source : which tissue-lipid reading the compartments are built from --
-        "measured" (default, L_root = 1% fw) or "briggs_anchor" (2.47% fw, the
-        value Briggs' own regression implies). The choice is genuinely open and
-        moves lipophilic compounds by up to 2.5x, so it is a named mode rather
-        than a buried constant; see `neutral_dpu.LIPID_SOURCES` and
-        docs/neutral_dpu_validation.md section 5. Every published neutral RMSE is
-        on "measured".
+        "measured" (default: the sourced dry-basis lipid restated at the organ water,
+        PREREG 5.10) or "briggs_anchor" (2.47% fw, the value Briggs' own regression
+        implies); see `neutral_dpu.LIPID_SOURCES`.
     waters / lipids : per-tissue fresh-weight water and lipid fractions, for a
         species other than rice, or to override one tissue of the selected
-        `lipid_source`. Rice-specific organ lipid remains an open gap: the root
-        value is corroborated by measured CEREAL roots (Li 2019), but stem/leaf
-        are still Trapp 1994's soybean figures.
+        `lipid_source`. Rice organ lipid is sourced on a dry basis (root: measured
+        cereal roots, Li 2019; stem/leaf: rice straw ether extract; grain: brown rice
+        crude fat) -- rice total root lipid itself is not measured.
     pKa / is_acid / pH : turn this into a WEAK ELECTROLYTE instead of a strictly
         neutral compound. `pKa=None` (default) is the neutral path and is
         bit-identical to before. With a pKa the compound is part neutral molecule

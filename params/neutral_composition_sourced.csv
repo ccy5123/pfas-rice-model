@@ -1,0 +1,29 @@
+# Neutral-path composition per plant (PREREG 5.10). water = water / fresh mass; lipid_dw = lipid per DRY
+# mass (a source's fresh lipid turned dry with that source's own water). The model runs each range at its
+# midpoint (PREREG 5.4) and reports the score at the corners. source = ids in docs/literature_db/sourced_inputs.csv.
+# plant "rice" = the tool's neutral compartments (its water is organ_mass.THETA_FW, not repeated here).
+plant,organ,quantity,low,high,basis,source
+rice,root,lipid_dw,0.053,0.114,cereal roots (maize 0.53 - wheat 1.14 % fw at 0.90 water),neu_lipid_li2019
+rice,stem,lipid_dw,0.009,0.021,rice straw ether extract (n = 161),neu_lipid
+rice,leaf,lipid_dw,0.009,0.021,rice straw ether extract (n = 161),neu_lipid
+rice,grain,lipid_dw,0.019,0.033,brown rice crude fat 1.6-2.8 g/100 g at 14 % moisture,neu_lipid
+rice_hydroponic_seedling,root,water,0.824,0.888,hydroponic rice seedling roots (12-d; 4-leaf),tis_theta_root
+rice_soil_vegetative,root,water,0.845,0.851,flooded soil pots 56 d after sowing,tis_theta_root
+rice_soil_vegetative,leaf,water,0.731,0.731,leaves at tillering (183 accessions),tis_theta_leaf
+radish,root,water,0.928,0.945,storage root,neu_water_radish
+radish,root,lipid_dw,0.010,0.010,0.10 % fw at 0.90,neu_lipid_li2019
+spinach,root,water,0.90,0.90,Li 2019 convention for fresh roots,neu_water_li2019
+spinach,root,lipid_dw,0.034,0.034,0.34 % fw at 0.90,neu_lipid_li2019
+lambs_lettuce,root,water,0.90,0.90,Li 2019 convention for fresh roots,neu_water_li2019
+lambs_lettuce,root,lipid_dw,0.010,0.114,Li 2019 13-crop root range (no species value),neu_lipid_li2019
+arugula,root,water,0.90,0.90,Li 2019 convention for fresh roots,neu_water_li2019
+arugula,root,lipid_dw,0.010,0.114,Li 2019 13-crop root range (no species value),neu_lipid_li2019
+li2019,root,water,0.90,0.90,Li's own basis for every row,neu_water_li2019
+barley,root,lipid_dw,0.100,0.100,1.00 % fw at 0.90,neu_lipid_li2019
+pumpkin,root,lipid_dw,0.070,0.070,0.70 % fw at 0.90 (Cucurbita pepo),neu_lipid_li2019
+cereal,root,lipid_dw,0.053,0.114,cereal roots (maize - wheat),neu_lipid_li2019
+crop,root,lipid_dw,0.010,0.114,Li 2019 13-crop root range (no species value),neu_lipid_li2019
+barley_seedling,stem,water,0.861,0.875,barley stem + leaf (34-d hydroponic),neu_water_barley_shoot
+barley_seedling,leaf,water,0.861,0.875,barley stem + leaf (34-d hydroponic),neu_water_barley_shoot
+barley_seedling,stem,lipid_dw,0.006,0.038,barley straw ether extract (n = 16),neu_lipid_barley_straw
+barley_seedling,leaf,lipid_dw,0.006,0.038,barley straw ether extract (n = 16),neu_lipid_barley_straw

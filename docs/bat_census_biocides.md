@@ -170,14 +170,16 @@ partition off a whole rice season imposes a Kow-dependent model-side discount):
 
 | substance | source | measured | model K_PW | error |
 |---|---|---|---|---|
-| **Propiconazole** | Liu 2023, **rice** root RCF, hydroponic 72 h | 9.32 | 9.64 | **+0.015 log (1.03×)** |
-| **Triclosan** | Li 2019 soil table, radish/carrot root, 14 rows | 5.4–58.9 (median 14.0) | 61.3 | +0.624 log, RMSE 0.688 |
+| **Propiconazole** | Liu 2023, **rice** root RCF, hydroponic 72 h | 9.32 | 11.59 | **+0.095 log (1.24×)** |
+| **Triclosan** | Li 2019 soil table, radish/carrot root, 14 rows | 5.4–58.9 (median 14.0) | 6.96 (median) | −0.197 log, RMSE 0.312 |
+
+Each table runs on its own plant's sourced composition (PREREG 5.10): Liu's hydroponic rice
+seedling root, and each Li soil row's own crop lipid at Li's 0.90 water.
 
 Two substances is not a validation. What they do is fix the sign: on the two
 places anything can be checked, the model is not wrong by an order of magnitude.
-The triclosan bias is the same sign as, and larger than, that whole soil table's
-documented +0.260 (§4h) — and triclosan is an **acid**, so part of the excess is
-speciation the equilibrium `K_PW` cannot see (next section).
+Triclosan is an **acid**, so part of its residual is speciation the equilibrium
+`K_PW` cannot see (next section).
 
 **Both scoreable substances now have their log Kow confirmed from outside.**
 Propiconazole's 3.72 is simultaneously this repo's cited value (Liu 2023 SI Table
@@ -233,16 +235,16 @@ with a caveat.**
 9.00 (its §8.11/§8.16). This model's root has no such turnover — the Briggs RCF
 has no descending limb — and its straw peaks at the TSCF bell, log Kow **1.75**,
 about 4.5 log units below BAT's peak. What the root does instead is **saturate
-kinetically**: root BAF / K_PW is 0.96 at log Kow 3.9, 0.78 at 6.3, 0.038 at 8.4
-and 0.0009 at 10.5 (half at 6.76). Above that the season is too short to equilibrate the root, so
+kinetically**: root BAF / K_PW is 0.96 at log Kow 3.9, 0.48 at 6.3, 0.016 at 8.4
+and 0.0004 at 10.5 (half at 6.26). Above that the season is too short to equilibrate the root, so
 the model's root number stops being a partition coefficient and becomes a rate.
 That is a limit of this model, stated here rather than discovered later.
 
 **(e) A fish BCF does not rank these substances the way a rice model does.**
 Spearman against BAT's Scenario A fish BCF over the **60** substances that have one:
-**root +0.892, straw −0.777**. The sample tripled across two rounds of data exchange
+**root +0.904, straw −0.777**. The sample tripled across two rounds of data exchange
 (20 → 35 → 60) and the relationship got *stronger* each time (+0.467 → +0.725 →
-+0.875, computed then on the pre-correction model; the current model gives +0.892
++0.875, computed then on the pre-correction model; the current model gives +0.904
 at n = 60) — the opposite of what an artefact does. Two exclusions are in the code
 rather than silent: the triamine, whose BAT output its own producers call
 uninterpretable (three charges against a tool that takes one pKa), and the

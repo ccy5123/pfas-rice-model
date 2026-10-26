@@ -231,7 +231,7 @@ section,key,value,unit,note
 6_biocides,n_runnable,117,행,
 6_biocides,n_inside_scope,69,행,
 6_biocides,n_excluded_ionisation,31,행,
-6_biocides,rho_fishBCF_root,0.892,-,from docs/policy_biocides_results.csv
+6_biocides,rho_fishBCF_root,0.904,-,from docs/policy_biocides_results.csv
 6_biocides,rho_fishBCF_straw,-0.777,-,from docs/policy_biocides_results.csv
 6_biocides,rho_n,60.0,종,from docs/policy_biocides_results.csv
 6_biocides,max_tscf_bioaccumulative,0.02059196237382389,-,from docs/policy_biocides_results.csv

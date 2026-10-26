@@ -7,6 +7,7 @@ import numpy as np
 import streamlit as st
 
 import model_api as api
+import neutral_dpu as ND
 import plots
 
 from ui.common import (_EX, _cong_label, _cong_label_ko, _PRESETS_KO, _SCENARIOS_KO, _mol_svg,
@@ -177,11 +178,11 @@ def _neutral_panel():
     with st.expander("🧪 Composition, phloem, air"):
         n["lipid_source"] = st.radio(
             "root lipid reading", ["measured", "briggs_anchor"], horizontal=True,
-            help="An OPEN question, so it is a switch. 'measured' = 1% fresh weight from "
-                 "measured cereal roots (default, and what every published number here is "
-                 "on); 'briggs_anchor' = 2.47%, what Briggs' 1982 regression implies — he "
-                 "measured no lipid at all. 2.5x apart for lipophilic compounds, ~equal "
-                 "below log Kow 1. Evidence is 3 measured tables to 1 against the anchor.")
+            help=f"'measured' (default) = measured cereal-root lipid (Li 2019), carried on a "
+                 f"dry basis and restated at the rice root's water: "
+                 f"{ND.RICE_LIPID_FW['root'] * 100:.2f}% fresh weight; 'briggs_anchor' = "
+                 f"{ND.BRIGGS_ANCHORED_LIPID_FW['root'] * 100:.2f}%, what Briggs' 1982 "
+                 f"regression implies — he measured no lipid at all.")
         n["phloem"] = st.checkbox(
             "phloem ON (departs from the base)", value=False,
             help="The neutral base excludes phloem transport — it is an addition of the "
@@ -291,9 +292,8 @@ def _neutral_panel():
         help=f"Used by the flooded Cwᵒ(t) shape and the live HYDRUS run (Kd = Koc·f_oc). "
              f"Default {koc_default:.1f} from {_src} (Karickhoff would give {karickhoff:.1f}) — "
              f"PROVISIONAL: no table in this repo scores a predicted Koc, and Li 2019's soil "
-             f"half shows the estimated sorption term is where the error collects (its bias is "
-             f"larger with an estimated K_om than with a measured one; "
-             f"validation/li2019_soil_table.py). Type a MEASURED Kd/f_oc here whenever you "
+             f"half shows the sorption term moves the result (its bias differs between rows "
+             f"with an estimated and a measured K_om; validation/li2019_soil_table.py). Type a MEASURED Kd/f_oc here whenever you "
              f"have one.")
     return n
 

@@ -80,14 +80,15 @@ def test_root_partition_ceiling_is_structural():
     comps = HW.lettuce_compartments()
     core = ND.neutral_compound(ND.NeutralCompound("chlorpyrifos", HW.LOG_KOW))
     kpw_root = float(binding_factors(comps, core)[0])
-    assert kpw_root == pytest.approx(15.8, abs=0.3)
+    # lettuce root at Li 2019's 0.90 water and 13-crop lipid range midpoint (PREREG 5.10)
+    assert kpw_root == pytest.approx(10.16, abs=0.05)
     res = HW.predict(10)
     assert res["conc"]["root"].max() / float(HW.exposure(10, 0.0)) < kpw_root * 1.01
 
 
 def test_the_basis_flips_the_verdict():
     """Read fresh, the measured root is far ABOVE the model's ceiling; read dry it
-    is BELOW. One unstated table footnote therefore decides whether this dataset
+    straddles it. One unstated table footnote therefore decides whether this dataset
     refutes or confirms the partition core -- which is why A3 concludes nothing
     about it."""
     comps = HW.lettuce_compartments()
@@ -95,8 +96,8 @@ def test_the_basis_flips_the_verdict():
     ceiling = float(binding_factors(comps, core)[0])
     fw = [HW.observed_baf(l, d, "root", "fw") for (l, d) in HW.TABLE1]
     dw = [HW.observed_baf(l, d, "root", "dw") for (l, d) in HW.TABLE1]
-    assert min(fw) > 2.5 * ceiling          # unreachable on every sampling
-    assert max(dw) <= 1.1 * ceiling         # bracketed, never far above
+    assert min(fw) > 4.0 * ceiling          # unreachable on every sampling
+    assert min(dw) < ceiling < max(dw) <= 2.0 * ceiling   # dry readings straddle it
     assert all(f > d for f, d in zip(fw, dw))
 
 

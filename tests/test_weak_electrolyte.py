@@ -128,8 +128,8 @@ def test_neutral_path_is_unmoved():
     tolerance above is about the solver and not about the partition core.
     """
     r = api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0)
-    assert r["baf_final"]["root"] == pytest.approx(1.3903352902730846, rel=GOLDEN_REL)
-    assert r["K_PW"]["root"] == 1.6524200621153846
+    assert r["baf_final"]["root"] == pytest.approx(2.4800832101100543, rel=GOLDEN_REL)   # PREREG 5.10 composition
+    assert r["K_PW"]["root"] == 2.9642732078564134
     # the compound the neutral path builds must carry NO speciation fields
     core = ND.neutral_compound(ND.NeutralCompound("x", 2.45))
     assert core.pKa is None and core.P_n == 0.0 and core.z is None

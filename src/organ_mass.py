@@ -61,14 +61,17 @@ def fresh_factor(organ):
     return 1.0 / (1.0 - THETA_FW[organ])
 
 
-def to_model_mass(b):
+def to_model_mass(b, theta=None):
     """Convert a crop-model biomass dict {root,stem,leaf,grain: DRY kg/hill, ...} to FRESH
     organ mass. Non-organ keys (e.g. ORYZA's `leaf_death_rate`, a RELATIVE rate that a
-    constant factor leaves unchanged) are passed through untouched."""
+    constant factor leaves unchanged) are passed through untouched. `theta` overrides the
+    organ water {organ: theta} (the neutral validation tables run on their own plant's
+    water, PREREG 5.10)."""
+    th = dict(THETA_FW, **(theta or {}))
     out = dict(b)
     for o in ORGANS:
         if o in b and b[o] is not None:
-            out[o] = np.asarray(b[o], float) * fresh_factor(o)
+            out[o] = np.asarray(b[o], float) * (1.0 / (1.0 - th[o]))
     return out
 
 
@@ -80,7 +83,7 @@ def to_model_mass(b):
 MASS_FLOOR = 1e-9            # kg
 
 
-def organ_matrix(b, floor=MASS_FLOOR):
+def organ_matrix(b, floor=MASS_FLOOR, theta=None):
     """(n, 4) FRESH mass matrix [root, stem, leaf, grain], floored at `MASS_FLOOR`."""
-    m = to_model_mass(b)
+    m = to_model_mass(b, theta)
     return np.maximum(np.column_stack([m[o] for o in ORGANS]), floor)

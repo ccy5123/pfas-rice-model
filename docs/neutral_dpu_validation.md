@@ -3,31 +3,31 @@
 > `src/neutral_dpu.py` · `validation/neutral_dpu_validation.py` · `tests/test_neutral_dpu.py`
 > **Status: IMPLEMENTED, anchors verified at source, validated a-priori (nothing fitted).**
 >
-> **Current numbers** (generic rice drivers on FRESH organ mass, `lipid_source="measured"`, organ water
-> = the sourced rice composition since addendum 5.8; `python validation/neutral_scores.py` →
-> `params/neutral_scores.json`, the record the app reads):
+> **Current numbers** (generic rice drivers on FRESH organ mass; composition of addendum 5.10: lipid on a
+> dry basis restated at the organ water, each table on its own plant's sourced water and lipid,
+> `params/neutral_composition_sourced.csv`; `python validation/neutral_scores.py` → `params/neutral_scores.json`,
+> the record the app reads; [min, max] over the sourced range corners):
 >
 > | table | n | log10 RMSE (ODE) | (equilibrium) |
 > |---|---|---|---|
-> | Liu 2023, rice root partition | 14 | **0.256** | **0.229** |
-> | Ge 2017, per-organ TF at 60 d | 6 | **0.702** | — (the season is the endpoint) |
-> | Li 2019 hydroponic RCF, 11 species | 29 | 0.568 | — |
-> | Kodešová 2019 carbamazepine, 3 soils | 21 | 0.469 | 0.392 |
-> | Li 2019 soil RCF, 13 crops | 376 | 0.549 | 0.639 |
-> | Briggs 1983 barley central stem (SCF) | 30 | 0.313 | (driver-free) |
+> | Liu 2023, rice root partition (read as fresh weight; as dry weight 0.821) | 14 | **0.212** [0.208, 0.278] | **0.204** |
+> | Ge 2017, leaf TF at 60 d (stem rows unscored: no vegetative rice stem water) | 3 | 0.631 [0.568, 0.724] | — |
+> | Li 2019 hydroponic RCF, 11 species (Li's 0.90 water; species lipid or Li's 13-crop range) | 29 | 0.677 [0.525, 1.115] | — |
+> | Kodešová 2019 carbamazepine, 4 plants, 3 soils | 21 | 0.157 [0.160, 0.193] | 0.172 |
+> | Li 2019 soil RCF, 13 crops (each row's own lipid) | 376 | 0.418 | 0.461 |
+> | Briggs 1983 barley central stem (SCF; barley shoot composition) | 30 | 0.357 [0.317, 0.417] | (driver-free) |
 > | Schriever 2020 TSCF, un-ionised rows | 30 | RMSE 0.310 (linear) | (driver-free) |
 >
-> All but the QSPR are worse than before addendum 5.8 (Liu 0.213, Ge 0.311, Kodešová 0.216, Li hydroponic
-> 0.546, Li soil 0.550, Briggs 0.299). Diagnosis (`docs/PREREG_sourced_values.md` §6): the neutral lipid
-> fractions are fresh-weight values reported at ~90 % water, and the comparison converts other species'
-> dry-weight observations with the rice root's water; the composition is restated per dataset in
-> amendment 2. Numbers quoted in the body below predate 5.8.
+> Numbers quoted in the body below predate addendum 5.10 (several also 5.8); the body is the derivation
+> record. The Briggs-anchor discussion in the body (the rice root's 1 % fw lipid 2.5x below Briggs' fitted
+> term) is superseded: the 1 % was a fresh fraction reported at 0.90 water run at another water; on the dry
+> basis the rice root runs 2.40 % fw (anchor 2.47 %).
 >
 > Weak electrolytes (§4l, Schriever's 67 ionisable rows; run through `model_api.simulate_neutral`, i.e.
-> the calibration site-year; re-run after 5.8): Spearman(f_n, TSCF) +0.480; speciation ON
-> lifts the model's rank +0.284 → +0.524 (acid reading), RMSE 0.310 → 0.288, and under-delivers
-> (bias −0.181). Bypass `g_apo` (§4m): ordering peak at 0.2 (rank +0.615), RMSE optimum at 2.0
-> (rank +0.452); nothing adopted.
+> the calibration site-year; re-run after 5.10): Spearman(f_n, TSCF) +0.480; speciation ON
+> lifts the model's rank +0.284 → +0.527 (acid reading), RMSE 0.310 → 0.288, and under-delivers
+> (bias −0.181). Bypass `g_apo` (§4m): ordering peak at 0.2 (rank +0.622), RMSE optimum at 2.0
+> (rank +0.450); nothing adopted.
 >
 > **Read the body as the derivation record.** §2–§4 were written before the organ-mass fix (crop
 > dry matter was used as the fresh organ mass), so the numbers quoted inside them (Liu 0.281, Ge 0.783, Kodešová 0.191, ...) are superseded by the table above.

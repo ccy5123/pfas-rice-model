@@ -256,14 +256,16 @@ log10 RMSE (records: `validation/transfer_sourced.json`, `params/transfer_scores
 
 ### 6.6 Neutral organics (Briggs/Kow path; nothing fitted)
 `src/neutral_dpu.py` — the same ODE with z = 0, no carrier, K_PW = W + L·a·Kow^b, f_xy = TSCF(log Kow),
-phloem off. The validation tables run on the generic drivers (other species and sites). Current a-priori
-scores (log10 RMSE; `validation/neutral_scores.py` → `params/neutral_scores.json`): Liu 2023 rice root
-0.256 (equilibrium basis 0.229) · Ge 2017 per-organ TF 0.702 · Kodešová 2019 carbamazepine root 0.469
-(0.392) · Li 2019 hydroponic 0.568 · Li 2019 soil 0.549 through the ODE (0.639 as an equilibrium
-partition) · Briggs 1983 barley stem 0.313. All are worse than before addendum 5.8 (one organ water on
-the neutral path): the neutral lipid fractions are fresh-weight fractions at ~90 % water while the
-comparison converts other species' dry-weight observations with the rice root's water — a basis
-mismatch, restated per dataset in amendment 2 (`docs/PREREG_sourced_values.md` §6).
+phloem off. Composition (addendum 5.10, `src/neutral_composition.py`, `params/neutral_composition_sourced.csv`):
+lipid carried on a dry basis and restated at the organ water (rice root = Li 2019 cereal roots, stem/leaf =
+rice straw ether extract, grain = brown rice crude fat); each validation table runs on its own plant's water
+and lipid, with its dry-weight observations converted by that water. The tables run on the generic drivers.
+Current a-priori scores (log10 RMSE at the midpoints, [corners]; `validation/neutral_scores.py` →
+`params/neutral_scores.json`): Liu 2023 rice root 0.212 [0.208, 0.278] (equilibrium 0.204; read as dry
+weight 0.821) · Ge 2017 leaf TF 0.631 (stem rows unscored: no vegetative rice stem water found) · Kodešová
+2019 0.157 (equilibrium 0.172) · Li 2019 hydroponic 0.677 [0.525, 1.115] · Li 2019 soil 0.418 (equilibrium
+0.461) · Briggs 1983 barley stem 0.357. Expectations: N1 wrong (both Li halves moved > 0.05, opposite ways),
+N2 and N3 held.
 Weak electrolytes (`pKa=`, `weak_electrolyte_tscf.py`, 67 ionisable Schriever rows): the direction is
 supported but the scale is not; nothing adopted (`docs/neutral_dpu_validation.md`). Plant–air exchange
 is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested against data.
@@ -305,7 +307,7 @@ is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested agains
   `oryza2000_kim_face_phenology.py`, `oryza2000_kim_face_nursery_events.py`,
   `oryza2000_kim_face_gao_japonica.py`, `oryza2000_wuxi_partitioning.py`.
 - **Neutral path**: `validation/neutral_dpu_validation.py --obs data_obs/neutral_obs_liu2023.csv`
-  (or `…ge2017.csv`, `--lipid-source both`, `--mode equilibrium`), `li2019_rcf_apriori.py`,
+  (or `…ge2017.csv`, `--lipid-source both`, `--mode equilibrium`), `neutral_scores.py`,
   `li2019_soil_table.py`, `kodesova2019_carbamazepine.py`, `briggs1983_stem.py`,
   `briggs1983_shoot.py`, `hwang2017_lettuce.py`, `schriever2020_tscf.py`,
   `weak_electrolyte_tscf.py` (`--fast`).
@@ -322,7 +324,7 @@ is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested agains
   first version (ccy5123/pfas-rice-model#65) carried pre-correction numbers.
 - **Compound lookup** (EPA CompTox): `python src/chem_lookup.py carbamazepine` (needs `CTX_API_KEY`;
   base URL `https://comptox.epa.gov/ctx-api`).
-- **Tests**: `pytest` (487 pass with the full stack, plus 1 module-level skip for `test_sci_adk_rigor.py` without sci-adk; ~8 min). CI (`.github/workflows/tests.yml`) runs the whole suite;
+- **Tests**: `pytest` (486 pass with the full stack, plus 1 module-level skip for `test_sci_adk_rigor.py` without sci-adk; ~8 min). CI (`.github/workflows/tests.yml`) runs the whole suite;
   `rigor.yml` runs the sci-adk over-claim guard on the frozen `runs/` records.
 
 ## 8. Conventions

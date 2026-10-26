@@ -264,8 +264,8 @@ editable default of the sidebar's `soil Koc` field, and it drives the flooded `C
 and the live HYDRUS run (`hydrus_drivers(log_kow=…)` or `Kd=`, via `soil_hydrus.inputs_from_hydrus(Kd=…)`).
 It is flagged **PROVISIONAL** for a specific reason: no table in this repo scores a *predicted*
 Koc (the neutral tables either supply the exposure directly or carry the paper's own measured
-isotherm), and Li 2019's soil half shows exactly what is at stake — root bias **+0.033** with an
-experimental `K_om` against **+0.291** with an estimated one. Type a measured value whenever
+isotherm), and Li 2019's soil half shows what is at stake — its root bias differs between rows
+with an experimental and an estimated `K_om` (`validation/li2019_soil_table.py`). Type a measured value whenever
 you have one — or let the CompTox lookup above supply the dashboard's OPERA `Koc`
 (returned **linear, in L/kg**), which then replaces the Karickhoff default and is
 labelled as predicted.

@@ -72,9 +72,9 @@ api.simulate_neutral(2.45, name="carbamazepine")      # a neutral organic by log
 - **Sourced input ranges** move the default's harvest BAF by grain ÷2.5 / ×2.1, straw ÷1.35 / ×1.32,
   root ÷1.27 / ×1.25 (median of 11 congeners); the panicle's transpiration share at heading leads
   the grain band (`params/input_range_band.json`).
-- **Neutral organics** (nothing fitted): rice root partition log10 0.26 (Liu 2023), per-organ TF
-  0.70 (Ge 2017), barley stem 0.31 (Briggs 1983); the neutral composition basis is being restated
-  per dataset (amendment 2).
+- **Neutral organics** (nothing fitted; each table on its own plant's sourced composition): rice
+  root partition log10 0.21 (Liu 2023), carbamazepine roots 0.16 (Kodešová 2019), Li 2019 soil 0.42
+  / hydroponic 0.68, barley stem 0.36 (Briggs 1983).
 
 The general-audience view shows every absolute number with a ×/÷ band set by the default
 configuration's transfer error (`model_api.APRIORI_OOS_SCORES`: median log10 0.49, ×3.1).

@@ -2,18 +2,46 @@
  "source": "validation/neutral_scores.py (a priori; nothing fitted)",
  "units": "log10 RMSE",
  "scores": {
-  "Liu 2023 rice root": 0.2561,
-  "Ge 2017 per-organ TF": 0.7025,
-  "Kodesova 2019 carbamazepine root": 0.4691,
-  "Li 2019 hydroponic": 0.5676,
-  "Li 2019 soil, through the ODE": 0.5493,
-  "Briggs 1983 barley stem": 0.3128
+  "Liu 2023 rice root": 0.2123,
+  "Ge 2017 per-organ TF": 0.6306,
+  "Kodesova 2019 carbamazepine root": 0.1569,
+  "Li 2019 hydroponic": 0.6775,
+  "Li 2019 soil, through the ODE": 0.4178,
+  "Briggs 1983 barley stem": 0.3575
  },
  "equilibrium_basis": {
-  "Liu 2023 rice root": 0.2292,
-  "Kodesova 2019 carbamazepine root": 0.3917,
-  "Li 2019 soil, through the ODE": 0.6391
+  "Liu 2023 rice root": 0.2042,
+  "Kodesova 2019 carbamazepine root": 0.1715,
+  "Li 2019 soil, through the ODE": 0.4613
  },
+ "range_corners": {
+  "Liu 2023 rice root": [
+   0.2079,
+   0.2784
+  ],
+  "Ge 2017 per-organ TF": [
+   0.568,
+   0.7241
+  ],
+  "Kodesova 2019 carbamazepine root": [
+   0.1601,
+   0.1925
+  ],
+  "Li 2019 hydroponic": [
+   0.525,
+   1.1146
+  ],
+  "Li 2019 soil, through the ODE": [
+   0.4178,
+   0.4178
+  ],
+  "Briggs 1983 barley stem": [
+   0.3173,
+   0.4175
+  ]
+ },
+ "liu2023_read_as_dw": 0.8213,
+ "composition": "PREREG 5.10: params/neutral_composition_sourced.csv",
  "briggs_stem_n": 30,
- "briggs_stem_bias": 0.0066
+ "briggs_stem_bias": 0.2497
 }
