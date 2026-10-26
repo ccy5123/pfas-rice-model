@@ -8,13 +8,11 @@
 # blades; src/harvest.py) with Yamazaki 2023's root / straw / grain
 # (data_obs/obs_baf_Yamazaki.csv, built from the SI).
 #
-#   python reproduce_demo.py           # the DEFAULT configuration (redistributed shoot +
-#                                      #   lipid loading): r_eq and L_Ph fitted per congener
-#                                      #   to root and grain, the lipid constants across
-#                                      #   congeners -- the straw is predicted by the shared
-#                                      #   constants, not fitted per congener
-#   python reproduce_demo.py --fit     # redistributed_fit: f_xy fitted to the straw as well
-#                                      #   -> a REPRODUCTION (saturated, 3 params / 3 cells)
+#   python reproduce_demo.py           # the DEFAULT configuration (redistributed_fit; amendment
+#                                      #   2a): r_eq, f_xy and L_Ph fitted per congener to root,
+#                                      #   straw and grain -> a REPRODUCTION (3 params / 3 cells)
+#   python reproduce_demo.py --lipid   # redistributed_lipid (amendment 1's default): the straw
+#                                      #   predicted by two lipid constants shared by all chains
 #   python reproduce_demo.py --free    # redistributed_free: the monotone a-priori f_xy
 #
 # The fits are made by validation/refit_sourced.py (pre-registered,
@@ -29,17 +27,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "src"))
 import model_api as api   # noqa: E402
 
-VARIANTS = {"default": dict(), "fit": dict(lipid_loading=False, f_xy_source="fit"),
+VARIANTS = {"default": dict(), "lipid": dict(lipid_loading=True),
             "free": dict(lipid_loading=False)}
-CHOICE = next((v for v in ("fit", "free") if f"--{v}" in sys.argv), "default")
+CHOICE = next((v for v in ("lipid", "free") if f"--{v}" in sys.argv), "default")
 TISS = ("root", "straw", "grain")
 
 
 def main(choice=CHOICE, verbose=True):
     say = print if verbose else (lambda *a, **k: None)
     kw = VARIANTS[choice]
-    v = api.variant_key(kw.get("shoot"), kw.get("f_xy_source", "recommended"),
-                        kw.get("lipid_loading"))
+    v = api.variant_key(kw.get("shoot"), kw.get("f_xy_source"), kw.get("lipid_loading"))
     say(f"variant: {v}  (Yamazaki 2020 site-year, dry basis, two harvest runs)")
     say(f"{'PFAS':8}{'nC':>3}{'f_xy':>8} | " + "".join(f"{k + ' m/o':>18}" for k in TISS))
     err = {k: [] for k in TISS}
@@ -52,15 +49,15 @@ def main(choice=CHOICE, verbose=True):
         out[c] = pr
         for k in o:
             err[k].append(np.log10(pr[k] / o[k]))
-        fxy = api._transport_defaults(api._CONG[c], kw.get("f_xy_source", "recommended"),
-                                      kw.get("lipid_loading"), kw.get("shoot"))[0]
+        fxy = api._resolve_transport(api._CONG[c], kw.get("f_xy_source"),
+                                     kw.get("lipid_loading"), kw.get("shoot"))[0]
         say(f"{c:8}{api._CONG[c]['n_C']:>3}{fxy:>8.4f} | "
             + "".join(f"{pr[k]:>8.3g}/{o.get(k, float('nan')):<9.3g}" for k in TISS))
     allerr = [e for vals in err.values() for e in vals]
     rmse = float(np.sqrt(np.mean(np.square(allerr))))
     per = {k: float(np.sqrt(np.mean(np.square(vals)))) for k, vals in err.items()}
     say(f"\nlog10 RMSE = {rmse:.3f}  (" + ", ".join(f"{k} {x:.3f}" for k, x in per.items()) + ")")
-    if choice == "fit":
+    if v.endswith("_fit"):
         say("NOTE: a saturated fit (3 parameters per congener vs 3 cells) -- a REPRODUCTION, not a "
             "prediction.")
     else:

@@ -19,8 +19,9 @@ by log Kow.
 
 ```bash
 pip install -r requirements.txt
-python reproduce_demo.py          # Yamazaki 2020 site-year, dry basis, fitted transport (a reproduction)
-python reproduce_demo.py --rec    # monotone physical f_xy: straw is a prediction
+python reproduce_demo.py          # Yamazaki 2020 site-year, dry basis, the default (a reproduction)
+python reproduce_demo.py --lipid  # shared lipid constants: the straw is a prediction
+python reproduce_demo.py --free   # monotone physical f_xy
 pytest                            # tests
 ```
 

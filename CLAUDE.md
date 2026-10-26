@@ -46,7 +46,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ```
 .
 ├── CLAUDE.md  README.md  requirements.txt  requirements-app.txt
-├── reproduce_demo.py                 # entry point: Yamazaki 2020 site-year, dry basis (default | --fit | --free)
+├── reproduce_demo.py                 # entry point: Yamazaki 2020 site-year, dry basis (default | --lipid | --free)
 ├── build_parameters.py               # (re)assembles params/parameters.json from source tables + refit_sourced.csv
 ├── app.py                            # Streamlit visualization tool (plant/soil map + exposure modes)
 ├── src/
@@ -214,7 +214,7 @@ outcome: `docs/PREREG_sourced_values.md` §8):
 - Pre-registered expectations (amendment 2a): E17–E19, E21 (direction; Choi's husk/brown ratio is not
   reached: PFOA −0.16, PFOS −0.85 log on the incumbent), E22, E24 held; E20 (the straw moved 0.108 with the
   shared lipid constants) and E23 (the crop sets, not the panicle share, lead the grain band) wrong.
-- `python reproduce_demo.py` prints the default (`--fit`, `--free`: the other redistributed variants).
+- `python reproduce_demo.py` prints the default (`--lipid`, `--free`: the other redistributed variants).
 
 ### 6.3 Transfer tests (no parameter fitted to the transfer data) — `validation/transfer_sourced.py`
 log10 RMSE (records: `validation/transfer_sourced.json`, `params/transfer_scores.json`). Li grain on brown
@@ -306,7 +306,7 @@ is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested agains
 ## 7. Build & run
 - `pip install -r requirements.txt` (RDKit and phydrus included; `requirements-app.txt` for the app,
   `requirements-validation.txt` for emcee).
-- **Reproduction**: `python reproduce_demo.py` (the default on the site-year, dry basis; `--fit`,
+- **Reproduction**: `python reproduce_demo.py` (the default on the site-year, dry basis; `--lipid`,
   `--free`). Re-fit: `python validation/refit_sourced.py` (~30 min; every variant, checkpointed,
   `--resume`; writes `validation/refit_sourced.json`, `params/refit_sourced.csv`,
   `params/lipid_loading_sourced.json`), then `python build_parameters.py`.

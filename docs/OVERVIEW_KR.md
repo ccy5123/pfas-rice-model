@@ -263,7 +263,7 @@ Liu 2023 벼 뿌리 분배 0.212(평형 0.204; 건중으로 읽으면 0.821) · 
 ## 7. 재현 방법
 ```bash
 pip install -r requirements.txt
-python reproduce_demo.py                          # Yamazaki 현장 연도, 기본 구성 (--fit, --free)
+python reproduce_demo.py                          # Yamazaki 현장 연도, 기본 구성 (--lipid, --free)
 python validation/refit_sourced.py                # 보정 다시 하기 (~30분, 사전 등록, --resume)
 python validation/transfer_sourced.py             # 전이 시험 (Tang / Kim / Li) + 판정
 python validation/input_range_band.py             # 출처 있는 입력 범위 밴드
