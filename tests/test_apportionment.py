@@ -99,7 +99,7 @@ def test_no_phloem_loading_makes_grain_xylem_fed():
 def test_model_api_apportionment_runs():
     r = api.apportionment("PFOA", n_t=121)
     assert r["success"]
-    assert set(r["fraction"]) == {"root", "stem", "leaf", "grain"}
+    assert set(r["fraction"]) == {"root", "stem", "leaf", "grain", "husk"}   # husk: PREREG 7.2
     assert np.isfinite(r["grain_phloem_fraction"])
     # the soil is the sole external source -> root soil-uptake share is the bulk
     assert r["fraction"]["root"]["soil_uptake"] > r["fraction"]["root"]["phloem_recirc"]

@@ -39,9 +39,13 @@ def theta(organ, value):
 
 
 def _bafs(organ, value, name="PFOA"):
-    """Root/straw/grain BAF on the fresh and on the dry basis (harvest operator)."""
+    """Root/straw/grain BAF on the fresh and on the dry basis (harvest operator), with the
+    organ's water held at `value` through the season: its stage anchors (PREREG 7.1) both at
+    `value`, and the constant copies too."""
+    anchors = ({organ: [float(value)] * len(om.THETA_STAGE[organ]["dvs"])}
+               if organ in om.THETA_STAGE else None)            # the grain is not staged
     with theta(organ, value):
-        r = api.simulate(name, **api.FOUR_POOL_FREE)
+        r = api.simulate(name, **api.FOUR_POOL_FREE, scenario_kw={"theta_anchors": anchors})
     C = {k: r["conc"][k][-1] / r["cwo_ref"] for k in api.TISSUES}
     fw = dict(root=C["root"], straw=r["straw_baf"], grain=C["grain"])
     dw = {k: r["baf_final_dw"][k] for k in ("root", "straw", "grain")}

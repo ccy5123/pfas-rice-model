@@ -232,12 +232,33 @@ def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=C
     return out
 
 
-def drivers_from_run(run, Cwo=1.0):
-    """A `model_api.simulate(drivers=...)` dict from one plant run (fresh organ mass)."""
+def drivers_from_run(run, Cwo=1.0, organ_water="constant", grain_basis="panicle",
+                     theta_anchors=None, panicle_kw=None):
+    """A `model_api.simulate(drivers=...)` dict from one plant run (fresh organ mass).
+
+    organ_water "stage": root, stem and leaf water follow the run's DVS (PREREG 7.1) and the dict
+    carries the theta(t) matrix that made M fresh ("theta"); "constant": the composition table's.
+    grain_basis "brown": the grain column is brown rice and the panicle remainder's DRY mass is in
+    "husk" (PREREG 7.2, `panicle.split_biomass`); "panicle": the grain is ORYZA's WSO."""
+    import panicle as pn
     b = {k: run[k] for k in ("root", "stem", "leaf", "grain")}
-    return dict(t=run["t"], Cwo=np.full_like(run["t"], float(Cwo)), Qtp=run["Qtp"],
-                M=om.organ_matrix(b), leaf_loss=run["leaf_death_rate"],
-                mass_basis=om.MASS_BASIS, dvs=np.asarray(run["dvs"], float))
+    b["dvs"] = np.asarray(run["dvs"], float)
+    if grain_basis == "brown":
+        b = pn.split_biomass(b, run["t"], **(panicle_kw or {}))
+    elif grain_basis != "panicle":
+        raise ValueError(f"grain_basis must be 'brown' or 'panicle', got {grain_basis!r}")
+    if organ_water not in ("stage", "constant"):
+        raise ValueError(f"organ_water must be 'stage' or 'constant', got {organ_water!r}")
+    stage = organ_water == "stage"
+    d = dict(t=run["t"], Cwo=np.full_like(run["t"], float(Cwo)), Qtp=run["Qtp"],
+             M=om.organ_matrix(b, stage=stage, anchors=theta_anchors),
+             leaf_loss=run["leaf_death_rate"], mass_basis=om.MASS_BASIS, dvs=b["dvs"])
+    if stage:
+        d["theta"] = om.theta_matrix(b, len(run["t"]), stage=True, anchors=theta_anchors)
+    if grain_basis == "brown":
+        d["husk"] = np.asarray(b["husk"], float)
+        d["panicle"] = np.asarray(b["panicle"], float)
+    return d
 
 
 def yamazaki2020_runs(**kw):

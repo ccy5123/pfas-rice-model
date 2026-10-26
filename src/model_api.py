@@ -95,6 +95,14 @@ T_C_PH = range_mid("T_C_Ph")
 # solute delivered to an evaporating organ stays there (the module's physics); phloem export
 # is a separate term -- 1 is derived, not chosen (PREREG 5.2)
 RETENTION = 1.0
+# amendment 2a (PREREG 7.1, 7.2): organ water follows the development stage; the grain pool is
+# brown rice and the panicle's transpired solute stays in the husk + rachis pool. The amendment-1
+# forms stay runnable: organ_water="constant", grain_basis="panicle".
+ORGAN_WATERS = ("stage", "constant")
+GRAIN_BASES = ("brown", "panicle")
+DEFAULT_ORGAN_WATER = "stage"
+DEFAULT_GRAIN_BASIS = "brown"
+_CROP_KEYS = ("organ_water", "grain_basis", "theta_anchors", "panicle_kw")
 # LINEAR EQUILIBRIUM root entry lam_eq*(r_eq*Cwo - Cw_root): r_eq is fitted per congener;
 # lam_eq is numerical and admissible only because the results do not depend on it once it
 # is this large (validation/numerics_convergence.py)
@@ -466,14 +474,46 @@ def scenario_drivers(scenario=DEFAULT_SCENARIO, Cwo=1.0, harvest="mean", **unkno
     if scenario != "yamazaki2020":
         raise ValueError(f"no site-year drivers for scenario {scenario!r}")
     import site_scenario as ss
+    crop = _crop_kw(unknowns)
     run = site_run(harvest, **unknowns)
-    d = ss.drivers_from_run(run, Cwo=Cwo)
+    d = ss.drivers_from_run(run, Cwo=Cwo, **crop)
     return {k: (np.array(v, copy=True) if isinstance(v, np.ndarray) else v) for k, v in d.items()}
+
+
+def _crop_kw(kw):
+    """Pop the amendment-2a crop options (organ water, grain basis and their band ends) out of a
+    scenario dict, with the defaults filled in."""
+    crop = {k: kw.pop(k) for k in _CROP_KEYS if k in kw}
+    crop.setdefault("organ_water", DEFAULT_ORGAN_WATER)
+    crop.setdefault("grain_basis", DEFAULT_GRAIN_BASIS)
+    if crop["organ_water"] not in ORGAN_WATERS:
+        raise ValueError(f"organ_water must be one of {ORGAN_WATERS}, got {crop['organ_water']!r}")
+    if crop["grain_basis"] not in GRAIN_BASES:
+        raise ValueError(f"grain_basis must be one of {GRAIN_BASES}, got {crop['grain_basis']!r}")
+    return crop
+
+
+def _crop_drivers(t, b, crop):
+    """(M, extras) from a DRY biomass dict on the grid `t` under the crop options: extras holds
+    "theta" (PREREG 7.1) and "husk"/"panicle" (PREREG 7.2) when they apply (need b["dvs"])."""
+    import panicle as pn
+    has_dvs = b.get("dvs") is not None
+    extras = {}
+    if crop["grain_basis"] == "brown" and has_dvs:
+        b = pn.split_biomass(b, t, **(crop.get("panicle_kw") or {}))
+        extras.update(husk=np.asarray(b["husk"], float), panicle=np.asarray(b["panicle"], float))
+    stage = crop["organ_water"] == "stage" and has_dvs
+    anchors = crop.get("theta_anchors")
+    M = om.organ_matrix(b, stage=stage, anchors=anchors)
+    if stage:
+        extras["theta"] = om.theta_matrix(b, len(t), stage=True, anchors=anchors)
+    return M, extras
 
 
 def _default_drivers(season, n_t, Cwo, measured_forcing, biomass="oryza2000",
                      scenario=DEFAULT_SCENARIO, scenario_kw=None):
-    """The built-in drivers: (t, Cwo, Qtp, M, leaf_loss, M_basis, dvs).
+    """The built-in drivers as a dict {t, Cwo, Qtp, M, leaf_loss, mass_basis, dvs[, theta, husk,
+    panicle]} (the last three under the amendment-2a crop options, `_crop_kw`).
 
     measured_forcing and scenario "yamazaki2020" (DEFAULT): the calibration site-year
         (`scenario_drivers`); the scenario sets the season (transplanting to harvest) and the
@@ -491,23 +531,27 @@ def _default_drivers(season, n_t, Cwo, measured_forcing, biomass="oryza2000",
     if scenario == "yamazaki2020":
         d = scenario_drivers(scenario, Cwo=Cwo, **(scenario_kw or {}))
         ss.check_season(season, d["t"])
-        return d["t"], d["Cwo"], d["Qtp"], d["M"], d["leaf_loss"], d["mass_basis"], d.get("dvs")
+        return d
     if season is None:
         raise ValueError("the generic drivers need an explicit season (days)")
+    crop = _crop_kw(dict(scenario_kw or {}))
     season = float(season)
     t = np.linspace(0.0, season, int(n_t))
     Qtp = fr.Q_TP(t, season)
     b = _biomass_fn(biomass)(t, season)
-    M = om.organ_matrix(b)
+    M, extras = _crop_drivers(t, b, crop)
     leaf_loss = b.get("leaf_death_rate")                # only the senescing ORYZA driver supplies it
-    Cwo_series = np.full_like(t, float(Cwo))
-    return t, Cwo_series, Qtp, M, leaf_loss, MASS_BASIS, b.get("dvs")
+    return dict(t=t, Cwo=np.full_like(t, float(Cwo)), Qtp=Qtp, M=M, leaf_loss=leaf_loss,
+                mass_basis=MASS_BASIS, dvs=b.get("dvs"), **extras)
 
 
-def _harvest(t, conc, M, comps, M_basis, leaf_loss, attached, sol, leaf_index):
+def _harvest(t, conc, M, comps, M_basis, leaf_loss, attached, sol, leaf_index, theta=None):
     """The harvest observation operator (src/harvest.py) on a 4-tissue solve: dead blades
-    kept in the leaf and straw, dry-basis concentrations for dw-reported data."""
-    dry = hv.dry_fractions({o: comps[i].theta for i, o in enumerate(TISSUES)}, M_basis)
+    kept in the leaf and straw, dry-basis concentrations for dw-reported data. `theta` (n, 4):
+    the organ water that made M fresh, when it follows the stage (PREREG 7.1)."""
+    th = ({o: np.asarray(theta, float)[:, i] for i, o in enumerate(TISSUES)} if theta is not None
+          else {o: comps[i].theta for i, o in enumerate(TISSUES)})
+    dry = hv.dry_fractions(th, M_basis)
     return hv.harvest_observables(
         t, conc, M, dry, leaf_loss=leaf_loss, attached=attached,
         C_leaf_fn=(lambda tt: sol.sol(tt)[leaf_index]) if getattr(sol, "sol", None) else None)
@@ -522,7 +566,8 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
              dead_leaf_attached=1.0, scenario=DEFAULT_SCENARIO, scenario_kw=None,
              phi=None, T_C_Ph=None, s_grain_dry=None, shoot=None,
              N=4, stem_transp_frac=None, lam_grain=None, retention=RETENTION,
-             kcw_organ=None, lam_eq=LAM_EQ):
+             kcw_organ=None, lam_eq=LAM_EQ, organ_water=None, grain_basis=None,
+             husk_phloem=False):
     """Run the 4-compartment ODE for one congener and scenario.
 
     Parameters
@@ -577,6 +622,14 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
         share without stage (redistributed shoot only).
     lipid_loading : None -> `DEFAULT_LIPID_LOADING`. f_xy_source="fit" is a free-anion fit
         and raises when combined with lipid loading (the lipid model supplies its own f_xy).
+    organ_water : "stage" (DEFAULT, PREREG 7.1: root, stem and leaf water follow the drivers'
+        DVS, for the fresh mass and the binding alike) or "constant" (amendment 1).
+    grain_basis : "brown" (DEFAULT, PREREG 7.2: the grain pool is brown rice, fed by the phloem
+        only; the panicle's transpiration deposit stays in a husk + rachis pool, reported as
+        `conc_dw["husk"]`, with the rough grain as `conc_dw["rough"]`) or "panicle" (amendment 1:
+        the grain is ORYZA's whole panicle). Both need drivers with DVS; without it they do not
+        apply. `scenario_kw` may carry their band ends (`theta_anchors`, `panicle_kw`).
+    husk_phloem : the husk + rachis dry growth draws phloem sap too (a band end of 7.2).
 
     Returns a dict with t, per-compartment conc & BAF time series (FRESH weight; the green
     leaf), finals, straw (with attached dead blades), the dry-basis harvest values
@@ -603,26 +656,31 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
     else:
         c = _CONG[congener]
 
-    if drivers is not None:
-        t = np.asarray(drivers["t"], dtype=float)
-        Cwo_series = np.asarray(drivers["Cwo"], dtype=float)
-        Qtp = np.asarray(drivers["Qtp"], dtype=float)
-        M = np.asarray(drivers["M"], dtype=float)
-        leaf_loss = drivers.get("leaf_loss")            # e.g. ORYZA senescence rate
-        season = float(t[-1])
-        M_basis = drivers.get("mass_basis", "fresh")
-        dvs = drivers.get("dvs")
-    else:
-        t, Cwo_series, Qtp, M, leaf_loss, M_basis, dvs = _default_drivers(
-            season, n_t, Cwo, measured_forcing, biomass, scenario, scenario_kw)
-        season = float(t[-1])
+    user_drivers = drivers is not None
+    skw = dict(scenario_kw or {})
+    if organ_water is not None:
+        skw["organ_water"] = organ_water
+    if grain_basis is not None:
+        skw["grain_basis"] = grain_basis
+    if drivers is None:
+        drivers = _default_drivers(season, n_t, Cwo, measured_forcing, biomass, scenario, skw)
         if cwo_profile != "constant":
-            Cwo_series = cwo_profile_series(
-                t, level=Cwo, profile=cwo_profile, n_C=c["n_C"], group=c["group"],
+            drivers = dict(drivers, Cwo=cwo_profile_series(
+                drivers["t"], level=Cwo, profile=cwo_profile, n_C=c["n_C"], group=c["group"],
                 congener=congener,
-                scenario=scenario if measured_forcing else "generic", **(cwo_kw or {}))
+                scenario=scenario if measured_forcing else "generic", **(cwo_kw or {})))
+    t = np.asarray(drivers["t"], dtype=float)
+    Cwo_series = np.asarray(drivers["Cwo"], dtype=float)
+    Qtp = np.asarray(drivers["Qtp"], dtype=float)
+    M = np.asarray(drivers["M"], dtype=float)
+    leaf_loss = drivers.get("leaf_loss")                # e.g. ORYZA senescence rate
+    season = float(t[-1])
+    M_basis = drivers.get("mass_basis", "fresh")
+    dvs = drivers.get("dvs")
+    theta = drivers.get("theta")                        # PREREG 7.1 (None: constant water)
+    husk = drivers.get("husk")                          # PREREG 7.2 (None: grain = panicle)
     inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss,
-                         M_basis=M_basis, dvs=dvs)
+                         M_basis=M_basis, dvs=dvs, theta=theta, M_husk=husk)
 
     f_xy, L_Ph, r_eq, g_xy, g_ph = _resolve_transport(
         c, f_xy_source, lipid_loading, shoot, f_xy_override, L_Ph_override, r_eq_override,
@@ -639,11 +697,12 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
             congener, cmpd, t, Cwo_series, Qtp, M, leaf_loss, season,
             N=N, stem_transp_frac=stem_transp_frac, lam_grain=lam_grain,
             retention=retention, dead_leaf_attached=dead_leaf_attached,
-            phi=phi, T_C_Ph=T_C_Ph, kcw=kcw, dvs=dvs)
+            phi=phi, T_C_Ph=T_C_Ph, kcw=kcw, dvs=dvs, theta=theta, husk=husk,
+            husk_phloem=husk_phloem)
         res["params"].update(
             K_PL=c["K_PL_Lkg"], K_prot=c["K_prot_Lkg"], K_cw=dict(kcw), K_surf=float(K_surf),
             n_C=c["n_C"], group=c["group"], r_eq=r_eq, lam_eq=float(lam_eq), mass_basis=M_basis,
-            scenario=(None if drivers is not None or not measured_forcing else scenario),
+            scenario=(None if user_drivers or not measured_forcing else scenario),
             shoot=shoot, lipid_loading=lipid_loading)
         res["root_baf_total"] = float(res["baf_final"]["root"] + cmpd.K_surf)
         return res
@@ -654,11 +713,16 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
     env = Environment()          # the linear equilibrium entry carries no membrane potential
     model = RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs, phi=float(phi),
                             T_C_Ph=float(T_C_Ph), s_grain_dry=s_grain_dry,
-                            lam_grain_dvs=(LAM_GRAIN_DVS if lam_grain is None else tuple(lam_grain)))
+                            lam_grain_dvs=(LAM_GRAIN_DVS if lam_grain is None else tuple(lam_grain)),
+                            husk_phloem=bool(husk_phloem))
     sol = model.solve(t)
-    C = sol.y                                            # (4, n_t)
+    C = sol.y                                            # (4 [+1 husk], n_t)
     conc = {k: C[i] for i, k in enumerate(TISSUES)}
-    obs = _harvest(t, conc, M, comps, inputs.M_basis, leaf_loss, dead_leaf_attached, sol, LEAF)
+    obs = _harvest(t, conc, M, comps, inputs.M_basis, leaf_loss, dead_leaf_attached, sol, LEAF,
+                   theta=theta)
+    if model.husk:
+        obs["conc_dw"].update(hv.panicle_observables(
+            conc["grain"], M[:, FRUIT], 1.0 - comps[FRUIT].theta, C[model.HUSK], husk))
     straw = obs["straw_fw"]
     B = binding_factors(comps, cmpd)
     # time-resolved BAF normaliser (per-step pore water); guard zeros
@@ -687,8 +751,11 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
                     n_C=c["n_C"], group=c["group"],
                     phi=float(phi), T_C_Ph=float(T_C_Ph),
                     mass_basis=M_basis,
-                    scenario=(None if drivers is not None or not measured_forcing else scenario),
-                    shoot=shoot, lipid_loading=lipid_loading),
+                    scenario=(None if user_drivers or not measured_forcing else scenario),
+                    shoot=shoot, lipid_loading=lipid_loading,
+                    organ_water=("stage" if theta is not None else "constant"),
+                    grain_basis=("brown" if husk is not None else "panicle"),
+                    husk_phloem=bool(husk_phloem)),
     )
 
 
@@ -720,21 +787,23 @@ def apportionment(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
     if shoot not in SHOOTS:
         raise ValueError(f"unknown shoot {shoot!r}; expected one of {SHOOTS}")
     lipid_loading = DEFAULT_LIPID_LOADING if lipid_loading is None else bool(lipid_loading)
-    t, Cwo_series, Qtp, M, leaf_loss, M_basis, dvs = _default_drivers(
-        season, n_t, Cwo, measured_forcing, biomass, scenario=scenario)
+    d = _default_drivers(season, n_t, Cwo, measured_forcing, biomass, scenario=scenario)
+    t, Cwo_series, Qtp, M, leaf_loss, M_basis, dvs = (d["t"], d["Cwo"], d["Qtp"], d["M"],
+                                                      d["leaf_loss"], d["mass_basis"], d.get("dvs"))
+    theta, husk = d.get("theta"), d.get("husk")
     if shoot == "redistributed":
         cmpd = _compound_for(congener, f_xy_source, f_xy_override, L_Ph_override,
                              r_eq_override, lipid_loading, g_xy_override, g_ph_override,
                              shoot=shoot)
         run = _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M, leaf_loss,
-                                 float(t[-1]), _keep_model=True, dvs=dvs)
+                                 float(t[-1]), _keep_model=True, dvs=dvs, theta=theta, husk=husk)
         res = ap.apportion_redistributed(run["_model"], run["_sol"])
         res.update(congener=congener, success=bool(run["success"]), shoot=shoot,
                    params=dict(f_xy=float(cmpd.f_xy), L_Ph=float(cmpd.L_Ph),
                                n_C=_CONG[congener]["n_C"], group=_CONG[congener]["group"]))
         return res
     inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss,
-                         M_basis=M_basis, dvs=dvs)
+                         M_basis=M_basis, dvs=dvs, theta=theta, M_husk=husk)
     cmpd = _compound_for(congener, f_xy_source, f_xy_override, L_Ph_override,
                          r_eq_override, lipid_loading, g_xy_override, g_ph_override,
                          shoot=shoot)
@@ -900,32 +969,25 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0,
     if congener not in _CONG:
         raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
     lipid_loading = DEFAULT_LIPID_LOADING if lipid_loading is None else bool(lipid_loading)
-    if drivers is not None:
-        t = np.asarray(drivers["t"], dtype=float)
-        season = float(t[-1])
-        Qtp = np.asarray(drivers["Qtp"], dtype=float)
-        Cwo_series = np.asarray(drivers["Cwo"], dtype=float)
-        M4 = np.asarray(drivers["M"], dtype=float)           # (n_t, 4) organ columns
-        leaf_loss = drivers.get("leaf_loss")
-        dvs = drivers.get("dvs")
-    elif biomass_fn is None and scenario == "yamazaki2020":
-        d = scenario_drivers(scenario, Cwo=Cwo, **(scenario_kw or {}))
-        ss.check_season(season, d["t"], "simulate_nstem_leaf")
-        t, Qtp, Cwo_series, leaf_loss = d["t"], d["Qtp"], d["Cwo"], d["leaf_loss"]
-        season = float(t[-1])
-        M4, dvs = d["M"], d.get("dvs")
-    else:
+    if drivers is None and biomass_fn is None and scenario == "yamazaki2020":
+        drivers = scenario_drivers(scenario, Cwo=Cwo, **(scenario_kw or {}))
+        ss.check_season(season, drivers["t"], "simulate_nstem_leaf")
+    elif drivers is None:
         if season is None:
             raise ValueError("the generic drivers need an explicit season (days)")
         season = float(season)
         t = np.linspace(0.0, season, int(n_t))
-        Qtp = fr.Q_TP(t, season)
         b = (biomass_fn or _biomass_fn("oryza2000"))(t, season)
-        dvs = b.get("dvs")
-        b = om.to_model_mass(b)                              # crop DRY matter -> FRESH mass
-        M4 = np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]])
-        Cwo_series = np.full_like(t, float(Cwo))
-        leaf_loss = b.get("leaf_death_rate")
+        M, extras = _crop_drivers(t, b, _crop_kw(dict(scenario_kw or {})))   # DRY -> FRESH
+        drivers = dict(t=t, Qtp=fr.Q_TP(t, season), Cwo=np.full_like(t, float(Cwo)), M=M,
+                       leaf_loss=b.get("leaf_death_rate"), dvs=b.get("dvs"), **extras)
+    t = np.asarray(drivers["t"], dtype=float)
+    season = float(t[-1])
+    Qtp = np.asarray(drivers["Qtp"], dtype=float)
+    Cwo_series = np.asarray(drivers["Cwo"], dtype=float)
+    M4 = np.asarray(drivers["M"], dtype=float)           # (n_t, 4) organ columns
+    leaf_loss = drivers.get("leaf_loss")
+    dvs = drivers.get("dvs")
     cmpd = _compound_for(congener, f_xy_source, f_xy_override, L_Ph_override,
                          r_eq_override, lipid_loading, g_xy_override, g_ph_override,
                          K_cw_organ=K_cw_organ, shoot="redistributed")
@@ -934,13 +996,15 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0,
                               lam_grain=lam_grain, retention=retention, k_seq=k_seq,
                               k_rel=k_rel, dead_leaf_attached=dead_leaf_attached,
                               phi=phi, T_C_Ph=T_C_Ph, segments_in_M=True,
-                              kcw=kcw_by_organ(_CONG[congener], K_cw_organ), dvs=dvs)
+                              kcw=kcw_by_organ(_CONG[congener], K_cw_organ), dvs=dvs,
+                              theta=drivers.get("theta"), husk=drivers.get("husk"))
 
 
 def _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M4, leaf_loss, season,
                        N=4, stem_transp_frac=None, lam_grain=None, retention=RETENTION,
                        k_seq=0.0, k_rel=0.0, dead_leaf_attached=1.0, phi=None, T_C_Ph=None,
-                       segments_in_M=False, _keep_model=False, kcw=None, dvs=None):
+                       segments_in_M=False, _keep_model=False, kcw=None, dvs=None,
+                       theta=None, husk=None, husk_phloem=False):
     """Solve the redistributed-shoot model on prepared drivers and a built Compound.
 
     M4 is the FRESH organ-mass matrix with the four organ columns [root, stem, leaf, grain];
@@ -956,7 +1020,12 @@ def _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M4, leaf_loss, season
         [np.maximum(M4[:, 0], om.MASS_FLOOR)]
         + [np.maximum(M4[:, 1] / N, om.MASS_FLOOR)] * N
         + [np.maximum(M4[:, 2], om.MASS_FLOOR), np.maximum(M4[:, 3], om.MASS_FLOOR)])
-    inputs = PlantInputsNL(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss, dvs=dvs)
+    th_seg = None
+    if theta is not None:                 # organ water by stage, the stem's repeated per segment
+        th4 = np.asarray(theta, float)
+        th_seg = np.column_stack([th4[:, 0]] + [th4[:, 1]] * N + [th4[:, 2], th4[:, 3]])
+    inputs = PlantInputsNL(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss, dvs=dvs,
+                           theta=th_seg, M_husk=husk)
     g = _COMP
     phi = PHI if phi is None else float(phi)
     T_C_Ph = T_C_PH if T_C_Ph is None else float(T_C_Ph)
@@ -977,7 +1046,8 @@ def _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M4, leaf_loss, season
     env = Environment()          # the linear equilibrium entry carries no membrane potential
     model = NStemLeafModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs, tau=tau,
                            retention=retention, phi=float(phi), T_C_Ph=float(T_C_Ph),
-                           k_seq=float(k_seq), k_rel=float(k_rel), **split)
+                           k_seq=float(k_seq), k_rel=float(k_rel),
+                           husk_phloem=bool(husk_phloem), **split)
     sol = model.solve(t)
     Y = sol.y                                            # (N+3 [+1 if two-pool], n_t)
     seg = slice(1, N + 1)
@@ -993,11 +1063,15 @@ def _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M4, leaf_loss, season
     baf_final = {k: float(v[-1] / cwo_ref) for k, v in conc.items()}
     # straw = stem segments + green leaf + attached dead blades (the harvest operator)
     Mo = np.column_stack([M[:, 0], np.sum(Mseg, axis=1), M[:, model.LEAF], M[:, model.GRAIN]])
+    th = ({o: np.asarray(theta, float)[:, i] for i, o in enumerate(TISSUES)} if theta is not None
+          else {o: _COMP["grain_brown" if o == "grain" else o]["theta_fw"] for o in TISSUES})
     obs = hv.harvest_observables(
-        t, conc, Mo, hv.dry_fractions({o: _COMP["grain_brown" if o == "grain" else o]["theta_fw"]
-                                       for o in TISSUES}),
+        t, conc, Mo, hv.dry_fractions(th),
         leaf_loss=leaf_loss, attached=dead_leaf_attached,
         C_leaf_fn=lambda tt: sol.sol(tt)[model.LEAF])
+    if model.husk:
+        obs["conc_dw"].update(hv.panicle_observables(
+            conc["grain"], Mo[:, 3], 1.0 - np.asarray(th["grain"], float), Y[model.HUSK], husk))
     straw = obs["straw_fw"]
     B = binding_factors(comps, cmpd)
     rec = _CONG.get(congener, {})
@@ -1023,7 +1097,10 @@ def _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M4, leaf_loss, season
                     n_C=rec.get("n_C"), group=rec.get("group"), L_Ph=float(cmpd.L_Ph),
                     r_eq=float(cmpd.r_eq), lam_eq=float(cmpd.lam_eq), g_xy=float(cmpd.g_xy),
                     g_ph=float(cmpd.g_ph), phi=float(phi), T_C_Ph=float(T_C_Ph),
-                    k_seq=float(k_seq), k_rel=float(k_rel)),
+                    k_seq=float(k_seq), k_rel=float(k_rel),
+                    organ_water=("stage" if theta is not None else "constant"),
+                    grain_basis=("brown" if husk is not None else "panicle"),
+                    husk_phloem=bool(husk_phloem)),
         **({"_model": model, "_sol": sol} if _keep_model else {}),
     )
 
@@ -1159,8 +1236,12 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=None, n_t=241,
         leaf_loss = drivers.get("leaf_loss")
         M_basis = drivers.get("mass_basis", "fresh")
     else:
-        t, Cwo_series, Qtp, M, leaf_loss, M_basis, _dvs = _default_drivers(
-            season, n_t, Cwo, measured_forcing, biomass, scenario, scenario_kw)
+        # the neutral path keeps the constant organ water and the whole panicle until
+        # amendment 2b decides them (PREREG 7.9)
+        d = _default_drivers(season, n_t, Cwo, measured_forcing, biomass, scenario,
+                             dict(scenario_kw or {}, organ_water="constant", grain_basis="panicle"))
+        t, Cwo_series, Qtp, M, leaf_loss, M_basis = (d["t"], d["Cwo"], d["Qtp"], d["M"],
+                                                     d["leaf_loss"], d["mass_basis"])
         season = float(t[-1])
         if cwo_profile != "constant":
             Cwo_series = cwo_profile_series(

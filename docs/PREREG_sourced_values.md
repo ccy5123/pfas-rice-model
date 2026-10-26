@@ -575,3 +575,23 @@ KNHANES intake and body weight, the white/brown basis of the intake fraction); a
   (midpoint 0.2075; ends 0.161 and 0.254 in the band).
 - DAH -> DVS: on each cultivar's own run, the DVS reached the given number of days after its measured
   heading date; maturity = DVS 2.
+
+### 7.11 Addendum (committed before any amendment-2a run; found while implementing 7.1-7.2)
+- **Stem vegetative anchor re-read at source**: 0.726-0.906, not 0.726-0.910 (midpoint 0.816, not
+  0.818). The prototype's 0.910 is Ya et al. 2026 CYQH FD4 control, 1 - 0.16/1.71 = 0.906, rounded.
+  The anchor's four sources are now in `sourced_inputs.csv` (`tis_theta_shoot_veg`: Saleh 2025
+  SG 65 0.726 and Giza 177 0.737; Ya 2026 controls 0.813-0.906; Choe 2026 0.873; Haruma 2023 rice
+  0.748 -- the same paper's Miscanthus rows, ~0.9, are not rice), read in full from Europe PMC.
+- **The grain is not staged** (7.2): `params/rice_theta_stage_sourced.csv` holds root, stem and
+  leaf only; brown rice keeps its harvest water (0.21). The neutral path keeps the constant water
+  and the whole panicle until 2b (`simulate_neutral` passes `organ_water="constant"`,
+  `grain_basis="panicle"`).
+- **The husk + rachis pool is carried per kg DRY** with its dry mass as the driver (it is
+  terminal: nothing leaves it, so it needs no binding factor and no water). Its mass from the
+  stated forms (7.2, 7.10) dips by up to ~5 % between Ansari anchors; a shrinking terminal pool
+  concentrates by the same amount. Kept (no sourced form to correct it with); it reaches only the
+  husk and rough-grain values (Li rough basis, the Choi check).
+- **Implementation choices, no new number**: `model_api.simulate(organ_water="stage"|"constant",
+  grain_basis="brown"|"panicle", husk_phloem=False)`; defaults are the amendment (7.7); the
+  amendment-1 forms stay runnable. The stage anchors' band ends pass as
+  `scenario_kw={"theta_anchors": ...}`, the panicle's as `scenario_kw={"panicle_kw": {...}}`.

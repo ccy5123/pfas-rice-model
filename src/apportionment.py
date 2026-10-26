@@ -52,7 +52,9 @@ FLUX_NAMES = (
     "xylem_root_stem",    # root -> stem  (transpiration stream, f_xy-loaded)
     "xylem_stem_leaf",    # stem -> leaf
     "xylem_stem_grain",   # stem -> grain
+    "xylem_stem_husk",    # stem -> husk + rachis (PREREG 7.2: the panicle's xylem; 0 without it)
     "phloem_leaf_grain",  # leaf -> grain (phloem)
+    "phloem_leaf_husk",   # leaf -> husk (a band end of 7.2; 0 by default)
     "phloem_leaf_root",   # leaf -> root  (phloem recirculation)
     "leaf_loss",          # leaf -> out   (senescence / shedding, ORYZA driver only)
     "degr_root", "degr_stem", "degr_leaf", "degr_grain",   # metabolism (PFAS ~ 0)
@@ -68,11 +70,12 @@ def flux_terms(model: RiceUptakeModel, t: float, C: np.ndarray) -> dict:
     """
     inp = model.inputs
     Cwo, Qtp, M, dM, leaf_loss, gam, dvs = inp.drivers_at(t)     # the drivers rhs() reads
+    th, gdry, Mh, dMh, gh = inp.extras_at(t)
     M = np.maximum(M, MASS_FLOOR)
     cmpd = model.cmpd
 
-    B = binding_factors(model.comps, cmpd)
-    Cw = C / B
+    B = model._binding(th)
+    Cw = C[:4] / B
 
     if model.lam_grain_dvs is not None:                          # the split rhs() uses
         f4 = panicle_share(dvs, *model.lam_grain_dvs)
@@ -82,16 +85,22 @@ def flux_terms(model: RiceUptakeModel, t: float, C: np.ndarray) -> dict:
         f3, f4 = split, 1.0 - split
 
     Q_g, Q_r = phloem_flows(model.comps, dM, Qtp, model.T_C_Ph, model.phi, inp.M_basis)
+    if model._staged:
+        Q_g = max(gdry * model.T_C_Ph, 0.0)
+    Q_h = max(dMh * model.T_C_Ph, 0.0) * gh if model.husk_phloem else 0.0
     C_Phl = model.phloem_loading_factor() * Cw[LEAF] + cmpd.g_ph * C[LEAF]
     Cw_xyl = cmpd.f_xy * Cw[ROOT] + cmpd.g_xy * C[ROOT]
     jR = root_uptake(Cwo, Cw[ROOT], cmpd, model.env)
     g = [c.gamma for c in model.comps]
+    wx = gh if model.husk else gam
 
     return dict(
         soil_uptake=jR * M[ROOT],
         xylem_root_stem=Qtp * Cw_xyl,
-        xylem_stem_leaf=(f3 + (1.0 - gam) * f4) * Qtp * Cw[STEM],
-        xylem_stem_grain=gam * f4 * Qtp * Cw[STEM],
+        xylem_stem_leaf=(f3 + (1.0 - wx) * f4) * Qtp * Cw[STEM],
+        xylem_stem_grain=0.0 if model.husk else gam * f4 * Qtp * Cw[STEM],
+        xylem_stem_husk=wx * f4 * Qtp * Cw[STEM] if model.husk else 0.0,
+        phloem_leaf_husk=Q_h * C_Phl,
         phloem_leaf_grain=gam * Q_g * C_Phl,
         phloem_leaf_root=Q_r * C_Phl,
         leaf_loss=leaf_loss * C[LEAF] * M[LEAF],
@@ -111,16 +120,22 @@ def dC_from_fluxes(model: RiceUptakeModel, t: float, C: np.ndarray) -> np.ndarra
     """
     f = flux_terms(model, t, C)
     _, _, M, dM, _, _, _ = model.inputs.drivers_at(t)
+    _, _, Mh, dMh, _ = model.inputs.extras_at(t)
     M = np.maximum(M, MASS_FLOOR)
     mu = dM / M
     mass_bal = np.array([
         f["soil_uptake"] - f["xylem_root_stem"] + f["phloem_leaf_root"] - f["degr_root"],
-        f["xylem_root_stem"] - (f["xylem_stem_leaf"] + f["xylem_stem_grain"]) - f["degr_stem"],
-        f["xylem_stem_leaf"] - (f["phloem_leaf_grain"] + f["phloem_leaf_root"])
-        - f["leaf_loss"] - f["degr_leaf"],
+        f["xylem_root_stem"] - (f["xylem_stem_leaf"] + f["xylem_stem_grain"]
+                                + f["xylem_stem_husk"]) - f["degr_stem"],
+        f["xylem_stem_leaf"] - (f["phloem_leaf_grain"] + f["phloem_leaf_root"]
+                                + f["phloem_leaf_husk"]) - f["leaf_loss"] - f["degr_leaf"],
         f["xylem_stem_grain"] + f["phloem_leaf_grain"] - f["degr_grain"],
     ])
-    return mass_bal / M - mu * C
+    dC = mass_bal / M - mu * C[:4]
+    if model.husk:
+        dC = np.append(dC, (f["xylem_stem_husk"] + f["phloem_leaf_husk"]) / Mh
+                       - dMh / Mh * C[model.HUSK])
+    return dC
 
 
 def apportion(model: RiceUptakeModel, sol) -> dict:
@@ -151,6 +166,9 @@ def apportion(model: RiceUptakeModel, sol) -> dict:
         "grain": {"xylem_from_stem": cum["xylem_stem_grain"],
                   "phloem_from_leaf": cum["phloem_leaf_grain"]},
     }
+    if model.husk:
+        inflow["husk"] = {"xylem_from_stem": cum["xylem_stem_husk"],
+                          "phloem_from_leaf": cum["phloem_leaf_husk"]}
     fraction = {}
     for k, d in inflow.items():
         tot = sum(max(v, 0.0) for v in d.values())
@@ -201,12 +219,17 @@ def flux_terms_redistributed(model, t, C):
     from pfas_rice_plant_module_4pool_surf import root_uptake as _ru
     inp = model.inputs
     Cwo, Q, M, dM, leaf_loss, gam, dvs = inp.drivers_at(t)       # the drivers rhs() reads
+    th, gdry, Mh, dMh, gh = inp.extras_at(t)
     M = np.maximum(M, MASS_FLOOR)
     n = model.n_comp
-    Cw = C[:n] / model._B
+    B = th + (1.0 - th) * model._X if model._staged else model._B
+    Cw = C[:n] / B
     leaf, grain, r = model.LEAF, model.GRAIN, model.retention
-    Q_g = max(dM[grain] * (1.0 - model.comps[grain].theta) * model.T_C_Ph, 0.0)
+    if not model._staged:
+        gdry = dM[grain] * (1.0 - model.comps[grain].theta)
+    Q_g = max(gdry * model.T_C_Ph, 0.0)
     Q_r = max(model.phi * Q, 0.0)
+    Q_h = max(dMh * model.T_C_Ph, 0.0) * gh if model.husk_phloem else 0.0
     C_Phl = model.cmpd.L_Ph * Cw[leaf] + model.cmpd.g_ph * C[leaf]
     jR = _ru(Cwo, Cw[model.ROOT], model.cmpd, model.env)
     xyl = Q * (model.cmpd.f_xy * Cw[model.ROOT] + model.cmpd.g_xy * C[model.ROOT])
@@ -216,12 +239,15 @@ def flux_terms_redistributed(model, t, C):
     else:
         lg, ll = model.lam_grain, model.lam_leaf
     residual = (lg + (1.0 - r) * (model.tau.sum() + ll)) * xyl
+    wx = gh if model.husk else gam
     return dict(
         soil_uptake=float(M[model.ROOT] * jR),
         xylem_root_out=float(xyl),
         xylem_to_stem=float(r * model.tau.sum() * xyl),
-        xylem_to_leaf=float(r * ll * xyl + (1.0 - gam) * residual),
-        xylem_to_grain=float(gam * residual),
+        xylem_to_leaf=float(r * ll * xyl + (1.0 - wx) * residual),
+        xylem_to_grain=0.0 if model.husk else float(gam * residual),
+        xylem_to_husk=float(wx * residual) if model.husk else 0.0,
+        phloem_leaf_husk=float(Q_h * C_Phl),
         phloem_leaf_grain=float(gam * Q_g * C_Phl),
         phloem_leaf_root=float(Q_r * C_Phl),
         leaf_loss=float(leaf_loss * M[leaf] * C[leaf]),
@@ -233,7 +259,8 @@ def apportion_redistributed(model, sol) -> dict:
     inflow fractions, with the same keys for the root and the grain as the 4-pool version."""
     t = sol.t
     names = ("soil_uptake", "xylem_root_out", "xylem_to_stem", "xylem_to_leaf",
-             "xylem_to_grain", "phloem_leaf_grain", "phloem_leaf_root", "leaf_loss")
+             "xylem_to_grain", "xylem_to_husk", "phloem_leaf_grain", "phloem_leaf_husk",
+             "phloem_leaf_root", "leaf_loss")
     series = {k: np.empty(len(t)) for k in names}
     for i, ti in enumerate(t):
         f = flux_terms_redistributed(model, float(ti), sol.y[:, i])
@@ -247,6 +274,9 @@ def apportion_redistributed(model, sol) -> dict:
         "grain": {"xylem_from_stem": cum["xylem_to_grain"],
                   "phloem_from_leaf": cum["phloem_leaf_grain"]},
     }
+    if model.husk:
+        inflow["husk"] = {"xylem_from_stem": cum["xylem_to_husk"],
+                          "phloem_from_leaf": cum["phloem_leaf_husk"]}
     fraction = {}
     for k, d in inflow.items():
         tot = sum(max(v, 0.0) for v in d.values())

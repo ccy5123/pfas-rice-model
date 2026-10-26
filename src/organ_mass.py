@@ -27,14 +27,17 @@ so the mass basis and the concentration basis cannot drift apart.
 Driver dicts carry the tag `mass_basis="fresh"` (MASS_BASIS) so the one place that needs
 dry matter -- the leaf/grain xylem split -- can take it back out (`xylem_leaf_share`).
 
-LIMITATIONS (docs/sampling_protocols_audit_KR.md): theta_fw is held constant over
-the season (grain 0.14 is harvest moisture; filling grain is ~0.5-0.6 water, mature
-straw dries to 0.1-0.5), and the root/stem/leaf values are estimates -- no rice
-dataset in the repo, nor any found in the literature audit, reports organ water
-content over a season.
+Organ water by development stage (PREREG 7.1): with `stage=True` and a driver that carries
+the crop's DVS, root, stem and leaf water follow `theta_at` -- linear in DVS between sourced
+anchors (params/rice_theta_stage_sourced.csv; the root dries from 0.82 in the vegetative phase
+to 0.64 at maturity), flat outside them. The grain (brown rice) is not staged: before harvest
+its water enters no dry-basis result (PREREG 7.2). `stage=False` (the default, and every
+path without DVS) keeps the constant composition-table value `THETA_FW`, which the neutral
+path uses until amendment 2b decides its water.
 """
 from __future__ import annotations
 
+import csv
 import json
 import os
 
@@ -53,26 +56,71 @@ def _load_theta():
     return {o: float(comp[k]["theta_fw"]) for o, k in _COMP_KEY.items()}
 
 
-THETA_FW = _load_theta()
+THETA_FW = _load_theta()          # constant: the fallback without stage, and the neutral path
+
+
+def _load_stage(name="rice_theta_stage_sourced.csv"):
+    """organ -> {"dvs", "low", "high"} arrays of the sourced stage anchors (PREREG 7.1)."""
+    rows = {}
+    with open(os.path.join(_ROOT, "params", name)) as f:
+        for r in csv.DictReader(line for line in f if not line.startswith("#")):
+            rows.setdefault(r["organ"], []).append((float(r["dvs"]), float(r["low"]), float(r["high"])))
+    return {o: {k: np.array([v[i] for v in sorted(a)]) for i, k in enumerate(("dvs", "low", "high"))}
+            for o, a in rows.items()}
+
+
+THETA_STAGE = _load_stage()       # root, stem, leaf (the grain is not staged)
+
+
+def theta_at(organ, dvs, anchors=None):
+    """theta_fw of `organ` at development stage(s) `dvs`: the midpoint of each sourced anchor,
+    linear in DVS between anchors, flat outside them. `anchors` overrides {organ: values at the
+    anchors} (the input-range band moves one anchor to an end). An organ without stage anchors
+    (the grain) keeps `THETA_FW`."""
+    d = np.asarray(dvs, float)
+    a = THETA_STAGE.get(organ)
+    if a is None:
+        th = np.full(d.shape, THETA_FW[organ])
+    else:
+        vals = (np.asarray(anchors[organ], float) if anchors and organ in anchors
+                else 0.5 * (a["low"] + a["high"]))
+        th = np.interp(d, a["dvs"], vals)
+    return float(th) if th.ndim == 0 else th
 
 
 def fresh_factor(organ):
-    """Multiplier dry -> fresh organ mass: 1/(1-theta_fw)."""
+    """Multiplier dry -> fresh organ mass at the constant water: 1/(1-theta_fw)."""
     return 1.0 / (1.0 - THETA_FW[organ])
 
 
-def to_model_mass(b, theta=None):
-    """Convert a crop-model biomass dict {root,stem,leaf,grain: DRY kg/hill, ...} to FRESH
-    organ mass. Non-organ keys (e.g. ORYZA's `leaf_death_rate`, a RELATIVE rate that a
-    constant factor leaves unchanged) are passed through untouched. `theta` overrides the
-    organ water {organ: theta} (the neutral validation tables run on their own plant's
-    water, PREREG 5.10)."""
+def organ_theta(b, theta=None, stage=False, anchors=None):
+    """{organ: theta_fw} for the dry biomass dict `b`: arrays on its grid when `stage` and `b`
+    carries a "dvs" (PREREG 7.1), else the constants (`theta` overrides them)."""
     th = dict(THETA_FW, **(theta or {}))
+    if stage and b.get("dvs") is not None:
+        dvs = np.asarray(b["dvs"], float)
+        th.update({o: theta_at(o, dvs, anchors) for o in THETA_STAGE})
+    return th
+
+
+def to_model_mass(b, theta=None, stage=False, anchors=None):
+    """Convert a crop-model biomass dict {root,stem,leaf,grain: DRY kg/hill, ...} to FRESH
+    organ mass. Non-organ keys (e.g. ORYZA's `leaf_death_rate`, a RELATIVE rate that the dry
+    and the fresh leaf share) are passed through untouched. `theta` overrides the organ water
+    {organ: theta} (the neutral validation tables run on their own plant's water, PREREG
+    5.10); `stage` makes root, stem and leaf water follow the driver's DVS (`organ_theta`)."""
+    th = organ_theta(b, theta, stage, anchors)
     out = dict(b)
     for o in ORGANS:
         if o in b and b[o] is not None:
-            out[o] = np.asarray(b[o], float) * (1.0 / (1.0 - th[o]))
+            out[o] = np.asarray(b[o], float) / (1.0 - np.asarray(th[o], float))
     return out
+
+
+def theta_matrix(b, n, theta=None, stage=False, anchors=None):
+    """(n, 4) theta_fw [root, stem, leaf, grain] on the driver grid, as `to_model_mass` used it."""
+    th = organ_theta(b, theta, stage, anchors)
+    return np.column_stack([np.broadcast_to(np.asarray(th[o], float), (n,)) for o in ORGANS])
 
 
 # The ODE divides by organ mass, so an organ the crop model has not formed yet (the grain
@@ -83,7 +131,7 @@ def to_model_mass(b, theta=None):
 MASS_FLOOR = 1e-9            # kg
 
 
-def organ_matrix(b, floor=MASS_FLOOR, theta=None):
+def organ_matrix(b, floor=MASS_FLOOR, theta=None, stage=False, anchors=None):
     """(n, 4) FRESH mass matrix [root, stem, leaf, grain], floored at `MASS_FLOOR`."""
-    m = to_model_mass(b, theta)
+    m = to_model_mass(b, theta, stage, anchors)
     return np.maximum(np.column_stack([m[o] for o in ORGANS]), floor)
