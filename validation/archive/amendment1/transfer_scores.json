@@ -1,0 +1,12 @@
+{
+ "source": "validation/transfer_sourced.py (PREREG 5.3)",
+ "variant": "redistributed_lipid",
+ "scores": {
+  "Tang 2026 per-organ TF, 0.1 ug/g": 0.729,
+  "Kim 2019 grain BAF (point)": 0.489,
+  "Kim 2019 grain BAF ([0, MDL] interval)": 0.3712,
+  "Li 2025 shoot/root TF by stage": 0.3858,
+  "Li 2025 grain/root TF by stage": 1.0185
+ },
+ "yamazaki_in_sample": 0.1592
+}

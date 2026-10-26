@@ -619,3 +619,14 @@ KNHANES intake and body weight, the white/brown basis of the intake fraction); a
 - Before the re-fit, the tests that compare a fitted score against its record
   (`test_kim2019_censored`, `test_plots::test_fig_congener_compare_builds`) fail: with the deposit in
   the husk, the congeners amendment 1 left at L_Ph = 0 have no grain at all until re-fitted (E20).
+
+### 7.13 Addendum (committed while the amendment-2a re-fit runs; no transfer score of 2a computed)
+- **Which Li 2025 grain basis decides.** 7.2 scores Li's undefined "grains" on two bases. The
+  decision rule (section 2) and the honesty band use the BROWN-rice basis -- the model's grain pool
+  and the basis of every other grain endpoint (Yamazaki, Kim, Tang) -- under the same endpoint name
+  `li_grain`. The rough-grain basis is reported beside it (`li_grain_rough` in
+  `validation/transfer_sourced.json`) and is the one E22 is about; it enters no decision.
+- **Choi 2018** runs as `validation/choi2018_husk_check.py` (E21): the model's husk + rachis pool
+  against Choi's husk, on the site-year drivers; nothing is fitted to it.
+- The amendment-1 records are kept in `validation/archive/amendment1/` (refit and transfer JSON, the
+  band, the transfer scores, the fitted parameter files) before the re-fit overwrites them.

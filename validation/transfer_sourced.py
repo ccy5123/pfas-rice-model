@@ -74,10 +74,15 @@ def kim_errors(kw):
     return ep, ei
 
 
-def li_errors(kw):
+def li_errors(kw, grain="grain"):
+    """Li 2025 level errors (shoot, grain); `grain` "rough" scores Li's undefined "grains" as
+    brown rice + husk + rachis instead of brown rice (PREREG 7.2; reported, not decided on: 7.13)."""
     data = L.load_data()
     days = L.stage_days()
-    model = {c: L.model_tf(api.simulate(c, Cwo=1.0, **kw), days) for c in L.CONGENERS}
+    res = {c: api.simulate(c, Cwo=1.0, **kw) for c in L.CONGENERS}
+    if grain == "rough" and "rough" not in res[L.CONGENERS[0]]["conc_dw"]:
+        return [], []
+    model = {c: L.model_tf(res[c], days, grain) for c in L.CONGENERS}
     lev = {"shoot": [], "grain": []}
     for c in L.CONGENERS:
         for k in L.SHOOT + (L.GRAIN,):
@@ -110,8 +115,9 @@ def score_variant(v):
     kw = VARIANTS[v]
     ep, ei = kim_errors(kw)
     ls, lg = li_errors(kw)
+    _, lgr = li_errors(kw, grain="rough")
     return v, dict(tang=tang_errors(kw), kim_point=ep, kim_interval=ei, li_shoot=ls,
-                   li_grain=lg, yamazaki=yamazaki_errors(kw))
+                   li_grain=lg, li_grain_rough=lgr, yamazaki=yamazaki_errors(kw))
 
 
 def rmse(e):
@@ -125,6 +131,9 @@ def main():
     print(f"{'variant':22}" + "".join(f"{k:>14}" for k in ends))
     for v in VARIANTS:
         print(f"{v:22}" + "".join(f"{rmse(err[v][k]):>14.3f}" for k in ends))
+    print("reported, not decided on (PREREG 7.13): Li 2025 grain on the rough-grain basis "
+          + "  ".join(f"{v} {rmse(err[v]['li_grain_rough']):.3f}" for v in VARIANTS
+                      if err[v].get("li_grain_rough")))
     dec = {}
     for v in VARIANTS:
         if v == DEFAULT:

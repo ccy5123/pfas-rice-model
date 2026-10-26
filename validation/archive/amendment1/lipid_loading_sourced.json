@@ -1,0 +1,33 @@
+{
+ "source": "validation/refit_sourced.py (PREREG 5.3, 5.6)",
+ "lipid_loading": {
+  "redistributed": {
+   "a": 0.05383402894166875,
+   "b": 0.0,
+   "g_xy": 0.004938756717035663,
+   "g_ph": 0.0,
+   "pfsa_ln": 0.0,
+   "gate": "none",
+   "terms_removed": [
+    "b",
+    "g_ph",
+    "pfsa_ln",
+    "gate_none"
+   ]
+  },
+  "4pool": {
+   "a": 0.052729878109402495,
+   "b": 0.0,
+   "g_xy": 0.005007731019954956,
+   "g_ph": 0.0,
+   "pfsa_ln": 0.0,
+   "gate": "none",
+   "terms_removed": [
+    "b",
+    "g_ph",
+    "pfsa_ln",
+    "gate_none"
+   ]
+  }
+ }
+}
