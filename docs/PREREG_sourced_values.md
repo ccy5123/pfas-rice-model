@@ -373,3 +373,189 @@ lipid; no range) (0.461) · Briggs 1983 barley stem 0.357 [0.317, 0.417]. Liu re
 - N4 (no expectation): Ge 0.631 (leaf 2.5-5.8x over without metabolism), Briggs stem 0.357 (the
   model 1.8x under on average).
 - Liu's fresh-weight reading (0.212) fits far better than the dry-weight one (0.821).
+
+## 7. Amendment 2a -- organ water, the grain basis and the crop parameters (committed before its runs)
+
+Amendment 1 left three default-scope rows open (`tests/test_value_provenance.py` OPEN: `tis_theta`,
+`crop_cultivar`, `obs_exposure_time`), and an external review of the model (P1-P9, read against the
+branch on 2026-10-26; `docs/amendment2/draft.md`) found further defects in the default model and the
+measured-table path. Choices made by the user on 2026-10-26:
+- amendment 2 is registered in two parts. **2a** (this section): the default model and its re-fit.
+  **2b** (registered later, before its own runs): the neutral path, the site soil and the
+  irrigation-source exposure, the app values and the SMILES `K_cw` (section 7.9);
+- organ water follows the development stage, linear between sourced stage anchors;
+- the rachis share is searched for before this commit, and run as a range if no source exists;
+- the exposure stays constant over the season in 2a; its seasonal shape is built in 2b with the
+  irrigation-water scenario.
+
+Two further choices were proposed in the session and not answered by the user before this commit; they
+stand as written unless changed by an addendum before any 2a run: Li 2025's grain is scored on both the
+brown-rice and the rough-grain basis (7.2); Choi 2018 is a check, not a scored endpoint (7.2, E21). The
+destination of the panicle's transpired solute was asked too and is settled by the sources read (7.2).
+
+The rules of sections 1-2 and the fit protocol of 5.6 are unchanged. Nothing in this section has
+been run on the amended model; the prototypes in `docs/amendment2/prototypes/` were built on the
+pre-amendment-1 tree, were not fitted, and two of them (0001, 0003) no longer apply.
+
+### 7.1 Organ water by development stage (`tis_theta`; review P2)
+- theta_fw(DVS) per organ, linear in DVS between sourced anchors and flat outside them
+  (`params/rice_theta_stage_sourced.csv`; the linear form is a stated assumption, as for the
+  panicle's transpiration share in 5.1). Anchors at the range midpoints:
+
+  | organ | vegetative (DVS <= 0.65) | anchor 2 | sources (`sourced_inputs.csv`) |
+  |---|---|---|---|
+  | root | 0.8245 (0.761-0.888; 4 studies, hydroponic and flooded pots) | DVS 2: 0.6365 (0.506-0.767; 6 studies, pots at maturity) | tis_theta_root |
+  | stem | 0.818 (0.726-0.910; whole shoot, no stem-only value) | DVS 2: 0.7095 (0.645-0.774; whole shoot 10-45 DAF and straw) | tis_theta_stem, tis_theta_root (shoot columns) |
+  | leaf | 0.731 (tillering, 183 accessions) | DVS 2: 0.659 (flag leaf at maturity) | tis_theta_leaf |
+  | grain | see 7.2 (the anchors must describe the pool the grain becomes) | | tis_theta_grain |
+
+- **One theta per organ and time for every use.** The fresh mass (`organ_mass`), the binding
+  factor B_k(t) and the harvest operator read the same theta(t). With a moving theta,
+  `dM_fresh * (1 - theta)` is no longer the dry growth, so the grain's phloem stream takes the dry
+  growth from the dry driver; the harvest operator divides burden by dry matter at the harvest time.
+- The burden P = C * M_fresh is the conserved quantity; the free concentration is
+  `Cw = P / (M_dry * (theta/(1-theta) + X))` with X = sum f*K on the dry basis. Mass conservation
+  of both shoots, the vectorised (A, b) against the right-hand side, the dry growth and the harvest
+  dry basis are tested (prototype `tests/test_theta_stage.py`, carried over).
+- **Band**: each anchor's ends, one at a time (rule 5.4). The amendment-1 constant theta rows leave
+  `INPUT_RANGE_BAND`.
+
+### 7.2 The grain pool is brown rice; the panicle's transpired solute stays in the husk (review P3)
+The grain pool is WSO, ORYZA's whole panicle ("Storage organs (panicles)", Bouman et al. 2001 p.169;
+"Measured panicle dry weight (storage organ)(WSO)" p.161), while its composition, its water and every
+grain observation (Yamazaki, Kim, Tang) are brown rice. Read for this section (main session, full text,
+2026-10-26; `sourced_inputs.csv` grain_*):
+- **Where xylem water goes in the panicle.** Zee 1972 (Aust. J. Biol. Sci. 25:411, p.411): dye fed to the
+  culm xylem reached "the vascular bundles of the rachilla, glumes, lemmas, and paleas" within minutes,
+  "but no dye was detected in the tracheary elements of the pericarp bundles unless the caryopses were
+  exposed by carefully separating the lemma and palea ... and the plant allowed to transpire in the dye
+  solution for 3-5 hr" (the xylem is continuous, unlike wheat, but carries no flow to the intact
+  caryopsis). Oparka & Gates 1981 (Planta 152:388, p.393-394): caryopses took up tracer only under high
+  humidity, "under low humidity solutions moved instead into the palea and lemma"; "most of the water
+  which enters the rice caryopsis during grain filling arrives by mass flow in the phloem", and water
+  leaves the caryopsis during filling, possibly to "the xylem of the palea and lemma prior to
+  transpiration".
+- **What the husk holds.** Choi et al. 2018 (J. Appl. Biol. Chem. 61:191, Table 1; cv. Sindongjin,
+  greenhouse pots of spiked soil, harvest 138 d after transplanting, husk and brown rice separated by a
+  dehuller): husk / brown rice = PFOA 8.8 (1 mg/kg soil) and 4.2 (5 mg/kg), PFOS 37 and 47; PFOS exceeds
+  PFOA in straw and husk but not in brown rice. Contrast for a phloem-mobile element: Cd in rice, phloem
+  ranked "rachis > brown rice > rice husk" (Luo et al. 2022, Ecotoxicol. Environ. Saf. 240:113683).
+
+Changes (no new number):
+- **Two panicle pools.** Brown rice (the grain pool: composition `grain_brown`, the observations) and the
+  panicle remainder (husk + rachis). Brown rice dry mass = (WSO − R)·(1 − h(t)), the remainder takes the
+  rest of WSO.
+- **The panicle's transpiration deposit goes to the remainder**, which keeps it (retention 1, as for
+  every evaporating organ in 5.2). **Brown rice receives the phloem stream only**, drawn by its own dry
+  growth (`T_C_Ph` per kg brown-rice DM). The xylem route into the caryopsis is removed (rule 1.3): the
+  sources above give no flow into the intact caryopsis and no number for one. The remainder loads no
+  phloem (in the model only the leaf does); it is a terminal pool.
+- **Husk share of rough grain h(t)** (dry). h = 1 at DVS 1 (the caryopsis starts at fertilisation), then
+  the per-grain hull and brown-rice weights of Ansari et al. 2017 (Bangladesh Agron. J. 19(2):125,
+  10.3329/baj.v19i2.31861, Fig. 1, Nipponbare; heading, 10, 20, 30 d after heading and maturity), digitised
+  and overlay-checked against the figure before the runs (`raw_si/ansari2017_fig1_digitised.csv`), mapped
+  to DVS on the run's own heading date; linear in DVS between them (the stated form). Maturity range:
+  Yoshida 1981 Table 1.1 (rough rice, 11 varieties 0.186-0.254; japonica 0.206, 0.209) with Ansari's
+  Nipponbare value; the run uses the midpoint and the band carries the ends.
+- **Rachis R: no source** (searched English, Japanese, Chinese, Korean; Matsui & Kagata 2002 weighs
+  spikelets only). Range (rule 1.4): ORYZA puts all panicle growth after DVS 0.95 into grains (Bouman et
+  al. 2001 p.57), so the rachis is complete by then and cannot exceed the panicle at DVS 0.95 (on the
+  site-year mean run 11.6 % of WSO at harvest; that panicle also holds the hulls formed before
+  flowering, so the upper end over-states R). R = [0, WSO(DVS 0.95)], run at the midpoint, ends in the
+  band. A rachis weight from a source replaces the range (lead: Kobayashi & Horie 1994, Jpn. J. Crop Sci.
+  63:193).
+- **Grain water before harvest enters no dry-basis result**: the brown-rice equation has no term in its
+  own free concentration (deposit, phloem from the leaf, growth dilution only), and the phloem stream reads
+  the dry growth. So brown rice runs on its sourced harvest water (0.20-0.22) for the fresh display and
+  the harvest operator; no filling-stage water is needed. A test holds that changing the grain's
+  pre-harvest theta moves no dry-basis number. (The 0.58 "early filling" anchor of the draft is whole
+  rough grain, the wrong basis for the brown-rice pool; it is not used.)
+- **Observation bases**: Yamazaki and Kim = brown rice; Tang endosperm = brown rice ×
+  `endosperm_white_factor` (unchanged). Li 2025 "paddy rice / grains" is undefined (it may include the
+  husk): scored on both bases, brown rice and rough grain (brown + remainder, the rachis included because
+  the pools are not separable), each reported, the range as in 5.10. Choi 2018 is a check, not a scored
+  endpoint (section 2 is unchanged): it is not used to fit anything.
+- **Band**: h at maturity, R, and the phloem draw of the remainder (0 = shipped; the other end lets the
+  husk + rachis dry growth draw phloem sap too, as for brown rice).
+
+### 7.3 The measured-table path (review P4, P5)
+- **P4 leaf loss.** `drivers_from_tables` passes no leaf loss, so a falling measured green-leaf mass
+  concentrates the leaf (mu < 0), the artefact the ORYZA path removed (CLAUDE.md, leaf senescence).
+  A table that gives green leaf mass only gets `leaf_loss = max(0, -dM_leaf/dt) / M_leaf` (the same
+  identity as ORYZA's D/M_leaf = DRLV: a falling green mass is read as death, not as export). A table
+  with a dead-leaf column uses it. No new number.
+- **P5 interpolation.** `np.interp` of measured masses makes mu = (dM/dt)/M a step function that
+  jumps at every sampling date. The form between samples is not measured, so the path runs two
+  forms and reports both: piecewise-linear in M (as now) and monotone cubic (PCHIP, continuous mu).
+  The midpoint convention does not apply to a choice of form; the app shows the linear run and the
+  spread. No scored endpoint uses this path, so no score moves.
+
+### 7.4 Planting density in the generic scenario (review P7)
+- 25 hills/m2 (0.04 m2/hill) has no source and is written five times: `forcing_rice`,
+  `growth_rice` and `oryza_growth` (`AREA_PER_HILL_M2`), `oryza2000` (`HA_PER_HILL` and
+  `Management.nh`), read again by `soil_hydrus`. Checked on 2026-10-26 (generic scenario, PFOA,
+  120 d): with the transpiration and the ORYZA2000 mass both at 1/18.5 m2/hill every BAF is unchanged
+  (log10 difference 0.000000), because Q_TP and M per hill scale together. With the transpiration
+  copy changed alone, the stem BAF moves +0.131 and the grain +0.122 log10. So the value only sets
+  per-hill absolute amounts, but the copies can drift apart and then it sets the BAFs.
+- One constant in one module, at the sourced 18.5 hills/m2 (Ibaraki standard, 5.1), read by every
+  driver; a test that the generic BAFs are invariant to it and that no second copy exists; every
+  per-hill display states the density (or shows per m2).
+
+### 7.5 Japonica crop sets as a crop-parameter range (`crop_cultivar`; review P6)
+- No ORYZA set exists for Koshihikari or Kasalath (searched; `sourced_inputs.csv`
+  crop_cultivar_search). Two published japonica sets run beside IR72, each with phenology
+  recalibrated to Yamazaki's measured heading and harvest (as IR72 is now):
+  - Gao et al. 2021 (Suijing-18, Heilongjiang; `raw_si/gao2021_cold_japonica_oryza_params.csv`);
+  - Wu et al. 2022 (Liaoning; ORYZA v3 partitioning FLV/FST/FSO to DVS 1.2 and SLA; the rest IR72, as
+    the authors state; `raw_si/wu2022_liaoning_oryza_params.csv`, to be verified against the PDF
+    before the runs). The Kaiyuan partitioning duplicates Donggang (a possible copy error in the
+    paper): Kaiyuan is not used.
+- A categorical input has no midpoint: the default stays IR72 (the shipped run and the re-fit) and the
+  two sets enter the band as ends (their log deviations from the IR72 run, per direction).
+
+### 7.6 Documentation only (review P8, P9)
+- P8: the model root is a root without plaque (`K_surf` off, not identifiable); every root comparison
+  states whether the observed root kept its plaque (`Sampling_Protocols.csv`).
+- P9: the stem's dry mass falls after heading (port: -13 % from its maximum to harvest; remobilisation),
+  so mu < 0 concentrates the stem. This is the crop model's carbon balance, kept; its size on the
+  stem BAF is quantified and recorded (theta(t) changes it).
+
+### 7.7 Re-fit and decisions
+- Re-fit every variant by protocol 5.6 on 7.1-7.2 (the corrections of 7.3-7.4 do not touch the
+  default scenario). Fitted values replace amendment 1's under the same keys.
+- 7.1-7.4 are corrections of a defect (a value or form without a source, or a wrong basis), adopted
+  whatever the scores do, as in amendment 1. The default variant is then re-decided by 5.3, and the
+  honesty band is the median transfer error of the resulting default.
+- Every scored endpoint and the input-range band are re-run and recorded in section 8.
+
+### 7.8 Expectations (written before the runs; misses will be recorded)
+- E17 The root fit absorbs the harvest root water in closed form. With entry at equilibrium,
+  `conc_dw(root) = r_eq * Cwo * (theta/(1-theta) + X)`, so the new r_eq / amendment-1 r_eq is
+  `(2.484 + X)/(1.751 + X)` (theta 0.713 -> 0.6365): PFBA 1.13, PFPeA 1.10, PFHxA 1.06, PFHpA 1.03,
+  PFBS 1.03, PFOA 1.02, others < 1.01 (X from the shipped binding). Each holds within +-0.02.
+  (The draft's E-a, ">20 % for short chains", was a guess this calculation contradicts; it is
+  replaced.)
+- E18 After the re-fit the Yamazaki observable moves by less than 0.05 log10 (0.159).
+- E19 The root's maturity water anchor is among the three largest contributors to the root band
+  for PFBA, PFPeA, PFHxA and PFBS.
+- E20 With the deposit moved to the husk, every congener with a grain cell fits L_Ph > 0 (amendment 1
+  left PFBA, PFPeA, PFHpA and PFUnDA at 0 with the grain still over), and the straw and root fits do not
+  move (the husk is not in Yamazaki's straw).
+- E21 Choi 2018 check (the model on the site-year drivers, Choi's sites not modelled): the model's husk +
+  rachis / brown-rice dry concentration ratio exceeds 1 for PFOA and PFOS, and is larger for PFOS than for
+  PFOA (Choi: 4.2-8.8 vs 37-47). The log10 distance to Choi's range is recorded.
+- E22 Li 2025 grain scores better on the rough-grain basis than on the brown-rice basis (the default
+  under-predicts Li's grain by -0.98 log on average; the husk raises the rough-grain value).
+- E23 The crop-set ends move straw and grain by >= 0.0005 log10 for every congener (they enter the
+  band), and the panicle's transpiration share at heading stays the largest grain-band contributor
+  (as E11).
+- E24 Every BAF of the generic scenario is invariant to the planting density (a test).
+
+### 7.9 Registered later (2b)
+Neutral path (organ water theta(t) or constant, one value for K_PW and the organ mass; dry-basis
+lipid; `neu_lipid_a` 1.22, `neu_leafexp` 0.95, `neu_surface` 20/2, `neu_kaw_cut` 1e-4,
+`mem_ph` 6.5 -> paddy pore-water pH 6.5-7.0; volatile-compound data); site soil and the
+irrigation-source scenario (`soil_*` rows, `obs_exposure_time`); app (`app_density`, `smiles_kcw`,
+KNHANES intake and body weight, the white/brown basis of the intake fraction); analysis rows
+(`tr_drivers`, `tr_li_grain_from`, `calib_sigma`; `fxy_recommended`).
