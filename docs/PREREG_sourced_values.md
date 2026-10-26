@@ -651,11 +651,11 @@ rough grain in brackets, no decision):
 
 | variant | Tang | Kim point | Kim interval | Li shoot | Li grain [rough] |
 |---|---|---|---|---|---|
-| redistributed_lipid (incumbent) | 0.687 | 0.554 | 0.444 | 0.364 | 1.364 [0.865] |
-| **redistributed_fit** | 0.686 | 0.562 | 0.443 | 0.467 | 1.337 [1.043] |
-| 4pool_lipid | 0.916 | 0.560 | 0.445 | 0.937 | 1.377 [0.886] |
-| redistributed_free | 1.738 | 2.118 | 1.866 | 1.279 | 1.866 [1.464] |
-| 4pool_free | 1.876 | 2.037 | 1.777 | 1.494 | 1.818 [1.439] |
+| redistributed_lipid (incumbent) | 0.687 | 0.554 | 0.444 | 0.364 | 1.361 [0.864] |
+| **redistributed_fit** | 0.686 | 0.562 | 0.443 | 0.467 | 1.334 [1.042] |
+| 4pool_lipid | 0.916 | 0.559 | 0.445 | 0.937 | 1.373 [0.885] |
+| redistributed_free | 1.738 | 2.118 | 1.866 | 1.279 | 1.863 [1.463] |
+| 4pool_free | 1.876 | 2.037 | 1.777 | 1.494 | 1.815 [1.437] |
 
 **Decision (5.3).** redistributed_fit is "better" than the incumbent on the Li grain (delta -0.027,
 95 % [-0.045, -0.003]) and "not worse" on every other endpoint (Tang -0.001 [-0.084, +0.086], Kim point
@@ -670,8 +670,8 @@ default shoot's (`resolve_loading`); the single-straw core has no `_fit` variant
 loading (`SHOOT_DEFAULT_LOADING`).
 
 Against amendment 1 the grain transfer is worse: Kim point 0.489 -> 0.554 (incumbent) and Li grain
-1.019 -> 1.364. The brown-rice pool takes no xylem: what the panicle transpires stays in the husk, so
-the brown-rice value is lower than amendment 1's whole panicle; on the rough basis Li grain is 0.865.
+1.019 -> 1.361. The brown-rice pool takes no xylem: what the panicle transpires stays in the husk, so
+the brown-rice value is lower than amendment 1's whole panicle; on the rough basis Li grain is 0.864.
 
 Section 7.8 (written for the incumbent default; read on its records):
 - E17 HELD. Every r_eq moved by the closed-form factor within 0.001 (PFBA 1.129, PFPeA 1.097, PFHxA
@@ -684,7 +684,7 @@ Section 7.8 (written for the incumbent default; read on its records):
   grain (a 0.0538 -> 0.0659, g_xy 0.00494 -> 0.00712), which moves every straw cell.
 - E21 HELD in direction, short in size. husk + rachis / brown rice, dry: PFOA 2.71 (Choi 4.2-8.8; -0.187
   log10), PFOS 4.74 (37-47; -0.892). On redistributed_fit: PFOA 2.91 (-0.156), PFOS 3.31 (-1.048).
-- E22 HELD. Li grain 1.364 brown, 0.865 rough.
+- E22 HELD. Li grain 1.361 brown, 0.864 rough.
 - E23 WRONG. The crop sets enter the straw and grain band for 11/11, but they, not the panicle share at
   heading, lead the grain band (crop_set 6/11, phi 4/11, PFBS's L_Ph range 1/11; the panicle share 0/11).
   Not foreseen: the japonica sets move the heading-to-maturity partitioning that sets the brown rice's
@@ -722,7 +722,9 @@ its limit is fixed in the model):
   (`test_grain_formation_gate`). The growth that draws a terminal pool's inflow (the grain's dM, its
   dry growth, the husk's growth) is now the slope of the linearly interpolated mass on each interval
   (`linear_expm.interval_slopes`); this moved every Yamazaki cell by <= 0.0002 log10, below reporting
-  precision, so the re-fit was not repeated again (the transfer records and the brief were).
+  precision, so the re-fit was not repeated again. The transfer records and the brief were: the Li
+  grain, scored on the filling-stage concentrations, moved by -0.003 in every variant (the table
+  above is the repeat), and the decision did not change.
   At the fitted values the Yamazaki observable moved 0.1160 -> 0.1158 (redistributed_fit); the re-fit,
   the transfer runs, both bands and the brief were repeated on the corrected numerics, and the numbers
   in this section are those of the repeat (the first run's are in git history).

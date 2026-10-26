@@ -225,15 +225,15 @@ rice (the decision basis, PREREG 7.13); the rough-grain value in brackets.
 | dataset | 4pool_free | redistributed_free | 4pool_lipid | redistributed_lipid | **default (redistributed_fit)** |
 |---|---|---|---|---|---|
 | Tang 2026 per-organ TF, 0.1 µg/g | 1.876 | 1.738 | 0.916 | 0.687 | **0.686** |
-| Kim 2019 grain BAF excl PFOA, point / [0, MDL] interval | 2.037 / 1.777 | 2.118 / 1.866 | 0.560 / 0.445 | 0.554 / 0.444 | **0.562 / 0.443** |
-| Li 2025 TF by stage, shoot / grain [rough] | 1.494 / 1.818 | 1.279 / 1.866 | 0.937 / 1.377 | 0.364 / 1.364 [0.865] | **0.467 / 1.337 [1.043]** |
+| Kim 2019 grain BAF excl PFOA, point / [0, MDL] interval | 2.037 / 1.777 | 2.118 / 1.866 | 0.559 / 0.445 | 0.554 / 0.444 | **0.562 / 0.443** |
+| Li 2025 TF by stage, shoot / grain [rough] | 1.494 / 1.815 | 1.279 / 1.863 | 0.937 / 1.373 | 0.364 / 1.361 [0.864] | **0.467 / 1.334 [1.042]** |
 
 - **Decision (PREREG 5.3, §8; applied by the user)**: `redistributed_fit` is better than the incumbent
   (`redistributed_lipid`) on the Li grain (−0.027, 95 % [−0.045, −0.003]) and ties on every other endpoint
   (Li shoot point 0.364 → 0.467, inside the tie). The margin is small and the chosen variant reproduces
   Yamazaki's straw.
 - **Grain against amendment 1** (0.489 Kim, 1.019 Li): worse, since brown rice takes no xylem; Li's grain
-  is under-predicted; on the rough basis Li grain is 0.865 (incumbent).
+  is under-predicted; on the rough basis Li grain is 0.864 (incumbent).
 - **Selection caveat**: Tang, Kim and Li chose the default, so its scores on them — and the band built
   from them — may be optimistic.
 - **Honesty band**: `model_api.APRIORI_OOS_SCORES` (read from `params/transfer_scores.json`; no number
@@ -382,7 +382,7 @@ is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested agains
    site's paddy soil.
 2. **Transfer datasets on their own drivers**: Tang (site, dates), Kim (field calendars), Li (stage
    dates) — each currently runs on the Yamazaki site-year.
-3. **Grain**: brown rice is phloem-fed only, and the default under-predicts Li's grain by stage (1.337;
+3. **Grain**: brown rice is phloem-fed only, and the default under-predicts Li's grain by stage (1.334;
    rough basis better) and Kim's PFOA; the husk/brown ratio is below Choi 2018's (PFOS by ~1 log). The
    timing and route of grain loading are open; harvest-only data cannot decide them.
 4. **Amendment 2b** (registered in PREREG 7.9; draft, prototypes and a Korean handoff in

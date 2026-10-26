@@ -70,7 +70,7 @@ api.simulate_neutral(2.45, name="carbamazepine")      # a neutral organic by log
   constants, the straw predicted) scores 0.154; the free anion with the a-priori `f_xy` 1.26.
 - **Transfer to independent data** (no parameter fitted to them): the default is off by log10 0.69
   on Tang 2026 per-organ TF, 0.56 on Kim 2019 grain (0.44 on the non-detect interval), and 0.47 /
-  1.34 on Li 2025 shoot / grain TF by stage (brown rice, phloem-fed only, is under-predicted). It
+  1.33 on Li 2025 shoot / grain TF by stage (brown rice, phloem-fed only, is under-predicted). It
   replaced the lipid loading by the pre-registered rule (better on the Li grain, tied elsewhere; a
   small margin). The 4-pool free anion: 1.88, 2.04, 1.49 / 1.82.
 - These datasets were not fitted, but they chose the default, so its scores on them — and the ×3.65
