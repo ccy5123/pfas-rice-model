@@ -395,7 +395,13 @@ def briggs_root_compartment() -> Compartment:
 # "water content root W_R = 94.2%". Treating them as dry-weight fractions (as an
 # earlier revision of this file did) under-states K_PW ~10x for lipophilic
 # compounds; the Liu 2023 root data caught it (log10 RMSE 0.605 -> 0.198).
-RICE_WATER = {"root": 0.90, "stem": 0.83, "leaf": 0.78, "grain": 0.14}
+# Organ water W: the same sourced theta_fw that turns the crop's dry matter into the fresh organ
+# mass (organ_mass.THETA_FW, from params/rice_composition_sourced.csv), so K_PW and M share one
+# water content per organ. (It was 0.90/0.83/0.78/0.14, whose source did not resolve.) The lipid
+# fractions below are FRESH-weight values reported next to root waters of 0.90-0.94; restating
+# them at the sourced, drier root is an open item (docs/ASSUMPTIONS.md, neutral path).
+import organ_mass as _om
+RICE_WATER = dict(_om.THETA_FW)
 TRAPP1994_LIPID_FW = {"root": 0.01, "stem": 0.03, "leaf": 0.03, "grain": 0.03}
 
 # CORROBORATION of the root value, added when Acquisition_Queue.csv row A1

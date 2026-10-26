@@ -20,6 +20,10 @@ sys.path.insert(0, os.path.join(_ROOT, "validation"))
 
 from pfas_rice_plant_module_4pool_surf import binding_factors  # noqa: E402
 import neutral_dpu as ND  # noqa: E402
+import json as _json  # noqa: E402
+
+# the a-priori scores as recorded by validation/neutral_scores.py (params/neutral_scores.json)
+_SCORES = _json.load(open(os.path.join(_ROOT, "params", "neutral_scores.json")))["scores"]
 
 
 @pytest.fixture(scope="module")
@@ -192,9 +196,10 @@ def test_ge2017_apriori_prediction():
     path = os.path.join(_ROOT, "data_obs", "neutral_obs_ge2017.csv")
     drv = V.drivers()
     rmse = V.compare_to_obs(path, drv, quiet=True)
-    assert rmse == pytest.approx(0.311, abs=0.05)
+    assert rmse == pytest.approx(_SCORES["Ge 2017 per-organ TF"], abs=1e-3)   # the record
     errs = {h: V.compare_to_obs(path, drv, half_life=h, quiet=True) for h in (30.0, 7.0, 3.0)}
-    assert errs[3.0] > errs[7.0] > errs[30.0]     # faster loss only makes it worse
+    # under PREREG 5.8 (root water 0.713) a ~7-d half-life helps a little and 3 d hurts
+    assert errs[3.0] > errs[30.0] > errs[7.0]
 
 
 def test_liu2023_root_partition_apriori():
@@ -213,7 +218,7 @@ def test_liu2023_root_partition_apriori():
     path = os.path.join(_ROOT, "data_obs", "neutral_obs_liu2023.csv")
     drv = V.drivers()
     rmse = V.compare_to_obs(path, drv, quiet=True)
-    assert rmse == pytest.approx(0.213, abs=0.04)
+    assert rmse == pytest.approx(_SCORES["Liu 2023 rice root"], abs=1e-3)     # the record
     flat = V.compare_to_obs(path, drv, half_life=7.0, quiet=True)
     assert abs(flat - rmse) < 0.02             # equilibrium endpoint: metabolism-insensitive
     rows = V.load_neutral_obs(path)

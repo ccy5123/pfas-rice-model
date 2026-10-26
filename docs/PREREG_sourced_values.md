@@ -247,4 +247,75 @@ Expectations added before the fit:
 
 ## 6. Outcome
 
-(appended after the runs)
+Runs of 2026-10-26 on amendment 1 (records: `validation/refit_sourced.json`,
+`validation/transfer_sourced.json`, `params/input_range_band.json`, `params/neutral_scores.json`;
+the checks of E7-E16 are read off them by `validation/prereg_a1_outcome.py`).
+
+Numerics changed during the runs, both under the rule of section 1 (no result moved at reporting
+precision except where stated):
+- The plant ODE is affine in its state, so it is now integrated by exponential steps
+  (`src/linear_expm.py`; 16 steps per driver interval, A frozen at the step midpoint) instead of BDF.
+  Against BDF at rtol 1e-8 every reported number is unchanged (`numerics_convergence.py`); each
+  model's vectorised (A, b) is held equal to its right-hand side (`tests/test_linear_expm.py`).
+  Intervals where a rate changes fast get more steps (`linear_expm.GRADE` 0.2; 0.05 moves
+  nothing). A run is ~10x faster; the full re-fit takes ~30 min instead of ~8 h.
+- In the `*_fit` variant the alternation of the straw (f_xy) and grain (L_Ph) solves did not settle
+  for PFDA (grain residual -0.367 recorded as solved); a joint solve now follows a non-settling
+  alternation (PFDA f_xy 0.602, L_Ph 2.81, both cells exact).
+- `LAM_EQ` 1e4 was not converged: 1e4 -> 1e5 moved the BAFs by 0.0008 log10. Raised to 1e6
+  (1e5 -> 1e6: 0.00008; 1e6 -> 1e7: 0.00001) and the re-fit repeated.
+- `hydrus_drivers` dropped the drivers' DVS, so `simulate(drivers=hydrus_drivers(...))` failed on
+  the default shoot (the panicle share follows DVS): fixed, with a test.
+
+Section 4 (expectations before amendment 1):
+- E1 HELD. The old ramp's young-panicle peak grew as the floor fell (1.41x -> 9.65x); the gate is now
+  a step at the floor and converges (floors 1e-8 to 1e-12: no number moves). Under the sourced
+  stage share (0 before heading) the PFOA panicle has no pre-heading peak at all (max at harvest).
+- E2 HELD. BDF tolerances, the harvest sub-daily grid and the inner floor converge (and the
+  exponential integrator's step count).
+- E3 HELD. No rice Km/Vmax for PFAS exists; the carrier became the linear entry (5.2).
+- E4 HELD. Unbounded, PFDA L_Ph = 6.44 and PFDoDA 13.2 (default); PFUnDA sits at 0.
+- E5 HELD, confounded. The Yamazaki observable moved 0.380 -> 0.159, less than 0.49, but with every
+  amendment-1 change at once, not composition alone.
+- E6 HELD. retention became derived (1); the stem and panicle shares are sourced ranges carried in the
+  band; no lever is a free fit.
+
+Section 5.5 / 5.6:
+- E7 PARTLY WRONG. Every r_eq reproduces its root cell (residual 0); the lam_eq scan was NOT converged
+  at 1e4 (above).
+- E8 HELD. Before the re-fit, retention 1 and the sourced panicle share cut the grain over-prediction
+  for 7 of 9 congeners (PFBA 6.6x -> 2.24x, PFPeA 7.1x -> 2.61x, PFHpA 6.9x -> 2.36x, PFOA 3.2x -> 2.60x,
+  PFNA 2.9x -> 2.67x, PFDA 1.9x -> 1.87x, PFOS 2.3x -> 2.00x); PFUnDA (7.3x -> 8.05x) and PFDoDA (1.1x ->
+  1.76x) rose.
+- E9 HELD (PFDA 6.44, PFDoDA 13.2). E10 HELD (0.159; root 0.000, straw 0.253, grain 0.103).
+- E11 HELD. Composition leads the root and straw band for PFBA, PFPeA, PFHxA, PFBS; a shoot share
+  (mostly the panicle share at heading) leads the grain band for 11/11.
+- E12 WRONG. Tang 0.729 (+0.089), Kim point 0.489 (+0.020), Li shoot 0.386 (+0.028) moved less than 0.49,
+  but Li grain moved +0.509 (0.510 -> 1.019): the grain is now under-predicted on Li (mean -0.98 log).
+  The default stays (5.3): no variant is better on a transfer endpoint and not worse on all.
+- E13 HELD (grain band > 0.1 log10 for 11/11; PFOA grain -0.38/+0.36). E14 HELD (g_ph removed in both
+  lipid variants; b, pfsa_ln and the K_PL gate were removed too, so both lipid shoots ship one f_xy
+  = a and one g_xy for every chain). E15 HELD (PFBA and PFPeA at L_Ph = 0 in every variant). E16 HELD
+  (spans PFBA 5.76x, PFPeA 3.65x, PFHpA 3.12x, PFBS 2.40x; all others < 2x).
+
+Scores (log10 RMSE; default = redistributed_lipid): Yamazaki 0.159 (in-sample); Tang 0.729; Kim point
+0.489, interval 0.371; Li shoot 0.386, grain 1.019; honesty band = their median 0.489 (x3.1). Variants:
+redistributed_free 1.266 / 1.757 / 1.967 / 1.710 / 1.343 / 1.405; redistributed_fit 0.152 / 0.695 / 0.554
+/ 0.444 / 0.510 / 1.183; 4pool_lipid 0.157 / 1.030 / 0.504 / 0.385 / 1.014 / 1.027; 4pool_free 1.359 /
+3.693 / 1.934 / 1.669 / 3.299 / 1.378 (Yamazaki / Tang / Kim point / interval / Li shoot / grain).
+In the free variants, L_Ph of an unreachable long chain is the ratio's maximum; where the ratio rises
+monotonically to an asymptote below the observation the stored value is merely large (up to ~1e9) and
+any larger value gives the same grain.
+
+Addenda:
+- 5.7 (Kim on the dry basis): applied; no expectation.
+- 5.8 (one water per organ on the neutral path): applied. Scores Liu 0.256 (equilibrium 0.229), Ge
+  0.702, Kodesova 0.469 (0.392), Li hydroponic 0.568, Li soil 0.549 (0.639), Briggs stem 0.313 -- all
+  worse than before (0.213, 0.311, 0.216, 0.546, 0.550, 0.299). Diagnosis: a basis mismatch the addendum
+  missed -- the neutral lipid fractions are fresh-weight fractions reported at ~90 % water, and the
+  comparison converts other species' dry-weight observations with the rice root's water. Restating
+  the neutral composition on one basis is amendment 2.
+- 5.9 (Li stages from sources): applied; the range ends are printed by
+  `validation/li2025_stage_resolved.py`.
+- Reopened (`params/value_provenance.csv` tis_theta): organ water falls with stage (root 0.76-0.89
+  vegetative, 0.51-0.77 at maturity); a constant theta is amendment 2.

@@ -69,7 +69,7 @@ def test_missing_root_reconstructed_from_ratio():
 def test_biomass_drivers_and_simulate():
     drv = mb.biomass_drivers(_demo_csv(), units="g/plant", plants_per_hill=3,
                              season=150.0, n_t=121)
-    assert set(drv) == {"t", "Cwo", "Qtp", "M", "mass_basis"}
+    assert set(drv) == {"t", "Cwo", "Qtp", "M", "mass_basis", "dvs"}   # dvs: the panicle share
     assert drv["mass_basis"] == "fresh"          # the xylem split reads it (organ_mass)
     assert drv["M"].shape == (121, 4)
     assert drv["t"][-1] == pytest.approx(150.0)

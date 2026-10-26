@@ -11,9 +11,9 @@ Why it differs from dynamiCROP's Fig. 2
 dynamiCROP splits a compartment's residue by INITIAL SOURCE pool (air/soil/leaf-
 surface/fruit-surface) using linear superposition -- valid because that model is a
 linear, constant-coefficient ODE driven only by an initial condition (a single
-application pulse). Our model is (a) NONLINEAR (GHK electrodiffusion + Michaelis-
-Menten carrier) and (b) driven by a CONTINUOUS soil source C_w^o(t), so the
-initial-source superposition does not apply. Everything here originates in the
+application pulse). Our model is driven by a CONTINUOUS soil source C_w^o(t) through
+the root entry, with time-varying coefficients, so the initial-source superposition does
+not apply. Everything here originates in the
 pore water -> root uptake j_R; from there PFAS moves
 
     root --(xylem)--> stem --(xylem)--> leaf, grain
@@ -41,8 +41,8 @@ from __future__ import annotations
 import numpy as np
 
 from pfas_rice_plant_module_4pool_surf import (
-    RiceUptakeModel, binding_factors, root_uptake, xylem_leaf_share, phloem_flows,
-    ROOT, STEM, LEAF, FRUIT)
+    RiceUptakeModel, binding_factors, root_uptake, xylem_leaf_share, panicle_share,
+    phloem_flows, MASS_FLOOR, ROOT, STEM, LEAF, FRUIT)
 
 _trapz = getattr(np, "trapezoid", None) or np.trapz   # numpy>=2 renames trapz
 
@@ -67,22 +67,24 @@ def flux_terms(model: RiceUptakeModel, t: float, C: np.ndarray) -> dict:
     term -mu*C cancels exactly, so these fluxes conserve mass at every junction.
     """
     inp = model.inputs
-    Cwo = inp.Cwo_(t)
-    Qtp = inp.Qtp_(t)
-    M = np.maximum(inp.M_(t), 1e-12)
+    Cwo, Qtp, M, dM, leaf_loss, gam, dvs = inp.drivers_at(t)     # the drivers rhs() reads
+    M = np.maximum(M, MASS_FLOOR)
     cmpd = model.cmpd
 
     B = binding_factors(model.comps, cmpd)
     Cw = C / B
 
-    split = xylem_leaf_share(model.comps, M, inp.M_basis, model.s_grain_dry)
-    f3, f4 = split, 1.0 - split
+    if model.lam_grain_dvs is not None:                          # the split rhs() uses
+        f4 = panicle_share(dvs, *model.lam_grain_dvs)
+        f3 = 1.0 - f4
+    else:
+        split = xylem_leaf_share(model.comps, M, inp.M_basis, model.s_grain_dry)
+        f3, f4 = split, 1.0 - split
 
-    Q_g, Q_r = phloem_flows(model.comps, inp.dM_(t), Qtp, model.T_C_Ph, model.phi, inp.M_basis)
-    C_Phl = cmpd.L_Ph * Cw[LEAF] + cmpd.g_ph * C[LEAF]
+    Q_g, Q_r = phloem_flows(model.comps, dM, Qtp, model.T_C_Ph, model.phi, inp.M_basis)
+    C_Phl = model.phloem_loading_factor() * Cw[LEAF] + cmpd.g_ph * C[LEAF]
     Cw_xyl = cmpd.f_xy * Cw[ROOT] + cmpd.g_xy * C[ROOT]
     jR = root_uptake(Cwo, Cw[ROOT], cmpd, model.env)
-    gam = inp.grain_gate_(t)
     g = [c.gamma for c in model.comps]
 
     return dict(
@@ -92,7 +94,7 @@ def flux_terms(model: RiceUptakeModel, t: float, C: np.ndarray) -> dict:
         xylem_stem_grain=gam * f4 * Qtp * Cw[STEM],
         phloem_leaf_grain=gam * Q_g * C_Phl,
         phloem_leaf_root=Q_r * C_Phl,
-        leaf_loss=inp.leaf_loss_(t) * C[LEAF] * M[LEAF],
+        leaf_loss=leaf_loss * C[LEAF] * M[LEAF],
         degr_root=g[ROOT] * C[ROOT] * M[ROOT],
         degr_stem=g[STEM] * C[STEM] * M[STEM],
         degr_leaf=g[LEAF] * C[LEAF] * M[LEAF],
@@ -108,8 +110,9 @@ def dC_from_fluxes(model: RiceUptakeModel, t: float, C: np.ndarray) -> np.ndarra
     the tests to assert flux_terms() never diverges from RiceUptakeModel.rhs().
     """
     f = flux_terms(model, t, C)
-    M = np.maximum(model.inputs.M_(t), 1e-12)
-    mu = model.inputs.dM_(t) / M
+    _, _, M, dM, _, _, _ = model.inputs.drivers_at(t)
+    M = np.maximum(M, MASS_FLOOR)
+    mu = dM / M
     mass_bal = np.array([
         f["soil_uptake"] - f["xylem_root_stem"] + f["phloem_leaf_root"] - f["degr_root"],
         f["xylem_root_stem"] - (f["xylem_stem_leaf"] + f["xylem_stem_grain"]) - f["degr_stem"],
@@ -197,9 +200,8 @@ def flux_terms_redistributed(model, t, C):
     forms that residual goes to the leaf."""
     from pfas_rice_plant_module_4pool_surf import root_uptake as _ru
     inp = model.inputs
-    Cwo, Q = inp.Cwo_(t), inp.Qtp_(t)
-    M = np.maximum(inp.M_(t), 1e-12)
-    dM = inp.dM_(t)
+    Cwo, Q, M, dM, leaf_loss, gam, dvs = inp.drivers_at(t)       # the drivers rhs() reads
+    M = np.maximum(M, MASS_FLOOR)
     n = model.n_comp
     Cw = C[:n] / model._B
     leaf, grain, r = model.LEAF, model.GRAIN, model.retention
@@ -208,17 +210,21 @@ def flux_terms_redistributed(model, t, C):
     C_Phl = model.cmpd.L_Ph * Cw[leaf] + model.cmpd.g_ph * C[leaf]
     jR = _ru(Cwo, Cw[model.ROOT], model.cmpd, model.env)
     xyl = Q * (model.cmpd.f_xy * Cw[model.ROOT] + model.cmpd.g_xy * C[model.ROOT])
-    gam = inp.grain_gate_(t)
-    residual = (model.lam_grain + (1.0 - r) * (model.tau.sum() + model.lam_leaf)) * xyl
+    if model.lam_grain_dvs is not None:                          # the split rhs() uses
+        lg = panicle_share(dvs, *model.lam_grain_dvs)
+        ll = 1.0 - model.tau.sum() - lg
+    else:
+        lg, ll = model.lam_grain, model.lam_leaf
+    residual = (lg + (1.0 - r) * (model.tau.sum() + ll)) * xyl
     return dict(
         soil_uptake=float(M[model.ROOT] * jR),
         xylem_root_out=float(xyl),
         xylem_to_stem=float(r * model.tau.sum() * xyl),
-        xylem_to_leaf=float(r * model.lam_leaf * xyl + (1.0 - gam) * residual),
+        xylem_to_leaf=float(r * ll * xyl + (1.0 - gam) * residual),
         xylem_to_grain=float(gam * residual),
         phloem_leaf_grain=float(gam * Q_g * C_Phl),
         phloem_leaf_root=float(Q_r * C_Phl),
-        leaf_loss=float(inp.leaf_loss_(t) * M[leaf] * C[leaf]),
+        leaf_loss=float(leaf_loss * M[leaf] * C[leaf]),
     )
 
 

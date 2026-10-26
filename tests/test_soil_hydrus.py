@@ -82,3 +82,14 @@ def test_hydrus_qtp_matches_the_crop_transpiration_when_unstressed():
     assert np.allclose(inp.Qtp[wet], run["Qtp"][wet], rtol=0.02, atol=1e-3)
     # after drainage the drying soil limits uptake below the potential
     assert inp.Qtp[-1] < run["Qtp"][-1]
+
+
+@hydrus
+def test_hydrus_drivers_run_the_default_configuration():
+    """The default shoot needs the drivers' DVS (the panicle's transpiration share follows it);
+    hydrus_drivers once dropped it, and simulate(drivers=hydrus_drivers(...)) raised."""
+    import model_api as api
+    drv, _ = api.hydrus_drivers("PFOA", Cwo_ref=1.0)
+    assert "dvs" in drv and len(drv["dvs"]) == len(drv["t"])
+    r = api.simulate("PFOA", drivers=drv)
+    assert r["success"]

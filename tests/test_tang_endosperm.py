@@ -6,9 +6,10 @@ default and "white" is the named alternative, which re-partitions the grain's fr
 concentration into a white-rice composition with membrane phospholipid counted the way
 the grain_brown row counts it.
 
-Pinned: the default is unchanged; the white composition is derived as documented; and
-the finding -- the white reading LOWERS the model endosperm 1.5-4x, so the documented
-grain under-prediction gets WORSE, not better (lipid OOS 0.640 -> 0.831).
+Pinned: the default is unchanged; the white composition is the sourced grain_white row
+(params/rice_composition_sourced.csv, midpoints); the white reading lowers the model
+endosperm (most for the high-K_PL sulfonate); and the band's Tang entry is the default
+configuration's score, the same as validation/transfer_sourced.json records.
 """
 import os
 import sys
@@ -39,41 +40,40 @@ def test_default_is_brown_and_unchanged():
         api.tang_tf_validation("PFOA", endosperm="husked")
 
 
-def test_white_composition_counts_membrane_pl_like_the_brown_row():
+def test_white_composition_is_the_sourced_row():
     w = api._grain_white_composition()
-    brown_pl = api._COMP["grain_brown"]["f_PL"]
-    assert w["f_PL"] == pytest.approx(0.2 * brown_pl / 0.88)
-    assert w["f_PL"] < brown_pl                       # bran/embryo PL milled away
-    assert (w["theta_fw"], w["f_prot"], w["f_cw"]) == (0.11, 0.075, 0.006)
+    assert w == api._COMP["grain_white"]
+    rng = api.PARAMS["tissue_composition_ranges"]["grain_white"]
+    for q in ("theta_fw", "f_prot", "f_PL", "f_cw"):
+        assert w[q] == pytest.approx(0.5 * (rng[q][0] + rng[q][1]), abs=1e-6)
+    assert w["f_PL"] < api._COMP["grain_brown"]["f_PL"]          # bran/embryo PL milled away
 
 
-def test_white_lowers_the_endosperm_most_for_the_high_kpl_sulfonate():
+def test_white_lowers_the_endosperm():
     f = {c: api.endosperm_white_factor(c) for c in api.TANG_CONGENERS}
-    assert all(v < 0.7 for v in f.values()), f
-    assert f["PFOS"] < f["PFOA"] < f["GenX"], f       # K_PL 31623 > 1905 > 118
+    assert all(v < 1.0 for v in f.values()), f
+    # with the sourced composition the milled-away phospholipid no longer orders them: PFOS and
+    # PFOA (K_PL 31623 vs 1905) within 0.5 %, GenX (118) the least lowered
+    assert abs(f["PFOS"] - f["PFOA"]) < 0.005 and f["GenX"] > max(f["PFOS"], f["PFOA"]), f
     v = api.tang_tf_validation("PFOS", dose="low", endosperm="white")
     vb = api.tang_tf_validation("PFOS", dose="low")
     assert v["model_tf"]["endosperm"] == pytest.approx(vb["model_tf"]["endosperm"] * f["PFOS"])
     assert v["model_tf"]["stalk"] == vb["model_tf"]["stalk"]   # only the endosperm moves
 
 
-def test_the_white_reading_makes_the_grain_gap_worse():
-    assert _rmse() == pytest.approx(0.640, abs=0.02)      # the default is lipid loading on
-    assert _rmse(lipid_loading=True, endosperm="white") == pytest.approx(0.831, abs=0.03)
-
-
 def test_the_honesty_band_uses_the_default_configuration_on_tang():
-    """The band's Tang entry must be the DEFAULT configuration's score. Since the
-    pre-registered switch (validation/default_switch.py) that is the redistributed shoot +
-    lipid loading (0.640). It once held a different shoot's score than the default ran --
-    the shoot models and the lipid term score differently on the same data, so each is
-    pinned here."""
+    """The band's Tang entry must be the DEFAULT configuration's score, recomputed here, and
+    every variant's Tang score must match the transfer record."""
+    import json
     key = [k for k in api.APRIORI_OOS_SCORES if k.startswith("Tang")][0]
     default = _rmse()
-    assert api.APRIORI_OOS_SCORES[key] == pytest.approx(default, abs=0.005)
-    assert default == pytest.approx(_rmse(shoot="redistributed", lipid_loading=True))
-    assert _rmse(lipid_loading=False) == pytest.approx(1.496, abs=0.01)   # same shoot, free anion
-    assert _rmse(shoot="4pool", lipid_loading=False) == pytest.approx(1.714, abs=0.01)  # old default
+    assert api.APRIORI_OOS_SCORES[key] == pytest.approx(default, abs=1e-4)
+    with open(os.path.join(ROOT, "validation", "transfer_sourced.json")) as f:
+        rec = json.load(f)["errors"]
+    for v, kw in (("redistributed_lipid", {}), ("redistributed_free", dict(lipid_loading=False)),
+                  ("4pool_free", dict(shoot="4pool", lipid_loading=False))):
+        assert _rmse(**kw) == pytest.approx(float(np.sqrt(np.mean(np.square(rec[v]["tang"])))),
+                                            abs=1e-6), v
     with pytest.raises(ValueError):
         api.tang_tf_validation("PFOA", shoot="two-pool")
 

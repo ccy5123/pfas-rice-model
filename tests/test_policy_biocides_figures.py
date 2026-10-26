@@ -86,9 +86,9 @@ def test_the_rank_correlation_is_60_substances_with_no_duplicate(P, rows, doc):
     names = [p["substance"].strip().lower() for p in pairs]
     assert len(set(names)) == 60, "한 물질이 두 번 가중되면 안 된다"
     x = [p["bat_A"] for p in pairs]
-    assert round(P._rho(x, [p["root"] for p in pairs]), 3) == 0.902
+    assert round(P._rho(x, [p["root"] for p in pairs]), 3) == 0.892
     assert round(P._rho(x, [p["straw"] for p in pairs]), 3) == -0.777
-    assert "+0.902" in doc and "−0.777" in doc
+    assert "**ρ(어류 BCF, 벼 뿌리) = +0.892**" in doc and "−0.777" in doc
 
 
 def test_the_row_vs_substance_count_is_stated_correctly(P, rows, doc):
@@ -125,13 +125,13 @@ def test_the_excluded_substances_are_never_quoted_bare(P, rows, doc):
 
 
 def test_the_meaning_collapse_is_computed_not_rounded(P, nums, doc):
-    """슬라이드 6. 6.73 은 «뿌리 BAF 가 평형값의 절반이 되는 지점»이라는 정의로
+    """슬라이드 6. 6.76 은 «뿌리 BAF 가 평형값의 절반이 되는 지점»이라는 정의로
     계산한 값이고, 문서는 7 로 반올림하지 말라고 명시한다."""
     key = ("5_meaning", "half_equilibrium_logkow")
     if key not in nums:
         pytest.skip("--fast 로 만든 CSV 라 5_meaning 이 없음")
-    assert float(nums[key]) == pytest.approx(6.73, abs=0.05)
-    assert "6.73" in doc
+    assert float(nums[key]) == pytest.approx(6.76, abs=0.005)
+    assert "log Kow **6.76** 위에서는" in doc
     assert "반올림해 인용하지 마세요" in doc
     # 그리고 그 한계가 아직 판정에 반영돼 있지 않다는 사실도 남아 있어야 한다
     assert "아직 판정 규칙에 반영되어 있지 않습니다" in doc

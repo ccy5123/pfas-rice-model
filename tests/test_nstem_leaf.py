@@ -21,11 +21,12 @@ from pfas_rice_plant_module_nstem_leaf import (
     NStemLeafModel, PlantInputsNL, make_stem_leaf_compartments, split_from_stem_frac)
 from pfas_rice_plant_module_4pool_surf import (
     Environment, Compound, binding_factors, root_uptake, _logistic)
+from model_api import PHI, T_C_PH   # the sourced phloem constants  # noqa: E402
 
 N = 4
 
 
-def _setup(retention=0.6, k_seq=0.0, k_rel=0.0, grain_share="gate"):
+def _setup(retention=0.6, k_seq=0.0, k_rel=0.0, staged=False, L_Ph=0.01):
     t = np.linspace(0.0, 150.0, 481)
     Qtp = 0.02 + 0.10 * np.exp(-((t - 95.0) ** 2) / (2 * 30.0 ** 2))
     stem = _logistic(t, 1e-3, 0.060, 0.11, 30.0)
@@ -33,18 +34,21 @@ def _setup(retention=0.6, k_seq=0.0, k_rel=0.0, grain_share="gate"):
     M = np.column_stack([_logistic(t, 1e-3, 0.030, 0.10, 20.0)]
                         + [stem / N] * N
                         + [leaf, _logistic(t, 1e-5, 0.035, 0.18, 90.0)])
-    inputs = PlantInputsNL(t=t, Cwo=np.full_like(t, 1.0), Qtp=Qtp, M=M)
+    dvs = np.clip(t / 75.0, 0.0, 2.0)                  # heading (DVS 1) at day 75
+    inputs = PlantInputsNL(t=t, Cwo=np.full_like(t, 1.0), Qtp=Qtp, M=M, dvs=dvs)
     comps = make_stem_leaf_compartments(
         N, dict(theta=0.83, f_prot=0.05, f_PL=0.005, f_cw=0.72),
         dict(theta=0.90, f_prot=0.07, f_PL=0.015, f_cw=0.50),
         dict(theta=0.78, f_prot=0.10, f_PL=0.010, f_cw=0.56),
         dict(theta=0.14, f_prot=0.09, f_PL=0.003, f_cw=0.035))
     cmpd = Compound(name="PFOA", K_prot=12.3, K_PL=1905.0, K_cw=6.5, kappa_d=2.0,
-                    Vmax_in=20.0, Km_in=5.0, Vmax_out=8.0, Km_out=5.0, L_Ph=0.01, f_xy=0.04)
+                    Vmax_in=20.0, Km_in=5.0, Vmax_out=8.0, Km_out=5.0, L_Ph=L_Ph, f_xy=0.04)
     tau, lam_leaf, lam_grain = split_from_stem_frac(N, 0.45, lam_grain=0.05)
+    split = (dict(lam_grain_dvs=(0.21, 0.07)) if staged
+             else dict(lam_leaf=lam_leaf, lam_grain=lam_grain))
     m = NStemLeafModel(env=Environment(), cmpd=cmpd, comps=comps, inputs=inputs,
-                       tau=tau, lam_leaf=lam_leaf, lam_grain=lam_grain, retention=retention,
-                       k_seq=k_seq, k_rel=k_rel, grain_share=grain_share)
+                       tau=tau, retention=retention, k_seq=k_seq, k_rel=k_rel,
+                       phi=PHI, T_C_Ph=T_C_PH, **split)
     return t, m
 
 
@@ -62,26 +66,22 @@ def _mass_residual(m, t, ti=70.0):
 
 
 @pytest.mark.parametrize("retention", [0.0, 0.6, 1.0])
-@pytest.mark.parametrize("grain_share", ["gate", "size"])
-def test_mass_conservation(retention, grain_share):
-    t, m = _setup(retention, grain_share=grain_share)
+@pytest.mark.parametrize("staged", [False, True])
+def test_mass_conservation(retention, staged):
+    t, m = _setup(retention, staged=staged)
     for ti in (70.0, 110.0):                 # before and during grain filling
         dmass, src = _mass_residual(m, t, ti)
         assert dmass == pytest.approx(src, rel=1e-6, abs=1e-9)
 
 
-def test_grain_share_size_takes_less_while_the_panicle_is_small():
-    """'size' routes the residual xylem stream to the grain in proportion to the panicle's
-    size, so the young panicle takes less than under the gate and the rest stays in the leaf
-    (validation/panicle_share_amendment.py); an unknown mode is refused."""
-    t, g = _setup(grain_share="gate")
-    _, z = _setup(grain_share="size")
-    yg, yz = g.solve(t).y, z.solve(t).y
-    i = int(np.searchsorted(t, 110.0))
-    assert yz[g.GRAIN, i] < yg[g.GRAIN, i]
-    assert yz[g.LEAF, i] > yg[g.LEAF, i]
-    with pytest.raises(ValueError):
-        _setup(grain_share="bogus")
+def test_staged_panicle_share_is_zero_before_heading():
+    """The stage-based split gives the panicle no transpiration before DVS 1 (PREREG 5.1): with
+    retention 1 and no phloem loading the grain takes nothing before heading (with phloem
+    loading it does: the growing panicle draws sap from its formation on)."""
+    t, m = _setup(retention=1.0, staged=True, L_Ph=0.0)
+    y = m.solve(t).y
+    i = int(np.searchsorted(t, 70.0))                  # DVS < 1
+    assert np.all(y[m.GRAIN, :i] < 1e-9)
 
 
 def test_transpiration_split_must_close_to_one():
@@ -89,7 +89,8 @@ def test_transpiration_split_must_close_to_one():
     tau = m.tau.copy()
     with pytest.raises(AssertionError):
         NStemLeafModel(env=m.env, cmpd=m.cmpd, comps=m.comps, inputs=m.inputs,
-                       tau=tau, lam_leaf=0.9, lam_grain=0.9)   # sums > 1
+                       tau=tau, lam_leaf=0.9, lam_grain=0.9,   # sums > 1
+                       phi=PHI, T_C_Ph=T_C_PH)
 
 
 def test_runs_finite_and_nonnegative():
@@ -109,13 +110,14 @@ def test_more_retention_sends_more_to_stalk():
 
 def test_redistribution_fills_the_stem():
     """The redistributed shoot fills the stalk the single-straw 4-pool leaves as a
-    pass-through, and the leaf loses its monopoly (default drivers)."""
+    pass-through, and the leaf loses its monopoly (default drivers; the same transport
+    values in both shoots, so only the structure differs)."""
     import model_api as api
-    base = api.simulate("PFOA", f_xy_source="recommended", **api.FOUR_POOL_FREE)
-    nl = api.simulate_nstem_leaf("PFOA", retention=0.6, stem_transp_frac=0.45)
-    b_root = base["baf_final"]["root"]
-    assert nl["tf_final"]["stem"] > 3.0 * base["baf_final"]["stem"] / b_root
-    assert nl["tf_final"]["leaf"] < 0.5 * base["baf_final"]["leaf"] / b_root
+    kw = dict(lipid_loading=False, f_xy_override=0.05, L_Ph_override=0.01, r_eq_override=1.0)
+    base = api.simulate("PFOA", shoot="4pool", **kw)
+    nl = api.simulate("PFOA", shoot="redistributed", **kw)
+    assert nl["tf_final"]["stem"] > 3.0 * base["baf_final"]["stem"] / base["baf_final"]["root"]
+    assert nl["tf_final"]["leaf"] < base["baf_final"]["leaf"] / base["baf_final"]["root"]
 
 
 # --------------------------------------------------------------------------

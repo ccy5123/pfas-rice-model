@@ -38,10 +38,12 @@ ORGANS = ("root", "stem", "leaf", "grain")
 
 
 def to_kg_per_hill(values: np.ndarray, units: str, *, plants_per_hill: float | None = None,
-                   hills_per_m2: float = 25.0) -> np.ndarray:
+                   hills_per_m2: float | None = None) -> np.ndarray:
     """Convert an organ biomass column to kg/hill from the given reporting units.
 
-    Unit conversion only -- the BASIS (dry or fresh) is whatever the input was."""
+    Unit conversion only -- the BASIS (dry or fresh) is whatever the input was. Per-area
+    units need the field's planting density `hills_per_m2`; there is no default (a
+    density is a property of the field the data came from, not of the model)."""
     v = np.asarray(values, float)
     u = units.strip().lower()
     if u == "kg/hill":
@@ -54,6 +56,8 @@ def to_kg_per_hill(values: np.ndarray, units: str, *, plants_per_hill: float | N
         if plants_per_hill is None:
             raise ValueError("units='g/plant' needs plants_per_hill")
         return v * plants_per_hill / 1.0e3
+    if u in ("g/m2", "kg/ha", "t/ha", "ton/ha", "mg/ha") and hills_per_m2 is None:
+        raise ValueError(f"units={units!r} needs the field's hills_per_m2")
     if u == "g/m2":
         return v / 1.0e3 / hills_per_m2
     if u in ("kg/ha",):
@@ -103,14 +107,15 @@ def biomass_matrix(t, day, organs_kg_hill, *, root_shoot_ratio: float | None = N
 
 
 def biomass_drivers(path_or_table, units, *, season=None, n_t=241, Cwo=1.0,
-                    plants_per_hill=None, hills_per_m2=25.0, root_shoot_ratio=None,
-                    Qtp=None):
+                    plants_per_hill=None, hills_per_m2=None, root_shoot_ratio=None,
+                    Qtp=None, dvs=None):
     """One-call: measured biomass table -> `drivers` dict for simulate(drivers=...).
 
     `path_or_table` is a CSV path/buffer, or a (day, organs) tuple from
     `load_biomass_table`.  `units` is the reporting unit of the table (see
     `to_kg_per_hill`).  `Qtp` (L/d/hill on the output grid) overrides the modelled
-    transpiration; otherwise `forcing_rice.Q_TP` is used.  The table's DRY weights
+    transpiration; otherwise `forcing_rice.Q_TP` is used. `dvs` (development stage on the
+    output grid) likewise defaults to the generic crop's.  The table's DRY weights
     become FRESH organ mass via `organ_mass`.  Returns the same dict shape as `model_api.drivers_from_arrays`.
     """
     import organ_mass as om
@@ -131,7 +136,13 @@ def biomass_drivers(path_or_table, units, *, season=None, n_t=241, Cwo=1.0,
         Qtp = fr.Q_TP(t, season)
     else:
         Qtp = np.asarray(Qtp, float)
-    return dict(t=t, Cwo=Cwo_arr, Qtp=Qtp, M=M, mass_basis=om.MASS_BASIS)
+    if dvs is None:
+        # a biomass table carries no development stage; like its default transpiration, the
+        # stage (which sets the panicle's share of transpiration) is the generic crop's
+        import model_api as api
+        dvs = api.crop_on_grid(t, "generic", season=season)[3]
+    return dict(t=t, Cwo=Cwo_arr, Qtp=Qtp, M=M, mass_basis=om.MASS_BASIS,
+                dvs=np.asarray(dvs, float))
 
 
 if __name__ == "__main__":

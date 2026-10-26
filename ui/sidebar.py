@@ -48,8 +48,8 @@ def _ctx_lookup_panel():
     * it does not fill the in-planta HALF-LIFE — no dashboard property corresponds
       to it, and Kodesova measured it varying 4.8x between species for one compound;
     * it does not hide PROVENANCE. CompTox serves experimental and OPERA-PREDICTED
-      values side by side, and every a-priori number this path advertises (Liu
-      0.206/0.213, Ge 0.311) was computed on a MEASURED log Kow. Experimental wins
+      values side by side, and every a-priori number this path advertises
+      (model_api.NEUTRAL_APRIORI_OOS_SCORES) was computed on a MEASURED log Kow. Experimental wins
       when both exist, and each filled field is shown with its badge, because a
       prediction quietly standing in for a measurement would make those numbers
       describe something the app is no longer doing.
@@ -90,9 +90,12 @@ def _ctx_lookup_panel():
                      "is not 'uncertain', it is out of scope. Replace them by hand or leave the "
                      "corresponding term off.")
         if predicted:
+            _ns = api.NEUTRAL_APRIORI_OOS_SCORES
+            _quoted = (f" (Liu {_ns['Liu 2023 rice root']:.3f}, Ge {_ns['Ge 2017 per-organ TF']:.3f})"
+                       if {"Liu 2023 rice root", "Ge 2017 per-organ TF"} <= set(_ns) else "")
             st.warning("**Predicted (not measured): " + ", ".join(predicted) + ".** Filled in "
-                       "anyway and marked — but this path's published a-priori errors (Liu 0.213, "
-                       "Ge 0.311) are on MEASURED log Kow, so replace it with a measured value "
+                       f"anyway and marked — but this path's published a-priori errors{_quoted} "
+                       "are on MEASURED log Kow, so replace it with a measured value "
                        "when you have one before quoting them for this run.")
         if "pKa" in kw:
             import literature_params as LP
@@ -245,8 +248,8 @@ def _neutral_panel():
                 + ("The ion is an ANION: excluded by the inside-negative membrane (the PFAS "
                    "case at f_n→0)." if n["is_acid"] else
                    "The ion is a CATION: ATTRACTED by the inside-negative membrane, not "
-                   "excluded — at pKa 4.5 / pH 6.5 / log Kow 2.45 the base's root BAF is "
-                   "1.70 against the acid's 0.18 (~9×)."))
+                   "excluded — at the same pKa the base reaches the neutral form's root BAF, "
+                   "the acid stays far below it (tests/test_weak_electrolyte.py)."))
             # The tested-floor warning lives HERE, where the path is actually switched
             # on, so it also covers a hand-typed pKa and a predicted one the user chose
             # to enable -- not only the ones a lookup turned on.
@@ -254,19 +257,19 @@ def _neutral_panel():
             if f_n < _cx.F_N_TESTED_FLOOR:
                 st.error(f"**f_n = {f_n:.3g} is BELOW the ≈{_cx.F_N_TESTED_FLOOR:g} floor where "
                          "this path was tested** (§4l: direction supported, magnitude REFUTED — "
-                         "under it the model predicts almost nothing where the measured transfer "
-                         "is still ~0.13, because its only entry is transmembrane while a real "
+                         "under it the model predicts almost nothing where a measured transfer "
+                         "remains, because its only entry is transmembrane while a real "
                          "ion also arrives apoplastically). Read this run as a lower bound on "
                          "uptake, not a prediction.")
         n["g_apo"] = st.number_input(
             "apoplastic bypass g_apo  [L/kg/d]", 0.0, 50.0, 0.0, 0.5,
             help="A route AROUND the membrane, so it feels neither speciation nor GHK. "
                  "0 = structurally absent (the default — NOTHING is adopted).")
-        st.caption("Speciation is TESTED and BOUNDED: direction supported (Spearman +0.480 on "
-                   "Schriever's 67 ionisable rows; rank +0.284 → +0.514), magnitude refuted "
-                   "(bias −0.164, ~nothing predicted below f_n ≈ 1e−3). A small g_apo ≈ 0.1 "
-                   "improves rank AND scale; the RMSE-optimal 1 degrades the ordering, so do not "
-                   "fit it on RMSE. §4l–4m of docs/neutral_dpu_validation.md.")
+        st.caption("Speciation is TESTED and BOUNDED on Schriever's ionisable rows: the "
+                   "direction is supported (speciation raises the rank correlation), the "
+                   "magnitude is not (a negative bias; ~nothing predicted at very low f_n). A "
+                   "bypass g_apo is not adopted: no value of it is supported by a source. "
+                   "validation/weak_electrolyte_tscf.py; §4l–4m of docs/neutral_dpu_validation.md.")
     # Soil sorption: needed only by the exposure modes that model the soil. The PFAS
     # chain-length Koc QSPR does not apply, so it comes from log Kow (Karickhoff 1981,
     # PROVISIONAL -- nothing in this repo scores a predicted Koc) and is editable.
@@ -288,81 +291,40 @@ def _neutral_panel():
         help=f"Used by the flooded Cwᵒ(t) shape and the live HYDRUS run (Kd = Koc·f_oc). "
              f"Default {koc_default:.1f} from {_src} (Karickhoff would give {karickhoff:.1f}) — "
              f"PROVISIONAL: no table in this repo scores a predicted Koc, and Li 2019's soil "
-             f"half shows the estimated sorption term is where the error collects (bias +0.033 "
-             f"with a measured K_om vs +0.291 with an estimated one). Type a MEASURED Kd/f_oc "
-             f"here whenever you have one.")
+             f"half shows the estimated sorption term is where the error collects (its bias is "
+             f"larger with an estimated K_om than with a measured one; "
+             f"validation/li2019_soil_table.py). Type a MEASURED Kd/f_oc here whenever you "
+             f"have one.")
     return n
 
 
 def _mechanism_panel():
-    """The PFAS mechanism switches (sidebar expander) -> (uptake, lipid_loading, shoot,
-    vmax_scale, g_apo, km_scale). They are OPEN questions, so they are named modes with the
-    default model as the default, never silent constants.
+    """The PFAS mechanism switches (sidebar expander) -> (lipid_loading, shoot). Each
+    alternative is a fitted variant of its own (validation/refit_sourced.py): switching runs
+    that variant's fitted values, never another's.
 
-    PFAS-ONLY, and not by omission: the carrier exists to overcome anion exclusion and
-    the lipid term is K_PL-gated on PFAS binding, so neither has a neutral counterpart
-    (the neutral path's own entry switch, the apoplastic bypass, lives in its panel).
-    """
-    vmax_scale = g_apo = None
-    km_scale = 1.0
+    PFAS-ONLY, and not by omission: the lipid term loads the PFAS bound pool, so it has no
+    neutral counterpart. The root entry is the linear equilibrium term; the carrier and
+    bypass modes and the membrane potential left the model (their constants have no source;
+    docs/PREREG_sourced_values.md)."""
     with st.expander("⚙️ Mechanism (advanced)"):
-        up_label = st.radio(
-            "Root entry", ["carrier (default — shipped)", "bypass (apoplastic)"],
-            help="How the anion gets past the inside-negative membrane. The "
-                 "Michaelis–Menten CARRIER is this repo's one addition to the Trapp "
-                 "cell model — and it keeps its place by DEFAULT, NOT BY EVIDENCE: "
-                 "on Yamazaki the carrier with its Vmax re-fitted (1.078) and a single "
-                 "global apoplastic bypass g_apo=50 (1.093) are indistinguishable "
-                 "(bootstrap 0.368), while adding nothing at all fails (2.301). See "
-                 "validation/carrier_vs_bypass.py.")
-        uptake = "carrier" if up_label.startswith("carrier") else "bypass"
         sh_label = st.radio(
             "Shoot model", ["redistributed shoot (default)", "single-straw 4-pool"],
-            help="Redistributed: N stem segments + leaf, each organ retaining the solute its own "
-                 "transpiration deposits (architecture levers retention / lam_grain / "
-                 "stem_transp_frac, none measured). 4-pool: one straw pool, the leaf/grain xylem "
-                 "split by dry-matter surface — the previous default. The switch was decided by "
-                 "the pre-registered rule in validation/default_switch.py.")
+            help="Redistributed: N stem segments + leaf, each organ keeping the solute its own "
+                 "transpiration deposits; the sheath+culm and panicle shares of transpiration are "
+                 "sourced ranges (Sugimoto 1973/1975 and others), run at their midpoints. 4-pool: "
+                 "one straw pool. Each was fitted on its own.")
         shoot = "redistributed" if sh_label.startswith("redistributed") else "4pool"
         lipid_loading = st.checkbox(
-            "Lipid-facilitated loading (K_PL-gated)", value=api.DEFAULT_LIPID_LOADING,
-            help="Adds the B-independent bound-loading term g_xy·C / g_ph·C: the free anion "
-                 "Cw=C/B starves high-binding long chains, but the membrane-lipid-bound pool "
-                 "still rides the transpiration stream. Constants were fit on YAMAZAKI only, so "
-                 "on other datasets it is out-of-sample. With the redistributed shoot (the "
-                 "default) it is best on all three independent datasets: Tang 0.64, Kim 0.47, "
-                 "Li 0.36 / 0.51, against 1.71 / 2.33 / 1.26 / 1.68 for the old 4-pool free "
-                 "anion. Default ON. It supplies its own f_xy, so the 'Root→shoot f_xy' choice "
-                 "above applies only with it off.")
-        st.caption("Defaults = the default model (redistributed shoot, lipid loading on, carrier). "
-                   "Changing any switch moves every tab (map, dynamics, BAF), never "
-                   "`parameters.json`.")
-        adv = st.checkbox("Override the entry constants", value=False,
-                          help="Scan levers from validation/carrier_vs_bypass.py and "
-                               "validation/dose_series_carrier.py. Leave off to use the "
-                               "mode's own values.")
-        if adv:
-            vmax_scale = st.number_input(
-                "Vmax ×", 0.0, 100.0, float(api.UPTAKE_MODES[uptake]["vmax_scale"]), 0.5,
-                # key includes the mode so switching carrier<->bypass RESEEDS the
-                # override with that mode's own value instead of keeping a stale one
-                key=f"vmax_scale_{uptake}",
-                help="Carrier capacity multiplier (0 = carrier off). The long-chain work "
-                     "needed ~5× for PFDoDA and that enhancement is NOT QSPR-able (LC6).")
-            km_scale = st.number_input(
-                "Km ×", 0.01, 1000.0, 1.0, 1.0,
-                help="Half-saturation multiplier — the model's ONLY nonlinearity in "
-                     "exposure. Tang's 5-dose series needs Km ≥ 150–500 µg/L (30–100× the "
-                     "fixed 5) to be as flat as measured, i.e. linear over the whole span, which "
-                     "IS the bypass's functional form (validation/dose_series_carrier.py).")
-            g_apo = st.number_input(
-                "g_apo  [L/kg/d]", 0.0, 100.0, float(api.UPTAKE_MODES[uptake]["g_apo"]), 0.5,
-                key=f"g_apo_{uptake}",
-                help="Apoplastic bypass: a route AROUND the membrane, so it feels neither "
-                     "speciation nor the GHK factor. 0 = structurally absent (the default; "
-                     "nothing is adopted).")
-
-    return uptake, lipid_loading, shoot, vmax_scale, g_apo, km_scale
+            "Lipid-facilitated loading", value=api.DEFAULT_LIPID_LOADING,
+            help="Adds the B-independent bound-loading term g·C: the free anion Cw = C/B starves "
+                 "high-binding long chains, but the membrane-lipid-bound pool can still ride the "
+                 "transpiration stream. Its constants are fitted on Yamazaki only (terms the data "
+                 "do not identify are removed); on other datasets it is a transfer. It supplies "
+                 "its own f_xy, so the 'Root→shoot f_xy' choice applies only with it off.")
+        st.caption("Defaults = the default model. Changing a switch moves every tab (map, "
+                   "dynamics, BAF), never `parameters.json`.")
+    return lipid_loading, shoot
 
 
 def build():
@@ -387,15 +349,10 @@ def build():
         smiles = None
         neutral = None            # NEUTRAL-organic kwargs (None = PFAS path)
         spec = "Curated congener"
-        E_m = -120
         fxy_source = "recommended"
         biomass = "site2020"      # crop scenario key: ui.common.CROPS / crop_kw
-        uptake = api.DEFAULT_UPTAKE
         lipid_loading = api.DEFAULT_LIPID_LOADING
         shoot = api.DEFAULT_SHOOT
-        vmax_scale = None
-        g_apo = None
-        km_scale = 1.0
         compare = []
         preset_label = None
         preset_word = None
@@ -451,9 +408,9 @@ def build():
             spec = st.radio("Compound class",
                             ["Curated congener", "SMILES (structure)", "Neutral organic (log Kow)"],
                             help="WHICH COMPOUND CLASS the run is about, not just which molecule — the "
-                                 "first two are PFAS (permanently dissociated anion: GHK exclusion + "
-                                 "carrier), the third is the Briggs/Kow neutral base (z=0, no exclusion, "
-                                 "no carrier, nothing fitted). Everything downstream — map, dynamics, "
+                                 "first two are PFAS (permanently dissociated anion; root entry fitted "
+                                 "per congener), the third is the Briggs/Kow neutral base (z=0, nothing "
+                                 "fitted). Everything downstream — map, dynamics, "
                                  "drivers, exposure modes, inverse, downloads — follows this choice.")
             if spec == "Curated congener":
                 congener = st.selectbox("PFAS congener", api.CONGENERS,
@@ -487,22 +444,17 @@ def build():
                         st.caption("structure (RDKit)")
                     else:
                         st.caption(f"⚠ {why}")
-            # E_m and f_xy are PFAS levers and are MEANINGLESS on the neutral path:
-            # at z=0 the GHK term degenerates to passive diffusion (so a membrane
-            # potential has nothing to act on) and f_xy is the computed Briggs TSCF,
-            # not a fitted loading factor. Showing them would invite a reading the
-            # model does not support, so they are absent rather than ignored.
+            # f_xy is a PFAS lever and is MEANINGLESS on the neutral path (there it is the
+            # computed Briggs TSCF, not a fitted loading factor), so it is absent there.
             if not neutral:
-                E_m = st.slider("Root membrane potential E_m  [mV]", -160, -90, -120, 5,
-                                help="GHK anion-exclusion lever (rice −116…−140 mV; NH₄⁺ depolarises).")
                 fxy_label = st.radio("Root→shoot loading f_xy",
                                      ["recommended (monotone, a priori)", "fit (reproduces Yamazaki)"],
                                      help="Applies only with lipid loading OFF (⚙️ Mechanism below; on by "
-                                          "default), which supplies its own K_PL-gated f_xy. recommended: the "
-                                          "monotone physical f_xy, with L_Ph and κ_d fitted to Yamazaki's root "
-                                          "and grain given it — straw is a prediction. fit: all three fitted per "
-                                          "congener on the 2020 site-year (a saturated reproduction). "
-                                          "validation/refit_site_year.py.")
+                                          "default), which supplies its own f_xy. recommended: the "
+                                          "monotone physical f_xy, with L_Ph and r_eq fitted to Yamazaki's root "
+                                          "and grain given it — straw is a prediction. fit: f_xy fitted to the "
+                                          "straw as well (a saturated reproduction). "
+                                          "validation/refit_sourced.py.")
                 fxy_source = "recommended" if fxy_label.startswith("recommended") else "fit"
             _bm = {v: k for k, v in _CM.CROPS.items()}
             bm_label = st.radio("Crop drivers (transpiration + organ mass)", list(_bm),
@@ -519,9 +471,9 @@ def build():
             # applies only to the generic drivers
             season = api.site_season() if biomass == "site2020" else 120.0
 
-            # PFAS mechanism switches (carrier/bypass, lipid loading) -- see _mechanism_panel
+            # PFAS mechanism switches (shoot model, lipid loading) -- see _mechanism_panel
             if not neutral:
-                uptake, lipid_loading, shoot, vmax_scale, g_apo, km_scale = _mechanism_panel()
+                lipid_loading, shoot = _mechanism_panel()
                 if lipid_loading and fxy_source == "fit":
                     st.warning("f_xy 'fit' is a free-anion fit and applies only with lipid loading "
                                "off (⚙️ Mechanism); this run uses lipid loading's own f_xy.")
@@ -719,15 +671,10 @@ def build():
     cfg.smiles = smiles
     cfg.neutral = neutral
     cfg.spec = spec
-    cfg.E_m = E_m
     cfg.fxy_source = fxy_source
     cfg.biomass = biomass
-    cfg.uptake = uptake
     cfg.lipid_loading = lipid_loading
     cfg.shoot = shoot
-    cfg.vmax_scale = vmax_scale
-    cfg.g_apo = g_apo
-    cfg.km_scale = km_scale
     cfg.compare = compare
     cfg.preset_label = preset_label
     cfg.preset_word = preset_word

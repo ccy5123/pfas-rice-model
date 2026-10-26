@@ -45,21 +45,24 @@ def test_dead_pool_closed_form():
 def test_mass_balance_with_dead_blades(config, kcw):
     # constant organ masses (no growth-dilution term) and a constant leaf death rate: the burden
     # in the living organs plus the dead blades must equal the cumulative root uptake -- for the
-    # 4-pool core and for the default (redistributed shoot + lipid loading, whose compound takes
-    # the stem cell-wall K everywhere, as in every scored redistributed run)
+    # 4-pool core and for the default (redistributed shoot + lipid loading); every organ binds with
+    # its own cell-wall K, so the root's entry reads the root's
     t = np.linspace(0.0, 60.0, 1201)
     M = np.tile([0.05, 0.10, 0.03, 0.04], (len(t), 1))
     drv = dict(t=t, Cwo=np.ones_like(t), Qtp=np.full_like(t, 0.2), M=M,
-               leaf_loss=np.full_like(t, 0.02), mass_basis="fresh")
-    r = api.simulate("PFOA", drivers=drv, **config)
+               leaf_loss=np.full_like(t, 0.02), mass_basis="fresh", dvs=np.linspace(0.0, 2.0, len(t)))
+    # a slow root entry (lam_eq 10/day) so the entry flux lam_eq (r_eq Cwo - Cw_root) is resolved
+    # on the output grid (at the shipped 1e6 the root sits at equilibrium and the flux is the
+    # difference of two equal numbers)
+    r = api.simulate("PFOA", drivers=drv, lam_eq=10.0, **config)
     assert r["dead_leaf"]["burden"][-1] > 0
     living = sum(r["conc"][k] * M[:, i] for i, k in enumerate(api.TISSUES))
     total = living + r["dead_leaf"]["burden"]
     cmpd = api._compound_for("PFOA", "recommended", K_cw_organ=kcw,
                              lipid_loading=config["lipid_loading"])
-    B = binding_factors(api._compartments(), cmpd)
-    env = Environment(E=-0.120)
-    j = np.array([root_uptake(1.0, cr / B[0], cmpd, env) for cr in r["conc"]["root"]]) * M[:, 0]
+    B = binding_factors(api._compartments(api.kcw_by_organ(api._CONG["PFOA"])), cmpd)  # own K_cw
+    p = r["params"]
+    j = p["lam_eq"] * (p["r_eq"] * 1.0 - r["conc"]["root"] / B[0]) * M[:, 0]
     uptake = np.concatenate([[0.0], np.cumsum(0.5 * (j[1:] + j[:-1]) * np.diff(t))])
     # compared as increments after day 1: the root fills within hours, faster than the grid
     k = int(np.searchsorted(t, 1.0))

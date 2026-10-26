@@ -11,23 +11,25 @@ driver comes from one source chain:
               pressure, wind (10.6 m -> 2 m by FAO-56 eq. 47).
   biomass     the ORYZA2000 port (src/oryza2000.py, IR72.D92) on that weather, transplanted on the
               paper's date (2020-05-11), development rates calibrated to the paper's dates: one
-              common factor on DVRJ/DVRI/DVRP puts DVS 1 (flowering) on the heading day (harvest
-              minus 30-31 d, as the paper states), DVRR puts DVS 2 on the harvest day.
+              common factor on DVRJ/DVRI/DVRP puts DVS 1 (flowering) on the measured heading
+              day, DVRR puts DVS 2 on the harvest day.
   water flow  ORYZA2000's own potential transpiration (manual eq. 4.4) from the FAO-56
               Penman-Monteith radiation/aerodynamic terms of the same weather and the port's own
               LAI (src/fao56.py); a flooded paddy is not water-limited, so actual = potential.
   mass basis  dry matter -> fresh organ mass through organ_mass (the ODE runs on fresh mass).
 
-Yamazaki harvested two cultivars, on 2020-09-01 and 2020-09-10, each 30-31 d after heading, and
-reports the geometric mean of the two; the model is run once per harvest date (same crop file,
-different phenology) and the two runs are combined the same way.
+Yamazaki harvested two cultivars, Kasalath (heading 2020-08-03, harvest 2020-09-01) and
+Koshihikari (heading 2020-08-11, harvest 2020-09-10), and reports the geometric mean of the two;
+the model is run once per cultivar (same crop file, each with its own measured heading and
+harvest) and the two runs are combined the same way.
 
-Inputs the paper does not report, stated (see docs/ASSUMPTIONS.md): nursery length and cover
-(SBDUR 23 d after emergence, open seedbed -- the median of the Shizukuishi FACE nurseries, Kim
-2003; sensitivity in validation/yamazaki_site_year.py), planting density (19.05 hills m-2,
-3 plants/hill -- Japanese machine spacing, as in Kim 2003), ambient CO2 (414 ppm, the 2020 Mauna
-Loa annual mean), heading = harvest - 30.5 d (midpoint of the stated 30-31 d), harvest =
-physiological maturity (DVS 2).
+Inputs the paper does not report take sourced values (docs/literature_db/sourced_inputs.csv):
+nursery 25-26 d after emergence (sown 04-13, transplanted 05-11, emergence 2-3 d after sowing
+by the Ibaraki calendar; midpoint 25.5: the drivers of the 25- and 26-d runs interpolated, as
+ORYZA counts whole days), seedbed cover 0-5.0 C on the daily maximum
+(midpoint 2.5), planting density 18.5 hills m-2 with 4-5 plants per hill (midpoint 4.5; the
+Ibaraki prefecture standard), ambient CO2 414 ppm (2020 Mauna Loa annual mean); harvest =
+physiological maturity (DVS 2). The ranges are carried into the output (model_api.RANGE_INPUTS).
 """
 from __future__ import annotations
 
@@ -53,12 +55,27 @@ TSUKUBA_ANEMOMETER_M = 10.6
 # Yamazaki et al. 2023 SI p.S2-S3
 YAMAZAKI_TRANSPLANT = _dt.date(2020, 5, 11)
 YAMAZAKI_HARVESTS = (_dt.date(2020, 9, 1), _dt.date(2020, 9, 10))
-DAYS_HEADING_TO_HARVEST = 30.5          # "30-31 d after heading": midpoint of the stated range
+# heading of the cultivar harvested on the same index (Kasalath, Koshihikari; SI p.S3)
+YAMAZAKI_HEADINGS = (_dt.date(2020, 8, 3), _dt.date(2020, 8, 11))
+YAMAZAKI_SOWING = _dt.date(2020, 4, 13)  # nursery boxes (SI p.S2)
 
-# not reported by Yamazaki -- stated defaults (docs/ASSUMPTIONS.md)
-SBDUR = 23                              # seedbed days after emergence (Kim 2003 median: 14/23/24)
-TMPSB = 0.0                             # open seedbed
-NH, NPLH = 19.05, 3.0                   # hills m-2, plants hill-1 (30 x 17.5 cm, as Kim 2003)
+# sourced values and ranges (docs/literature_db/sourced_inputs.csv; PREREG amendment 1)
+# seedbed days after emergence: sown 04-13, transplanted 05-11 (28 d), emergence 2-3 d after
+# sowing (Ibaraki calendar) -> 25-26 d; midpoint. ORYZA counts whole days, so a fractional
+# SBDUR runs the two whole-day neighbours and interpolates their drivers (`plant_run`).
+SBDUR_RANGE = (25, 26)
+SBDUR = 0.5 * (SBDUR_RANGE[0] + SBDUR_RANGE[1])
+# seedbed cover: ORYZA's TMPSB raises the daily MAXIMUM. The Ibaraki calendar keeps the
+# seedbed at 15-25 C (greening) and 10-25 C (hardening); the ambient maximum over the seedbed
+# days averages 20.0 C (JMA Tsukuba 2020), already inside the band, so the cover can add
+# 0 (no warming needed) up to 25 - 20.0 = 5.0 C (the band's top). Midpoint.
+TMPSB_RANGE = (0.0, 5.0)
+TMPSB = 0.5 * (TMPSB_RANGE[0] + TMPSB_RANGE[1])
+# planting: Ibaraki prefecture standard for Koshihikari (18 cm hill spacing, 4-5 seedlings);
+# the NARO field's own spacing is unreported
+NH = 18.5
+NPLH_RANGE = (4.0, 5.0)
+NPLH = 0.5 * (NPLH_RANGE[0] + NPLH_RANGE[1])
 CO2_2020 = 414.0                        # ppm, Mauna Loa 2020 annual mean
 RATE_KEYS = ("DVRJ", "DVRI", "DVRP", "DVRR")
 
@@ -73,6 +90,7 @@ def _doy(d):
 # the default single run: harvest at the midpoint of the two harvest dates (fractional day).
 # The calibration itself runs both harvests and combines them as the data are combined.
 YAMAZAKI_HARVEST_MEAN_DOY = sum(_doy(h) for h in YAMAZAKI_HARVESTS) / 2.0
+YAMAZAKI_HEADING_MEAN_DOY = sum(_doy(h) for h in YAMAZAKI_HEADINGS) / 2.0
 
 
 def load_tsukuba_2020():
@@ -87,7 +105,10 @@ def load_tsukuba_2020():
                 ea_kpa=g("ea_kpa"), u2=F.wind_2m(g("wind_10p6m"), TSUKUBA_ANEMOMETER_M))
 
 
-def _mgmt(sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=CO2_2020):
+def _mgmt(sbdur, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=CO2_2020):
+    if float(sbdur) != int(sbdur):
+        raise ValueError("ORYZA's seedbed duration is whole days (plant_run interpolates)")
+    sbdur = int(sbdur)
     tp = _doy(YAMAZAKI_TRANSPLANT)
     return O2K.Management(lat=TSUKUBA_LAT, emd=tp - sbdur, sbdur=sbdur, nplh=nplh, nh=nh, co2=co2,
                           tmpsb=tmpsb)
@@ -134,16 +155,44 @@ def calibrate_rates(w, heading_doy, harvest_doy, mgmt):
     return rates, f
 
 
+def heading_for(harvest):
+    """The measured heading day of year for a harvest: the cultivar's own (Yamazaki SI p.S3);
+    the mean-date run takes the mean of the two."""
+    hv = _doy(harvest) if not isinstance(harvest, (int, float)) else float(harvest)
+    for h, hd in zip(YAMAZAKI_HARVESTS, YAMAZAKI_HEADINGS):
+        if abs(_doy(h) - hv) < 1e-9:
+            return float(_doy(hd))
+    if abs(hv - YAMAZAKI_HARVEST_MEAN_DOY) < 1e-9:
+        return YAMAZAKI_HEADING_MEAN_DOY
+    raise ValueError(f"no measured heading for harvest day {hv}; pass heading_doy")
+
+
 def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=CO2_2020,
-              days_heading_to_harvest=DAYS_HEADING_TO_HARVEST, harvest_is_maturity=True):
+              heading_doy=None, harvest_is_maturity=True):
     """One cultivar's season: daily main-field states from transplanting to harvest.
 
     Returns t (days after transplanting), dry organ mass [kg/hill], LAI, leaf death rate, and the
-    water terms (ET0, ETRD, ETAE, Tp, Ep [mm/d]; Qtp [L/d/hill])."""
+    water terms (ET0, ETRD, ETAE, Tp, Ep [mm/d]; Qtp [L/d/hill]).
+
+    ORYZA counts the seedbed in whole days (`Management.sbdur` is an integer). A fractional
+    `sbdur` runs the two whole-day neighbours and returns their series linearly interpolated
+    (same time grid: transplanting to harvest), the driver at the midpoint of a sourced range."""
     w = w or load_tsukuba_2020()
+    lo = int(np.floor(sbdur))
+    if abs(sbdur - lo) > 1e-12:
+        frac = float(sbdur - lo)
+        kw = dict(w=w, tmpsb=tmpsb, nh=nh, nplh=nplh, co2=co2, heading_doy=heading_doy,
+                  harvest_is_maturity=harvest_is_maturity)
+        a, b = plant_run(harvest, sbdur=lo, **kw), plant_run(harvest, sbdur=lo + 1, **kw)
+        out = {k: ((1.0 - frac) * a[k] + frac * b[k]
+                   if isinstance(a[k], np.ndarray) and k != "t" else a[k]) for k in a}
+        out["cbc_max"] = max(abs(a["cbc_max"]), abs(b["cbc_max"]))
+        out["sbdur_runs"] = (lo, lo + 1, frac)
+        return out
+    sbdur = lo
     mgmt = _mgmt(sbdur, tmpsb, nh, nplh, co2)
     tp, hv = _doy(YAMAZAKI_TRANSPLANT), _doy(harvest)
-    heading = hv - days_heading_to_harvest
+    heading = heading_for(harvest) if heading_doy is None else float(heading_doy)
     if harvest_is_maturity:
         rates, f = calibrate_rates(w, heading, hv, mgmt)
     else:                                   # sensitivity: IR72 grain-filling rate kept
@@ -163,7 +212,7 @@ def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=C
     out = dict(t=t, rates=rates, factor=f, heading_doy=heading, harvest_doy=hv)
     for name, key in (("root", "wrt"), ("stem", "wst"), ("leaf", "wlvg"), ("grain", "wso")):
         v = np.concatenate([[r[key][i3] * pltr], r[key][main]])
-        out[name] = np.maximum(np.interp(t, td, v * ha_per_hill), 1e-9)      # held after maturity
+        out[name] = np.interp(t, td, v * ha_per_hill)     # crop model's own value; held after maturity
     lai = np.interp(t, td, np.concatenate([[r["lai"][i3] * pltr], r["lai"][main]]))
     drlv = np.concatenate([[r["drlv"][i3]], r["drlv"][main]])
     out["leaf_death_rate"] = np.where(t > td[-1], 0.0, np.maximum(np.interp(t, td, drlv), 0.0))
@@ -188,7 +237,7 @@ def drivers_from_run(run, Cwo=1.0):
     b = {k: run[k] for k in ("root", "stem", "leaf", "grain")}
     return dict(t=run["t"], Cwo=np.full_like(run["t"], float(Cwo)), Qtp=run["Qtp"],
                 M=om.organ_matrix(b), leaf_loss=run["leaf_death_rate"],
-                mass_basis=om.MASS_BASIS)
+                mass_basis=om.MASS_BASIS, dvs=np.asarray(run["dvs"], float))
 
 
 def yamazaki2020_runs(**kw):

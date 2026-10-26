@@ -60,13 +60,28 @@ def runs():
 
 def test_plant_runs_hit_the_reported_dates(runs):
     tp = S._doy(S.YAMAZAKI_TRANSPLANT)
-    for r, h in zip(runs, S.YAMAZAKI_HARVESTS):
+    for r, h, hd in zip(runs, S.YAMAZAKI_HARVESTS, S.YAMAZAKI_HEADINGS):
         hv = S._doy(h)
-        assert r["harvest_doy"] == hv and r["heading_doy"] == hv - S.DAYS_HEADING_TO_HARVEST
+        assert r["harvest_doy"] == hv and r["heading_doy"] == S._doy(hd)     # SI p.S3
         t_head = np.interp(1.0, r["dvs"], r["t"])
         assert tp + t_head == pytest.approx(r["heading_doy"], abs=0.05)
         assert r["dvs"][-1] == pytest.approx(2.0, abs=1e-5) and r["t"][-1] == hv - tp
         assert abs(r["cbc_max"]) < 1e-10
+
+
+def test_fractional_nursery_interpolates_the_whole_day_runs():
+    """ORYZA counts the seedbed in whole days; the sourced midpoint (25.5 d) is the two
+    neighbouring runs' drivers interpolated, and ORYZA itself refuses a fraction."""
+    w = S.load_tsukuba_2020()
+    h = S.YAMAZAKI_HARVESTS[0]
+    a, b = S.plant_run(h, w=w, sbdur=25), S.plant_run(h, w=w, sbdur=26)
+    m = S.plant_run(h, w=w, sbdur=25.5)
+    assert S.SBDUR == 25.5 and m["sbdur_runs"] == (25, 26, 0.5)
+    for k in ("root", "stem", "leaf", "grain", "Qtp", "dvs", "leaf_death_rate"):
+        assert np.allclose(m[k], 0.5 * (a[k] + b[k]), rtol=0, atol=1e-15)
+    assert np.array_equal(m["t"], a["t"])
+    with pytest.raises(ValueError):
+        S._mgmt(25.5)
 
 
 def test_water_terms(runs):

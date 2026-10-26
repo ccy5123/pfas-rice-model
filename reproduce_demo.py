@@ -2,19 +2,23 @@
 # =============================================================================
 # reproduce_demo.py -- self-contained reproduction entry point
 # -----------------------------------------------------------------------------
-# Runs the 4-compartment ODE on the Yamazaki 2020 site-year (JMA Tsukuba weather, the
-# ORYZA2000 port on the paper's transplanting / heading / harvest dates, ORYZA2000
-# transpiration; src/site_scenario.py) and compares the harvest values (dry basis; straw
-# with attached dead blades; src/harvest.py) with Yamazaki 2023's root / straw / grain
-# (data_obs/obs_baf_Yamazaki.csv, dry basis).
+# Runs the model on the Yamazaki 2020 site-year (JMA Tsukuba weather, the ORYZA2000 port on
+# the paper's transplanting / heading / harvest dates, ORYZA2000 transpiration;
+# src/site_scenario.py) and compares the harvest values (dry basis; straw with attached dead
+# blades; src/harvest.py) with Yamazaki 2023's root / straw / grain
+# (data_obs/obs_baf_Yamazaki.csv, built from the SI).
 #
-#   python reproduce_demo.py         # f_xy_source="fit": (f_xy, L_Ph, kappa_d) fitted per
-#                                    #   congener -> REPRODUCTION (saturated, 3 params / 3 cells)
-#   python reproduce_demo.py --rec   # f_xy_source="recommended": the monotone a-priori f_xy,
-#                                    #   L_Ph / kappa_d fitted to root + grain -> straw is a PREDICTION
+#   python reproduce_demo.py           # the DEFAULT configuration (redistributed shoot +
+#                                      #   lipid loading): r_eq and L_Ph fitted per congener
+#                                      #   to root and grain, the lipid constants across
+#                                      #   congeners -- the straw is predicted by the shared
+#                                      #   constants, not fitted per congener
+#   python reproduce_demo.py --fit     # redistributed_fit: f_xy fitted to the straw as well
+#                                      #   -> a REPRODUCTION (saturated, 3 params / 3 cells)
+#   python reproduce_demo.py --free    # redistributed_free: the monotone a-priori f_xy
 #
-# The fits are made by validation/refit_site_year.py (pre-registered). PFBS grain is wholly
-# imputed (<MQL) and is not scored.
+# The fits are made by validation/refit_sourced.py (pre-registered,
+# docs/PREREG_sourced_values.md). PFBS grain is wholly < MQL and is not scored.
 # =============================================================================
 import os
 import sys
@@ -25,13 +29,18 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "src"))
 import model_api as api   # noqa: E402
 
-SOURCE = "recommended" if "--rec" in sys.argv else "fit"
+VARIANTS = {"default": dict(), "fit": dict(lipid_loading=False, f_xy_source="fit"),
+            "free": dict(lipid_loading=False)}
+CHOICE = next((v for v in ("fit", "free") if f"--{v}" in sys.argv), "default")
 TISS = ("root", "straw", "grain")
 
 
-def main(source=SOURCE, verbose=True):
+def main(choice=CHOICE, verbose=True):
     say = print if verbose else (lambda *a, **k: None)
-    say(f"f_xy source: {source}  (Yamazaki 2020 site-year, dry basis, two harvest runs)")
+    kw = VARIANTS[choice]
+    v = api.variant_key(kw.get("shoot"), kw.get("f_xy_source", "recommended"),
+                        kw.get("lipid_loading"))
+    say(f"variant: {v}  (Yamazaki 2020 site-year, dry basis, two harvest runs)")
     say(f"{'PFAS':8}{'nC':>3}{'f_xy':>8} | " + "".join(f"{k + ' m/o':>18}" for k in TISS))
     err = {k: [] for k in TISS}
     out = {}
@@ -39,23 +48,25 @@ def main(source=SOURCE, verbose=True):
         o = api.observed_baf(c)
         if not o:
             continue
-        pr = api.yamazaki_harvest_baf(c, f_xy_source=source, **api.FOUR_POOL_FREE)
+        pr = api.yamazaki_harvest_baf(c, **kw)
         out[c] = pr
         for k in o:
             err[k].append(np.log10(pr[k] / o[k]))
-        fxy = api._transport_defaults(api._CONG[c], source, False)[0]
+        fxy = api._transport_defaults(api._CONG[c], kw.get("f_xy_source", "recommended"),
+                                      kw.get("lipid_loading"), kw.get("shoot"))[0]
         say(f"{c:8}{api._CONG[c]['n_C']:>3}{fxy:>8.4f} | "
             + "".join(f"{pr[k]:>8.3g}/{o.get(k, float('nan')):<9.3g}" for k in TISS))
-    allerr = [e for v in err.values() for e in v]
+    allerr = [e for vals in err.values() for e in vals]
     rmse = float(np.sqrt(np.mean(np.square(allerr))))
-    per = {k: float(np.sqrt(np.mean(np.square(v)))) for k, v in err.items()}
-    say(f"\nlog10 RMSE = {rmse:.3f}  (" + ", ".join(f"{k} {v:.3f}" for k, v in per.items()) + ")")
-    if source == "fit":
+    per = {k: float(np.sqrt(np.mean(np.square(vals)))) for k, vals in err.items()}
+    say(f"\nlog10 RMSE = {rmse:.3f}  (" + ", ".join(f"{k} {x:.3f}" for k, x in per.items()) + ")")
+    if choice == "fit":
         say("NOTE: a saturated fit (3 parameters per congener vs 3 cells) -- a REPRODUCTION, not a "
-            "prediction. `--rec` fixes f_xy at the monotone a-priori value, so its straw is a prediction.")
+            "prediction.")
     else:
-        say("NOTE: straw is predicted (f_xy not fitted); root and grain are fitted through kappa_d / L_Ph.")
-    return dict(rmse=rmse, per_tissue=per, pred=out)
+        say("NOTE: root and grain are fitted per congener (r_eq, L_Ph; grain where L_Ph reaches it); "
+            "the straw is not fitted per congener.")
+    return dict(rmse=rmse, per_tissue=per, pred=out, variant=v)
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ The app opens in a **Simple mode** for a general audience (policy makers, studen
 public): a plain-language intro, a friendly chemical dropdown + a low/medium/high
 **contamination preset**, three plain metric cards + a one-sentence summary, and five
 jargon-free tabs (🗺️ *Where it goes* · 📈 *Build-up over time* · 📊 *How much builds up* ·
-🔎 *Work backwards* · ℹ️ *About & glossary*) — no `BAF`/`Cwᵒ`/`f_xy`/`eᴺ` symbols in the
+🔎 *Work backwards* · ℹ️ *About & glossary*) — no `BAF`/`Cwᵒ`/`f_xy`/`r_eq` symbols in the
 default view. A prominent **research/educational disclaimer** sits on every screen (top +
 footer), and a **Download** expander exports the results (CSV; PNG when `kaleido` is present).
 
@@ -58,34 +58,26 @@ The compute is UI-agnostic and unit-tested head-less:
 
 ## Mechanism switches (sidebar → ⚙️ Mechanism, Expert only)
 
-The model's open questions are *named modes*, not buried constants — the repo's idiom
-(`lipid_source`, `f_xy_source`, `cwo_profile`, `biomass`, `uptake`, `shoot`). All default to the
-default model (redistributed shoot, lipid loading on, carrier) and, when one differs from it, a
-banner sits next to the headline metrics, because the sidebar expander is collapsed and the run
-would otherwise look like the default one.
+The model's alternatives are *named modes*, not buried constants — the repo's idiom
+(`lipid_source`, `f_xy_source`, `cwo_profile`, `biomass`, `shoot`). Each alternative is a
+variant fitted on its own (`validation/refit_sourced.py`; `model_api.variant_key`), so a switch
+runs that variant's fitted values. All default to the default model (redistributed shoot, lipid
+loading on) and, when one differs from it, a banner sits next to the headline metrics, because
+the sidebar expander is collapsed and the run would otherwise look like the default one.
 
 - **Shoot model — redistributed (default) vs single-straw 4-pool** (`simulate(shoot=…)`,
-  `model_api.SHOOTS`). The redistributed shoot (N = 4 stem segments + leaf; each organ retains
-  part of the solute its own transpiration deposits; `retention` 0.6, `lam_grain` 0.05,
-  `stem_transp_frac` 0.45 — none measured) became the default by the pre-registered rule in
-  `validation/default_switch.py`; the 4-pool is the previous default, on which every transport
-  parameter was fitted (`model_api.FOUR_POOL_FREE` = 4-pool + free anion).
-
-- **Root entry — carrier (default) vs apoplastic bypass** (`simulate(uptake=…)`,
-  `model_api.UPTAKE_MODES`). The Michaelis–Menten carrier is this repo's one addition to the
-  Trapp cell model, and it keeps its place **by default, not by evidence**: on Yamazaki the
-  carrier with its Vmax re-fitted (log10 RMSE 1.078) and one global bypass `g_apo`=50 (1.093)
-  are indistinguishable (bootstrap 0.368), while adding nothing at all fails (2.301) — so *an*
-  addition is necessary and *which* is undecided (`validation/carrier_vs_bypass.py`). An
-  "Override the entry constants" checkbox exposes `Vmax ×`, `Km ×` and `g_apo` — the levers of
-  that scan and of the dose series (whose durable result is a POST-HOC bound: the carrier must
-  have `Km ≥ 150–500 µg/L`, 30–100× the fixed 5, to be as flat as Tang's 5 doses measure).
-- **Lipid-facilitated loading** (`simulate(lipid_loading=…)`, default **on**) — the K_PL-gated,
-  B-independent `g_xy·C` / `g_ph·C` term, fitted on Yamazaki only. It transfers far better than
-  the free anion (on the 4-pool core Tang per-organ 1.71 → 0.99, Kim grain 2.33 → 0.56; on the
-  redistributed shoot Tang 1.50 → 0.64, and the default is best on Kim 0.47 and Li 0.36 / 0.51 —
-  with **nothing re-fit** to any of them), but it supplies its own `f_xy`, so the sidebar's
-  `f_xy` choice applies only with it off, and against the *Yamazaki* bars it is in-sample.
+  `model_api.SHOOTS`). The redistributed shoot: N = 4 stem segments + leaf, each organ keeping the
+  solute its own transpiration deposits (retention 1, derived); the sheath + culm share and the
+  panicle share of transpiration are sourced ranges run at their midpoints (`RANGE_INPUTS`). The
+  4-pool: one stem pool, the leaf/grain split by the same sourced panicle share.
+- **Root entry** is not a switch: it is the linear equilibrium `λ_eq·(r_eq·Cwᵒ − C_w,root)`
+  (`r_eq` fitted to Yamazaki's root, `λ_eq` numerical). The carrier and bypass modes left the
+  tool with amendment 1 — their constants had no source (`validation/archive/carrier_vs_bypass.py`).
+- **Lipid-facilitated loading** (`simulate(lipid_loading=…)`, default **on**) — the
+  B-independent loading term `g_xy·C` (one `f_xy` and one `g_xy` for every chain), its constants fitted on Yamazaki only (terms the data do not
+  identify are removed by backward elimination). It supplies its own `f_xy`, so the sidebar's
+  `f_xy` choice applies only with it off, and against the *Yamazaki* bars it is in-sample. The
+  transfer scores of every variant are in `validation/transfer_sourced.json`.
 
 Both switches propagate to every tab, the congener comparison **and** the Bayesian inverse
 (`estimate_exposure_bayesian(**sim_kw)`), so the inverse is never run under a different model
@@ -141,16 +133,15 @@ opt-in `plant_air` with MW/`K_AW`) and *Weak electrolyte (pKa) + apoplastic bypa
 A **soil Koc** field feeds the soil-side modes.
 
 **What is deliberately absent for a neutral compound**, rather than shown and ignored:
-`E_m` and the `f_xy` source (at `z = 0` a membrane potential has nothing to act on and `f_xy`
-*is* the computed TSCF), the PFAS mechanism switches (the carrier exists to overcome anion
-exclusion; the lipid term is K_PL-gated on PFAS binding), and the four PFAS-only tabs
-(Yamazaki BAF bars, chain-length trends, congener comparison, Tang per-organ TF). The
-headline's `eᴺ` metric is replaced by **TSCF**, since `eᴺ` is 1 by construction there.
+the `f_xy` source (`f_xy` *is* the computed TSCF there), the PFAS mechanism switches (the lipid
+term is fitted to PFAS data), and the four PFAS-only tabs (Yamazaki BAF bars, chain-length
+trends, congener comparison, Tang per-organ TF). The headline's root-entry `r_eq` metric is
+replaced by **TSCF**.
 
 The scope panel above the tabs states, in-UI, what the run is and is not: nothing is fitted;
-a-priori log10 RMSE **0.213** (Liu 2023 root partition) and **0.311** (Ge 2017 per-organ TF)
-on the season-ODE basis, **0.206** for Liu on the equilibrium basis proper to a root-partition
-measurement; the **grain compartment is UNTESTED** for neutrals; stem/leaf lipid are still
+the a-priori log10 RMSE of Liu 2023 (root partition) and Ge 2017 (per-organ TF) on the
+season-ODE basis, and Liu on the equilibrium basis proper to a root-partition measurement, read from
+`params/neutral_scores.json` (no number typed in the UI); the **grain compartment is UNTESTED** for neutrals; stem/leaf lipid are still
 Trapp 1994's soybean values; and with `half_life = 0` the leaf is an unbounded terminal
 accumulator, so the run is an upper bound (a warning fires in that case).
 
@@ -163,8 +154,8 @@ enters, so the neutral panel has a **🔎 Look up the compound** box that takes 
 since the CTX chemical search has no structure route.
 
 Three rules the module enforces, all for the same reason — this path's whole claim
-is that **nothing in it is fitted**, and its published a-priori errors (Liu
-0.206/0.213, Ge 0.311, Briggs stem 0.299) are on *measured* log Kow:
+is that **nothing in it is fitted**, and its a-priori errors (`params/neutral_scores.json`)
+are on *measured* log Kow:
 
 1. **Experimental beats predicted.** CompTox serves measured values and OPERA
    predictions side by side; when both exist the measured one is used.
@@ -192,7 +183,7 @@ warnings**.
 2. **The pKa is predicted** — a statement about the *source*, and **carbamazepine is
    the in-repo counterexample**: CompTox's OPERA returns an acidic pKa of **5.07**
    (→ f_n 0.036, 96% ionised at pH 6.5) while the measured value this repo's own
-   best-conditioned table is built on — Kodešová 2019 (§4f), whose a-priori 0.216/0.237
+   best-conditioned table is built on — Kodešová 2019 (§4f), whose a-priori score
    assumes CAR is **un-ionised everywhere** — is **13.9** (f_n 1.00). Nine log units
    apart, on the very compound the neutral path is validated with, and only the
    measured one reproduces the published result.
@@ -297,21 +288,18 @@ Kow span, so the mismatch cannot come back.
 The **✅ Tang TF (OOS)** tab checks root→shoot transfer against **Tang et al. 2026** (flooded
 paddy pot, Nipponbare; PFOA/PFOS/GenX): the per-organ transfer factor **TF = C_organ/C_root**
 (SI Table S8, dry/dry), shown for the selected congener as grouped bars — **Tang (measured)** vs
-**model** vs **model with the Tang-refit `f_xy`** (`model_api.tang_tf_validation` →
-`plots.fig_tang_tf`). The model runs the redistributed shoot (`simulate_nstem_leaf`) on the
-calibration site-year (Tang's site and dates are not in the repo) and is read through the harvest
-operator on dry basis, like the data.
+**model** (`model_api.tang_tf_validation` → `plots.fig_tang_tf`). The model runs the default
+configuration on the calibration site-year (Tang's site and dates are not in the repo) and is read
+through the harvest operator on dry basis, like the data.
 
-- **The refit is in-sample.** `TANG_REFIT_FXY` (PFOA 0.930, PFOS 0.999 — at the ceiling —, GenX
-  0.059) is fitted to these bars (overall log10 RMSE 0.339); it is an override, `parameters.json`
-  is unchanged.
-- The default-model bars (grey) are the K_PL-gated lipid model on the redistributed shoot, whose
-  constants were fitted on **Yamazaki** and transferred untouched: log10 RMSE **0.640**. A **free
-  anion (no lipid loading)** checkbox adds the same shoot without the lipid term (**1.496**; the
-  4-pool core scores 0.992 with lipid vs 1.714 without) (`validation/oos_tang_lipid.py`).
-- **The grain is under-predicted**; reading the endosperm as milled rice
-  (`tang_tf_validation(endosperm="white")`) makes it worse (0.640 → 0.831), so composition does
-  not close the gap.
+- The default-model bars (grey) are the lipid-loading model, whose constants were fitted on
+  **Yamazaki** and transferred untouched; the panel computes the log10 RMSE for the congener and
+  dose shown. A **free anion (no lipid loading)** checkbox adds the same shoot without the lipid
+  term. The scored endpoint over the three congeners, for every variant, is in
+  `validation/transfer_sourced.json`; the per-organ detail is printed by
+  `validation/oos_tang_lipid.py`.
+- The in-sample Tang refit of `f_xy` (`TANG_REFIT_FXY`) left the tool with amendment 1
+  (`validation/archive/tang2026_fxy_refit.py`).
 
 ---
 

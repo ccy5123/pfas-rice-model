@@ -41,20 +41,20 @@ def test_default_simulate_runs_on_fresh_site_year_mass():
     r = api.simulate("PFOA")
     assert r["params"]["mass_basis"] == "fresh" and r["params"]["scenario"] == "yamazaki2020"
     for i, organ in enumerate(api.TISSUES):
-        expect = np.maximum(run[organ] * om.fresh_factor(organ), 1e-4)
+        expect = np.maximum(run[organ] * om.fresh_factor(organ), om.MASS_FLOOR)
         assert np.allclose(r["M"][:, i], expect)
 
 
-def test_placeholder_forcing_has_no_basis():
-    r = api.simulate("PFOA", measured_forcing=False)
-    assert r["params"]["mass_basis"] is None
+def test_placeholder_forcing_is_refused():
+    with pytest.raises(ValueError):                 # the placeholder logistics were removed
+        api.simulate("PFOA", measured_forcing=False)
 
 
 def test_driver_builders_convert():
     t = np.linspace(0.0, 120.0, 61)
     _, M = api.measured_forcing(t, scenario="generic", biomass="oryza")
     dry = og.organ_biomass_oryza(t, p=og.OryzaParams(season=120.0))
-    assert np.allclose(M[-1], [max(dry[o][-1] * om.fresh_factor(o), 1e-4) for o in om.ORGANS])
+    assert np.allclose(M[-1], [max(dry[o][-1] * om.fresh_factor(o), om.MASS_FLOOR) for o in om.ORGANS])
     drv = og.oryza_drivers(n_t=61)
     assert drv["mass_basis"] == "fresh"
     assert drv["M"][-1, 2] == pytest.approx(dry["leaf"][-1] * om.fresh_factor("leaf"), rel=1e-6)

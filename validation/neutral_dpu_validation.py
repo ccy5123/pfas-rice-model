@@ -286,7 +286,7 @@ def compare_to_obs(path, drv=None, half_life=None, tscf_model="briggs", quiet=Fa
     in the same file (data_obs/neutral_obs_li2019_rcf.csv carries the 18 Briggs
     1982 barley rows the RCF QSPR was fitted to). Pass subset=None to score
     everything. Files WITHOUT the column -- liu2023, ge2017 -- are unaffected, so
-    the published 0.213 / 0.311 cannot move because of this argument.
+    the published Liu / Ge scores cannot move because of this argument.
 
     `group_by` names a column to also report per-group RMSE for (e.g. "species").
 

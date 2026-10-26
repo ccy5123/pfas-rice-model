@@ -11,6 +11,7 @@ from calibration import (
     Param, ObservedBAF, predict_bafs, set_param, get_param, calibrate,
     load_baf_csv,
 )
+from model_api import PHI, T_C_PH   # the sourced phloem constants  # noqa: E402
 
 
 def build_model(**cmpd_kw):
@@ -29,7 +30,8 @@ def build_model(**cmpd_kw):
              Compartment("leaf", 0.78, 0.10, 0.010, 0.56, S=20.0),
              Compartment("grain", 0.14, 0.09, 0.003, 0.035, S=2.0)]
     return RiceUptakeModel(env=Environment(), cmpd=Compound(**base), comps=comps,
-                           inputs=PlantInputs(t=t, Cwo=Cwo, Qtp=Qtp, M=M)), t
+                           inputs=PlantInputs(t=t, Cwo=Cwo, Qtp=Qtp, M=M),
+                           phi=PHI, T_C_Ph=T_C_PH), t
 
 
 # ---------------------------------------------------------------------------

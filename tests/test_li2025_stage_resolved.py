@@ -2,11 +2,10 @@
 
 Pinned: (1) the SI Table S6 transcription reproduces the repo's 5-stage means and the
 authors' own TF; (2) the TF estimator alone moves the observed TF up to 5.8x; (3) the
-stage-to-stage scatter is ~4.5x what the reported SDs imply, so per-stage shape is
-noise-limited; (4) the pre-registered verdict -- the redistributed shoot with lipid
-loading discriminates (the expectation was that Li would stay inconclusive), and the
-post-hoc checks that it survives the other estimators and needs BOTH the shoot
-structure and the lipid term.
+stage-to-stage scatter exceeds what the reported SDs imply (chi-square), so per-stage shape
+is noise-limited; (4) the stage -> model-day mapping is the sourced one (PREREG 5.9); (5) the
+level scores equal the transfer record of the same fitted variants
+(validation/transfer_sourced.json).
 """
 import contextlib
 import csv
@@ -53,29 +52,32 @@ def test_the_estimator_alone_moves_the_observed_tf(result):
 
 def test_stage_scatter_exceeds_the_reported_sds(result):
     assert result["noise_limited"]
-    assert result["noise_ratio"] == pytest.approx(4.5, abs=0.3)
-    assert all(s["p"] > L.ALPHA for s in result["scores"].values())   # no shape signal
+    assert result["noise_ratio"] == pytest.approx(4.5, abs=0.3)      # data only
 
 
-def test_the_pre_registered_verdict(result):
+def test_the_stage_mapping_is_the_sourced_one():
+    """PREREG 5.9: heading and ripening by the DVS definitions, tillering at the midpoint of
+    [transplanting, panicle initiation], filling and milk-ripening at the centroid of their
+    ordered range -- no chosen DVS."""
+    lo, hi = L.tillering_range()
+    til, head, fill, milk, ripe = L.stage_dvs()
+    assert (head, ripe) == (1.0, 2.0) and hi == 0.65 and lo < hi
+    assert til == pytest.approx(0.5 * (lo + hi))
+    assert (fill, milk) == pytest.approx((4.0 / 3.0, 5.0 / 3.0))
+    assert np.all(np.diff(L.stage_days()) > 0)
+
+
+def test_level_scores_match_the_transfer_record(result):
+    import json
+    with open(os.path.join(ROOT, "validation", "transfer_sourced.json")) as f:
+        rec = json.load(f)["errors"]
+    same = {"nstem_lipid": "redistributed_lipid", "lipid": "4pool_lipid", "mono": "4pool_free",
+            "fit": "redistributed_fit"}
     sc = result["scores"]
-    assert result["winner"] == "nstem_lipid"
-    assert sc["nstem_lipid"]["rmse"]["shoot"] == pytest.approx(0.36, abs=0.02)
-    assert sc["nstem_lipid"]["rmse"]["grain"] == pytest.approx(0.51, abs=0.02)
-    assert sc["lipid"]["rmse"]["shoot"] == pytest.approx(0.90, abs=0.02)
-    assert sc["lipid"]["rmse"]["grain"] == pytest.approx(1.24, abs=0.03)
-
-
-def test_posthoc_estimators_and_decomposition(result):
-    post = result["posthoc"]
-    for est in ("mean_of_ratios", "ratio_of_means"):
-        row = post[est]
-        assert L.verdict({v: {"rmse": row[v]} for v in L.VARIANTS}) == "nstem_lipid"
-    dec = post["decomposition"]
-    for g in ("shoot", "grain"):
-        assert dec["nstem_lipid"][g] < dec["nstem_mono"][g] - 0.3      # the lipid term matters
-        assert dec["nstem_lipid"][g] < dec["lipid"][g] - 0.3           # so does the shoot
-        assert dec["nstem_lipid"][g] > post["noise_floor"][g]          # but not at the floor
+    for v, key in same.items():
+        for g in ("shoot", "grain"):
+            r = float(np.sqrt(np.mean(np.square(rec[key][f"li_{g}"]))))
+            assert sc[v]["rmse"][g] == pytest.approx(r, abs=1e-6), (v, g)
 
 
 if __name__ == "__main__":

@@ -599,7 +599,7 @@ def organ_biomass(t, season: float = 120.0, weather: dict | None = None,
     out = {}
     for name, key in organs.items():
         v = np.concatenate([[r[key][i3] * pltr], r[key][main]])
-        out[name] = np.maximum(np.interp(t, td, v * HA_PER_HILL), 1e-9)
+        out[name] = np.interp(t, td, v * HA_PER_HILL)     # crop model's own value (0 before formation)
     drlv = np.concatenate([[r["drlv"][i3]], r["drlv"][main]])
     if r["dvs"][-1] > 2.0:
         drlv[-1] = 0.0

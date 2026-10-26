@@ -196,6 +196,16 @@ class Compound:
     # own anion-uptake deficit is carried by the fitted CARRIER (Vmax_in) instead;
     # whether one mechanism should serve both is open.
     g_apo: float = 0.0
+    # LINEAR EQUILIBRIUM root entry: j = lam_eq * (r_eq * Cwo - Cw_root). The root's free
+    # concentration relaxes toward r_eq x the pore water at rate lam_eq. It is the form the
+    # data identify when membrane exchange is fast against xylem export and growth: only
+    # the ratio r_eq is then constrained by a root BAF, and lam_eq is numerical (results
+    # must not depend on it once it is large -- the convergence rule). It replaces the
+    # GHK + Michaelis-Menten pair, whose Km/Vmax have no source and whose uptake the
+    # literature finds linear at environmental levels (docs/literature_db/sourced_inputs.csv).
+    # 0 (the default) removes the term identically.
+    r_eq: float = 0.0
+    lam_eq: float = 0.0
 
 
 @dataclass
@@ -211,9 +221,36 @@ class Compartment:
     pH: float | None = None  # compartment pH, for the weak-electrolyte phloem ion trap
                              # (LEAF_CYTOSOL_PH is the usual leaf value). None -> no
                              # speciation calculation at all, which is the PFAS path.
+    K_cw: float | None = None  # this organ's cell-wall binding [L/kg cw]; None -> the
+                             # compound's K_cw (one value for every compartment)
 
 
 M_BASES = (None, "fresh")
+from organ_mass import MASS_FLOOR   # the one organ-mass floor (numerical, converged)
+# the integrator: "expm" (exponential stepping of the affine system, `linear_expm`) or "bdf";
+# SUBSTEPS = exponential steps per driver interval (validation/numerics_convergence.py)
+SOLVER = "expm"
+SUBSTEPS = 16
+
+
+def grain_formed(gm, floor=MASS_FLOOR):
+    """1 where the grain mass is off the organ-mass floor, 0 where it sits on it; all 1 if
+    the series never touches the floor (the grain exists from the start)."""
+    gm = np.asarray(gm, dtype=float)
+    on_floor = gm <= floor * (1.0 + 1e-12)
+    return np.ones(len(gm)) if not on_floor.any() else (~on_floor).astype(float)
+
+
+def panicle_share(dvs, at_heading, at_maturity):
+    """The panicle's share of whole-plant transpiration at ORYZA development stage `dvs`
+    (1 = heading/flowering, 2 = maturity): 0 before heading (the panicle is still inside the
+    boot), then linear from `at_heading` to `at_maturity`. The two anchors are sourced
+    (Sugimoto 1973, 1975; Roberts & Batchelor 1983; Takahashi & Kurata 2007); the linear
+    form between them is an assumption (docs/PREREG_sourced_values.md 5.1)."""
+    d = float(dvs)
+    if not np.isfinite(d) or d < 1.0:
+        return 0.0
+    return float(at_heading + (at_maturity - at_heading) * min(d - 1.0, 1.0))
 
 # Transpiring surface per kg DRY matter [m^2/kg], for the leaf/grain xylem split when M is
 # fresh weight. Leaf 20 is the SLA reading of the original S. Grain 0.5116 = 2 x (1-0.78)/
@@ -287,6 +324,8 @@ class PlantInputs:
     M: np.ndarray            # shape (len(t), 4)
     leaf_loss: np.ndarray | None = None   # leaf senescence loss RATE [1/day] (opt; 0 if None)
     M_basis: str | None = None            # 'fresh' | None -- see the docstring
+    dvs: np.ndarray | None = None         # crop development stage (ORYZA DVS); needed when the
+                                          # panicle's xylem share follows the stage
 
     def __post_init__(self):
         if self.M_basis not in M_BASES:
@@ -302,34 +341,37 @@ class PlantInputs:
         self._dM = [interp1d(self.t, dM[:, k], **kw) for k in range(4)]
         ll = np.zeros(len(self.t)) if self.leaf_loss is None else np.asarray(self.leaf_loss, float)
         self._leaf_loss = interp1d(self.t, ll, **kw)
-        # grain FORMATION gate gamma(t): 0 while the grain mass is held at its floor (the
-        # panicle has not set, ~pre-flowering), ramping to 1 once it forms (>2% of its
-        # season max). The grain's PFAS influx is gated by this, so no solute loads a
-        # not-yet-formed organ (DPU-consistent: import is tied to organ existence). It is
-        # 1 throughout for a constant-mass driver (no floor period -> grain always present).
-        gm = self.M[:, FRUIT]
-        glo, ghi = float(gm.min()), float(gm.max())
-        # ramp 0->1 as the grain mass LEAVES its floor (glo -> 1.5*glo): gam=1 for the whole
-        # of grain filling (so loading is normal), 0 only while it sits at the floor (not set).
-        gate = (np.clip((gm - glo) / (0.5 * glo + 1e-30), 0.0, 1.0)
-                if (ghi > 0.0 and glo < 0.05 * ghi) else np.ones(len(self.t)))
+        # grain FORMATION gate gamma(t): 0 while the grain sits on the organ-mass floor (the
+        # crop model has not formed the panicle), 1 from the day it leaves it. The grain's
+        # PFAS influx is gated by this, so no solute loads a not-yet-formed organ
+        # (DPU-consistent: import is tied to organ existence). A driver whose grain is never
+        # on the floor (e.g. constant mass) has the grain present throughout (gate 1). A step,
+        # not a ramp: the ramp that used to soften it was not converged
+        # (validation/numerics_convergence.py); between daily driver nodes the gate is
+        # linearly interpolated like every other driver.
+        gate = grain_formed(self.M[:, FRUIT])
         self._grain_gate = interp1d(self.t, gate, **kw)
+        self._dvs = (None if self.dvs is None
+                     else interp1d(self.t, np.asarray(self.dvs, float), **kw))
         # one table of every driver column for the RHS: a single linear interpolation per
         # call instead of twelve scalar interp1d calls (identical values: same linear
         # interpolation, same linear extrapolation beyond the ends)
+        dv = (np.full(len(self.t), np.nan) if self.dvs is None
+              else np.asarray(self.dvs, float))
         self._tg = np.asarray(self.t, dtype=float)
         self._tab = np.column_stack([np.asarray(self.Cwo, float), np.asarray(self.Qtp, float),
-                                     self.M, dM, ll, gate])
+                                     self.M, dM, ll, gate, dv])
 
     def drivers_at(self, t):
-        """(Cwo, Qtp, M[4], dM[4], leaf_loss, grain_gate) at time t, by one linear lerp."""
+        """(Cwo, Qtp, M[4], dM[4], leaf_loss, grain_gate, dvs) at time t, by one linear lerp
+        (dvs is NaN for a driver set without a development stage)."""
         tg = self._tg
         i = int(np.searchsorted(tg, t, side="right")) - 1
         i = min(max(i, 0), len(tg) - 2)
         w = (t - tg[i]) / (tg[i + 1] - tg[i])
         row = self._tab[i] + w * (self._tab[i + 1] - self._tab[i])
         return (row[0], row[1], row[2:6], row[6:10], max(row[10], 0.0),
-                min(1.0, max(0.0, row[11])))
+                min(1.0, max(0.0, row[11])), row[12])
 
     def Cwo_(self, t):  return float(self._Cwo(t))
     def Qtp_(self, t):  return float(self._Qtp(t))
@@ -337,6 +379,11 @@ class PlantInputs:
     def dM_(self, t):   return np.array([float(f(t)) for f in self._dM])
     def leaf_loss_(self, t):  return max(float(self._leaf_loss(t)), 0.0)
     def grain_gate_(self, t):  return min(1.0, max(0.0, float(self._grain_gate(t))))
+    def dvs_(self, t):
+        if self._dvs is None:
+            raise ValueError("this driver set carries no 'dvs'; the stage-based panicle "
+                             "share needs the crop's development stage")
+        return float(self._dvs(t))
 
 
 # ----------------------------------------------------------------------------
@@ -353,7 +400,8 @@ def binding_factors(comps: list[Compartment], cmpd: Compound) -> np.ndarray:
     """
     return np.array([
         c.theta + (1.0 - c.theta) * (
-            c.f_prot * cmpd.K_prot + c.f_PL * cmpd.K_PL + c.f_cw * cmpd.K_cw)
+            c.f_prot * cmpd.K_prot + c.f_PL * cmpd.K_PL
+            + c.f_cw * (cmpd.K_cw if c.K_cw is None else c.K_cw))
         for c in comps
     ])
 
@@ -402,7 +450,9 @@ def root_uptake(Cwo: float, Cw_root: float, cmpd: Compound, env: Environment) ->
     # apoplastic bypass: around the membrane, so neither speciation- nor
     # potential-gated. `g_apo` defaults to 0 and `x + 0.0 == x` exactly.
     j_apo = cmpd.g_apo * (Cwo - Cw_root)
-    return j_n + j_ed + j_carr + j_apo
+    # linear equilibrium entry (opt-in; 0 removes it identically)
+    j_eq = cmpd.lam_eq * (cmpd.r_eq * Cwo - Cw_root)
+    return j_n + j_ed + j_carr + j_apo + j_eq
 
 
 @dataclass
@@ -411,9 +461,15 @@ class RiceUptakeModel:
     cmpd: Compound
     comps: list[Compartment]            # [root, stem, leaf, fruit]
     inputs: PlantInputs
-    phi: float = 0.1                    # phloem recirculation fraction to roots [-]
-    T_C_Ph: float = 10.0                # phloem flux per unit grain dry mass [L/kg]
+    # phloem stream to the root as a fraction of transpiration [-] and phloem sap per kg of
+    # grain dry-matter growth [L/kg]: no default -- the caller passes the sourced values
+    # (model_api.PHI, T_C_PH); a model run without them raises
+    phi: float | None = None
+    T_C_Ph: float | None = None
     s_grain_dry: float | None = None    # override S_XYLEM_DRY[grain] (an unmeasured constant)
+    # (panicle share at heading, at maturity): the leaf/grain xylem split follows the crop's
+    # development stage (`panicle_share`); None keeps the transpiring-surface split
+    lam_grain_dvs: tuple | None = None
     # OPTIONAL plant-air exchange (volatilisation + gaseous uptake), see
     # `plant_air.AirExchange` and docs/dpu_model_summary_corrected.tex
     # sec:permeability. None (the default) skips the terms entirely -- they are
@@ -424,6 +480,11 @@ class RiceUptakeModel:
     # sieve-tube sap pH for the weak-electrolyte phloem ion trap; inert unless the
     # compound carries a pKa AND the leaf compartment carries a pH.
     phloem_pH: float = PHLOEM_PH
+
+    def __post_init__(self):
+        if self.phi is None or self.T_C_Ph is None:
+            raise ValueError("phi and T_C_Ph have no default: pass the sourced values "
+                             "(model_api.PHI, model_api.T_C_PH)")
 
     def phloem_loading_factor(self) -> float:
         """Effective leaf->phloem loading partition [-]  (`C_Phl = L * Cw_leaf`).
@@ -474,16 +535,23 @@ class RiceUptakeModel:
 
     def rhs(self, t: float, C: np.ndarray) -> np.ndarray:
         """RHS of dC/dt for the 4 compartments (Eqs. root, stem, leaf, fruit)."""
-        Cwo, Qtp, M, dM, leaf_loss, gam = self.inputs.drivers_at(t)
-        M = np.maximum(M, 1e-12)                     # guard against division by zero
+        Cwo, Qtp, M, dM, leaf_loss, gam, dvs = self.inputs.drivers_at(t)
+        M = np.maximum(M, MASS_FLOOR)                # the drivers are floored already; a guard
         mu = dM / M                                  # growth-dilution rates [1/day]
 
         B = binding_factors(self.comps, self.cmpd)   # [L/kg]
         Cw = C / B                                   # free aqueous conc [ug/L]
 
-        # leaf/fruit xylem split by transpiring surface, on DRY matter
-        split = xylem_leaf_share(self.comps, M, self.inputs.M_basis, self.s_grain_dry)
-        f3, f4 = split, 1.0 - split
+        # leaf/fruit xylem split: the panicle's sourced share of transpiration at the crop's
+        # development stage (lam_grain_dvs); without it, the transpiring-surface split
+        if self.lam_grain_dvs is not None:
+            if self.inputs.dvs is None:
+                self.inputs.dvs_(t)                 # raises: the stage-based share needs dvs
+            f4 = panicle_share(dvs, *self.lam_grain_dvs)
+            f3 = 1.0 - f4
+        else:
+            split = xylem_leaf_share(self.comps, M, self.inputs.M_basis, self.s_grain_dry)
+            f3, f4 = split, 1.0 - split
 
         # phloem flows (carrier loading at leaf; NOT pH trap): the grain draws the sap its
         # dry-matter growth needs (T_C_Ph per kg DM); a fraction phi of transpiration
@@ -538,10 +606,72 @@ class RiceUptakeModel:
                                 xyl_share=(f3, gam * f4))
         return dC
 
+    def affine(self, ts):
+        """(A[m,4,4], b[m,4]) with rhs(t, C) = A(t) C + b(t) at the times `ts`, or None when
+        the system is not affine (a carrier root entry). The same terms
+        as `rhs`, vectorised; `tests/test_linear_expm.py` holds them equal to the rhs."""
+        import linear_expm as LE
+        kio = LE.root_coefficients(root_uptake, self.cmpd, self.env)
+        if kio is None:
+            return None
+        k_in, k_out = kio
+        row = LE.lerp_table(self.inputs._tg, self.inputs._tab, ts)
+        Cwo, Q = row[:, 0], row[:, 1]
+        M = np.maximum(row[:, 2:6], MASS_FLOOR)
+        dM = row[:, 6:10]
+        ll = np.maximum(row[:, 10], 0.0)
+        gam = np.clip(row[:, 11], 0.0, 1.0)
+        dvs = row[:, 12]
+        mu = dM / M
+        B = binding_factors(self.comps, self.cmpd)
+        g = np.array([c.gamma for c in self.comps])
+        if self.lam_grain_dvs is not None:
+            if self.inputs.dvs is None:
+                self.inputs.dvs_(0.0)
+            f4 = np.array([panicle_share(d, *self.lam_grain_dvs) for d in dvs])
+        else:
+            f4 = 1.0 - np.array([xylem_leaf_share(self.comps, Mi, self.inputs.M_basis,
+                                                  self.s_grain_dry) for Mi in M])
+        f3 = 1.0 - f4
+        dMg = (dM[:, FRUIT] * (1.0 - self.comps[FRUIT].theta)
+               if self.inputs.M_basis == "fresh" else dM[:, FRUIT])
+        Q_g = np.maximum(dMg * self.T_C_Ph, 0.0)
+        Q_r = np.maximum(self.phi * Q, 0.0)
+        p = self.phloem_loading_factor() / B[LEAF] + self.cmpd.g_ph
+        x = self.cmpd.f_xy / B[ROOT] + self.cmpd.g_xy
+        A = np.zeros((len(row), 4, 4))
+        b = np.zeros((len(row), 4))
+        A[:, ROOT, ROOT] = -k_out / B[ROOT] - Q * x / M[:, ROOT] - g[ROOT] - mu[:, ROOT]
+        A[:, ROOT, LEAF] = Q_r * p / M[:, ROOT]
+        b[:, ROOT] = k_in * Cwo
+        A[:, STEM, ROOT] = Q * x / M[:, STEM]
+        A[:, STEM, STEM] = -Q / (M[:, STEM] * B[STEM]) - g[STEM] - mu[:, STEM]
+        A[:, LEAF, STEM] = (f3 + (1.0 - gam) * f4) * Q / (M[:, LEAF] * B[STEM])
+        A[:, LEAF, LEAF] = (-(gam * Q_g + Q_r) * p / M[:, LEAF] - g[LEAF] - mu[:, LEAF] - ll)
+        A[:, FRUIT, STEM] = gam * f4 * Q / (M[:, FRUIT] * B[STEM])
+        A[:, FRUIT, LEAF] = gam * Q_g * p / M[:, FRUIT]
+        A[:, FRUIT, FRUIT] = -g[FRUIT] - mu[:, FRUIT]
+        if self.air is not None and self.air.K_AW > 0.0:
+            # plant-air exchange is affine in C too (volatilisation ~ C, gaseous uptake from a
+            # fixed air concentration): read it off `AirExchange.flux` itself, time by time
+            for i in range(len(row)):
+                kw = dict(M=M[i], K_PW=B, comps=self.comps, Qtp=Q[i],
+                          xyl_share=(f3[i], gam[i] * f4[i]))
+                Aa, ba = LE.affine_parts(lambda _t, C: self.air.flux(C=C, **kw), 0.0, 4)
+                A[i] += Aa
+                b[i] += ba
+        return A, b
+
     def solve(self, t_eval: np.ndarray, C0: np.ndarray | None = None):
-        """Integrate the stiff system with BDF. Returns scipy solution object."""
+        """Integrate the system. Affine (the shipped PFAS and neutral paths, air exchange
+        included): exponential stepping (`linear_expm`, converged in
+        validation/numerics_convergence.py); otherwise BDF. Returns a solution object with
+        the scipy fields the callers read (t, y, success, sol)."""
         if C0 is None:
             C0 = np.zeros(4)
+        if SOLVER == "expm" and self.affine(np.asarray(t_eval[:1], float)) is not None:
+            import linear_expm as LE
+            return LE.solve_affine(self.affine, t_eval, 4, C0, substeps=SUBSTEPS)
         t_span = (float(t_eval[0]), float(t_eval[-1]))
         sol = solve_ivp(self.rhs, t_span, C0, t_eval=t_eval,
                         method="BDF", rtol=1e-6, atol=1e-9, dense_output=True)
@@ -563,102 +693,6 @@ class RiceUptakeModel:
         return float(C[ROOT] / self.inputs.Cwo_(t) + self.cmpd.K_surf)
 
 
-# ----------------------------------------------------------------------------
-# Synthetic demo (replace inputs with Phydrus/HYDRUS output + a growth model)
-# ----------------------------------------------------------------------------
 def _logistic(t, M0, Mmax, k, t0):
+    """Logistic curve (a helper for synthetic test drivers; no model value)."""
     return Mmax / (1.0 + (Mmax / M0 - 1.0) * np.exp(-k * (t - t0)))
-
-
-def _demo():
-    season = 120.0                       # days
-    t = np.linspace(0.0, season, 481)    # 0.25-day grid
-
-    # --- external drivers (PLACEHOLDERS; supply from HYDRUS/Phydrus + growth model)
-    Cwo = np.full_like(t, 1.0)           # soil pore-water free conc [ug/L], constant
-    # transpiration: rises with canopy, peaks mid/late season [L/day]
-    Qtp = 0.05 + 0.35 * np.exp(-((t - 75.0) ** 2) / (2 * 25.0 ** 2))
-    # growth: root/stem/leaf early; grain (fruit) fills from ~flowering (day 65)
-    M = np.column_stack([
-        _logistic(t, 1e-3, 0.030, 0.10, 20.0),    # root  [kg]
-        _logistic(t, 1e-3, 0.040, 0.10, 25.0),    # stem
-        _logistic(t, 1e-3, 0.050, 0.12, 30.0),    # leaf
-        _logistic(t, 1e-5, 0.025, 0.18, 80.0),    # fruit/grain (late)
-    ])
-    inputs = PlantInputs(t=t, Cwo=Cwo, Qtp=Qtp, M=M)
-
-    env = Environment()                  # N ~ +4.67 for z=-1, E=-120 mV
-    # PFOA-like placeholder compound (values are illustrative, NOT calibrated).
-    # The three transport parameters below encode the PFAS-specific physics that
-    # produces the empirical root > straw > grain ordering:
-    #   f_xy = 0.02  -> low transpiration-stream loading: the anion is strongly
-    #                   retained in the root and translocates poorly to the shoot
-    #                   (endodermal Casparian barrier + binding); larger for short
-    #                   chains, smaller for long chains.
-    #   L_Ph = 0.005 -> PFAS is poorly phloem-mobile (no weak-acid ion-trap for a
-    #                   fully dissociated anion), so the phloem-fed grain is the
-    #                   most poorly supplied compartment.
-    cmpd = Compound(
-        name="PFOA",
-        K_prot=50.0, K_PL=100.0, K_cw=7.0,         # [L/kg] PROVISIONAL: K_cw=whole-cw eff(Mel+poly); K_PL pending QC1 down-weight
-        kappa_d=0.5,                                # [L/(day kg)]
-        Vmax_in=20.0, Km_in=5.0,                    # carrier influx (must overcome anion exclusion)
-        Vmax_out=8.0, Km_out=5.0,                   # carrier efflux
-        L_Ph=0.005,                                 # low phloem loading (anion: no pH ion-trap)
-        f_xy=0.02,                                  # root->xylem loading (TSCF): limited translocation
-    )
-    # rice_tissue dw composition (recommended anchors); theta = fresh-weight water
-    # fraction; f_* = DRY-weight fractions; f_cw = WHOLE cell wall (poly + lignin).
-    comps = [
-        Compartment("root",  theta=0.90, f_prot=0.07, f_PL=0.015, f_cw=0.50),
-        Compartment("stem",  theta=0.83, f_prot=0.05, f_PL=0.005, f_cw=0.72),
-        Compartment("leaf",  theta=0.78, f_prot=0.10, f_PL=0.010, f_cw=0.56, S=20.0),
-        Compartment("grain", theta=0.14, f_prot=0.09, f_PL=0.003, f_cw=0.035, S=2.0),
-    ]
-
-    model = RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs)
-    sol = model.solve(t)
-
-    B = binding_factors(comps, cmpd)
-    Cend = sol.y[:, -1]
-    print(f"electrochemical number N = {env.N:.3f}  (e^N = {np.exp(env.N):.1f})")
-    print(f"binding factors B_k [L/kg]: " +
-          ", ".join(f"{c.name}={b:.2f}" for c, b in zip(comps, B)))
-    print("\nfinal tissue concentrations & BAFs:")
-    baf = model.baf(Cend, t[-1])
-    for c, ck, bk in zip(comps, Cend, baf):
-        print(f"  {c.name:5s}  C = {ck:8.3f} ug/kg   BAF = {bk:7.3f} L/kg")
-    # empirical target ordering root > straw > grain, where "straw" is the bulk
-    # shoot = mass-weighted mean of stem + leaf (standard rice-agronomy tissue).
-    Mf = inputs.M_(t[-1])
-    straw = (Cend[STEM] * Mf[STEM] + Cend[LEAF] * Mf[LEAF]) / (Mf[STEM] + Mf[LEAF])
-    straw_baf = straw / inputs.Cwo_(t[-1])
-    ordered = baf[ROOT] > straw_baf > baf[FRUIT]
-    print(f"\nordering check (target: root > straw > grain):")
-    print(f"  root  BAF = {baf[ROOT]:6.2f}")
-    print(f"  straw BAF = {straw_baf:6.2f}   (mass-weighted stem+leaf)")
-    print(f"  grain BAF = {baf[FRUIT]:6.2f}")
-    print(f"  root > straw > grain : {'OK' if ordered else 'VIOLATED'}"
-          f"  (root/straw = {baf[ROOT]/straw_baf:.2f}, straw/grain = {straw_baf/baf[FRUIT]:.2f})")
-
-    # optional figure
-    try:
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(figsize=(7, 4.2))
-        for k, c in enumerate(comps):
-            ax.plot(t, sol.y[k], label=c.name, lw=2)
-        ax.set_xlabel("time [day]"); ax.set_ylabel("tissue conc [ug/kg]")
-        ax.set_title("PFAS rice 4-compartment uptake (synthetic demo)")
-        ax.legend(); fig.tight_layout()
-        fig.savefig("pfas_rice_demo.png", dpi=130)
-        print("\nsaved figure: pfas_rice_demo.png")
-    except Exception as e:
-        print(f"\n(plot skipped: {e})")
-
-    return model, sol
-
-
-if __name__ == "__main__":
-    _demo()

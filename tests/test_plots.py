@@ -102,24 +102,21 @@ if __name__ == "__main__":
 def test_fig_tang_tf_builds():
     import model_api as api, plots
     val = api.tang_tf_validation("PFOA")
-    valr = api.tang_tf_validation("PFOA", use_refit=True)
-    fig = plots.fig_tang_tf(val, valr)
-    assert len(fig.data) == 3                       # Tang + model + refit
+    fig = plots.fig_tang_tf(val)
+    assert len(fig.data) == 2                       # Tang + model
     assert fig.layout.yaxis.type == "log"
-    # single-arg form (no refit bar) also builds
-    assert len(plots.fig_tang_tf(val).data) == 2
 
 
 def test_fig_tang_tf_lipid_extra_series():
     """The app's Tang tab: the default model (lipid loading on; OOS here -- its constants
     were fit on Yamazaki, not on Tang) is the main model bar, and the free anion on the same
-    shoot is drawn as its own third series rather than replacing the Tang-refit bar."""
+    shoot is drawn as its own third series."""
     import model_api as api, plots
     val = api.tang_tf_validation("PFOS", dose="low")
     vfree = api.tang_tf_validation("PFOS", dose="low", lipid_loading=False)
     assert val["lipid_loading"] and not vfree["lipid_loading"]
-    fig = plots.fig_tang_tf(val, None, vfree, extra_label="model · free anion")
-    assert len(fig.data) == 3                       # Tang + model + free anion (no refit bar)
+    fig = plots.fig_tang_tf(val, vfree)
+    assert len(fig.data) == 3                       # Tang + model + free anion
     assert any("free anion" in (tr.name or "") for tr in fig.data)
     # the K_PL-gated lipid term carries the high-K_PL sulfonate into the stalk
     assert val["model_tf"]["stalk"] > 3 * vfree["model_tf"]["stalk"]

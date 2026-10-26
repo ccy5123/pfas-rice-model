@@ -20,7 +20,7 @@ def scenarios():
     return dict(
         A=bid.run_scenario("A", ["qtp_scale", "cwo_level"], noise=False),
         B=bid.run_scenario("B", ["qtp_scale", "f_xy_mult"], noise=False),
-        C=bid.run_scenario("C", ["cwo_level", "kappa_d_mult"], noise=False),
+        C=bid.run_scenario("C", ["cwo_level", "r_eq_mult"], noise=False),
     )
 
 
@@ -42,11 +42,12 @@ def test_qtp_fxy_trade_off(scenarios):
 
 
 def test_cwo_conductance_is_a_ridge(scenarios):
-    """(C) Cwo and the root-uptake conductance are degenerate: far worse conditioned
-    than either other pair, correlation ~ -1."""
+    """(C) Cwo and the root equilibrium ratio enter the linear root entry only as a product:
+    far worse conditioned than either other pair, correlation ~ -1, the product pinned."""
     a, b, c = scenarios["A"], scenarios["B"], scenarios["C"]
     assert abs(c["corr"]) > 0.99
     assert c["cond"] > 1e3 * max(a["cond"], b["cond"])
+    assert c["product"] == pytest.approx(1.0, abs=0.02)
 
 
 def test_emcee_posterior_recovers_well_posed():

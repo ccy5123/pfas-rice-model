@@ -18,7 +18,6 @@ def render(cfg):
     obs = cfg.obs
     bio_baf = cfg.bio_baf
     preset_word = cfg.preset_word
-    E_m = cfg.E_m
     fxy_source = cfg.fxy_source
     biomass = cfg.biomass
     # ---- hands-on guidance (for the try-it-yourself audience) ---------------
@@ -50,25 +49,37 @@ def render(cfg):
     # Headline RESULT STRIP first (big signal + one-line takeaway), so the answer
     # lands before the numbers. Colour-blind-safe badge (colour + shape + label).
     _where_ko = {"roots": "뿌리", "straw (stems + leaves)": "짚(줄기+잎)", "grain": "낟알"}[where_most]
-    _intake = api.intake_fraction(grain_c, congener=congener)
+    # the intake reference uses milled white rice as eaten (14 % moisture), not the brown-rice
+    # pool on the plant (api.white_rice_conc)
+    white_c = api.white_rice_conc(res)
+    white_c = grain_c if white_c is None else white_c
+    _intake = api.intake_fraction(white_c, congener=congener)
     _pct_txt = f"기준의 {_intake['percent']:.0f}%" if _intake["in_group"] else "참고"
     _badge = signal_badge_html(_intake["signal"], ko=True, extra=_pct_txt)
     _cls = {"green": "safe", "amber": "warn", "red": "dang"}.get(_intake["signal"], "")
     st.markdown(
         f"<div class='pfas-result {_cls}'>{_badge}"
-        f"<div class='pfas-result-text'>대부분의 PFAS는 <b>{_where_ko}</b>에 남고, 먹는 "
-        f"<b>낟알</b>엔 약 <b>{grain_c:.2g} µg/kg</b> 들어 있을 것으로 추정합니다.</div></div>",
+        f"<div class='pfas-result-text'>대부분의 PFAS는 <b>{_where_ko}</b>에 남고, 낟알(현미)엔 "
+        f"약 <b>{grain_c:.2g} µg/kg</b>, 먹는 <b>백미</b>로 환산하면 약 <b>{white_c:.2g} µg/kg</b>"
+        f"으로 추정합니다.</div></div>",
         unsafe_allow_html=True)
 
     # then the three tissue numbers as cards
     m1, m2, m3 = st.columns(3)
     m1.metric("🥕 뿌리 속", f"{root_c:.2g} µg/kg", _rng_ko(bands["root"]), delta_color="off")
     m2.metric("🌿 짚(줄기+잎) 속", f"{straw_c:.2g} µg/kg", _rng_ko(bands["straw"]), delta_color="off")
-    m3.metric("🌾 낟알(먹는 쌀) 속", f"{grain_c:.2g} µg/kg", _rng_ko(bands["grain"]), delta_color="off")
+    m3.metric("🌾 낟알(현미) 속", f"{grain_c:.2g} µg/kg", _rng_ko(bands["grain"]), delta_color="off")
 
     st.caption(f"신호등은 EFSA 건강기반 안전기준 대비 수준입니다(색·모양·라벨로 표시). 숫자는 "
-               f"**대략적 예측**(실측과 ~{_fold:.0f}배 차이 가능)이며 법적 식품기준이 아닙니다. "
+               f"**대략적 예측**(실측과 ~{_fold:.1f}배 차이 가능)이며 법적 식품기준이 아닙니다. "
                f"자세한 비교는 🍚·⚖️·🔬 탭에서.")
+    _irb = {k: api.input_range_factors(congener, k) for k in ("root", "straw", "grain")}
+    if all(_irb.values()):
+        st.caption("근거가 범위로만 있는 입력값(조직 조성, 증산 분배, 묘판 조건 등)을 범위 양 끝으로 "
+                   "옮겼을 때의 폭 — " + " · ".join(
+                       f"{_n} ×{lo:.2f}–×{hi:.2f}" for _n, (lo, hi) in
+                       zip(("뿌리", "짚", "낟알"), (_irb["root"], _irb["straw"], _irb["grain"])))
+                   + " (보정 조건 기준).")
 
     s_tabs = st.tabs(["🗺️ 어디로 가나", "📈 시간에 따른 축적", "📊 얼마나 쌓이나",
                       "⚖️ 물질 비교", "🍚 밥으로 먹으면", "🔎 거꾸로 추정", "🔬 신뢰도 & 안내"])
@@ -90,7 +101,7 @@ def render(cfg):
                                                 grain_signal=_grain_sig),
                     unsafe_allow_html=True)
         st.markdown(
-            f"<span class='pfas-caveat'>ⓘ 대략적 예측 · 실측과 ~{api.uncertainty_factor():.0f}배 "
+            f"<span class='pfas-caveat'>ⓘ 대략적 예측 · 실측과 ~{api.uncertainty_factor():.1f}배 "
             f"차이 가능</span>", unsafe_allow_html=True)
         st.caption("**색이 진할수록 그 부위에 PFAS가 많습니다.** 카드 숫자는 그 부위 "
                    "**1 kg당 PFAS 농도**(µg/kg)이고, 맨 아래 **공극수**는 논물·흙물 "
@@ -124,7 +135,7 @@ def render(cfg):
                 if c in api.CONGENERS]
         try:
             _cmp = {c: _simulate(c, Cwo=cfg.Cwo_const, season=cfg.season,
-                                 measured_forcing=cfg.measured, E_m_mV=E_m,
+                                 measured_forcing=cfg.measured,
                                  f_xy_source=fxy_source, **_crop_kw(biomass)) for c in _rep}
             st.plotly_chart(plots.fig_congener_compare(_cmp, lang="ko", order=_rep),
                             width="stretch")
@@ -141,18 +152,21 @@ def render(cfg):
     with s_tabs[4]:
         st.markdown("#### 이 쌀을 먹으면 안전기준 대비 어느 정도일까요? (참고)")
         cA, cB = st.columns(2)
-        rice_g = cA.slider("하루 쌀 섭취량 [g/일]", 30, 400,
-                           int(api.DEFAULT_RICE_INTAKE_G_PER_DAY), 10,
-                           help="국민건강영양조사·KOSIS 기준 국내 1인 1일 쌀 섭취량은 약 150 g입니다.")
-        bw = cB.slider("체중 [kg]", 20, 100, int(api.DEFAULT_BODY_WEIGHT_KG), 5,
-                       help="1인 기준 체중. 어린이 등 체중이 작을수록 체중당 섭취 비율이 높아집니다.")
-        info = api.intake_fraction(grain_c, congener=congener,
+        _ri = api.RICE_INTAKE_G_PER_DAY_RANGE
+        rice_g = cA.slider("하루 쌀(백미) 섭취량 [g/일]", 30.0, 400.0,
+                           float(round(api.DEFAULT_RICE_INTAKE_G_PER_DAY, 1)), 0.5,
+                           help=f"기본값: 국민건강영양조사 2023 성인 연령대별 멥쌀 섭취량 평균 "
+                                f"{_ri[0]:.0f}–{_ri[1]:.0f} g/일의 중간값.")
+        bw = cB.slider("체중 [kg]", 20.0, 100.0, float(api.DEFAULT_BODY_WEIGHT_KG), 0.5,
+                       help="기본값: 국민건강영양조사 2013–2016 성인 평균 체중. 어린이 등 체중이 작을수록 "
+                            "체중당 섭취 비율이 높아집니다.")
+        info = api.intake_fraction(white_c, congener=congener,
                                    rice_intake_g_day=float(rice_g), body_weight_kg=float(bw))
         _gb = signal_badge_html(info["signal"], ko=True,
                                 extra=(f"기준의 {info['percent']:.0f}%" if info["in_group"] else "참고"))
         st.markdown(_gb, unsafe_allow_html=True)
         st.plotly_chart(plots.fig_intake_gauge(info, lang="ko"), width="stretch", theme=None)
-        _band = api.predictive_band(grain_c)
+        _band = api.predictive_band(white_c)
         _lo = api.intake_fraction(_band["lo"], congener=congener,
                                   rice_intake_g_day=float(rice_g), body_weight_kg=float(bw))
         _hi = api.intake_fraction(_band["hi"], congener=congener,
@@ -161,7 +175,8 @@ def render(cfg):
         mA.metric("주간 섭취량 / 안전기준", f"{info['percent']:.0f}%",
                   f"대략 {_lo['percent']:.0f}–{_hi['percent']:.0f}%", delta_color="off")
         mB.markdown(
-            f"낟알 **{grain_c:.2g} µg/kg**인 쌀을 하루 **{rice_g} g** 드시면 PFAS 주간 섭취량은 "
+            f"백미 **{white_c:.2g} µg/kg**(낟알 계산값을 백미·수분 14% 기준으로 환산)인 쌀을 하루 "
+            f"**{rice_g:.0f} g** 드시면 PFAS 주간 섭취량은 "
             f"EFSA 안전기준(**{info['twi']} ng/kg 체중/주**, 4종 합)의 약 **{info['percent']:.0f}%** "
             f"수준입니다.")
         if info["in_group"] is False:
@@ -175,12 +190,12 @@ def render(cfg):
                 "- **쌀만 섭취원으로 가정**한 단순 계산 (실제론 물·타 식품에서도 섭취).\n"
                 "- 낟알 농도 예측 자체가 실측과 **수배 차이날 수 있습니다.**")
         st.caption("출처: EFSA 2020 그룹 TWI 4.4 ng/kg 체중/주 (PFOA·PFOS·PFNA·PFHxS, "
-                   "doi:10.2903/j.efsa.2020.6223) · 쌀 섭취량 KOSIS/국민건강영양조사. "
-                   "🔴빨강 = 기준의 100% 이상, 🟡노랑 = 10–100%, 🟢초록 = 10% 미만.")
+                   "doi:10.2903/j.efsa.2020.6223) · 쌀 섭취량 국민건강영양조사 2023, 체중 국민건강영양조사 "
+                   "2013–2016. 🔴빨강 = 기준의 100% 이상, 🟢초록 = 100% 미만.")
 
     # ---- Simple tab 6: work backwards (Bayesian inverse estimate) -----------
     with s_tabs[5]:
-        _render_inverse_estimator(congener, E_m_mV=E_m, f_xy_source=fxy_source,
+        _render_inverse_estimator(congener, f_xy_source=fxy_source,
                                   biomass=biomass, key="inv_simple", simple=True)
 
     # ---- Simple tab 7: model trust (validation status) + about & glossary ---
@@ -192,14 +207,13 @@ def render(cfg):
         st.markdown(
             "| 항목 | 상태 | 근거 / 설명 |\n"
             "|---|---|---|\n"
-            "| 음이온 배제(뿌리 흡수 장벽) · 질량보존 | 🟢 **구조적으로 검증** | "
-            "막전위 기반 물리(eᴺ≈107); 모델이 반드시 만족 |\n"
-            "| 짧은사슬 PFAS 이행 **방향** | 🟢 **실측과 일치** | Yamazaki 2023 논 현장 (쓰쿠바) |\n"
+            "| 질량보존 | 🟢 **구조적으로 검증** | 모든 실행에서 유입 = 축적 + 유출 (테스트로 확인) |\n"
+            "| 뿌리 흡수·체관 적재 | 🟡 **Yamazaki 2023에 보정** | 물질별 2개 값을 뿌리·낟알 실측에 맞춤 |\n"
             "| 토양→공극수 결합 | 🟢 **실제 HYDRUS-1D 엔진 연동** | Method A (일방향) |\n"
-            f"| **절대 농도**(예측력) | 🟡 **대략치 (실측과 약 ×{api.uncertainty_factor():.0f})** | "
-            f"기본 설정을 독립 데이터에 옮겼을 때의 오차(중앙값) log10 RMSE ≈{api.APRIORI_LOG10_RMSE:.1f} |\n"
-            "| 긴사슬(C10~C12) 짚·낟알 축적 | 🔴 **탐색적·미해결** | 문헌·메커니즘 공백 |\n"
-            "| 물질별 이행계수 f_xy 절대값 | 🟡 **데이터셋 의존** | 논·품종·조건마다 다름 |\n")
+            f"| **절대 농도**(예측력) | 🟡 **대략치 (실측과 약 ×{api.uncertainty_factor():.1f})** | "
+            f"기본 설정을 보정에 쓰지 않은 독립 데이터에 옮겼을 때의 오차(중앙값) "
+            f"log10 RMSE {api.APRIORI_LOG10_RMSE:.2f} |\n"
+            "| 근거가 범위로만 있는 입력값 | 🟡 **범위의 중앙값으로 실행** | 양 끝값이 결과를 움직이는 폭은 별도 표시 |\n")
         st.caption("🟢 검증됨 · 🟡 대략치/조건의존 · 🔴 미해결(연구 진행 중). 절대 수치보다 **부위 간 "
                    "상대 비교**와 **물질 간 경향**을 신뢰하세요.")
         if obs:
@@ -207,8 +221,8 @@ def render(cfg):
                         "대해 모델이 데이터와 잘 맞습니다.")
             # the model's version of the observation (dry weight, the 2020 site-year, two harvests,
             # the congener's irrigation-water level) -- not the sidebar scenario
-            st.plotly_chart(plots.fig_baf(_yamazaki_observable(congener, f_xy_source=fxy_source,
-                                                               E_m_mV=E_m), obs, lang="ko"),
+            st.plotly_chart(plots.fig_baf(_yamazaki_observable(congener, f_xy_source=fxy_source),
+                                          obs, lang="ko"),
                             width="stretch", key="baf_trust")
         else:
             st.caption(f"{congener}에 대한 공개 실측 BAF가 없어 이 물질은 모델 예측만 표시됩니다.")
@@ -250,7 +264,7 @@ def render(cfg):
                                file_name=f"{congener}_요약.html", mime="text/html",
                                help="식물 지도 + 안전기준 게이지 + 핵심 수치 + 한계를 한 파일로. "
                                     "브라우저에서 열어 PDF로 인쇄하면 슬라이드 한 장이 됩니다.")
-        _intake_md = api.intake_fraction(grain_c, congener=congener)
+        _intake_md = api.intake_fraction(white_c, congener=congener)
         st.download_button("📄 요약 텍스트 (Markdown)",
                            api.summary_report_md(res, congener=congener, obs=obs,
                                                  intake=_intake_md, scenario=preset_word, lang="ko"),

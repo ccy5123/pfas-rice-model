@@ -16,6 +16,7 @@ from pfas_rice_plant_module import (
     Environment, Compound, Compartment, PlantInputs, RiceUptakeModel,
     binding_factors, root_uptake, _ghk_factor, ROOT, STEM, LEAF, FRUIT,
 )
+from model_api import PHI, T_C_PH   # the sourced phloem constants  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -56,7 +57,7 @@ def make_comps():
 def make_model(**cmpd_kw):
     t, inputs = make_inputs()
     model = RiceUptakeModel(env=Environment(), cmpd=make_compound(**cmpd_kw),
-                            comps=make_comps(), inputs=inputs)
+                            comps=make_comps(), inputs=inputs, phi=PHI, T_C_Ph=T_C_PH)
     return t, model
 
 
@@ -216,7 +217,7 @@ def test_concentrations_stay_nonnegative():
 def test_zero_soil_concentration_gives_zero_uptake():
     t, inputs = make_inputs(Cwo=0.0)
     model = RiceUptakeModel(env=Environment(), cmpd=make_compound(),
-                            comps=make_comps(), inputs=inputs)
+                            comps=make_comps(), inputs=inputs, phi=PHI, T_C_Ph=T_C_PH)
     C = model.solve(t).y[:, -1]
     assert np.allclose(C, 0.0, atol=1e-9)
 

@@ -306,7 +306,8 @@ def organ_biomass_oryza(t: np.ndarray, p: OryzaParams | None = None,
         target = p.shoot_anchor_g_m2 * 10.0                              # g/m2 -> kg/ha
         f = target / shoot_final if shoot_final > 0 else 1.0
         organs = {k: v * f for k, v in organs.items()}
-    out = {k: np.maximum(np.interp(t, td, v * kg_hill), 1e-9) for k, v in organs.items()}
+    out = {k: np.interp(t, td, v * kg_hill) for k, v in organs.items()}   # model value; 0 before formation
+    out["dvs"] = np.interp(t, td, sim["dvs"])
     # leaf senescence loss RATE [1/day] (NOT a mass -> no kg_hill / anchor scaling). The
     # PFAS leaf ODE adds -leaf_death_rate*C so the dead leaf carries its PFAS away
     # (D/M_leaf = drlv exactly), cancelling the spurious senescence concentration.
@@ -315,7 +316,9 @@ def organ_biomass_oryza(t: np.ndarray, p: OryzaParams | None = None,
 
 
 def M_matrix_oryza(t: np.ndarray, p: OryzaParams | None = None, weather: dict | None = None):
-    """Mass matrix [len(t), 4] = columns [root, stem, leaf, grain] [kg/hill]."""
+    """DRY mass matrix [len(t), 4] = columns [root, stem, leaf, grain] [kg/hill], the crop
+    model's values (0 before an organ forms); `organ_mass.organ_matrix` makes the floored FRESH
+    mass the ODE runs on."""
     b = organ_biomass_oryza(t, p, weather)
     return np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]])
 
@@ -332,10 +335,10 @@ def oryza_drivers(congener: str = "PFOA", Cwo: float = 1.0, season: float = 120.
     import organ_mass as om
     t = np.linspace(0.0, season, n_t)
     b = organ_biomass_oryza(t, p, weather)
-    M = om.organ_matrix(b, floor=1e-9)
+    M = om.organ_matrix(b)
     Qtp = fr.Q_TP(t, season) if Qtp is None else np.asarray(Qtp, float)
     return dict(t=t, Cwo=np.full_like(t, float(Cwo)), Qtp=Qtp, M=M,
-                leaf_loss=b["leaf_death_rate"], mass_basis=om.MASS_BASIS)
+                leaf_loss=b["leaf_death_rate"], mass_basis=om.MASS_BASIS, dvs=b["dvs"])
 
 
 if __name__ == "__main__":

@@ -225,7 +225,9 @@ def load_baf_csv(path: str) -> list[ObservedBAF]:
 
 
 # ---------------------------------------------------------------------------
-# demos: synthetic recovery + identifiability
+# SYNTHETIC recovery: a test of the optimiser, not of the plant. Every number in the
+# synthetic model below is an arbitrary test input (the truth the optimiser must recover);
+# none is a model value and none reaches the tool's outputs.
 # ---------------------------------------------------------------------------
 def _demo_model() -> tuple[RiceUptakeModel, np.ndarray]:
     from pfas_rice_plant_module import (
@@ -243,7 +245,8 @@ def _demo_model() -> tuple[RiceUptakeModel, np.ndarray]:
              Compartment("stem", 0.80, 0.01, 0.005, 0.08),
              Compartment("leaf", 0.80, 0.03, 0.020, 0.04, S=20.0),
              Compartment("grain", 0.15, 0.08, 0.010, 0.10, S=2.0)]
-    return RiceUptakeModel(env=Environment(), cmpd=cmpd, comps=comps, inputs=inputs), t
+    return RiceUptakeModel(env=Environment(), cmpd=cmpd, comps=comps, inputs=inputs,
+                           phi=0.1, T_C_Ph=10.0), t
 
 
 def synthetic_recovery(noise=0.0, seed=0, global_search=True):

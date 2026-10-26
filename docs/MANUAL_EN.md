@@ -93,7 +93,7 @@ PFSA C4/C6/C8: PFBS·PFHxS·PFOS; ether-PFAS: GenX); in Expert mode **any PFAS c
 | Audience | policy / students / public | environmental science / research |
 | Input | chemical + level (low/medium/high) | 6 exposure modes, SMILES, mechanism switches, all parameters |
 | Tabs | 5 (plain language) | 10 (technical) |
-| Symbols | none (BAF/Cwᵒ/f_xy/eᴺ hidden) | all exposed |
+| Symbols | none (BAF/Cwᵒ/f_xy/r_eq hidden) | all exposed |
 
 **How to switch:** the toggle at the top of the sidebar — **🔬 전문가/고급 모드 (Expert / advanced)**.
 - **Off (default)** = Simple mode (Korean)
@@ -143,17 +143,15 @@ Turning the toggle on switches to the English UI; the sidebar becomes **1 · Dat
 Three classes, chosen in the sidebar because the compound is a scenario input, not a result view:
 - **Curated congener**: one of 13 PFAS (measured/cited calibrated parameters).
 - **SMILES (structure)**: paste any PFAS structure → RDKit extracts descriptors → (1) **read-across** if it matches a curated congener, or (2) a **QSPR** (provisional) for a novel structure. A 2-D structure preview is shown. (`docs/structure_input.md`)
-- **Neutral organic (log Kow)**: a NON-PFAS, non-ionised compound — the Briggs/Kow base on the *same* ODE with `z = 0` (GHK → 1, `eᴺ` 107 → 1, carrier off, **nothing fitted**). The one required input is a **log Kow**; then name, in-planta half-life, TSCF QSPR (briggs/schriever), and two expanders — *Composition, phloem, air* (`lipid_source`, phloem departure, opt-in air exchange with MW/`K_AW`) and *Weak electrolyte (pKa) + apoplastic bypass* (`pKa`/acid-base/pH → prints `f_n`; `g_apo`) — plus an editable **soil Koc** (Karickhoff default, PROVISIONAL) for the soil-side modes. Every exposure mode, the map/dynamics/drivers, the inverse and the downloads work on it; the PFAS-only levers (`E_m`, `f_xy` source, the mechanism switches) and the four PFAS-only tabs are absent rather than ignored, and the headline shows **TSCF** instead of `eᴺ`.
+- **Neutral organic (log Kow)**: a NON-PFAS, non-ionised compound — the Briggs/Kow base on the *same* ODE with `z = 0` (no charge, so the root membrane term is passive diffusion; **nothing fitted**). The one required input is a **log Kow**; then name, in-planta half-life, TSCF QSPR (briggs/schriever), and two expanders — *Composition, phloem, air* (`lipid_source`, phloem departure, opt-in air exchange with MW/`K_AW`) and *Weak electrolyte (pKa) + apoplastic bypass* (`pKa`/acid-base/pH → prints `f_n`; `g_apo`) — plus an editable **soil Koc** (Karickhoff default, PROVISIONAL) for the soil-side modes. Every exposure mode, the map/dynamics/drivers, the inverse and the downloads work on it; the PFAS-only levers (`f_xy` source, the mechanism switches) and the four PFAS-only tabs are absent rather than ignored, and the headline shows **TSCF** instead of the root entry `r_eq`.
 
 ### 5.3 Model parameters (sidebar)
-- **E_m [mV]** (root membrane potential): the GHK anion-exclusion lever (rice −116…−140 mV). More negative → more anion exclusion.
-- **f_xy source** (applies only with lipid loading OFF; on by default, it supplies its own f_xy): `recommended` (monotone physical TSCF, with L_Ph and κ_d fitted to Yamazaki's root and grain — straw is a prediction) / `fit` (all three fitted per congener on the 2020 site-year — a saturated reproduction).
+- **f_xy source** (applies only with lipid loading OFF; on by default, it supplies its own f_xy): `recommended` (monotone physical TSCF, with the root entry `r_eq` and `L_Ph` fitted to Yamazaki's root and grain — straw is a prediction) / `fit` (all three fitted per congener on the 2020 site-year — a saturated reproduction). Each choice runs its own fitted values (`validation/refit_sourced.py`).
+- There is no membrane-potential or carrier control: the root entry is the linear equilibrium `λ_eq·(r_eq·Cwᵒ − C_w,root)`, because no source gives the constants of the GHK + Michaelis–Menten pair (amendment 1, `docs/PREREG_sourced_values.md`).
 - **Crop drivers (transpiration + organ mass)**: the **calibration site-year** (default: JMA Tsukuba 2020 weather, the ORYZA2000 port transplanted on Yamazaki's date, ORYZA2000 transpiration; the season is transplanting to harvest, so there is no season slider) / a **generic climatology** (`forcing_rice` transpiration) with a biomass driver — the ORYZA2000 port, the reduced ORYZA re-coding, or `growth_rice` — over the season slider.
-- **⚙️ Mechanism (advanced)** — questions that are still *open* are exposed as modes rather than buried constants (all default to the default model: redistributed shoot, lipid loading on, carrier; `parameters.json` untouched). A banner appears next to the headline metrics whenever one differs from the default.
-  - **Shoot model**: `redistributed shoot` (default; N = 4 stem segments + leaf, each organ retaining part of the solute its own transpiration deposits — levers `retention` 0.6, `lam_grain` 0.05, `stem_transp_frac` 0.45, none measured) vs `single-straw 4-pool` (the previous default, on which every transport parameter was fitted). The switch was decided by a pre-registered rule (`validation/default_switch.py`).
-  - **Root entry**: `carrier` (default) vs `bypass` (apoplastic). The Michaelis–Menten carrier is the **one piece of physics this repo adds** to the Trapp cell model — yet on Yamazaki the carrier with its Vmax re-fitted (1.078) and a single global `g_apo`=50 (1.093) are **indistinguishable** (bootstrap 0.368) while adding nothing at all fails (2.301): *an* addition is necessary, *which* is undecided, so the carrier keeps its place **by default, not by evidence** (`validation/carrier_vs_bypass.py`).
-  - **Lipid-facilitated loading** (default ON): the K_PL-gated, B-independent loading term (`g_xy·C`/`g_ph·C`), fitted on Yamazaki only. With **nothing re-fit to Tang** it moves the per-organ transfer error 1.50 → 0.64 on the redistributed shoot (1.71 → 0.99 on the 4-pool core); with the redistributed shoot it is best on Kim (0.47) and Li (0.36 / 0.51) too. It supplies its own `f_xy`, so the f_xy choice above applies only with it off.
-  - **Override the entry constants**: `Vmax ×`, `Km ×`, `g_apo` — the levers of that scan and of the dose series (whose result is the post-hoc bound `Km ≥ 150–500 µg/L`, 30–100× the fixed value).
+- **⚙️ Mechanism (advanced)** — the alternatives are exposed as modes rather than buried constants; each is a variant fitted on its own (`validation/refit_sourced.py`), so a switch runs that variant's fitted values, never another's. A banner appears next to the headline metrics whenever one differs from the default.
+  - **Shoot model**: `redistributed shoot` (default; N = 4 stem segments + leaf, each organ keeping the solute its own transpiration deposits; the sheath + culm and panicle shares of transpiration are sourced ranges run at their midpoints) vs `single-straw 4-pool` (one stem pool; the leaf/grain split by the same sourced panicle share).
+  - **Lipid-facilitated loading** (default ON): the B-independent loading term `g_xy·C` (one `f_xy` and one `g_xy` for every chain), its constants fitted on Yamazaki only (terms the data do not identify are removed by backward elimination). It supplies its own `f_xy`, so the f_xy choice above applies only with it off. Its transfer scores against the free anion are in `validation/transfer_sourced.json`.
   - The switches propagate to every tab, the congener comparison and the **Bayesian inverse**, so the inverse is never run under a different model than the forward tabs.
 
 ### 5.4 Scenario (3 · Scenario) — per-mode controls
@@ -166,12 +164,12 @@ Three classes, chosen in the sidebar because the compound is a scenario input, n
 
 ### 5.5 Expert tabs (9 for PFAS, 5 for a neutral organic)
 1. **🗺️ Plant & soil map** — accumulation map (concentration/BAF toggle, day slider/animate).
-2. **📈 Tissue dynamics** — tissue concentration C_k(t) + **PFAS mass (burden) C_k·M_k**. Shows B_k/f_xy/L_Ph/κ_d. Explains the grain formation gate.
+2. **📈 Tissue dynamics** — tissue concentration C_k(t) + **PFAS mass (burden) C_k·M_k**. Shows B_k/f_xy/L_Ph/r_eq. Explains the grain formation gate.
 3. **🟫 Soil & drivers** — the actual Cwᵒ(t)·Q_TP(t)·M(t) drivers, the (soil-inventory) isotherm, and the soil profile.
-4. **📊 BAF vs observed** — model vs Yamazaki 2023 bars. Optional **two-pool (seq)** and **merged root+shoot** (`simulate_twopool_nstem`) exploratory overlays. Yamazaki conditions/matching explained.
+4. **📊 BAF vs observed** — model vs Yamazaki 2023 bars (dry basis, the two-cultivar observable). Yamazaki conditions/matching explained.
 5. **🔗 Chain-length trends** — chain length vs a parameter (K_PL/K_prot/K_cw/f_xy/B_root/B_grain).
 6. **⚖️ Compare congeners** — per-tissue BAF across the congeners selected in the sidebar.
-7. **✅ Tang TF (OOS)** — Tang 2026 per-organ TF (out-of-sample) check (PFOA/PFOS/GenX, dry-weight). The grey bars are the default model, calibrated on Yamazaki and transferred untouched (0.64); the green bars are the in-sample Tang refit of the free anion (0.34). A **free anion (no lipid loading)** checkbox adds the same shoot without the lipid term as a third series (1.50).
+7. **✅ Tang TF (OOS)** — Tang 2026 per-organ TF (out-of-sample) check (PFOA/PFOS/GenX, dry-weight). The grey bars are the default model, calibrated on Yamazaki and transferred untouched; the panel computes the log10 RMSE for the congener and dose shown. A **free anion (no lipid loading)** checkbox adds the same shoot without the lipid term as a second series. The scored transfer endpoint over all three congeners is in `validation/transfer_sourced.json`.
 8. **🔎 Inverse (Bayesian)** — tissue concentrations → exposure Cwᵒ, with the identifiability caveat → [6.1](#61-work-backwards-bayesian-inverse).
 9. **ℹ️ About / coupling** — the six modes, the HYDRUS-1D input/output mapping, and the glossary.
 
@@ -189,7 +187,7 @@ Answers "I measured PFAS in my rice — how contaminated was the soil water?" **
 - **Input**: measured root/straw/grain concentrations (µg/kg), any subset, + a measurement-precision setting (Typical ±~40% / High precision ±~20% / Rough ±~2×).
 - **Button**: 📐 Estimate the contamination level (the estimate solves the ODE a few times, so it is gated behind a button).
 - **Output**: the most likely soil-water level (µg/L) + a 95% credible interval + a posterior curve + a check that the model reproduces your inputs.
-- **Why it's a real inverse**: root uptake is **saturable** (GHK + carrier), so tissue conc is a **nonlinear** increasing function of Cwᵒ — not a division. It finds the MAP via a **quadratic-fit Laplace** in log10(Cwᵒ) (MAP + curvature = posterior width; `model_api.estimate_exposure_bayesian`).
+- **What it does**: with the linear root entry, tissue concentration is proportional to a constant Cwᵒ, so the central estimate is measured ÷ predicted-per-unit-exposure (several tissues are combined in log space). The interval is what matters: its width is the model's transfer error (the honesty band) combined with your measurement precision. It is computed as a Laplace approximation in log10(Cwᵒ) (`model_api.estimate_exposure_bayesian`).
 - **Limit (identifiability)**: only the **exposure level** is estimated. From tissue data alone, Q_TP·f_xy (a product) and Cwᵒ-vs-uptake-conductance are ridges → pinning transport absolutely needs an independent measurement (xylem sap / a pore-water probe).
 
 ### 6.2 Your own data tables (growth + pore-water)
@@ -278,7 +276,7 @@ Full derivation: `docs/pfas_rice_compartmental_model.{tex,pdf}`; the overview en
 
 - **Model skeleton**: an **ionizable-organic-compound (IOC) extension** of the Trapp/Brunetti **DPU (Dynamic Plant Uptake)** framework — a 4-compartment (root/stem/leaf/grain) dynamic ODE.
 - **PFAS = permanent anion** (very low pKa, `f_d≈1`) → the neutral-compound Briggs/Kow partition core does not apply.
-- **Hybrid root uptake `j_R`**: ionic electrodiffusion (GHK; inside-negative membrane ⇒ anion **exclusion**, `e^N≈107`) **+** a saturable Michaelis–Menten carrier.
+- **Root uptake**: the theory derives a hybrid entry (GHK electrodiffusion with anion **exclusion** + a saturable carrier); the shipped model uses the linear equilibrium `λ_eq·(r_eq·Cwᵒ − C_w,root)` with `r_eq` fitted to the root, because no source gives the hybrid's constants and uptake is linear in exposure in every dose series found.
 - **Internal transport**: xylem advection (up) + phloem (grain is phloem-fed) + the **binding factor `B_k`** (`θ + f_prot·K_prot + f_PL·K_PL + f_cw·K_cw`, basis-A fresh weight, no density prefactor).
 - **Root→shoot loading `f_xy`** (TSCF analog): the anion is retained in the root and translocates poorly; the ordering is congener-dependent.
 - **Grain & leaf = terminal accumulators**: growth dilution → 0 at maturity ⇒ no steady state ⇒ a **dynamic model is essential** (final conc = time-integral / final mass).
@@ -286,9 +284,9 @@ Full derivation: `docs/pfas_rice_compartmental_model.{tex,pdf}`; the overview en
 - **Soil coupling (Method A, one-way)**: HYDRUS-1D/Phydrus → Cwᵒ(t), Q_TP(t); the plant ODE is solved in Python. HYDRUS is unmodified.
 
 **Known limitations (stated honestly)**
-- The fitted reproduction (log10 RMSE 0.162) is **saturated** (3 parameters per 3 observations), not predictive validation. The default configuration (redistributed shoot + lipid loading) is off by log10 0.36–0.64 on independent datasets (Tang 0.64, Kim 0.47, Li 0.36 / 0.51; the previous 4-pool free-anion default 1.26–2.33), and over-predicts most congeners' Yamazaki grain 2–7×. Every input without a measurement is listed with its sensitivity in `docs/ASSUMPTIONS.md`.
+- The fit to Yamazaki (default log10 RMSE 0.159) is in-sample, not predictive validation. On independent datasets the default (redistributed shoot + lipid loading) is off by log10 0.73 (Tang), 0.49 (Kim grain) and 0.39 / 1.02 (Li shoot / grain by stage; the 4-pool free anion 1.38–3.69). Every input is a sourced value, a fit, or a sourced range whose effect is reported (`docs/ASSUMPTIONS.md`, `params/input_range_band.json`).
 - **Long-chain (C10–C12)**: the free anion under-predicts the shoot (PFDoDA stays under even with f_xy = L_Ph = 1); the default's lipid loading reaches it, but the mechanism is not confirmed by experiment.
-- `K_cw` (cell-wall partition) has no measured coefficient in the literature (placeholder). Ether/sulfonamide Koc is a gap.
+- `K_cw` (cell-wall partition) is derived per organ from polysaccharide and lignin sorption (`docs/DELIVERABLE_GAP_A_Kcw.md`); a SMILES structure without a match still uses a placeholder. Ether/sulfonamide Koc is a gap.
 - Current results and the scripts behind them: `CLAUDE.md` §6.
 
 ---
@@ -306,7 +304,7 @@ Full derivation: `docs/pfas_rice_compartmental_model.{tex,pdf}`; the overview en
 | Uptake / translocation | How the chemical enters the roots and moves up into shoot and grain |
 | Bayesian estimate | Working backwards from a measurement to the most likely cause, **with an uncertainty range** |
 | f_xy (TSCF) | Root→xylem loading fraction (ease of shoot translocation) |
-| eᴺ (anion exclusion) | The GHK anion-exclusion factor (the negative membrane suppresses anion uptake) |
+| r_eq (root entry) | The root's equilibrium ratio to the soil water, fitted to Yamazaki's root (the root entry is linear in exposure) |
 | B_k | The binding factor (tissue conc = B_k × local free-water conc) [L/kg fw] |
 | TF | Transfer factor = C_organ / C_root (Tang validation) |
 
@@ -328,8 +326,9 @@ Full derivation: `docs/pfas_rice_compartmental_model.{tex,pdf}`; the overview en
 ## 12. Reproduce / validate / test
 
 ```bash
-python reproduce_demo.py          # Yamazaki 2020 site-year, fitted transport (a reproduction, log10 RMSE 0.162)
-python reproduce_demo.py --rec    # monotone physical f_xy: straw is a prediction (log10 1.40)
+python reproduce_demo.py          # default (redistributed shoot + lipid loading) on the Yamazaki 2020 site-year
+python reproduce_demo.py --fit    # f_xy fitted to the straw as well: a saturated reproduction
+python reproduce_demo.py --free   # the monotone a-priori f_xy: straw is a prediction
 python build_parameters.py        # rebuild params/parameters.json
 pip install pytest && pytest      # full test suite (structure/mass-conservation/QSPR/calibration/API/plots/inverse/tables …)
 ```

@@ -1,0 +1,31 @@
+# Rice organ composition with sources (replaces rice_tissue_params.csv, whose source keys resolved to nothing).
+# low/high = the sourced range; the model runs at the midpoint and carries the range into the output
+# (docs/PREREG_sourced_values.md 5.4). source = ids in docs/literature_db/sourced_inputs.csv.
+# A cell with no rice source carries its PHYSICAL bounds and says so in `basis`.
+# theta_fw = water / fresh mass; f_* = kg per kg DRY matter; lignin_share = lignin / whole cell wall.
+organ,quantity,low,high,basis,source
+root,theta_fw,0.713,0.713,measured (one pot study at maturity),tis_theta_root
+root,f_prot,0.04,0.08,measured (field; after heading),tis_fprot_root
+root,f_PL,0.019,0.022,measured (hydroponic seedlings),tis_fpl_root
+root,f_cw,0.11,0.94,lower = non-cellulosic polysaccharides alone (measured); upper = physical bound 1 - f_prot - f_PL,tis_fcw_root
+root,lignin_share,0.0,1.0,physical bound (no rice root lignin source),
+stem,theta_fw,0.645,0.774,whole shoot 10-45 d after flowering and straw at maturity (no stem-only source),tis_theta_stem
+stem,f_prot,0.034,0.11,straw at maturity to in-season (stem N = half leaf N),tis_fprot_stem
+stem,f_PL,0.0019,0.0050,derived: straw ether extract x leaf phospholipid share,tis_fpl_stem
+stem,f_cw,0.62,0.81,straw NDF,tis_fcw_stem
+stem,lignin_share,0.069,0.075,straw lignin / NDF (Feedipedia 4.8/69.1; Su 2012 ADL 61.0/NDF 811.8),tis_fcw_stem
+leaf,theta_fw,0.659,0.731,measured (flag leaf at maturity; leaves at tillering),tis_theta_leaf
+leaf,f_prot,0.088,0.319,measured leaf N x 6.25 (IR72DS92; maturity to tillering),tis_fprot_leaf
+leaf,f_PL,0.0085,0.0097,measured (seedling leaves),tis_fpl_leaf
+leaf,f_cw,0.0,0.90,physical bound 0 to 1 - f_prot - f_PL (no rice blade source read),
+leaf,lignin_share,0.0,1.0,physical bound (no rice blade lignin source),
+grain_brown,theta_fw,0.20,0.22,measured (on the plant at harvest),tis_theta_grain
+grain_brown,f_prot,0.083,0.097,measured (N x 5.95),tis_fprot_grain
+grain_brown,f_PL,0.0007,0.0017,measured (diacyl PE+PC to total phospholipid),tis_fpl_grain
+grain_brown,f_cw,0.034,0.045,measured NDF,tis_fcw_grain
+grain_brown,lignin_share,0.0,1.0,physical bound (no brown-rice lignin source),
+grain_white,theta_fw,0.20,0.22,taken as the grain's (the endosperm is part of it at harvest),tis_theta_grain
+grain_white,f_prot,0.073,0.083,measured (FAO 1993 Table 14),tis_fprot_grain
+grain_white,f_PL,0.0007,0.0012,measured (polished rice; mostly lyso-PC),tis_fpl_grain
+grain_white,f_cw,0.008,0.027,measured NDF of milled rice (FAO 1993),tis_fcw_grain
+grain_white,lignin_share,0.0,1.0,physical bound,

@@ -1,0 +1,19 @@
+{
+ "source": "validation/neutral_scores.py (a priori; nothing fitted)",
+ "units": "log10 RMSE",
+ "scores": {
+  "Liu 2023 rice root": 0.2561,
+  "Ge 2017 per-organ TF": 0.7025,
+  "Kodesova 2019 carbamazepine root": 0.4691,
+  "Li 2019 hydroponic": 0.5676,
+  "Li 2019 soil, through the ODE": 0.5493,
+  "Briggs 1983 barley stem": 0.3128
+ },
+ "equilibrium_basis": {
+  "Liu 2023 rice root": 0.2292,
+  "Kodesova 2019 carbamazepine root": 0.3917,
+  "Li 2019 soil, through the ODE": 0.6391
+ },
+ "briggs_stem_n": 30,
+ "briggs_stem_bias": 0.0066
+}

@@ -347,6 +347,7 @@ def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season:
         b = {k: site[k] for k in ("root", "stem", "leaf", "grain")}
         leaf_loss = site["leaf_death_rate"]
         q_direct = site["Qtp"]
+        dvs = np.asarray(site["dvs"], float)
     else:
         t = np.linspace(0.0, season, n_t)
         if biomass == "oryza":
@@ -357,6 +358,7 @@ def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season:
             b = gr.organ_biomass(t, season)
         leaf_loss = b.get("leaf_death_rate")          # only the senescing ORYZA driver supplies it
         q_direct = fr.Q_TP(t, season)
+        dvs = np.asarray(b["dvs"], float)
     Cw_h = np.interp(t, res.t, res.Cw)
     Cw_h = Cw_h * (Cwo_ref / np.mean(Cw_h))          # normalise to mean = Cwo_ref
     M = om.organ_matrix(b)                            # crop DRY matter -> ODE FRESH mass
@@ -368,7 +370,8 @@ def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season:
     else:
         Qtp = q_direct
 
-    return PlantInputs(t=t, Cwo=Cw_h, Qtp=Qtp, M=M, leaf_loss=leaf_loss, M_basis=om.MASS_BASIS), res
+    return PlantInputs(t=t, Cwo=Cw_h, Qtp=Qtp, M=M, leaf_loss=leaf_loss, M_basis=om.MASS_BASIS,
+                       dvs=dvs), res
 
 
 # ---------------------------------------------------------------------------

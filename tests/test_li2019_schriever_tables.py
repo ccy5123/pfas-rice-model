@@ -154,7 +154,7 @@ def test_default_composition_is_untouched_by_the_new_constant():
     assert ND.TRAPP1994_LIPID_FW == {"root": 0.01, "stem": 0.03,
                                      "leaf": 0.03, "grain": 0.03}
     comps = {c.name: c for c in ND.rice_compartments()}
-    assert comps["root"].f_PL == pytest.approx(0.01 / (1.0 - 0.90))
+    assert comps["root"].f_PL == pytest.approx(0.01 / (1.0 - ND.RICE_WATER["root"]))
 
 
 def test_partition_bias_is_flat_in_exposure_and_absent_at_low_kow():
@@ -182,7 +182,10 @@ def test_partition_bias_is_flat_in_exposure_and_absent_at_low_kow():
 
     by_kow = [bias([r for r in rows if lo <= float(r["log_kow"]) < hi])
               for lo, hi in ((-1, 2), (2, 3.5), (3.5, 4.5), (4.5, 9))]
-    assert by_kow[0] > -0.1                   # no bias where the water floor rules
+    # where the water floor rules the bias is the water itself: the mature rice root's water
+    # (0.713, PREREG 5.8) against hydroponic seedling roots near 0.9 -- log10(W / 0.90) of it
+    # (amendment 2: water by stage)
+    assert by_kow[0] == pytest.approx(np.log10(W / 0.90), abs=0.03)
     assert all(b < -0.25 for b in by_kow[1:])  # large wherever the lipid term rules
 
     # 3c: collapse each compound x study to one row -- the top two bins go flat,
@@ -293,9 +296,9 @@ def test_kodesova_votes_against_restoring_the_anchor():
                for p in (KODESOVA, LI2019)]
     anchored = [V.compare_to_obs(p, drv, quiet=True, lipid_source="briggs_anchor")
                 for p in (KODESOVA, LI2019)]
-    assert shipped[0] < anchored[0]          # Kodesova prefers the shipped lipid
-    assert anchored[1] < shipped[1]          # Li 2019 prefers the anchor
-    assert shipped[0] < 0.25                 # and it is the best a-priori root fit
+    # PREREG 5.8 state: the rice root water is the sourced 0.713 while the neutral lipid fractions are fresh fractions reported at ~0.9 water -- a basis mismatch that amendment 2 restates (docs/PREREG_sourced_values.md section 6): under it BOTH tables prefer the anchor (Kodesova used to prefer the shipped
+    # lipid); the vote is pinned as it stands so amendment 2 has to confront it
+    assert anchored[0] < shipped[0] and anchored[1] < shipped[1]
 
 
 # --------------------------------------------------------------------------
@@ -320,7 +323,9 @@ def test_the_rice_ode_discounts_the_root_in_a_kow_dependent_way():
         m = ND.simulate_neutral(ND.NeutralCompound("x", lk), drv)
         disc[lk] = m["baf_final"]["root"] / V.equilibrium_rcf(lk)
     assert disc[-0.5] > 0.85 and disc[5.0] > 0.95      # ~no discount at the ends
-    assert min(disc.values()) > 0.88                    # and little anywhere
+    # and at most ~20 % anywhere (the root is lighter on fresh mass at the sourced water 0.713
+    # than it was at 0.90, so it keeps up less with its xylem export)
+    assert min(disc.values()) > 0.78
 
 
 def test_equilibrium_mode_changes_the_root_tables_and_not_ge2017():
@@ -343,7 +348,7 @@ def test_equilibrium_mode_changes_the_root_tables_and_not_ge2017():
     li_ode, li_eq = both(LI2019)
     kod_ode, kod_eq = both(kod)
     assert liu_eq < liu_ode and li_eq < li_ode        # short-exposure: improves
-    assert kod_eq > kod_ode                            # Kodesova was flattered
+    assert kod_eq < kod_ode                            # under 5.8 Kodesova improves too
     assert liu_eq < kod_eq                             # Liu is the best, not Kodesova
 
     # Ge 2017 carries only stem/leaf tf rows, so equilibrium mode cannot touch it
@@ -365,8 +370,9 @@ def test_equilibrium_mode_does_not_change_the_anchor_verdicts():
                              lipid_source="measured") for p in (kod, LI2019)]
     anch = [V.compare_to_obs(p, drv, quiet=True, mode="equilibrium",
                              lipid_source="briggs_anchor") for p in (kod, LI2019)]
-    assert ship[0] < anch[0] and anch[1] < ship[1]     # same opposite verdicts
-    assert anch[0] - ship[0] > 0.10                    # but a much wider margin
+    # PREREG 5.8 state: the rice root water is the sourced 0.713 while the neutral lipid fractions are fresh fractions reported at ~0.9 water -- a basis mismatch that amendment 2 restates (docs/PREREG_sourced_values.md section 6): on the equilibrium basis too, both tables now prefer the anchor
+    assert anch[0] < ship[0] and anch[1] < ship[1]
+    assert ship[0] - anch[0] > 0.10
 
 
 # --------------------------------------------------------------------------
@@ -432,9 +438,9 @@ def test_compare_lipid_sources_reproduces_the_three_to_one_tally():
     rows = V.compare_lipid_sources(drv=V.drivers())
     by = {label: (m, a) for label, m, a in rows}
     assert len(rows) == 5
-    # the anchor wins only on the two the docs say it wins on
+    # the tables the anchor wins on (PREREG 5.8 state: the rice root water is the sourced 0.713 while the neutral lipid fractions are fresh fractions reported at ~0.9 water -- a basis mismatch that amendment 2 restates (docs/PREREG_sourced_values.md section 6): Kodesova joined Ge and Li hydroponic)
     won = {label for label, (m, a) in by.items() if a < m}
-    assert won == {"Ge 2017 (per-organ)", "Li 2019 hydroponic"}
+    assert won == {"Ge 2017 (per-organ)", "Li 2019 hydroponic", "Kodesova 2019"}
     # and the table it damages is the SOIL half of the paper it most helps
     m_soil, a_soil = by["Li 2019 soil"]
     assert a_soil - m_soil > 0.10
@@ -560,7 +566,9 @@ def test_metabolism_and_the_leaf_root_gap():
 
     assert model_leaf_root(1.5) < model_leaf_root(7.0)   # shorter does help
     assert model_leaf_root(None) > 5.0 * obs             # no metabolism: still far above
-    assert model_leaf_root(1.5) < 2.0 * obs              # a 1.5-d half-life ~closes it
+    # under PREREG 5.8 (root water 0.713: a lighter fresh root, a higher leaf/root) it takes a
+    # ~0.5-d half-life to reach the measurement; 1.5 d leaves it ~2.5x above
+    assert model_leaf_root(0.5) < 1.5 * obs < model_leaf_root(1.5)
 
 
 # --------------------------------------------------------------------------

@@ -11,8 +11,8 @@
 # the report is printed here, written to `docs/policy_brief_results.csv`, and
 # pinned by `tests/test_policy_brief.py`.
 #
-# WHICH MODEL. The DEFAULT configuration -- the redistributed shoot with K_PL-gated
-# lipid loading (`model_api.DEFAULT_SHOOT` / `DEFAULT_LIPID_LOADING`, adopted by the
+# WHICH MODEL. The DEFAULT configuration -- the redistributed shoot with lipid loading (the
+# form the amendment-1 fit kept: one f_xy and one g_xy for every chain) (`model_api.DEFAULT_SHOOT` / `DEFAULT_LIPID_LOADING`, adopted by the
 # pre-registered rule in validation/default_switch.py) -- on the calibration
 # site-year. The previous default (4-pool, free anion: `model_api.FOUR_POOL_FREE`) is
 # computed beside it wherever the briefing contrasts the two. All tissue values are
@@ -137,7 +137,7 @@ def section1(quiet=False):
 # ---------------------------------------------------------------------------
 def section2(quiet=False, cwo=KIM_PFOA_POREWATER, tag="2_pfoa"):
     r = api.simulate("PFOA", Cwo=cwo)
-    grain = float(r["conc"]["grain"][-1])                 # as eaten (grain water 14 %)
+    grain = api.white_rice_conc(r)                        # milled white rice as eaten (14 % water)
     dw = r["conc_dw"]
     ap = api.apportionment("PFOA", Cwo=cwo)["fraction"]
     d = dict(cwo=cwo, root=float(dw["root"][-1]), straw=float(dw["straw"][-1]), grain=grain,
@@ -151,7 +151,8 @@ def section2(quiet=False, cwo=KIM_PFOA_POREWATER, tag="2_pfoa"):
     rec(tag, "grain.band_hi", d["band"]["hi"], "ug/kg as eaten")
     rec(tag, "grain.band_factor", d["band"]["factor"], "x")
     rec(tag, "efsa_twi_percent", d["intake"]["percent"], "%",
-        "EFSA 2020 4종 합 TWI 4.4 ng/kg bw/주, 쌀 150 g/일, 체중 60 kg")
+        f"EFSA 2020 4종 합 TWI 4.4 ng/kg bw/주, 백미 {api.DEFAULT_RICE_INTAKE_G_PER_DAY:g} g/일, "
+        f"체중 {api.DEFAULT_BODY_WEIGHT_KG:g} kg")
     rec(tag, "grain_via_xylem", ap["grain"]["xylem_from_stem"], "-")
     rec(tag, "grain_via_phloem", ap["grain"]["phloem_from_leaf"], "-")
     rec(tag, "root_from_soil", ap["root"]["soil_uptake"], "-")
@@ -187,13 +188,13 @@ def section3(quiet=False):
                          obs_baf=pub, lo=lo, hi=hi,
                          base=preds["nstem_lipid"][nm], prev=preds["mono"][nm]))
         rec("3_kim2019", f"{nm}.porewater", pw, "ng/L", "Kim 2019 field mean (ND as 0)")
-        rec("3_kim2019", f"{nm}.brownrice", rice, "ug/kg", "Kim 2019 field mean (ND as 0); basis not stated")
+        rec("3_kim2019", f"{nm}.brownrice", rice, "ug/kg", "Kim 2019 field mean (ND as 0); freeze-dried grain (dry basis)")
         rec("3_kim2019", f"{nm}.detection_freq", df, "%", "brown rice, 30 fields")
         rec("3_kim2019", f"{nm}.obs_grain_baf", pub, "L/kg")
         rec("3_kim2019", f"{nm}.obs_lo", lo, "L/kg", "every non-detect at 0")
         rec("3_kim2019", f"{nm}.obs_hi", hi, "L/kg", "every non-detect at the MDL")
         rec("3_kim2019", f"{nm}.model_grain_baf", preds["nstem_lipid"][nm], "L/kg",
-            "pore water 1 ug/L, harvest moisture")
+            "pore water 1 ug/L, dry basis")
         rec("3_kim2019", f"{nm}.model_grain_baf_prev", preds["mono"][nm], "L/kg")
     s, p = scores["nstem_lipid"], scores["mono"]
     rec("3_kim2019", "rmse_point_default", s["point"], "log10", "PFOA excluded")

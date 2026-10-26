@@ -13,9 +13,11 @@
 # B-INDEPENDENT lipid-facilitated bound-loading term (g_xy*C, g_ph*C, K_PL-gated) that
 # fixes the IN-SAMPLE long-chain (Yamazaki C10-C12) collapse, and it is independently
 # corroborated by Chen 2025 (membrane K_MW rises monotone with chain length; the lipid
-# pool, not protein, carries the longest/most-sorptive species). CRUCIALLY, the
-# LIPID_LOADING constants were fit on YAMAZAKI (excl. PFDoDA), NOT on Tang -- so applying
-# the mechanism to Tang is a genuine OUT-OF-SAMPLE test of whether it GENERALIZES.
+# pool, not protein, carries the longest/most-sorptive species). CRUCIALLY, the lipid
+# constants are fitted on YAMAZAKI only (validation/refit_sourced.py, per shoot model), NOT
+# on Tang -- so applying the mechanism to Tang is an OUT-OF-SAMPLE test of whether it
+# GENERALIZES. The scored endpoint and the decision are in validation/transfer_sourced.py;
+# this script prints the per-organ detail.
 #
 # This script contrasts the OOS Tang error with the mechanism OFF vs ON. If turning it
 # on (no parameters touched for Tang) drops the OOS RMSE toward the in-sample level --
@@ -53,8 +55,7 @@ def main(dose="low"):
     variants = [("4pool free", dict(shoot="4pool", lipid_loading=False)),
                 ("4pool lipid", dict(shoot="4pool", lipid_loading=True)),
                 ("redist free", dict(shoot="redistributed", lipid_loading=False)),
-                ("redist lipid", dict(shoot="redistributed", lipid_loading=True)),
-                ("redist refit", dict(shoot="redistributed", use_refit=True))]
+                ("redist lipid", dict(shoot="redistributed", lipid_loading=True))]
     res = {name: _rmse(dose, **kw) for name, kw in variants}
     print(f"{'cong':6}{'organ':>11}" + "".join(f"{n:>14}" for n, _ in variants) + f"{'Tang':>9}")
     for key in res["4pool free"][1]:

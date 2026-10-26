@@ -1,151 +1,117 @@
 # Assumption register
 
-Every input the shipped model runs on, with its source, or — where there is none — marked
-**unmeasured** with the range it is run over and what that range does. Kept in step with the
-code; the numbers in the *effect* column come from the scripts named there.
+Every input the shipped model runs on, with its source. The rule (2026-10-25): no value may be
+chosen without a source (`docs/PREREG_sourced_values.md`). The machine-readable inventory is
+`params/value_provenance.csv` (guarded by `tests/test_value_provenance.py`); the quotes behind
+each sourced value are in `docs/literature_db/sourced_inputs.csv`.
 
-Conventions: *measured* = a value read from a cited table; *derived* = computed from measured
-values by a stated rule; *convention* = a modelling choice with a stated reason;
-*unmeasured* = no value exists for this crop/site; the default is stated, and the range is run.
+How a value is admitted (PREREG section 1): a value read in a source; else a fit the data identify
+(scored on data not used to fit it); else the mechanism that needs it is removed or reduced;
+else the model runs at the midpoint of the sourced range and reports the range. Numerical values
+(floors, tolerances, grids) are admitted only where the results converge at reporting precision
+(0.0005 log10; `validation/numerics_convergence.py`).
 
-**Effect** (sections 1–3): the median over the 11 Yamazaki congeners of |Δ log10 BAF|
-(root / straw / grain, dry basis) when the input is moved to the end of its range with the
-fitted parameters held fixed. Two configurations are reported, because the transport
-parameters were fitted on one and the model now runs on the other:
-- **default** — the redistributed shoot + lipid loading (`validation/default_sensitivity.py`;
-  yardstick = the two observed harvest runs' model difference, **0.004 / 0.036 / 0.037**);
-- **4-pool** — the single-straw free-anion fits (Fit A held; `validation/refit_site_year.py`,
-  "Unknown inputs"; yardstick **0.003 / 0.027 / 0.067**). Inputs consequential there were
-  re-fitted at both ends; "re-fit" gives the median (range) change of the fitted parameters.
-An effect above its yardstick is **consequential** (bold).
+**Effects of the ranges** are not typed here: they are in `params/input_range_band.json`
+(`validation/input_range_band.py`, PREREG 5.4) -- per congener and tissue the log10 envelope
+when each range input moves to its ends with the fits held, and the inputs that contribute most.
 
-## 1. Calibration site-year (Yamazaki et al. 2023, NARO Tsukuba 2020) — `src/site_scenario.py`
+## 1. Calibration site-year (Yamazaki et al. 2023, NARO Tsukuba 2020) -- `src/site_scenario.py`
 
-| input | value | status | source / range |
+| input | value | status | source |
 |---|---|---|---|
-| weather | JMA Tsukuba 2020 daily + hourly | measured | `raw_si/jma_tsukuba_2020.csv` (radiation = sum of hourly, vapour pressure = mean of hourly) |
-| transplanting | 2020-05-11 | measured | Yamazaki SI p.S2 |
-| harvests | 2020-09-01 and 2020-09-10 (two cultivars) | measured | Yamazaki SI p.S3 |
-| heading | harvest − 30.5 d | derived | the paper states 30–31 d; 30 / 31 d: default 0.000 / 0.004 / 0.003; 4-pool 0.000 / 0.003 / 0.009 |
-| harvest = physiological maturity (DVS 2) | — | convention | IR72's own grain-fill rate kept instead: default 0.000 / 0.001 / 0.001; 4-pool 0.000 / 0.001 / 0.002 |
-| phenology calibration | one factor on DVRJ/DVRI/DVRP → heading; DVRR → harvest | convention | ORYZA2000 manual §8.2 (DRATES); the juvenile/photoperiod split is not observable from two dates |
-| crop parameters | IR72.D92 verbatim | convention | the cultivars (Kasalath, Koshihikari) have no ORYZA crop file; IR72.D92 fits IR72DS92 and is closer than the shipped driver on the Wuxi partitioning check |
-| two cultivars → two runs, geometric mean | — | convention | the observations are the cultivar geometric mean; the single mean-date run (the app default): default 0.000 / 0.004 / 0.005; 4-pool 0.000 / 0.003 / 0.008 |
-| nursery (SBDUR) | 23 d after emergence, open seedbed | unmeasured | Kim 2003 nurseries 14/23/24 d; 14 / 30 d: default 0.001 / 0.008 / 0.004, 4-pool 0.001 / 0.008 / 0.025; covered seedbed (TMPSB 9 °C): default 0.002 / 0.014 / 0.005, 4-pool 0.002 / 0.014 / 0.048 |
-| planting density | 19.05 hills m⁻², 3 plants hill⁻¹ | unmeasured | Japanese machine spacing 30 × 15–22 cm; 15 / 22 hills m⁻²: default 0.001 / 0.006 / 0.005, 4-pool 0.001 / 0.006 / 0.024; 5 plants hill⁻¹: default 0.002 / 0.013 / 0.004, 4-pool 0.001 / 0.014 / 0.046 |
-| CO₂ | 414 ppm | measured (global) | Mauna Loa 2020 annual mean; 400 / 430: default 0.000 / 0.007 / 0.008; 4-pool 0.000 / 0.006 / 0.008 |
-| reference ET terms | FAO-56 Penman–Monteith radiation / aerodynamic terms | convention | the ORYZA2000 manual does not print its Penman routine; FAO-56 is the definition it cites |
-| field reflection | ORYZA eq. 4.2 with RFS 0.05 under standing water | measured (manual) | manual §4.1 |
-| transpiration | ORYZA eq. 4.4, actual = potential | convention | continuous flooding except a midsummer drainage; no water stress modelled |
-| wind height | 10.6 m → 2 m (FAO-56 eq. 47) | measured | JMA station metadata |
+| weather | JMA Tsukuba 2020 daily + hourly | measured | `raw_si/jma_tsukuba_2020.csv` |
+| transplanting | 2020-05-11 | measured | Yamazaki SI p.S2-S3 |
+| harvests | Kasalath 2020-09-01, Koshihikari 2020-09-10 | measured | Yamazaki SI p.S3 |
+| heading | Kasalath 2020-08-03, Koshihikari 2020-08-11 (mean run: their mean) | measured | Yamazaki SI p.S3 |
+| harvest = physiological maturity (DVS 2) | -- | convention | the phenology is calibrated so that DVS 2 falls on the harvest day |
+| phenology calibration | one factor on DVRJ/DVRI/DVRP -> heading; DVRR -> harvest | fitted | ORYZA2000 manual section 8.2 (DRATES) |
+| crop parameters | IR72.D92 verbatim | **open** | no ORYZA crop set for Koshihikari or Kasalath has been published (`sourced_inputs` crop_cultivar_search); the japonica sets of Gao et al. 2021 and Wu et al. 2022 are the next amendment's range |
+| nursery after emergence (SBDUR) | 25.5 d (range 25-26) | derived | sown 04-13 (Yamazaki), emergence 2-3 d after sowing (Ibaraki calendar); ORYZA counts whole days, so the midpoint runs the 25- and 26-d drivers interpolated |
+| seedbed cover (TMPSB, on the daily maximum) | 2.5 C (range 0-5.0) | derived | Ibaraki calendar seedbed 15-25 / 10-25 C against an ambient maximum of 20.0 C (JMA Tsukuba 2020) |
+| planting density | 18.5 hills m-2 | measured | Ibaraki prefecture standard (the field's own is unreported) |
+| plants per hill | 4.5 (range 4-5) | measured | Ibaraki prefecture standard |
+| CO2 | 414 ppm | measured | Mauna Loa 2020 annual mean |
+| reference ET terms | FAO-56 Penman-Monteith radiation / aerodynamic terms | inherited | the definition the ORYZA2000 manual cites |
+| transpiration | ORYZA eq. 4.4, actual = potential | inherited | continuous flooding except a midsummer drainage (Yamazaki SI p.S3) |
 
-## 2. Observation (Yamazaki 2023) — `data_obs/obs_baf_Yamazaki.csv`, `src/harvest.py`
+## 2. Observation (Yamazaki 2023) -- `data_obs/obs_baf_Yamazaki.csv`
 
-| item | value | status | note |
+Built by `docs/literature_db/tools/yamazaki_obs_from_si.py` from the SI transcription
+`raw_si/yamazaki2023_si_s16_s18_s19.csv`; where the SI leaves a value open the table carries the
+midpoint and both ends (`lo`, `hi`).
+
+| item | value | status | source |
 |---|---|---|---|
-| tissue basis | dry weight (pg/g dw) | measured | the fresh table it replaces was these × assumed water contents; inverted exactly |
-| exposure | one irrigation-water grab, 2020-06-08, held constant | measured value, convention for time | the seasonal course of the water is unknown |
-| straw | unweighted mean of four height bands | measured as reported | band masses not reported; the band range bounds any mass-weighted value (`straw_lo/hi`) |
-| brown rice | 0.88 white + 0.12 bran | derived | white:brown 86–90 % by mass (SI p.S3) |
-| PFBS grain | not used | — | wholly imputed (< MQL) |
-| other < MQL cells | MQL/2 upstream | unknown which | needs SI S18/S19 |
-| σ | 0.4 log10 | unmeasured | n = 1 composite per tissue |
-| dead blades in straw / leaf | all kept (attached = 1) | unmeasured | ORYZA's WAGT convention and a whole-plant harvest; all lost: default **straw 0.045** (root, grain 0); 4-pool **straw 0.174**, re-fit f_xy ×1.31 (1.00–1.53), L_Ph ×1.00 (0.44–1.00) |
-| dead tissue exchange | none after death | convention | no wash-off, no remobilisation |
+| tissue basis | dry weight (pg/g dw) | measured | Tables S18, S19 |
+| exposure | irrigation water, Table S16 (one grab, 2020-06-08), held over the season | measured value; **time course open** | the seasonal course of the water is not reported |
+| two cultivars | geometric mean (observation and model alike) | convention | each cultivar runs on its own heading and harvest |
+| straw | height bands weighted by their share of straw dry mass; mean of the 10 and 49 d-after-heading profiles (range = each profile) | measured | Tanaka et al. 2022, Rice 15:10, Fig. 3 (digitised; `raw_si/tanaka2022_fig3_layers.csv`) |
+| brown rice | white share 0.88 (range 0.86-0.90) of white + bran | measured | SI p.S3 |
+| < MQL cells | midpoint of [0, MQL) with both ends | derived | Table S6 MQLs; among the used cells only PFOS indica bran |
+| PFBS grain | not scored (white and bran < MQL in both cultivars); its censoring bound sets PFBS's L_Ph range | -- | |
+| dead blades in the straw | all attached | measured (qualitative) | rice and most grasses do not shed dead blades (McGlone et al. 2014; Chang & Bardenas 1965); no fraction is published -- all-lost is a reported sensitivity |
 
-## 3. Plant model constants
+## 3. Plant model
 
-| constant | value | status | range run / note |
+| constant | value | status | source / note |
 |---|---|---|---|
-| θ_fw (root/stem/leaf/grain) | 0.90 / 0.83 / 0.78 / 0.14 | estimates, **source not traceable** | `params/rice_tissue_params.csv` ranges (its `source_key` column -- `S_physiol`, `S_grainMC`, ... -- resolves to no reference anywhere in the repo, so the rows labelled "measured" there are not checkable either); `validation/theta_fw_sensitivity.py`: root INTERMEDIATE, stem/leaf/grain SMALL (pre-registered rule; dry-basis metrics) |
-| composition f_prot, f_PL, f_cw | `rice_tissue_params.csv` | **source not traceable** | the file labels each row measured or estimate, but none of its source keys resolves to a reference in the repo; no sensitivity has been run on f_prot, f_PL or f_cw |
-| K_PL, K_prot | Chen 2025, Zhou 2025 | measured | |
-| K_cw | GAP A deliverable | derived | no measured coefficient exists |
-| E_m | −120 mV | measured (Wang 1994) | −90 mV (NH₄⁺ depolarisation): default **0.128 / 0.126 / 0.127**; 4-pool **0.128 / 0.126 / 0.127**, re-fit κ_d ×1.46 (1.33–2.29), f_xy and L_Ph unchanged |
-| carrier Vmax_in / Km / Vmax_out | 20 / 5 µg L⁻¹ / 8 | **unmeasured, fixed, no source** (the values are chosen, not taken from any study) | Km × 100 (the dose-series lower bound ≥ 500 µg/L): default **1.27 / 1.27 / 1.27**; 4-pool **1.26 / 1.26 / 1.26**, re-fit: κ_d → ~0 (the now-linear carrier takes over), f_xy ×3.9 (1.0–28), L_Ph ×1.1 (1.0–9000). The level of every fitted transport parameter depends on this unmeasured constant. |
-| φ (phloem recirculation to the root) | 0.1 | unmeasured, no source | 0.05 / 0.2: default 0.000 / 0.026 / 0.002 (not consequential); 4-pool 0.001 / **0.048** / 0.026 (straw, through the root's recirculated burden), re-fit f_xy ×0.94 / ×1.11 (up to ×5.7) |
-| T_C,Ph (phloem flow per kg grain DM) | 10 L/kg | literature order of magnitude | 4 / 12 L/kg (sap 100–300 g/L sugar + grain water): default 0.000 / 0.009 / 0.017 (not consequential: PFOA's default grain is ~80 % xylem-fed, `apportionment`); 4-pool 0.000 / 0.012 / **0.160** — it sets the whole grain phloem volume there; re-fit L_Ph to its bound or ×0.85 |
-| grain xylem surface (4-pool only) | 0.5116 m² per kg DM (~6 % of the leaf + grain stream from panicle formation to harvest on the site-year, transpiration-weighted; 8 % from heading) | unmeasured | 0.2 (~2.5 %) / 2.0 (~18 %): 4-pool 0.000 / **0.044 / 0.280**; re-fit L_Ph ×1.31 (up to ×300) / ×0.15 (down to the floor). The default shoot splits the stream by `lam_grain` instead (below) |
-| redistributed shoot: `lam_grain` (grain share of the stream) | 0.05 | unmeasured | 0.025 / 0.18 (the share the 4-pool range spans): default 0.000 / 0.034 / **0.063** |
-| redistributed shoot: grain routing of the residual xylem stream (`grain_share`) | "gate": all of it once the panicle forms | structural choice, tested | "size" (share = panicle mass / mature mass): Yamazaki 0.380 → 0.254, Kim interval 0.154 → 0.267, Li grain TF 0.510 → 0.940; kept "gate" by the pre-registered rule (`validation/panicle_share_amendment.py`) |
-| redistributed shoot: `retention` (share of the deposited solute an organ keeps) | 0.6 | unmeasured, no source | ± one third, 0.40 / 0.80: default 0.000 / **0.110 / 0.225** |
-| redistributed shoot: `stem_transp_frac` (stem share of the shoot stream) | 0.45 | unmeasured, no source | ± one third, 0.30 / 0.60: default 0.000 / 0.011 / 0.008 |
-| redistributed shoot: stem segments N | 4 | convention | the configuration scored in every transfer test |
-| leaf xylem surface (4-pool only) | 20 m² per kg DM | convention, **value not sourced** | the original S read as an SLA; not a rice SLA measurement -- IR72.D92's own SLA is 24–45 m² per kg (ASLA 0.0024 + BSLA 0.0025·e^(−4.5(DVS−0.14)) ha/kg, capped at SLAMAX 0.0045); not run over a range |
-| grain formation gate | opens as the grain mass leaves the 1e-4 kg organ-mass floor, fully open at 1.5 × the floor (one day later on the site-year) | **numerical choice, no source** | `validation/gate_numerics_sensitivity.py` (ramp 1.1 / 3 / 10 ×, floor 1e-5 / 1e-3 kg): the PFOA young-panicle peak moves 1.41–9.65× its harvest value (shipped 3.29×) -- its size is set by these two numbers, not by data; the scores barely move: Yamazaki 0.367–0.384 (shipped 0.380), grain BAFs median \|Δ log10\| ≤ 0.024, transfer endpoints ≤ 0.038 (Li grain 0.498–0.548) |
-| root surface / plaque pool K_surf | 0 | convention | no dataset removed plaque; absorbed by κ_d in the fit |
-| f_xy bounds | ≤ 1 | physical | |
-| f_xy head-group offset (free anion, `f_xy_recommended`) | PFSA = PFCA × e^−1.1, ether × e^−0.7 | derived from TF ratios | PFOS/PFOA TF of Tang 2026 (0.26) and Yamazaki 2023 (0.43) -- so Tang's PFOS is not independent of the free-anion f_xy; the default (lipid loading) uses the fitted `pfsa_ln` instead. GenX from Tang alone (provisional) |
-| organ-mass floor | 1e-4 kg (`organ_mass.organ_matrix`) | numerical choice | keeps the ODE off zero mass; also sets when the grain gate opens (row above) |
-| L_Ph, κ_d bounds | [1e-5, 1], [1e-2, 50] | convention | L_Ph = 1 means sieve-tube sap at the leaf's free concentration (no active concentrating); the upper bound BINDS for PFDA, PFUnDA, PFOS and PFDoDA, whose grain stays under -- whether phloem loading can concentrate PFAS is unmeasured |
+| organ composition (theta_fw, f_prot, f_PL, f_cw, lignin share) | midpoints of `params/rice_composition_sourced.csv` | measured; physical bounds where no rice source exists (root and leaf f_cw upper ends; lignin shares of root, leaf and grain) | `sourced_inputs` tis_* rows |
+| root theta_fw over the season | 0.713 (one maturity study) | **open** | later search: maturity pot roots 0.51-0.77 (five studies), seedling to vegetative 0.76-0.89 (hydroponic and flooded soil). The model's theta is constant over the season; how to represent the seasonal fall (a range, or theta(t)) is amendment 2 |
+| K_PL, K_prot | per congener | measured | Chen 2025 (SSLM), Zhou 2025 |
+| K_cw | per organ: (1 - s) K_poly + s K_lignin | derived | GAP A deliverable (Guo 2025, Mel 2024); s = the organ's lignin share |
+| root entry | linear equilibrium `lam_eq (r_eq Cwo - Cw_root)` | structural | the GHK + Michaelis-Menten pair had no sourced constants; uptake is linear in exposure in every series found (Blaine 2014 and others) |
+| r_eq | per congener and variant | fitted | Yamazaki root (closed form); per-cultivar interval recorded |
+| lam_eq | 1e6 per day per kg | numerical | converged (`numerics_convergence.py`; 1e4 was not: 0.0008 log10) |
+| L_Ph | per congener and variant, >= 0, no upper bound | fitted | Yamazaki grain; 0 where the xylem alone already over-feeds the grain; PFBS: midpoint of [0, L at the censoring bound] |
+| lipid loading constants | per shoot model; terms not identified are removed | fitted | Yamazaki straw (and grain at L_Ph = 0), backward elimination by the bootstrap rule (`validation/refit_sourced.py`) |
+| free-anion f_xy (`*_free` variants only) | monotone logistic | derived, **points of the fit not recorded** | `docs/DELIVERABLE_GAP_B_fxy.md` (Felizeter TSCF level, theory shape) |
+| phi (phloem stream to the root) | 0.06 (range 0.02-0.10) | measured (non-cereal) | Windt et al. 2006 daytime phloem/xylem volume flow; no cereal value exists |
+| T_C,Ph (phloem sap per kg grain DM) | 6.1 L/kg (range 4.4-7.8) | derived | rice sieve-tube sucrose (Chino 1988; Hayashi & Chino 1990) |
+| panicle share of transpiration | 0 before heading; 0.21 (0.09-0.33) at DVS 1; 0.07 (0-0.14) at DVS 2; linear in DVS between | measured anchors; the linear form between them is stated as an assumption | Sugimoto 1973, 1975; Roberts & Batchelor 1983; Takahashi & Kurata 2007 |
+| sheath + culm share | 0.29 (range 0.22-0.36) | measured (post-heading, extended to the season) | Sugimoto 1973, 1975 |
+| retention | 1 | derived | solute delivered to an evaporating organ stays (a dead end); export is the phloem term |
+| stem segments N | 4 | numerical | converged |
+| organ-mass floor | 1e-9 kg; the grain formation gate is a step at the floor | numerical | converged (`numerics_convergence.py`) |
+| metabolism gamma | 0 | structural | PFAAs are terminal, persistent products (Gredelj 2020; Just 2022; Arp 2024) |
+| air exchange | 0 | structural | the anions do not volatilise (Vierke 2013; Johansson 2017) |
+| root plaque pool K_surf | 0 (off) | structural | not identifiable: no dataset removed plaque |
 
-## 4. Transport fit — `validation/refit_site_year.py` (pre-registered, amendment 1)
+## 4. Fits -- `validation/refit_sourced.py` (PREREG 5.3, 5.6)
 
-| item | value | status |
-|---|---|---|
-| `*_fit` | (f_xy, L_Ph, κ_d) per congener, saturated | fitted (reproduction) |
-| `*_rec` | (L_Ph, κ_d) with the monotone f_xy fixed | fitted; straw a prediction |
-| PFBS L_Ph | geometric mean of the others | convention (no grain value) |
-| GenX / SMILES records | geometric mean of the fitted congeners' L_Ph, κ_d | convention |
-| lipid globals | six, on the `*_rec` L_Ph/κ_d, PFDoDA excluded | fitted |
+Variants, each with its own fitted values: `redistributed_lipid` (the default),
+`redistributed_free`, `redistributed_fit` (f_xy fitted to the straw as well; a reproduction),
+`4pool_lipid`, `4pool_free`. Results: `validation/refit_sourced.json`; parameters:
+`params/refit_sourced.csv`, `params/lipid_loading_sourced.json` -> `parameters.json`.
 
-Fit A reproduces the 32 used cells at log10 RMSE 0.162 (root 0.000, straw 0.035, grain
-0.287; saturated -- a reproduction). PFBA and PFPeA sit at the L_Ph floor with their grain
-over (xylem-fed); PFDA, PFUnDA and PFOS reach the L_Ph upper bound (1) with their grain
-under, and PFDoDA sits at f_xy = L_Ph = 1 with straw and grain under: with the grain drawing
-only its growth sap, the free anion cannot carry the mid/long-chain grain. Fit B's straw (a
-prediction) is at log10 RMSE 1.401. The lipid globals reach 0.207 over 29 cells.
-
-**The default configuration** (redistributed shoot + lipid loading; `validation/default_switch.py`)
-adds no fitted parameter: it runs the `*_rec` L_Ph/κ_d and the lipid globals, all fitted on the
-4-pool. On the Yamazaki observable it scores 0.380 (root 0.090, straw 0.253, grain 0.619) and
-over-predicts the grain of most congeners (PFPeA 7.1×, PFUnDA 7.3×, PFOA 3.2×).
-
-**Reading the consequential inputs together**: the fitted (f_xy, L_Ph, κ_d) are conditional
-on the carrier constants (Km above all), E_m, φ, T_C,Ph and the grain xylem surface, none of which is
-measured for rice; the default's results are, in addition, conditional on the shoot levers
-`retention` and `lam_grain`, which are not measured either. A fit that reproduces Yamazaki does not pin them; a transfer test does
-not either, because each transfer dataset also runs on borrowed drivers (section 5).
-
-## 5. Transfer datasets (out-of-sample)
+## 5. Transfer datasets
 
 | dataset | drivers used | why |
 |---|---|---|
-| Tang 2026 (pot, Nipponbare) | calibration site-year | Tang's site and dates are not in the repo |
-| Kim 2019 (30 Korean fields) | calibration site-year | no dated crop record per field |
-| Li 2025 (one field, Jinyu Japonica No.22) | calibration site-year, stages by ORYZA DVS | stage dates not reported |
-| neutral tables (Liu, Ge, Kodešová, Li 2019, …) | generic (`forcing_rice` + `growth_rice`, `neutral_dpu_validation.drivers`) | other species/sites; the neutral validation is about the partition core |
-| Schriever TSCF weak-electrolyte rows | calibration site-year (`model_api.simulate_neutral` default) | the comparison is speciation ON vs OFF on the same drivers |
+| Tang 2026 (screenhouse, Nipponbare, Hangzhou soil) | calibration site-year | the paper gives timing relative to exposure only (heading ~month 4, harvest day 150), no year or dates |
+| Kim 2019 (30 Korean fields) | calibration site-year | harvest window Oct 6-18 2016 only; fields anonymised |
+| Li 2025 (Tianjin, Jinyu Japonica No.22) | calibration site-year, stages by ORYZA DVS | samples July-October 2023; no stage dates. Stage -> DVS from sources (PREREG 5.9): heading 1 and ripening 2 by definition, tillering the midpoint of [transplanting, panicle initiation 0.65], filling and milk-ripening the centre (4/3, 5/3) of their ordered range; the range ends are printed |
 
-## 6. Soil side (HYDRUS-1D, flooded profile) — `src/soil_hydrus.py`
+Decision rule for every comparison: `validation/decision_stats.decide` (paired bootstrap, 95 %
+interval; PREREG section 2). Scores: `validation/transfer_sourced.json` and
+`params/transfer_scores.json` (the honesty band).
+
+## 6. Soil side (HYDRUS-1D, flooded profile) -- `src/soil_hydrus.py` (not the default exposure)
 
 | input | value | status |
 |---|---|---|
-| Kd | Koc(chain length) × f_oc, f_oc 0.02 | QSPR (measured anchors); f_oc unmeasured for the site, no range run |
-| flooding | continuous to day 90, then drainage | convention (Yamazaki: continuous except midsummer drainage; dates not reported) |
-| percolation | 0.30 cm/d | chosen, no source, no range run |
-| profile | 100 cm, ρ_b 1.3, dispersivity 5 cm | chosen, no source, no range run |
+| f_oc | 0.02 | **open**: Yamazaki SI Table S5 gives 3.7-3.8 % TOC (next amendment) |
+| bulk density | 1.3 g/cm3 | **open**: 0.61 measured at a Tsukuba Andosol paddy (Koyama & Hayashi 2017) |
+| percolation | 0.30 cm/d | **open**: 0.41-0.67 cm/d at an Ibaraki Andosol paddy (Kondo et al. 2019) |
+| flooding | continuous to day 90 | **open**: midsummer drainage 35-40 d after transplanting for 15-20 d (Ibaraki calendar) |
+| profile, dispersivity, node spacing | 100 cm, 5 cm, 2 cm | **open**: literature range or convergence |
 
-## 7. External data that would replace an assumption
+## 7. App
 
-- Yamazaki 2023 SI (S16 water, S18/S19 raw values and MQL flags, planting density, nursery).
-- A panicle / caryopsis transpiration share (grain xylem surface).
-- Phloem sap volume per grain dry matter for rice (T_C,Ph).
-- Organ water content over a season (θ_fw).
-- A rice-root cell-wall / plaque PFAS sorption coefficient (K_cw, K_surf).
-
-## 8. Decision thresholds
-
-The pre-registered analyses decide by margins. The margins were fixed before each run (so a
-result could not tune them), but no study supplies their values: they are choices. For each
-decision, the margin at which the verdict would change, from the recorded scores:
-
-| decision (script) | margin used | recorded result | verdict holds for |
+| input | value | status | source |
 |---|---|---|---|
-| default switch D1, beat the old default on every transfer endpoint (`default_switch.py`) | > 0.3 log | smallest gain 0.90 (Li shoot 1.26 → 0.36) | any margin < 0.90 |
-| default switch D1, within 0.1 of the 4-pool lipid variant | 0.1 log | better on all five endpoints | any margin ≥ 0 |
-| panicle amendment A2, transfer non-inferiority of `"size"` (`panicle_share_amendment.py`) | 0.10 log | Kim interval +0.113, Li grain +0.430 | FAIL for any margin < 0.43 (from 0.12 only Li grain fails) |
-| Kim robust winner between the two lipid variants (`kim2019_censored.py`) | 0.10 log on point and interval | point 0.56 vs 0.47 (0.09), interval 0.38 vs 0.15 | **close**: a margin below ~0.09 names the default |
-| θ_fw: constant θ kept if every metric < 0.05, θ(t) built if any > 0.10 (`theta_fw_sensitivity.py`) | 0.05 / 0.10 log | root 0.053 (Ge) → INTERMEDIATE | **close**: a lower cut of 0.054 would make root SMALL |
-| panicle amendment A1, `"size"` has no young-panicle peak | max ≤ 1.5 × harvest value | `"size"` max 1.00× (`"gate"` 3.2–3.8×) | any cut ≥ 1.00; the `"gate"` peak size itself depends on the gate numerics (§3, grain formation gate) |
-
+| rice intake | 113.9 g/day white rice (range 101.68-126.13) | measured | KNHANES 2023 adult age-group means |
+| body weight | 64.5 kg | measured | KNHANES 2013-2016 adults (Yoon et al. 2022) |
+| rice eaten | white rice at 14 % moisture, from the dry brown-rice value and the white-rice composition | derived | `model_api.white_rice_conc` |
+| intake signal | green below / red at or above the TWI | structural | EFSA 2020 TWI (the only sourced threshold) |
+| tissue density (per-volume view) | 1.0 / 0.30 / 0.30 / 1.20 | **open** | no source |
+| SMILES K_cw | 20 L/kg placeholder | **open** | no source |

@@ -19,15 +19,16 @@ subtlety:
     the pair sits near the script's 0.95 ridge threshold -- on one side or the other
     depending on how much of the grain the phloem carries (the printed verdict is the
     current one). Either way, to pin Q_TP absolutely, measure it (or f_xy) independently.
-  * `cwo_level` and the root-uptake conductance `kappa_d` trade off the same way
-    (the linear-regime influx is ~ g_in * C_w^o), another ridge.
+  * `cwo_level` and the root equilibrium ratio `r_eq` enter the linear root entry
+    lam_eq*(r_eq*C_w^o - C_w,root) only through their PRODUCT: an exact ridge.
   * With the TRANSPORT parameters held fixed, `(qtp_scale, cwo_level)` IS
     identifiable — `cwo_level` sets the overall level (root), `qtp_scale` the
     shoot/root ratio — so the two act on different directions of the data.
 
 Method: a Laplace (Gauss-Newton) posterior around the MAP fit in log space.
-Observations are the final root/straw/grain BAFs (positive, span orders → log
-space, as in src/calibration.py). The posterior covariance ~ (JᵀJ)⁻¹·σ² makes
+Observations are the final root/straw/grain DRY concentrations (positive, span orders → log
+space, as in src/calibration.py) -- concentrations, not BAFs: the model is linear in the
+exposure, so a BAF carries no information on its level. The posterior covariance ~ (JᵀJ)⁻¹·σ² makes
 the ridge quantitative: a near-±1 parameter correlation + an inflated marginal
 std == non-identifiable. Optionally cross-checked with an emcee MCMC if present.
 
@@ -46,26 +47,28 @@ CONGENER = "PFOA"
 SIGMA = 0.05                      # log10 observation noise / weight
 _RNG = np.random.default_rng(0)
 
-# transport baseline (recommended monotone f_xy + its kappa_d) for CONGENER
+# transport baseline (the 4-pool free anion: monotone f_xy + its fitted L_Ph, r_eq) for CONGENER
 _c = api._CONG[CONGENER]
-_BASE_FXY, _, _BASE_KD, _, _ = api._transport_defaults(_c, "recommended", False)
+_BASE_FXY, _BASE_LPH, _BASE_REQ, _, _ = api._transport_defaults(_c, "recommended", False, "4pool")
 
 _D = api.scenario_drivers()                    # the calibration site-year (default drivers)
-_T, _BASE_Q, _M, _LL = _D["t"], _D["Qtp"], _D["M"], _D["leaf_loss"]
+_T, _BASE_Q, _M, _LL, _DVS = _D["t"], _D["Qtp"], _D["M"], _D["leaf_loss"], _D["dvs"]
 
-DEFAULTS = dict(qtp_scale=1.0, cwo_level=1.0, f_xy_mult=1.0, kappa_d_mult=1.0)
+DEFAULTS = dict(qtp_scale=1.0, cwo_level=1.0, f_xy_mult=1.0, r_eq_mult=1.0)
 
 
 def predict(knobs):
-    """Final root/straw/grain BAF for a set of exposure/transport knobs."""
+    """Final root/straw/grain DRY concentrations for a set of exposure/transport knobs (the
+    tissue data the inverse sees; a BAF would hide the exposure level, the model being linear
+    in it)."""
     k = {**DEFAULTS, **knobs}
     drivers = dict(t=_T, Cwo=np.full_like(_T, k["cwo_level"]),
-                   Qtp=k["qtp_scale"] * _BASE_Q, M=_M, leaf_loss=_LL, mass_basis="fresh")
+                   Qtp=k["qtp_scale"] * _BASE_Q, M=_M, leaf_loss=_LL, mass_basis="fresh", dvs=_DVS)
     r = api.simulate(CONGENER, drivers=drivers,
-                     f_xy_override=_BASE_FXY * k["f_xy_mult"],
-                     kappa_d_override=_BASE_KD * k["kappa_d_mult"], **api.FOUR_POOL_FREE)
-    dw = r["baf_final_dw"]
-    return np.array([dw["root"], dw["straw"], dw["grain"]])
+                     f_xy_override=_BASE_FXY * k["f_xy_mult"], L_Ph_override=_BASE_LPH,
+                     r_eq_override=_BASE_REQ * k["r_eq_mult"], **api.FOUR_POOL_FREE)
+    c = r["conc_dw"]
+    return np.array([c["root"][-1], c["straw"][-1], c["grain"][-1]])
 
 
 def _jacobian_at(free, point):
@@ -128,13 +131,12 @@ def run_scenario(name, free, truth=None, noise=True):
     print(f"    posterior corr(θ1,θ2) = {off:+.3f}   cond(JᵀJ) = {cond:.1f}"
           f"   -> {'RIDGE: non-identifiable' if abs(off) > 0.95 else 'identifiable'}")
     if abs(off) > 0.95:
-        if abs(np.log10(max(prod, 1e-9))) < 0.1:          # a clean product invariant (linear shoot advection)
+        if abs(np.log10(max(prod, 1e-9))) < 0.1:          # a product invariant
             print(f"    BUT the PRODUCT θ1·θ2 = {prod:.3f} (truth 1.000) is recovered "
                   "-> only the product is constrained")
-        else:                                             # nonlinear uptake -> ridge without an exact product
-            print("    ridge in the data, but root uptake is NONLINEAR (GHK + saturable carrier) so "
-                  "there is no exact product invariant -> the individual values just slide along the "
-                  "ridge (here biased off truth) and are unconstrained")
+        else:
+            print("    ridge in the data without a clean product invariant -> the individual "
+                  "values slide along the ridge and are unconstrained")
     return dict(name=name, free=free, truth=truth, recovered=recovered,
                 corr=off, cond=cond, sd=sd.tolist(), product=prod)
 
@@ -205,15 +207,15 @@ def maybe_emcee(nstep=120, nwalk=8):
 
 def run(do_emcee=False):
     print("Bayesian inverse demo — infer exposure from tissue C(t)\n"
-          f"  congener={CONGENER}, obs = final root/straw/grain BAF, "
+          f"  congener={CONGENER}, obs = final root/straw/grain dry concentration, "
           f"σ={SIGMA} log10")
     results = [
         run_scenario("A  WELL-POSED: exposure, transport fixed",
                      ["qtp_scale", "cwo_level"]),
         run_scenario("B  transpiration vs root->xylem loading",
                      ["qtp_scale", "f_xy_mult"]),
-        run_scenario("C  RIDGE: pore water vs root-uptake conductance",
-                     ["cwo_level", "kappa_d_mult"]),
+        run_scenario("C  RIDGE: pore water vs root equilibrium ratio",
+                     ["cwo_level", "r_eq_mult"]),
     ]
     if do_emcee:
         maybe_emcee()
@@ -226,9 +228,9 @@ def run(do_emcee=False):
     print(f"\nTakeaway: (A) with transport fixed, Q_TP-scale and Cwo-level recover from the "
           f"tissue data (corr {ra['corr']:+.2f}, cond {ra['cond']:.0f}). (B) Q_TP and f_xy trade "
           f"off strongly (corr {rb['corr']:+.2f}, cond {rb['cond']:.0f}): they share the "
-          f"root->shoot flux, and {b_txt}. (C) Cwo and the root-uptake conductance are degenerate (corr "
-          f"{rc['corr']:+.2f}, cond {rc['cond']:.1e}) with no clean product invariant (uptake is "
-          f"nonlinear). Pinning Cwo absolutely needs an independent pore-water measurement; "
+          f"root->shoot flux, and {b_txt}. (C) Cwo and the root equilibrium ratio are degenerate (corr "
+          f"{rc['corr']:+.2f}, cond {rc['cond']:.1e}): the linear entry carries only their product "
+          f"({rc['product']:.3f}). Pinning Cwo absolutely needs an independent pore-water measurement; "
           f"pinning Q_TP needs a measured transpiration or xylem-sap ratio.")
     return results
 

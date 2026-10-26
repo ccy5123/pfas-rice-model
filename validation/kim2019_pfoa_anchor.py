@@ -23,8 +23,9 @@
 #       range 0.98 at A-2 to 597 at D-7)
 # Also already seen: kim2019_censored.py (step 4a) PRINTED the four variants' PFOA grain
 # BAF as unscored anchor rows, all far below 4.43. Nothing below uses them to choose an
-# estimator. And: no shipped parameter is fitted to Kim PFOA (L_Ph_fit, L_Ph_rec and
-# LIPID_LOADING are Yamazaki fits; only the literature_params DEMO fits L_Ph to 4.43), so
+# estimator. And: no shipped parameter is fitted to Kim PFOA (r_eq, L_Ph and the lipid
+# constants are Yamazaki fits, validation/refit_sourced.py; only the literature_params DEMO
+# fits L_Ph to 4.43), so
 # the "PFOA* used in the L_Ph fit" exclusion in the OOS scripts has no basis.
 #
 # Site accounting: 30 sites. 14 have rice and water both detected; 12 have water detected
@@ -54,7 +55,7 @@
 #      is not proportional to what the plant took up over the season, and E5 is a typical
 #      value with that noise in it, not a plant constant.
 #   Q3 (model) Each variant's PFOA grain BAF (kim2019_censored.predict: mono, W2, lipid,
-#      nstem_lipid; Cwo 1, fresh weight) against E1 and against E5 with its interval.
+#      nstem_lipid; Cwo 1, dry weight) against E1 and against E5 with its interval.
 #   Q3b (model) Is the model linear in exposure over Kim's water range? Slope of log10
 #      grain conc on log10 Cwo between 0.0008 and 1.76 ug/L (the lowest and highest PFOA
 #      void water), per variant. If ~1, a data slope below 1 cannot come from the carrier.
@@ -238,15 +239,8 @@ def profile_interval(d, level=LEVEL):
 
 
 def model_baf(v, cwo=1.0):
-    """Harvest PFOA grain BAF [L/kg fw] at constant Cwo (as kim2019_censored.predict)."""
-    if v == "nstem_lipid":
-        r = api.simulate_nstem_leaf("PFOA", Cwo=cwo, lipid_loading=True)
-    else:
-        kw = dict(mono=dict(f_xy_source="recommended", **api.FOUR_POOL_FREE),
-                  fit=dict(f_xy_source="fit", **api.FOUR_POOL_FREE),
-                  lipid=dict(lipid_loading=True, shoot="4pool"))[v]
-        r = api.simulate("PFOA", Cwo=cwo, **kw)
-    return float(r["baf_final"]["grain"])
+    """Harvest PFOA grain BAF [L/kg dry weight] at constant Cwo (as kim2019_censored.predict)."""
+    return float(api.simulate("PFOA", Cwo=cwo, **K.VARIANT_KW[v])["baf_final_dw"]["grain"])
 
 
 def where(p, lo, hi):
@@ -285,7 +279,7 @@ def main():
           f"[{slo:.2f}, {shi:.2f}]  (a constant BAF means b = 1)")
     print(f"     -> the interval {'EXCLUDES' if shi < 1 or slo > 1 else 'includes'} 1")
 
-    print("\nQ3 — model PFOA grain BAF (Cwo 1, fresh weight) vs E1 and E5")
+    print("\nQ3 — model PFOA grain BAF (Cwo 1, dry weight) vs E1 and E5")
     with contextlib.redirect_stdout(io.StringIO()):
         pred = {v: model_baf(v) for v in K.VARIANTS}
     for v in K.VARIANTS:

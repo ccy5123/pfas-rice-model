@@ -19,15 +19,16 @@
 # Already computed (data only, before this file): PFHpA [0.39, 2.11], PFOA [4.43, 4.92],
 # PFNA [2.21, 7.07], PFDA [1.55, 11.3], PFUnDA [19.8, 168], PFDoDA [5.5, 630] L/kg. The
 # shipped ND=0 values are the LOWER bound for PFHpA/PFNA/PFDA/PFOA. Also already seen:
-# the "reliable DF>=15%" Kim score in oos_crossdataset is ONE congener (PFNA) -- the
+# the "reliable DF>=15%" Kim score in (archived) oos_crossdataset is ONE congener (PFNA) -- the
 # label there says PFHpA+PFNA, but PFHpA's DF is 13%.
 #
 # Model: grain BAF at harvest, Cwo constant 1, the default drivers (the calibration site-year;
 # as oos_crossdataset). Variants: 4-pool monotone f_xy, 4-pool saturated "fit" (was W2),
 # 4-pool lipid loading (the three oos_crossdataset scores), plus nstem_leaf + lipid (the
 # configuration that won Tang and Li). Scored congeners: PFHpA, PFNA, PFDA, PFUnDA, PFDoDA
-# (PFOA stays out, as in oos_crossdataset). Model fresh-weight BAF vs Kim as published
-# (brown-rice basis not stated; dw would move Kim by 0.065 log).
+# (PFOA stays out, as in oos_crossdataset). Model DRY-weight BAF vs Kim as published: Kim
+# freeze-dried the grain before dehusking and weighing 2 g for extraction (main p.715-716), so
+# ng/g is per dry mass (until amendment 1 the fresh-weight BAF was compared).
 #
 # Questions and decision rules:
 #   Q1 (data) Is the long-chain RISE in Kim's grain BAF robust to the non-detects? A step
@@ -63,18 +64,22 @@ import model_api as api            # noqa: E402
 SCORED = ("PFHpA", "PFNA", "PFDA", "PFUnDA", "PFDoDA")        # PFOA out, as in oos_crossdataset
 CHAIN = ("PFHpA", "PFOA", "PFNA", "PFDA", "PFUnDA", "PFDoDA")
 VARIANTS = ("mono", "fit", "lipid", "nstem_lipid")
-MARGIN = 0.10
+# The 0.10 margin of the original rule is retired (docs/PREREG_sourced_values.md section 2): a
+# variant wins only if decision_stats.decide calls it "better" than every other variant on both
+# the point and the interval errors.
+
+
+VARIANT_KW = dict(mono=dict(f_xy_source="recommended", **api.FOUR_POOL_FREE),
+                  fit=dict(f_xy_source="fit", lipid_loading=False),
+                  lipid=dict(lipid_loading=True, shoot="4pool"),
+                  nstem_lipid=dict(lipid_loading=True, shoot="redistributed"))
 
 
 def predict(nm, v):
-    """Harvest grain BAF [L/kg fw at harvest moisture], Cwo = 1, default drivers."""
-    if v == "nstem_lipid":
-        r = api.simulate_nstem_leaf(nm, Cwo=1.0, lipid_loading=True)
-        return float(r["baf_final"]["grain"])
-    kw = dict(mono=dict(f_xy_source="recommended", **api.FOUR_POOL_FREE),
-              fit=dict(f_xy_source="fit", **api.FOUR_POOL_FREE),
-              lipid=dict(lipid_loading=True, shoot="4pool"))[v]
-    return float(api.simulate(nm, **kw)["baf_final"]["grain"])
+    """Harvest grain BAF [L/kg DRY weight], Cwo = 1, default drivers; each variant with its own
+    fitted values (validation/refit_sourced.py). Dry, because Kim freeze-dried the grain before
+    dehusking and weighing it for extraction (main p.715-716)."""
+    return float(api.simulate(nm, Cwo=1.0, **VARIANT_KW[v])["baf_final_dw"]["grain"])
 
 
 def point_error(pred, bounds):
@@ -99,9 +104,11 @@ def rise_steps(b):
     return out
 
 
-def verdict(scores):
+def verdict(errors):
+    """The variant decide() calls "better" than every other on point AND interval, or None."""
+    import decision_stats as D
     for v in VARIANTS:
-        if all(scores[u][k] - scores[v][k] > MARGIN
+        if all(D.decide(np.array(errors[u][k]), np.array(errors[v][k]))["verdict"] == "better"
                for u in VARIANTS if u != v for k in ("point", "interval")):
             return v
     return None
@@ -131,10 +138,11 @@ def main():
         tag = " (not scored here; see kim2019_pfoa_anchor.py)" if nm not in SCORED else ""
         print(f"  {nm:7}{f'[{lo:.2f}, {hi:.2f}]':>17}  "
               + "".join(f"{preds[v][nm]:>12.3g}" for v in VARIANTS) + tag)
-    scores = {}
+    scores, errors = {}, {}
     for v in VARIANTS:
         ep = [point_error(preds[v][nm], b[nm]) for nm in SCORED]
         ei = [interval_error(preds[v][nm], b[nm]) for nm in SCORED]
+        errors[v] = dict(point=ep, interval=ei)
         scores[v] = dict(point=float(np.sqrt(np.mean(np.square(ep)))),
                          interval=float(np.sqrt(np.mean(np.square(ei)))),
                          inside=int(sum(e == 0.0 for e in ei)))
@@ -143,11 +151,11 @@ def main():
         s = scores[v]
         print(f"  {v:12}{s['point']:>12.2f}{s['interval']:>15.2f}{s['inside']:>6}/{len(SCORED)}")
 
-    win = verdict(scores)
+    win = verdict(errors)
     print("\n" + "=" * 84)
     print("VERDICT (against the pre-registered rule)")
     print("=" * 84)
-    print(f"  robust winner (> {MARGIN} on point AND interval): {win or 'none'}")
+    print(f"  robust winner (bootstrap 'better' on point AND interval): {win or 'none'}")
     print(f"  long-chain rise: C11 {'robust' if steps[('PFDA', 'PFUnDA')] else 'not robust'}, "
           f"C12 {'robust' if steps[('PFDA', 'PFDoDA')] else 'not robust'}")
     print("  the 'reliable DF>=15%' Kim score in oos_crossdataset is PFNA alone (PFHpA DF 13%)")

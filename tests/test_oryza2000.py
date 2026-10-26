@@ -98,11 +98,11 @@ def test_model_api_generic_biomass_modes():
     different crops; an unknown name raises instead of falling back silently. (The default
     scenario runs the port on the Yamazaki site-year -- tests/test_site_scenario.py.)"""
     import model_api as api
-    port = api.simulate("PFOA", scenario="generic", biomass="oryza2000")
-    reduced = api.simulate("PFOA", scenario="generic", biomass="oryza")
+    port = api.simulate("PFOA", scenario="generic", season=120.0, biomass="oryza2000")
+    reduced = api.simulate("PFOA", scenario="generic", season=120.0, biomass="oryza")
     assert not np.allclose(port["M"][-1], reduced["M"][-1])
     with pytest.raises(ValueError):
-        api.simulate("PFOA", scenario="generic", biomass="ORYZA2000")
+        api.simulate("PFOA", scenario="generic", season=120.0, biomass="ORYZA2000")
 
 
 if __name__ == "__main__":

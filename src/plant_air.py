@@ -374,36 +374,3 @@ class AirExchange:
                 P_plant=P, K_PA=self.k_pa(K_PW[idx]),
                 rate=k, half_life=(np.log(2.0) / k if k > 0 else float("inf")))
         return rows
-
-
-def _demo():
-    """Permeabilities and volatilisation half-lives across volatility."""
-    import neutral_dpu as ND
-
-    comps = ND.rice_compartments()
-    print(f"{'compound':>16}{'logKow':>8}{'K_AW':>10}{'P_cut':>11}{'P_stom':>11}"
-          f"{'leaf t1/2':>11}")
-    print(f"{'':>16}{'':>8}{'':>10}{'[m/d]':>11}{'[m/d]':>11}{'[d]':>11}")
-    # a volatility ladder at fixed lipophilicity, plus PFOA for the null case
-    for name, lk, kaw, mw in (("PFOA (anion)", 4.8, 0.0, 414.0),
-                              ("carbamazepine", 2.45, 4.6e-9, 236.3),
-                              ("chlorpyrifos", 4.01, 4.8e-4, 350.6),
-                              ("trichloroethene", 2.42, 0.40, 131.4)):
-        air = AirExchange(K_AW=kaw, MW=mw, log_kow=lk)
-        c = ND.neutral_compound(ND.NeutralCompound(name, lk))
-        from pfas_rice_plant_module_4pool_surf import binding_factors
-        K_PW = binding_factors(comps, c)
-        s = air.summary(comps, K_PW, M=np.array([0.03, 0.04, 0.05, 0.025]),
-                        Qtp=0.1, xyl_share=(0.9, 0.1))["leaf"]
-        hl = f"{s['half_life']:.3g}" if np.isfinite(s["half_life"]) else "inf"
-        print(f"{name:>16}{lk:>8.2f}{kaw:>10.1e}{s['P_cuticular']:>11.2e}"
-              f"{s['P_stomatal']:>11.2e}{hl:>11}")
-    print("\nK_AW = 0 (PFAS) gives an infinite half-life: the air pathway is")
-    print("structurally absent, not numerically small.")
-
-
-if __name__ == "__main__":
-    import os
-    import sys
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    _demo()

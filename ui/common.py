@@ -83,20 +83,25 @@ def crop_kw(crop):
 def _drivers_tuple(d):
     """A driver dict as a hashable tuple for the run caches. It must carry EVERY key the
     model reads: dropping `leaf_loss` silently turned off the ORYZA leaf-senescence
-    correction in every driver mode, and `mass_basis` decides the xylem split."""
+    correction in every driver mode, `mass_basis` decides the xylem split, and `dvs` sets
+    the panicle's share of transpiration."""
     ll = d.get("leaf_loss")
+    dv = d.get("dvs")
     return (tuple(d["t"]), tuple(d["Cwo"]), tuple(d["Qtp"]),
             tuple(np.asarray(d["M"]).ravel()), int(np.asarray(d["M"]).shape[1]),
             None if ll is None else tuple(np.asarray(ll, float)),
-            d.get("mass_basis", "fresh"))
+            d.get("mass_basis", "fresh"),
+            None if dv is None else tuple(np.asarray(dv, float)))
 
 
 def _drivers_from_tuple(drv):
-    t, Cwo, Qtp, Mflat, ncol, ll, basis = drv
+    t, Cwo, Qtp, Mflat, ncol, ll, basis, dv = drv
     d = dict(t=np.array(t), Cwo=np.array(Cwo), Qtp=np.array(Qtp),
              M=np.array(Mflat).reshape(-1, ncol), mass_basis=basis)
     if ll is not None:
         d["leaf_loss"] = np.array(ll)
+    if dv is not None:
+        d["dvs"] = np.array(dv)
     return d
 
 
@@ -221,7 +226,8 @@ def _summary_html(cfg, lang="ko"):
         cong = cfg.congener
         scenario = getattr(cfg, "preset_label", None) or getattr(cfg, "scen_label", None)
         grain_c = float(res["conc"]["grain"][-1])
-        info = api.intake_fraction(grain_c, congener=cong)
+        white_c = api.white_rice_conc(res)
+        info = api.intake_fraction(grain_c if white_c is None else white_c, congener=cong)
         map_fig = plots.fig_schematic_from_res(res, "conc", -1, lang=lang)
         gauge = plots.fig_intake_gauge(info, lang=lang)
         # embed plotly.js once (offline-safe), then the gauge without re-embedding
@@ -231,7 +237,7 @@ def _summary_html(cfg, lang="ko"):
                                   default_height="300px")
         rows = [("뿌리" if ko else "Roots", float(res["conc"]["root"][-1])),
                 ("짚(줄기+잎)" if ko else "Straw", float(res["straw"][-1])),
-                ("낟알(먹는 쌀)" if ko else "Grain", grain_c)]
+                ("낟알(현미, 수확 시)" if ko else "Grain (brown rice at harvest)", grain_c)]
         trs = ""
         for name, v in rows:
             b = api.predictive_band(v)
@@ -286,17 +292,21 @@ def _glossary_md(ko=False):
     return _t("glossary", "ko" if ko else "en")
 
 
-# uncertainty presets for the inverse estimator (measurement + model noise, log10 units)
-_UNC = {"Typical (±~40%)": 0.15, "High precision (±~20%)": 0.10, "Rough (±~2×)": 0.30}
+def meas_sigma_log10(rsd_percent):
+    """The user's analytical relative SD [%] -> log10 SD, through the lognormal relation
+    sigma_ln = sqrt(ln(1 + CV^2)). 0 -> 0 (not given). The model's own transfer error is
+    added inside `estimate_exposure_bayesian`; nothing here is a preset."""
+    cv = max(float(rsd_percent), 0.0) / 100.0
+    return float(np.sqrt(np.log1p(cv * cv)) / np.log(10.0))
 
 
-def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, simple=True,
+def _render_inverse_estimator(congener, *, f_xy_source, biomass, key, simple=True,
                               mech=None, curated_only=True):
     """Shared 'work backwards' panel: Bayesian estimate of the soil-water contamination
     level Cwᵒ from measured tissue concentrations, with a credible interval. Used by
     both the Simple (Korean) and Expert (English) tabs. `key` namespaces the widgets.
 
-    `mech` carries the sidebar's mechanism switches (uptake / lipid_loading / ...) into
+    `mech` carries the sidebar's mechanism switches (shoot / lipid_loading) into
     the inverse, so it is run under the SAME model as the forward tabs; it is part of the
     cache signature, so flipping a switch re-estimates rather than serving a stale run.
     `curated_only=False` lifts the congener check for the NEUTRAL path, where the compound
@@ -311,14 +321,14 @@ def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, si
     root = c1.number_input(_t("inv.in_root", lang), 0.0, 1e6, 0.0, 0.1, key=f"{key}_root")
     straw = c2.number_input(_t("inv.in_straw", lang), 0.0, 1e6, 0.0, 0.1, key=f"{key}_straw")
     grain = c3.number_input(_t("inv.in_grain", lang), 0.0, 1e6, 0.0, 0.1, key=f"{key}_grain")
-    unc_label = st.radio(_t("inv.precision_label", lang), list(_UNC), horizontal=True,
-                         key=f"{key}_unc", help=_t("inv.precision_help", lang))
-    sigma = _UNC[unc_label]
+    rsd = st.number_input(_t("inv.precision_label", lang), 0.0, 300.0, 0.0, 5.0,
+                          key=f"{key}_rsd", help=_t("inv.precision_help", lang))
+    sigma = meas_sigma_log10(rsd)
     have = any(v > 0 for v in (root, straw, grain))
     run = st.button(_t("inv.estimate_btn", lang), key=f"{key}_btn", disabled=not have, type="primary")
     # repr() rather than the items themselves: `mech` may carry a nested dict
     # (the neutral kwargs), which is unhashable inside a tuple.
-    sig = (congener, root, straw, grain, sigma, E_m_mV, f_xy_source, biomass,
+    sig = (congener, root, straw, grain, sigma, f_xy_source, biomass,
            repr(sorted(mech.items(), key=lambda kv: kv[0])))
     if run:
         st.session_state[f"{key}_sig"] = sig
@@ -344,7 +354,7 @@ def _render_inverse_estimator(congener, *, E_m_mV, f_xy_source, biomass, key, si
             prog.progress(min(done / total, 1.0), text=_t("inv.running", lang, done=done, total=total))
         try:
             est = api.estimate_exposure_bayesian(
-                congener, meas, sigma_log10=sigma, E_m_mV=E_m_mV,
+                congener, meas, meas_sigma_log10=sigma,
                 f_xy_source=f_xy_source, progress=_cb, **crop_kw(biomass), **mech)
         except Exception as e:                               # noqa: BLE001
             prog.empty()
@@ -382,7 +392,7 @@ def _default_growth_df(season, crop, n_rows=7):
     if kw["scenario"] == "yamazaki2020":
         season = api.site_season()
     t = np.linspace(0.0, float(season), n_rows)
-    _, M, _ = api.crop_on_grid(t, season=season, **kw)      # FRESH organ mass [kg/hill]
+    _, M, _, _ = api.crop_on_grid(t, season=season, **kw)   # FRESH organ mass [kg/hill]
     return pd.DataFrame({"day": np.round(t, 0),
                          **{o: np.round(M[:, i] * 1e3, 2) for i, o in enumerate(_ORGANS4)}})
 
@@ -701,27 +711,18 @@ def run_model(cfg):
     measured = cfg.measured
     cwo_profile = cfg.cwo_profile
     cwo_kleach = cfg.cwo_kleach
-    E_m = cfg.E_m
     fxy_source = cfg.fxy_source
     biomass = cfg.biomass
     measured_bio = cfg.measured_bio
-    sim_kw = dict(E_m_mV=E_m, f_xy_source=fxy_source, **crop_kw(biomass),
-                  uptake=getattr(cfg, "uptake", api.DEFAULT_UPTAKE),
+    sim_kw = dict(f_xy_source=fxy_source, **crop_kw(biomass),
                   lipid_loading=bool(getattr(cfg, "lipid_loading", api.DEFAULT_LIPID_LOADING)),
-                  shoot=getattr(cfg, "shoot", api.DEFAULT_SHOOT),
-                  km_scale=float(getattr(cfg, "km_scale", 1.0) or 1.0))
-    # Only send the entry-constant overrides when the user actually set them --
-    # None means "use the uptake mode's own value" (model_api.UPTAKE_MODES).
-    for _k in ("vmax_scale", "g_apo"):
-        _v = getattr(cfg, _k, None)
-        if _v is not None:
-            sim_kw[_k] = float(_v)
+                  shoot=getattr(cfg, "shoot", api.DEFAULT_SHOOT))
     desc = None
     provisional = False
     neutral = getattr(cfg, "neutral", None)
     if neutral:
         # NEUTRAL organic: a different compound CLASS, not a different molecule. The
-        # PFAS levers (E_m, f_xy source, carrier/lipid) have no meaning at z=0, so they
+        # PFAS levers (f_xy source, shoot variant, lipid loading) have no meaning at z=0, so they
         # are not passed; everything else -- drivers, biomass, Cwᵒ shape -- is shared,
         # and the result dict follows the same contract as `simulate()`.
         nk = {k: v for k, v in neutral.items() if k != "Koc"}

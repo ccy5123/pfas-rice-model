@@ -39,17 +39,23 @@ def test_simulate_structure_and_units():
     assert r["t"][0] == 0.0 and r["t"][-1] == pytest.approx(api.site_season())
 
 
-def test_membrane_potential_lever():
-    # more negative E_m -> stronger anion exclusion (larger e^N)
-    r_neg = api.simulate("PFOA", E_m_mV=-140.0)
-    r_pos = api.simulate("PFOA", E_m_mV=-90.0)
-    assert r_neg["eN"] > r_pos["eN"]
+def test_root_entry_is_linear_and_has_no_membrane_lever():
+    """The linear equilibrium root entry (PREREG 5.2): tissue concentration is proportional to
+    the exposure, and the removed membrane-potential lever is no longer accepted."""
+    a = api.simulate("PFOA", Cwo=1.0)["baf_final_dw"]
+    b = api.simulate("PFOA", Cwo=3.0)["baf_final_dw"]
+    for k in ("root", "straw", "grain"):
+        assert b[k] == pytest.approx(a[k], rel=1e-4)
+    with pytest.raises(TypeError):
+        api.simulate("PFOA", E_m_mV=-90.0)
 
 
 def test_forcing_and_fxy_toggles_run():
     a = api.simulate("PFOA", measured_forcing=True, f_xy_source="recommended")
-    b = api.simulate("PFOA", measured_forcing=False, f_xy_source="fit", lipid_loading=False)
+    b = api.simulate("PFOA", f_xy_source="fit", lipid_loading=False)
     assert a["success"] and b["success"]
+    with pytest.raises(ValueError):                 # the placeholder logistics were removed
+        api.simulate("PFOA", measured_forcing=False)
     # the two f_xy sources differ for a long chain (recommended monotone vs the fit); the
     # f_xy source applies only with lipid loading off (the default lipid model has its own f_xy)
     rec = api.simulate("PFDA", f_xy_source="recommended", lipid_loading=False)["params"]["f_xy"]
@@ -244,18 +250,14 @@ def test_estimate_exposure_bayesian_recovers_and_brackets():
 
 def test_estimate_exposure_bayesian_runs_under_the_selected_mechanism():
     """The inverse must use the SAME model as the forward run, not silently fall back
-    to the shipped one: the app passes the sidebar's mechanism switches straight
-    through. The bypass takes up more anion per unit exposure, so explaining the same
-    measured tissue needs a LOWER Cwᵒ than the carrier does."""
-    meas = {"grain": api.simulate("PFOA", Cwo=2.0)["conc_dw"]["grain"][-1]}
-    carrier = api.estimate_exposure_bayesian("PFOA", meas, uptake="carrier")
-    bypass = api.estimate_exposure_bayesian("PFOA", meas, uptake="bypass")
-    assert carrier["median"] == pytest.approx(2.0, rel=0.10)       # default is unchanged
-    assert bypass["median"] < carrier["median"]
-    # lipid loading (on by default) is likewise honoured: switching it off moves the grain
-    # hard, so the level moves
-    free = api.estimate_exposure_bayesian("PFOA", meas, lipid_loading=False)
-    assert free["median"] != pytest.approx(carrier["median"], rel=0.05)
+    to the shipped one: the app passes the sidebar's mechanism switches straight through.
+    Each variant has its own fitted values, so the same measured straw points to a
+    different exposure under another variant."""
+    meas = {"straw": api.simulate("PFOA", Cwo=2.0)["conc_dw"]["straw"][-1]}
+    default = api.estimate_exposure_bayesian("PFOA", meas)
+    assert default["median"] == pytest.approx(2.0, rel=0.10)        # recovers its own run
+    other = api.estimate_exposure_bayesian("PFOA", meas, shoot="4pool", lipid_loading=False)
+    assert other["median"] != pytest.approx(default["median"], rel=0.05)
 
 
 def test_estimate_exposure_progress_callback():
@@ -281,12 +283,16 @@ def test_estimate_exposure_progress_callback():
 
 def test_predictive_band_and_uncertainty_factor():
     """The general-audience honesty band: a ×/÷ factor from the default configuration's
-    transfer errors (median log10 0.49, ~3.1×), symmetric in log space, graceful NaN edges."""
+    transfer errors (params/transfer_scores.json, written by validation/transfer_sourced.py),
+    symmetric in log space, graceful NaN edges."""
+    import json
+    with open(os.path.join(_ROOT, "params", "transfer_scores.json")) as fh:
+        rec = json.load(fh)
+    assert api.APRIORI_OOS_SCORES == rec["scores"] and len(rec["scores"]) == 5
     f = api.uncertainty_factor()
     assert f == pytest.approx(10.0 ** api.APRIORI_LOG10_RMSE)
     assert api.APRIORI_LOG10_RMSE == pytest.approx(
         float(np.median(list(api.APRIORI_OOS_SCORES.values()))))
-    assert f == pytest.approx(3.09, abs=0.05)   # Tang 0.640, Kim 0.469, Li 0.358 / 0.510
     b = api.predictive_band(2.0)
     assert b["factor"] == pytest.approx(f)
     assert b["lo"] == pytest.approx(2.0 / f) and b["hi"] == pytest.approx(2.0 * f)
@@ -323,9 +329,11 @@ def test_intake_fraction_efsa_twi():
     b = api.intake_fraction(2.0, congener="PFOA")
     assert b["percent"] == pytest.approx(2 * a["percent"])
     heavier = api.intake_fraction(1.0, congener="PFOA", body_weight_kg=120.0)
-    assert heavier["percent"] == pytest.approx(a["percent"] * 60.0 / 120.0)
-    # traffic-light thresholds (10 % / 100 %)
+    assert heavier["percent"] == pytest.approx(a["percent"] * api.DEFAULT_BODY_WEIGHT_KG / 120.0)
+    # the TWI is the only threshold: green below, red at or above
     assert api.intake_fraction(1e-4, congener="PFOA")["signal"] == "green"
+    assert (api.DEFAULT_RICE_INTAKE_G_PER_DAY, api.DEFAULT_BODY_WEIGHT_KG) == (
+        pytest.approx(0.5 * (101.68 + 126.13)), 64.5)              # KNHANES (sourced_inputs exp_*)
     # the four group members flagged in, everything else out; None if unspecified
     for g in api.EFSA_TWI_CONGENERS:
         assert api.intake_fraction(1.0, congener=g)["in_group"] is True
@@ -368,7 +376,9 @@ def test_lipid_loading_off_matches_baseline():
             assert off["params"]["f_xy"] == api._CONG[nm]["f_xy_recommended"]
             zeroed = api.simulate(nm, lipid_loading=True, measured_forcing=True, shoot=shoot,
                                   g_xy_override=0.0, g_ph_override=0.0,
-                                  f_xy_override=api._CONG[nm]["f_xy_recommended"])
+                                  f_xy_override=api._CONG[nm]["f_xy_recommended"],
+                                  r_eq_override=off["params"]["r_eq"],
+                                  L_Ph_override=off["params"]["L_Ph"])   # each variant fits its own
             assert off["baf_final"]["grain"] == pytest.approx(zeroed["baf_final"]["grain"], rel=1e-9)
 
 
@@ -382,16 +392,24 @@ def test_lipid_loading_rescues_longchain_grain():
     assert all(np.isfinite(v) and v >= 0 for v in on["baf_final"].values())
 
 
-def test_lipid_conductances_are_KPL_gated():
-    """g_xy/g_ph ~0 for short chains, rise with K_PL for long chains; f_xy declines."""
-    short = api.lipid_loading_conductances(4, 42.0, "PFCA")      # PFBA
-    long = api.lipid_loading_conductances(11, 5.6e4, "PFCA")     # PFUnDA-like
-    assert short[1] < 0.01 and short[2] < 0.01                  # bound loading off (short)
-    assert long[1] > short[1] and long[2] > short[2]            # rises with K_PL
-    assert long[0] < short[0]                                   # free TSCF declines
-    # PFSA head-group factor lowers all three vs the CF2-matched PFCA
-    assert api.lipid_loading_conductances(8, 1e4, "PFSA")[1] < api.lipid_loading_conductances(8, 1e4, "PFCA")[1]
-
+def test_lipid_conductances_follow_the_fitted_form():
+    """The conductance function implements every form the elimination can leave (PREREG 5.6):
+    the full form (K_PL gate, chain slope, PFSA factor) on a synthetic set, and the shipped
+    shoots' fitted sets, from which the data removed b, g_ph, pfsa_ln and the gate -- so the
+    shipped loading is one f_xy = a and one g_xy for every chain."""
+    full = dict(a=0.07, b=0.1, g_xy=0.005, g_ph=0.001, K_half=900.0, pfsa_ln=0.5, gate="half")
+    short = api.lipid_loading_conductances(4, 42.0, "PFCA", p=full)       # PFBA-like
+    long = api.lipid_loading_conductances(11, 5.6e4, "PFCA", p=full)      # PFUnDA-like
+    assert short[1] < 0.1 * full["g_xy"] < long[1]                     # the gate rises with K_PL
+    assert long[2] > short[2] and long[0] < short[0]                     # free loading declines
+    assert (api.lipid_loading_conductances(8, 1e4, "PFSA", p=full)[1]
+            < api.lipid_loading_conductances(8, 1e4, "PFCA", p=full)[1])
+    for shoot in api.SHOOTS:
+        p = api.lipid_globals(shoot)
+        assert p["gate"] == "none" and p["b"] == 0.0 and p["g_ph"] == 0.0 and p["pfsa_ln"] == 0.0
+        vals = {api.lipid_loading_conductances(n, k, g, shoot=shoot)
+                for n, k, g in ((4, 42.0, "PFCA"), (11, 5.6e4, "PFCA"), (8, 1e4, "PFSA"))}
+        assert vals == {(p["a"], p["g_xy"], 0.0)}
 
 if __name__ == "__main__":
     import sys
@@ -403,7 +421,7 @@ def test_nstem_leaf_biomass_fn_override():
     switches it to the generic drivers and gives a different leaf transfer factor."""
     import growth_rice as gr2
     default = api.simulate_nstem_leaf("PFOA", Cwo=1.0)
-    growth = api.simulate_nstem_leaf("PFOA", Cwo=1.0, biomass_fn=gr2.organ_biomass)
+    growth = api.simulate_nstem_leaf("PFOA", Cwo=1.0, biomass_fn=gr2.organ_biomass, season=120.0)
     assert default["success"] and growth["success"]
     assert default["season"] == pytest.approx(api.scenario_drivers()["t"][-1])
     assert abs(default["tf_final"]["leaf"] - growth["tf_final"]["leaf"]) > 1e-3
@@ -420,7 +438,6 @@ def test_tang_tf_validation_and_observed():
         assert set(v["model_tf"]) == set(v["organs"])
         assert v["tang_tf"] and all(t > 0 for t in v["tang_tf"].values())
         assert all(np.isfinite(m) and m >= 0 for m in v["model_tf"].values())
-        assert api.tang_tf_validation(c, use_refit=True)["f_xy"] == api.TANG_REFIT_FXY[c]
     # Tang TF declines with dose -> 0.1 ug/g (low) value exceeds the across-dose mean
     low, mean = api.tang_observed_tf("PFOA", "low"), api.tang_observed_tf("PFOA", "mean")
     assert low["stalk"] > mean["stalk"]
@@ -432,37 +449,43 @@ def test_scenarios():
     base = api.simulate("PFOA")
     assert base["params"]["scenario"] == "yamazaki2020"
     assert base["season"] == pytest.approx(api.scenario_drivers()["t"][-1])
-    gr_ = api.simulate("PFOA", scenario="generic", biomass="growth_rice")
-    oz = api.simulate("PFOA", scenario="generic", biomass="oryza2000")
+    gr_ = api.simulate("PFOA", scenario="generic", season=120.0, biomass="growth_rice")
+    oz = api.simulate("PFOA", scenario="generic", season=120.0, biomass="oryza2000")
     assert gr_["season"] == 120.0 and not np.allclose(gr_["M"][-1], oz["M"][-1])
     assert all(np.isfinite(v) and v >= 0 for v in gr_["baf_final"].values())
     with pytest.raises(ValueError):
         api.simulate("PFOA", scenario="tsukuba1999")
     with pytest.raises(ValueError):
-        api.simulate("PFOA", scenario="generic", biomass="sucros")
+        api.simulate("PFOA", scenario="generic", season=120.0, biomass="sucros")
 
 
-def test_fit_source_reproduces_yamazaki():
-    """f_xy_source='fit' (validation/refit_site_year.py) reproduces the Yamazaki dry-basis
-    observation for a congener that sits off the bounds; 'recommended' keeps the monotone
-    f_xy and reproduces root and grain only -- and only where L_Ph is off its bounds:
-    from PFOA (C8) up the monotone f_xy leaves the grain short even at L_Ph = 1, so the
-    'recommended' check uses PFHpA (off every bound in both fits)."""
-    o = api.observed_baf("PFOA")
-    fit = api.yamazaki_harvest_baf("PFOA", f_xy_source="fit", **api.FOUR_POOL_FREE)   # the fits are 4-pool
-    for k in ("root", "straw", "grain"):
-        assert abs(np.log10(fit[k] / o[k])) < 0.01
-    o7 = api.observed_baf("PFHpA")
-    rec = api.yamazaki_harvest_baf("PFHpA", f_xy_source="recommended", **api.FOUR_POOL_FREE)
-    assert abs(np.log10(rec["root"] / o7["root"])) < 0.01
-    assert abs(np.log10(rec["grain"] / o7["grain"])) < 0.01
-    short = api.yamazaki_harvest_baf("PFOA", f_xy_source="recommended", **api.FOUR_POOL_FREE)
-    assert short["grain"] < o["grain"]          # at the L_Ph bound, grain under
-    p = {s: api._transport_defaults(api._CONG["PFOA"], s, False) for s in api.F_XY_SOURCES}
-    assert p["recommended"][0] == api._CONG["PFOA"]["f_xy_recommended"]
-    assert p["fit"][0] == api._CONG["PFOA"]["f_xy_fit"]
+def test_fitted_variants_reproduce_their_cells():
+    """Each variant's fitted values (validation/refit_sourced.py) reproduce the Yamazaki cells
+    they were fitted to: root always (r_eq), grain where L_Ph solved it, and for '*_fit' the
+    straw as well. Keys are per variant, so a 4-pool run never uses redistributed fits."""
+    obs = api.yamazaki_obs()
+    checked = 0
+    for c in api.CONGENERS:
+        if c not in obs:
+            continue
+        rec = api._CONG[c]
+        o = obs[c]["baf_dw"]
+        for kw in (dict(), dict(shoot="4pool", lipid_loading=False),
+                   dict(lipid_loading=False, f_xy_source="fit")):
+            v = api.variant_key(kw.get("shoot"), kw.get("f_xy_source", "recommended"),
+                                kw.get("lipid_loading"))
+            m = api.yamazaki_harvest_baf(c, **kw)
+            assert abs(np.log10(m["root"] / o["root"])) < 1e-3, (c, v)
+            L = rec[f"L_Ph__{v}"]
+            if obs[c]["use"]["grain"] and L > 0 and not rec.get(f"L_Ph_unreachable__{v}"):
+                assert abs(np.log10(m["grain"] / o["grain"])) < 1e-3, (c, v)
+            checked += 1
+    assert checked >= 30
+    for v in ("redistributed_lipid", "4pool_free"):
+        assert api.variant_key(*{"redistributed_lipid": ("redistributed", "recommended", True),
+                                 "4pool_free": ("4pool", "recommended", False)}[v]) == v
     with pytest.raises(ValueError):
-        api._transport_defaults(api._CONG["PFOA"], "W2fit", False)
+        api.variant_key("redistributed", "fit", True)
 
 
 def test_leaf_senescence_loss():
@@ -478,13 +501,9 @@ def test_leaf_senescence_loss():
 
 def test_grain_formation_gate():
     """The grain takes NO PFAS before the panicle forms, then accumulates to its harvest
-    value; a constant-mass driver still loads the grain (gate=1). In the 4-pool the grain's
-    xylem share scales with its dry matter, so its concentration rises monotonically (no
-    early spike). The DEFAULT (redistributed) shoot gives the formed panicle the whole residual
-    xylem stream (grain_share="gate"), so its concentration PEAKS in the young panicle ~2 weeks
-    before heading (PFOA ~3.3x the harvest value) and dilutes as it grows -- a property of
-    the default, not a gate failure. The size-scaled alternative removes it but was not adopted
-    (validation/panicle_share_amendment.py; test_grain_share_option_and_the_recorded_decision)."""
+    value; a constant-mass driver still loads the grain (gate=1). Both shoots give the panicle
+    its sourced share of transpiration, 0 before heading (PREREG 5.1), so no young-panicle
+    peak."""
     run = api.site_run()
     t_head = float(np.interp(1.0, run["dvs"], run["t"]))
     four = api.simulate("PFOA", **api.FOUR_POOL_FREE)
@@ -495,34 +514,19 @@ def test_grain_formation_gate():
     r = api.simulate("PFOA")
     t, cg = r["t"], np.asarray(r["conc"]["grain"])
     assert np.all(cg[t < t_head - 25] < 1e-3)         # the gate holds in the default too
-    i = int(np.argmax(cg))
-    assert t[i] < t_head and 2.5 < cg[i] / cg[-1] < 4.5   # the young-panicle peak
+    assert cg.max() <= cg[-1] * 1.5                   # no young-panicle peak
     t2 = np.linspace(0, 120, 121)
     Mc = np.tile([0.003, 0.02, 0.013, 0.03], (121, 1))
     rc = api.simulate("PFOA", drivers=api.drivers_from_arrays(t2, np.ones(121), M=Mc))
     assert rc["baf_final"]["grain"] > 0.0
 
 
-def test_grain_share_option_and_the_recorded_decision():
-    """The redistributed shoot's routing of the residual xylem stream to the grain.
-    validation/panicle_share_amendment.py (pre-registered) kept "gate" as the default: "size"
-    removes the young-panicle maximum and improves Yamazaki, but fails transfer non-inferiority
-    on Kim's [0, MDL] interval and Li's grain TF. "gate" must stay bit-identical to the default
-    and "size" must keep doing what it was scored for."""
-    assert api.DEFAULT_GRAIN_SHARE == "gate" and api.GRAIN_SHARES == ("gate", "size")
-    a = api.simulate("PFOA")
-    b = api.simulate("PFOA", grain_share="gate")
-    assert all(a["baf_final_dw"][k] == b["baf_final_dw"][k] for k in a["baf_final_dw"])
-    z = api.simulate("PFOA", grain_share="size")
-    cg = np.asarray(z["conc"]["grain"])
-    assert cg.max() <= 1.5 * cg[-1]                                  # no young-panicle peak
-    assert z["baf_final_dw"]["grain"] == pytest.approx(0.970, rel=0.01)
-    assert abs(np.log10(z["baf_final_dw"]["root"] / a["baf_final_dw"]["root"])) < 0.01
-    assert z["params"]["grain_share"] == "size"
-    with pytest.raises(ValueError):
-        api.simulate("PFOA", shoot="4pool", lipid_loading=False, grain_share="size")
-    with pytest.raises(ValueError):
-        api.simulate("PFOA", grain_share="bogus")
+def test_removed_options_are_refused():
+    """Options whose constants had no source left the API (PREREG 5.2): the residual-stream
+    routing (with retention 1 there is no residual), the carrier/bypass entry, Km scaling."""
+    for kw in (dict(grain_share="size"), dict(uptake="bypass"), dict(km_scale=10.0)):
+        with pytest.raises(TypeError):
+            api.simulate("PFOA", **kw)
 
 
 def test_simulate_nstem_leaf_k_seq_off_by_default_and_drivers_path():
@@ -664,10 +668,10 @@ def test_simulate_neutral_returns_the_simulate_contract():
     assert r["TSCF"] == pytest.approx(ND.briggs_tscf(2.45))
     assert r["K_PW"]["root"] > 0 and r["rcf_briggs"] > 0
     assert r["params"]["gamma"] == pytest.approx(np.log(2.0) / 7.0)
-    # z = 0: the ionic machinery is off (PFAS: N = 4.67, e^N ~ 107)
+    # z = 0: the ionic machinery is off; the PFAS path enters by the linear equilibrium instead
     assert r["N"] == pytest.approx(0.0, abs=1e-12)
     assert r["eN"] == pytest.approx(1.0, abs=1e-12)
-    assert pfas["N"] > 4.0
+    assert pfas["params"]["lam_eq"] == api.LAM_EQ and pfas["params"]["r_eq"] > 0
 
 
 def test_simulate_neutral_air_is_opt_in_and_zero_for_pfas_like_compounds():

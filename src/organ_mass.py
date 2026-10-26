@@ -72,7 +72,15 @@ def to_model_mass(b):
     return out
 
 
-def organ_matrix(b, floor=1e-4):
-    """(n, 4) FRESH mass matrix [root, stem, leaf, grain], floored."""
+# The ODE divides by organ mass, so an organ the crop model has not formed yet (the grain
+# before panicle initiation) sits on a floor. The floor is numerical, not a datum: it is
+# admissible because the results do not depend on it -- harvest values are identical for
+# every floor <= 1e-6 kg and the young-panicle time course for every floor <= 1e-9 kg
+# (validation/numerics_convergence.py). 1e-4 kg, used before, was not converged.
+MASS_FLOOR = 1e-9            # kg
+
+
+def organ_matrix(b, floor=MASS_FLOOR):
+    """(n, 4) FRESH mass matrix [root, stem, leaf, grain], floored at `MASS_FLOOR`."""
     m = to_model_mass(b)
     return np.maximum(np.column_stack([m[o] for o in ORGANS]), floor)

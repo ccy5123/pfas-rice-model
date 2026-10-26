@@ -82,9 +82,11 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
+import pfas_rice_plant_module_4pool_surf as _P4   # SOLVER / SUBSTEPS (one switch)
 
 from pfas_rice_plant_module_4pool_surf import (
-    Environment, Compound, Compartment, binding_factors, root_uptake,
+    Environment, Compound, Compartment, binding_factors, root_uptake, grain_formed,
+    panicle_share, MASS_FLOOR,
 )
 
 
@@ -100,6 +102,8 @@ class PlantInputsNL:
     Qtp: np.ndarray
     M: np.ndarray
     leaf_loss: np.ndarray | None = None   # leaf senescence loss RATE [1/day] (opt; 0 if None)
+    dvs: np.ndarray | None = None         # crop development stage (ORYZA DVS), for the
+                                          # stage-based panicle share
 
     def __post_init__(self):
         self.M = np.asarray(self.M, dtype=float)
@@ -115,25 +119,35 @@ class PlantInputsNL:
         self._dM = interp1d(self.t, dM, axis=0, **kw)
         ll = np.zeros(len(self.t)) if self.leaf_loss is None else np.asarray(self.leaf_loss, float)
         self._leaf_loss = interp1d(self.t, ll, **kw)
-        # grain FORMATION gate gamma(t): 0 while the grain mass (last column) sits at its
-        # floor (panicle not set), ramping to 1 at formation (>2% of season max). Gates the
-        # grain's PFAS influx so a not-yet-formed organ takes no solute (DPU-consistent);
-        # =1 throughout for a constant-mass driver (no floor period).
-        gm = self.M[:, -1]
-        glo, ghi = float(gm.min()), float(gm.max())
-        # ramp 0->1 as the grain mass LEAVES its floor (glo -> 1.5*glo): gam=1 for the whole
-        # of grain filling (loading normal), 0 only while it sits at the floor (panicle unset).
-        gate = (np.clip((gm - glo) / (0.5 * glo + 1e-30), 0.0, 1.0)
-                if (ghi > 0.0 and glo < 0.05 * ghi) else np.ones(len(self.t)))
+        # grain FORMATION gate gamma(t): 0 while the grain (last column) sits on the
+        # organ-mass floor (panicle not formed), 1 from the day it leaves it; 1 throughout
+        # for a driver whose grain never touches the floor. Same rule as the 4-pool core
+        # (`grain_formed`); a step because the old ramp was not converged.
+        gate = grain_formed(self.M[:, -1])
         self._grain_gate = interp1d(self.t, gate, **kw)
-        # grain SIZE weight w(t) for grain_share="size": the panicle's share of the residual
-        # xylem stream scales with its size relative to the crop's mature panicle,
-        # (Mg - Mg_min) / (Mg_max - Mg_min) over the driver series (grain theta is constant,
-        # so this is the dry-matter ratio); 1 throughout for a driver with no floor period,
-        # exactly like the gate (validation/panicle_share_amendment.py).
-        size = (np.clip((gm - glo) / max(ghi - glo, 1e-30), 0.0, 1.0)
-                if (ghi > 0.0 and glo < 0.05 * ghi) else np.ones(len(self.t)))
-        self._grain_size = interp1d(self.t, size, **kw)
+        self._dvs = (None if self.dvs is None
+                     else interp1d(self.t, np.asarray(self.dvs, float), **kw))
+        # one table of every driver column for the RHS: one linear interpolation per call
+        # instead of seven scipy calls (identical values: same linear interpolation, same
+        # linear extrapolation beyond the ends)
+        n = self.n_comp
+        dv = (np.full(len(self.t), np.nan) if self.dvs is None
+              else np.asarray(self.dvs, float))
+        self._tg = np.asarray(self.t, dtype=float)
+        self._tab = np.column_stack([np.asarray(self.Cwo, float), np.asarray(self.Qtp, float),
+                                     self.M, dM, ll, gate, dv])
+        self._sl = (slice(2, 2 + n), slice(2 + n, 2 + 2 * n), 2 + 2 * n, 3 + 2 * n, 4 + 2 * n)
+
+    def drivers_at(self, t):
+        """(Cwo, Qtp, M, dM, leaf_loss, grain_gate, dvs) at time t, by one linear lerp."""
+        tg = self._tg
+        i = int(np.searchsorted(tg, t, side="right")) - 1
+        i = min(max(i, 0), len(tg) - 2)
+        w = (t - tg[i]) / (tg[i + 1] - tg[i])
+        row = self._tab[i] + w * (self._tab[i + 1] - self._tab[i])
+        sM, sdM, ill, ig, idv = self._sl
+        return (row[0], row[1], row[sM], row[sdM], max(row[ill], 0.0),
+                min(1.0, max(0.0, row[ig])), row[idv])
 
     def Cwo_(self, t): return float(self._Cwo(t))
     def Qtp_(self, t): return float(self._Qtp(t))
@@ -141,10 +155,12 @@ class PlantInputsNL:
     def dM_(self, t):  return np.asarray(self._dM(t), dtype=float)
     def leaf_loss_(self, t):  return max(float(self._leaf_loss(t)), 0.0)
     def grain_gate_(self, t):  return min(1.0, max(0.0, float(self._grain_gate(t))))
-    def grain_size_(self, t):  return min(1.0, max(0.0, float(self._grain_size(t))))
+    def dvs_(self, t):
+        if self._dvs is None:
+            raise ValueError("this driver set carries no 'dvs'; the stage-based panicle "
+                             "share needs the crop's development stage")
+        return float(self._dvs(t))
 
-
-GRAIN_SHARES = ("gate", "size")
 
 
 @dataclass
@@ -156,33 +172,36 @@ class NStemLeafModel:
     lam_leaf, lam_grain : leaf / panicle transpiration draw-off (fraction of Q)
         Constraint: sum(tau) + lam_leaf + lam_grain == 1.
     retention : fraction of each organ's transpiration-deposited solute retained
-        (terminal); 1-retention is carried on to the grain as residual xylem.
+        (terminal); 1-retention is carried on to the grain as residual xylem. 1 (the default)
+        is the module's own physics: solute delivered to an evaporating organ is at a dead
+        end; export from the leaf is the phloem term (docs/PREREG_sourced_values.md 5.2).
+    lam_grain_dvs : (panicle share at heading, at maturity). When given, the panicle's share
+        of transpiration follows the crop's development stage (`panicle_share`: 0 before
+        heading) and the leaf takes 1 - sum(tau) - share; `lam_grain`/`lam_leaf` are then
+        unused. Needs `inputs.dvs`.
     k_seq : irreversible root sequestration rate [1/day]. 0 (default) = ONE root
         pool (state vector unchanged, pre-merge model recovered exactly); >0 adds
         a sequestered root state (index `SEQ`, appended last) fed at k_seq*C_root.
     k_rel : slow seq->mobile desorption rate [1/day] (0 = irreversible sink).
-    grain_share : how much of the residual xylem stream (the panicle's own deposit plus every
-        non-retained share) the grain takes. "gate" -- all of it once the panicle has formed
-        (the formation gate), so a tiny young panicle takes 0.43 of the export and its
-        concentration peaks before heading; "size" -- a share w(t) that grows with the panicle's
-        mass up to the crop's mature size (PlantInputsNL.grain_size_), the rest going to the leaf
-        as before formation. The phloem stream is gated as before in both.
     """
     env: Environment
     cmpd: Compound
     comps: list
     inputs: PlantInputsNL
     tau: np.ndarray
-    lam_leaf: float = 0.50
-    lam_grain: float = 0.05
+    lam_leaf: float | None = None     # static split (when lam_grain_dvs is not given)
+    lam_grain: float | None = None
     retention: float = 1.0
-    phi: float = 0.1                  # phloem recirculation fraction to root
-    T_C_Ph: float = 10.0              # phloem flux per unit grain dry-mass gain [L/kg]
+    phi: float | None = None          # phloem stream to the root / transpiration: no default
+    T_C_Ph: float | None = None       # phloem sap per kg grain DM [L/kg]: no default (model_api)
     k_seq: float = 0.0                # root mobile -> sequestered rate [1/day]
     k_rel: float = 0.0                # sequestered -> mobile desorption [1/day]
-    grain_share: str = "gate"         # "gate" | "size" (see GRAIN_SHARES)
+    lam_grain_dvs: tuple | None = None   # (share at heading, at maturity); see the docstring
 
     def __post_init__(self):
+        if self.phi is None or self.T_C_Ph is None:
+            raise ValueError("phi and T_C_Ph have no default: pass the sourced values "
+                             "(model_api.PHI, model_api.T_C_PH)")
         self.N = len(self.comps) - 3          # number of stem segments
         self.ROOT = 0
         self.LEAF = self.N + 1
@@ -196,23 +215,29 @@ class NStemLeafModel:
         assert self.k_seq >= 0.0 and self.k_rel >= 0.0
         self.tau = np.asarray(self.tau, dtype=float)
         assert len(self.tau) == self.N, "tau must have one entry per stem segment"
-        tot = float(self.tau.sum()) + self.lam_leaf + self.lam_grain
-        assert abs(tot - 1.0) < 1e-9, (
-            f"transpiration split must sum to 1 (sum(tau)+lam_leaf+lam_grain={tot:.6f})")
-        assert self.tau.min() >= 0 and self.lam_leaf >= 0 and self.lam_grain >= 0
+        self._tau_sum = float(self.tau.sum())
+        if self.lam_grain_dvs is None:
+            if self.lam_leaf is None or self.lam_grain is None:
+                raise ValueError("give lam_grain_dvs, or both lam_leaf and lam_grain")
+            tot = self._tau_sum + self.lam_leaf + self.lam_grain
+            assert abs(tot - 1.0) < 1e-9, (
+                f"transpiration split must sum to 1 (sum(tau)+lam_leaf+lam_grain={tot:.6f})")
+            assert self.lam_leaf >= 0 and self.lam_grain >= 0
+        else:
+            if self.inputs.dvs is None:
+                raise ValueError("lam_grain_dvs needs the drivers' 'dvs'")
+            assert 1.0 - self._tau_sum - max(self.lam_grain_dvs) >= 0.0, \
+                "stem + panicle shares exceed the transpiration stream"
+        assert self.tau.min() >= 0
         assert 0.0 <= self.retention <= 1.0
-        if self.grain_share not in GRAIN_SHARES:
-            raise ValueError(f"grain_share must be one of {GRAIN_SHARES}, got {self.grain_share!r}")
         # binding + metabolism depend only on (comps, cmpd), both fixed at
         # construction -- hoist them out of the RHS (called ~3k times per solve).
         self._B = binding_factors(self.comps, self.cmpd)
         self._gamma = np.array([c.gamma for c in self.comps])
 
     def rhs(self, t, C):
-        Cwo = self.inputs.Cwo_(t)
-        Q = self.inputs.Qtp_(t)
-        M = np.maximum(self.inputs.M_(t), 1e-12)
-        dM = self.inputs.dM_(t)
+        Cwo, Q, M, dM, leaf_loss, gam, dvs = self.inputs.drivers_at(t)
+        M = np.maximum(M, MASS_FLOOR)
         mu = dM / M
         Cw = C[:self.n_comp] / self._B
         g = self._gamma
@@ -239,21 +264,25 @@ class NStemLeafModel:
             dC[s] = (r * self.tau[s - 1] * xyl_flux / M[s]
                      - g[s] * C[s] - mu[s] * C[s])
 
+        # transpiration split at this stage: the panicle's sourced share (0 before heading)
+        if self.lam_grain_dvs is not None:
+            lg = panicle_share(dvs, *self.lam_grain_dvs)
+            ll = 1.0 - self._tau_sum - lg
+        else:
+            lg, ll = self.lam_grain, self.lam_leaf
         # grain FORMATION gate: before the panicle sets (gam~0) the grain takes NO xylem/
         # phloem -- its residual xylem is rerouted to the leaf and its phloem stream is not
         # exported, so the balance closes (DPU-consistent).
-        gam = self.inputs.grain_gate_(t)
-        residual = (self.lam_grain + (1.0 - r) * (self.tau.sum() + self.lam_leaf)) * xyl_flux
-        # the grain's share of that residual: the gate, or the panicle's relative size
-        wx = gam if self.grain_share == "gate" else self.inputs.grain_size_(t)
+        residual = (lg + (1.0 - r) * (self._tau_sum + ll)) * xyl_flux
+        wx = gam
 
         # --- leaf: own deposit (+ the grain's rerouted residual pre-formation); phloem
         #     source (gated grain share + root recirc); senescence loss carries PFAS away ---
-        dC[leaf] = (r * self.lam_leaf * xyl_flux / M[leaf]
+        dC[leaf] = (r * ll * xyl_flux / M[leaf]
                     + (1.0 - wx) * residual / M[leaf]
                     - ((gam * Q_g + Q_r) / M[leaf]) * C_Phl
                     - g[leaf] * C[leaf] - mu[leaf] * C[leaf]
-                    - self.inputs.leaf_loss_(t) * C[leaf])
+                    - leaf_loss * C[leaf])
 
         # --- grain (formation-gated): panicle deposit + non-retained residual xylem + phloem ---
         dC[grain] = (wx * residual / M[grain]
@@ -277,9 +306,67 @@ class NStemLeafModel:
         C = np.asarray(C)
         return C[self.ROOT] + (C[self.SEQ] if self.two_pool else 0.0)
 
+    def affine(self, ts):
+        """(A[m,n,n], b[m,n]) with rhs(t, C) = A(t) C + b(t) at the times `ts`, or None when
+        the root entry is not linear (a carrier). The same terms as `rhs`, vectorised;
+        `tests/test_linear_expm.py` holds them equal to the rhs."""
+        import linear_expm as LE
+        kio = LE.root_coefficients(root_uptake, self.cmpd, self.env)
+        if kio is None:
+            return None
+        k_in, k_out = kio
+        inp = self.inputs
+        row = LE.lerp_table(inp._tg, inp._tab, ts)
+        sM, sdM, ill, ig, idv = inp._sl
+        Cwo, Q = row[:, 0], row[:, 1]
+        M = np.maximum(row[:, sM], MASS_FLOOR)
+        dM = row[:, sdM]
+        lls = np.maximum(row[:, ill], 0.0)
+        gam = np.clip(row[:, ig], 0.0, 1.0)
+        dvs = row[:, idv]
+        mu = dM / M
+        B, g = self._B, self._gamma
+        R0, Lf, Gr, r = self.ROOT, self.LEAF, self.GRAIN, self.retention
+        Q_g = np.maximum(dM[:, Gr] * (1.0 - self.comps[Gr].theta) * self.T_C_Ph, 0.0)
+        Q_r = np.maximum(self.phi * Q, 0.0)
+        p = self.cmpd.L_Ph / B[Lf] + self.cmpd.g_ph
+        x = self.cmpd.f_xy / B[R0] + self.cmpd.g_xy
+        if self.lam_grain_dvs is not None:
+            lg = np.array([panicle_share(d, *self.lam_grain_dvs) for d in dvs])
+            lf = 1.0 - self._tau_sum - lg
+        else:
+            lg = np.full(len(row), float(self.lam_grain))
+            lf = np.full(len(row), float(self.lam_leaf))
+        Rc = (lg + (1.0 - r) * (self._tau_sum + lf)) * Q * x     # residual = Rc * C_root
+        n = self.n_states
+        A = np.zeros((len(row), n, n))
+        b = np.zeros((len(row), n))
+        A[:, R0, R0] = -k_out / B[R0] - Q * x / M[:, R0] - g[R0] - mu[:, R0]
+        A[:, R0, Lf] = Q_r * p / M[:, R0]
+        b[:, R0] = k_in * Cwo
+        for s_ in range(1, self.N + 1):
+            A[:, s_, R0] = r * self.tau[s_ - 1] * Q * x / M[:, s_]
+            A[:, s_, s_] = -g[s_] - mu[:, s_]
+        A[:, Lf, R0] = r * lf * Q * x / M[:, Lf] + (1.0 - gam) * Rc / M[:, Lf]
+        A[:, Lf, Lf] = -(gam * Q_g + Q_r) * p / M[:, Lf] - g[Lf] - mu[:, Lf] - lls
+        A[:, Gr, R0] = gam * Rc / M[:, Gr]
+        A[:, Gr, Lf] = gam * Q_g * p / M[:, Gr]
+        A[:, Gr, Gr] = -g[Gr] - mu[:, Gr]
+        if self.two_pool:
+            Sq = self.SEQ
+            A[:, R0, R0] -= self.k_seq
+            A[:, R0, Sq] += self.k_rel
+            A[:, Sq, R0] = self.k_seq
+            A[:, Sq, Sq] = -self.k_rel - mu[:, R0]
+        return A, b
+
     def solve(self, t_eval, C0=None):
         if C0 is None:
             C0 = np.zeros(self.n_states)
+        if _P4.SOLVER == "expm" and self.affine(np.asarray(t_eval[:1], float)) is not None:
+            import linear_expm as LE
+            return LE.solve_affine(self.affine, t_eval, self.n_states, C0,
+                                   substeps=_P4.SUBSTEPS)
         return solve_ivp(self.rhs, (float(t_eval[0]), float(t_eval[-1])), C0,
                          t_eval=t_eval, method="BDF", rtol=1e-6, atol=1e-9,
                          dense_output=True)
@@ -301,62 +388,19 @@ def make_stem_leaf_compartments(N, stem_kw, root_kw, leaf_kw, grain_kw):
 
 
 def default_tau(N, stem_transp_frac):
-    """Per-segment stem draw-off shape (decreasing with height) scaled to a total.
+    """Per-segment stem draw-off: ``stem_transp_frac`` (the sourced sheath + culm share of
+    transpiration) split evenly over the N segments.
 
-    The lower segments carry the larger sheath/culm transpiring surface, so the
-    draw-off decreases upward; the entries sum to ``stem_transp_frac`` (the total
-    fraction of canopy transpiration that terminates on the stalk)."""
-    shape = np.linspace(1.3, 0.7, N)              # decreasing bottom->top
-    return shape / shape.sum() * float(stem_transp_frac)
+    No source gives how the stalk's transpiration divides with height, and nothing reported
+    depends on it: with retention 1 a segment exports nothing, so its burden is its own deposit
+    and the stem (the mass-weighted mean over equal segments), the straw, the root and the grain
+    depend only on the sum. (A height gradient 1.3 -> 0.7 stood here without a source.)"""
+    return np.full(int(N), float(stem_transp_frac) / int(N))
 
 
-def split_from_stem_frac(N, stem_transp_frac, lam_grain=0.05):
+def split_from_stem_frac(N, stem_transp_frac, lam_grain):
     """Convenience: (tau, lam_leaf, lam_grain) from a single stalk-transpiration
     fraction, with the leaf taking the remainder.  Closes to sum 1."""
     tau = default_tau(N, stem_transp_frac)
     lam_leaf = 1.0 - stem_transp_frac - lam_grain
     return tau, lam_leaf, lam_grain
-
-
-if __name__ == "__main__":
-    # smoke test against the measured forcings (PFOA), reported as TF
-    import os, sys, json
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    import forcing_rice as fr
-    import growth_rice as gr
-
-    ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    PAR = json.load(open(os.path.join(ROOT_DIR, "params", "parameters.json")))
-    comp = PAR["tissue_composition_recommended"]
-    carr = PAR["carrier_MichaelisMenten"]
-    _kw = lambda d: dict(theta=d["theta_fw"], f_prot=d["f_prot"], f_PL=d["f_PL"], f_cw=d["f_cw"])
-
-    N, SEASON = 4, 150.0
-    t = np.linspace(0.0, SEASON, 481)
-    Qtp = fr.Q_TP(t, SEASON)
-    import organ_mass as om
-    b = om.to_model_mass(gr.organ_biomass(t, SEASON))       # crop DRY matter -> ODE FRESH mass
-    M = np.column_stack(
-        [np.maximum(b["root"], 1e-9)]
-        + [np.maximum(b["stem"] / N, 1e-9)] * N
-        + [np.maximum(b["leaf"], 1e-9), np.maximum(b["grain"], 1e-9)])
-    inputs = PlantInputsNL(t=t, Cwo=np.full_like(t, 1.0), Qtp=Qtp, M=M)
-    comps = make_stem_leaf_compartments(
-        N, _kw(comp["stem"]), _kw(comp["root"]), _kw(comp["leaf"]), _kw(comp["grain_brown"]))
-
-    c = next(x for x in PAR["congeners"] if x["name"] == "PFOA")
-    cmpd = Compound(name="PFOA", K_prot=c["K_prot_Lkg"], K_PL=c["K_PL_Lkg"],
-                    K_cw=c["K_cw_wholecw_Lkg"]["stem"], kappa_d=2.0,
-                    Vmax_in=carr["Vmax_in"], Km_in=carr["Km_in"],
-                    Vmax_out=carr["Vmax_out"], Km_out=carr["Km_out"],
-                    L_Ph=0.01, f_xy=c["f_xy_recommended"])
-    tau, lam_leaf, lam_grain = split_from_stem_frac(N, 0.45, lam_grain=0.05)
-    for ret in (1.0, 0.6):
-        m = NStemLeafModel(env=Environment(), cmpd=cmpd, comps=comps, inputs=inputs,
-                           tau=tau, lam_leaf=lam_leaf, lam_grain=lam_grain, retention=ret)
-        Cend = m.solve(t).y[:, -1]
-        root = Cend[0]
-        stalk = m.stem_aggregate(Cend, t[-1])
-        print(f"PFOA (N=4, stem_transp=0.45, retention={ret}): "
-              f"TF stalk={stalk/root:.2f} (Tang 1.45)  "
-              f"leaf={Cend[m.LEAF]/root:.2f} (1.66)  grain={Cend[m.GRAIN]/root:.2f} (0.95)")

@@ -1,46 +1,44 @@
 # Yamazaki et al. 2023 (10.1021/acs.est.2c08767), NARO Tsukuba Andosol paddy FIELD 2020, Kasalath + Koshihikari.
-# Tissue concentration [pg/g DRY weight] / irrigation-water concentration [pg/mL]  ->  BAF on the DRY basis [L/kg dw].
-# Geometric mean of the two cultivars (SI Tables S18 indica, S19 japonica); water = SI Table S16 (ONE grab, 2020-06-08).
+# BUILT by docs/literature_db/tools/yamazaki_obs_from_si.py from raw_si/yamazaki2023_si_s16_s18_s19.csv (do not edit).
+# baf_dw = tissue [pg/g DRY weight] (SI Tables S18 indica, S19 japonica) / irrigation water [pg/mL] (Table S16, one grab
+#   2020-06-08) [L/kg dw]; the two cultivars combined by geometric mean (as the model's two harvest runs).
 # root  = whole root system (tap + Milli-Q rinse; no plaque removal).
-# straw = UNWEIGHTED mean of the four height bands 0-20/20-40/40-60/>60 cm (stems incl. leaves; band masses not reported);
-#         straw_lo/straw_hi = the lowest/highest band, which bound any mass-weighted straw.
-# grain = brown rice reconstructed as 0.88 white + 0.12 bran (dry-mass weights; white:brown 86-90% by mass, SI p.S3).
-# Derivation: the previous fresh-weight table was these values x (1-theta) with ASSUMED theta (root 0.90, straw 0.80, grain
-#   0.14); this table inverts that exactly, so no water content enters the observations. water_ng_L is back-calculated
-#   from the root and straw values (mean of the two; S16 itself is not in the repo) and is used only as the exposure level.
-# use=0: PFBS grain is fully imputed (<MQL in both cultivars, MQL/2) -- not a measurement. Other <MQL cells were also
-#   imputed at MQL/2 upstream; which ones is not recorded here (needs SI S18/S19). sigma 0.4 log10 is ASSUMED (n=1 composite).
-compound,tissue,baf_dw,straw_lo,straw_hi,water_ng_L,use,sigma
-PFBA,root,6.803,,,7.37,1,0.4
-PFBA,straw,55.174,14.44,106.6,7.37,1,0.4
-PFBA,grain,1.2286,,,7.37,1,0.4
-PFPeA,root,2.699,,,12,1,0.4
-PFPeA,straw,13.6875,4.598,25.22,12,1,0.4
-PFPeA,grain,0.30686,,,12,1,0.4
-PFHxA,root,2.784,,,12.1,1,0.4
-PFHxA,straw,5.6925,3.704,9.462,12.1,1,0.4
-PFHxA,grain,0.483837,,,12.1,1,0.4
-PFHpA,root,7.805,,,7.46,1,0.4
-PFHpA,straw,5.3555,3.202,9.15,7.46,1,0.4
-PFHpA,grain,0.49407,,,7.46,1,0.4
-PFOA,root,4.866,,,8.55,1,0.4
-PFOA,straw,4.1665,2.291,6.489,8.55,1,0.4
-PFOA,grain,0.538837,,,8.55,1,0.4
-PFNA,root,5.685,,,5.95,1,0.4
-PFNA,straw,3.464,1.648,5.7,5.95,1,0.4
-PFNA,grain,0.480814,,,5.95,1,0.4
-PFDA,root,41.574,,,0.535,1,0.4
-PFDA,straw,17.2915,7.844,25.21,0.535,1,0.4
-PFDA,grain,3.91965,,,0.535,1,0.4
-PFUnDA,root,195.306,,,0.32,1,0.4
-PFUnDA,straw,40.82,18.78,65.72,0.32,1,0.4
-PFUnDA,grain,3.6443,,,0.32,1,0.4
-PFDoDA,root,692.82,,,0.02,1,0.4
-PFDoDA,straw,248.747,100.1,325.3,0.02,1,0.4
-PFDoDA,grain,52.915,,,0.02,1,0.4
-PFBS,root,22.782,,,0.669,1,0.4
-PFBS,straw,10.9185,7.477,13.01,0.669,1,0.4
-PFBS,grain,0.29407,,,0.669,0,0.4
-PFOS,root,59.326,,,1.18,1,0.4
-PFOS,straw,21.726,12.7,32.51,1.18,1,0.4
-PFOS,grain,2.29395,,,1.18,1,0.4
+# straw = the four height bands weighted by their share of straw dry mass (Tanaka et al. 2022 Fig. 3, 10 and 49 d after
+#         heading; raw_si/tanaka2022_fig3_layers.csv): baf_dw at the mean of the two profiles, lo/hi at each profile.
+# grain = brown rice = s x white + (1 - s) x bran, s = 0.86-0.90 (SI p.S3); baf_dw at s = 0.88 and <MQL at MQL/2 (the
+#         midpoints), lo/hi over both ends of s and of [0, MQL].
+# use=0: no measured value at all (PFBS grain: white and bran < MQL in both cultivars).
+compound,tissue,baf_dw,lo,hi,water_ng_L,use
+PFBA,root,6.80274,6.80274,6.80274,7.41,1
+PFBA,straw,53.1744,52.4963,53.8508,7.41,1
+PFBA,grain,1.22859,1.20517,1.25201,7.41,1
+PFPeA,root,2.6987,2.6987,2.6987,12.03,1
+PFPeA,straw,13.2444,13.0948,13.3938,12.03,1
+PFPeA,grain,0.306912,0.289749,0.324062,12.03,1
+PFHxA,root,2.7835,2.7835,2.7835,12.13,1
+PFHxA,straw,5.60316,5.57325,5.63308,12.13,1
+PFHxA,grain,0.483805,0.450791,0.516815,12.13,1
+PFHpA,root,7.80468,7.80468,7.80468,7.47,1
+PFHpA,straw,5.33786,5.28555,5.39016,7.47,1
+PFHpA,grain,0.494032,0.482299,0.505748,7.47,1
+PFOA,root,4.86559,4.86559,4.86559,8.61,1
+PFOA,straw,4.15992,4.12041,4.19935,8.61,1
+PFOA,grain,0.538888,0.516808,0.560772,8.61,1
+PFNA,root,5.68492,5.68492,5.68492,5.96,1
+PFNA,straw,3.45219,3.41724,3.48713,5.96,1
+PFNA,grain,0.480839,0.469199,0.492478,5.96,1
+PFDA,root,41.574,41.574,41.574,0.54,1
+PFDA,straw,17.3718,17.1257,17.6178,0.54,1
+PFDA,grain,3.91963,3.88448,3.95447,0.54,1
+PFUnDA,root,195.306,195.306,195.306,0.32,1
+PFUnDA,straw,42.1012,40.9151,43.2871,0.32,1
+PFUnDA,grain,3.64434,3.56305,3.72387,0.32,1
+PFDoDA,root,692.82,692.82,692.82,0.02,1
+PFDoDA,straw,252.442,247.482,257.399,0.02,1
+PFDoDA,grain,52.915,52.4404,53.3854,0.02,1
+PFBS,root,22.7823,22.7823,22.7823,0.68,1
+PFBS,straw,10.7573,10.5885,10.9253,0.68,1
+PFBS,grain,0.294118,0,0.588235,0.68,0
+PFOS,root,59.3256,59.3256,59.3256,1.19,1
+PFOS,straw,21.5037,21.4319,21.5753,1.19,1
+PFOS,grain,2.29398,2.22611,2.35294,1.19,1

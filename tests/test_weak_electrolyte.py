@@ -33,6 +33,7 @@ import literature_params as LP  # noqa: E402
 import model_api as api  # noqa: E402
 import neutral_dpu as ND  # noqa: E402
 import pfas_rice_plant_module_4pool_surf as P4  # noqa: E402
+from model_api import PHI, T_C_PH   # the sourced phloem constants  # noqa: E402
 
 
 # --------------------------------------------------------------------------
@@ -80,29 +81,31 @@ import pfas_rice_plant_module_4pool_surf as P4  # noqa: E402
 # are set out in tests/conftest.py, which now owns that rule.
 GOLDEN_REL = 1e-3
 
-# Goldens on the 4-pool free-anion core (calibration site-year, fresh organ mass, harvest
-# at the mean date) -- the configuration the transport fits were made on -- and on the
-# DEFAULT configuration (redistributed shoot + lipid loading). Regenerate them only when the
-# model itself is deliberately changed.
+# Goldens on two fitted variants (calibration site-year, fresh organ mass, harvest at the mean
+# date) and on the DEFAULT configuration (redistributed shoot + lipid loading), regenerated for
+# amendment 1 (docs/PREREG_sourced_values.md). Regenerate them only when the model itself is
+# deliberately changed.
 PFAS_GOLDEN = {
-    ("PFOA", "recommended"): {"root": 0.41267945513714566, "grain": 0.24553875107615294},
-    ("PFOS", "fit"): {"root": 5.037316673047101, "grain": 1.210992611037675},
-    ("PFBA", "recommended"): {"root": 0.575251173798138, "grain": 3.798411995667259},
+    ("PFOA", "4pool_free"): {"root": 1.3964242626962549, "grain": 0.2608010314137209},
+    ("PFOS", "redistributed_fit"): {"root": 17.026443688382177, "grain": 1.8044310983194625},
+    ("PFBA", "4pool_free"): {"root": 1.952386051986818, "grain": 14.238026150588324},
 }
+_VARIANT_KW = {"4pool_free": dict(api.FOUR_POOL_FREE),
+               "redistributed_fit": dict(f_xy_source="fit", lipid_loading=False)}
 
 
 @pytest.mark.parametrize("key,expected", list(PFAS_GOLDEN.items()))
 def test_pfas_path_is_unmoved(key, expected):
     """The speciation terms must not move the PFAS path (a permanent anion, pKa None)."""
-    cong, src = key
-    r = api.simulate(cong, f_xy_source=src, **api.FOUR_POOL_FREE)
+    cong, v = key
+    r = api.simulate(cong, **_VARIANT_KW[v])
     for tissue, want in expected.items():
         assert r["baf_final"][tissue] == pytest.approx(want, rel=GOLDEN_REL), tissue
 
 
 PFAS_GOLDEN_DEFAULT = {
-    "PFOA": {"root": 0.41000723114202087, "grain": 1.2365932626597504},
-    "PFBA": {"root": 0.7615810257870217, "grain": 5.932552960908893},
+    "PFOA": {"root": 1.396424254905138, "grain": 0.4241424722203747},
+    "PFBA": {"root": 1.9523863460568354, "grain": 1.1322229267521402},
 }
 
 
@@ -125,8 +128,8 @@ def test_neutral_path_is_unmoved():
     tolerance above is about the solver and not about the partition core.
     """
     r = api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0)
-    assert r["baf_final"]["root"] == pytest.approx(1.688863308015264, rel=GOLDEN_REL)
-    assert r["K_PW"]["root"] == 1.8394200621153844
+    assert r["baf_final"]["root"] == pytest.approx(1.3903352902730846, rel=GOLDEN_REL)
+    assert r["K_PW"]["root"] == 1.6524200621153846
     # the compound the neutral path builds must carry NO speciation fields
     core = ND.neutral_compound(ND.NeutralCompound("x", 2.45))
     assert core.pKa is None and core.P_n == 0.0 and core.z is None
@@ -189,14 +192,15 @@ def test_a_weak_base_is_a_cation_and_is_not_excluded():
     (anion, z=-1) is excluded by the inside-negative membrane while a base (cation,
     z=+1) is attracted -- one global `Environment.z` cannot say both.
 
-    Magnitude ~9x on the site-year (the base reaches its partition ceiling); the SIGN is
-    the claim."""
+    The SIGN is the claim: the acid sits far below the neutral form, the base does not. "Not
+    excluded" is checked against the neutral form of the same compound (the season ODE keeps
+    every compound somewhat below its partition ceiling K_PW, so K_PW is not the yardstick)."""
     kw = dict(name="x", pKa=4.5)
     acid = api.simulate_neutral(2.45, is_acid=True, **kw)["baf_final"]["root"]
-    base_r = api.simulate_neutral(2.45, is_acid=False, **kw)
-    base = base_r["baf_final"]["root"]
+    base = api.simulate_neutral(2.45, is_acid=False, **kw)["baf_final"]["root"]
+    neutral = api.simulate_neutral(2.45, name="x")["baf_final"]["root"]
     assert base > 3.0 * acid
-    assert base == pytest.approx(base_r["K_PW"]["root"], rel=0.1)   # the cation is not excluded
+    assert base == pytest.approx(neutral, rel=0.02)          # the cation is not excluded
 
 
 def test_speciation_spans_the_whole_range():
@@ -235,7 +239,7 @@ def test_phloem_trap_is_off_for_pfas_by_construction():
     assert cmpd.pKa is None
     env = LP.literature_environment()
     m = P4.RiceUptakeModel(env=env, cmpd=cmpd, comps=comps,
-                           inputs=_dummy_inputs())
+                           inputs=_dummy_inputs(), phi=PHI, T_C_Ph=T_C_PH)
     assert m.phloem_loading_factor() == cmpd.L_Ph        # exact, not approx
 
 
@@ -245,7 +249,7 @@ def test_phloem_trap_enriches_a_weak_acid_when_it_is_configured():
     comps[P4.LEAF] = replace(comps[P4.LEAF], pH=P4.LEAF_CYTOSOL_PH)
     cmpd = ND.neutral_compound(ND.NeutralCompound("x", 2.45, pKa=4.5))
     m = P4.RiceUptakeModel(env=LP.literature_environment(), cmpd=cmpd,
-                           comps=comps, inputs=_dummy_inputs())
+                           comps=comps, inputs=_dummy_inputs(), phi=PHI, T_C_Ph=T_C_PH)
     # L_Ph is 0 on the neutral base, so the trap route is the whole factor
     assert cmpd.L_Ph == 0.0
     assert m.phloem_loading_factor() > 1.0

@@ -14,31 +14,18 @@
       "K_prot": "Zhou2025",
       "K_cw": "GAP A / Prompt2 v2 (Guo2025 Fig.3f DFT + Mel2024 lignin anchor; rice whole-cw per organ)",
       "f_xy_recommended": "GAP B / S4 + docs/theory_anchor.tex (Trapp+Briggs LFER: MONOTONE logistic)",
-      "f_xy_fit": "per-congener (f_xy, L_Ph, kappa_d) fitted to Yamazaki 2023 on the 2020 Tsukuba site-year (src/site_scenario.py), dry-basis data, harvest operator with attached dead blades (src/harvest.py); validation/refit_site_year.py, params/refit_site_year.csv. Saturated (3 params / 3 cells) -> reproduction, not prediction. model_api f_xy_source='fit'.",
-      "L_Ph_rec": "(L_Ph, kappa_d) fitted to Yamazaki root + grain with f_xy_recommended FIXED (straw a prediction); used by f_xy_source='recommended' and the lipid model. Same script.",
-      "composition": "rice_tissue package (recommended anchors)"
+      "transport": "r_eq__<v>, L_Ph__<v> (and f_xy__<v> for v = *_fit): fitted per congener to Yamazaki 2023 root and grain (fit: also straw) on the 2020 Tsukuba site-year with that shoot and loading form; validation/refit_sourced.py, params/refit_sourced.csv (pre-registered: docs/PREREG_sourced_values.md)",
+      "lipid_loading": "per shoot model, fitted with the lipid variant's per-congener values (params/lipid_loading_sourced.json); terms the data do not identify are removed",
+      "composition": "params/rice_composition_sourced.csv: midpoints of sourced ranges (docs/literature_db/sourced_inputs.csv); cells without a rice source carry physical bounds"
     },
-    "WARNING_f_xy": "f_xy_recommended is the monotone a-priori value; f_xy_fit is a saturated reproduction fit (one value per congener per dataset) and is not a transferable property.",
-    "refit_site_year": "Transport parameters fitted to Yamazaki 2023 on the 2020 Tsukuba site-year (src/site_scenario.py), dry-basis tissue data, harvest operator with attached dead blades (src/harvest.py); validation/refit_site_year.py. *_fit: per congener (f_xy, L_Ph, kappa_d), saturated (reproduction log10 RMSE 0.162). *_rec: (L_Ph, kappa_d) with the monotone f_xy_recommended fixed, so straw is a prediction (a-priori straw log10 RMSE 1.401). PFBS has no grain value: its L_Ph is the geometric mean of the others'."
+    "WARNING_f_xy": "f_xy_recommended is the monotone a-priori value; f_xy__*_fit is a saturated reproduction fit (one value per congener per dataset) and is not a transferable property."
   },
   "environment": {
-    "E_m_V": -0.12,
-    "E_m_plausible_range_V": [
-      -0.12,
-      -0.09
-    ],
     "z": -1,
     "f_d": 1.0,
     "f_n": 0.0,
     "T_K": 298.15,
-    "note": "fully-dissociated anion; E_m is the live pH/redox lever (Task B); in-situ paddy E_m unmeasured (key gap)."
-  },
-  "carrier_MichaelisMenten": {
-    "Vmax_in": 20.0,
-    "Km_in": 5.0,
-    "Vmax_out": 8.0,
-    "Km_out": 5.0,
-    "note": "fixed values (not fitted to any dataset here; the per-congener kappa_d fit absorbs root-entry magnitude); carrier overcomes GHK anion exclusion (e^N≈107). validation/dose_series_carrier.py bounds Km >= 150 (PFOA) - 500 (PFOS) ug/L from Tang's dose series."
+    "note": "fully dissociated anion. The root entry is the linear equilibrium term (PREREG amendment 1); the membrane potential and the Michaelis-Menten carrier left the model (no source for their constants)."
   },
   "f_xy_functional_form": {
     "form": "logistic",
@@ -55,28 +42,146 @@
   },
   "tissue_composition_recommended": {
     "root": {
-      "theta_fw": 0.9,
-      "f_prot": 0.07,
-      "f_PL": 0.015,
-      "f_cw": 0.5
+      "theta_fw": 0.713,
+      "f_prot": 0.06,
+      "f_PL": 0.0205,
+      "f_cw": 0.525
     },
     "stem": {
-      "theta_fw": 0.83,
-      "f_prot": 0.05,
-      "f_PL": 0.005,
-      "f_cw": 0.72
+      "theta_fw": 0.7095,
+      "f_prot": 0.072,
+      "f_PL": 0.00345,
+      "f_cw": 0.715
     },
     "leaf": {
-      "theta_fw": 0.78,
-      "f_prot": 0.1,
-      "f_PL": 0.01,
-      "f_cw": 0.56
+      "theta_fw": 0.695,
+      "f_prot": 0.2035,
+      "f_PL": 0.0091,
+      "f_cw": 0.45
     },
     "grain_brown": {
-      "theta_fw": 0.14,
+      "theta_fw": 0.21,
       "f_prot": 0.09,
-      "f_PL": 0.003,
-      "f_cw": 0.035
+      "f_PL": 0.0012,
+      "f_cw": 0.0395
+    },
+    "grain_white": {
+      "theta_fw": 0.21,
+      "f_prot": 0.078,
+      "f_PL": 0.00095,
+      "f_cw": 0.0175
+    }
+  },
+  "tissue_composition_ranges": {
+    "root": {
+      "theta_fw": [
+        0.713,
+        0.713
+      ],
+      "f_prot": [
+        0.04,
+        0.08
+      ],
+      "f_PL": [
+        0.019,
+        0.022
+      ],
+      "f_cw": [
+        0.11,
+        0.94
+      ],
+      "lignin_share": [
+        0.0,
+        1.0
+      ]
+    },
+    "stem": {
+      "theta_fw": [
+        0.645,
+        0.774
+      ],
+      "f_prot": [
+        0.034,
+        0.11
+      ],
+      "f_PL": [
+        0.0019,
+        0.005
+      ],
+      "f_cw": [
+        0.62,
+        0.81
+      ],
+      "lignin_share": [
+        0.069,
+        0.075
+      ]
+    },
+    "leaf": {
+      "theta_fw": [
+        0.659,
+        0.731
+      ],
+      "f_prot": [
+        0.088,
+        0.319
+      ],
+      "f_PL": [
+        0.0085,
+        0.0097
+      ],
+      "f_cw": [
+        0.0,
+        0.9
+      ],
+      "lignin_share": [
+        0.0,
+        1.0
+      ]
+    },
+    "grain_brown": {
+      "theta_fw": [
+        0.2,
+        0.22
+      ],
+      "f_prot": [
+        0.083,
+        0.097
+      ],
+      "f_PL": [
+        0.0007,
+        0.0017
+      ],
+      "f_cw": [
+        0.034,
+        0.045
+      ],
+      "lignin_share": [
+        0.0,
+        1.0
+      ]
+    },
+    "grain_white": {
+      "theta_fw": [
+        0.2,
+        0.22
+      ],
+      "f_prot": [
+        0.073,
+        0.083
+      ],
+      "f_PL": [
+        0.0007,
+        0.0012
+      ],
+      "f_cw": [
+        0.008,
+        0.027
+      ],
+      "lignin_share": [
+        0.0,
+        1.0
+      ]
     }
   },
   "congeners": [
@@ -87,25 +192,31 @@
       "K_prot_Lkg": 10.72,
       "K_PL_Lkg": 42.66,
       "K_cw_wholecw_Lkg": {
-        "root": 2.8,
-        "stem": 2.77,
-        "leaf": 2.46,
-        "grain": 3.31
+        "root": 4.6,
+        "stem": 2.032,
+        "leaf": 4.6,
+        "grain": 4.6
       },
       "K_cw_poly_rec_Lkg": 1.6,
       "K_lignin_rec_Lkg": 7.6,
       "f_xy_recommended": 0.79,
       "B_k_basisA_Lkg_fw": {
-        "root": 1.179,
-        "stem": 1.296,
-        "leaf": 1.413,
-        "grain": 1.179
+        "root": 1.842,
+        "stem": 1.399,
+        "leaf": 2.11,
+        "grain": 1.156
       },
-      "f_xy_fit": 0.258917,
-      "L_Ph_fit": 1e-05,
-      "kappa_d_fit": 1.013521,
-      "L_Ph_rec": 1e-05,
-      "kappa_d_rec": 0.741067
+      "r_eq__redistributed_lipid": 1.0601042,
+      "L_Ph__redistributed_lipid": 0.0,
+      "r_eq__redistributed_free": 1.0601083,
+      "L_Ph__redistributed_free": 0.0,
+      "r_eq__redistributed_fit": 1.0601047,
+      "L_Ph__redistributed_fit": 0.0,
+      "f_xy__redistributed_fit": 0.14284683,
+      "r_eq__4pool_lipid": 1.0601042,
+      "L_Ph__4pool_lipid": 0.0,
+      "r_eq__4pool_free": 1.0601083,
+      "L_Ph__4pool_free": 0.0
     },
     {
       "name": "PFPeA",
@@ -114,25 +225,31 @@
       "K_prot_Lkg": 12.3,
       "K_PL_Lkg": 104.71,
       "K_cw_wholecw_Lkg": {
-        "root": 3.44,
-        "stem": 3.4,
-        "leaf": 3.03,
-        "grain": 4.06
+        "root": 5.6,
+        "stem": 2.5184,
+        "leaf": 5.6,
+        "grain": 5.6
       },
       "K_cw_poly_rec_Lkg": 2.0,
       "K_lignin_rec_Lkg": 9.2,
       "f_xy_recommended": 0.47,
       "B_k_basisA_Lkg_fw": {
-        "root": 1.315,
-        "stem": 1.44,
-        "leaf": 1.654,
-        "grain": 1.484
+        "root": 2.385,
+        "stem": 1.595,
+        "leaf": 2.518,
+        "grain": 1.359
       },
-      "f_xy_fit": 0.172863,
-      "L_Ph_fit": 1e-05,
-      "kappa_d_fit": 3.875565,
-      "L_Ph_rec": 1e-05,
-      "kappa_d_rec": 3.720692
+      "r_eq__redistributed_lipid": 0.32479737,
+      "L_Ph__redistributed_lipid": 0.0,
+      "r_eq__redistributed_free": 0.32479807,
+      "L_Ph__redistributed_free": 0.0,
+      "r_eq__redistributed_fit": 0.32479746,
+      "L_Ph__redistributed_fit": 0.0,
+      "f_xy__redistributed_fit": 0.11612783,
+      "r_eq__4pool_lipid": 0.32479737,
+      "L_Ph__4pool_lipid": 0.0,
+      "r_eq__4pool_free": 0.32479806,
+      "L_Ph__4pool_free": 0.0
     },
     {
       "name": "PFHxA",
@@ -141,25 +258,31 @@
       "K_prot_Lkg": 14.13,
       "K_PL_Lkg": 263.03,
       "K_cw_wholecw_Lkg": {
-        "root": 4.2,
-        "stem": 4.15,
-        "leaf": 3.71,
-        "grain": 4.93
+        "root": 6.75,
+        "stem": 3.112,
+        "leaf": 6.75,
+        "grain": 6.75
       },
       "K_cw_poly_rec_Lkg": 2.5,
       "K_lignin_rec_Lkg": 11.0,
       "f_xy_recommended": 0.216,
       "B_k_basisA_Lkg_fw": {
-        "root": 1.603,
-        "stem": 1.682,
-        "leaf": 2.127,
-        "grain": 2.061
+        "root": 3.521,
+        "stem": 1.915,
+        "leaf": 3.228,
+        "grain": 1.675
       },
-      "f_xy_fit": 0.101878,
-      "L_Ph_fit": 0.02038,
-      "kappa_d_fit": 4.751898,
-      "L_Ph_rec": 1e-05,
-      "kappa_d_rec": 4.679993
+      "r_eq__redistributed_lipid": 0.22689144,
+      "L_Ph__redistributed_lipid": 0.03395264,
+      "r_eq__redistributed_free": 0.22689163,
+      "L_Ph__redistributed_free": 0.0,
+      "r_eq__redistributed_fit": 0.22689145,
+      "L_Ph__redistributed_fit": 0.02529894,
+      "f_xy__redistributed_fit": 0.0761302,
+      "r_eq__4pool_lipid": 0.22689144,
+      "L_Ph__4pool_lipid": 0.02382896,
+      "r_eq__4pool_free": 0.22689162,
+      "L_Ph__4pool_free": 0.0
     },
     {
       "name": "PFHpA",
@@ -168,25 +291,31 @@
       "K_prot_Lkg": 13.18,
       "K_PL_Lkg": 707.95,
       "K_cw_wholecw_Lkg": {
-        "root": 5.36,
-        "stem": 5.3,
-        "leaf": 4.74,
-        "grain": 6.29
+        "root": 8.6,
+        "stem": 3.9776,
+        "leaf": 8.6,
+        "grain": 8.6
       },
       "K_cw_poly_rec_Lkg": 3.2,
       "K_lignin_rec_Lkg": 14.0,
       "f_xy_recommended": 0.098,
       "B_k_basisA_Lkg_fw": {
-        "root": 2.322,
-        "stem": 2.193,
-        "leaf": 3.211,
-        "grain": 3.176
+        "root": 6.401,
+        "stem": 2.521,
+        "leaf": 4.658,
+        "grain": 2.087
       },
-      "f_xy_fit": 0.050877,
-      "L_Ph_fit": 0.034919,
-      "kappa_d_fit": 2.223461,
-      "L_Ph_rec": 0.003726,
-      "kappa_d_rec": 2.193254
+      "r_eq__redistributed_lipid": 0.34993723,
+      "L_Ph__redistributed_lipid": 0.0,
+      "r_eq__redistributed_free": 0.34993726,
+      "L_Ph__redistributed_free": 0.0,
+      "r_eq__redistributed_fit": 0.34993715,
+      "L_Ph__redistributed_fit": 0.04580541,
+      "f_xy__redistributed_fit": 0.04792461,
+      "r_eq__4pool_lipid": 0.34993723,
+      "L_Ph__4pool_lipid": 0.0,
+      "r_eq__4pool_free": 0.34993725,
+      "L_Ph__4pool_free": 0.0
     },
     {
       "name": "PFOA",
@@ -195,25 +324,33 @@
       "K_prot_Lkg": 12.3,
       "K_PL_Lkg": 1905.46,
       "K_cw_wholecw_Lkg": {
-        "root": 6.6,
-        "stem": 6.53,
-        "leaf": 5.86,
-        "grain": 7.71
+        "root": 10.5,
+        "stem": 4.936,
+        "leaf": 10.5,
+        "grain": 10.5
       },
       "K_cw_poly_rec_Lkg": 4.0,
       "K_lignin_rec_Lkg": 17.0,
       "f_xy_recommended": 0.04,
       "B_k_basisA_Lkg_fw": {
-        "root": 4.174,
-        "stem": 3.353,
-        "leaf": 5.965,
-        "grain": 6.24
+        "root": 13.718,
+        "stem": 3.902,
+        "leaf": 8.188,
+        "grain": 3.219
       },
-      "f_xy_fit": 0.128019,
-      "L_Ph_fit": 0.104612,
-      "kappa_d_fit": 7.485037,
-      "L_Ph_rec": 1.0,
-      "kappa_d_rec": 7.522344
+      "r_eq__redistributed_lipid": 0.10179755,
+      "L_Ph__redistributed_lipid": 0.30144183,
+      "r_eq__redistributed_free": 0.10179752,
+      "L_Ph__redistributed_free": 3.2477313,
+      "L_Ph_unreachable__redistributed_free": 1.0,
+      "r_eq__redistributed_fit": 0.10179757,
+      "L_Ph__redistributed_fit": 0.18186345,
+      "f_xy__redistributed_fit": 0.14295832,
+      "r_eq__4pool_lipid": 0.10179755,
+      "L_Ph__4pool_lipid": 0.18404757,
+      "r_eq__4pool_free": 0.10179751,
+      "L_Ph__4pool_free": 4.234929,
+      "L_Ph_unreachable__4pool_free": 1.0
     },
     {
       "name": "PFNA",
@@ -222,25 +359,33 @@
       "K_prot_Lkg": 16.98,
       "K_PL_Lkg": 5623.41,
       "K_cw_wholecw_Lkg": {
-        "root": 8.2,
-        "stem": 8.11,
-        "leaf": 7.29,
-        "grain": 9.57
+        "root": 13.0,
+        "stem": 6.152,
+        "leaf": 13.0,
+        "grain": 13.0
       },
       "K_cw_poly_rec_Lkg": 5.0,
       "K_lignin_rec_Lkg": 21.0,
       "f_xy_recommended": 0.014,
       "B_k_basisA_Lkg_fw": {
-        "root": 9.864,
-        "stem": 6.747,
-        "leaf": 14.423,
-        "grain": 16.251
+        "root": 36.05,
+        "stem": 7.978,
+        "leaf": 19.141,
+        "grain": 7.154
       },
-      "f_xy_fit": 0.222652,
-      "L_Ph_fit": 0.286596,
-      "kappa_d_fit": 17.067418,
-      "L_Ph_rec": 1.0,
-      "kappa_d_rec": 17.147231
+      "r_eq__redistributed_lipid": 0.04525925,
+      "L_Ph__redistributed_lipid": 0.82927791,
+      "r_eq__redistributed_free": 0.04525921,
+      "L_Ph__redistributed_free": 7.5914396,
+      "L_Ph_unreachable__redistributed_free": 1.0,
+      "r_eq__redistributed_fit": 0.04525926,
+      "L_Ph__redistributed_fit": 0.49066389,
+      "f_xy__redistributed_fit": 0.27411138,
+      "r_eq__4pool_lipid": 0.04525925,
+      "L_Ph__4pool_lipid": 0.50417772,
+      "r_eq__4pool_free": 0.04525921,
+      "L_Ph__4pool_free": 11.781685,
+      "L_Ph_unreachable__4pool_free": 1.0
     },
     {
       "name": "PFDA",
@@ -249,25 +394,33 @@
       "K_prot_Lkg": 23.44,
       "K_PL_Lkg": 15135.61,
       "K_cw_wholecw_Lkg": {
-        "root": 10.24,
-        "stem": 10.13,
-        "leaf": 9.11,
-        "grain": 11.93
+        "root": 16.15,
+        "stem": 7.7184,
+        "leaf": 16.15,
+        "grain": 16.15
       },
       "K_cw_poly_rec_Lkg": 6.3,
       "K_lignin_rec_Lkg": 26.0,
       "f_xy_recommended": 0.0051,
       "B_k_basisA_Lkg_fw": {
-        "root": 24.279,
-        "stem": 15.134,
-        "leaf": 35.716,
-        "grain": 41.363
+        "root": 92.6,
+        "stem": 17.972,
+        "leaf": 46.375,
+        "grain": 16.729
       },
-      "f_xy_fit": 0.401336,
-      "L_Ph_fit": 1.0,
-      "kappa_d_fit": 4.722372,
-      "L_Ph_rec": 1.0,
-      "kappa_d_rec": 4.879845
+      "r_eq__redistributed_lipid": 0.12885212,
+      "L_Ph__redistributed_lipid": 6.4445809,
+      "r_eq__redistributed_free": 0.12885191,
+      "L_Ph__redistributed_free": 18.401689,
+      "L_Ph_unreachable__redistributed_free": 1.0,
+      "r_eq__redistributed_fit": 0.12885218,
+      "L_Ph__redistributed_fit": 2.806696,
+      "f_xy__redistributed_fit": 0.60242543,
+      "r_eq__4pool_lipid": 0.12885209,
+      "L_Ph__4pool_lipid": 2.9533527,
+      "r_eq__4pool_free": 0.12885191,
+      "L_Ph__4pool_free": 54.474677,
+      "L_Ph_unreachable__4pool_free": 1.0
     },
     {
       "name": "PFUnDA",
@@ -276,25 +429,33 @@
       "K_prot_Lkg": 23.44,
       "K_PL_Lkg": 31622.78,
       "K_cw_wholecw_Lkg": {
-        "root": 13.0,
-        "stem": 12.86,
-        "leaf": 11.57,
-        "grain": 15.14
+        "root": 20.5,
+        "stem": 9.8,
+        "leaf": 20.5,
+        "grain": 20.5
       },
       "K_cw_poly_rec_Lkg": 8.0,
       "K_lignin_rec_Lkg": 33.0,
       "f_xy_recommended": 0.0039,
       "B_k_basisA_Lkg_fw": {
-        "root": 49.148,
-        "stem": 29.483,
-        "leaf": 72.291,
-        "grain": 83.997
+        "root": 190.258,
+        "stem": 34.928,
+        "leaf": 92.733,
+        "grain": 32.495
       },
-      "f_xy_fit": 0.345662,
-      "L_Ph_fit": 1.0,
-      "kappa_d_fit": 1.642934,
-      "L_Ph_rec": 1.0,
-      "kappa_d_rec": 1.836554
+      "r_eq__redistributed_lipid": 0.29461619,
+      "L_Ph__redistributed_lipid": 0.0,
+      "r_eq__redistributed_free": 0.29461464,
+      "L_Ph__redistributed_free": 36.785459,
+      "L_Ph_unreachable__redistributed_free": 1.0,
+      "r_eq__redistributed_fit": 0.29461526,
+      "L_Ph__redistributed_fit": 0.73307852,
+      "f_xy__redistributed_fit": 0.4408322,
+      "r_eq__4pool_lipid": 0.29461621,
+      "L_Ph__4pool_lipid": 0.0,
+      "r_eq__4pool_free": 0.29461464,
+      "L_Ph__4pool_free": 766016550.0,
+      "L_Ph_unreachable__4pool_free": 1.0
     },
     {
       "name": "PFDoDA",
@@ -303,25 +464,34 @@
       "K_prot_Lkg": 23.44,
       "K_PL_Lkg": 66069.34,
       "K_cw_wholecw_Lkg": {
-        "root": 16.4,
-        "stem": 16.22,
-        "leaf": 14.57,
-        "grain": 19.14
+        "root": 26.0,
+        "stem": 12.304,
+        "leaf": 26.0,
+        "grain": 26.0
       },
       "K_cw_poly_rec_Lkg": 10.0,
       "K_lignin_rec_Lkg": 42.0,
       "f_xy_recommended": 0.003,
       "B_k_basisA_Lkg_fw": {
-        "root": 100.988,
-        "stem": 59.174,
-        "leaf": 148.443,
-        "grain": 172.989
+        "root": 393.753,
+        "stem": 69.972,
+        "leaf": 189.094,
+        "grain": 65.322
       },
-      "f_xy_fit": 1.0,
-      "L_Ph_fit": 1.0,
-      "kappa_d_fit": 0.173482,
-      "L_Ph_rec": 1.0,
-      "kappa_d_rec": 0.859602
+      "r_eq__redistributed_lipid": 0.50498821,
+      "L_Ph__redistributed_lipid": 13.232612,
+      "r_eq__redistributed_free": 0.50498477,
+      "L_Ph__redistributed_free": 75.001092,
+      "L_Ph_unreachable__redistributed_free": 1.0,
+      "r_eq__redistributed_fit": 0.50498632,
+      "L_Ph__redistributed_fit": 75.009527,
+      "f_xy__redistributed_fit": 1.0,
+      "L_Ph_unreachable__redistributed_fit": 1.0,
+      "r_eq__4pool_lipid": 0.50498754,
+      "L_Ph__4pool_lipid": 30.253138,
+      "r_eq__4pool_free": 0.50498477,
+      "L_Ph__4pool_free": 993656230.0,
+      "L_Ph_unreachable__4pool_free": 1.0
     },
     {
       "name": "PFBS",
@@ -330,25 +500,36 @@
       "K_prot_Lkg": 36.31,
       "K_PL_Lkg": 524.81,
       "K_cw_wholecw_Lkg": {
-        "root": 9.4,
-        "stem": 9.28,
-        "leaf": 8.14,
-        "grain": 11.29
+        "root": 16.0,
+        "stem": 6.584,
+        "leaf": 16.0,
+        "grain": 16.0
       },
       "K_cw_poly_rec_Lkg": 5.0,
       "K_lignin_rec_Lkg": 27.0,
       "f_xy_recommended": 0.26296,
       "B_k_basisA_Lkg_fw": {
-        "root": 2.411,
-        "stem": 2.721,
-        "leaf": 3.736,
-        "grain": 4.644
+        "root": 6.837,
+        "stem": 3.362,
+        "leaf": 6.601,
+        "grain": 3.788
       },
-      "f_xy_fit": 0.035907,
-      "L_Ph_fit": 0.034112,
-      "kappa_d_fit": 0.549604,
-      "L_Ph_rec": 0.018077,
-      "kappa_d_rec": 0.430707
+      "r_eq__redistributed_lipid": 0.95637496,
+      "L_Ph__redistributed_lipid": 0.0,
+      "L_Ph_MQL__redistributed_lipid": 0.0,
+      "r_eq__redistributed_free": 0.95637585,
+      "L_Ph__redistributed_free": 0.0,
+      "L_Ph_MQL__redistributed_free": 0.0,
+      "r_eq__redistributed_fit": 0.95637468,
+      "L_Ph__redistributed_fit": 0.0,
+      "f_xy__redistributed_fit": 0.03203255,
+      "L_Ph_MQL__redistributed_fit": 0.0,
+      "r_eq__4pool_lipid": 0.95637496,
+      "L_Ph__4pool_lipid": 0.0,
+      "L_Ph_MQL__4pool_lipid": 0.0,
+      "r_eq__4pool_free": 0.95637584,
+      "L_Ph__4pool_free": 0.0,
+      "L_Ph_MQL__4pool_free": 0.0
     },
     {
       "name": "PFHxS",
@@ -357,19 +538,19 @@
       "K_prot_Lkg": 42.66,
       "K_PL_Lkg": 4466.84,
       "K_cw_wholecw_Lkg": {
-        "root": 12.6,
-        "stem": 12.47,
-        "leaf": 11.29,
-        "grain": 14.57
+        "root": 19.5,
+        "stem": 9.656,
+        "leaf": 19.5,
+        "grain": 19.5
       },
       "K_cw_poly_rec_Lkg": 8.0,
       "K_lignin_rec_Lkg": 31.0,
       "f_xy_recommended": 0.07191,
       "B_k_basisA_Lkg_fw": {
-        "root": 8.529,
-        "stem": 6.516,
-        "leaf": 12.936,
-        "grain": 15.405
+        "root": 30.666,
+        "stem": 8.084,
+        "leaf": 18.417,
+        "grain": 8.086
       }
     },
     {
@@ -379,25 +560,33 @@
       "K_prot_Lkg": 34.67,
       "K_PL_Lkg": 31622.78,
       "K_cw_wholecw_Lkg": {
-        "root": 17.4,
-        "stem": 17.28,
-        "leaf": 16.14,
-        "grain": 19.29
+        "root": 24.0,
+        "stem": 14.584,
+        "leaf": 24.0,
+        "grain": 24.0
       },
       "K_cw_poly_rec_Lkg": 13.0,
       "K_lignin_rec_Lkg": 35.0,
       "f_xy_recommended": 0.01332,
       "B_k_basisA_Lkg_fw": {
-        "root": 49.447,
-        "stem": 30.119,
-        "leaf": 73.101,
-        "grain": 84.991
+        "root": 190.979,
+        "stem": 36.157,
+        "leaf": 93.91,
+        "grain": 33.402
       },
-      "f_xy_fit": 0.573448,
-      "L_Ph_fit": 1.0,
-      "kappa_d_fit": 6.986101,
-      "L_Ph_rec": 1.0,
-      "kappa_d_rec": 7.292811
+      "r_eq__redistributed_lipid": 0.08915402,
+      "L_Ph__redistributed_lipid": 0.46796899,
+      "r_eq__redistributed_free": 0.08915358,
+      "L_Ph__redistributed_free": 37.244605,
+      "L_Ph_unreachable__redistributed_free": 1.0,
+      "r_eq__redistributed_fit": 0.08915389,
+      "L_Ph__redistributed_fit": 1.3575588,
+      "f_xy__redistributed_fit": 0.79041076,
+      "r_eq__4pool_lipid": 0.089154,
+      "L_Ph__4pool_lipid": 0.67111872,
+      "r_eq__4pool_free": 0.08915358,
+      "L_Ph__4pool_free": 774994970.0,
+      "L_Ph_unreachable__4pool_free": 1.0
     },
     {
       "name": "GenX",
@@ -406,38 +595,51 @@
       "K_prot_Lkg": 12.3,
       "K_PL_Lkg": 117.5,
       "K_cw_wholecw_Lkg": {
-        "root": 3.44,
-        "stem": 3.4,
-        "leaf": 3.03,
-        "grain": 4.06
+        "root": 5.6,
+        "stem": 2.5184,
+        "leaf": 5.6,
+        "grain": 5.6
       },
       "K_cw_poly_rec_Lkg": 2.0,
       "K_lignin_rec_Lkg": 9.2,
       "f_xy_recommended": 0.2334,
       "B_k_basisA_Lkg_fw": {
-        "root": 1.334,
-        "stem": 1.451,
-        "leaf": 1.682,
-        "grain": 1.517
+        "root": 2.46,
+        "stem": 1.608,
+        "leaf": 2.553,
+        "grain": 1.371
       },
       "provisional": "ether-PFAS (HFPO-DA/GenX): K_PL measured (Chen2025), K_prot/K_cw≈PFPeA (matched K_MW), f_xy=PFCA(nPFC5)·exp(-0.7) (Tang2026 ether offset); NOT calibrated to BAF data."
     }
   ],
-  "status": {
-    "GAP_A_Kcw": "CLOSED (docs/DELIVERABLE_GAP_A_Kcw.md)",
-    "GAP_B_fxy": "CLOSED (docs/DELIVERABLE_GAP_B_fxy.md; H7 §7.2 entanglement resolved by theory)",
-    "validation": "see CLAUDE.md section 6 and validation/refit_site_year.py (Yamazaki 2020 site-year fit; reproduce_demo.py prints the reproduction RMSE)",
-    "open_data_limited": [
-      "rice (not wheat) per-congener root subcellular -> alpha/QC1 point estimate",
-      "reliable per-congener pore-water OR hydroponic RCF -> surface test + f_xy absolute",
-      "measured Q_TP(t), M(t) -> f_xy absolute scale",
-      "direct K_cw_poly + rice cw monosaccharide composition (long-term weakest point)",
-      "in-situ paddy E_m (-90..-120 mV -> ~2.5-3x passive-influx spread)"
-    ],
-    "config_decisions": {
-      "root_theta": "0.90 recommended (rice_tissue/Liu measured 0.90-0.92); 0.70 was an early choice",
-      "root_f_PL": "0.015 recommended (estimate, range 0.01-0.02; dominates long-chain B_root)",
-      "grain_theta": "0.14 (harvest/dry) vs 0.30 (filling) — stage-dependent"
+  "lipid_loading": {
+    "redistributed": {
+      "a": 0.05383402894166875,
+      "b": 0.0,
+      "g_xy": 0.004938756717035663,
+      "g_ph": 0.0,
+      "pfsa_ln": 0.0,
+      "gate": "none",
+      "terms_removed": [
+        "b",
+        "g_ph",
+        "pfsa_ln",
+        "gate_none"
+      ]
+    },
+    "4pool": {
+      "a": 0.052729878109402495,
+      "b": 0.0,
+      "g_xy": 0.005007731019954956,
+      "g_ph": 0.0,
+      "pfsa_ln": 0.0,
+      "gate": "none",
+      "terms_removed": [
+        "b",
+        "g_ph",
+        "pfsa_ln",
+        "gate_none"
+      ]
     }
   }
 }

@@ -3,10 +3,9 @@ in bbb3a8a).
 
 Pinned: (1) the bounds the published averages imply when every non-detect lies in
 [0, MDL] -- the ND=0 values are the lower corner and PFDoDA spans 114x; (2) the C11
-rise survives the non-detects, the C12 level does not; (3) the scores: both lipid
-variants beat the free-anion variants by > 1 log10 on either scoring, but which lipid
-variant is better depends on the non-detect treatment, so the pre-registered rule
-finds no single winner.
+rise survives the non-detects, the C12 level does not; (3) the scores equal the transfer
+record (validation/transfer_sourced.json) of the same fitted variants, and the interval
+scoring never exceeds the point scoring.
 """
 import contextlib
 import io
@@ -49,20 +48,19 @@ def test_the_c11_rise_survives_the_non_detects_and_c12_does_not(result):
     assert not s[("PFDA", "PFDoDA")]
 
 
-def test_scores_and_verdict(result):
+def test_scores_match_the_transfer_record(result):
+    import json
+    import numpy as np
+    with open(os.path.join(ROOT, "validation", "transfer_sourced.json")) as f:
+        rec = json.load(f)["errors"]
+    same = {"nstem_lipid": "redistributed_lipid", "lipid": "4pool_lipid", "mono": "4pool_free",
+            "fit": "redistributed_fit"}
     sc = result["scores"]
-    assert sc["lipid"]["point"] == pytest.approx(0.56, abs=0.02)
-    assert sc["nstem_lipid"]["point"] == pytest.approx(0.47, abs=0.02)
-    assert sc["mono"]["point"] == pytest.approx(2.33, abs=0.03)
-    assert sc["fit"]["point"] == pytest.approx(0.73, abs=0.03)
-    assert sc["nstem_lipid"]["interval"] == pytest.approx(0.15, abs=0.02)
-    assert sc["lipid"]["interval"] == pytest.approx(0.38, abs=0.02)
-    for v in ("lipid", "nstem_lipid"):
+    for v, key in same.items():
         for k in ("point", "interval"):
-            assert sc["mono"][k] - sc[v][k] > 1.0                      # the free anion misses
-            assert sc["fit"][k] - sc[v][k] > 0.15                      # so does the Yamazaki fit
-    assert all(sc[v]["interval"] <= sc[v]["point"] for v in sc)         # intervals only help
-    assert result["winner"] is None
+            r = float(np.sqrt(np.mean(np.square(rec[key][f"kim_{k}"]))))
+            assert sc[v][k] == pytest.approx(r, abs=1e-6), (v, k)
+    assert all(sc[v]["interval"] <= sc[v]["point"] + 1e-12 for v in sc)    # intervals only help
 
 
 if __name__ == "__main__":

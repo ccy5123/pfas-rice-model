@@ -258,9 +258,8 @@ _SIGNAL_COLOR = {"green": "#2ca02c", "amber": "#e6a817", "red": "#d62728"}
 def fig_intake_gauge(info, lang="en"):
     """Half-circle gauge: predicted grain PFAS as a % of the EFSA group TWI.
 
-    `info` is a `model_api.intake_fraction` dict. A traffic-light gauge (green
-    <10 %, amber 10-100 %, red >=100 %) with a threshold marker at 100 % of the
-    tolerable weekly intake. Plain labels; `lang="ko"` renders Korean. This is an
+    `info` is a `model_api.intake_fraction` dict. Green below and red at or above 100 %
+    of the tolerable weekly intake (the only sourced threshold), marked on the dial. Plain labels; `lang="ko"` renders Korean. This is an
     intake reference to a HEALTH-BASED guidance value, not a food-standard (MRL)
     check -- the surrounding UI copy carries that caveat."""
     ko = lang == "ko"
@@ -279,8 +278,7 @@ def fig_intake_gauge(info, lang="en"):
             "bar": {"color": color, "thickness": 0.72},
             "borderwidth": 0,
             "steps": [
-                {"range": [0, 10], "color": "rgba(44,160,44,0.16)"},
-                {"range": [10, min(100, axis_max)], "color": "rgba(230,168,23,0.16)"},
+                {"range": [0, min(100, axis_max)], "color": "rgba(44,160,44,0.16)"},
                 {"range": [min(100, axis_max), axis_max], "color": "rgba(214,39,40,0.16)"},
             ],
             "threshold": {"line": {"color": "#d62728", "width": 4},
@@ -294,15 +292,11 @@ def fig_intake_gauge(info, lang="en"):
     return fig
 
 
-def fig_tang_tf(val, val_refit=None, val_extra=None, extra_label="model · lipid loading (OOS)"):
-    """Tang 2026 per-organ TF (DRY weight): measured vs model, optional refit-f_xy bar.
+def fig_tang_tf(val, val_extra=None, extra_label="model · free anion"):
+    """Tang 2026 per-organ TF (DRY weight): measured vs model.
 
-    `val` (and the optional `val_refit` / `val_extra`) come from
-    `model_api.tang_tf_validation`. Log-y grouped bars over stalk/leaf/endosperm.
-
-    `val_extra` is a third model series under its own label -- used for the lipid-loading
-    run, whose constants were fit on Yamazaki and NOT on Tang, so unlike `val_refit` it is
-    an out-of-sample prediction rather than a fit to the bars it is drawn against.
+    `val` (and the optional `val_extra`, a second model series under its own label) come
+    from `model_api.tang_tf_validation`. Log-y grouped bars over stalk/leaf/endosperm.
     """
     organs = val["organs"]
     fig = go.Figure()
@@ -312,11 +306,6 @@ def fig_tang_tf(val, val_refit=None, val_extra=None, extra_label="model · lipid
                 name=f"model · f_xy={val['f_xy']:.3g}", marker_color="#bdbdbd",
                 marker_line=dict(width=0.5, color="#333"),
                 hovertemplate="model %{x}: %{y:.3g}<extra></extra>")
-    if val_refit is not None:
-        fig.add_bar(x=organs, y=[val_refit["model_tf"][o] for o in organs],
-                    name=f"model · Tang-refit f_xy={val_refit['f_xy']:.3g}", marker_color="#2ca02c",
-                    marker_line=dict(width=0.5, color="#333"),
-                    hovertemplate="refit %{x}: %{y:.3g}<extra></extra>")
     if val_extra is not None:
         fig.add_bar(x=organs, y=[val_extra["model_tf"][o] for o in organs],
                     name=extra_label, marker_color="#9467bd",

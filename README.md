@@ -45,33 +45,36 @@ api.simulate_neutral(2.45, name="carbamazepine")      # a neutral organic by log
   (`src/organ_mass.py`).
 - **Harvest observation operator** (`src/harvest.py`): dead leaf blades are reconstructed from the
   crop model's leaf death and kept in the leaf and straw; results are compared on dry basis.
-- **Default configuration** (pre-registered switch, `validation/default_switch.py`): the
-  **redistributed shoot** (N = 4 stem segments + leaf; each shoot organ retains the solute its own
-  transpiration deposits) with **K_PL-gated lipid loading** and the carrier root entry.
-  `shoot="4pool"` is the single-straw core; `api.FOUR_POOL_FREE` the previous default.
-- **Transport parameters** are fitted on the site-year with the 4-pool shoot
-  (`validation/refit_site_year.py`, pre-registered): `f_xy_source="recommended"` (monotone physical
-  f_xy, with L_Ph and κ_d fitted to root and grain) or `"fit"` (all three fitted per congener; a
-  saturated reproduction; free anion only). Lipid loading supplies its own f_xy (six globals fitted
-  on Yamazaki).
+- **No value without a source** (`docs/PREREG_sourced_values.md`, `params/value_provenance.csv`):
+  every input is a value read in a source, a fit the data identify, a mechanism removed for lack
+  of either, or a sourced range run at its midpoint whose effect is reported
+  (`params/input_range_band.json`).
+- **Default configuration**: the **redistributed shoot** (N = 4 stem segments + leaf; each shoot
+  organ keeps the solute its own transpiration deposits; sourced stem and panicle shares of
+  transpiration) with **lipid loading** (one `f_xy` and one `g_xy` for every chain) and the **linear equilibrium root entry**
+  `λ_eq·(r_eq·C_w^o − C_w,root)`. `shoot="4pool"` is the single-straw core.
+- **Fitted parameters** (`validation/refit_sourced.py`, pre-registered), per variant: `r_eq` (root)
+  and `L_Ph` (grain) per congener; the lipid-loading constants across congeners (terms the data do
+  not identify removed by backward elimination); `f_xy` too in the `*_fit` variant (a saturated
+  reproduction).
 
 ## Results in brief (details and scripts: `CLAUDE.md` §6)
 
-- **Reproduction** (4-pool Fit A, saturated): log10 RMSE 0.162 on Yamazaki's root/straw/grain.
-  With the monotone f_xy the straw is a prediction and misses by log10 1.40.
-- **Transfer to independent data** (no parameter fitted to them): the default configuration is
-  off by log10 0.64 on Tang 2026 per-organ TF, 0.47 on Kim 2019 grain and 0.36 / 0.51 on Li 2025
-  TF by stage; the previous default (4-pool free anion) by 1.71, 2.33 and 1.26 / 1.68. On Kim the
-  ranking of the two lipid variants depends on the non-detects.
-- These three datasets were not fitted, but they chose the default (the switch scored the
-  candidates on them), so the default's scores on them — and the ×3.1 band — may be optimistic.
-- **On Yamazaki** (in-sample for the lipid constants) the default scores 0.380, with the grain
-  over-predicted 2–7× for most congeners.
-- **Unmeasured inputs that matter** for the default: the carrier constants (Km above all), E_m,
-  the shoot levers `retention` and `lam_grain` (the grain's share of the stream), and whether dead
-  blades stay in the harvested straw (`docs/ASSUMPTIONS.md`).
-- **Neutral organics** (nothing fitted): rice root partition log10 0.21 (Liu 2023), per-organ TF
-  0.31 (Ge 2017), barley stem 0.30 (Briggs 1983).
+- **On Yamazaki** (the calibration data; `r_eq`, `L_Ph` and the two lipid constants fitted) the
+  default scores log10 0.159 (root 0.000, straw 0.253 — predicted by the shared constants —, grain
+  0.103). The free anion scores 1.27: from PFOA up its grain is out of reach.
+- **Transfer to independent data** (no parameter fitted to them): the default is off by log10 0.73
+  on Tang 2026 per-organ TF, 0.49 on Kim 2019 grain (0.37 on the non-detect interval), and 0.39 /
+  1.02 on Li 2025 shoot / grain TF by stage (the grain by stage is under-predicted: the panicle takes
+  no transpiration before heading). The 4-pool free anion: 3.69, 1.93, 3.30 / 1.38.
+- These datasets were not fitted, but they chose the default at an earlier switch, so its scores on
+  them — and the ×3.1 band — may be optimistic.
+- **Sourced input ranges** move the default's harvest BAF by grain ÷2.5 / ×2.1, straw ÷1.35 / ×1.32,
+  root ÷1.27 / ×1.25 (median of 11 congeners); the panicle's transpiration share at heading leads
+  the grain band (`params/input_range_band.json`).
+- **Neutral organics** (nothing fitted): rice root partition log10 0.26 (Liu 2023), per-organ TF
+  0.70 (Ge 2017), barley stem 0.31 (Briggs 1983); the neutral composition basis is being restated
+  per dataset (amendment 2).
 
 The general-audience view shows every absolute number with a ×/÷ band set by the default
 configuration's transfer error (`model_api.APRIORI_OOS_SCORES`: median log10 0.49, ×3.1).
@@ -88,8 +91,8 @@ pip install phydrus
 python validation/hydrus_coupled_run.py
 ```
 
-Weakly sorbed short chains leach during flooding (default configuration: PFBA grain BAF 6.90 at constant exposure →
-0.69), long chains stay buffered. `simulate(cwo_profile="flooded")` gives an engine-free analytic
+Weakly sorbed short chains leach during flooding, long chains stay buffered (the paddy-soil inputs
+are not yet site-sourced, so no soil-scenario number is reported). `simulate(cwo_profile="flooded")` gives an engine-free analytic
 shape whose `k_leach` is calibrated per congener to the HYDRUS run. On Claude Code on the web the
 SessionStart hook builds the engine.
 
@@ -103,7 +106,7 @@ streamlit run app.py
 A plant-and-soil map coloured by concentration, tissue dynamics, drivers, the comparison with
 Yamazaki, the Tang check, a Bayesian inverse (exposure from measured tissue), six exposure modes
 (parametric, custom tables, HYDRUS CSV, live HYDRUS-1D, soil inventory, biomonitoring), the
-mechanism switches (shoot model, carrier/bypass, lipid loading) and three compound classes (congener, SMILES,
+mechanism switches (shoot model, lipid loading) and three compound classes (congener, SMILES,
 neutral log Kow with an optional EPA CompTox lookup). Simple mode is in Korean, Expert in English.
 See `docs/visualization_tool.md` and the manuals.
 
@@ -112,7 +115,7 @@ See `docs/visualization_tool.md` and the manuals.
 ```
 ├── reproduce_demo.py / build_parameters.py / app.py
 ├── src/            model code (core ODE, harvest operator, site scenario, ORYZA2000 port, API, plots, soil)
-├── params/         parameters.json + source tables + refit_site_year.csv + cwo_kleach.csv
+├── params/         parameters.json + source tables + refit_sourced.csv + value_provenance.csv + records
 ├── data_obs/       observations (Yamazaki dry basis, Li 2025, neutral tables)
 ├── validation/     maintained analyses; archive/ = superseded ones
 ├── docs/           ASSUMPTIONS.md, model report (.tex), literature DB, manuals
@@ -126,21 +129,20 @@ See `docs/visualization_tool.md` and the manuals.
 B_k = θ_fw + (1 − θ_fw) · ( f_prot·K_prot + f_PL·K_PL + f_cw·K_cw )      [L/kg fw]
 ```
 
-Root influx = GHK electrodiffusion (anion exclusion e^N ≈ 107 at E_m = −120 mV) + a saturable
-Michaelis–Menten carrier. Xylem loading `f_xy · C_root/B_root` + the K_PL-gated lipid term
-`g_xy · C_root` (on by default). The leaf feeds two phloem streams at concentration
-`L_Ph · C_leaf/B_leaf`: to the grain, the sap its dry-matter growth draws; to the root, a fraction
-φ of transpiration. In the default (redistributed) shoot the stream passes N stem segments, the
-leaf and the grain, and each organ retains part of the solute its own transpiration deposits.
-Grain and leaf are terminal accumulators, so the model is dynamic.
+Root entry = `λ_eq · (r_eq · C_w^o − C_w,root)` (linear equilibrium; the theory's GHK + carrier
+pair has no sourced constants). Xylem loading `f_xy · C_root/B_root` + a lipid term `g_xy · C_root`
+(on by default). The leaf feeds two phloem streams at concentration `L_Ph · C_leaf/B_leaf`: to the
+grain, the sap its dry-matter growth draws; to the root, a fraction φ of transpiration. In the
+default (redistributed) shoot each organ draws its own share of the transpiration stream and keeps
+the solute it deposits. Grain and leaf are terminal accumulators, so the model is dynamic.
 
 ## Open
 
-Measurements that would replace assumptions are listed in `docs/ASSUMPTIONS.md` §7 (Yamazaki SI
-raw values, carrier kinetics, a panicle transpiration share, rice phloem sap volume, organ water
-content over a season, rice-root cell-wall / plaque sorption) — and, for the default shoot, the
-`retention` and `lam_grain` levers. The transfer datasets still run on the calibration site-year's
-drivers because their own sites and dates are not in the repo. How the growth and PFAS papers
+What is still open is listed in `docs/ASSUMPTIONS.md` (marked **open**) and
+`params/value_provenance.csv`: a crop parameter set for Koshihikari/Kasalath, the seasonal course
+of the irrigation-water exposure, the soil-side values, the neutral path's composition, the app's
+per-volume density. The transfer datasets still run on the calibration site-year's drivers because
+their own sites and dates are not in the papers. How the growth and PFAS papers
 physically processed their rice (sampling, organ separation, washing, drying, milling), and a
 checklist for new sampling, is in `docs/rice_sample_processing_KR.md`. Korean policy-briefing scripts built
 from script output: `docs/POLICY_BRIEF_KR.md` (PFAS) and `docs/POLICY_BRIEF_BIOCIDES_KR.md` (EU biocides).
