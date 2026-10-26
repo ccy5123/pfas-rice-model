@@ -70,6 +70,12 @@ def render(cfg):
     else:
         c4.metric("root entry r_eq", f"{p['r_eq']:.3g}", "fitted to Yamazaki's root",
                   delta_color="off")
+    if res.get("interp_spread"):
+        # a measured growth table: the form between its samples is not measured (PREREG 7.3)
+        sp = res["interp_spread"]
+        st.caption("Growth table interpolated piecewise-linearly (shown). The monotone-cubic "
+                   "form moves the dry BAF by " + ", ".join(f"{k} {sp[k]:+.3f}" for k in sp)
+                   + " log10 — the spread from the unmeasured form between samples.")
 
     # ---- neutral scope panel (what this path is, and what it is not) --------
     if neutral:

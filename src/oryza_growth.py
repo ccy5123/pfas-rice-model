@@ -45,7 +45,7 @@ from dataclasses import dataclass
 import numpy as np
 
 # planting density convention shared with forcing_rice / growth_rice
-AREA_PER_HILL_M2 = 0.04                       # 25 hills/m^2 (transplanted paddy)
+from oryza2000 import AREA_PER_HILL_M2  # noqa: E402  (one definition; matches forcing_rice)
 HA_PER_HILL = AREA_PER_HILL_M2 / 1.0e4        # kg/ha -> kg/hill
 
 # 3-point Gaussian (Goudriaan) for day & canopy integration

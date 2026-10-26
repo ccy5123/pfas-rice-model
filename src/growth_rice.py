@@ -49,7 +49,7 @@ _FSH = np.array([0.50, 0.75, 1.00, 1.00])
 # IR72 final aboveground biomass ~17.4 t/ha = 1740 g/m^2 (Kumar et al. 2017, PMC5291415,
 # 390-ppm sunlit chambers; misattributed to Bouman 2006 before the protocol audit); add roots.
 WSHOOT_MAX_G_M2 = 1740.0
-AREA_PER_HILL_M2 = 0.04                  # 25 hills/m^2 (matches forcing_rice)
+from oryza2000 import AREA_PER_HILL_M2  # noqa: E402  (one definition; matches forcing_rice)
 G_M2_TO_KG_HILL = AREA_PER_HILL_M2 / 1000.0
 
 

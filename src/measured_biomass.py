@@ -83,11 +83,40 @@ def load_biomass_table(path_or_buffer):
     return day, organs
 
 
-def biomass_matrix(t, day, organs_kg_hill, *, root_shoot_ratio: float | None = None):
+INTERP_FORMS = ("linear", "pchip")
+
+
+def interpolate(t, day, v, interp="linear"):
+    """A measured series on the grid `t`, held flat beyond its first and last sample. The form
+    between samples is not measured (PREREG 7.3): "linear" (piecewise-linear in mass, so the
+    growth-dilution rate (dM/dt)/M steps at every sampling date) or "pchip" (monotone cubic:
+    continuous rate, no overshoot). The table path reports both."""
+    t, day, v = (np.asarray(a, float) for a in (t, day, v))
+    if interp == "linear" or len(day) < 3:
+        return np.interp(t, day, v)
+    if interp != "pchip":
+        raise ValueError(f"interp must be one of {INTERP_FORMS}, got {interp!r}")
+    from scipy.interpolate import PchipInterpolator
+    return PchipInterpolator(day, v, extrapolate=False)(np.clip(t, day[0], day[-1]))
+
+
+def leaf_loss_rate(t, M_leaf, dead=None):
+    """The leaf death rate [1/day] a measured leaf series implies (PREREG 7.3, review P4): a table
+    with a dead-leaf column gives d(dead)/dt / M_leaf; one with green leaf only reads a falling
+    green mass as death, max(0, -dM/dt) / M_leaf -- the identity ORYZA's D/M_leaf = DRLV uses."""
+    t = np.asarray(t, float)
+    m = np.maximum(np.asarray(M_leaf, float), 1e-12)
+    if dead is not None:
+        return np.maximum(np.gradient(np.asarray(dead, float), t), 0.0) / m
+    return np.maximum(-np.gradient(m, t), 0.0) / m
+
+
+def biomass_matrix(t, day, organs_kg_hill, *, root_shoot_ratio: float | None = None,
+                   interp="linear"):
     """Interpolate measured per-organ biomass [kg/hill] onto grid `t` -> M (n,4)
     in column order [root, stem, leaf, grain].
 
-    A measured organ series is interpolated (and held flat beyond its last sample).
+    A measured organ series is interpolated (`interpolate`, held flat beyond its last sample).
     If `root` is absent, it is reconstructed from `root_shoot_ratio` * (stem+leaf+grain)
     when given, else floored to a small value (root then plays no transport role)."""
     t = np.asarray(t, float)
@@ -95,7 +124,7 @@ def biomass_matrix(t, day, organs_kg_hill, *, root_shoot_ratio: float | None = N
     for o in ORGANS:
         v = organs_kg_hill.get(o)
         if v is not None:
-            cols[o] = np.interp(t, day, v)            # flat extrapolation at ends
+            cols[o] = interpolate(t, day, v, interp)
     if "root" not in cols:
         if root_shoot_ratio is not None:
             shoot = sum(cols[o] for o in ("stem", "leaf", "grain") if o in cols)
@@ -108,7 +137,7 @@ def biomass_matrix(t, day, organs_kg_hill, *, root_shoot_ratio: float | None = N
 
 def biomass_drivers(path_or_table, units, *, season=None, n_t=241, Cwo=1.0,
                     plants_per_hill=None, hills_per_m2=None, root_shoot_ratio=None,
-                    Qtp=None, dvs=None):
+                    Qtp=None, dvs=None, interp="linear"):
     """One-call: measured biomass table -> `drivers` dict for simulate(drivers=...).
 
     `path_or_table` is a CSV path/buffer, or a (day, organs) tuple from
@@ -128,7 +157,8 @@ def biomass_drivers(path_or_table, units, *, season=None, n_t=241, Cwo=1.0,
                  for o, v in organs_raw.items()}
     season = float(np.max(day)) if season is None else float(season)
     t = np.linspace(0.0, season, n_t)
-    M = biomass_matrix(t, day, organs_kg, root_shoot_ratio=root_shoot_ratio)
+    M = biomass_matrix(t, day, organs_kg, root_shoot_ratio=root_shoot_ratio, interp=interp)
+    leaf_loss = leaf_loss_rate(t, M[:, 2])            # dry leaf: the same relative rate fresh
     M = M * np.array([om.fresh_factor(o) for o in ORGANS])
     Cwo_arr = np.full_like(t, float(Cwo))
     if Qtp is None:
@@ -142,7 +172,7 @@ def biomass_drivers(path_or_table, units, *, season=None, n_t=241, Cwo=1.0,
         import model_api as api
         dvs = api.crop_on_grid(t, "generic", season=season)[3]
     return dict(t=t, Cwo=Cwo_arr, Qtp=Qtp, M=M, mass_basis=om.MASS_BASIS,
-                dvs=np.asarray(dvs, float))
+                dvs=np.asarray(dvs, float), leaf_loss=leaf_loss)
 
 
 if __name__ == "__main__":

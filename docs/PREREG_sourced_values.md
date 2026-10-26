@@ -595,3 +595,27 @@ KNHANES intake and body weight, the white/brown basis of the intake fraction); a
   grain_basis="brown"|"panicle", husk_phloem=False)`; defaults are the amendment (7.7); the
   amendment-1 forms stay runnable. The stage anchors' band ends pass as
   `scenario_kw={"theta_anchors": ...}`, the panicle's as `scenario_kw={"panicle_kw": {...}}`.
+
+### 7.12 Addendum (committed before any amendment-2a run; found while implementing 7.3-7.5)
+- **7.4, the density value: the generic crop run's own, not 18.5.** 7.4 put the one constant at the
+  sourced 18.5 hills/m2. But the generic scenario's density is not only a per-hill conversion: the
+  ORYZA2000 port runs the IR72DS92 experiment file verbatim, whose NH = 25 hills/m2 is a crop input
+  (establishment density), and a per-hill conversion at another density than the run's would be
+  inconsistent. So the one definition is `oryza2000.GENERIC_HILLS_PER_M2 = Management().nh`
+  (inherited with the crop file), from which `AREA_PER_HILL_M2` / `HA_PER_HILL` derive and which
+  `forcing_rice`, `growth_rice` and `oryza_growth` import; the site-year keeps its sourced 18.5
+  (`site_scenario.NH`). What 7.4 asked for holds: one definition, no second copy (a test greps for
+  one), and the generic BAFs are invariant to the value (a test moves it to 1/18.5; relative change
+  < 1e-6, the remainder being the fixed 1e-9 kg organ-mass floor).
+- **7.5, which Wu sets**: Huanren, Donggang, Liaozhong and Dawa (Kaiyuan excluded, as registered).
+  With Gao 2021 that is five band "ends"; the band takes the most negative and the most positive
+  deviation from the IR72 run over them (`crop_sets.BAND_SETS`).
+- **7.3, the measured-table grain**: a growth table gives no husk mass, so its grain column is taken
+  as given and receives the panicle's transpiration deposit (the amendment-1 grain); stated in
+  `drivers_from_tables`. Its interpolation form: `interp="linear"` (shown) and `"pchip"`; the
+  Expert view prints the monotone-cubic run's deviation.
+- **The app's driver cache** now carries `theta` and `husk` (`ui/common._drivers_tuple`): without
+  them a staged fresh mass ran with constant binding and the panicle deposit went back to brown rice.
+- Before the re-fit, the tests that compare a fitted score against its record
+  (`test_kim2019_censored`, `test_plots::test_fig_congener_compare_builds`) fail: with the deposit in
+  the husk, the congeners amendment 1 left at L_Ph = 0 have no grain at all until re-fitted (E20).

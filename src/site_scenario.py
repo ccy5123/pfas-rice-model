@@ -114,8 +114,10 @@ def _mgmt(sbdur, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=CO2_2020):
                           tmpsb=tmpsb)
 
 
-def _run(w, rates, mgmt):
+def _run(w, rates, mgmt, crop_set="IR72"):
+    import crop_sets as CS
     crop = O2K.load_crop()
+    crop.update(CS.overrides(crop_set))      # a published japonica set (src/crop_sets.py)
     crop.update(rates)
     return O2K.simulate(w, crop, mgmt, max_days=len(w["rad_mj"]) - (mgmt.emd - w["doy0"]))
 
@@ -132,9 +134,12 @@ def _crossing(r, lim):
     return float(t[i - 1] + (lim - d[i - 1]) / (d[i] - d[i - 1]) * (t[i] - t[i - 1]))
 
 
-def calibrate_rates(w, heading_doy, harvest_doy, mgmt):
-    """Common factor on DVRJ/DVRI/DVRP -> DVS 1 on heading_doy; DVRR -> DVS 2 on harvest_doy."""
+def calibrate_rates(w, heading_doy, harvest_doy, mgmt, crop_set="IR72"):
+    """Common factor on DVRJ/DVRI/DVRP -> DVS 1 on heading_doy; DVRR -> DVS 2 on harvest_doy
+    (starting from the crop set's own rates)."""
+    import crop_sets as CS
     base = {k: float(O2K.load_crop()[k]) for k in RATE_KEYS}
+    base.update({k: v for k, v in CS.overrides(crop_set).items() if k in RATE_KEYS})
 
     def solve(fun, lo, hi):
         for _ in range(6):
@@ -144,7 +149,7 @@ def calibrate_rates(w, heading_doy, harvest_doy, mgmt):
         raise RuntimeError("no bracket")
 
     def miss(rates, lim, day):
-        x = _crossing(_run(w, rates, mgmt), lim)
+        x = _crossing(_run(w, rates, mgmt, crop_set), lim)
         return (x if x is not None else 1.0e4) - day
 
     f = solve(lambda x: miss({**base, **{k: base[k] * x for k in ("DVRJ", "DVRI", "DVRP")}}, 1.0,
@@ -168,7 +173,7 @@ def heading_for(harvest):
 
 
 def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=CO2_2020,
-              heading_doy=None, harvest_is_maturity=True):
+              heading_doy=None, harvest_is_maturity=True, crop_set="IR72"):
     """One cultivar's season: daily main-field states from transplanting to harvest.
 
     Returns t (days after transplanting), dry organ mass [kg/hill], LAI, leaf death rate, and the
@@ -182,7 +187,7 @@ def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=C
     if abs(sbdur - lo) > 1e-12:
         frac = float(sbdur - lo)
         kw = dict(w=w, tmpsb=tmpsb, nh=nh, nplh=nplh, co2=co2, heading_doy=heading_doy,
-                  harvest_is_maturity=harvest_is_maturity)
+                  harvest_is_maturity=harvest_is_maturity, crop_set=crop_set)
         a, b = plant_run(harvest, sbdur=lo, **kw), plant_run(harvest, sbdur=lo + 1, **kw)
         out = {k: ((1.0 - frac) * a[k] + frac * b[k]
                    if isinstance(a[k], np.ndarray) and k != "t" else a[k]) for k in a}
@@ -194,12 +199,12 @@ def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=C
     tp, hv = _doy(YAMAZAKI_TRANSPLANT), _doy(harvest)
     heading = heading_for(harvest) if heading_doy is None else float(heading_doy)
     if harvest_is_maturity:
-        rates, f = calibrate_rates(w, heading, hv, mgmt)
+        rates, f = calibrate_rates(w, heading, hv, mgmt, crop_set)
     else:                                   # sensitivity: IR72 grain-filling rate kept
         base = {k: float(O2K.load_crop()[k]) for k in RATE_KEYS}
-        rates, f = calibrate_rates(w, heading, hv, mgmt)
+        rates, f = calibrate_rates(w, heading, hv, mgmt, crop_set)
         rates["DVRR"] = base["DVRR"]
-    r = _run(w, rates, mgmt)
+    r = _run(w, rates, mgmt, crop_set)
     sta = r["cropsta"]
     i3 = int(np.where(sta == 3)[0][0])
     main = np.where(sta >= 4)[0]
@@ -209,7 +214,7 @@ def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=C
     if t[-1] < hv - tp - 1e-9:                         # fractional harvest day: end exactly there
         t = np.append(t, hv - tp)
     ha_per_hill = 1.0 / (nh * 1.0e4)
-    out = dict(t=t, rates=rates, factor=f, heading_doy=heading, harvest_doy=hv)
+    out = dict(t=t, rates=rates, factor=f, heading_doy=heading, harvest_doy=hv, crop_set=crop_set)
     for name, key in (("root", "wrt"), ("stem", "wst"), ("leaf", "wlvg"), ("grain", "wso")):
         v = np.concatenate([[r[key][i3] * pltr], r[key][main]])
         out[name] = np.interp(t, td, v * ha_per_hill)     # crop model's own value; held after maturity

@@ -140,3 +140,52 @@ def test_amendment_one_forms_stay_runnable():
     assert "husk" not in a["conc_dw"] and a["params"]["grain_basis"] == "panicle"
     with pytest.raises(ValueError):
         api.simulate("PFOA", organ_water="wet")
+
+
+def test_planting_density_is_defined_once_and_bafs_do_not_depend_on_it(monkeypatch):
+    """PREREG 7.4: one density constant for the generic drivers, read by every driver, and the
+    generic BAFs are invariant to it (Q_TP and M per hill scale together)."""
+    import os
+    import re
+    import forcing_rice as fr
+    import growth_rice as gr
+    import oryza_growth as og
+    import oryza2000 as o2
+    root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
+    for f in os.listdir(root):
+        if f.endswith(".py"):
+            src = open(os.path.join(root, f)).read()
+            assert not re.search(r"AREA_PER_HILL_M2\s*=\s*0\.04", src), f
+            assert not re.search(r"HA_PER_HILL\s*=\s*0\.04", src), f
+    assert fr.AREA_PER_HILL_M2 is gr.AREA_PER_HILL_M2 is og.AREA_PER_HILL_M2 is o2.AREA_PER_HILL_M2
+    assert o2.GENERIC_HILLS_PER_M2 == o2.Management().nh
+    base = api.simulate("PFOA", scenario="generic", season=120)["baf_final_dw"]
+    a = 1.0 / 18.5
+    monkeypatch.setattr(o2, "HA_PER_HILL", a / 1.0e4)
+    monkeypatch.setattr(fr.Q_TP, "__defaults__",
+                        tuple(a if d == o2.AREA_PER_HILL_M2 else d for d in fr.Q_TP.__defaults__))
+    alt = api.simulate("PFOA", scenario="generic", season=120)["baf_final_dw"]
+    for k, v in base.items():
+        assert alt[k] == pytest.approx(v, rel=1e-6), k      # 1e-9: the fixed organ-mass floor
+
+
+def test_measured_table_leaf_loss_and_interpolation_forms():
+    """PREREG 7.3 (review P4, P5): a falling green-leaf mass is read as death, and the table path
+    runs both interpolation forms; the monotone cubic gives a continuous growth-dilution rate."""
+    import measured_biomass as mb
+    g = {"day": [0, 30, 60, 90, 120], "root": [1, 5, 10, 11, 10], "stem": [1, 10, 30, 35, 30],
+         "leaf": [1, 8, 20, 15, 8], "grain": [0, 0, 0, 20, 40]}
+    lin = api.drivers_from_tables(g, None, growth_units="g/hill", interp="linear")
+    pch = api.drivers_from_tables(g, None, growth_units="g/hill", interp="pchip")
+    t = lin["t"]
+    assert np.all(lin["leaf_loss"][t < 60] == 0.0) and lin["leaf_loss"][t > 70].min() > 0.0
+    mu = lambda d: np.gradient(d["M"][:, 2], t) / d["M"][:, 2]
+    jump = lambda m: np.abs(np.diff(m))[(t[1:] > 58) & (t[1:] < 62)].max()
+    assert jump(mu(pch)) < 0.25 * jump(mu(lin))                  # no step at a sampling date
+    with pytest.raises(ValueError):
+        mb.interpolate(t, g["day"], g["leaf"], "spline")
+    # a dead-leaf column is used when given
+    dead = api.drivers_from_tables(dict(g, dead_leaf=[0, 0, 0, 6, 14]), None, growth_units="g/hill")
+    assert not np.allclose(dead["leaf_loss"], lin["leaf_loss"])
+    r = api.simulate("PFOA", drivers=lin)
+    assert r["success"] and "husk" not in r["conc_dw"]           # the table's grain as given

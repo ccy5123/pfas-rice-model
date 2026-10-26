@@ -49,8 +49,8 @@ ET0_MEAN_MM_D = 3.39                    # Kumari 2022 lysimeter mean ET0-PM [mm/
 # Flooded-paddy open-water evaporation is large, so f_T must be anchored to this
 # MEASURED partition (the FAO-56 default Kcb over-states paddy transpiration ~1.5x).
 F_T_INI, F_T_FULL = 0.034, 0.567
-# planting density: ~25 hills/m^2 (transplanted paddy) -> 0.04 m^2 per hill
-AREA_PER_HILL_M2 = 0.04
+# planting density: the generic crop run's own (oryza2000.GENERIC_HILLS_PER_M2; one definition)
+from oryza2000 import AREA_PER_HILL_M2  # noqa: E402
 
 
 def kc_curve(t: np.ndarray, season: float) -> np.ndarray:

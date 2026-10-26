@@ -1,0 +1,13 @@
+# Wu et al. 2022, "Evaluation and application of the ORYZA (v3) rice model under different nitrogen levels in Liaoning
+# Province, China", Appl. Ecol. Environ. Res. 20(1):633-651, doi:10.15666/aeer/2001_633651 (open access; PDF read in
+# full by the main session, NOT committed). Table 3 (development rates) and Table 4 (partitioning to stem/leaf/panicle
+# vs DVS; specific leaf area vs DVS), as printed. Five sites, one japonica cultivar each. "The bulk of our model
+# parameters were taken from IR72" (p.639): every parameter not listed here is IR72's. Table 3 heads the Liaozhong
+# column "Liaoning" (a typo; Table 4 says Liaozhong). Kaiyuan's partitioning equals Donggang's as printed. Units are
+# not printed (ORYZA convention: DVR per degree-day, SLA ha/kg). Tables as "DVS:value;...".
+site,cultivar,DVRJ,DVRI,DVRP,DVRR,FSTTB,FLVTB,FSOTB,SLATB
+Huanren,Shendao 529,0.0007932,0.0008976,0.0004741,0.0019309,0.00:0.60;0.50:0.60;0.75:0.85;1.00:0.11;1.20:0.00,0.00:0.40;0.50:0.40;0.75:0.05;1.00:0.00;1.20:0.00,0.00:0.00;0.50:0.00;0.75:0.10;1.00:0.89;1.20:1.00,0.16:0.0055;0.33:0.0040;0.65:0.0028;0.79:0.0025;2.10:0.0025
+Donggang,Shendao 505,0.0008890,0.0008076,0.0005630,0.0016590,0.00:0.31;0.50:0.33;0.75:0.55;1.00:0.02;1.20:0.00,0.00:0.69;0.50:0.67;0.75:0.15;1.00:0.00;1.20:0.00,0.00:0.00;0.50:0.00;0.75:0.30;1.00:0.98;1.20:1.00,0.16:0.0036;0.33:0.0035;0.65:0.0033;0.79:0.0032;2.10:0.0024
+Liaozhong,Beijing 1,0.0008969,0.0007696,0.0008544,0.0019500,0.00:0.42;0.50:0.43;0.75:0.65;1.00:0.085;1.20:0.00,0.00:0.58;0.50:0.57;0.75:0.25;1.00:0.00;1.20:0.00,0.00:0.00;0.50:0.00;0.75:0.10;1.00:0.915;1.20:1.00,0.16:0.0054;0.33:0.0047;0.65:0.0038;0.79:0.0038;2.10:0.0026
+Kaiyuan,Tiejing 7,0.0007960,0.0008976,0.0005990,0.0016710,0.00:0.31;0.50:0.33;0.75:0.55;1.00:0.02;1.20:0.00,0.00:0.69;0.50:0.67;0.75:0.15;1.00:0.00;1.20:0.00,0.00:0.00;0.50:0.00;0.75:0.30;1.00:0.98;1.20:1.00,0.16:0.0040;0.33:0.0035;0.65:0.0033;0.79:0.0032;2.10:0.0024
+Dawa,Yanfeng 47,0.0008860,0.0007576,0.0005420,0.0013030,0.00:0.62;0.50:0.62;0.75:0.85;1.00:0.11;1.20:0.00,0.00:0.38;0.50:0.38;0.75:0.05;1.00:0.00;1.20:0.00,0.00:0.00;0.50:0.00;0.75:0.10;1.00:0.89;1.20:1.00,0.16:0.0045;0.33:0.0030;0.65:0.0026;0.79:0.0026;2.10:0.0023

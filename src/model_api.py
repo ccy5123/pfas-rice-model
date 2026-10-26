@@ -1296,18 +1296,30 @@ def crop_on_grid(t, scenario=DEFAULT_SCENARIO, biomass="oryza2000", season=None)
     grid `t` [days after transplanting]. "yamazaki2020" interpolates the calibration
     site-year (held at its harvest values beyond its season); "generic" is forcing_rice +
     the `biomass` driver."""
+    d = _crop_grid(t, scenario, biomass, season)
+    return d["Qtp"], d["M"], d["leaf_loss"], d["dvs"]
+
+
+def _crop_grid(t, scenario=DEFAULT_SCENARIO, biomass="oryza2000", season=None):
+    """`crop_on_grid` as a dict, with the organ water theta(t) and the husk mass that the fresh
+    M was built with (PREREG 7.1/7.2), so a driver set built from it stays self-consistent."""
     t = np.asarray(t, float)
     if scenario == "yamazaki2020":
         d = scenario_drivers(scenario)
-        Qtp = np.interp(t, d["t"], d["Qtp"])
-        M = np.column_stack([np.interp(t, d["t"], d["M"][:, k]) for k in range(4)])
-        ll = np.interp(t, d["t"], d["leaf_loss"], right=0.0)
-        return Qtp, M, ll, np.interp(t, d["t"], d["dvs"])
+        lerp = lambda a: (np.column_stack([np.interp(t, d["t"], a[:, k]) for k in range(a.shape[1])])
+                          if np.ndim(a) == 2 else np.interp(t, d["t"], a))
+        out = dict(Qtp=lerp(d["Qtp"]), M=lerp(d["M"]),
+                   leaf_loss=np.interp(t, d["t"], d["leaf_loss"], right=0.0), dvs=lerp(d["dvs"]))
+        out.update({k: lerp(d[k]) for k in ("theta", "husk") if k in d})
+        return out
     if scenario != "generic":
         raise ValueError(f"scenario must be one of {SCENARIOS}, got {scenario!r}")
     season = float(t[-1]) if season is None else float(season)
     b = _biomass_fn(biomass)(t, season)
-    return fr.Q_TP(t, season), om.organ_matrix(b), b.get("leaf_death_rate"), b["dvs"]
+    M, extras = _crop_drivers(t, b, _crop_kw({}))
+    extras.pop("panicle", None)
+    return dict(Qtp=fr.Q_TP(t, season), M=M, leaf_loss=b.get("leaf_death_rate"),
+                dvs=b["dvs"], **extras)
 
 
 def measured_forcing(t, season=None, biomass="oryza2000", scenario=DEFAULT_SCENARIO):
@@ -1331,14 +1343,17 @@ def drivers_from_arrays(t, Cwo, Qtp=None, M=None, season=None, biomass="oryza200
     """
     t = np.asarray(t, float)
     Cwo = np.asarray(Cwo, float)
-    q, m, ll, dv = crop_on_grid(t, scenario, biomass, season)
+    crop = _crop_grid(t, scenario, biomass, season)
     leaf_loss = None
+    extras = {}
     if Qtp is None:
-        Qtp = q
-    if M is None:
-        M, leaf_loss = m, ll
+        Qtp = crop["Qtp"]
+    if M is None:            # the crop's own mass: with its water by stage and its husk pool
+        M, leaf_loss = crop["M"], crop["leaf_loss"]
+        extras = {k: crop[k] for k in ("theta", "husk") if k in crop}
     drv = dict(t=t, Cwo=Cwo, Qtp=np.asarray(Qtp, float), M=np.asarray(M, float),
-               mass_basis=MASS_BASIS, dvs=np.asarray(dv if dvs is None else dvs, float))
+               mass_basis=MASS_BASIS, dvs=np.asarray(crop["dvs"] if dvs is None else dvs, float),
+               **extras)
     if leaf_loss is not None:
         drv["leaf_loss"] = np.asarray(leaf_loss, float)
     return drv
@@ -1353,7 +1368,8 @@ DEFAULT_TISSUE_DENSITY = {"root": 1.0, "stem": 0.30, "leaf": 0.30, "grain": 1.20
 
 def drivers_from_tables(growth=None, cwo=None, *, growth_units="g/hill", Cwo_const=1.0,
                         n_t=241, season=None, Qtp=None, biomass="oryza2000",
-                        plants_per_hill=None, hills_per_m2=None, scenario=DEFAULT_SCENARIO):
+                        plants_per_hill=None, hills_per_m2=None, scenario=DEFAULT_SCENARIO,
+                        interp="linear"):
     """Build a `simulate(drivers=...)` dict from user-entered TABLES.
 
     growth : dict with 'day' + any of root/stem/leaf/grain -- organ **fresh-weight**
@@ -1363,7 +1379,12 @@ def drivers_from_tables(growth=None, cwo=None, *, growth_units="g/hill", Cwo_con
     cwo : dict with 'day' + 'Cwo' -- the **absolute** pore-water concentration [µg/L].
         None/empty -> a flat `Cwo_const` series.
 
-    Rows are sorted by day and interpolated onto the model grid. Returns the same dict
+    Rows are sorted by day and interpolated onto the model grid (`interp`: "linear" or
+    "pchip"; the form between samples is not measured, so both are worth running, PREREG 7.3).
+    A falling leaf mass is read as leaf death (`measured_biomass.leaf_loss_rate`; a
+    `dead_leaf` column, same units, is used when given), so the green leaf is not concentrated
+    by its own senescence. The table's grain column is taken as given and receives the panicle's
+    transpiration deposit (no husk column: the amendment-1 grain). Returns the same dict
     shape as `drivers_from_arrays` (t, Cwo, Qtp, M[, leaf_loss]). The per-compartment
     DENSITY is a display/consistency property handled by the caller (the transport ODE
     is fresh-mass based, so it is not needed to integrate).
@@ -1392,15 +1413,24 @@ def drivers_from_tables(growth=None, cwo=None, *, growth_units="g/hill", Cwo_con
     t = np.linspace(0.0, season, int(n_t))
 
     M = None
+    leaf_loss = None
     if g_cols:
-        organs_kg = {o: (mb.to_kg_per_hill(g_cols[o], growth_units, plants_per_hill=plants_per_hill,
-                                           hills_per_m2=hills_per_m2) if o in g_cols else None)
-                     for o in mb.ORGANS}
-        M = mb.biomass_matrix(t, g_day, organs_kg)
+        kg = lambda v: mb.to_kg_per_hill(v, growth_units, plants_per_hill=plants_per_hill,
+                                         hills_per_m2=hills_per_m2)
+        organs_kg = {o: (kg(g_cols[o]) if o in g_cols else None) for o in mb.ORGANS}
+        M = mb.biomass_matrix(t, g_day, organs_kg, interp=interp)
+        if "leaf" in g_cols:
+            dead = growth.get("dead_leaf")
+            dead = (mb.interpolate(t, g_day, kg(np.asarray(dead, float)[np.argsort(
+                np.asarray(growth["day"], float))]), interp) if dead is not None else None)
+            leaf_loss = mb.leaf_loss_rate(t, M[:, 2], dead)
     Cwo_arr = (np.interp(t, c_day, c_vals) if c_day is not None
                else np.full_like(t, float(Cwo_const)))
-    return drivers_from_arrays(t, Cwo_arr, Qtp=Qtp, M=M, season=season, biomass=biomass,
-                               scenario=scenario)
+    drv = drivers_from_arrays(t, Cwo_arr, Qtp=Qtp, M=M, season=season, biomass=biomass,
+                              scenario=scenario)
+    if leaf_loss is not None:
+        drv["leaf_loss"] = leaf_loss
+    return drv
 
 
 _DRIVER_COLS = ("t", "Cwo", "Qtp", "M_root", "M_stem", "M_leaf", "M_grain")
