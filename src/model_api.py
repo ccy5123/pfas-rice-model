@@ -1375,7 +1375,7 @@ def drivers_from_arrays(t, Cwo, Qtp=None, M=None, season=None, biomass="oryza200
         Qtp = crop["Qtp"]
     if M is None:            # the crop's own mass: with its water by stage and its husk pool
         M, leaf_loss = crop["M"], crop["leaf_loss"]
-        extras = {k: crop[k] for k in ("theta", "husk", "panicle") if k in crop}
+        extras = {k: crop[k] for k in ("theta", "husk") if k in crop}   # what the model reads
     drv = dict(t=t, Cwo=Cwo, Qtp=np.asarray(Qtp, float), M=np.asarray(M, float),
                mass_basis=MASS_BASIS, dvs=np.asarray(crop["dvs"] if dvs is None else dvs, float),
                **extras)
