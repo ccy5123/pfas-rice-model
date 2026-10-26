@@ -559,3 +559,19 @@ lipid; `neu_lipid_a` 1.22, `neu_leafexp` 0.95, `neu_surface` 20/2, `neu_kaw_cut`
 irrigation-source scenario (`soil_*` rows, `obs_exposure_time`); app (`app_density`, `smiles_kcw`,
 KNHANES intake and body weight, the white/brown basis of the intake fraction); analysis rows
 (`tr_drivers`, `tr_li_grain_from`, `calib_sigma`; `fxy_recommended`).
+
+### 7.10 Addendum (committed before any amendment-2a run; found while digitising Ansari Fig. 1)
+- `raw_si/ansari2017_fig1_digitised.csv`, checked by `docs/literature_db/tools/ansari2017_fig1_check.py`
+  (axis ticks re-fitted; every marker standing alone re-detected; merged markers checked on the overlay).
+  Nipponbare hull / brown rice per grain [mg]: heading 3.02 / -; 10 DAH 3.80 / 7.5 (merged, 7.0-8.0);
+  20 DAH 3.84 / 16.67; 30 DAH 4.05 / 20.50; maturity 3.80 / 19.8. Husk share of rough grain h:
+  10 DAH 0.336, 20 DAH 0.187, 30 DAH 0.165, maturity 0.161. Panel B's y label is misprinted ("A hull
+  weight"); the caption (brown rice) is followed.
+- **The form of h(t), made explicit.** 7.2 put the maturity anchor at the midpoint of a range that also
+  contains indica values (0.161-0.254, midpoint 0.2075), above Nipponbare's own 30-DAH value (0.165): read
+  literally, h would rise again at the end of filling, which no series shows. Instead the Nipponbare course
+  is scaled so that its maturity value equals the maturity anchor, h(t) = h_N(t) * h_mat / h_N(maturity),
+  for t >= 10 DAH; h = 1 at DVS 1, linear in DVS to the 10-DAH value. h_mat keeps the range of 7.2
+  (midpoint 0.2075; ends 0.161 and 0.254 in the band).
+- DAH -> DVS: on each cultivar's own run, the DVS reached the given number of days after its measured
+  heading date; maturity = DVS 2.
