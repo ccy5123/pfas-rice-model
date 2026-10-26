@@ -728,4 +728,7 @@ its limit is fixed in the model):
   At the fitted values the Yamazaki observable moved 0.1160 -> 0.1158 (redistributed_fit); the re-fit,
   the transfer runs, both bands and the brief were repeated on the corrected numerics, and the numbers
   in this section are those of the repeat (the first run's are in git history).
+- `numerics_convergence.py` on the final state: the floor (1e-8 to 1e-12), the substeps (32, 64), the
+  step grading (0.05), BDF at rtol 1e-8, the harvest grid (96/day), N (8, 16) and lam_eq (1e5, 1e7) move
+  every reported number by < 0.0005 (largest 0.0002, BDF).
 - The husk + rachis mass dips by up to ~5 % between Ansari anchors (7.11); kept.
