@@ -67,15 +67,15 @@ api.simulate_neutral(2.45, name="carbamazepine")      # a neutral organic by log
 
 - **On Yamazaki** (the calibration data; `r_eq`, `f_xy` and `L_Ph` fitted per congener) the default
   scores log10 0.116 — a reproduction; only PFDoDA is out of reach. The lipid loading (two shared
-  constants, the straw predicted) scores 0.156; the free anion with the a-priori `f_xy` 1.26.
+  constants, the straw predicted) scores 0.154; the free anion with the a-priori `f_xy` 1.26.
 - **Transfer to independent data** (no parameter fitted to them): the default is off by log10 0.69
   on Tang 2026 per-organ TF, 0.56 on Kim 2019 grain (0.44 on the non-detect interval), and 0.47 /
-  1.33 on Li 2025 shoot / grain TF by stage (brown rice, phloem-fed only, is under-predicted). It
+  1.34 on Li 2025 shoot / grain TF by stage (brown rice, phloem-fed only, is under-predicted). It
   replaced the lipid loading by the pre-registered rule (better on the Li grain, tied elsewhere; a
-  small margin). The 4-pool free anion: 1.87, 2.04, 1.49 / 1.82.
+  small margin). The 4-pool free anion: 1.88, 2.04, 1.49 / 1.82.
 - These datasets were not fitted, but they chose the default, so its scores on them — and the ×3.65
   band — may be optimistic.
-- **Sourced input ranges** move the default's harvest BAF by grain ÷3.0 / ×3.6, straw ÷1.40 / ×1.90,
+- **Sourced input ranges** move the default's harvest BAF by grain ÷3.0 / ×3.6, straw ÷1.40 / ×1.89,
   root ÷1.29 / ×1.29 (median of 11 congeners); the japonica crop parameter sets lead the straw and grain
   band (`params/input_range_band.json`).
 - **Neutral organics** (nothing fitted; each table on its own plant's sourced composition): rice

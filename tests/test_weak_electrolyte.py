@@ -82,13 +82,13 @@ from model_api import PHI, T_C_PH   # the sourced phloem constants  # noqa: E402
 GOLDEN_REL = 1e-3
 
 # Goldens on two fitted variants (calibration site-year, fresh organ mass, harvest at the mean
-# date) and on the DEFAULT configuration (redistributed shoot + lipid loading), regenerated for
-# amendment 2a (docs/PREREG_sourced_values.md section 7: staged organ water, brown-rice grain,
-# re-fit). Regenerate them only when the model itself is deliberately changed.
+# date) and on the DEFAULT configuration (redistributed_fit), regenerated for amendment 2a
+# (docs/PREREG_sourced_values.md sections 7-8: staged organ water, brown-rice grain, the
+# terminal pools as burden, re-fit). Regenerate them only when the model itself is deliberately changed.
 PFAS_GOLDEN = {
-    ("PFOA", "4pool_free"): {"root": 1.7687909048265118, "grain": 0.19963128941571007},
-    ("PFOS", "redistributed_fit"): {"root": 21.569014730269302, "grain": 1.811277985219705},
-    ("PFBA", "4pool_free"): {"root": 2.4728430009933478, "grain": 0.9654560104245904},
+    ("PFOA", "4pool_free"): {"root": 1.7687909049187536, "grain": 0.20021364082263676},
+    ("PFOS", "redistributed_fit"): {"root": 21.569014721901613, "grain": 1.8083563015803177},
+    ("PFBA", "4pool_free"): {"root": 2.4728430001475936, "grain": 0.9640453467296496},
 }
 _VARIANT_KW = {"4pool_free": dict(api.FOUR_POOL_FREE),
                "redistributed_fit": dict(f_xy_source="fit", lipid_loading=False)}
@@ -104,8 +104,8 @@ def test_pfas_path_is_unmoved(key, expected):
 
 
 PFAS_GOLDEN_DEFAULT = {
-    "PFOA": {"root": 1.7689644922415433, "grain": 0.4256529492927554},
-    "PFBA": {"root": 2.473042900671329, "grain": 0.9668122132998346},
+    "PFOA": {"root": 1.7689644924094703, "grain": 0.424960408461994},
+    "PFBA": {"root": 2.4730429003189482, "grain": 0.9653576963292074},
 }
 
 

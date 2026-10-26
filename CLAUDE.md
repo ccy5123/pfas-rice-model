@@ -185,17 +185,17 @@ with its source or its sensitivity range, is in **`docs/ASSUMPTIONS.md`**.
 ### 6.2 Calibration on the site-year — `validation/refit_sourced.py` (pre-registered; amendment 2a)
 Every variant fits `r_eq` (root, closed form) and `L_Ph` (grain) per congener; `*_fit` adds `f_xy` per
 congener (straw); the lipid variants add two constants shared by all chains (backward elimination left
-`f_xy = a` 0.0672 and `g_xy` 0.00786 on `redistributed_lipid`). Yamazaki two-harvest observable, log10 RMSE
+`f_xy = a` 0.0659 and `g_xy` 0.00712 on `redistributed_lipid`). Yamazaki two-harvest observable, log10 RMSE
 over 32 cells (records: `validation/refit_sourced.json`; amendment 1's in `validation/archive/amendment1/`;
 outcome: `docs/PREREG_sourced_values.md` §8):
 
 | variant | all | root | straw | grain |
 |---|---|---|---|---|
-| **redistributed_fit** (default; a reproduction) | **0.116** | 0.000 | 0.156 | 0.128 |
-| redistributed_lipid | 0.156 | 0.000 | 0.266 | 0.000 |
-| 4pool_lipid | 0.152 | 0.000 | 0.259 | 0.000 |
-| redistributed_free | 1.261 | 0.000 | 1.638 | 1.463 |
-| 4pool_free | 1.308 | 0.000 | 1.791 | 1.396 |
+| **redistributed_fit** (default; a reproduction) | **0.116** | 0.000 | 0.156 | 0.127 |
+| redistributed_lipid | 0.154 | 0.000 | 0.262 | 0.011 |
+| 4pool_lipid | 0.151 | 0.000 | 0.258 | 0.000 |
+| redistributed_free | 1.261 | 0.000 | 1.639 | 1.461 |
+| 4pool_free | 1.309 | 0.000 | 1.794 | 1.394 |
 
 - **Default**: every cell is reproduced except PFDoDA (f_xy at 1; straw −0.52, grain −0.40 log). Every
   congener with a grain cell fits `L_Ph` > 0 in every variant (the panicle deposit now goes to the husk).
@@ -203,16 +203,18 @@ outcome: `docs/PREREG_sourced_values.md` §8):
   by 0.8–3.1 log; the stored `L_Ph` of an unreachable chain is merely large.
 - **Input-range band** (`validation/input_range_band.py` → `params/input_range_band.json`; PREREG 5.4, 7):
   every sourced range moved to its ends with the fits held, now with the stage-water anchors, the husk
-  share, the rachis, the husk phloem draw and the crop sets; median over 11 congeners grain ÷2.98 / ×3.63,
-  straw ÷1.40 / ×1.90, root ÷1.29 / ×1.29. The crop sets lead the straw band (11/11) and the grain band
+  share, the rachis, the husk phloem draw and the crop sets; median over 11 congeners grain ÷2.97 / ×3.65,
+  straw ÷1.40 / ×1.89, root ÷1.29 / ×1.29. The crop sets lead the straw band (11/11) and the grain band
   (7/11; φ 3/11), root composition the root band. The one-at-a-time envelope covers the all-corner run in
   38/66 cases only (inputs interact). The incumbent's band (E19/E23 record):
   `validation/input_range_band__redistributed_lipid.json`.
 - **Numerics** (`validation/numerics_convergence.py`): exponential integrator (`src/linear_expm.py`),
-  `λ_eq` 1e6, the grain gate step at the floor. The brown rice's pre-harvest water moves its dry value by
-  ≤ 0.0012 log10 on the daily driver grid (analytically 0).
+  `λ_eq` 1e6; the terminal pools (grain, husk) are integrated as burden y = M·C (their dilution cancels
+  exactly), and brown rice's phloem is not gated by the mass floor (the gate stays on the panicle basis).
+  This fixed a grain not converged in the floor (PREREG §8; the re-fit was repeated on it).
+  The brown rice's pre-harvest water moves no dry-basis number.
 - Pre-registered expectations (amendment 2a): E17–E19, E21 (direction; Choi's husk/brown ratio is not
-  reached: PFOA −0.16, PFOS −0.85 log on the incumbent), E22, E24 held; E20 (the straw moved 0.108 with the
+  reached: PFOA −0.19, PFOS −0.89 log on the incumbent), E22, E24 held; E20 (the straw moved 0.086 with the
   shared lipid constants) and E23 (the crop sets, not the panicle share, lead the grain band) wrong.
 - `python reproduce_demo.py` prints the default (`--lipid`, `--free`: the other redistributed variants).
 
@@ -222,25 +224,25 @@ rice (the decision basis, PREREG 7.13); the rough-grain value in brackets.
 
 | dataset | 4pool_free | redistributed_free | 4pool_lipid | redistributed_lipid | **default (redistributed_fit)** |
 |---|---|---|---|---|---|
-| Tang 2026 per-organ TF, 0.1 µg/g | 1.872 | 1.737 | 0.916 | 0.676 | **0.686** |
-| Kim 2019 grain BAF excl PFOA, point / [0, MDL] interval | 2.038 / 1.778 | 2.119 / 1.867 | 0.559 / 0.445 | 0.559 / 0.444 | **0.562 / 0.443** |
-| Li 2025 TF by stage, shoot / grain [rough] | 1.490 / 1.817 | 1.278 / 1.864 | 0.937 / 1.375 | 0.376 / 1.363 [0.850] | **0.467 / 1.334 [1.044]** |
+| Tang 2026 per-organ TF, 0.1 µg/g | 1.876 | 1.738 | 0.916 | 0.687 | **0.686** |
+| Kim 2019 grain BAF excl PFOA, point / [0, MDL] interval | 2.037 / 1.777 | 2.118 / 1.866 | 0.560 / 0.445 | 0.554 / 0.444 | **0.562 / 0.443** |
+| Li 2025 TF by stage, shoot / grain [rough] | 1.494 / 1.818 | 1.279 / 1.866 | 0.937 / 1.377 | 0.364 / 1.364 [0.865] | **0.467 / 1.337 [1.043]** |
 
 - **Decision (PREREG 5.3, §8; applied by the user)**: `redistributed_fit` is better than the incumbent
-  (`redistributed_lipid`) on the Li grain (−0.029, 95 % [−0.046, −0.006]) and ties on every other endpoint
-  (Li shoot point 0.376 → 0.467, inside the tie). The margin is small and the chosen variant reproduces
+  (`redistributed_lipid`) on the Li grain (−0.027, 95 % [−0.045, −0.003]) and ties on every other endpoint
+  (Li shoot point 0.364 → 0.467, inside the tie). The margin is small and the chosen variant reproduces
   Yamazaki's straw.
 - **Grain against amendment 1** (0.489 Kim, 1.019 Li): worse, since brown rice takes no xylem; Li's grain
-  is under-predicted; on the rough basis Li grain is 0.850 (incumbent).
+  is under-predicted; on the rough basis Li grain is 0.865 (incumbent).
 - **Selection caveat**: Tang, Kim and Li chose the default, so its scores on them — and the band built
   from them — may be optimistic.
 - **Honesty band**: `model_api.APRIORI_OOS_SCORES` (read from `params/transfer_scores.json`; no number
   typed in code); their median 0.562 log10 (**×3.65**) is the band the Simple view shows. Yamazaki is not
   in the list (in-sample).
 - **Kim PFOA per site** (`kim2019_pfoa_anchor.py`): censored per-site geomean 9.94 L/kg [4.57, 20.16];
-  the default's 0.539 L/kg is below the interval (−1.27 log).
+  the default's 0.538 L/kg is below the interval (−1.27 log).
 - **Inverse** (`estimate_exposure_bayesian`, Kim PFOA brown rice 0.349 µg/kg dw, void water
-  0.0787 µg/L): the default estimates 0.648 µg/L (8.2× over; 95 % 0.051–8.18, which contains the
+  0.0787 µg/L): the default estimates 0.649 µg/L (8.2× over; 95 % 0.051–8.20, which contains the
   measured value) (`validation/policy_brief_runs.py`).
 - Earlier decisions (the amendment-1 records, the pre-amendment default switch, the panicle-size share, the
   gate numerics) are in `validation/archive/` and git history; their numbers do not describe the current model.
@@ -380,7 +382,7 @@ is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested agains
    site's paddy soil.
 2. **Transfer datasets on their own drivers**: Tang (site, dates), Kim (field calendars), Li (stage
    dates) — each currently runs on the Yamazaki site-year.
-3. **Grain**: brown rice is phloem-fed only, and the default under-predicts Li's grain by stage (1.334;
+3. **Grain**: brown rice is phloem-fed only, and the default under-predicts Li's grain by stage (1.337;
    rough basis better) and Kim's PFOA; the husk/brown ratio is below Choi 2018's (PFOS by ~1 log). The
    timing and route of grain loading are open; harvest-only data cannot decide them.
 4. **Amendment 2b** (registered in PREREG 7.9; draft, prototypes and a Korean handoff in

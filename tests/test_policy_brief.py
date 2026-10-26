@@ -78,7 +78,7 @@ def test_worked_example_matches_the_document(brief, results):
     assert v(results, "2_pfoa", "conc.grain") == pytest.approx(0.0288, abs=5e-5)
     for s in ("**0.383**", "**0.323**", "**0.0288**"):
         assert s in brief
-    assert v(results, "2_pfoa", "efsa_twi_percent") == pytest.approx(8.10, abs=0.01)
+    assert v(results, "2_pfoa", "efsa_twi_percent") == pytest.approx(8.08, abs=0.01)
     assert "**8 %**" in brief
     assert v(results, "2_pfoa", "grain.band_factor") == pytest.approx(3.65, abs=0.01)
     assert "×/÷3.6" in brief
@@ -97,7 +97,7 @@ def test_worked_example_matches_the_document(brief, results):
     assert v(results, "2_pfoa_50ngL", "efsa_twi_percent") == pytest.approx(5.14, abs=0.01)
     assert "EFSA 대비 5 %" in brief
     # Kim's PFOA brown rice against the model's, both dry
-    assert 0.349 / v(results, "2_pfoa", "conc.grain_dw") == pytest.approx(8.23, abs=0.01)
+    assert 0.349 / v(results, "2_pfoa", "conc.grain_dw") == pytest.approx(8.24, abs=0.01)
     assert "**약 8배 낮게**" in brief
 
 
@@ -116,10 +116,10 @@ def test_the_field_grain_table_matches(brief, results):
     assert "표본 내 비교" in brief
     prev_miss = v(results, "1_congeners", "PFDoDA.obs_grain") / \
         v(results, "1_congeners", "PFDoDA.yz_grain_prev")
-    assert 800 < prev_miss < 825 and "약 813배" in brief
+    assert 800 < prev_miss < 825 and "약 809배" in brief
     assert v(results, "1_congeners", "mean_grain_shortchain_C4_C6_base") == pytest.approx(0.90, abs=0.005)
-    assert v(results, "1_congeners", "mean_grain_longchain_C9_C12_base") == pytest.approx(7.22, abs=0.005)
-    assert "단쇄(C4–C6) 0.90, 장쇄(C9–C12) 7.22 L/kg" in brief
+    assert v(results, "1_congeners", "mean_grain_longchain_C9_C12_base") == pytest.approx(7.24, abs=0.005)
+    assert "단쇄(C4–C6) 0.90, 장쇄(C9–C12) 7.24 L/kg" in brief
 
 
 def test_kim2019_scores_are_the_documented_result(brief, results):
@@ -157,11 +157,11 @@ def test_inverse_recovers_a_known_truth_but_misses_the_field(brief, results):
         v(results, "4_inverse", "synthetic.ci95_hi")
     assert "계산 절차의 점검일 뿐 정확도의 증거가 아닙니다" in brief
     f = v(results, "4_inverse", "field.overestimate_factor")
-    assert f == pytest.approx(8.23, abs=0.01)
+    assert f == pytest.approx(8.24, abs=0.01)
     assert v(results, "4_inverse", "field.ci95_lo") < truth < v(results, "4_inverse", "field.ci95_hi")
     assert "약 8배 과대추정" in brief and "실측을 겨우 포함함" in brief
     assert v(results, "4_inverse", "field.overestimate_factor_prev") == pytest.approx(17.5, abs=0.05)
-    assert "약 18배" in brief
+    assert "약 17.5배" in brief
 
 
 def test_structure_input_flags_the_unknown_ones(results):
