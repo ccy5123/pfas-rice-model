@@ -3,7 +3,7 @@
 # validation/prereg_a2_outcome.py
 # -----------------------------------------------------------------------------
 # Checks the expectations E17-E24 of docs/PREREG_sourced_values.md section 7 (amendment 2a)
-# against the run records -- refit_sourced.json, transfer_sourced.json, params/input_range_band.json
+# against the run records -- refit_sourced.json, transfer_sourced.json, input_range_band__redistributed_lipid.json
 # and the amendment-1 records kept in validation/archive/amendment1/ -- so the outcome is read off
 # the records, not written from memory.
 #
@@ -49,7 +49,9 @@ def e17_factor(c):
 def main():
     rf, rf1 = _load(os.path.join(HERE, "refit_sourced.json")), _load(os.path.join(A1, "refit_sourced.json"))
     tr = _load(os.path.join(HERE, "transfer_sourced.json"))
-    bd = _load(os.path.join(ROOT, "params", "input_range_band.json"))
+    # E19/E23 were registered on the band of the incumbent default (redistributed_lipid); the
+    # band of the default the decision chose is params/input_range_band.json
+    bd = _load(os.path.join(HERE, "input_range_band__redistributed_lipid.json"))
     new, old = rf["variants"][DEF], rf1["variants"][DEF]
     out = {}
 
@@ -90,7 +92,9 @@ def main():
 
     # E21
     import choi2018_husk_check as CH
-    res = CH.main()
+    res = CH.main(shoot="redistributed", lipid_loading=True)       # the registered default
+    print("     on the default the decision chose (redistributed_fit):")
+    CH.main()
     out["E21"] = all(res[c]["model"] > 1.0 for c in res) and res["PFOS"]["model"] > res["PFOA"]["model"]
 
     # E22

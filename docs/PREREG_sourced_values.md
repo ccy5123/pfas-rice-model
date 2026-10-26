@@ -630,3 +630,75 @@ KNHANES intake and body weight, the white/brown basis of the intake fraction); a
   against Choi's husk, on the site-year drivers; nothing is fitted to it.
 - The amendment-1 records are kept in `validation/archive/amendment1/` (refit and transfer JSON, the
   band, the transfer scores, the fitted parameter files) before the re-fit overwrites them.
+
+## 8. Outcome (amendment 2a)
+
+Runs of 2026-10-26 on amendment 2a (records: `validation/refit_sourced.json`,
+`validation/transfer_sourced.json`, `validation/input_range_band__redistributed_lipid.json` (the band
+E19 and E23 were registered on), `params/input_range_band.json` (the band of the default chosen
+below); the checks of E17-E23 are read off them by `validation/prereg_a2_outcome.py`; the amendment-1
+records are in `validation/archive/amendment1/`).
+
+Re-fit (log10 RMSE over 32 cells: all / straw / grain; root 0.000 in every variant):
+redistributed_lipid 0.156 / 0.266 / 0.000 (amendment 1: 0.159 / 0.253 / 0.103) · redistributed_fit
+0.116 / 0.156 / 0.128 · 4pool_lipid 0.152 / 0.259 / 0.000 · redistributed_free 1.261 / 1.638 / 1.463 ·
+4pool_free 1.308 / 1.791 / 1.396. Backward elimination left `f_xy = a` 0.0672 and `g_xy` 0.00786 on
+redistributed_lipid (0.0634 / 0.00732 on 4pool_lipid); b, g_ph, pfsa_ln and the K_PL gate were
+removed again. In redistributed_fit PFDoDA alone is out of reach (f_xy at 1; straw -0.52, grain -0.40).
+
+Transfer (log10 RMSE; Tang / Kim point / Kim interval / Li shoot / Li grain on brown rice; Li grain on
+rough grain in brackets, no decision):
+
+| variant | Tang | Kim point | Kim interval | Li shoot | Li grain [rough] |
+|---|---|---|---|---|---|
+| redistributed_lipid (incumbent) | 0.676 | 0.559 | 0.444 | 0.376 | 1.363 [0.850] |
+| **redistributed_fit** | 0.686 | 0.562 | 0.443 | 0.467 | 1.334 [1.044] |
+| 4pool_lipid | 0.916 | 0.559 | 0.445 | 0.937 | 1.375 [0.888] |
+| redistributed_free | 1.737 | 2.119 | 1.867 | 1.278 | 1.864 [1.466] |
+| 4pool_free | 1.872 | 2.038 | 1.778 | 1.490 | 1.817 [1.440] |
+
+**Decision (5.3).** redistributed_fit is "better" than the incumbent on the Li grain (delta -0.029,
+95 % [-0.046, -0.006]) and "not worse" on every other endpoint (Tang +0.010 [-0.063, +0.099], Kim point
++0.003 [-0.002, +0.021], Kim interval -0.001 [-0.002, 0.000], Li shoot +0.091 [-0.049, +0.180]; all
+ties); no other variant is better anywhere. The rule switches the default to **redistributed_fit**,
+and the user applied it (2026-10-26). Recorded with it: the margin is small, the Li shoot point score
+is worse (0.376 -> 0.467, inside the tie), and the chosen variant fits f_xy per congener to Yamazaki's
+straw, so on Yamazaki it is a reproduction, not a prediction. The honesty band is its transfer median,
+0.562 log10 (x3.65; amendment 1: 0.489, x3.1). `model_api` now resolves an unspecified loading to the
+default shoot's (`resolve_loading`); the single-straw core has no `_fit` variant and keeps the lipid
+loading (`SHOOT_DEFAULT_LOADING`).
+
+Against amendment 1 the grain transfer is worse: Kim point 0.489 -> 0.559 (incumbent) and Li grain
+1.019 -> 1.363. The brown-rice pool takes no xylem: what the panicle transpires stays in the husk, so
+the brown-rice value is lower than amendment 1's whole panicle; on the rough basis Li grain is 0.850.
+
+Section 7.8 (written for the incumbent default; read on its records):
+- E17 HELD. Every r_eq moved by the closed-form factor within 0.001 (PFBA 1.129, PFPeA 1.097, PFHxA
+  1.064, PFHpA 1.034, PFBS 1.032, PFOA 1.016, the rest <= 1.006).
+- E18 HELD. 0.159 -> 0.156.
+- E19 HELD. root.theta@DVS2 is third, after root.f_cw and the lignin share, for PFBA, PFPeA, PFHxA, PFBS.
+- E20 WRONG. Every congener with a grain cell now fits L_Ph > 0 in every variant (amendment 1 left five at
+  0), and the root does not move; but the straw does, by up to 0.108 log10. Not foreseen: the
+  expectation held the lipid constants fixed, but they are shared by all chains and re-fit with the
+  grain (a 0.0538 -> 0.0672, g_xy 0.00494 -> 0.00786), which moves every straw cell.
+- E21 HELD in direction, short in size. husk + rachis / brown rice, dry: PFOA 2.90 (Choi 4.2-8.8; -0.158
+  log10), PFOS 5.21 (37-47; -0.851). On redistributed_fit: PFOA 2.91 (-0.156), PFOS 3.31 (-1.048).
+- E22 HELD. Li grain 1.363 brown, 0.850 rough.
+- E23 WRONG. The crop sets enter the straw and grain band for 11/11, but they, not the panicle share at
+  heading, lead the grain band (crop_set 6/11, phi 4/11, PFBS's L_Ph range 1/11; the panicle share 0/11).
+  Not foreseen: the japonica sets move the heading-to-maturity partitioning that sets the brown rice's
+  dry growth, hence its phloem draw, and with the deposit in the husk the panicle share no longer
+  reaches the grain at all.
+- E24 HELD (`tests/test_amendment2a.py`: relative change < 1e-6).
+
+Band (`input_range_band`, median over 11 congeners, down / up): on the incumbent, root ÷1.29 / ×1.29,
+straw ÷1.86 / ×2.43, grain ÷3.80 / ×6.49 (amendment 1: ÷1.27 / ×1.25, ÷1.35 / ×1.32, ÷2.54 / ×2.07); the
+crop sets lead the straw band for 11/11. BAND_FIT_PLACEHOLDER
+
+Numerics and recorded deviations:
+- Brown rice's equation has no term in its own free concentration, so its pre-harvest water moves no
+  dry-basis number analytically; on the daily driver grid (M linear between nodes, dM by central
+  differences) a different water moves the grain by up to 0.0012 log10 (`tests/test_amendment2a.py`
+  tolerance 0.002).
+- The husk + rachis mass dips by up to ~5 % between Ansari anchors (7.11); kept.
+- NUMERICS_PLACEHOLDER

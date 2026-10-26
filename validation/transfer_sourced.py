@@ -15,7 +15,7 @@
 #                 as zero) and interval ([0, MDL] non-detects; 0 inside)                 (5)
 #   Li 2025       stage-geometric-mean TF: shoot (stem, leaf) and grain (from filling)
 #   Yamazaki      the calibration observable (in-sample for every variant)
-# Decision (5.3): the default (redistributed_lipid) stays unless another variant is "better"
+# Decision (5.3): the incumbent default stays unless another variant is "better"
 # (decision_stats.decide: paired bootstrap, 95 % interval below 0) on at least one transfer
 # endpoint and "not worse" on every endpoint. The honesty band is the median transfer error
 # of the resulting default (model_api.APRIORI_OOS_SCORES).
@@ -48,6 +48,8 @@ VARIANTS = {
     "4pool_lipid": dict(shoot="4pool", lipid_loading=True),
     "4pool_free": dict(shoot="4pool", lipid_loading=False),
 }
+# the incumbent the amendment-2a decision was taken against (the record's "default" is the
+# outcome: redistributed_fit, now model_api's default -- PREREG section 8)
 DEFAULT = "redistributed_lipid"
 TRANSFER = ("tang", "kim_point", "kim_interval", "li_shoot", "li_grain")
 OUT = os.path.join(HERE, "transfer_sourced.json")

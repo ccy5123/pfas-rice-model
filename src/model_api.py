@@ -56,11 +56,35 @@ DEFAULT_SCENARIO = "yamazaki2020"
 #   "redistributed" N stem segments + leaf, each organ keeping the solute its own transpiration
 #                   deposits (`simulate_nstem_leaf`; retention 1, the sourced stem and panicle
 #                   shares).
-# DEFAULT = the redistributed shoot with lipid loading; re-decided after the
-# amendment-1 re-fit by the rule in docs/PREREG_sourced_values.md 5.3.
+# DEFAULT = the redistributed shoot, free anion with f_xy fitted per congener
+# (`redistributed_fit`); re-decided after the amendment-2a re-fit by the rule in
+# docs/PREREG_sourced_values.md 5.3 (section 8: better on the Li 2025 grain, not worse on any
+# other transfer endpoint). Amendment 1's default was the lipid loading.
 SHOOTS = ("4pool", "redistributed")
 DEFAULT_SHOOT = "redistributed"
-DEFAULT_LIPID_LOADING = True
+DEFAULT_F_XY_SOURCE = "fit"
+DEFAULT_LIPID_LOADING = False
+# a shoot's loading when neither f_xy_source nor lipid_loading is given: the single-straw core
+# has no '_fit' variant (it was not fitted), so it keeps the lipid loading it was scored with
+SHOOT_DEFAULT_LOADING = {"redistributed": (DEFAULT_F_XY_SOURCE, DEFAULT_LIPID_LOADING),
+                         "4pool": ("recommended", True)}
+
+
+def resolve_loading(shoot=None, f_xy_source=None, lipid_loading=None):
+    """(shoot, f_xy_source, lipid_loading) with the defaults filled in. Neither loading given ->
+    the shoot's default (`SHOOT_DEFAULT_LOADING`); only lipid_loading given -> f_xy_source
+    'recommended' (lipid: its own f_xy; free: the monotone a-priori one); only f_xy_source
+    given -> the free anion (both 'fit' and 'recommended' are free-anion f_xy)."""
+    shoot = DEFAULT_SHOOT if shoot is None else shoot
+    if shoot not in SHOOTS:
+        raise ValueError(f"unknown shoot {shoot!r}; expected one of {SHOOTS}")
+    if f_xy_source is None and lipid_loading is None:
+        f_xy_source, lipid_loading = SHOOT_DEFAULT_LOADING[shoot]
+    elif f_xy_source is None:
+        f_xy_source = "recommended"
+    elif lipid_loading is None:
+        lipid_loading = False
+    return shoot, f_xy_source, bool(lipid_loading)
 # the configuration every calibration record and 4-pool mechanism analysis was run on
 FOUR_POOL_FREE = dict(shoot="4pool", lipid_loading=False)
 
@@ -349,7 +373,7 @@ def tang_observed_tf(congener, dose="mean"):
 TANG_SHOOTS = ("redistributed", "4pool")
 
 
-def tang_tf_validation(congener, f_xy_source="recommended",
+def tang_tf_validation(congener, f_xy_source=None,
                        dose="mean", lipid_loading=None, endosperm="brown", scenario=DEFAULT_SCENARIO,
                        shoot=None):
     """Model per-organ transfer factor (DRY weight) vs Tang 2026, for a Tang congener.
@@ -365,8 +389,8 @@ def tang_tf_validation(congener, f_xy_source="recommended",
     denominator -- may carry surface-sorbed PFAS (no Fe/Mn plaque removal; same confound as
     Li 2025), which would bias every Tang TF low. ``shoot`` -- 'redistributed'
     (`simulate_nstem_leaf`) or '4pool' (the single-straw core), None -> DEFAULT_SHOOT, so
-    each shoot model can be scored on the same data; ``lipid_loading`` None ->
-    DEFAULT_LIPID_LOADING. Returns None for non-Tang congeners.
+    each shoot model can be scored on the same data; the loading resolves as in `simulate`
+    (`resolve_loading`). Returns None for non-Tang congeners.
     """
     if congener not in TANG_CONGENERS:
         return None
@@ -375,7 +399,7 @@ def tang_tf_validation(congener, f_xy_source="recommended",
     shoot = DEFAULT_SHOOT if shoot is None else shoot
     if shoot not in TANG_SHOOTS:
         raise ValueError(f"unknown shoot {shoot!r}; expected one of {TANG_SHOOTS}")
-    lipid_loading = DEFAULT_LIPID_LOADING if lipid_loading is None else bool(lipid_loading)
+    shoot, f_xy_source, lipid_loading = resolve_loading(shoot, f_xy_source, lipid_loading)
     if shoot == "4pool":
         r = simulate(congener, Cwo=1.0, f_xy_source=f_xy_source,
                      lipid_loading=lipid_loading, scenario=scenario, shoot="4pool")
@@ -557,7 +581,7 @@ def _harvest(t, conc, M, comps, M_basis, leaf_loss, attached, sol, leaf_index, t
         C_leaf_fn=(lambda tt: sol.sol(tt)[leaf_index]) if getattr(sol, "sol", None) else None)
 
 
-def simulate(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
+def simulate(congener="PFOA", Cwo=1.0, f_xy_source=None,
              f_xy_override=None, L_Ph_override=None, r_eq_override=None,
              lipid_loading=None, g_xy_override=None, g_ph_override=None,
              season=None, n_t=241, measured_forcing=True, biomass="oryza2000",
@@ -574,9 +598,11 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
     ----------
     congener : one of CONGENERS.
     Cwo : constant pore-water free concentration C_w^o [ug/L] (1.0 -> conc == BAF).
-    f_xy_source : "recommended" (DEFAULT; the monotone a-priori f_xy, with r_eq/L_Ph
-        fitted to root and grain given it, so straw is a prediction) or "fit" (f_xy, L_Ph and
-        r_eq fitted per congener -- reproduces Yamazaki by construction). See F_XY_SOURCES.
+    f_xy_source, lipid_loading : the loading form (`resolve_loading`; both None -> the
+        shoot's default, `redistributed_fit` on the default shoot). f_xy_source "fit" (f_xy,
+        L_Ph and r_eq fitted per congener -- the straw is reproduced, not predicted) or
+        "recommended" (the monotone a-priori f_xy with r_eq/L_Ph fitted given it). See
+        F_XY_SOURCES.
     f_xy_override : if given, use this f_xy instead.
     L_Ph_override, r_eq_override : if given, use these phloem-loading / root equilibrium
         ratio values instead of the fitted ones.
@@ -620,8 +646,8 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
         heading and the sourced anchors `LAM_GRAIN_DVS` at heading and maturity (needs the
         drivers' 'dvs'); a (heading, maturity) tuple -> other anchors; a float -> a constant
         share without stage (redistributed shoot only).
-    lipid_loading : None -> `DEFAULT_LIPID_LOADING`. f_xy_source="fit" is a free-anion fit
-        and raises when combined with lipid loading (the lipid model supplies its own f_xy).
+    lipid_loading : f_xy_source="fit" is a free-anion fit and raises when combined with lipid
+        loading (the lipid model supplies its own f_xy).
     organ_water : "stage" (DEFAULT, PREREG 7.1: root, stem and leaf water follow the drivers'
         DVS, for the fresh mass and the binding alike) or "constant" (amendment 1).
     grain_basis : "brown" (DEFAULT, PREREG 7.2: the grain pool is brown rice, fed by the phloem
@@ -636,10 +662,7 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
     (`conc_dw`, `baf_final_dw` -- compare these with dw-reported data), the dead-blade pool,
     the driver series actually used (Cwo, Qtp, M), B_k, and the effective params.
     """
-    shoot = DEFAULT_SHOOT if shoot is None else shoot
-    if shoot not in SHOOTS:
-        raise ValueError(f"unknown shoot {shoot!r}; expected one of {SHOOTS}")
-    lipid_loading = DEFAULT_LIPID_LOADING if lipid_loading is None else bool(lipid_loading)
+    shoot, f_xy_source, lipid_loading = resolve_loading(shoot, f_xy_source, lipid_loading)
     if lipid_loading and f_xy_source == "fit":
         raise ValueError("f_xy_source='fit' is a free-anion fit; pass lipid_loading=False "
                          "(the lipid model supplies its own f_xy)")
@@ -759,7 +782,7 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
     )
 
 
-def apportionment(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
+def apportionment(congener="PFOA", Cwo=1.0, f_xy_source=None,
                   f_xy_override=None, L_Ph_override=None, r_eq_override=None,
                   lipid_loading=None, g_xy_override=None, g_ph_override=None,
                   season=None, n_t=241, measured_forcing=True, biomass="oryza2000",
@@ -778,15 +801,12 @@ def apportionment(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
     pathway. Returns the ``apportionment.apportion`` dict plus congener/params.
     ``shoot`` (None -> DEFAULT_SHOOT) picks the shoot model; the redistributed shoot uses
     its own flux map (`apportionment.apportion_redistributed`), with the same root/grain keys.
-    ``lipid_loading=None`` -> DEFAULT_LIPID_LOADING, as in `simulate`.
+    The loading resolves as in `simulate` (`resolve_loading`).
     """
     import apportionment as ap
     if congener not in _CONG:
         raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
-    shoot = DEFAULT_SHOOT if shoot is None else shoot
-    if shoot not in SHOOTS:
-        raise ValueError(f"unknown shoot {shoot!r}; expected one of {SHOOTS}")
-    lipid_loading = DEFAULT_LIPID_LOADING if lipid_loading is None else bool(lipid_loading)
+    shoot, f_xy_source, lipid_loading = resolve_loading(shoot, f_xy_source, lipid_loading)
     d = _default_drivers(season, n_t, Cwo, measured_forcing, biomass, scenario=scenario)
     t, Cwo_series, Qtp, M, leaf_loss, M_basis, dvs = (d["t"], d["Cwo"], d["Qtp"], d["M"],
                                                       d["leaf_loss"], d["mass_basis"], d.get("dvs"))
@@ -852,13 +872,13 @@ def simulate_from_smiles(smiles, *, name=None, f_xy=None, f_xy_override=None, **
 F_XY_SOURCES = ("recommended", "fit")
 
 
-def variant_key(shoot=None, f_xy_source="recommended", lipid_loading=None):
+def variant_key(shoot=None, f_xy_source=None, lipid_loading=None):
     """The name of a fitted transport variant: '<shoot>_<loading>', loading 'lipid' (the lipid
     model's own f_xy), 'free' (the monotone free-anion f_xy_recommended) or 'fit' (f_xy fitted
     per congener). Each variant's (r_eq, L_Ph[, f_xy]) were fitted with that shoot and loading
-    (validation/refit_sourced.py); parameters.json keys are r_eq__<variant> etc."""
-    shoot = DEFAULT_SHOOT if shoot is None else shoot
-    lipid_loading = DEFAULT_LIPID_LOADING if lipid_loading is None else bool(lipid_loading)
+    (validation/refit_sourced.py); parameters.json keys are r_eq__<variant> etc. The defaults
+    resolve as in `simulate` (`resolve_loading`): variant_key() is the default variant."""
+    shoot, f_xy_source, lipid_loading = resolve_loading(shoot, f_xy_source, lipid_loading)
     if f_xy_source not in F_XY_SOURCES:
         raise ValueError(f"f_xy_source must be one of {F_XY_SOURCES}, got {f_xy_source!r}")
     if lipid_loading and f_xy_source == "fit":
@@ -902,7 +922,8 @@ def _resolve_transport(c, f_xy_source, lipid_loading, shoot, f_xy=None, L_Ph=Non
                        g_xy=None, g_ph=None):
     """(f_xy, L_Ph, r_eq, g_xy, g_ph): the overrides given, the variant's fitted values for the
     rest (looked up only when one is missing, so a fit can run before any fit exists)."""
-    lipid = DEFAULT_LIPID_LOADING if lipid_loading is None else bool(lipid_loading)
+    shoot, f_xy_source, lipid = resolve_loading(shoot, f_xy_source, lipid_loading)
+    lipid_loading = lipid
     if not lipid:                         # the free anion has no bound-loading term
         g_xy = 0.0 if g_xy is None else g_xy
         g_ph = 0.0 if g_ph is None else g_ph
@@ -940,7 +961,7 @@ def _compound_for(congener, f_xy_source="recommended", f_xy_override=None,
 
 
 def simulate_nstem_leaf(congener="PFOA", Cwo=1.0,
-                        f_xy_source="recommended", f_xy_override=None,
+                        f_xy_source=None, f_xy_override=None,
                         L_Ph_override=None, r_eq_override=None,
                         lipid_loading=None, g_xy_override=None, g_ph_override=None,
                         season=None, n_t=361, N=4, stem_transp_frac=None,
@@ -968,7 +989,7 @@ def simulate_nstem_leaf(congener="PFOA", Cwo=1.0,
     """
     if congener not in _CONG:
         raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}")
-    lipid_loading = DEFAULT_LIPID_LOADING if lipid_loading is None else bool(lipid_loading)
+    _, f_xy_source, lipid_loading = resolve_loading("redistributed", f_xy_source, lipid_loading)
     if drivers is None and biomass_fn is None and scenario == "yamazaki2020":
         drivers = scenario_drivers(scenario, Cwo=Cwo, **(scenario_kw or {}))
         ss.check_season(season, drivers["t"], "simulate_nstem_leaf")
@@ -1699,7 +1720,7 @@ _ESTIMATE_MAX_SOLVES = 8
 
 def estimate_exposure_bayesian(congener=None, measured_conc=None, *, sigma_log10=None,
                                meas_sigma_log10=0.0,
-                               season=None, f_xy_source="recommended",
+                               season=None, f_xy_source=None,
                                biomass="oryza2000", measured_forcing=True, n_plot=121,
                                progress=None, log_kow=None, neutral_kw=None, **sim_kw):
     """Bayesian estimate of the soil-water contamination level Cwᵒ [µg/L] that best

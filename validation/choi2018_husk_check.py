@@ -45,12 +45,13 @@ def model_ratio(c, **kw):
     return r["husk"] / r["grain"]
 
 
-def main():
+def main(**kw):
+    """`kw` pass to `simulate` (the variant; None -> the default)."""
     obs = observed()
     res = {}
     print(f"{'':6} {'model husk/brown':>17} {'Choi 2018':>14} {'log10 distance':>15}")
     for c in ("PFOA", "PFOS"):
-        m = model_ratio(c)
+        m = model_ratio(c, **kw)
         lo, hi = obs[c]
         d = 0.0 if lo <= m <= hi else (np.log10(m / lo) if m < lo else np.log10(m / hi))
         res[c] = dict(model=m, choi=(lo, hi), log10_distance=float(d))

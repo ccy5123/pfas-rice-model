@@ -78,9 +78,11 @@ midpoint and both ends (`lo`, `hi`).
 
 ## 4. Fits -- `validation/refit_sourced.py` (PREREG 5.3, 5.6)
 
-Variants, each with its own fitted values: `redistributed_lipid` (the default),
-`redistributed_free`, `redistributed_fit` (f_xy fitted to the straw as well; a reproduction),
-`4pool_lipid`, `4pool_free`. Results: `validation/refit_sourced.json`; parameters:
+Variants, each with its own fitted values: `redistributed_fit` (the default since amendment 2a:
+f_xy fitted per congener to the straw as well, so on Yamazaki a reproduction; chosen by the
+transfer rule, PREREG section 8), `redistributed_lipid` (amendment 1's default), `redistributed_free`,
+`4pool_lipid`, `4pool_free` (the single-straw core has no `_fit` variant; unspecified, it runs
+`4pool_lipid`). Results: `validation/refit_sourced.json`; parameters:
 `params/refit_sourced.csv`, `params/lipid_loading_sourced.json` -> `parameters.json`.
 
 ## 5. Transfer datasets
