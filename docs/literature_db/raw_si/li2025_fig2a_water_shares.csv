@@ -1,0 +1,58 @@
+# Li et al. 2025 (J. Hazard. Mater. 492:138256; doi 10.1016/j.jhazmat.2025.138256) Fig. 2a: composition (% of SigmaPFAS) of
+#   the IRRIGATION water at the five growth stages, read from the figure bitmap (main text p.4, 1000 x 631 px; PDF supplied by
+#   the user, NOT committed). Per-congener water concentrations are NOT printed anywhere in the article or SI, so
+#   conc_ngL = share x the stage SigmaPFAS of SI Table S5 (raw_si/li2025_stage_water_soil.csv, the four class sums).
+# METHOD (docs/literature_db/tools/fig_overlay_checks.py li2025 <PDF>): x axis calibrated on its six ticks (0..100 %,
+#   6.52 px per %, residual <= 0.07 %); each stacked bar split at its dark separator lines (separator centres = boundaries),
+#   each segment identified by its median colour against the legend swatches. +-1 px per boundary => share +-0.22 %.
+#   Overlaid on the original (boundaries drawn on the bitmap): every boundary sits on a separator.
+# CHECKS against TABULATED / printed numbers:
+#   - class sums vs SI Table S5: PFCAs 93.47/97.61/92.93/96.99 vs 93.39/97.31/92.98/96.87 % and PFSAs 6.36/2.22/6.28/2.80 vs
+#     6.17/2.24/6.30/2.80 % (tillering/heading/filling/milk) - within 0.4 %-points;
+#   - text p.3: PFOA 59.3-70.2 % (read 59.20-70.24), PFBA 18.6-31.1 % (read 18.63-31.05), PFOS 0.30-1.64 % (read up to 1.76).
+# ANOMALY IN THE FIGURE (not the reading): the RIPENING bar carries a 4.45 % segment in the 6:2 FTS colour, but S5 gives
+#   precursors 0.05 % there (text: 0.02-0.11 %) and its PFCAs read 89.17 % vs S5 93.21 %. Shares are kept as read; rescaling
+#   the ripening PFCAs to S5 would raise the 5-stage mean PFOA by 0.9 % (46.5 -> 46.9 ng/L).
+# PFOS at heading and milk is a <= 2 px sliver against the bar end: milk = S5 PFSAs - PFEtS - PFBS (0.42 %); heading leaves
+#   ~0 by that difference, so it is set to the text's stated minimum 0.30 % and PFBS = tail - 0.30 (both flagged in `note`).
+# 5-STAGE MEANS (ng/L) vs the values data_obs/Li2025_BAF_TF.csv was built with (an external package; no script in the repo):
+#   PFBA 18.73 [18.57, 18.89] vs 17.9 | PFHxA 1.21 [1.05, 1.37] vs 2.5 (x2.1; ~= PFHxA + PFHpA 2.65, two adjacent similar
+#   colours read as one) | PFOA 46.51 vs 46.7 | PFBS 1.10 [0.94, 1.26] vs 1.3 | PFOS 0.71 [0.55, 0.87] vs 0.4.
+#   The verified values are added BESIDE the old ones in data_obs (columns *_verified); the old columns stay as the record
+#   the S6 analyses were made with. TF = tissue/tissue does not use water, so the stage-resolved TF analysis is unaffected.
+stage,congener,share_pct,share_lo,share_hi,stage_sum_pfas_ngL,conc_ngL,conc_lo,conc_hi,note
+tillering,PFEtS,2.61,2.39,2.83,63.18,1.647,1.508,1.786,
+tillering,PFBA,18.63,18.41,18.85,63.18,11.772,11.633,11.911,
+tillering,PFHxA,2.61,2.39,2.83,63.18,1.647,1.508,1.786,
+tillering,PFHpA,1.99,1.77,2.21,63.18,1.260,1.121,1.398,
+tillering,PFOA,70.24,70.02,70.46,63.18,44.373,44.234,44.512,
+tillering,PFBS,2.45,2.23,2.67,63.18,1.550,1.411,1.689,
+tillering,PFOS,1.30,1.08,1.52,63.18,0.824,0.685,0.963,
+heading,PFEtS,1.07,0.85,1.29,76.04,0.816,0.649,0.984,
+heading,PFBA,27.83,27.61,28.05,76.04,21.166,20.999,21.333,
+heading,PFHxA,1.00,0.78,1.22,76.04,0.758,0.591,0.925,
+heading,PFHpA,2.76,2.54,2.98,76.04,2.099,1.932,2.266,
+heading,PFOA,66.02,65.80,66.24,76.04,50.204,50.037,50.371,
+heading,PFBS,0.85,0.63,1.07,76.04,0.647,0.479,0.814,tail segment 1.15 pct shared with the PFOS sliver; PFBS = tail - 0.30
+heading,PFOS,0.30,0.15,0.60,76.04,0.228,0.114,0.456,sliver <= 2 px; set to the text minimum 0.30 pct (S5 PFSA - PFEtS - tail = 0.01 pct)
+filling,PFEtS,2.22,2.00,2.44,63.45,1.411,1.271,1.551,
+filling,PFBA,28.98,28.76,29.20,63.45,18.391,18.252,18.531,
+filling,PFHxA,2.45,2.23,2.67,63.45,1.557,1.417,1.697,
+filling,PFHpA,2.30,2.08,2.52,63.45,1.460,1.320,1.599,
+filling,PFOA,59.20,58.98,59.42,63.45,37.561,37.421,37.701,
+filling,PFBS,2.30,2.08,2.52,63.45,1.460,1.320,1.599,
+filling,PFOS,1.76,1.54,1.98,63.45,1.119,0.979,1.259,
+milk,PFEtS,1.38,1.16,1.60,85.68,1.183,0.994,1.371,
+milk,PFBA,31.05,30.83,31.27,85.68,26.608,26.419,26.796,
+milk,PFHxA,1.15,0.93,1.37,85.68,0.985,0.797,1.174,
+milk,PFHpA,1.76,1.54,1.98,85.68,1.511,1.323,1.700,
+milk,PFOA,63.03,62.81,63.25,85.68,54.004,53.815,54.192,
+milk,PFBS,1.00,0.78,1.22,85.68,0.854,0.666,1.043,
+milk,PFOS,0.42,0.15,0.60,85.68,0.363,0.129,0.514,sliver <= 2 px; by difference from S5: PFSA 2.80 pct - PFEtS - PFBS
+ripening,PFEtS,3.07,2.85,3.29,71.88,2.205,2.046,2.363,
+ripening,PFBA,21.85,21.63,22.07,71.88,15.708,15.550,15.866,
+ripening,PFHxA,1.53,1.31,1.75,71.88,1.102,0.944,1.260,
+ripening,PFHpA,1.23,1.01,1.45,71.88,0.882,0.724,1.040,
+ripening,PFOA,64.56,64.34,64.78,71.88,46.408,46.249,46.566,
+ripening,PFBS,1.38,1.16,1.60,71.88,0.992,0.834,1.150,
+ripening,PFOS,1.38,1.16,1.60,71.88,0.992,0.834,1.150,

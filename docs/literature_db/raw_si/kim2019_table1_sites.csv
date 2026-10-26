@@ -1,0 +1,38 @@
+# Kim et al. 2019, Sci. Total Environ. 671:714-721 (doi 10.1016/j.scitotenv.2019.03.240), main-text Table 1 (p.718).
+# Per-site concentrations, 30 Korean paddy fields, sampled at harvest (Oct 6-18 2016); ONE rice plant per site.
+# Void water: PVC cylinder (200 mm dia x 300 mm) pushed into soil, lidded 2 d, GF/F-filtered. Soil: next to the root.
+# Brown rice: freeze-dried (-30 C), husk removed with a rice-polishing machine; reported only as "ng/g" (basis not stated; likely dry).
+# ND = below MDL (SI Table S5 PFOA MDL: void water 0.683 ng/L, soil 0.011 ng/g-dw, brown rice 0.088 ng/g).
+# NS = no sample (region E: insufficient void water). wwtp_near = 1 for footnote c ("There was WWTP near sampling site").
+# There is no site D-5 in the table (30 sites). Transcribed from the PDF text layer and checked row-by-row against the rendered page.
+site,wwtp_near,soil_PFOA_ngg_dw,soil_PFOS_ngg_dw,soil_sum17_ngg_dw,water_PFOA_ngL,water_PFOS_ngL,water_sum17_ngL,rice_PFOA_ngg,rice_PFOS_ngg,rice_sum17_ngg
+A-1,0,ND,ND,1.14,27.2,2.22,79.7,0.880,ND,0.880
+A-2,1,2.08,ND,13.9,1760,17.5,3019,1.73,ND,1.85
+A-3,0,ND,ND,1.82,50.1,10.7,169,0.890,ND,0.930
+A-4,0,ND,ND,2.81,31.4,2.95,96.2,0.826,ND,0.932
+A-5,0,ND,ND,1.40,66.6,ND,164,0.514,ND,0.514
+B-1,0,ND,ND,0.319,1.68,1.08,16.5,ND,ND,ND
+B-2,0,ND,0.360,1.25,3.44,ND,22.9,ND,ND,ND
+B-3,0,ND,ND,0.989,13.8,5.67,72.1,ND,ND,ND
+B-4,0,ND,ND,0.402,25.7,2.74,73.2,ND,ND,0.0572
+B-5,0,ND,ND,0.486,1.60,3.17,18.9,ND,ND,ND
+B-6,0,0.328,ND,1.25,11.8,1.26,66.2,ND,ND,ND
+C-1,0,0.0783,ND,2.20,13.4,2.30,43.3,ND,ND,0.200
+C-2,0,ND,0.701,0.924,14.9,11.3,113,ND,ND,0.270
+C-3,0,0.0544,ND,0.991,24.0,3.37,86.8,0.0939,ND,0.0939
+C-4,0,ND,0.552,1.14,19.3,3.79,97.5,0.150,ND,0.321
+C-5,0,0.278,ND,0.532,1.22,ND,7.94,ND,ND,ND
+C-6,0,0.0639,ND,0.519,ND,1.01,14.9,ND,ND,0.205
+C-7,0,0.0672,ND,2.19,1.34,2.30,25.8,ND,ND,0.125
+C-8,0,ND,ND,0.176,0.823,ND,11.7,ND,ND,0.194
+D-1,1,0.328,ND,7.47,7.20,ND,33.7,1.18,ND,1.179
+D-2,0,ND,ND,1.25,2.79,ND,7.76,0.127,ND,0.127
+D-3,0,0.210,ND,0.584,2.94,ND,12.6,ND,ND,ND
+D-4,0,ND,ND,0.120,21.2,ND,96.3,0.643,ND,0.643
+D-6,0,0.996,ND,1.58,6.73,ND,16.0,0.135,ND,0.135
+D-7,0,ND,ND,2.06,1.0,10.3,19.9,0.597,ND,0.597
+D-8,0,ND,ND,1.53,1.93,ND,22.9,0.704,ND,0.704
+E-1,0,ND,ND,0.539,13.7,1.64,80.8,0.425,ND,0.425
+E-2,0,0.123,ND,4.00,NS,NS,NS,0.420,ND,0.420
+E-3,0,0.109,ND,1.79,NS,NS,NS,0.138,ND,0.138
+E-4,0,0.0812,ND,2.21,NS,NS,NS,1.03,ND,1.16

@@ -1,0 +1,58 @@
+# Kim et al. 2019 (Sci. Total Environ.; DOI 10.1016/j.scitotenv.2019.03.240) SI Table S6 (min/average/max
+# and detection frequency per matrix) joined with SI Table S5 (method detection limit, MDL) -- numbered as in
+# the SI file; the main text cites the same tables as S5 and S4 (p.716-717). Average
+# treats non-detects as ZERO (stated in the paper), so with the DF and the MDL it bounds the true mean:
+# the n*(1-DF) non-detects lie in [0, MDL]. Void water n=27, soil n=30, brown rice n=30 (one plant per
+# field). Blank min/avg/max = 'ND' (below MDL). Brown rice basis not stated (dw assumed in the repo).
+pfas,matrix,n,unit,min,avg,max,DF_pct,MDL
+PFBA,void_water,27,ng/L,0.947,15.6,175,100,0.421
+PFBA,soil,30,ng/g dw,,0.0499,0.453,30,0.066
+PFBA,brown_rice,30,ng/g,,,,0,0.164
+PFPeA,void_water,27,ng/L,,12.1,217,56,0.276
+PFPeA,soil,30,ng/g dw,,0.0666,0.712,33,0.023
+PFPeA,brown_rice,30,ng/g,,,,0,0.093
+PFHxA,void_water,27,ng/L,,8.13,26.8,96,0.275
+PFHxA,soil,30,ng/g dw,,0.0679,0.533,43,0.013
+PFHxA,brown_rice,30,ng/g,,,,0,0.183
+PFHpA,void_water,27,ng/L,,24.7,504,89,0.267
+PFHpA,soil,30,ng/g dw,,0.499,4.42,50,0.009
+PFHpA,brown_rice,30,ng/g,,0.00974,0.119,13,0.049
+PFOA,void_water,27,ng/L,,78.7,1760,96,0.683
+PFOA,soil,30,ng/g dw,,0.160,2.08,43,0.011
+PFOA,brown_rice,30,ng/g,,0.349,1.73,57,0.088
+PFNA,void_water,27,ng/L,0.293,13.0,233,100,0.220
+PFNA,soil,30,ng/g dw,,0.272,3.96,67,0.039
+PFNA,brown_rice,30,ng/g,,0.0287,0.208,20,0.079
+PFDA,void_water,27,ng/L,,3.54,62.5,85,0.158
+PFDA,soil,30,ng/g dw,,0.217,1.25,83,0.035
+PFDA,brown_rice,30,ng/g,,0.00551,0.125,6.7,0.037
+PFUnDA,void_water,27,ng/L,,0.244,2.21,19,0.200
+PFUnDA,soil,30,ng/g dw,,0.149,0.787,67,0.088
+PFUnDA,brown_rice,30,ng/g,,0.00807,0.0907,13,0.038
+PFDoDA,void_water,27,ng/L,,0.0488,0.555,11,0.297
+PFDoDA,soil,30,ng/g dw,,0.0802,0.263,60,0.055
+PFDoDA,brown_rice,30,ng/g,,0.00172,0.0516,3.3,0.030
+PFTrDA,void_water,27,ng/L,,,,0,0.248
+PFTrDA,soil,30,ng/g dw,,0.0568,0.382,33,0.064
+PFTrDA,brown_rice,30,ng/g,,,,0,0.031
+PFTeDA,void_water,27,ng/L,,,,0,0.290
+PFTeDA,soil,30,ng/g dw,,,,0,0.063
+PFTeDA,brown_rice,30,ng/g,,,,0,0.042
+PFHxDA,void_water,27,ng/L,,,,0,0.174
+PFHxDA,soil,30,ng/g dw,,,,0,0.030
+PFHxDA,brown_rice,30,ng/g,,,,0,0.040
+PFODA,void_water,27,ng/L,,,,0,1.290
+PFODA,soil,30,ng/g dw,,,,0,0.107
+PFODA,brown_rice,30,ng/g,,,,0,0.710
+PFBS,void_water,27,ng/L,,3.94,29.9,93,0.281
+PFBS,soil,30,ng/g dw,,0.0134,0.182,10,0.0633
+PFBS,brown_rice,30,ng/g,,,,0,0.0616
+PFHxS,void_water,27,ng/L,,3.19,34.3,41,0.334
+PFHxS,soil,30,ng/g dw,,0.233,2.44,33,0.0600
+PFHxS,brown_rice,30,ng/g,,,,0,0.113
+PFOS,void_water,27,ng/L,,3.09,17.5,63,0.873
+PFOS,soil,30,ng/g dw,,0.0538,0.701,10,0.200
+PFOS,brown_rice,30,ng/g,,,,0,0.121
+PFDS,void_water,27,ng/L,,,,0,0.848
+PFDS,soil,30,ng/g dw,,,,0,0.0854
+PFDS,brown_rice,30,ng/g,,,,0,0.132

@@ -1,0 +1,839 @@
+From 691621c906e5c2265d555c13a9d8a74fd72291ab Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 25 Oct 2026 22:42:45 +0000
+Subject: [PATCH 1/4] A2 prototype: organ water by development stage
+
+---
+ build_parameters.py                      |  10 ++
+ params/parameters.json                   |  67 ++++++++++++
+ params/rice_theta_stage_sourced.csv      |  16 +++
+ src/apportionment.py                     |  19 ++--
+ src/harvest.py                           |   7 +-
+ src/model_api.py                         |  47 ++++++---
+ src/organ_mass.py                        |  58 ++++++++---
+ src/pfas_rice_plant_module_4pool_surf.py |  63 ++++++++----
+ src/pfas_rice_plant_module_nstem_leaf.py |  31 ++++--
+ src/site_scenario.py                     |   1 +
+ tests/test_organ_mass.py                 |   6 +-
+ tests/test_theta_stage.py                | 124 +++++++++++++++++++++++
+ 12 files changed, 377 insertions(+), 72 deletions(-)
+ create mode 100644 params/rice_theta_stage_sourced.csv
+ create mode 100644 tests/test_theta_stage.py
+
+diff --git a/build_parameters.py b/build_parameters.py
+index 8e4a6c5..1fe54c5 100644
+--- a/build_parameters.py
++++ b/build_parameters.py
+@@ -31,6 +31,14 @@ def rd_commented(name):
+         return list(csv.DictReader(line for line in f if not line.startswith("#")))
+ 
+ RC = rd_commented("rice_composition_sourced.csv")
++# organ water by development stage (anchors; the model interpolates linearly in DVS)
++THETA_STAGE = {}
++for r in rd_commented("rice_theta_stage_sourced.csv"):
++    lo, hi = float(r["low"]), float(r["high"])
++    THETA_STAGE.setdefault(r["organ"], []).append(
++        [float(r["dvs"]), round(0.5 * (lo + hi), 6), lo, hi])
++for v in THETA_STAGE.values():
++    v.sort()
+ 
+ ORGANS = ["root", "stem", "leaf", "grain_brown"]   # grain_brown == model "grain"
+ QUANT = ("theta_fw", "f_prot", "f_PL", "f_cw", "lignin_share")
+@@ -154,6 +162,8 @@ doc = {
+     },
+     "tissue_composition_recommended": composition,
+     "tissue_composition_ranges": {o: {q: list(v) for q, v in d.items()} for o, d in ranges.items()},
++    "theta_stage": {"columns": ["dvs", "theta_mid", "low", "high"],
++                    "source": "params/rice_theta_stage_sourced.csv", "anchors": THETA_STAGE},
+     "congeners": congeners,
+     "lipid_loading": lipid_loading,
+ }
+diff --git a/params/parameters.json b/params/parameters.json
+index 714e562..ee2bb6f 100644
+--- a/params/parameters.json
++++ b/params/parameters.json
+@@ -184,6 +184,73 @@
+       ]
+     }
+   },
++  "theta_stage": {
++    "columns": [
++      "dvs",
++      "theta_mid",
++      "low",
++      "high"
++    ],
++    "source": "params/rice_theta_stage_sourced.csv",
++    "anchors": {
++      "root": [
++        [
++          0.65,
++          0.8245,
++          0.761,
++          0.888
++        ],
++        [
++          2.0,
++          0.6365,
++          0.506,
++          0.767
++        ]
++      ],
++      "stem": [
++        [
++          0.65,
++          0.818,
++          0.726,
++          0.91
++        ],
++        [
++          2.0,
++          0.7095,
++          0.645,
++          0.774
++        ]
++      ],
++      "leaf": [
++        [
++          0.65,
++          0.731,
++          0.731,
++          0.731
++        ],
++        [
++          2.0,
++          0.659,
++          0.659,
++          0.659
++        ]
++      ],
++      "grain_brown": [
++        [
++          1.0,
++          0.58,
++          0.58,
++          0.58
++        ],
++        [
++          2.0,
++          0.21,
++          0.2,
++          0.22
++        ]
++      ]
++    }
++  },
+   "congeners": [
+     {
+       "name": "PFBA",
+diff --git a/params/rice_theta_stage_sourced.csv b/params/rice_theta_stage_sourced.csv
+new file mode 100644
+index 0000000..f570f4f
+--- /dev/null
++++ b/params/rice_theta_stage_sourced.csv
+@@ -0,0 +1,16 @@
++# Organ water content theta_fw (water / fresh mass) by crop development stage (ORYZA DVS), from the
++# rice measurements in docs/literature_db/sourced_inputs.csv (tis_theta_*). Between anchors theta is
++# linear in DVS and flat outside them (the linear form is a stated assumption, as for the panicle's
++# transpiration share). low/high = the sourced range at the anchor; the model runs at the midpoint and
++# the input-range band carries the ends. An anchor at DVS 0.65 holds from transplanting to panicle
++# initiation (seedling and vegetative measurements carry no finer stage). Stem: no stem-only source;
++# whole-shoot values stand in.
++organ,dvs,low,high,basis,source
++root,0.65,0.761,0.888,"seedling to vegetative; hydroponic and flooded soil pots (4 studies)",tis_theta_root
++root,2.0,0.506,0.767,"maturity; soil pots (6 studies)",tis_theta_root
++stem,0.65,0.726,0.910,"whole shoot, seedling to vegetative (soil pots 56 d after sowing; hydroponic seedlings)",tis_theta_root (shoot columns)
++stem,2.0,0.645,0.774,"whole shoot 10-45 d after flowering and straw at maturity",tis_theta_stem
++leaf,0.65,0.731,0.731,"leaf at tillering (183 accessions)",tis_theta_leaf
++leaf,2.0,0.659,0.659,"flag leaf at maturity",tis_theta_leaf
++grain_brown,1.0,0.58,0.58,"initial phase of grain filling",tis_theta_grain
++grain_brown,2.0,0.20,0.22,"on the plant at harvest",tis_theta_grain
+diff --git a/src/apportionment.py b/src/apportionment.py
+index 7d6de3f..db8f4a9 100644
+--- a/src/apportionment.py
++++ b/src/apportionment.py
+@@ -67,21 +67,22 @@ def flux_terms(model: RiceUptakeModel, t: float, C: np.ndarray) -> dict:
+     term -mu*C cancels exactly, so these fluxes conserve mass at every junction.
+     """
+     inp = model.inputs
+-    Cwo, Qtp, M, dM, leaf_loss, gam, dvs = inp.drivers_at(t)     # the drivers rhs() reads
++    Cwo, Qtp, M, dM, leaf_loss, gam, dvs, dM_dry = inp.drivers_at(t)   # the drivers rhs() reads
+     M = np.maximum(M, MASS_FLOOR)
+     cmpd = model.cmpd
+ 
+-    B = binding_factors(model.comps, cmpd)
++    B = binding_factors(model.comps, cmpd, dvs)
+     Cw = C / B
+ 
+     if model.lam_grain_dvs is not None:                          # the split rhs() uses
+         f4 = panicle_share(dvs, *model.lam_grain_dvs)
+         f3 = 1.0 - f4
+     else:
+-        split = xylem_leaf_share(model.comps, M, inp.M_basis, model.s_grain_dry)
++        split = xylem_leaf_share(model.comps, M, inp.M_basis, model.s_grain_dry, dvs)
+         f3, f4 = split, 1.0 - split
+ 
+-    Q_g, Q_r = phloem_flows(model.comps, dM, Qtp, model.T_C_Ph, model.phi, inp.M_basis)
++    Q_g, Q_r = phloem_flows(model.comps, dM, Qtp, model.T_C_Ph, model.phi, inp.M_basis,
++                            dM_dry, dvs)
+     C_Phl = model.phloem_loading_factor() * Cw[LEAF] + cmpd.g_ph * C[LEAF]
+     Cw_xyl = cmpd.f_xy * Cw[ROOT] + cmpd.g_xy * C[ROOT]
+     jR = root_uptake(Cwo, Cw[ROOT], cmpd, model.env)
+@@ -110,7 +111,7 @@ def dC_from_fluxes(model: RiceUptakeModel, t: float, C: np.ndarray) -> np.ndarra
+     the tests to assert flux_terms() never diverges from RiceUptakeModel.rhs().
+     """
+     f = flux_terms(model, t, C)
+-    _, _, M, dM, _, _, _ = model.inputs.drivers_at(t)
++    _, _, M, dM, _, _, _, _ = model.inputs.drivers_at(t)
+     M = np.maximum(M, MASS_FLOOR)
+     mu = dM / M
+     mass_bal = np.array([
+@@ -200,12 +201,14 @@ def flux_terms_redistributed(model, t, C):
+     forms that residual goes to the leaf."""
+     from pfas_rice_plant_module_4pool_surf import root_uptake as _ru
+     inp = model.inputs
+-    Cwo, Q, M, dM, leaf_loss, gam, dvs = inp.drivers_at(t)       # the drivers rhs() reads
++    Cwo, Q, M, dM, leaf_loss, gam, dvs, dM_dry = inp.drivers_at(t)   # the drivers rhs() reads
+     M = np.maximum(M, MASS_FLOOR)
+     n = model.n_comp
+-    Cw = C[:n] / model._B
++    Cw = C[:n] / (binding_factors(model.comps, model.cmpd, dvs) if model._B_staged else model._B)
+     leaf, grain, r = model.LEAF, model.GRAIN, model.retention
+-    Q_g = max(dM[grain] * (1.0 - model.comps[grain].theta) * model.T_C_Ph, 0.0)
++    g_dry = (dM_dry[grain] if np.isfinite(dM_dry[grain])
++             else dM[grain] * (1.0 - model.comps[grain].theta_at(dvs)))
++    Q_g = max(g_dry * model.T_C_Ph, 0.0)
+     Q_r = max(model.phi * Q, 0.0)
+     C_Phl = model.cmpd.L_Ph * Cw[leaf] + model.cmpd.g_ph * C[leaf]
+     jR = _ru(Cwo, Cw[model.ROOT], model.cmpd, model.env)
+diff --git a/src/harvest.py b/src/harvest.py
+index a1c4753..b1ef1f4 100644
+--- a/src/harvest.py
++++ b/src/harvest.py
+@@ -56,8 +56,10 @@ def dead_leaf_pool(t, C_leaf, M_leaf, leaf_loss, dry_fraction_leaf, C_leaf_fn=No
+     else:
+         tf, cl, ml, ll = t, np.asarray(C_leaf, float), np.asarray(M_leaf, float), np.asarray(leaf_loss, float)
+     ll = np.maximum(ll, 0.0)
++    dfl = (np.interp(tf, t, np.asarray(dry_fraction_leaf, float))
++           if np.ndim(dry_fraction_leaf) else dry_fraction_leaf)   # stage-dependent water
+     burden = cumulative_trapezoid(ll * cl * ml, tf, initial=0.0)
+-    dry = cumulative_trapezoid(ll * ml * dry_fraction_leaf, tf, initial=0.0)
++    dry = cumulative_trapezoid(ll * ml * dfl, tf, initial=0.0)
+     return np.interp(t, tf, burden), np.interp(t, tf, dry)
+ 
+ 
+@@ -67,7 +69,8 @@ def harvest_observables(t, conc, M, dry_fraction, leaf_loss=None, attached=1.0,
+ 
+     conc          dict root/stem/leaf/grain -> concentration series [µg/kg on M's basis]
+     M             (n, 4) organ mass [root, stem, leaf, grain] on the ODE's basis
+-    dry_fraction  dict organ -> dry matter per unit of M (1 - theta_fw)
++    dry_fraction  dict organ -> dry matter per unit of M (1 - theta_fw): a number, or a series on
++                  `t` when the organ's water follows the development stage
+ 
+     Returns dict with conc_dw {root, stem, leaf_green, leaf, grain, straw}, straw_fw (dead blades
+     at their dry mass), dead_burden, dead_dry, attached."""
+diff --git a/src/model_api.py b/src/model_api.py
+index 5b5cefd..9096029 100644
+--- a/src/model_api.py
++++ b/src/model_api.py
+@@ -208,17 +208,21 @@ def kcw_by_organ(c, organ=None):
+ 
+ def _compartments(kcw=None):
+     """[root, stem, leaf, grain] compartments; `kcw` ({organ: K_cw}) binds each organ with
+-    its own cell-wall K (None -> the compound's single K_cw)."""
++    its own cell-wall K (None -> the compound's single K_cw). Each carries its organ's water
++    by development stage (`organ_mass.THETA_STAGE`); the constant `theta` is the fallback for
++    a driver without stage."""
+     g = _COMP
+     k = kcw or {}
++    st = om.THETA_STAGE
+     return [Compartment("root",  g["root"]["theta_fw"], g["root"]["f_prot"], g["root"]["f_PL"], g["root"]["f_cw"],
+-                        K_cw=k.get("root")),
++                        K_cw=k.get("root"), theta_dvs=st.get("root")),
+             Compartment("stem",  g["stem"]["theta_fw"], g["stem"]["f_prot"], g["stem"]["f_PL"], g["stem"]["f_cw"],
+-                        K_cw=k.get("stem")),
++                        K_cw=k.get("stem"), theta_dvs=st.get("stem")),
+             Compartment("leaf",  g["leaf"]["theta_fw"], g["leaf"]["f_prot"], g["leaf"]["f_PL"], g["leaf"]["f_cw"], S=20.0,
+-                        K_cw=k.get("leaf")),
++                        K_cw=k.get("leaf"), theta_dvs=st.get("leaf")),
+             Compartment("grain", g["grain_brown"]["theta_fw"], g["grain_brown"]["f_prot"],
+-                        g["grain_brown"]["f_PL"], g["grain_brown"]["f_cw"], S=2.0, K_cw=k.get("grain"))]
++                        g["grain_brown"]["f_PL"], g["grain_brown"]["f_cw"], S=2.0, K_cw=k.get("grain"),
++                        theta_dvs=st.get("grain"))]
+ 
+ 
+ def yamazaki_obs(congener=None):
+@@ -502,10 +506,17 @@ def _default_drivers(season, n_t, Cwo, measured_forcing, biomass="oryza2000",
+     return t, Cwo_series, Qtp, M, leaf_loss, MASS_BASIS, b.get("dvs")
+ 
+ 
+-def _harvest(t, conc, M, comps, M_basis, leaf_loss, attached, sol, leaf_index):
++def _dry_fraction_series(M, dvs):
++    """organ -> dry matter per unit of fresh M at every time (1 - theta at that stage)."""
++    Md = om.dry_from_fresh(M, dvs)
++    return {o: Md[:, i] / np.asarray(M, float)[:, i] for i, o in enumerate(TISSUES)}
++
++
++def _harvest(t, conc, M, comps, M_basis, leaf_loss, attached, sol, leaf_index, dvs=None):
+     """The harvest observation operator (src/harvest.py) on a 4-tissue solve: dead blades
+-    kept in the leaf and straw, dry-basis concentrations for dw-reported data."""
+-    dry = hv.dry_fractions({o: comps[i].theta for i, o in enumerate(TISSUES)}, M_basis)
++    kept in the leaf and straw, dry-basis concentrations for dw-reported data (each organ's
++    dry matter at its water of that stage)."""
++    dry = _dry_fraction_series(M, dvs)
+     return hv.harvest_observables(
+         t, conc, M, dry, leaf_loss=leaf_loss, attached=attached,
+         C_leaf_fn=(lambda tt: sol.sol(tt)[leaf_index]) if getattr(sol, "sol", None) else None)
+@@ -620,7 +631,8 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
+                 congener=congener,
+                 scenario=scenario if measured_forcing else "generic", **(cwo_kw or {}))
+     inputs = PlantInputs(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss,
+-                         M_basis=M_basis, dvs=dvs)
++                         M_basis=M_basis, dvs=dvs,
++                         M_dry=(om.dry_from_fresh(M, dvs) if M_basis == "fresh" else None))
+ 
+     f_xy, L_Ph, r_eq, g_xy, g_ph = _resolve_transport(
+         c, f_xy_source, lipid_loading, shoot, f_xy_override, L_Ph_override, r_eq_override,
+@@ -656,9 +668,10 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source="recommended",
+     sol = model.solve(t)
+     C = sol.y                                            # (4, n_t)
+     conc = {k: C[i] for i, k in enumerate(TISSUES)}
+-    obs = _harvest(t, conc, M, comps, inputs.M_basis, leaf_loss, dead_leaf_attached, sol, LEAF)
++    obs = _harvest(t, conc, M, comps, inputs.M_basis, leaf_loss, dead_leaf_attached, sol, LEAF,
++                   dvs=dvs)
+     straw = obs["straw_fw"]
+-    B = binding_factors(comps, cmpd)
++    B = binding_factors(comps, cmpd, None if dvs is None else float(np.asarray(dvs)[-1]))
+     # time-resolved BAF normaliser (per-step pore water); guard zeros
+     cw = np.where(Cwo_series > 0, Cwo_series, np.nan)
+     cwo_ref = float(Cwo_series[-1]) if Cwo_series[-1] > 0 else (
+@@ -954,7 +967,10 @@ def _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M4, leaf_loss, season
+         [np.maximum(M4[:, 0], om.MASS_FLOOR)]
+         + [np.maximum(M4[:, 1] / N, om.MASS_FLOOR)] * N
+         + [np.maximum(M4[:, 2], om.MASS_FLOOR), np.maximum(M4[:, 3], om.MASS_FLOOR)])
+-    inputs = PlantInputsNL(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss, dvs=dvs)
++    D4 = om.dry_from_fresh(np.maximum(M4, om.MASS_FLOOR), dvs)
++    Mdry = np.column_stack([D4[:, 0]] + [D4[:, 1] / N] * N + [D4[:, 2], D4[:, 3]])
++    inputs = PlantInputsNL(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss, dvs=dvs,
++                           M_dry=Mdry)
+     g = _COMP
+     phi = PHI if phi is None else float(phi)
+     T_C_Ph = T_C_PH if T_C_Ph is None else float(T_C_Ph)
+@@ -962,7 +978,7 @@ def _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M4, leaf_loss, season
+     if kcw is None:                       # each organ's own K_cw unless the caller gave a set
+         kcw = kcw_by_organ(_CONG[congener]) if congener in _CONG else {}
+     _kw = lambda d, o: dict(theta=d["theta_fw"], f_prot=d["f_prot"], f_PL=d["f_PL"],
+-                            f_cw=d["f_cw"], K_cw=kcw.get(o))
++                            f_cw=d["f_cw"], K_cw=kcw.get(o), theta_dvs=om.THETA_STAGE.get(o))
+     comps = make_stem_leaf_compartments(
+         N, _kw(g["stem"], "stem"), _kw(g["root"], "root"), _kw(g["leaf"], "leaf"),
+         _kw(g["grain_brown"], "grain"))
+@@ -992,12 +1008,11 @@ def _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M4, leaf_loss, season
+     # straw = stem segments + green leaf + attached dead blades (the harvest operator)
+     Mo = np.column_stack([M[:, 0], np.sum(Mseg, axis=1), M[:, model.LEAF], M[:, model.GRAIN]])
+     obs = hv.harvest_observables(
+-        t, conc, Mo, hv.dry_fractions({o: _COMP["grain_brown" if o == "grain" else o]["theta_fw"]
+-                                       for o in TISSUES}),
++        t, conc, Mo, _dry_fraction_series(Mo, dvs),
+         leaf_loss=leaf_loss, attached=dead_leaf_attached,
+         C_leaf_fn=lambda tt: sol.sol(tt)[model.LEAF])
+     straw = obs["straw_fw"]
+-    B = binding_factors(comps, cmpd)
++    B = binding_factors(comps, cmpd, None if dvs is None else float(np.asarray(dvs)[-1]))
+     rec = _CONG.get(congener, {})
+     return dict(
+         t=t, congener=congener, success=bool(sol.success), season=float(season),
+diff --git a/src/organ_mass.py b/src/organ_mass.py
+index e1e98a2..777363e 100644
+--- a/src/organ_mass.py
++++ b/src/organ_mass.py
+@@ -27,11 +27,10 @@ so the mass basis and the concentration basis cannot drift apart.
+ Driver dicts carry the tag `mass_basis="fresh"` (MASS_BASIS) so the one place that needs
+ dry matter -- the leaf/grain xylem split -- can take it back out (`xylem_leaf_share`).
+ 
+-LIMITATIONS (docs/sampling_protocols_audit_KR.md): theta_fw is held constant over
+-the season (grain 0.14 is harvest moisture; filling grain is ~0.5-0.6 water, mature
+-straw dries to 0.1-0.5), and the root/stem/leaf values are estimates -- no rice
+-dataset in the repo, nor any found in the literature audit, reports organ water
+-content over a season.
++theta_fw follows the crop's development stage (`theta_at`): linear in DVS between sourced
++anchors (params/rice_theta_stage_sourced.csv) -- the root dries from ~0.82 in the vegetative
++phase to ~0.64 at maturity, the grain from 0.58 early in filling to 0.21 at harvest. A driver
++without stage falls back to the constant composition-table value `THETA_FW`.
+ """
+ from __future__ import annotations
+ 
+@@ -53,25 +52,60 @@ def _load_theta():
+     return {o: float(comp[k]["theta_fw"]) for o, k in _COMP_KEY.items()}
+ 
+ 
+-THETA_FW = _load_theta()
++THETA_FW = _load_theta()          # constant fallback for a driver without development stage
+ 
+ 
+-def fresh_factor(organ):
+-    """Multiplier dry -> fresh organ mass: 1/(1-theta_fw)."""
+-    return 1.0 / (1.0 - THETA_FW[organ])
++def _load_stage():
++    """organ -> array [[dvs, theta], ...] of the sourced stage anchors (theta at each anchor's
++    midpoint; params/rice_theta_stage_sourced.csv via parameters.json["theta_stage"])."""
++    with open(os.path.join(_ROOT, "params", "parameters.json")) as f:
++        st = json.load(f).get("theta_stage") or {}
++    anc = st.get("anchors", {})
++    return {o: np.asarray(anc[k], float)[:, :2] for o, k in _COMP_KEY.items() if k in anc}
++
++
++THETA_STAGE = _load_stage()
++
++
++def theta_at(organ, dvs=None):
++    """theta_fw of `organ` at development stage(s) `dvs`: linear in DVS between the sourced
++    anchors and flat outside them. A driver without stage (dvs None, or NaN entries) uses the
++    constant `THETA_FW`."""
++    a = THETA_STAGE.get(organ)
++    if dvs is None or a is None:
++        return THETA_FW[organ] if dvs is None or np.ndim(dvs) == 0 else \
++            np.full(np.shape(dvs), THETA_FW[organ])
++    d = np.asarray(dvs, float)
++    th = np.where(np.isfinite(d), np.interp(np.nan_to_num(d), a[:, 0], a[:, 1]), THETA_FW[organ])
++    return float(th) if th.ndim == 0 else th
++
++
++def fresh_factor(organ, dvs=None):
++    """Multiplier dry -> fresh organ mass: 1/(1-theta_fw), at stage `dvs` when given."""
++    return 1.0 / (1.0 - theta_at(organ, dvs))
+ 
+ 
+ def to_model_mass(b):
+     """Convert a crop-model biomass dict {root,stem,leaf,grain: DRY kg/hill, ...} to FRESH
+-    organ mass. Non-organ keys (e.g. ORYZA's `leaf_death_rate`, a RELATIVE rate that a
+-    constant factor leaves unchanged) are passed through untouched."""
++    organ mass, with each organ's water at the driver's development stage (`b["dvs"]`) when
++    it carries one. Non-organ keys (e.g. ORYZA's `leaf_death_rate`, a RELATIVE rate of the
++    dry leaf, which applies to the burden unchanged) are passed through untouched."""
+     out = dict(b)
++    dvs = b.get("dvs")
+     for o in ORGANS:
+         if o in b and b[o] is not None:
+-            out[o] = np.asarray(b[o], float) * fresh_factor(o)
++            out[o] = np.asarray(b[o], float) * fresh_factor(o, dvs)
+     return out
+ 
+ 
++def dry_from_fresh(M, dvs=None):
++    """(n, 4) DRY matter from an (n, 4) FRESH matrix with the same organ water (`theta_at`)
++    that made it fresh -- the dry growth the grain phloem stream is per kg of, and the dry
++    basis of the harvest operator."""
++    M = np.asarray(M, float)
++    return np.column_stack([M[:, i] * (1.0 - theta_at(o, dvs)) for i, o in enumerate(ORGANS)])
++
++
+ # The ODE divides by organ mass, so an organ the crop model has not formed yet (the grain
+ # before panicle initiation) sits on a floor. The floor is numerical, not a datum: it is
+ # admissible because the results do not depend on it -- harvest values are identical for
+diff --git a/src/pfas_rice_plant_module_4pool_surf.py b/src/pfas_rice_plant_module_4pool_surf.py
+index 212c87d..af761a0 100644
+--- a/src/pfas_rice_plant_module_4pool_surf.py
++++ b/src/pfas_rice_plant_module_4pool_surf.py
+@@ -223,6 +223,15 @@ class Compartment:
+                              # speciation calculation at all, which is the PFAS path.
+     K_cw: float | None = None  # this organ's cell-wall binding [L/kg cw]; None -> the
+                              # compound's K_cw (one value for every compartment)
++    theta_dvs: object = None  # organ water by development stage: array [[dvs, theta], ...]
++                             # (linear in DVS, flat outside); None -> `theta` throughout
++
++    def theta_at(self, dvs=None):
++        """Water content at development stage `dvs` (None or NaN -> the constant `theta`)."""
++        if self.theta_dvs is None or dvs is None or not np.isfinite(dvs):
++            return self.theta
++        a = np.asarray(self.theta_dvs, float)
++        return float(np.interp(dvs, a[:, 0], a[:, 1]))
+ 
+ 
+ M_BASES = (None, "fresh")
+@@ -260,7 +269,7 @@ def panicle_share(dvs, at_heading, at_maturity):
+ S_XYLEM_DRY = {LEAF: 20.0, FRUIT: 0.5116}
+ 
+ 
+-def xylem_leaf_share(comps, M, M_basis=None, s_grain_dry=None):
++def xylem_leaf_share(comps, M, M_basis=None, s_grain_dry=None, dvs=None):
+     """Leaf share of the xylem stream that leaves the stem (the grain takes the rest).
+ 
+     Split by transpiring surface x mass. For a FRESH M (M_basis='fresh') the split runs
+@@ -272,29 +281,32 @@ def xylem_leaf_share(comps, M, M_basis=None, s_grain_dry=None):
+     """
+     if M_basis == "fresh":
+         s4 = S_XYLEM_DRY[FRUIT] if s_grain_dry is None else float(s_grain_dry)
+-        A3 = S_XYLEM_DRY[LEAF] * M[LEAF] * (1.0 - comps[LEAF].theta)
+-        A4 = s4 * M[FRUIT] * (1.0 - comps[FRUIT].theta)
++        A3 = S_XYLEM_DRY[LEAF] * M[LEAF] * (1.0 - comps[LEAF].theta_at(dvs))
++        A4 = s4 * M[FRUIT] * (1.0 - comps[FRUIT].theta_at(dvs))
+     else:
+         A3 = comps[LEAF].S * M[LEAF]
+         A4 = comps[FRUIT].S * M[FRUIT]
+     return A3 / (A3 + A4) if (A3 + A4) > 0 else 0.5
+ 
+ 
+-def grain_dry_growth(comps, dM, M_basis=None):
++def grain_dry_growth(comps, dM, M_basis=None, dM_dry=None, dvs=None):
+     """Grain DRY-matter growth rate [kg/day] for the grain phloem stream Q_g = growth x T_C_Ph,
+-    whose coefficient is per kg of grain DRY matter. A fresh M (M_basis 'fresh') carries the
+-    grain's water, so its growth is converted with the binding factor's theta; None (the
+-    basis-free placeholder) is used as given."""
++    whose coefficient is per kg of grain DRY matter. The dry driver's own growth when the
++    inputs carry it (`dM_dry`; the right one when the organ's water changes with stage);
++    otherwise a fresh M (M_basis 'fresh') is converted with the binding factor's theta, and
++    None (the basis-free placeholder) is used as given."""
++    if dM_dry is not None and np.isfinite(dM_dry[FRUIT]):
++        return dM_dry[FRUIT]
+     if M_basis == "fresh":
+-        return dM[FRUIT] * (1.0 - comps[FRUIT].theta)
++        return dM[FRUIT] * (1.0 - comps[FRUIT].theta_at(dvs))
+     return dM[FRUIT]
+ 
+ 
+-def phloem_flows(comps, dM, Qtp, T_C_Ph, phi, M_basis=None):
++def phloem_flows(comps, dM, Qtp, T_C_Ph, phi, M_basis=None, dM_dry=None, dvs=None):
+     """The two phloem streams from the leaf [L/day]: to the grain, the sap its DRY-matter
+     growth draws (`grain_dry_growth` x T_C_Ph); to the root, the recirculating fraction phi
+     of transpiration. Separate streams: the recirculation does not pass through the grain."""
+-    Q_g = max(grain_dry_growth(comps, dM, M_basis) * T_C_Ph, 0.0)
++    Q_g = max(grain_dry_growth(comps, dM, M_basis, dM_dry, dvs) * T_C_Ph, 0.0)
+     Q_r = max(phi * Qtp, 0.0)
+     return Q_g, Q_r
+ 
+@@ -322,6 +334,8 @@ class PlantInputs:
+     M_basis: str | None = None            # 'fresh' | None -- see the docstring
+     dvs: np.ndarray | None = None         # crop development stage (ORYZA DVS); needed when the
+                                           # panicle's xylem share follows the stage
++    M_dry: np.ndarray | None = None       # the DRY matter behind a fresh M (n, 4), whose growth
++                                          # the grain phloem stream is per kg of
+ 
+     def __post_init__(self):
+         if self.M_basis not in M_BASES:
+@@ -354,20 +368,22 @@ class PlantInputs:
+         # interpolation, same linear extrapolation beyond the ends)
+         dv = (np.full(len(self.t), np.nan) if self.dvs is None
+               else np.asarray(self.dvs, float))
++        dMd = (np.full((len(self.t), 4), np.nan) if self.M_dry is None
++               else np.gradient(np.asarray(self.M_dry, float), self.t, axis=0))
+         self._tg = np.asarray(self.t, dtype=float)
+         self._tab = np.column_stack([np.asarray(self.Cwo, float), np.asarray(self.Qtp, float),
+-                                     self.M, dM, ll, gate, dv])
++                                     self.M, dM, ll, gate, dv, dMd])
+ 
+     def drivers_at(self, t):
+-        """(Cwo, Qtp, M[4], dM[4], leaf_loss, grain_gate, dvs) at time t, by one linear lerp
+-        (dvs is NaN for a driver set without a development stage)."""
++        """(Cwo, Qtp, M[4], dM[4], leaf_loss, grain_gate, dvs, dM_dry[4]) at time t, by one
++        linear lerp (dvs and dM_dry are NaN for a driver set without them)."""
+         tg = self._tg
+         i = int(np.searchsorted(tg, t, side="right")) - 1
+         i = min(max(i, 0), len(tg) - 2)
+         w = (t - tg[i]) / (tg[i + 1] - tg[i])
+         row = self._tab[i] + w * (self._tab[i + 1] - self._tab[i])
+         return (row[0], row[1], row[2:6], row[6:10], max(row[10], 0.0),
+-                min(1.0, max(0.0, row[11])), row[12])
++                min(1.0, max(0.0, row[11])), row[12], row[13:17])
+ 
+     def Cwo_(self, t):  return float(self._Cwo(t))
+     def Qtp_(self, t):  return float(self._Qtp(t))
+@@ -385,7 +401,7 @@ class PlantInputs:
+ # ----------------------------------------------------------------------------
+ # Model functions
+ # ----------------------------------------------------------------------------
+-def binding_factors(comps: list[Compartment], cmpd: Compound) -> np.ndarray:
++def binding_factors(comps: list[Compartment], cmpd: Compound, dvs=None) -> np.ndarray:
+     """B_k = theta_fw + (1-theta_fw)*(f_prot K_prot + f_PL K_PL + f_cw K_cw)  [L/kg fw].
+ 
+     FRESH-WEIGHT basis (NOTES path A): theta is the fresh-weight water fraction and
+@@ -394,11 +410,12 @@ def binding_factors(comps: list[Compartment], cmpd: Compound) -> np.ndarray:
+     M and fluxes. Compare to dw-reported data via C_dw = C_fw / (1 - theta_fw).
+     4-POOL: f_cw is the WHOLE cell wall (polysaccharide + lignin lumped).
+     """
++    th = [c.theta_at(dvs) for c in comps]
+     return np.array([
+-        c.theta + (1.0 - c.theta) * (
++        t + (1.0 - t) * (
+             c.f_prot * cmpd.K_prot + c.f_PL * cmpd.K_PL
+             + c.f_cw * (cmpd.K_cw if c.K_cw is None else c.K_cw))
+-        for c in comps
++        for c, t in zip(comps, th)
+     ])
+ 
+ 
+@@ -531,11 +548,12 @@ class RiceUptakeModel:
+ 
+     def rhs(self, t: float, C: np.ndarray) -> np.ndarray:
+         """RHS of dC/dt for the 4 compartments (Eqs. root, stem, leaf, fruit)."""
+-        Cwo, Qtp, M, dM, leaf_loss, gam, dvs = self.inputs.drivers_at(t)
++        Cwo, Qtp, M, dM, leaf_loss, gam, dvs, dM_dry = self.inputs.drivers_at(t)
+         M = np.maximum(M, MASS_FLOOR)                # the drivers are floored already; a guard
+-        mu = dM / M                                  # growth-dilution rates [1/day]
++        mu = dM / M                                  # growth-dilution rates [1/day] (fresh: with
++                                                     # the organ's water change when theta moves)
+ 
+-        B = binding_factors(self.comps, self.cmpd)   # [L/kg]
++        B = binding_factors(self.comps, self.cmpd, dvs)   # [L/kg], at this stage's water
+         Cw = C / B                                   # free aqueous conc [ug/L]
+ 
+         # leaf/fruit xylem split: the panicle's sourced share of transpiration at the crop's
+@@ -546,13 +564,14 @@ class RiceUptakeModel:
+             f4 = panicle_share(dvs, *self.lam_grain_dvs)
+             f3 = 1.0 - f4
+         else:
+-            split = xylem_leaf_share(self.comps, M, self.inputs.M_basis, self.s_grain_dry)
++            split = xylem_leaf_share(self.comps, M, self.inputs.M_basis, self.s_grain_dry, dvs)
+             f3, f4 = split, 1.0 - split
+ 
+         # phloem flows (carrier loading at leaf; NOT pH trap): the grain draws the sap its
+         # dry-matter growth needs (T_C_Ph per kg DM); a fraction phi of transpiration
+         # recirculates to the ROOT. The two are separate streams from the same leaf source.
+-        Q_g, Q_r = phloem_flows(self.comps, dM, Qtp, self.T_C_Ph, self.phi, self.inputs.M_basis)
++        Q_g, Q_r = phloem_flows(self.comps, dM, Qtp, self.T_C_Ph, self.phi, self.inputs.M_basis,
++                                dM_dry, dvs)
+         # L_Ph_eff == cmpd.L_Ph unless a weak-electrolyte pH trap is configured
+         C_Phl = (self.phloem_loading_factor() * Cw[LEAF]
+                  + self.cmpd.g_ph * C[LEAF])          # free + lipid-bound [ug/L]
+diff --git a/src/pfas_rice_plant_module_nstem_leaf.py b/src/pfas_rice_plant_module_nstem_leaf.py
+index 298ef8b..5b8cf70 100644
+--- a/src/pfas_rice_plant_module_nstem_leaf.py
++++ b/src/pfas_rice_plant_module_nstem_leaf.py
+@@ -103,6 +103,8 @@ class PlantInputsNL:
+     leaf_loss: np.ndarray | None = None   # leaf senescence loss RATE [1/day] (opt; 0 if None)
+     dvs: np.ndarray | None = None         # crop development stage (ORYZA DVS), for the
+                                           # stage-based panicle share
++    M_dry: np.ndarray | None = None       # the DRY matter behind M (same columns), whose growth
++                                          # the grain phloem stream is per kg of
+ 
+     def __post_init__(self):
+         self.M = np.asarray(self.M, dtype=float)
+@@ -132,21 +134,25 @@ class PlantInputsNL:
+         n = self.n_comp
+         dv = (np.full(len(self.t), np.nan) if self.dvs is None
+               else np.asarray(self.dvs, float))
++        dMd = (np.full((len(self.t), n), np.nan) if self.M_dry is None
++               else np.gradient(np.asarray(self.M_dry, float), self.t, axis=0))
+         self._tg = np.asarray(self.t, dtype=float)
+         self._tab = np.column_stack([np.asarray(self.Cwo, float), np.asarray(self.Qtp, float),
+-                                     self.M, dM, ll, gate, dv])
+-        self._sl = (slice(2, 2 + n), slice(2 + n, 2 + 2 * n), 2 + 2 * n, 3 + 2 * n, 4 + 2 * n)
++                                     self.M, dM, ll, gate, dv, dMd])
++        self._sl = (slice(2, 2 + n), slice(2 + n, 2 + 2 * n), 2 + 2 * n, 3 + 2 * n, 4 + 2 * n,
++                    slice(5 + 2 * n, 5 + 3 * n))
+ 
+     def drivers_at(self, t):
+-        """(Cwo, Qtp, M, dM, leaf_loss, grain_gate, dvs) at time t, by one linear lerp."""
++        """(Cwo, Qtp, M, dM, leaf_loss, grain_gate, dvs, dM_dry) at time t, by one linear lerp
++        (dvs and dM_dry are NaN for a driver set without them)."""
+         tg = self._tg
+         i = int(np.searchsorted(tg, t, side="right")) - 1
+         i = min(max(i, 0), len(tg) - 2)
+         w = (t - tg[i]) / (tg[i + 1] - tg[i])
+         row = self._tab[i] + w * (self._tab[i + 1] - self._tab[i])
+-        sM, sdM, ill, ig, idv = self._sl
++        sM, sdM, ill, ig, idv, sdd = self._sl
+         return (row[0], row[1], row[sM], row[sdM], max(row[ill], 0.0),
+-                min(1.0, max(0.0, row[ig])), row[idv])
++                min(1.0, max(0.0, row[ig])), row[idv], row[sdd])
+ 
+     def Cwo_(self, t): return float(self._Cwo(t))
+     def Qtp_(self, t): return float(self._Qtp(t))
+@@ -229,23 +235,28 @@ class NStemLeafModel:
+                 "stem + panicle shares exceed the transpiration stream"
+         assert self.tau.min() >= 0
+         assert 0.0 <= self.retention <= 1.0
+-        # binding + metabolism depend only on (comps, cmpd), both fixed at
+-        # construction -- hoist them out of the RHS (called ~3k times per solve).
++        # binding + metabolism depend only on (comps, cmpd), both fixed at construction --
++        # hoist them out of the RHS (called ~3k times per solve) unless an organ's water
++        # follows the development stage, in which case B is evaluated at each step's stage.
+         self._B = binding_factors(self.comps, self.cmpd)
++        self._B_staged = any(c.theta_dvs is not None for c in self.comps)
+         self._gamma = np.array([c.gamma for c in self.comps])
+ 
+     def rhs(self, t, C):
+-        Cwo, Q, M, dM, leaf_loss, gam, dvs = self.inputs.drivers_at(t)
++        Cwo, Q, M, dM, leaf_loss, gam, dvs, dM_dry = self.inputs.drivers_at(t)
+         M = np.maximum(M, MASS_FLOOR)
+         mu = dM / M
+-        Cw = C[:self.n_comp] / self._B
++        B = binding_factors(self.comps, self.cmpd, dvs) if self._B_staged else self._B
++        Cw = C[:self.n_comp] / B
+         g = self._gamma
+         dC = np.zeros_like(C)
+ 
+         leaf, grain, r = self.LEAF, self.GRAIN, self.retention
+         # phloem: loaded at the leaf (free + optional lipid-bound); two streams -- to the grain
+         # the sap its DRY growth draws (T_C_Ph per kg DM; M is fresh), to the root phi x Q_TP
+-        Q_g = max(dM[grain] * (1.0 - self.comps[grain].theta) * self.T_C_Ph, 0.0)
++        g_dry = (dM_dry[grain] if np.isfinite(dM_dry[grain])
++                 else dM[grain] * (1.0 - self.comps[grain].theta_at(dvs)))
++        Q_g = max(g_dry * self.T_C_Ph, 0.0)
+         Q_r = max(self.phi * Q, 0.0)
+         C_Phl = self.cmpd.L_Ph * Cw[leaf] + self.cmpd.g_ph * C[leaf]
+ 
+diff --git a/src/site_scenario.py b/src/site_scenario.py
+index 6a9f4b8..6d0c1f9 100644
+--- a/src/site_scenario.py
++++ b/src/site_scenario.py
+@@ -235,6 +235,7 @@ def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=C
+ def drivers_from_run(run, Cwo=1.0):
+     """A `model_api.simulate(drivers=...)` dict from one plant run (fresh organ mass)."""
+     b = {k: run[k] for k in ("root", "stem", "leaf", "grain")}
++    b["dvs"] = np.asarray(run["dvs"], float)          # each organ's water at its stage
+     return dict(t=run["t"], Cwo=np.full_like(run["t"], float(Cwo)), Qtp=run["Qtp"],
+                 M=om.organ_matrix(b), leaf_loss=run["leaf_death_rate"],
+                 mass_basis=om.MASS_BASIS, dvs=np.asarray(run["dvs"], float))
+diff --git a/tests/test_organ_mass.py b/tests/test_organ_mass.py
+index e7753a2..cf935c6 100644
+--- a/tests/test_organ_mass.py
++++ b/tests/test_organ_mass.py
+@@ -54,10 +54,12 @@ def test_driver_builders_convert():
+     t = np.linspace(0.0, 120.0, 61)
+     _, M = api.measured_forcing(t, scenario="generic", biomass="oryza")
+     dry = og.organ_biomass_oryza(t, p=og.OryzaParams(season=120.0))
+-    assert np.allclose(M[-1], [max(dry[o][-1] * om.fresh_factor(o), om.MASS_FLOOR) for o in om.ORGANS])
++    d_end = dry["dvs"][-1]                       # each organ's water at the driver's stage
++    assert np.allclose(M[-1], [max(dry[o][-1] * om.fresh_factor(o, d_end), om.MASS_FLOOR)
++                               for o in om.ORGANS])
+     drv = og.oryza_drivers(n_t=61)
+     assert drv["mass_basis"] == "fresh"
+-    assert drv["M"][-1, 2] == pytest.approx(dry["leaf"][-1] * om.fresh_factor("leaf"), rel=1e-6)
++    assert drv["M"][-1, 2] == pytest.approx(dry["leaf"][-1] * om.fresh_factor("leaf", d_end), rel=1e-6)
+ 
+ 
+ def test_measured_biomass_table_is_dry_in_fresh_out():
+diff --git a/tests/test_theta_stage.py b/tests/test_theta_stage.py
+new file mode 100644
+index 0000000..fafbe79
+--- /dev/null
++++ b/tests/test_theta_stage.py
+@@ -0,0 +1,124 @@
++"""Organ water that follows the development stage (amendment 2 prototype).
++
++Pinned: (1) theta(DVS) is linear between the sourced anchors and flat outside them, and the
++dry -> fresh conversion is undone exactly by `dry_from_fresh`; (2) with staged water the
++models still conserve mass (the burden C*M_fresh changes only by uptake and loss, whatever
++the water does) and the flux mirror still equals rhs(); (3) the grain phloem stream is per kg
++of DRY growth taken from the dry driver; (4) the harvest operator reports burden / dry matter.
++"""
++import os
++import sys
++
++import numpy as np
++import pytest
++
++ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
++sys.path.insert(0, os.path.join(ROOT, "src"))
++
++import organ_mass as om                                    # noqa: E402
++import apportionment as ap                                  # noqa: E402
++from model_api import PHI, T_C_PH                           # noqa: E402
++from pfas_rice_plant_module_4pool_surf import (            # noqa: E402
++    Environment, Compound, Compartment, PlantInputs, RiceUptakeModel, binding_factors,
++    root_uptake, _logistic)
++from pfas_rice_plant_module_nstem_leaf import (            # noqa: E402
++    NStemLeafModel, PlantInputsNL, make_stem_leaf_compartments, default_tau)
++
++STAGE = {"root": [[0.65, 0.82], [2.0, 0.64]], "stem": [[0.65, 0.82], [2.0, 0.71]],
++         "leaf": [[0.65, 0.73], [2.0, 0.66]], "grain": [[1.0, 0.58], [2.0, 0.21]]}
++
++
++def _cmpd():
++    return Compound(name="x", K_prot=12.3, K_PL=1905.0, K_cw=6.5, kappa_d=0.0, Vmax_in=0.0,
++                    Km_in=1.0, Vmax_out=0.0, Km_out=1.0, L_Ph=0.05, f_xy=0.04,
++                    r_eq=2.0, lam_eq=1e4, g_xy=0.002, g_ph=0.0)
++
++
++def _drivers(t):
++    dvs = np.clip(t / 75.0, 0.0, 2.0)
++    dry = np.column_stack([_logistic(t, 1e-4, 0.004, 0.10, 20.0), _logistic(t, 1e-4, 0.010, 0.11, 30.0),
++                           _logistic(t, 1e-4, 0.005, 0.11, 30.0), _logistic(t, 1e-8, 0.012, 0.18, 95.0)])
++    th = np.column_stack([np.interp(dvs, *np.array(STAGE[o]).T) for o in om.ORGANS])
++    return dvs, dry, dry / (1.0 - th)
++
++
++def test_theta_is_linear_between_anchors_and_flat_outside():
++    a = om.THETA_STAGE["root"]
++    assert om.theta_at("root", 0.0) == pytest.approx(a[0, 1])          # flat before
++    assert om.theta_at("root", 2.5) == pytest.approx(a[-1, 1])         # flat after
++    mid = 0.5 * (a[0, 0] + a[1, 0])
++    assert om.theta_at("root", mid) == pytest.approx(0.5 * (a[0, 1] + a[1, 1]))
++    assert om.theta_at("root") == om.THETA_FW["root"]                  # no stage: constant
++    t = np.linspace(0, 120, 50)
++    b = {"root": t * 1e-4 + 1e-6, "stem": t * 2e-4 + 1e-6, "leaf": t * 1e-4 + 1e-6,
++         "grain": t * 5e-5 + 1e-6, "dvs": np.clip(t / 60.0, 0, 2)}
++    M = np.column_stack([om.to_model_mass(b)[o] for o in om.ORGANS])
++    assert np.allclose(om.dry_from_fresh(M, b["dvs"]), np.column_stack([b[o] for o in om.ORGANS]))
++
++
++def _comps4():
++    return [Compartment("root", 0.8, 0.06, 0.02, 0.5, theta_dvs=STAGE["root"]),
++            Compartment("stem", 0.8, 0.07, 0.003, 0.7, theta_dvs=STAGE["stem"]),
++            Compartment("leaf", 0.7, 0.2, 0.009, 0.4, theta_dvs=STAGE["leaf"]),
++            Compartment("grain", 0.2, 0.09, 0.001, 0.04, theta_dvs=STAGE["grain"])]
++
++
++def test_4pool_flux_mirror_and_mass_with_staged_water():
++    t = np.linspace(0.0, 150.0, 301)
++    dvs, dry, M = _drivers(t)
++    inp = PlantInputs(t=t, Cwo=np.ones_like(t), Qtp=0.05 + 0.1 * np.exp(-((t - 90) / 30) ** 2),
++                      M=M, M_basis="fresh", dvs=dvs, M_dry=dry)
++    m = RiceUptakeModel(env=Environment(), cmpd=_cmpd(), comps=_comps4(), inputs=inp,
++                        phi=PHI, T_C_Ph=T_C_PH, lam_grain_dvs=(0.21, 0.07))
++    rng = np.random.default_rng(1)
++    for ti in (20.0, 80.0, 120.0):
++        C = rng.uniform(0.0, 30.0, 4)
++        assert np.allclose(m.rhs(ti, C), ap.dC_from_fluxes(m, ti, C), rtol=1e-9, atol=1e-12)
++    # the burden changes only by root entry (no loss, no metabolism, no air)
++    sol = m.solve(t)
++    for ti in (60.0, 110.0):
++        C = sol.sol(ti); dC = m.rhs(ti, C)
++        Cwo, Q, Mi, dM, ll, gam, dv, dMd = inp.drivers_at(ti)
++        B = binding_factors(m.comps, m.cmpd, dv)
++        jR = root_uptake(Cwo, C[0] / B[0], m.cmpd, m.env)
++        assert float(np.sum(dM * C + Mi * dC)) == pytest.approx(float(Mi[0] * jR), rel=1e-6, abs=1e-9)
++
++
++def test_redistributed_mass_with_staged_water():
++    N = 4
++    t = np.linspace(0.0, 150.0, 301)
++    dvs, dry4, M4 = _drivers(t)
++    M = np.column_stack([M4[:, 0]] + [M4[:, 1] / N] * N + [M4[:, 2], M4[:, 3]])
++    Md = np.column_stack([dry4[:, 0]] + [dry4[:, 1] / N] * N + [dry4[:, 2], dry4[:, 3]])
++    inp = PlantInputsNL(t=t, Cwo=np.ones_like(t), Qtp=0.05 + 0.1 * np.exp(-((t - 90) / 30) ** 2),
++                        M=M, dvs=dvs, M_dry=Md)
++    kw = lambda o, th, fp, fpl, fcw: dict(theta=th, f_prot=fp, f_PL=fpl, f_cw=fcw, theta_dvs=STAGE[o])
++    comps = make_stem_leaf_compartments(N, kw("stem", .8, .07, .003, .7), kw("root", .8, .06, .02, .5),
++                                        kw("leaf", .7, .2, .009, .4), kw("grain", .2, .09, .001, .04))
++    m = NStemLeafModel(env=Environment(), cmpd=_cmpd(), comps=comps, inputs=inp,
++                       tau=default_tau(N, 0.29), phi=PHI, T_C_Ph=T_C_PH, lam_grain_dvs=(0.21, 0.07))
++    sol = m.solve(t)
++    for ti in (60.0, 110.0):
++        C = sol.sol(ti); dC = m.rhs(ti, C)
++        Cwo, Q, Mi, dM, ll, gam, dv, dMd = inp.drivers_at(ti)
++        B = binding_factors(m.comps, m.cmpd, dv)
++        jR = root_uptake(Cwo, C[0] / B[0], m.cmpd, m.env)
++        assert float(np.sum(dM * C + Mi * dC)) == pytest.approx(float(Mi[0] * jR), rel=1e-6, abs=1e-9)
++
++
++def test_grain_phloem_uses_the_dry_growth():
++    from pfas_rice_plant_module_4pool_surf import grain_dry_growth, FRUIT
++    comps = _comps4()
++    dM = np.array([0, 0, 0, 1.0]); dMd = np.array([0, 0, 0, 0.3])
++    assert grain_dry_growth(comps, dM, "fresh", dMd, 1.5) == 0.3
++    assert grain_dry_growth(comps, dM, "fresh", None, 1.5) == pytest.approx(1 - comps[FRUIT].theta_at(1.5))
++
++
++def test_harvest_reports_burden_over_dry_matter():
++    import model_api as api
++    r = api.simulate("PFOA", shoot="4pool", lipid_loading=False, f_xy_override=0.1,
++                     L_Ph_override=0.05, r_eq_override=1.0)
++    run = api.site_run()
++    dry = om.dry_from_fresh(r["M"], run["dvs"])
++    assert r["conc_dw"]["grain"][-1] == pytest.approx(r["conc"]["grain"][-1] * r["M"][-1, 3] / dry[-1, 3])
++    assert r["conc_dw"]["root"][-1] == pytest.approx(r["conc"]["root"][-1] / (1 - om.theta_at("root", run["dvs"][-1])))
+-- 
+2.43.0
+

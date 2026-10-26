@@ -269,3 +269,37 @@ cell-wall / Fe-Mn-plaque batch-sorption and desorption assay.
 >
 > The neutral-organic arc is a separate handoff (`HANDOFF_neutral_next.md`); the
 > PFAS two-pool arc is `HANDOFF_BAF_twopool.md`.
+
+---
+
+## 5. On fresh organ mass (2026-10) — the verdicts survive, one comparison had to be made fair
+
+Both scripts call the default `simulate()`, so after the organ-mass fix
+(`src/organ_mass.py`) they had silently been running on fresh mass while every number
+above is on the pre-fix dry basis. They now take `PFAS_MASS_BASIS` (default fresh);
+`PFAS_MASS_BASIS=dry ... --fast` reproduces the record above exactly (the recorded
+numbers are the `--fast` grid: 2.640 / 1.035 / 0.996 at `g_apo`=20 / 2.289, bootstrap
+0.749, corr +0.832 over 25×).
+
+- **Dose series: unchanged.** Fresh and dry agree to two decimals (PFOS carrier 6.27×
+  vs measured 1.17×, the `Km` ≥ 500 bound, 1/3 congeners). Shapes are normalised to the
+  lowest dose and entry is a root property, so the basis cancels.
+- **"An addition is necessary": unchanged.** Fresh: nothing 3.004, depolarisation 2.634,
+  either addition ~1.16–1.20.
+- **"Which addition": unchanged — but only after a fairness fix.** Run as written on
+  fresh mass, the bypass beats the carrier at bootstrap **0.996**. That is because the
+  bypass's one parameter is re-fitted on whatever basis the script runs on while the
+  carrier's `Vmax` stays at its W2-fit value. New POST-HOC section 6 re-fits the
+  carrier's one global parameter too: fresh, carrier ×16 (grid edge) **1.161** vs bypass
+  **1.194**, P(bypass beats the re-fitted carrier) **0.30** (fast grid 0.27; dry 0.16).
+  Not a difference, on either basis.
+- **The bypass's chain-length independence: refuted more strongly** (corr +0.909 full
+  grid on fresh, vs +0.855 dry full / +0.832 dry fast).
+- **The convergence, now on ONE setup.** Section 6 also fits the carrier's `Vmax` per
+  congener in the same single-pool, monotone-`f_xy` setup as section 3's bypass:
+  corr(n_C, log Vmax) **+0.915** fresh / **+0.880** dry, against the bypass's
+  +0.909 / +0.832. Previously the carrier side came from LC6, a different setup. And where
+  `f_xy` is left free (the carrier two-pool closure) the carrier's correction nearly
+  vanishes on fresh mass (1.26–1.50×) — the chain-length correction lands on whichever
+  term is free, which is what the B3 "mis-partitioned η" reading predicts. Recorded in
+  `docs/theory_anchor.tex`.

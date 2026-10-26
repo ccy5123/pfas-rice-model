@@ -1,34 +1,44 @@
-compound,tissue,baf,sigma,source
-PFBA,root,0.6803,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFBA,straw,11.0348,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFBA,grain,1.0566,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFPeA,root,0.2699,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFPeA,straw,2.7375,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFPeA,grain,0.2639,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFHxA,root,0.2784,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFHxA,straw,1.1385,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFHxA,grain,0.4161,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFHpA,root,0.7805,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFHpA,straw,1.0711,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFHpA,grain,0.4249,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFOA,root,0.4866,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFOA,straw,0.8333,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFOA,grain,0.4634,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFNA,root,0.5685,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFNA,straw,0.6928,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFNA,grain,0.4135,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFDA,root,4.1574,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFDA,straw,3.4583,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFDA,grain,3.3709,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFUnDA,root,19.5306,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFUnDA,straw,8.164,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFUnDA,grain,3.1341,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFDoDA,root,69.282,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFDoDA,straw,49.7494,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFDoDA,grain,45.5069,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFBS,root,2.2782,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFBS,straw,2.1837,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFBS,grain,0.2529,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFOS,root,5.9326,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFOS,straw,4.3452,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
-PFOS,grain,1.9728,0.4,"Yamazaki2023 S16/S18/S19 geomean Indica+Japonica, fw-converted"
+# Yamazaki et al. 2023 (10.1021/acs.est.2c08767), NARO Tsukuba Andosol paddy FIELD 2020, Kasalath + Koshihikari.
+# BUILT by docs/literature_db/tools/yamazaki_obs_from_si.py from raw_si/yamazaki2023_si_s16_s18_s19.csv (do not edit).
+# baf_dw = tissue [pg/g DRY weight] (SI Tables S18 indica, S19 japonica) / irrigation water [pg/mL] (Table S16, one grab
+#   2020-06-08) [L/kg dw]; the two cultivars combined by geometric mean (as the model's two harvest runs).
+# root  = whole root system (tap + Milli-Q rinse; no plaque removal).
+# straw = the four height bands weighted by their share of straw dry mass (Tanaka et al. 2022 Fig. 3, 10 and 49 d after
+#         heading; raw_si/tanaka2022_fig3_layers.csv): baf_dw at the mean of the two profiles, lo/hi at each profile.
+# grain = brown rice = s x white + (1 - s) x bran, s = 0.86-0.90 (SI p.S3); baf_dw at s = 0.88 and <MQL at MQL/2 (the
+#         midpoints), lo/hi over both ends of s and of [0, MQL].
+# use=0: no measured value at all (PFBS grain: white and bran < MQL in both cultivars).
+compound,tissue,baf_dw,lo,hi,water_ng_L,use
+PFBA,root,6.80274,6.80274,6.80274,7.41,1
+PFBA,straw,53.1744,52.4963,53.8508,7.41,1
+PFBA,grain,1.22859,1.20517,1.25201,7.41,1
+PFPeA,root,2.6987,2.6987,2.6987,12.03,1
+PFPeA,straw,13.2444,13.0948,13.3938,12.03,1
+PFPeA,grain,0.306912,0.289749,0.324062,12.03,1
+PFHxA,root,2.7835,2.7835,2.7835,12.13,1
+PFHxA,straw,5.60316,5.57325,5.63308,12.13,1
+PFHxA,grain,0.483805,0.450791,0.516815,12.13,1
+PFHpA,root,7.80468,7.80468,7.80468,7.47,1
+PFHpA,straw,5.33786,5.28555,5.39016,7.47,1
+PFHpA,grain,0.494032,0.482299,0.505748,7.47,1
+PFOA,root,4.86559,4.86559,4.86559,8.61,1
+PFOA,straw,4.15992,4.12041,4.19935,8.61,1
+PFOA,grain,0.538888,0.516808,0.560772,8.61,1
+PFNA,root,5.68492,5.68492,5.68492,5.96,1
+PFNA,straw,3.45219,3.41724,3.48713,5.96,1
+PFNA,grain,0.480839,0.469199,0.492478,5.96,1
+PFDA,root,41.574,41.574,41.574,0.54,1
+PFDA,straw,17.3718,17.1257,17.6178,0.54,1
+PFDA,grain,3.91963,3.88448,3.95447,0.54,1
+PFUnDA,root,195.306,195.306,195.306,0.32,1
+PFUnDA,straw,42.1012,40.9151,43.2871,0.32,1
+PFUnDA,grain,3.64434,3.56305,3.72387,0.32,1
+PFDoDA,root,692.82,692.82,692.82,0.02,1
+PFDoDA,straw,252.442,247.482,257.399,0.02,1
+PFDoDA,grain,52.915,52.4404,53.3854,0.02,1
+PFBS,root,22.7823,22.7823,22.7823,0.68,1
+PFBS,straw,10.7573,10.5885,10.9253,0.68,1
+PFBS,grain,0.294118,0,0.588235,0.68,0
+PFOS,root,59.3256,59.3256,59.3256,1.19,1
+PFOS,straw,21.5037,21.4319,21.5753,1.19,1
+PFOS,grain,2.29398,2.22611,2.35294,1.19,1

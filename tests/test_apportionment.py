@@ -17,12 +17,13 @@ from pfas_rice_plant_module import (
 
 # reuse the plant-module test builders for a self-contained model
 from test_plant_module import make_compound, make_comps, make_inputs
+from model_api import PHI, T_C_PH   # the sourced phloem constants  # noqa: E402
 
 
 def _model(**cmpd_kw):
     t, inputs = make_inputs()
     model = RiceUptakeModel(env=Environment(), cmpd=make_compound(**cmpd_kw),
-                            comps=make_comps(), inputs=inputs)
+                            comps=make_comps(), inputs=inputs, phi=PHI, T_C_Ph=T_C_PH)
     return t, model
 
 

@@ -133,11 +133,9 @@ def test_speciation_on_orders_better_and_under_delivers(rows, is_acid):
     """The load-bearing half of the two-metric result, pinned on a deterministic
     subsample so the guard stays fast.
 
-    ONLY the robust claims are asserted. The RMSE degradation is deliberately NOT
-    asserted here: it holds on the full table (0.272 -> 0.304) but survives only
-    ~82% of bootstrap resamples, and this very subsample flips it. Writing it as
-    a test would pin an artefact -- see `bootstrap_wins` and section 4 of the
-    validation script, which is where that comparison belongs."""
+    The ordering gain and the under-delivery are asserted; the RMSE comparison is
+    not, because it is the less robust metric on a 12-row subsample (section 4 of
+    the validation script bootstraps it on the full table)."""
     ion = [r for r in rows if not r["neutral"]]
     sub = ion[::6]                          # 12 rows, stable under row order
     obs = np.array([r["TSCF"] for r in sub])
@@ -202,10 +200,10 @@ def test_g_apo_is_self_targeting():
 
 def test_a_small_bypass_helps_and_a_large_one_absorbs(rows):
     """The shape of the g_apo curve IS the result (docs section 4m), so it is the
-    thing to pin: the ordering peaks at a SMALL bypass and the RMSE optimum lies
-    past that peak. A later session that fits g_apo on RMSE and reports the 0.245
-    without the +0.450 beside it has reintroduced exactly the absorption this was
-    pre-registered against.
+    thing to pin: the ordering peaks at a SMALL bypass (g_apo ~ 0.1 on the full table)
+    and the RMSE optimum lies past that peak (~1, where the ordering has fallen back).
+    A later session that fits g_apo on RMSE and reports its RMSE without the rank
+    beside it has reintroduced exactly the absorption this was pre-registered against.
 
     Run on a deterministic subsample to stay fast; the full-table curve is in the
     docs and reproduced by validation/weak_electrolyte_tscf.py section 5.
@@ -217,7 +215,7 @@ def test_a_small_bypass_helps_and_a_large_one_absorbs(rows):
         return np.array([WE.model_tscf(r["logP"], r["fn"], r["pH"], True, g_apo=g)
                          for r in ion])
 
-    p0, p_small, p_big = preds(0.0), preds(0.5), preds(5.0)
+    p0, p_small, p_big = preds(0.0), preds(0.1), preds(5.0)
     rmse = lambda p: float(np.sqrt(np.mean((p - obs) ** 2)))    # noqa: E731
 
     # a small bypass helps BOTH ways -- the Pareto point the docs quote
@@ -228,11 +226,10 @@ def test_a_small_bypass_helps_and_a_large_one_absorbs(rows):
     assert WE.spearman(p_big, obs) < WE.spearman(p_small, obs)
 
 
-def test_the_rank_gain_is_robust_and_the_rmse_loss_is_not():
-    """Pins the asymmetry itself, on synthetic arrays so it costs no ODE solves:
-    `bootstrap_wins` must be able to report the two frequencies separately. The
-    measured values (rank 0.94, RMSE 0.18) are recorded in the docs; what is
-    pinned here is that the comparison is made at all and is direction-aware."""
+def test_bootstrap_wins_reports_each_metric_separately():
+    """On synthetic arrays (no ODE solves): `bootstrap_wins` must report the rank and
+    the RMSE frequencies separately and direction-aware, since the two can disagree.
+    The measured frequencies are printed by section 4 of the validation script."""
     obs = np.linspace(0.05, 0.9, 40)
     off = np.random.default_rng(7).permutation(obs)  # right scale, ordering lost
     on = 0.01 * obs                                  # right ordering, wrong scale

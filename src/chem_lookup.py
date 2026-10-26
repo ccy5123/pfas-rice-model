@@ -12,7 +12,7 @@ THE ONE RULE THIS MODULE ENFORCES: PROVENANCE TRAVELS WITH THE VALUE
 -------------------------------------------------------------------
 CompTox serves EXPERIMENTAL and PREDICTED (OPERA) values side by side, and the
 neutral path's only claim is that *nothing in it is fitted* -- every published
-a-priori number (Liu 0.206/0.281, Ge 0.783, Briggs-stem 0.299) was computed on a
+a-priori number (Liu 0.206/0.213, Ge 0.311, Briggs-stem 0.299) was computed on a
 measured/reported log Kow. Silently substituting an OPERA prediction would leave
 those numbers describing something the app no longer does. So every value here is
 a `Prop` carrying `source` ("experimental" / "predicted") and the reporting lab or

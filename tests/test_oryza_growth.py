@@ -26,8 +26,9 @@ def test_organ_biomass_scaled_to_anchor():
     t = np.linspace(0, 120.0, 241)
     b = oz.organ_biomass_oryza(t, scale_to_anchor=True)
     assert {"root", "stem", "leaf", "grain"} <= set(b)
-    for k in ("root", "stem", "leaf", "grain"):
-        assert b[k].shape == t.shape and np.all(b[k] > 0)
+    for k in ("root", "stem", "leaf", "grain"):          # the model's values: no floor here
+        assert b[k].shape == t.shape and np.all(b[k] >= 0) and b[k][-1] > 0
+    assert b["grain"][0] == 0.0                          # no panicle before its formation
     # leaf senescence loss RATE [1/d] is also exposed (>=0, nonzero after flowering)
     assert b["leaf_death_rate"].shape == t.shape and np.all(b["leaf_death_rate"] >= 0)
     assert np.max(b["leaf_death_rate"]) > 0
@@ -52,8 +53,8 @@ def test_leaf_senescence_and_grain_fill():
 
 def test_M_matrix_and_drivers_shapes():
     t = np.linspace(0, 120.0, 200)
-    M = oz.M_matrix_oryza(t)
-    assert M.shape == (200, 4) and np.all(M > 0)
+    M = oz.M_matrix_oryza(t)                              # DRY matter as the crop model gives it
+    assert M.shape == (200, 4) and np.all(M >= 0)
     dr = oz.oryza_drivers("PFOA", Cwo=1.0, n_t=200)
     assert set(("t", "Cwo", "Qtp", "M")).issubset(dr)
     assert dr["M"].shape == (200, 4) and np.all(dr["M"] > 0)

@@ -32,8 +32,17 @@
 # solution, so they belong on the ionic path, not this one. What remains is 7
 # neonicotinoids + 7 triazoles, all un-ionised, spanning log Kow -0.66 to 4.4.
 #
-# BASIS. The paper records fresh weight ("All fresh weight samples were recorded"),
-# and the model's concentrations are fresh weight, so basis=fw.
+# BASIS. fw, on the numbers rather than on a sentence: the reconstructed RCF of the
+# hydrophilic compounds (log Kow < 1) is 0.44-1.23, i.e. about the root water content,
+# which is the fresh-weight signature (a dry basis would be several-fold higher, ~9 at 90 %
+# root water). The paper does
+# not state the basis of Table S4. Checked against the article (2026-10-25): the sentence
+# "All fresh weight samples were recorded" belongs to the half-life test (section 2.3.1);
+# in the subcellular run the separated tissues were weighed, and the Table S3 mass ratios
+# are of LYOPHILISED control fractions (dry-mass shares, main p.3). The weights are
+# therefore dry-mass shares applied to fraction concentrations of unstated basis -- to be
+# settled against the SI's units. The roots were rinsed with deionised water x3 and then
+# quickly with acetonitrile before separation (section 2.3.2, which 2.3.3 follows).
 #
 compound,log_kow,tissue,value,basis,endpoint,exposure_ugL,half_life_d,K_AW,season_d,note
 nitenpyram,-0.66,root,0.861,fw,baf,1000,,,,neonicotinoid; Liu2023 Table S3xS4 reconstruction; 1 mg/L 72 h

@@ -19,6 +19,7 @@ from pfas_rice_plant_module import (
     _logistic, ROOT, STEM, LEAF, FRUIT,
 )
 from soil_paddy import FreundlichSoil, inputs_from_soil
+from model_api import PHI, T_C_PH   # the sourced phloem constants  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -219,7 +220,7 @@ def _full_model(species="PFOA"):
              Compartment("grain", 0.15, 0.08, 0.010, 0.10, S=2.0)]
     model = RiceUptakeModel(env=lp.literature_environment(),
                             cmpd=lp.literature_compound(species),
-                            comps=comps, inputs=inputs)
+                            comps=comps, inputs=inputs, phi=PHI, T_C_Ph=T_C_PH)
     return t, model
 
 

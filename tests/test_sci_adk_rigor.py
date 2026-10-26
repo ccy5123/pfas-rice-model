@@ -8,7 +8,7 @@ repo gate. It re-runs sci-adk's headless `verify` over the COMMITTED run
   * any recorded claim no longer reproduces from the record, OR
   * an EMPIRICAL predictive claim (Yamazaki predictive-validation / grain risk
     assessment) is ever marked SUPPORTED -- the exact over-claim the review found
-    to be unjustified (saturated in-sample fit; a-priori RMSE ~0.84-0.95), and the
+    to be unjustified (saturated in-sample fit; a-priori straw RMSE ~1.4), and the
     "rice-failure defect" sci-adk exists to prevent, OR
   * the synthetic_proxy validity-HALT artifact (the demo-BAF refusal) disappears.
 
@@ -72,7 +72,7 @@ def test_empirical_predictive_claims_not_supported():
     for hyp in _PREDICTIVE:
         assert status.get(hyp) != "supported", (
             f"{hyp} is SUPPORTED -- an empirical predictive claim was certified. The "
-            f"Yamazaki fit is saturated in-sample (a-priori RMSE ~0.84-0.95) and grain is "
+            f"Yamazaki fit is saturated in-sample (a-priori straw RMSE ~1.4) and grain is "
             f"structurally under-predicted; certifying these is the rice-failure defect. "
             f"Fix the model/evidence, do not relax this gate.")
 

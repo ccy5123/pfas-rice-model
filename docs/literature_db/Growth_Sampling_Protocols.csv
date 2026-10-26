@@ -1,0 +1,248 @@
+paper,field,value,page,quote,status
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),site,"Shizukuishi, Iwate, Japan (Rice FACE; 모리오카 인근 논). FACE 4개 + 대조(ambient) 4개 논, 대조구는 FACE 링에서 90 m 이상 떨어짐",p.826; p.827,"a free air CO2 enrichment (FACE) experiment was conducted at Shizukuishi, Iwate, Japan",reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),years,"1998, 1999, 2000 (3작기)",p.826,"Shizukuishi, Iwate, Japan in 1998–2000",reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),cultivar,Akitakomachi,p.828,"In all three years, seed of rice cv. Akitakomachi was obtained from crops grown locally",reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),setting,노지 담수 논(field). N 처리구(LN/HN)는 30 cm PVC 판을 흙에 10 cm 박아 나머지(MN)와 분리,p.829,by a 30 cm PVC board barrier pushed 10 cm into the soil,reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),planting_density,"포기(hill) 간격 17.5 cm × 줄 간격 30 cm = 19.05 hills m-2; 포기당 3본, 손 이앙",p.828-829,"Hills and rows were 17.5 and 30 cm apart, respectively (equivalent to 19.05 hills m",reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),nursery_transplanting,"흐르는 물에 침종 → 발아 직후 트레이에 파종(1998·1999: 비료 함유 암면(rockwool) 매트 + 시판 육묘 상토 피복, 2000: 육묘 상토만); 트레이는 비닐 챔버(대기 또는 +200 ppm CO2). 출아 후 14(1998)/23(1999)/24(2000)일에 이앙: 5월 21/20/22일",p.828-829,hand-transplanted in groups of three (referred to as a hill),reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),water_management,"전 생육기 담수, 7월 중순 5일 중간낙수, 수확 약 10일 전부터 낙수",p.829,fields were flooded throughout the season except for a five day summer drainage in mid-July and from about 10 days prior to harvest,reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),border_exclusion,"시험구 둘레를 기계이앙 보호구(border) 식물이 둘러쌈. 처음 두 번의 채취 자리는 보호구에서 가져온 예비 포기로 다시 심고, 이 포기는 이후 채취하지 않음",p.829,the sampling locations were replanted with spare hills taken from the borders; these replanted hills were not sampled later,reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),sampling_dates_stages,"5회: 분얼 중기, 유수형성기(PI), 개화기(anthesis), 등숙 중기, 성숙기에 맞춤. 이앙 후 일수(DAT)는 Table 1(MN: 1998 25/53/81/109/131, 1999 32/62/88/105/123, 2000 29/56/78/100/120; LN·HN 일부 다름)",p.829; Table 1 p.828,"Sample dates were chosen so as to coincide as close as possible to the mid-tillering, PI, anthesis, mid-ripening and grain maturity growth stages",reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),phenology_event_dates,보고 안 함 (출수·개화·성숙 실제 날짜 없음; 채취일만 단계 이름으로 표시),-,,not reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),hills_per_sample,"MN: 1998 구당 3곳 × 4포기, 1999·2000 구당 2곳 × 6포기; HN: 구당 1곳 × 4(1998) 또는 6포기(1999·2000); LN: 1998 없음, 1999·2000 구당 1곳 × 4포기",p.829,four hills were sampled from three locations in each plot in 1998 and six hills from two locations in each plot,reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),replicates,"4 블록(블록마다 FACE 1구 + ambient 1구, 서로 다른 논). 통계는 각 N 소구 내 채취 포기의 평균값 사용",p.829,"There were four blocks, each consisting of a FACE and an ambient plot located in separate paddies",reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),hill_selection,이웃 포기 교란을 최소화하도록 채취. 평균 분얼수 포기 선택 같은 대표성 기준은 보고 안 함,p.829,Hills were sampled so as to minimize disturbance of the neighbouring hills.,reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),sampling_time_of_day,보고 안 함,-,,not reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),root_soil_volume,포기마다 폭 30 cm × 길이 17.5 cm × 깊이 15 cm 흙 블록을 파냄,p.829,"a block of soil 30 cm wide, 17.5 cm long and 15 cm deep around each individual hill was dug up",reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),root_washing,"1998년 포기의 1/2, 1999년 1/3, 2000년 1/6만 흐르는 물로 뿌리의 흙·이물질 제거. 나머지 포기의 뿌리량은 세척한 포기의 지상부:뿌리 건물중 비로 추정. 체(sieve) 눈금 보고 안 함",p.829,soil and other extraneous matter was carefully cleaned from the root system under running water,reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),root_shoot_basis,건물중 기준 지상부:뿌리 비(뿌리를 씻지 않은 포기의 뿌리량 추정에 사용),p.829,Based on the shoot to root dry weight ratio of plants from which roots were collected,reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),root_plaque_removal,보고 안 함,-,,not reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),organ_fractions,"생엽 잎몸(living leaf laminae), 고사엽 잎몸(senesced leaf laminae), 줄기(잎집 포함), 이삭(있을 때), 뿌리",p.829,"The plants were separated into living and senesced leaf laminae, stem (including leaf sheath), panicles (when present) and roots",reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),sheath_assignment,잎집은 줄기에 포함,p.829,stem (including leaf sheath),reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),dead_leaf_separation,"고사엽 잎몸을 따로 분리·칭량(Table 2의 SLdw = 고사엽 건물중, g m-2)",p.829; Table 2 p.831,senescent leaf dry weight on a ground area basis,reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),detached_blade_handling,"보고 안 함 (떨어진 잎몸을 모았는지, 잃었는지 기술 없음)",-,,not reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),leaf_area_method,포기의 절반에서 녹색 잎면적 측정. 기기·방법 보고 안 함,p.829,green leaf area was measured for half the hills,reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),fresh_weight_recorded,보고 안 함,-,,not reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),drying,"강제송풍 오븐 80 °C, 1주. 기관별로 따로 건조·칭량",p.829,The dry weight of the plant parts was determined separately after drying at 80,reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),balance_precision,보고 안 함,-,,not reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),sample_grinding,질소 분석용으로 0.5 mm 체 눈금으로 분쇄(milling; 여기서 milling은 분쇄이며 도정이 아님) 후 micro-Kjeldahl,p.829,"After milling (0.5 mm mesh), the N content of all plant parts was determined separately using a micro-Kjeldahl technique",reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),yield_sampling,"성숙기 수량: LN 18(1998·1999)/40(2000)포기, MN 54(1998)/60(1999·2000)포기, HN 10/20/40포기(1998/1999/2000)",p.829,"and 60 hills (1999, 2000) were harvested for the MN-subplots",reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),threshing_filled_unfilled,임실 영화(fertile spikelet) 수를 세고 낟알 질량 측정. 탈곡·임실/불임 분리 방법은 보고 안 함,p.829,Total fertile spikelet number was counted and grain mass determined.,reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),yield_moisture_basis,수량 = 임실 영화의 건물중(14% 수분 환산 아님),p.829,Grain yield was defined as the dry weight of fertile spikelets.,reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),hulling_milling,보고 안 함 (현미·백미 무게 없음),-,,not reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),thousand_grain_weight,보고 안 함 (본문은 낟알 1개 평균 질량을 Kim et al. 2001로 인용),p.835,,not reported
+Kim et al. 2003 (Glob. Change Biol. 9:826-837),organ_water_content,보고 안 함,-,,not reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),site,"FACE 시설(상세는 Okada et al. 2001). 지명은 본문에 직접 없음. 잎 질소를 ""같은 장소""(Kim et al. 2003)에서 측정했다고 씀",p.1710; p.1709,measured at the same site (Kim et al. 2003),reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),years,1999,p.1710,were grown in a paddy field under AMB and FACE conditions in 1999,reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),cultivar,Akitakomachi,p.1710,Rice plants (Oryza sativa L. cv.,reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),setting,노지 담수 논,p.1710,All plants were grown in flooded conditions.,reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),planting_density,포기당 3본; 17.5 cm × 30 cm = 19.05 hills m-2,p.1710,"Hills and rows were 17.5 and 30 cm apart, respectively (equivalent to 19.05 hills m",reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),nursery_transplanting,"흐르는 물에서 발아 → 유근 출현 직후 비료 함유 암면 매트 트레이에 파종; 트레이는 비닐 챔버(대기 또는 +200 ppm). 출아 후 23일, 5월 20일 이앙",p.1710,"At 23 days after emergence, on 20 May, seedlings were transplanted into the paddy field at three per hill.",reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),phenology_event_dates,"유수형성기 이앙 후 약 54일(7월 13일); 출수 78 DAT(8월 6일, AMB), 75 DAT(8월 3일, FACE). 성숙일 보고 안 함",p.1710,"The plants reached the panicle initiation stage around 54 days after transplanting (DAT) (13 July), and heading days were 78 DAT",reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),sampling_dates_stages,"생장분석: 33(6/22), 65(7/24), 94(8/22), 119 DAT(9/16) = 분얼 중기·출수 전·등숙기·성숙기. LAI: 32, 62, 88, 105, 123 DAT",p.1710,"Plants were sampled for growth analysis at 33 (22 June), 65 (24 July), 94 (22 August), and 119 DAT (16 September).",reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),hills_per_sample,생장분석 회당 4포기(13C 측정과 같은 포기). LAI는 회당 16포기,p.1710,Four hills were sampled at each sampling and these were the same plants that we used for measurement of 13C.,reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),hill_selection,생장분석 포기 = 13C 공급 포기(0.10 mm PVC 봉지를 120–180분 씌움). 대표성 선택 기준은 보고 안 함,p.1710,Each treated hill was covered with a transparent bag made of 0.10-mm-thick polyvinylchloride film,reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),sampling_time_of_day,보고 안 함 (호흡 측정만 저녁에 했다고 기술),-,,not reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),root_soil_volume,보고 안 함,-,,not reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),root_washing,흐르는 물로 흙·이물질 제거 후 동결건조. 체 눈금 보고 안 함,p.1710,"Roots were carefully cleaned under running water to remove soil and other extraneous matter, and then freeze-dried.",reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),root_plaque_removal,보고 안 함,-,,not reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),organ_fractions,"잎몸, 줄기(잎집 포함), 뿌리, 이삭(있을 때). 생엽/고사엽 구분 보고 안 함",p.1710,"Plants were separated into leaf blades, stems (including leaf sheath), roots, and ears (when present).",reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),sheath_assignment,잎집은 줄기에 포함(그림 4 설명: 줄기 = 잎집 + 稈),p.1706,Stem includes leaf sheath and culm.,reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),dead_leaf_separation,보고 안 함,-,,not reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),detached_blade_handling,보고 안 함,-,,not reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),leaf_area_method,"녹색 잎면적(LAI), 회당 16포기. 기기·방법 보고 안 함",p.1710,Sixteen hills were sampled at each sampling.,reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),fresh_weight_recorded,보고 안 함,-,,not reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),drying,잎몸·줄기·이삭은 즉시 −80 °C 보관 후 동결건조; 뿌리는 세척 후 동결건조; 건조 후 기관별 건물중,p.1710,The dry weights of the plant organs were determined separately after drying.,reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),balance_precision,보고 안 함,-,,not reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),yield_and_grain_processing,보고 안 함 (수량은 Kim et al. 2001 인용; 탈곡·도정·천립중 없음),-,,not reported
+Sasaki et al. 2005 (Plant Cell Physiol. 46:1704-1712),organ_water_content,보고 안 함,-,,not reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),site,"Nianyu Farm, Wuxi, Jiangsu, China (31°35′N, 120°30′E, 해발 5 m); stagnic anthrosol; 벼–밀 윤작",p.13,"where the soil is classified as stagnic anthrosols (local name, huangni soil)",reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),years,2001–2003,p.12,"in 2001–2003, using Wuxiangging 14, a japonica cultivar",reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),cultivar,"논문 표기 ""Wuxiangging 14""(Hasegawa 2017 SI 표기는 Wuxiangjing 14), 조생 만생종 자포니카, 이삭당 영화 평균 155",p.13,Early-maturing late japonica cv. Wuxiangging 14,reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),setting,"노지 논, China Rice/Wheat FACE: FACE 링 3개(팔각형, 지름 12 m) + ambient 링 5개",p.13,"three FACE rings in octagon, 12 m in diameter (hereinafter called FACE plots), and five similar ambient rings",reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),planting_density,"포기당 3본, 손 이앙; ""17.5 × 30 cm (24 hills m-2에 해당)""라고 씀 — 그러나 17.5 × 30 cm는 산술상 19.05 hills m-2 (논문 내부 불일치; Hasegawa 2017 SI도 24로 기재)",p.13,"Spacing of the hills was 17.5 by 30 cm, (equivalent to 24 hills m",reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),nursery_transplanting,"5월 18일 파종, 대기 조건에서 육묘, 6월 13일 손 이앙. 육묘 방식(상자·노지) 보고 안 함",p.13,Rice seeds were sown on 18 May. The seedlings grown under ambient air were manually transplanted,reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),water_management,"6/13–7/10 약 5 cm 담수, 7/11–8/4 여러 번 완전 낙수, 8/5부터 수확 10일 전까지 간단관개",p.14,"about 5 cm in depth from 13 June to 10 July, and drained dry several times from 11 July to 4 August",reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),border_exclusion,시험구 둘레에 같은 방식으로 관리한 보호구 식물. 채취 후 빈자리는 보호구 포기로 다시 심고 이후 채취 안 함; 수량은 보호구 제외 2 m2,p.14,the vacant spaces left after sampling were replanted with hills taken from the borders,reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),sampling_dates_stages,"분얼 중기, PI, 출수기(50% 출수), 등숙 중기, 성숙기. 2001: 28·51 DAT, 출수기, 출수 후 20일, 성숙기; 2002: 27·47 DAT, 출수기, 20 DAH, 성숙기; 2003: 28·45 DAT, 출수기, 30 DAH, 성숙기",p.14,"coincide as much as possible with the mid-tillering, PI, heading (50% of plant headed), mid-ripening and grain maturity stages",reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),phenology_event_dates,보고 안 함 (출수·성숙 날짜 없음),-,,not reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),hills_per_sample,"소구(subplot)당 5포기(본문은 ""five plants""로 쓰고 바로 뒤에 ""five hills""로 지칭)",p.14,five plants with the mean stem number were selected,reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),hill_selection,"소구 여러 곳에서 100포기의 줄기 수를 세고, 평균 줄기 수를 가진 5포기 선택",p.14,the number of stems in 100 hills was counted at different places in each subplot,reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),replicates,"FACE 링 3, ambient 링 5. 링 안 소구 수 보고 안 함",p.13,five similar ambient rings,reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),sampling_time_of_day,보고 안 함,-,,not reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),root_collected,보고 안 함 (뿌리 채취 기술 없음; 표는 지상부만),-,,not reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),organ_fractions,"생엽, 고사엽, 줄기(잎집 포함), 이삭(있을 때). Table 3은 잎/줄기/이삭(spike) 비율 3가지만 제시",p.14; Table 3 p.16,"The samples were separated into living and dead leaf tissue, stem (including leaf sheath), and panicle (when applicable).",reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),sheath_assignment,잎집은 줄기에 포함,p.14,stem (including leaf sheath),reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),dead_leaf_separation,"고사엽을 분리함. 단 Table 3의 ""Leaf""가 고사엽을 포함하는지는 보고 안 함",p.14; p.16,living and dead leaf tissue,reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),detached_blade_handling,보고 안 함,-,,not reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),leaf_area_method,5포기 중 2포기에서 녹색 잎면적 측정. 기기·방법 보고 안 함,p.14,For two of the five hills green leaf areas were measured.,reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),fresh_weight_recorded,보고 안 함,-,,not reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),drying,"오븐 80 °C, 항량(constant weight)까지 건조 후 칭량",p.14,All the plant parts were oven-dried at 80,reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),balance_precision,보고 안 함,-,,not reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),yield_sampling,소구당 2 m2(보호구 제외)의 전체 식물,p.14,Grain yield was determined of all the plants from a 2 m2 patch (excluding plants in the borders) in each subplot,reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),yield_moisture_basis,수분 0.14 g H2O g-1 생중량(=14%)으로 환산,p.14,after the grains were adjusted to a moisture content of 0.14 g H2O g,reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),threshing_filled_unfilled,"보고 안 함 (고찰에 ""spikelet fertility percentage"", ""grain weight""가 나오나 측정법 없음)",p.18,,not reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),hulling_milling,보고 안 함,-,,not reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),thousand_grain_weight,보고 안 함,-,,not reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),harvest_index_definition,HI = 성숙기 지상부 건물중 중 이삭(spike) 비율(이삭축·왕겨 포함; 정조/현미 기준 아님),p.18,"the spike DM proportion at grain maturity, which is also called HI",reported
+Yang et al. 2006 (Field Crops Res. 98:12-19),organ_water_content,보고 안 함,-,,not reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),site,"Qing'an Irrigation Experimental Station (46°58′06″N, 127°39′37″E), 쑹넌 평원, 중국 동북부",p.2,Field experiments were conducted at Qing'an Irrigation Experimental Station,reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),years,"2018, 2019",p.2,in 2018 and 2019,reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),cultivar,Suijing-18 (한랭지 자포니카),p.3,The Japonica rice variety of Suijing-18 was used,reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),setting,"노지 논(라이시미터·소구 시험이 아닌 정비된 농지), 관행 담수 관개(basin)",p.3,Traditional flood irrigation (i.e. basin irrigation) was applied in our experiment.,reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),planting_density,"20 hills m-2, 포기당 5본. 포기·줄 간격 보고 안 함",p.3,The planting density was 20 hills per m2 and 5 plants per hill.,reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),nursery_transplanting,"두 해 모두 4월 15일 파종, 5월 16일 이앙; 수확 9월 18일(2018), 21일(2019). 육묘 방식 보고 안 함",p.3,The crop was sown on April 15th and transplanted on May 16th in both 2018 and 2019,reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),phenology_event_dates,"Table 2에 연도별 생육단계 기간(날짜) 제시(예: 2018 blooming 7/23–8/3, yellow ripe 8/19–9/18). Table A1: EMD 111, IDOYTR 136, IDOYPI 191, IDOYFL 214, IDOYM 261(연도 명시 없음)",Table 2 p.4; Table A1 p.11,,reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),sampling_dates_stages,"시험포 안 3지점에서 약 10일 간격(중요 생육기엔 더 자주); 2018년 9회, 2019년 10회",p.3,Crop sampling and observation were taken at three sites within the experimental field about every 10 days during the crop seasons,reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),hills_per_sample,보고 안 함,-,,not reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),replicates,2018: 시험포 3곳 × 3반복; 2019: 시험포 1곳 × 3반복,p.3,three experimental fields with three-time replications in each field during 2018,reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),hill_selection,보고 안 함,-,,not reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),sampling_time_of_day,보고 안 함,-,,not reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),root_collected,"뿌리를 기관 중 하나로 분리했다고 씀. 채취 부피·깊이·세척 방법은 보고 안 함; 뿌리 측정값은 논문에 제시되지 않음(그림 3은 D-AGB, DWST, DWGL, DWSO, LAI만)",p.3; Fig. 3 p.8,"The complete plant was sampled and separated into different components: roots, stems, green leaves, dead leaves and storage organ (i.e. panicles).",reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),root_washing,보고 안 함,-,,not reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),root_plaque_removal,보고 안 함,-,,not reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),organ_fractions,"뿌리, 줄기, 녹색 잎, 고사엽, 저장기관(이삭)",p.3,"roots, stems, green leaves, dead leaves and storage organ (i.e. panicles)",reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),sheath_assignment,보고 안 함,-,,not reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),dead_leaf_separation,"고사엽 건물중(DWDL)을 따로 측정했으나 그림에는 없음. D-AGB는 ""dry aboveground green biomass""로 정의",p.3; p.8,"including the dry aboveground green biomass (D-AGB) and the dry biomass of stems, green leaves, dead leaves, and panicles",reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),detached_blade_handling,보고 안 함,-,,not reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),leaf_area_method,"잎마다 길이·너비 측정, LAI = 0.75·ρ·(1/3)·ΣΣ l·b (식 1, Han et al. 2009), 0.75 = 형상계수, ρ = 재식밀도",p.3,"the leaf length and width were measured for each leaf, and the LAI was calculated using Eq. (1)",reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),fresh_weight_recorded,보고 안 함,-,,not reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),drying,"오븐 80 °C, 항량까지",p.3,The dry biomass was measured by oven drying at 80,reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),balance_precision,보고 안 함,-,,not reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),yield_sampling,수확 시 1 m2 × 6반복,p.3,Dry grain yield was collected at 1 m2 with six replicates during harvest.,reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),yield_moisture_basis,"""Dry grain yield""라고만 씀; 오븐 건조 기준인지 14% 환산인지 보고 안 함. 2018 실측 7604 ± 738 kg ha-1",p.3; p.6,,not reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),threshing_filled_unfilled,보고 안 함,-,,not reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),hulling_milling,보고 안 함,-,,not reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),thousand_grain_weight,보고 안 함 (Table A1의 WGRMX 0.0000249 kg grain-1은 모델 파라미터),Table A1 p.11,,not reported
+Gao et al. 2021 (Agric. Water Manage. 250:106864),organ_water_content,보고 안 함 (토양 수분만 오븐 건조법으로 측정),-,,not reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,site,"IRRI farm, 14.22N, 121.25E, 23 m (Los Baños, Philippines) — 실험 자료 파일(§7.2) 머리말",p.153 (PDF 162),"Experimental site: IRRI farm, 14.22N, 121.25E, 23m",reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,years,1992 건기(dry season),p.153,"Year/Season : 1992, dry season",reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,cultivar,IR72,p.153,Crop : Oryza sativa cv. IR72,reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,setting,"노지 시험, N 3수준 처리(§8.1.1). §7.2 예시 파일은 225 kg N 처리(이앙·분얼 중기·PI 각 60, 개화 45)",p.153; p.191-192,Fertilizer : 225 kg N,reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,planting_density,"실험 자료 파일의 관리 입력값: 포기당 5본, 25 hills m-2, 묘판 1000본 m-2",p.157 (PDF 166),NH = 25. ! Number of hills (no m-2),reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,nursery_transplanting,"1992년 1월 4일 파종, 1월 16일 이앙(묘판 12일)",p.157,"Transplanting date January 16, 1992; sowing date Jan. 4.",reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,phenology_event_dates,"관측 생물계절: 이앙 DOY 16, PI DOY 58, 개화 DOY 83, 성숙 DOY 114 (1992)",p.161 (PDF 170),IDOYPI = 58 ! Day of panicle initiation,reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,sampling_dates_stages,"관측일 DOY 4, 16, 34, 58, 68, 83, 97, 114 (LAI, WLVG, WLVD, WST, WSO, WAGT, 엽질소)",p.161-163,,reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,organ_fractions,"녹색 잎(WLVG), 고사엽(WLVD), 줄기(WST), 이삭(WSO, panicle dry weight), 지상부 합(WAGT); 모두 kg 건물 ha-1. 뿌리 관측값 없음",p.164 (PDF 173),Observed values can be given for green leaf weight (WLVG; kg dry matter ha,reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,sheath_assignment,"매뉴얼은 줄기와 잎집을 함께 다룸(""stem (or sheath) area index""). IR72DS92 채취에서 잎집을 어디에 넣었는지는 보고 안 함",p.37 (PDF 46),stem (or sheath) area index (SAI),reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,sample_processing,"매뉴얼에는 채취 포기 수·반복·건조 온도·뿌리·탈곡 등 시료 처리 절차가 없고, 실험 정보를 Kropff et al. (1994a)로 미룸. Kropff 1994a(2026-10-25 확인)는 반복·포기 수·육묘를 채우지만 건조 온도·뿌리·탈곡은 거기에도 없음",p.191-192 (PDF 200-201),More information on this experiment and on the application of ORYZA2000 is given by,not reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,data_requirement_same_dates,"PARAM으로 분배계수를 구하려면 모든 무게 관측을 같은 날, 가능하면 LAI도 같은 날",p.164,all the weight observations should be made on the same dates and preferably also for the leaf area index,reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,data_requirement_dead_leaves,고사엽을 측정하지 않으면 개화 후 잎·줄기 감소를 반영할 수 없어 최대값을 쓰게 됨(분배계수 계산),p.172 (PDF 181),this maximum value is used for partitioning calculations when dead leaves are not measured,reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,yield_moisture_basis,모델 출력 WRR14 = 낟알 건물중 / 0.86 (정조 14% 수분),p.74 (PDF 83),The weight of rough rice is calculated from the dry weight of the grains (WRR) by considering 14% moisture.,reported
+Bouman et al. 2001 ORYZA2000 manual - IR72DS92 experiment,root_depth_method,최대 뿌리 깊이는 현장 뿌리 단면 또는 토양 코어로 측정 가능(일반 지침; IR72DS92의 실측 아님),p.174 (PDF 183),can simply be measured by making root profiles in the field or by taking soil core samples,reported
+Hasegawa et al. 2017 SI Table S1,site,"일본: 39°38′N/140°57′E, Andosol(모래 43.1%, 실트 31.4%, 점토 25.5%, 용적밀도 0.73, 경작층 12.3 cm, 전탄소 82.5 g kg-1); 중국: 31°37′N/120°28′E, stagnic anthrosol(용적밀도 1.2, 경작층 13.0 cm)",SI p.3,Table S1. Summary of the experimental conditions for the Japanese and Chinese FACE experiments,reported
+Hasegawa et al. 2017 SI Table S1,cultivar,"일본 Akitakomachi(평균 생육기간 146일, 이삭당 영화 81); 중국 Wuxiangjing 14(158일, 155)",SI p.3,Akitakomachi,reported
+Hasegawa et al. 2017 SI Table S1,nursery_transplanting,"일본 파종 5/1(1998), 4/23(1999), 4/23(2000) → 이앙 5/21, 5/20, 5/22; 중국 파종 5/18 → 이앙 6/13(2001–2003)",SI p.3,Sowing dates,reported
+Hasegawa et al. 2017 SI Table S1,planting_density,일본 19 hills m-2; 중국 24 hills m-2,SI p.3,Planting density,reported
+Hasegawa et al. 2017 SI Table S1,sample_processing,보고 안 함 (조건 요약표일 뿐 채취·건조 절차 없음),-,,not reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),site,"스크린하우스(screenhouse) 포트 시험. 토양은 저장대학 농업시험장(30°18′23.9″N, 120°4′46.6″E, 항저우) 표토 0–20 cm. 스크린하우스 위치 보고 안 함",p.2; p.3,All experiments were systematically maintained within a screenhouse facility,reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),years,보고 안 함,-,,not reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),cultivar,Nipponbare (자포니카),p.3,"Japonica rice ""Nipponbare""",reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),setting,"HDPE 버킷(윗지름 18 cm, 높이 16 cm), 토양 2.5 kg, 묘 20본/버킷, 처리별 3반복, 무작위 배치. 토양: 2 mm 체, 풍건, 메탄올 1 L로 PFAS 첨가, 2주 안정화, 수분 40%(건중 기준)",p.2-3,"Each treatment consisted of 20 rice seedlings, 2.5 kg of soil, and an individual high-density polyethylene bucket",reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),nursery_transplanting,"종자 10% H2O2 10분 소독 후 탈이온수 5회 헹굼 → 30 °C 암조건 72 h 발아 → 육묘 트레이 수경 5일 → 1/2 Kimura B 양액(pH 5.6, 72 h마다 교체), 26 °C·80% RH·2000 lux → 4주 묘를 시험에 사용",p.3,Four-week-old seedlings exhibiting morphological uniformity were selected for experimental treatments,reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),water_management,분얼 후기·등숙기를 빼고 2–3 cm 담수; 관개수는 탈이온수; 시비 없음,p.3,this experiment strictly excluded supplemental fertilization and utilized deionized water for irrigation,reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),sampling_dates_stages,노출 150일 후 수확; 매월 채취(1–5개월). 날짜·생육단계 보고 안 함,p.3,"Rice was harvested after 150 days of exposure, with samples collected monthly throughout its entire life cycle.",reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),phenology_event_dates,보고 안 함,-,,not reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),hills_per_sample,"버킷당 20본, 처리당 3버킷은 보고. 매월 몇 본을 채취했는지는 보고 안 함",p.3,Each treatment including PFAS-free controls was conducted in triplicate.,reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),sampling_time_of_day,"보고 안 함 (묘 단계의 생리 조작을 ""standardized sampling windows""에 맞췄다고만 씀)",p.3,synchronized to circadian rhythms through standardized sampling windows,not reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),root_soil_volume,보고 안 함 (포트 시험이지만 뿌리를 포트에서 어떻게 꺼내 분리했는지 기술 없음),-,,not reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),tissue_wash_water,탈이온수로 붙은 흙 입자를 조심스럽게 헹굼(채취 시료); 성숙기 생장 측정 시에도 탈이온수로 흙 제거,p.3,Each sample was carefully rinsed with deionized water to remove attached soil particles,reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),rinse_count,"보고 안 함 (종자 소독 뒤 ""five consecutive rinses""는 조직 세척이 아님)",-,,not reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),root_plaque_removal,보고 안 함,-,,not reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),organ_fractions,"뿌리, 줄기(stems = 2.6절의 stalk), 잎, 왕겨(rice chaff), 배젖(endosperm) 5부위",p.3,"divided into five parts: roots, stems, leaves, rice chaff, and endosperm",reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),sheath_assignment,보고 안 함,-,,not reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),dead_leaf_separation,보고 안 함,-,,not reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),fresh_weight_recorded,"분리 직후 조직을 칭량(생중량); 성숙기 식물체·이삭 생물량을 따로 측정(그림 1, FW). 기관별 생중량 값은 논문에 없음",p.3; Fig. 1 p.4,The plant tissues were immediately weighed,reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),drying,PE 봉지에 밀봉 → 동결건조기에서 −80 °C 동결건조 → 분말화,p.3,"sealed in polyethylene bags, freeze-dried at − 80 °C in a freeze-dryer, and ground into powders",reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),sample_grinding,분말화(기기 보고 안 함); 분석에 동결건조 분말 1 g + 메탄올 5 mL 초음파 추출,p.3,"1 g of freeze-dried powder of rice (root, stalk, leaf, rice chaff, endosperm) and soil samples were extracted by ultrasonication in 5 mL of methanol",reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),storage,조직은 PE 봉지 밀봉 후 동결건조; 토양은 분석 전 −20 °C. 분말 보관 조건 보고 안 함,p.2; p.3,All samples were stored at –20 ◦ C refrigerator before the analyses.,reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),contamination_control,"실험 전 과정에 폴리프로필렌 재질, 모든 용기를 Milli-Q 물로 사전 세척",SI Text S2,polypropylene materials were used throughout the experimental process and all containers were pre-washed with Milli-Q water,reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),grain_definition,"""endosperm""과 ""rice chaff""의 정의, 탈곡·제현·도정 여부 보고 안 함. 결론부에서 왕겨·배젖 농축을 ""rice bran feed"" 같은 부산물 오염과 연결해 언급(정의 아님)",p.9,suggesting vigilance against secondary pollution from agricultural and sideline products (such as rice bran feed),not reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),yield_moisture_basis,보고 안 함 (SI Text S3는 섭취 안전 기준 계산에 백미 표준 GB/T 1354-2018의 수분 ≤15.5%를 사용 — 분석 시료 설명이 아님),SI Text S3,that the moisture content of japonica rice shall not exceed 15.5%,not reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),thousand_grain_weight,보고 안 함,-,,not reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),conc_basis,조직 농도는 건중 기준,Fig. 3·4 captions p.7,The Bioconcentrations (based on dry weight),reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),organ_water_content,보고 안 함 (생중량 즉시 칭량 + 동결건조라 계산 가능한 자료는 있었으나 기관별 수분은 미제시),-,,not reported
+Tang et al. 2026 (J. Hazard. Mater. 502:141017),growth_measurements,"성숙기 탈이온수로 세척 → 식물체와 이삭 생물량 따로 측정, 뿌리 길이·초장은 줄자",p.3,the root length and plant height are determined using a tape measure,reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),site,"톈진 교외 논(38°34′N, 116°43′E), 1년 1작, 100 m × 100 m 이상 필지",p.2,"Expansive paddy fields that cultivate one crop of rice annually, which exceed 100 m × 100 m, were chosen for this study.",reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),years,2023년 7–10월,p.2,All samples were collected between July 2023 and October 2023.,reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),cultivar,Jinyu Japonica NO.22,p.2,Paddy plants (Jinyu Japonica NO.22),reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),setting,노지 논(농가 포장). 재식밀도·이앙일·물관리·시비 보고 안 함,p.2,,reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),planting_density,보고 안 함,-,,not reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),sampling_dates_stages,"5단계: 분얼기, 출수기, 등숙기(filling), 유숙기(milk-ripening), 완숙기(ripening). 날짜 보고 안 함",p.2,"tillering, heading, filling, milk-ripening, and ripening",reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),phenology_event_dates,보고 안 함,-,,not reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),hills_per_sample,"3반복, 반복마다 20 m × 20 m 구역의 부분시료 5개. 부분시료당 포기 수 보고 안 함",p.2,with each replicate comprising five sub-samples sourced from an area spanning 20 m × 20 m,reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),hill_selection,보고 안 함,-,,not reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),sampling_time_of_day,보고 안 함,-,,not reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),transport_storage,"PP 봉지 밀봉, 아이스백 보관, 즉시 실험실 운반. 분말·조직 보관 조건 보고 안 함",p.2,"All the samples were sealed in polypropylene (PP) bags, stored in ice bags, and transported to the laboratory immediately.",reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),root_soil_volume,보고 안 함 (토양 시료는 0–10 cm 표토),-,,not reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),tissue_wash_water,채취 당일 증류수로 흙 입자 세척,p.2,"On the same day, these plant samples were carefully washed with distilled water to remove soil particles.",reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),rinse_count,보고 안 함,-,,not reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),root_plaque_removal,보고 안 함,-,,not reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),organ_fractions,"방법: 뿌리, 잎(줄기 포함), 낟알. 그러나 Table 1·SI Table S6은 뿌리/줄기/잎/낟알을 따로 보고(논문 내부 불일치). 낟알은 출수기부터",p.2; Table 1 p.4,"Plant samples were divided into roots, leaves (including stems), and grains.",reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),sheath_assignment,보고 안 함,-,,not reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),dead_leaf_separation,보고 안 함,-,,not reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),fresh_weight_recorded,보고 안 함 (생물량 자료 없음),-,,not reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),drying,동결건조(온도·시간 보고 안 함),p.2,Both soil and plant samples were freeze-dried and ground into powder using an electric grinder,reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),sample_grinding,전동 분쇄기로 분말화; 조직 1 g을 아세토니트릴 6 mL로 초음파 추출 3회,p.2; SI Text,underwent ultrasonic extraction using 6 mL of Acetonitrile,reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),grain_definition,"""grains"" / ""paddy rice""의 정의(왕겨 포함 여부), 제현·도정 보고 안 함",p.3,C is the concentration of PFASs in paddy rice (ng/g dw),not reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),grain_protein,"낟알 단백질은 자동 켈달 질소분석기(KDY-9830)로 측정, 7.84–14.55%",p.6,determined by an automatic Kjeldahl nitrogen meter (KDY-9830,reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),conc_basis,건중(ng/g dw),p.3,"the root, stem, leaf, and grain (ng/g dw)",reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),yield_and_grain_processing,보고 안 함 (수량·천립중·수분 기준 없음),-,,not reported
+Li et al. 2025 (J. Hazard. Mater. 492:138256),organ_water_content,보고 안 함,-,,not reported
+Kim et al. 2001 (New Phytol. 150:223-229),site,"Shizukuishi Rice FACE (시설 상세는 Okada et al. 2001). FACE 링 4개 + 대조 논 4개, 4블록, 대조구는 FACE 링에서 90 m 이상",p.224,A full description of the Rice FACE facility is provided by Okada et al. (2001),reported
+Kim et al. 2001 (New Phytol. 150:223-229),years,"1998, 1999 (2작기)",p.224,In both 1998 and 1999 seeds of rice cv. Akitakomachi were obtained,reported
+Kim et al. 2001 (New Phytol. 150:223-229),nursery_transplanting,"흐르는 물에 발아, 유근 출현 직후 비료 함유 암면 매트 트레이에 파종, 플라스틱 챔버에서 육묘(대기 또는 +200 ppm). 출아 후 14일(1998)/23일(1999)에 3본씩 손 이앙, 1998-05-21 / 1999-05-20",p.224,"Fourteen (1998) and 23 (1999) d after emergence, seedlings were hand-transplanted in groups of three",reported
+Kim et al. 2001 (New Phytol. 150:223-229),planting_density,"포기 간격 17.5 cm, 줄 간격 30 cm (19.05 hills m-2), 포기당 3본",p.224,"Hills and rows were 17.5 and 30 cm apart, respectively (equivalent to 19.05 hills m-2)",reported
+Kim et al. 2001 (New Phytol. 150:223-229),water_management,"전 기간 담수; 7월 중순 5일 중간낙수, 수확 10일 전부터 낙수",p.224,Fields were flooded throughout both seasons except for a 5 d summer drainage in mid-July and from 10 d before harvest,reported
+Kim et al. 2001 (New Phytol. 150:223-229),sampling_dates_stages,"MN 5회: 1998년 25, 53, 81, 109, 131 DAT(3곳), 1999년 32, 62, 88, 105, 123 DAT(2곳); 분얼 중기, PI, 출수, 등숙 중기, 성숙에 맞춤. 1999년 HN 63, 89, 124 DAT, LN 61, 124 DAT",p.224,"Sample dates were chosen to coincide as closely as possible with the mid-tillering, panicle initiation (PI), heading, mid-ripening and grain maturity growth stages",reported
+Kim et al. 2001 (New Phytol. 150:223-229),hills_per_sample,회당 4포기(1998)/6포기(1999); MN은 합계 12포기,p.224,"Four and six hills were sampled for each sampling in 1998 and 1999, respectively",reported
+Kim et al. 2001 (New Phytol. 150:223-229),border_exclusion,처음 두 번의 채취 자리는 보호구 예비 포기로 보식(보식 포기는 채취 안 함); 시험 포기는 기계 이앙 보호구로 둘러쌈,p.224,hills were replaced with spare hills from the borders; these were not sampled,reported
+Kim et al. 2001 (New Phytol. 150:223-229),root_soil_volume,포기마다 흙 블록 폭 30 cm × 길이 17.5 cm × 깊이 20 cm (Kim 2003은 같은 실험에 깊이 15 cm라고 씀),p.224,"a block of soil 30 cm wide, 17.5 cm long and 20 cm deep around each individual hill was removed",reported
+Kim et al. 2001 (New Phytol. 150:223-229),root_washing,포기의 1/2 또는 1/3만 흐르는 물로 흙·이물질을 씻고 뿌리 건물중 측정,p.224-225,"For half or one-third of the hills, soil and other extraneous matter was carefully cleaned from the roots under running water",reported
+Kim et al. 2001 (New Phytol. 150:223-229),organ_fractions,"살아 있는 잎, 고사 잎, 줄기(잎집 포함), 이삭(있을 때), 뿌리",p.224,"Hills were separated into living and dead leaf tissue, stems (including leaf sheath), panicles (when present) and roots",reported
+Kim et al. 2001 (New Phytol. 150:223-229),detached_blade_handling,보고 안 함 (고사 잎 조직을 분리했다고만 씀),-,,not reported
+Kim et al. 2001 (New Phytol. 150:223-229),drying,"강제송풍 오븐 80 °C, 1주, 기관별",p.225,after drying at 80°C in a forced air oven for 1 wk,reported
+Kim et al. 2001 (New Phytol. 150:223-229),sample_grinding,"질소 분석용 0.5 mm 체 분쇄, micro-Kjeldahl",p.225,"After milling (0.5 mm mesh), the N content of all plant parts was determined separately",reported
+Kim et al. 2001 (New Phytol. 150:223-229),yield_sampling,"성숙기 LN·HN 18포기(1998)/20포기(1999) 1곳, MN 54포기(3곳, 1998)/60포기(2곳, 1999); 이삭·임실 영화 수, 낟알 질량; 수량 = 임실 낟알 건물중",p.225,Grain yield was expressed as the dry mass of filled grains,reported
+Kim et al. 2001 (New Phytol. 150:223-229),thousand_grain_weight,"Table 2 개별 낟알 질량(mg): 대기 CO2 LN 25.93, MN 24.15, HN 23.64 (연도 표기 없음)",p.227,Individual grain mass (mg),reported
+Kim et al. 2001 (New Phytol. 150:223-229),fresh_weight_recorded,보고 안 함,-,,not reported
+Kim et al. 2001 (New Phytol. 150:223-229),phenology_event_dates,보고 안 함 (채취일만 단계 이름으로),-,,not reported
+Kim et al. 2001 (New Phytol. 150:223-229),sampling_time_of_day,보고 안 함,-,,not reported
+Kim et al. 2001 (New Phytol. 150:223-229),root_plaque_removal,보고 안 함,-,,not reported
+Okada et al. 2001 (New Phytol. 150:251-260),site,"Shizukuishi, Iwate (39°38′N, 140°57′E), 해발 약 200 m; 논 100 m × 30 m; 팔각 FACE 링 지름 12 m, 유효 면적 약 80 m2",p.252,It is situated at an altitude of about 200 m,reported
+Okada et al. 2001 (New Phytol. 150:251-260),sample_processing,보고 안 함 (재배 이력은 Kim et al. 2001로 미룸; 시설·CO2 제어 논문),-,A full description of the crop history is provided by Kim et al. (2001),not reported
+Hasegawa et al. 2017 main text (Sci. Rep. 7:14858),site,"Shizukuishi(39°38′N, 140°57′E)와 Wuxi(31°37′N, 120°28′E). 실험 절차는 Okada·Kim(Shizukuishi), Liu·Yang(Wuxi)으로 미룸",p.10,Details of experimental procedures are given in Okada et al. and Kim et al. for the Shizukuishi site and in Liu et al. and Yang et al. for the Wuxi site,reported
+Hasegawa et al. 2017 main text (Sci. Rep. 7:14858),nursery_transplanting,4–5엽기에 이앙; 수확 10–15일 전까지 담수,p.10,Seedlings were transplanted at 4–5 leaf age and grown under flooded conditions until 10–15 d before harvest,reported
+Hasegawa et al. 2017 main text (Sci. Rep. 7:14858),planting_density,"Shizukuishi 19, Wuxi 24 hills m-2, 포기당 3본",p.10,"The planting density was 19 and 24 hills m−2 at Shizukuishi and Wuxi, respectively",reported
+Hasegawa et al. 2017 main text (Sci. Rep. 7:14858),phenology_event_dates,"FACE 시험의 날짜는 보고 안 함. 개화·성숙 날짜를 모델러에게 줬다고 쓴 것은 SPAR 챔버 시험뿐; FACE는 보정 자료(Shizukuishi 1999, Wuxi 2002)를 줬다고만 씀",p.10-11,"Each modelling group received all required crop management, soil and weather data, phenology dates (anthesis and maturity)",not reported
+Hasegawa et al. 2017 main text (Sci. Rep. 7:14858),sample_processing,보고 안 함,-,,not reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),setting,ORYZA 매개변수화에 쓴 IRRI 포장 시험 4개(1991–1993; IR72와 IR58 계통; IR72 1992 건기 포함)와 검증 시험 1개(Wopereis et al. 1994),p.254-255,"four field experiments at IRRI between 1991 and 1993, with variety IR72 and breeding lines of IR58",reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),replicates,모든 시험 4반복; 관측값은 4반복 평균,p.255,All experiments had four replicates,reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),nursery_transplanting,"12일묘, 포기당 5본 이앙",p.255,Twelve-day-old seedlings were transplanted at 5 seedlings per hill,reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),planting_density,25 hills m-2,p.255,25 hills per square meter,reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),hills_per_sample,"생육 중 순차 채취, 회당 14포기",p.255,Sequential crop samples were taken during the growing season from 14 hills,reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),organ_fractions,"LAI와 녹색 잎, 고사 잎, 줄기, 이삭의 건물중",p.255,"to determine LAI and biomass of green leaves, dead leaves, stems, and panicles",reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),thousand_grain_weight,수확 때 낟알 1개 무게를 포함한 수량 구성요소를 쟀다고 씀. 값은 논문에 없음,p.255,"At harvest, yield components were measured, including individual grain weight",reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),drying,보고 안 함,-,,not reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),root_collected,보고 안 함,-,,not reported
+Bouman & van Laar 2006 (Agric. Syst. 87:249-273),detached_blade_handling,보고 안 함,-,,not reported
+Kropff van Laar & Matthews (eds) 1994a ORYZA1 (SARP Research Proceedings) - IRRI 1991-92 experiments incl. IR72 1992 DS,access,"Wageningen 대학 공개 저장소 전문(https://edepot.wur.nl/297737, 112쪽 스캔). 쪽은 인쇄 쪽; 스캔에 빈 쪽이 빠져 PDF 쪽과의 차이가 일정하지 않음",-,,reported
+Kropff van Laar & Matthews (eds) 1994a ORYZA1 (SARP Research Proceedings) - IRRI 1991-92 experiments incl. IR72 1992 DS,setting,"ORYZA1 매개변수는 1992 건기 IRRI 수량 잠재력 시험의 IR72 225 kg N 처리에서 옴(= 매뉴얼의 IR72DS92 파일)",p.43,"Oryza sativa cv. IR72, IRRI, Dry Season (M10) at 225 kg N",reported
+Kropff van Laar & Matthews (eds) 1994a ORYZA1 (SARP Research Proceedings) - IRRI 1991-92 experiments incl. IR72 1992 DS,replicates,"4반복 분할구(split plot): N 처리가 주구, 품종이 세구 (1991 WS, 1992 DS, 1992 WS 시험)",p.57,Treatments were laid out in four replicates in a split plot design with N treatment as the main plots and varieties as subplots.,reported
+Kropff van Laar & Matthews (eds) 1994a ORYZA1 (SARP Research Proceedings) - IRRI 1991-92 experiments incl. IR72 1992 DS,nursery_transplanting,"트레이에서 기른 12일묘",p.57,Twelve-days-old seedlings grown in trays were used.,reported
+Kropff van Laar & Matthews (eds) 1994a ORYZA1 (SARP Research Proceedings) - IRRI 1991-92 experiments incl. IR72 1992 DS,hills_per_sample,"주요 생육단계와 그 사이에 회당 12–14포기 채취(Bouman & van Laar 2006은 14포기라고 씀)",p.57,"At the major phenological stages and in between, 12-14 hills were sampled and analysed for LAI and dry weights of the organs.",reported
+Kropff van Laar & Matthews (eds) 1994a ORYZA1 (SARP Research Proceedings) - IRRI 1991-92 experiments incl. IR72 1992 DS,organ_fractions,"기관 건물중이라고만 씀(기관 목록 없음). 분배계수 그림(Fig. 3.4)은 잎·줄기·이삭만 다루고, 뿌리 분배표(FRTTB)의 출처는 쓰지 않음",p.2; p.49,Dry weights of organs and N concentration of tissue were measured periodically.,reported
+Kropff van Laar & Matthews (eds) 1994a ORYZA1 (SARP Research Proceedings) - IRRI 1991-92 experiments incl. IR72 1992 DS,partitioning_method,"분배계수는 연속한 두 채취 사이 새 건물의 기관별 배분에서 구함; 고사엽을 재지 않으면 잎·줄기는 최대값 사용",p.49,These fractions are derived by analysing the fractions of new dry matter production allocated to the plant organs between two subsequent harvests.,reported
+Kropff van Laar & Matthews (eds) 1994a ORYZA1 (SARP Research Proceedings) - IRRI 1991-92 experiments incl. IR72 1992 DS,drying,보고 안 함,-,,not reported
+Kropff van Laar & Matthews (eds) 1994a ORYZA1 (SARP Research Proceedings) - IRRI 1991-92 experiments incl. IR72 1992 DS,root_collected,보고 안 함,-,,not reported
+Kropff van Laar & Matthews (eds) 1994a ORYZA1 (SARP Research Proceedings) - IRRI 1991-92 experiments incl. IR72 1992 DS,threshing_milling,보고 안 함,-,,not reported
+Kropff Cassman Penning de Vries & van Laar 1993 (J. Agr. Met. 48:795-798) - IRRI 1991 WS / 1992 DS,access,사용자 제공(Google Drive 48_795.pdf); 레포에 넣지 않음,-,,reported
+Kropff Cassman Penning de Vries & van Laar 1993 (J. Agr. Met. 48:795-798) - IRRI 1991 WS / 1992 DS,organ_fractions,기관 건물중과 조직 질소를 주기적으로 측정했다고만 씀,p.796,Dry weights of organs and N concentration of tissue were measured periodically.,reported
+Kropff Cassman Penning de Vries & van Laar 1993 (J. Agr. Met. 48:795-798) - IRRI 1991 WS / 1992 DS,drying,보고 안 함,-,,not reported
+Kropff Cassman Penning de Vries & van Laar 1993 (J. Agr. Met. 48:795-798) - IRRI 1991 WS / 1992 DS,root_collected,보고 안 함,-,,not reported
+Kropff et al. 1995 in Matthews Kropff Bachelet & van Laar (eds) Modeling the Impact of Climate Change on Rice Production in Asia (CABI/IRRI) ch.3 - IRRI 1991 WS / 1992 DS,access,사용자 제공(Google Drive 0851989594_content.pdf); 레포에 넣지 않음,-,,reported
+Kropff et al. 1995 in Matthews Kropff Bachelet & van Laar (eds) Modeling the Impact of Climate Change on Rice Production in Asia (CABI/IRRI) ch.3 - IRRI 1991 WS / 1992 DS,nursery_transplanting,"이앙 1991 WS 7월 13일, 1992 DS 1월 16일",p.47,Seedlings were transplanted on 13 July (WS) and 16 January (DS).,reported
+Kropff et al. 1995 in Matthews Kropff Bachelet & van Laar (eds) Modeling the Impact of Climate Change on Rice Production in Asia (CABI/IRRI) ch.3 - IRRI 1991 WS / 1992 DS,replicates,"분할구, N 처리 주구·품종 세구, 4반복",p.47,"Treatments were arranged in a split plot design with N rates as the main plots, varieties as subplots, and four replicates.",reported
+Kropff et al. 1995 in Matthews Kropff Bachelet & van Laar (eds) Modeling the Impact of Climate Change on Rice Production in Asia (CABI/IRRI) ch.3 - IRRI 1991 WS / 1992 DS,hills_per_sample,"정기적으로 구당 12포기 채취 (원문 오식 nwe = were)",p.47; p.49,"12-hill samples nwe taken from each plot to monitor LAI, dry matter, and N content in the leaf blades, stems, and panicles",reported
+Kropff et al. 1995 in Matthews Kropff Bachelet & van Laar (eds) Modeling the Impact of Climate Change on Rice Production in Asia (CABI/IRRI) ch.3 - IRRI 1991 WS / 1992 DS,organ_fractions,"잎몸·줄기·이삭의 건물중과 질소, LAI. 뿌리는 측정 기관 목록에 없음",p.49,"leaf blades, stems, and panicles",reported
+Kropff et al. 1995 in Matthews Kropff Bachelet & van Laar (eds) Modeling the Impact of Climate Change on Rice Production in Asia (CABI/IRRI) ch.3 - IRRI 1991 WS / 1992 DS,drying,보고 안 함,-,,not reported

@@ -1,0 +1,173 @@
+From a97ba83a8e88d01ddf3f3e2f8a529750025b780f Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 25 Oct 2026 23:03:00 +0000
+Subject: [PATCH 4/4] A2 prototype: SMILES K_cw from the GAP A ladder; no
+ transport constants in the SMILES Compound
+
+---
+ src/literature_params.py | 44 ++++++++++++++++++++++++++++++++++++++--
+ src/model_api.py         |  9 ++++++--
+ src/pfas_structure.py    | 29 ++++++++++++++++----------
+ 3 files changed, 67 insertions(+), 15 deletions(-)
+
+diff --git a/src/literature_params.py b/src/literature_params.py
+index 7db4921..a61495b 100644
+--- a/src/literature_params.py
++++ b/src/literature_params.py
+@@ -379,7 +379,45 @@ KPL_ANCHOR_LKG = 10.0 ** KMW_CHEN2025_LOG["PFOA"]   # measured PFOA anchor (~190
+ KPL_ANCHOR_NPFC = 7
+ KPROT_ANCHOR_LKG = 12.0        # K_prot last-resort fallback [L/kg] (~ measured soy PFOA),
+                                # used only if a congener is absent from KPROW_ZHOU2025_LOG
+-KCW_ANCHOR_LKG = 20.0          # K_cw cell-wall  [PLACEHOLDER -- no coefficient in literature]
++# K_cw for a structure without a curated record: the GAP A ladder (docs/DELIVERABLE_GAP_A_Kcw.md;
++# params/Kcw_Klignin_params_v2.csv) -- K_poly and K_lignin interpolated log-linearly in the number
++# of perfluorinated carbons within the head-group class (PFCA, PFSA), extrapolated beyond the table
++# at the ladder's +0.10 log per CF2; an ether acid is read as a carboxylate (GAP A has no ether row).
++KCW_PER_CF2_LOG = 0.10
++
++
++def kcw_pools(n_cf: int, head_group: str = "carboxylate") -> tuple[float, float]:
++    """(K_cw_poly, K_lignin) [L/kg pool dw] of a PFAS with `n_cf` perfluorinated carbons."""
++    import csv as _csv
++    import os as _os
++    path = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))),
++                         "params", "Kcw_Klignin_params_v2.csv")
++    cls = "PFSA" if head_group == "sulfonate" else "PFCA"
++    with open(path) as f:
++        rows = [r for r in _csv.DictReader(f) if r["class"] == cls]
++    n = np.array([float(r["n_CF"]) for r in rows])
++    order = np.argsort(n)
++    n = n[order]
++    out = []
++    for col in ("K_cw_poly_rec", "K_lignin_rec"):
++        lk = np.log10([float(rows[i][col]) for i in order])
++        x = float(n_cf)
++        if x < n[0]:
++            v = lk[0] - KCW_PER_CF2_LOG * (n[0] - x)
++        elif x > n[-1]:
++            v = lk[-1] + KCW_PER_CF2_LOG * (x - n[-1])
++        else:
++            v = float(np.interp(x, n, lk))
++        out.append(float(10.0 ** v))
++    return out[0], out[1]
++
++
++def kcw_wholecw(n_cf: int, head_group: str, lignin_share: float) -> float:
++    """Whole-cell-wall K_cw of an organ with the given lignin share of its cell wall:
++    (1 - s) K_poly + s K_lignin (the GAP A organ mix)."""
++    kp, kl = kcw_pools(n_cf, head_group)
++    s = float(lignin_share)
++    return (1.0 - s) * kp + s * kl
+ # Plant storage proteins (soy protein isolate) bind PFAS WEAKER than serum
+ # albumin -- now captured DIRECTLY by the measured K_prow (zhou2025 Table 1), so
+ # NO scale factor is needed: plant/grain tissues use protein="soy", animal "bsa".
+@@ -638,7 +676,7 @@ def literature_compound(name: str | None = None, *,
+                         Vmax_out: float = 8.0, Km_out: float = 5.0,
+                         kpl_anchor: float = KPL_ANCHOR_LKG,
+                         kprot_anchor: float = KPROT_ANCHOR_LKG,
+-                        kcw_anchor: float = KCW_ANCHOR_LKG) -> Compound:
++                        kcw_anchor: float | None = None) -> Compound:
+     """Build a :class:`Compound` with literature-derived binding & speciation.
+ 
+     Binding (``K_prot``, ``K_PL``) scales with chain length via the verified C4
+@@ -651,6 +689,8 @@ def literature_compound(name: str | None = None, *,
+         raise ValueError("provide a known `name` (in SPECIES) or both "
+                          "`n_perfluoroC` and `head_group`")
+     label = name or f"PF{n_perfluoroC}{'S' if head_group == 'sulfonate' else 'A'}"
++    if kcw_anchor is None:                 # the GAP A ladder, cell-wall pools in equal shares
++        kcw_anchor = kcw_wholecw(n_perfluoroC, head_group, 0.5)
+     return Compound(
+         name=label,
+         K_prot=k_prot(n_perfluoroC, plant=plant_protein, anchor=kprot_anchor, name=name),
+diff --git a/src/model_api.py b/src/model_api.py
+index 9096029..8db0d52 100644
+--- a/src/model_api.py
++++ b/src/model_api.py
+@@ -781,10 +781,15 @@ def simulate_from_smiles(smiles, *, name=None, f_xy=None, f_xy_override=None, **
+     else:
+         group = ("PFSA" if d.head_group == "sulfonate"
+                  else "ether" if d.n_ether_O > 0 else "PFCA")
++        import literature_params as LP
++        rng = PARAMS["tissue_composition_ranges"]
++        kcw = {o: LP.kcw_wholecw(d.n_perfluoroC, d.head_group,
++                                 0.5 * sum(rng["grain_brown" if o == "grain" else o]["lignin_share"]))
++               for o in TISSUES}                  # the GAP A ladder, each organ's lignin share
+         record = {"name": cmpd.name, "n_C": d.n_C, "group": group,
+                   "K_prot_Lkg": cmpd.K_prot, "K_PL_Lkg": cmpd.K_PL,
+-                  "K_cw_wholecw_Lkg": {"root": cmpd.K_cw},
+-                  "f_xy_recommended": cmpd.f_xy}   # no fit: L_Ph/kappa_d -> fitted geomean
++                  "K_cw_wholecw_Lkg": kcw,
++                  "f_xy_recommended": cmpd.f_xy}   # no fit: r_eq / L_Ph -> fitted congeners' median
+         res = simulate(cmpd.name, record=record, f_xy_override=fxy_ov, **kw)
+     res["descriptors"] = d
+     res["provisional"] = (d.matched_name is None) or (not d.is_linear)
+diff --git a/src/pfas_structure.py b/src/pfas_structure.py
+index fe431d4..2236d7a 100644
+--- a/src/pfas_structure.py
++++ b/src/pfas_structure.py
+@@ -233,19 +233,25 @@ def _match_known(d: Descriptors) -> str | None:
+ # ---------------------------------------------------------------------------
+ # 3. structure -> Compound
+ # ---------------------------------------------------------------------------
++def _root_lignin_share():
++    with open(_PARAMS_JSON) as f:
++        lo, hi = json.load(f)["tissue_composition_ranges"]["root"]["lignin_share"]
++    return 0.5 * (lo + hi)
++
++
+ def compound_from_smiles(smiles: str, *, name: str | None = None,
+                          pH: float = L.PADDY_PH, plant_protein: bool = True,
+-                         f_xy: float | None = None, L_Ph: float = 0.005,
+-                         kappa_d: float = 0.5, Vmax_in: float = 20.0, Km_in: float = 5.0,
+-                         Vmax_out: float = 8.0, Km_out: float = 5.0,
+-                         kcw_anchor: float = L.KCW_ANCHOR_LKG):
+-    """Build a :class:`Compound` from a SMILES string.
++                         f_xy: float | None = None):
++    """Build a :class:`Compound` (binding and speciation) from a SMILES string.
+ 
+     Returns ``(compound, descriptors)``.  Binding (K_PL, K_prot) and speciation
+     (f_d) come from MEASURED read-across when the structure matches a known
+-    congener, else from the literature_params QSPR.  ``f_xy`` is taken from the
++    congener, else from the literature_params QSPR; K_cw from the curated record, else
++    the GAP A ladder (`literature_params.kcw_pools`).  ``f_xy`` is taken from the
+     curated monotone series (exact for a known congener; interpolated x head-group
+-    offset for a novel one -- PROVISIONAL) unless supplied explicitly.
++    offset for a novel one -- PROVISIONAL) unless supplied explicitly. The root entry and
++    phloem loading are not set here: `model_api.simulate` resolves them (a novel structure
++    takes the fitted congeners' median), so the Compound carries no transport constant.
+     """
+     d = descriptors(smiles)
+     known = name or d.matched_name
+@@ -258,7 +264,7 @@ def compound_from_smiles(smiles: str, *, name: str | None = None,
+         # --- known congener: read across the CURATED params (exact consistency) ---
+         K_PL = float(rec["K_PL_Lkg"]); kpl_src = f"curated parameters.json ({known})"
+         K_prot = float(rec["K_prot_Lkg"]); kprot_src = kpl_src
+-        kcw_anchor = float(rec["K_cw_wholecw_Lkg"]["root"])
++        kcw_root = float(rec["K_cw_wholecw_Lkg"]["root"])
+         f_xy_rec = float(rec["f_xy_recommended"]); fxy_src = f"curated f_xy_recommended ({known})"
+     else:
+         # --- novel structure: QSPR (measured anchor where available) ---
+@@ -272,6 +278,7 @@ def compound_from_smiles(smiles: str, *, name: str | None = None,
+             kpl_src = (f"QSPR (CF2 slope, {binding_hg}"
+                        + (f", {d.n_ether_O}x ether {L.KPL_ETHER_LOG_OFFSET:+.2f}log)" if d.n_ether_O else ")"))
+         K_prot = L.k_prot(npf, plant=plant_protein); kprot_src = "QSPR (chain factor)"
++        kcw_root = L.kcw_wholecw(npf, d.head_group, _root_lignin_share())
+         off_class = d.transport_class if d.transport_class in L.FXY_HEADGROUP_LN_OFFSET else "carboxylate"
+         f_xy_rec = L.f_xy_headgroup(_fxy_carboxylate(npf), off_class)
+         fxy_src = (f"monotone PFCA(nPFC={npf}) x exp({L.FXY_HEADGROUP_LN_OFFSET[off_class]:+.1f})"
+@@ -285,9 +292,9 @@ def compound_from_smiles(smiles: str, *, name: str | None = None,
+     label = known or f"PF{npf}{'S' if d.head_group == 'sulfonate' else 'A'}*"
+     provisional = (not d.is_linear) or (d.matched_name is None and name is None)
+     cmpd = Compound(
+-        name=label, K_prot=K_prot, K_PL=K_PL, K_cw=kcw_anchor,
+-        kappa_d=kappa_d, Vmax_in=Vmax_in, Km_in=Km_in,
+-        Vmax_out=Vmax_out, Km_out=Km_out, L_Ph=L_Ph, f_xy=f_xy,
++        name=label, K_prot=K_prot, K_PL=K_PL, K_cw=kcw_root,
++        kappa_d=0.0, Vmax_in=0.0, Km_in=1.0, Vmax_out=0.0, Km_out=1.0,   # no carrier
++        L_Ph=0.0, f_xy=f_xy,
+         fd=fd, fn=0.0,
+     )
+     d.notes.append(f"K_PL: {kpl_src};  K_prot: {kprot_src};  f_d({acid_hg});  f_xy: {fxy_src}")
+-- 
+2.43.0
+

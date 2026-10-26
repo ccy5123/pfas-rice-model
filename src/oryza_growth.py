@@ -2,10 +2,13 @@
 oryza_growth.py — ORYZA2000 potential-production (Level 1) growth core, in Python
 =================================================================================
 
-A faithful re-implementation of the ORYZA2000 / ORYZA(v3) **potential production**
+A REDUCED re-coding of the ORYZA2000 / ORYZA(v3) **potential production**
 crop-growth mechanism (carbon-driven), as opposed to the lightweight DVS-partition-
-on-a-logistic reconstruction in `growth_rice.py`.  It actually runs the ORYZA carbon
-balance on a daily step:
+on-a-logistic reconstruction in `growth_rice.py`.  It runs a simplified ORYZA carbon
+balance on a daily step (for the line-by-line port with the IR72.D92 crop file -- stem
+reserves, transplanting shock, leaf-N based AMAX, the grain sink limit -- see
+`oryza2000.py`; on the IR72DS92 experiment this reduced version matures 12 d late and
+keeps growing its stem after flowering, validation/oryza2000_ir72ds92.py):
 
     radiation + temperature
         -> SUCROS astronomy (daylength, solar height)            [ASTRO]
@@ -303,7 +306,8 @@ def organ_biomass_oryza(t: np.ndarray, p: OryzaParams | None = None,
         target = p.shoot_anchor_g_m2 * 10.0                              # g/m2 -> kg/ha
         f = target / shoot_final if shoot_final > 0 else 1.0
         organs = {k: v * f for k, v in organs.items()}
-    out = {k: np.maximum(np.interp(t, td, v * kg_hill), 1e-9) for k, v in organs.items()}
+    out = {k: np.interp(t, td, v * kg_hill) for k, v in organs.items()}   # model value; 0 before formation
+    out["dvs"] = np.interp(t, td, sim["dvs"])
     # leaf senescence loss RATE [1/day] (NOT a mass -> no kg_hill / anchor scaling). The
     # PFAS leaf ODE adds -leaf_death_rate*C so the dead leaf carries its PFAS away
     # (D/M_leaf = drlv exactly), cancelling the spurious senescence concentration.
@@ -312,28 +316,29 @@ def organ_biomass_oryza(t: np.ndarray, p: OryzaParams | None = None,
 
 
 def M_matrix_oryza(t: np.ndarray, p: OryzaParams | None = None, weather: dict | None = None):
-    """Mass matrix [len(t), 4] = columns [root, stem, leaf, grain] [kg/hill]."""
+    """DRY mass matrix [len(t), 4] = columns [root, stem, leaf, grain] [kg/hill], the crop
+    model's values (0 before an organ forms); `organ_mass.organ_matrix` makes the floored FRESH
+    mass the ODE runs on."""
     b = organ_biomass_oryza(t, p, weather)
     return np.column_stack([b["root"], b["stem"], b["leaf"], b["grain"]])
 
 
 def oryza_drivers(congener: str = "PFOA", Cwo: float = 1.0, season: float = 120.0,
                   n_t: int = 241, p: OryzaParams | None = None, weather: dict | None = None,
-                  Qtp=None, mass_basis: str = "fresh"):
+                  Qtp=None):
     """Build a `drivers` dict for model_api.simulate(drivers=...) with ORYZA biomass.
 
     Cwo is held constant (so conc==BAF at Cwo=1); Q_TP defaults to the measured
     forcing_rice transpiration; M is the mechanistic ORYZA biomass, converted from DRY
-    matter to the FRESH mass the plant ODE runs on (`organ_mass`; mass_basis="dry"
-    reproduces the pre-fix drivers)."""
+    matter to the FRESH mass the plant ODE runs on (`organ_mass`)."""
     import forcing_rice as fr
     import organ_mass as om
     t = np.linspace(0.0, season, n_t)
     b = organ_biomass_oryza(t, p, weather)
-    M = om.organ_matrix(b, mass_basis, floor=1e-9)
+    M = om.organ_matrix(b)
     Qtp = fr.Q_TP(t, season) if Qtp is None else np.asarray(Qtp, float)
     return dict(t=t, Cwo=np.full_like(t, float(Cwo)), Qtp=Qtp, M=M,
-                leaf_loss=b["leaf_death_rate"])
+                leaf_loss=b["leaf_death_rate"], mass_basis=om.MASS_BASIS, dvs=b["dvs"])
 
 
 if __name__ == "__main__":

@@ -29,8 +29,6 @@ import model_api as api  # noqa: E402
 
 # short -> long: spans the leaching/buffering transition
 CONGENERS = ["PFBA", "PFOA", "PFOS", "PFDoDA"]
-SEASON = 120.0
-N_T = 121
 K_LEACH_SCAN = np.round(np.arange(0.005, 0.121, 0.005), 3)
 
 
@@ -53,7 +51,7 @@ def _corr(a, b):
 
 
 def run():
-    t = np.linspace(0.0, SEASON, N_T)
+    t = api.scenario_drivers()["t"]                       # the calibration site-year grid
     rows, series = [], {}
     for cong in CONGENERS:
         c = api._CONG[cong]

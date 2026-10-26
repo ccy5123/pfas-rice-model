@@ -1,0 +1,121 @@
+# Gao et al. 2021 (doi:10.1016/j.agwat.2021.106864) Fig. 3: measured dry biomass of stems (DWST; the paper says "stems", not "green stems"), green leaves (DWGL),
+# panicles (DWSO) and their sum D-AGB ("dry aboveground GREEN biomass"), kg/ha, and LAI (m2/m2), Qing'an 2018 (calibration
+# year) and 2019 (validation year). DIGITISED from the figure bitmap (PDF page 8, the page's only image, 1900 x 1367 px).
+# Axes: x ticks 20 Apr..20 Sep (5.08 px/d); y 0..16000 kg/ha over 554.5 px (28.86 kg/ha per px); LAI 0..6 over 555 px.
+# value = marker centre; value_lo..value_hi = reading range. Error bars (SD) not digitised. Dead leaves were measured (DWDL)
+# but are NOT plotted, and D-AGB EXCLUDES them. Sampling dates are read off the markers (rounded to the day).
+# OVERLAY VERIFICATION against the original figure (docs/literature_db/tools/gao2021_fig3_check.py <the PDF>):
+#  (1) axis calibration re-fitted on every tick: y(0) 659.06-659.21 vs 659.5 used and y(16000) 105.01-105.05 vs 105.0
+#      (<= 13 kg/ha); LAI <= 0.006; x ticks within 0.5 px.
+#  (2) an SD bar is symmetric, so the midpoint of its two caps is the plotted value whatever the marker's shape: on the 28
+#      markers with an unambiguous cap pair it lies +1.2 +- 0.8 px (max 2.7) below the marker centre, i.e. values may read
+#      high by ~35 kg/ha / 0.013 LAI (not corrected). Hence +-2 px (+-58 kg/ha, +-0.02 LAI) for 'clear' markers.
+#  (3) a marker partly hidden (by another marker, an error-bar cap, or the axis frame, which clips markers) has a TRUNCATED
+#      visible box whose centre is biased - the first pass (021cf88) used that centre. Each such marker is re-placed on a
+#      visible edge with white background beyond it (top of a square or down-triangle, apex or base of an up-triangle,
+#      lower half of a circle) plus the nominal half-size measured on clear markers (square 14 px, LAI square 15,
+#      up-triangle 17, down-triangle 16, circle 16); range = +-1 px of that edge. Cross-checked by a 2-D template fit
+#      (clear markers agree within 1 px) and by drawing each marker's full nominal outline on the original image.
+#  Changes from the first pass: 15 values re-placed (largest: 2019-06-16 DWST 332->199 and DWGL 202->35, 2018-06-07
+#  D-AGB 390->244 and DWGL 231->92, 2019-05-28 DWST 274->83 and LAI 0->0.06), the two 'hidden' markers measured
+#  (2018-06-18 DWST 289, 2019-06-26 DWGL 390; the organ sums had given 274 / 433), and 8 partly visible markers added.
+# flag: clear | partial (re-placed, see note) | near_axis = centre within half a marker (7 px) of the axis, i.e. below
+#  ~200 kg/ha / 0.075 LAI: NOT resolvable (2018-05-30 DWST 133 > D-AGB 71, 2019-05-28 DWST 83 > D-AGB 56) - do not use in
+#  ratios | on_axis_zero = centre at or below the axis: 0, at most 3 px (87 kg/ha, 0.03 LAI).
+# Consistency: of the 13 dates with D-AGB > 1000, DWST + DWGL + DWSO is -5.0..-0.3% of D-AGB on 12; 2018-07-26 is +14.6% (
+#  every marker re-checked, the excess is in the figure); the -3.5/-4.8% deficits of 2018-09-17/08-18 are 15-17 px, so
+#  also in the figure. On the 200-1000 kg/ha dates (2018-06-07, 06-18, 2019-06-16) the summed ranges overlap D-AGB's.
+year,date,series,value,value_lo,value_hi,unit,flag,note
+2018,2018-05-30,D-AGB,71,42,100,kg/ha,near_axis,"ADDED: top edge of a square (x 370-384, row 650/651; light-green antialias) on both sides of the DWST apex; the rest hidden"
+2018,2018-05-30,DWGL,0,0,87,kg/ha,on_axis_zero,
+2018,2018-05-30,DWST,133,104,162,kg/ha,near_axis,apex visible at row 647 (2 px wide); lower half under DWGL + black bars; placed by apex + nominal half-height. First pass 245 (visible-box centre)
+2018,2018-05-30,LAI,0.00,0.00,0.03,m2/m2,on_axis_zero,
+2018,2018-06-07,D-AGB,244,215,273,kg/ha,partial,"top edge visible (row 645, white above); lower part under DWGL. First pass 390"
+2018,2018-06-07,DWGL,92,63,121,kg/ha,near_axis,"flat top visible (row 649, 17 px wide); apex hidden in the near-axis clutter. First pass 231"
+2018,2018-06-07,DWST,173,144,202,kg/ha,near_axis,"ADDED: only the lower corners visible (rows 657-660, 17 px wide, clipped by the axis frame); missed in the first pass"
+2018,2018-06-07,LAI,0.23,0.21,0.25,m2/m2,clear,
+2018,2018-06-18,D-AGB,525,496,554,kg/ha,partial,top edge visible (rows 634/635); bottom under the DWGL triangle. First pass 592
+2018,2018-06-18,DWGL,222,193,251,kg/ha,partial,"flat top visible (row 644, 18 px), widths narrow on the nominal schedule to row 652; apex hidden. First pass 317"
+2018,2018-06-18,DWSO,0,0,87,kg/ha,on_axis_zero,ADDED: red circle visible only at rows 658-660 just above the axis
+2018,2018-06-18,DWST,289,260,317,kg/ha,partial,"was hidden: lower corners visible (rows 654-657, 18-20 px wide = near the base). Organ sum had given 274"
+2018,2018-06-18,LAI,0.75,0.73,0.77,m2/m2,clear,
+2018,2018-07-03,D-AGB,2828,2770,2886,kg/ha,clear,
+2018,2018-07-03,DWGL,1053,995,1111,kg/ha,clear,
+2018,2018-07-03,DWSO,0,0,87,kg/ha,on_axis_zero,
+2018,2018-07-03,DWST,1746,1717,1775,kg/ha,partial,apex under an error-bar cap; placed by the base rows 606/607. First pass 1688
+2018,2018-07-03,LAI,2.48,2.46,2.50,m2/m2,clear,
+2018,2018-07-14,D-AGB,3650,3592,3708,kg/ha,clear,
+2018,2018-07-14,DWGL,1183,1125,1241,kg/ha,clear,
+2018,2018-07-14,DWSO,245,187,303,kg/ha,clear,
+2018,2018-07-14,DWST,2179,2150,2207,kg/ha,partial,apex under the black error bar; placed by the base row 592 (white below). First pass 2135
+2018,2018-07-14,LAI,2.94,2.92,2.96,m2/m2,clear,
+2018,2018-07-26,D-AGB,5728,5670,5786,kg/ha,clear,
+2018,2018-07-26,DWGL,1645,1587,1703,kg/ha,partial,blue triangle drawn over the red circle; its lower tip is hidden
+2018,2018-07-26,DWSO,1298,1270,1327,kg/ha,partial,"red circle; top hidden under the blue DWGL apex, placed by its lower half. First pass 1270"
+2018,2018-07-26,DWST,3621,3563,3679,kg/ha,clear,
+2018,2018-07-26,LAI,3.94,3.92,3.96,m2/m2,clear,
+2018,2018-08-05,D-AGB,7358,7300,7416,kg/ha,clear,
+2018,2018-08-05,DWGL,1212,1154,1270,kg/ha,clear,
+2018,2018-08-05,DWSO,2121,2063,2179,kg/ha,clear,
+2018,2018-08-05,DWST,3996,3938,4054,kg/ha,clear,
+2018,2018-08-05,LAI,2.85,2.83,2.87,m2/m2,clear,
+2018,2018-08-18,D-AGB,10619,10561,10677,kg/ha,clear,
+2018,2018-08-18,DWGL,1183,1125,1241,kg/ha,clear,
+2018,2018-08-18,DWSO,5194,5136,5252,kg/ha,clear,
+2018,2018-08-18,DWST,3737,3708,3766,kg/ha,partial,apex under an error-bar cap; placed by the base rows 537/538. First pass 3679
+2018,2018-08-18,LAI,1.99,1.97,2.01,m2/m2,clear,
+2018,2018-09-17,D-AGB,12610,12552,12668,kg/ha,clear,
+2018,2018-09-17,DWGL,808,779,837,kg/ha,partial,apex under the bottom error-bar cap; placed by the flat top (row 624/625) and the row widths. First pass 880
+2018,2018-09-17,DWSO,7416,7358,7474,kg/ha,clear,
+2018,2018-09-17,DWST,3939,3881,3997,kg/ha,clear,
+2018,2018-09-17,LAI,1.06,1.04,1.08,m2/m2,clear,
+2019,2019-05-28,D-AGB,56,27,85,kg/ha,near_axis,"ADDED: only 2-4 px of the top edge visible (row 651, white above)"
+2019,2019-05-28,DWGL,0,0,87,kg/ha,on_axis_zero,ADDED: fragments of the flat top at rows 653-656; centre at or below the axis
+2019,2019-05-28,DWSO,0,0,87,kg/ha,on_axis_zero,
+2019,2019-05-28,DWST,83,54,111,kg/ha,near_axis,"apex visible (rows 649-651, 2/4/6 px wide), rest under the red DWSO circle. First pass 274"
+2019,2019-05-28,LAI,0.06,0.05,0.07,m2/m2,near_axis,"square visible rows 1237-1248, bottom clipped by the axis; placed by its top edge. First pass 0 (on_axis_zero)"
+2019,2019-06-06,D-AGB,56,27,85,kg/ha,near_axis,ADDED: only the top edge visible (row 651)
+2019,2019-06-06,DWGL,0,0,87,kg/ha,on_axis_zero,ADDED: fragments at rows 653-657; centre at or below the axis
+2019,2019-06-06,DWSO,0,0,87,kg/ha,on_axis_zero,
+2019,2019-06-06,DWST,46,18,75,kg/ha,near_axis,ADDED: only the apex visible (row 650)
+2019,2019-06-06,LAI,0.10,0.08,0.12,m2/m2,clear,
+2019,2019-06-16,D-AGB,244,215,273,kg/ha,partial,left edge (x 1325.5) and top edge (row 644) visible; bottom under DWGL/DWST/DWSO. First pass 361
+2019,2019-06-16,DWGL,35,6,63,kg/ha,near_axis,"flat top visible (row 651, 20 px); the rest under DWSO. First pass 202"
+2019,2019-06-16,DWSO,0,0,87,kg/ha,on_axis_zero,
+2019,2019-06-16,DWST,199,170,228,kg/ha,near_axis,apex at row 645 and base corners at rows 657/658; middle under the red circle. First pass 332
+2019,2019-06-16,LAI,0.37,0.35,0.39,m2/m2,clear,
+2019,2019-06-26,D-AGB,1010,952,1068,kg/ha,clear,
+2019,2019-06-26,DWGL,390,361,418,kg/ha,partial,was hidden: top-left corner (row 639) and apex (rows 649-652) visible beside/under DWST. Organ sum had given 433
+2019,2019-06-26,DWSO,0,0,87,kg/ha,on_axis_zero,
+2019,2019-06-26,DWST,577,519,635,kg/ha,clear,
+2019,2019-06-26,LAI,1.31,1.29,1.33,m2/m2,clear,
+2019,2019-07-05,D-AGB,2005,1947,2063,kg/ha,clear,
+2019,2019-07-05,DWGL,736,678,794,kg/ha,partial,partly covered; re-checked by template + pixel reading (within 1 px)
+2019,2019-07-05,DWSO,0,0,87,kg/ha,on_axis_zero,
+2019,2019-07-05,DWST,1169,1111,1227,kg/ha,clear,
+2019,2019-07-05,LAI,2.45,2.43,2.47,m2/m2,clear,
+2019,2019-07-15,D-AGB,3881,3823,3939,kg/ha,clear,
+2019,2019-07-15,DWGL,1385,1327,1443,kg/ha,clear,
+2019,2019-07-15,DWSO,0,0,87,kg/ha,on_axis_zero,
+2019,2019-07-15,DWST,2438,2380,2496,kg/ha,clear,
+2019,2019-07-15,LAI,3.00,2.98,3.02,m2/m2,clear,
+2019,2019-07-25,D-AGB,6117,6059,6175,kg/ha,clear,
+2019,2019-07-25,DWGL,1486,1428,1544,kg/ha,clear,
+2019,2019-07-25,DWSO,909,851,967,kg/ha,clear,
+2019,2019-07-25,DWST,3679,3621,3737,kg/ha,clear,
+2019,2019-07-25,LAI,3.84,3.82,3.86,m2/m2,clear,
+2019,2019-08-05,D-AGB,7517,7459,7575,kg/ha,clear,
+2019,2019-08-05,DWGL,1313,1255,1371,kg/ha,clear,
+2019,2019-08-05,DWSO,1775,1717,1833,kg/ha,clear,
+2019,2019-08-05,DWST,4343,4285,4401,kg/ha,clear,
+2019,2019-08-05,LAI,3.29,3.27,3.31,m2/m2,clear,
+2019,2019-08-13,D-AGB,7098,7040,7156,kg/ha,clear,
+2019,2019-08-13,DWGL,967,909,1025,kg/ha,clear,
+2019,2019-08-13,DWSO,2496,2438,2554,kg/ha,clear,
+2019,2019-08-13,DWST,3592,3534,3650,kg/ha,clear,
+2019,2019-08-13,LAI,2.63,2.61,2.65,m2/m2,clear,
+2019,2019-09-20,D-AGB,11542,11484,11600,kg/ha,clear,
+2019,2019-09-20,DWGL,534,476,592,kg/ha,clear,
+2019,2019-09-20,DWSO,7098,7040,7156,kg/ha,clear,
+2019,2019-09-20,DWST,3881,3823,3939,kg/ha,clear,
+2019,2019-09-20,LAI,1.00,0.98,1.02,m2/m2,clear,

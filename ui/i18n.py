@@ -145,13 +145,16 @@ STRINGS = {
                "모델을 거꾸로 돌려 **토양수가 얼마나 오염됐을지**를 — 하나의 숫자가 아니라 "
                "**불확실성 범위**까지(베이지안 추정) — 추정합니다."),
     },
-    "inv.in_root": {"en": "Measured in roots [µg/kg]", "ko": "뿌리 측정값 [µg/kg]"},
-    "inv.in_straw": {"en": "Measured in straw (stems+leaves) [µg/kg]", "ko": "짚(줄기+잎) 측정값 [µg/kg]"},
-    "inv.in_grain": {"en": "Measured in grain [µg/kg]", "ko": "낟알 측정값 [µg/kg]"},
-    "inv.precision_label": {"en": "How precise are the measurements?", "ko": "측정값이 얼마나 정밀한가요?"},
+    "inv.in_root": {"en": "Measured in roots [µg/kg dry weight]", "ko": "뿌리 측정값 [µg/kg 건물중]"},
+    "inv.in_straw": {"en": "Measured in straw (stems+leaves) [µg/kg dry weight]", "ko": "짚(줄기+잎) 측정값 [µg/kg 건물중]"},
+    "inv.in_grain": {"en": "Measured in grain [µg/kg dry weight]", "ko": "낟알 측정값 [µg/kg 건물중]"},
+    "inv.precision_label": {"en": "Your measurement's relative SD [%] (0 = not given)",
+                            "ko": "측정값의 상대표준편차 [%] (0 = 모름)"},
     "inv.precision_help": {
-        "en": "Sets the measurement+model uncertainty used in the estimate.",
-        "ko": "추정에 쓰이는 측정+모델 불확실성을 설정합니다.",
+        "en": "Your lab's analytical precision. It is combined with the model's own transfer "
+              "error (the band shown with every result), which the estimate always includes.",
+        "ko": "실험실의 분석 정밀도입니다. 추정에는 모델 자체의 오차(결과마다 표시되는 범위)가 항상 들어가고, "
+              "여기 입력한 값이 그 위에 더해집니다.",
     },
     "inv.estimate_btn": {"en": "📐 Estimate the contamination level", "ko": "📐 오염 수준 추정하기"},
     "inv.enter_first": {

@@ -14,8 +14,6 @@ from plotly.subplots import make_subplots
 from plotly.colors import sample_colorscale
 
 import model_api as api
-import forcing_rice as fr
-import growth_rice as gr
 
 _COL = {"root": "#8c564b", "stem": "#2ca02c", "leaf": "#1f77b4", "grain": "#ff7f0e"}
 # plain-language tissue names for the general-audience (Simple) views
@@ -117,22 +115,21 @@ _BAF_EXTRA_COLORS = ["#2ca02c", "#9467bd", "#8c564b", "#17becf"]
 
 
 def fig_baf(res, obs, extra=None, lang="en"):
-    """Predicted vs observed (Yamazaki) root/straw/grain BAF, grouped bars.
+    """Predicted vs observed (Yamazaki) root/straw/grain BAF on the DRY-weight basis.
 
-    `extra` optionally overlays additional model series (e.g. the EXPLORATORY
-    two-pool model): a dict {label: {"root","straw","grain"}} (values may be None);
-    each is added as its own grouped bar so the canonical core, the overlay model(s)
-    and the observed data are compared side by side. `lang="ko"` localises the axis,
-    title and the core/observed legend names for the Simple (general-audience) view.
+    `res` needs `baf_final_dw` (a `simulate()` result, or `{"congener", "baf_final_dw"}` built
+    from `model_api.yamazaki_harvest_baf`, the model's version of the observation); `obs` is
+    `model_api.observed_baf` (dry basis). `extra` optionally overlays more model series:
+    {label: {"root","straw","grain"}}. `lang="ko"` localises the labels.
     """
     ko = lang == "ko"
     nm = _plain(lang)
     tis = ["root", "straw", "grain"]
     x = [nm[t_] for t_ in tis]
-    pred = [res["baf_final"]["root"], res["straw_baf"], res["baf_final"]["grain"]]
+    pred = [res["baf_final_dw"][t_] for t_ in tis]
     fig = go.Figure()
-    fig.add_bar(x=x, y=pred, name="모델" if ko else "model (4-pool core)", marker_color="#1f77b4",
-                hovertemplate="core %{x}: %{y:.3g}<extra></extra>")
+    fig.add_bar(x=x, y=pred, name="모델" if ko else "model", marker_color="#1f77b4",
+                hovertemplate="model %{x}: %{y:.3g}<extra></extra>")
     for i, (label, vals) in enumerate(dict(extra or {}).items()):
         fig.add_bar(x=x, y=[vals.get(t_) for t_ in tis], name=label,
                     marker_color=_BAF_EXTRA_COLORS[i % len(_BAF_EXTRA_COLORS)],
@@ -146,7 +143,7 @@ def fig_baf(res, obs, extra=None, lang="en"):
         barmode="group",
         title=(f"{res['congener']} — 모델 예측 vs 실측 (Yamazaki)" if ko
                else f"{res['congener']} — predicted vs observed BAF"),
-        yaxis_title="축적 배수 [L/kg]" if ko else "BAF [L/kg]", **_LAYOUT)
+        yaxis_title="축적 배수 [L/kg 건물중]" if ko else "BAF [L/kg dry weight]", **_LAYOUT)
     return fig
 
 
@@ -178,7 +175,7 @@ def fig_where_plain(res, lang="en", band=False):
     A jargon-free read of where the chemical ends up at harvest (the same numbers
     as the BAF bars, but labelled as a concentration build-up, no 'BAF' symbol).
     `lang="ko"` renders Korean. `band=True` overlays the coarse a-priori predictive
-    uncertainty (`model_api.predictive_band`, a ×/÷ ~7 honesty band) as error bars,
+    uncertainty (`model_api.predictive_band`, a ×/÷ honesty band) as error bars,
     so the general-audience view never shows an absolute number without a spread."""
     nm = _plain(lang)
     ko = lang == "ko"
@@ -189,7 +186,7 @@ def fig_where_plain(res, lang="en", band=False):
     ys = [float(vals[t_]) for t_ in order]
     cols = [_COL.get(t_, "#1f77b4") for t_ in order]
     if band:
-        # The band is multiplicative (×/÷ ~7). On a LOG y-axis its up/down whiskers
+        # The band is multiplicative (×/÷). On a LOG y-axis its up/down whiskers
         # are symmetric (log(v·7)−log(v) == log(v)−log(v/7)) instead of the lop-sided
         # look a linear axis gives, so we plot the estimate as a MARKER with error
         # bars (bars read wrong on a log scale — their baseline is arbitrary).
@@ -261,9 +258,8 @@ _SIGNAL_COLOR = {"green": "#2ca02c", "amber": "#e6a817", "red": "#d62728"}
 def fig_intake_gauge(info, lang="en"):
     """Half-circle gauge: predicted grain PFAS as a % of the EFSA group TWI.
 
-    `info` is a `model_api.intake_fraction` dict. A traffic-light gauge (green
-    <10 %, amber 10-100 %, red >=100 %) with a threshold marker at 100 % of the
-    tolerable weekly intake. Plain labels; `lang="ko"` renders Korean. This is an
+    `info` is a `model_api.intake_fraction` dict. Green below and red at or above 100 %
+    of the tolerable weekly intake (the only sourced threshold), marked on the dial. Plain labels; `lang="ko"` renders Korean. This is an
     intake reference to a HEALTH-BASED guidance value, not a food-standard (MRL)
     check -- the surrounding UI copy carries that caveat."""
     ko = lang == "ko"
@@ -282,8 +278,7 @@ def fig_intake_gauge(info, lang="en"):
             "bar": {"color": color, "thickness": 0.72},
             "borderwidth": 0,
             "steps": [
-                {"range": [0, 10], "color": "rgba(44,160,44,0.16)"},
-                {"range": [10, min(100, axis_max)], "color": "rgba(230,168,23,0.16)"},
+                {"range": [0, min(100, axis_max)], "color": "rgba(44,160,44,0.16)"},
                 {"range": [min(100, axis_max), axis_max], "color": "rgba(214,39,40,0.16)"},
             ],
             "threshold": {"line": {"color": "#d62728", "width": 4},
@@ -297,15 +292,11 @@ def fig_intake_gauge(info, lang="en"):
     return fig
 
 
-def fig_tang_tf(val, val_refit=None, val_extra=None, extra_label="model · lipid loading (OOS)"):
-    """Tang 2026 per-organ TF (DRY weight): measured vs model, optional refit-f_xy bar.
+def fig_tang_tf(val, val_extra=None, extra_label="model · free anion"):
+    """Tang 2026 per-organ TF (DRY weight): measured vs model.
 
-    `val` (and the optional `val_refit` / `val_extra`) come from
-    `model_api.tang_tf_validation`. Log-y grouped bars over stalk/leaf/endosperm.
-
-    `val_extra` is a third model series under its own label -- used for the lipid-loading
-    run, whose constants were fit on Yamazaki and NOT on Tang, so unlike `val_refit` it is
-    an out-of-sample prediction rather than a fit to the bars it is drawn against.
+    `val` (and the optional `val_extra`, a second model series under its own label) come
+    from `model_api.tang_tf_validation`. Log-y grouped bars over stalk/leaf/endosperm.
     """
     organs = val["organs"]
     fig = go.Figure()
@@ -315,11 +306,6 @@ def fig_tang_tf(val, val_refit=None, val_extra=None, extra_label="model · lipid
                 name=f"model · f_xy={val['f_xy']:.3g}", marker_color="#bdbdbd",
                 marker_line=dict(width=0.5, color="#333"),
                 hovertemplate="model %{x}: %{y:.3g}<extra></extra>")
-    if val_refit is not None:
-        fig.add_bar(x=organs, y=[val_refit["model_tf"][o] for o in organs],
-                    name=f"model · Tang-refit f_xy={val_refit['f_xy']:.3g}", marker_color="#2ca02c",
-                    marker_line=dict(width=0.5, color="#333"),
-                    hovertemplate="refit %{x}: %{y:.3g}<extra></extra>")
     if val_extra is not None:
         fig.add_bar(x=organs, y=[val_extra["model_tf"][o] for o in organs],
                     name=extra_label, marker_color="#9467bd",
@@ -332,7 +318,7 @@ def fig_tang_tf(val, val_refit=None, val_extra=None, extra_label="model · lipid
     return fig
 
 
-_CHAIN_LOG = {"K_PL", "K_prot", "f_xy_recommended", "f_xy_W2fit", "B_root", "B_grain"}
+_CHAIN_LOG = {"K_PL", "K_prot", "f_xy_recommended", "f_xy_fit", "B_root", "B_grain"}
 
 
 def fig_chain(rows, congener, key="K_PL"):
@@ -351,22 +337,6 @@ def fig_chain(rows, congener, key="K_PL"):
     fig.update_layout(title=f"{key} vs chain length", xaxis_title="perfluoro-C", yaxis_title=key,
                       yaxis_type="log" if key in _CHAIN_LOG else "linear",
                       hovermode="closest", **_LAYOUT)
-    return fig
-
-
-def fig_forcings(t, season):
-    """Measured transpiration Q_TP(t) and ORYZA organ biomass (dual y-axis)."""
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
-    fig.add_scatter(x=t, y=fr.Q_TP(t, season), name="Q_TP", line=dict(color="royalblue", width=2.5),
-                    hovertemplate="Q_TP: %{y:.3f} L/d/hill<extra></extra>", secondary_y=False)
-    b = gr.organ_biomass(t, season)
-    for k in api.TISSUES:
-        fig.add_scatter(x=t, y=b[k], name=k, line=dict(color=_COL[k]),
-                        hovertemplate=f"{k}: %{{y:.4f}} kg/hill<extra></extra>", secondary_y=True)
-    fig.update_layout(title="Measured forcings (Q_TP, M_s)", xaxis_title="days",
-                      hovermode="x unified", **_LAYOUT)
-    fig.update_yaxes(title_text="Q_TP [L/day/hill]", secondary_y=False)
-    fig.update_yaxes(title_text="dry biomass [kg DM/hill]", secondary_y=True)
     return fig
 
 

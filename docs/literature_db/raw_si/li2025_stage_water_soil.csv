@@ -1,0 +1,44 @@
+# Li et al. 2025 SI Table S5: PFAS in paddy IRRIGATION water (ng/L) and soil (ng/g dw) by
+# compound CLASS (sums), mean +/- SD per growth stage. Per-congener water values are NOT
+# printed in the paper (the repo's are Fig 2a shares x the class sum, digitised).
+stage,stage_order,medium,class,mean,sd
+tillering,1,irrigation_water_ng_L,PFCAs,59,7.5
+tillering,1,irrigation_water_ng_L,PFSAs,3.9,0.56
+tillering,1,irrigation_water_ng_L,Precursors,0.026,0.005
+tillering,1,irrigation_water_ng_L,Novel alternatives,0.25,0.07
+tillering,1,soil_ng_g_dw,PFCAs,41,5.7
+tillering,1,soil_ng_g_dw,PFSAs,26,4.3
+tillering,1,soil_ng_g_dw,Precursors,2.8,0.38
+tillering,1,soil_ng_g_dw,Novel alternatives,5.6,1.5
+heading,2,irrigation_water_ng_L,PFCAs,74,8.3
+heading,2,irrigation_water_ng_L,PFSAs,1.7,0.38
+heading,2,irrigation_water_ng_L,Precursors,0.013,0.003
+heading,2,irrigation_water_ng_L,Novel alternatives,0.33,0.18
+heading,2,soil_ng_g_dw,PFCAs,30,5.6
+heading,2,soil_ng_g_dw,PFSAs,23,2.8
+heading,2,soil_ng_g_dw,Precursors,2.5,0.54
+heading,2,soil_ng_g_dw,Novel alternatives,4.3,1.3
+filling,3,irrigation_water_ng_L,PFCAs,59,8.7
+filling,3,irrigation_water_ng_L,PFSAs,4.0,0.47
+filling,3,irrigation_water_ng_L,Precursors,0.072,0.018
+filling,3,irrigation_water_ng_L,Novel alternatives,0.38,0.05
+filling,3,soil_ng_g_dw,PFCAs,36,7.6
+filling,3,soil_ng_g_dw,PFSAs,23,7.4
+filling,3,soil_ng_g_dw,Precursors,4.5,1.53
+filling,3,soil_ng_g_dw,Novel alternatives,6.4,1.3
+milk,4,irrigation_water_ng_L,PFCAs,83,5.8
+milk,4,irrigation_water_ng_L,PFSAs,2.4,0.58
+milk,4,irrigation_water_ng_L,Precursors,0.020,0.002
+milk,4,irrigation_water_ng_L,Novel alternatives,0.26,0.03
+milk,4,soil_ng_g_dw,PFCAs,31,4.8
+milk,4,soil_ng_g_dw,PFSAs,22,5.6
+milk,4,soil_ng_g_dw,Precursors,1.3,0.13
+milk,4,soil_ng_g_dw,Novel alternatives,5.8,2.0
+ripening,5,irrigation_water_ng_L,PFCAs,67,9.7
+ripening,5,irrigation_water_ng_L,PFSAs,4.5,0.97
+ripening,5,irrigation_water_ng_L,Precursors,0.039,0.012
+ripening,5,irrigation_water_ng_L,Novel alternatives,0.34,0.09
+ripening,5,soil_ng_g_dw,PFCAs,26,5.4
+ripening,5,soil_ng_g_dw,PFSAs,17,3.5
+ripening,5,soil_ng_g_dw,Precursors,1.3,0.08
+ripening,5,soil_ng_g_dw,Novel alternatives,2.7,0.4

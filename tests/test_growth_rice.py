@@ -62,13 +62,6 @@ def test_target_root_shoot_partitioning_method_B():
     assert B["grain"][-1] / shoot(B) == pytest.approx(base["grain"][-1] / shoot(base), abs=0.04)
 
 
-def test_M_for_nstem_shape():
-    t = np.linspace(0, 120.0, 200)
-    M = gr.M_for_nstem(t, N=4, season=120.0)
-    assert M.shape == (200, 6)            # root + 4 stem segments + grain
-    assert np.all(M > 0)                  # floored, strictly positive for the ODE
-
-
 if __name__ == "__main__":
     import sys, pytest
     sys.exit(pytest.main([__file__, "-v"]))

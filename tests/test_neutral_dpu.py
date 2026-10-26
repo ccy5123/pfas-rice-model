@@ -20,6 +20,10 @@ sys.path.insert(0, os.path.join(_ROOT, "validation"))
 
 from pfas_rice_plant_module_4pool_surf import binding_factors  # noqa: E402
 import neutral_dpu as ND  # noqa: E402
+import json as _json  # noqa: E402
+
+# the a-priori scores as recorded by validation/neutral_scores.py (params/neutral_scores.json)
+_SCORES = _json.load(open(os.path.join(_ROOT, "params", "neutral_scores.json")))["scores"]
 
 
 @pytest.fixture(scope="module")
@@ -155,17 +159,17 @@ def test_schriever_refit_is_the_same_form_and_reproduces_briggs_paper():
         ND.tscf(2.0, "nope")
 
 
-def test_lipid_defaults_are_the_cited_trapp1994_values():
-    """The lipid contents must stay traceable to Trapp 1994 (root 1%, stem/leaf 3%
-    fresh weight), not drift back to unsourced guesses."""
-    assert ND.TRAPP1994_LIPID_FW["root"] == 0.01
-    assert ND.TRAPP1994_LIPID_FW["stem"] == ND.TRAPP1994_LIPID_FW["leaf"] == 0.03
+def test_lipid_defaults_are_the_sourced_dry_basis_values():
+    """The lipid contents must stay traceable to their sources (PREREG 5.10;
+    params/neutral_composition_sourced.csv), carried dry and restated at the organ water."""
+    import neutral_composition as NC
+    for organ in ("root", "stem", "leaf", "grain"):
+        lo, hi, src = NC.TABLE[("rice", organ, "lipid_dw")]
+        assert src and ND.RICE_LIPID_DW[organ] == pytest.approx(0.5 * (lo + hi))
     comps = {c.name: c for c in ND.rice_compartments()}
-    # FRESH-weight basis, same as W -- required for K_PW = W + L*a*Kow^b to add up.
-    # (Treating them as dry-weight understates K_PW ~10x; the Liu 2023 root data
-    # caught that error, log10 RMSE 0.605 -> 0.198.)
+    # FRESH-weight basis, same as W -- required for K_PW = W + L*a*Kow^b to add up
     fw_root = comps["root"].f_PL * (1.0 - comps["root"].theta)
-    assert fw_root == pytest.approx(0.01, rel=1e-9)
+    assert fw_root == pytest.approx(ND.RICE_LIPID_DW["root"] * (1 - ND.RICE_WATER["root"]))
     # and Briggs' own barley anchor is likewise ~2.5% of FRESH weight
     assert 10.0 ** ND.RCF_INTERCEPT / ND.LIPID_OCTANOL_A == pytest.approx(0.0247, abs=0.001)
 
@@ -185,29 +189,18 @@ def test_ge2017_apriori_prediction():
     must therefore help a lot -- and it has a genuine MINIMUM (~7 d), which is a
     testable prediction rather than a monotone slide toward faster loss.
 
-    SUPERSEDED BY THE ORGAN-MASS FIX (src/organ_mass.py): the 0.783 and the ~7-d
-    minimum are on the pre-fix DRY organ mass (pinned below as the legacy record).
-    On the corrected FRESH mass the strict a-priori run is 0.311 and shortening the
-    half-life only HURTS -- the "~7-d half-life" was absorbing the mass-basis error,
-    not measuring metabolism."""
+    On fresh organ mass (src/organ_mass.py) the strict a-priori run is 0.311 and
+    shortening the half-life only HURTS: the "~7-d half-life" once read off this table
+    was absorbing the dry-matter-as-fresh-mass error, not measuring metabolism."""
     import neutral_dpu_validation as V
     path = os.path.join(_ROOT, "data_obs", "neutral_obs_ge2017.csv")
-    # legacy record (pre-fix, dry organ mass)
-    drv = V.drivers(mass_basis="dry")
-    rmse = V.compare_to_obs(path, drv, quiet=True)
-    assert rmse == pytest.approx(0.783, abs=0.05)
-    errs = {h: V.compare_to_obs(path, drv, half_life=h, quiet=True)
-            for h in (30.0, 14.0, 7.0, 3.0)}
-    assert errs[7.0] < 0.4 * rmse                 # metabolism "explained" most of it
-    assert errs[7.0] < errs[30.0] and errs[7.0] < errs[3.0]   # a "real" minimum
-    # the ORIGINAL Briggs bell beats the broader modern refit on this data
-    assert V.compare_to_obs(path, drv, tscf_model="schriever", quiet=True) > rmse
-    # the corrected basis
     drv = V.drivers()
     rmse = V.compare_to_obs(path, drv, quiet=True)
-    assert rmse == pytest.approx(0.311, abs=0.05)
+    assert rmse == pytest.approx(_SCORES["Ge 2017 per-organ TF"], abs=1e-3)   # the record
     errs = {h: V.compare_to_obs(path, drv, half_life=h, quiet=True) for h in (30.0, 7.0, 3.0)}
-    assert errs[3.0] > errs[7.0] > errs[30.0]     # faster loss only makes it worse
+    # PREREG 5.10 (only the leaf rows scored, on the table's own rice waters): the leaf is
+    # over without metabolism, a 30-d half-life helps, shorter ones over-correct
+    assert errs[30.0] < rmse and errs[3.0] > errs[7.0] > errs[30.0]
 
 
 def test_liu2023_root_partition_apriori():
@@ -221,14 +214,12 @@ def test_liu2023_root_partition_apriori():
     FLAT here, which is the counterpart of the Ge case where it is steep: root is
     exposure-buffered, leaf is an accumulator.
 
-    0.281 is the pre-fix (DRY organ mass) record; on the corrected FRESH mass the ODE
-    root sits much closer to K_PW and the score is 0.213 (src/organ_mass.py)."""
+    On fresh organ mass the ODE root sits close to K_PW and the score is 0.213."""
     import neutral_dpu_validation as V
     path = os.path.join(_ROOT, "data_obs", "neutral_obs_liu2023.csv")
-    assert V.compare_to_obs(path, V.drivers(mass_basis="dry"), quiet=True) == pytest.approx(0.281, abs=0.04)
     drv = V.drivers()
     rmse = V.compare_to_obs(path, drv, quiet=True)
-    assert rmse == pytest.approx(0.213, abs=0.04)
+    assert rmse == pytest.approx(_SCORES["Liu 2023 rice root"], abs=1e-3)     # the record
     flat = V.compare_to_obs(path, drv, half_life=7.0, quiet=True)
     assert abs(flat - rmse) < 0.02             # equilibrium endpoint: metabolism-insensitive
     rows = V.load_neutral_obs(path)

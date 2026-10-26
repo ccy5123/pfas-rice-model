@@ -501,10 +501,13 @@ def grain_baf_chain_factor(n_perfluoroC: float, ref_n_perfluoroC: int = 7) -> fl
 # averages, so the BAFs below are approximate anchors.  What the main text adds
 # (docs/sampling_protocols_audit_KR.md): ONE rice plant per field, harvest Oct 2016;
 # non-detects were averaged as ZERO; PFOA is site-paired in main Table 1, and one
-# WWTP-impacted field (A-2, 1760 ng/L) is 83% of the void-water PFOA mean -- the
-# ratio of means is 4.4 L/kg, the site-paired geomean 27 (n=14, range 1-597). The
-# long chains rest on 1-4 detections (PFDoDA rice 1/30); the authors themselves
-# analysed PFOA only. (see docs/literature_db/raw_si/kim2019_field_conc.csv, kim2019_grain_baf.csv)
+# WWTP-impacted field (A-2, 1760 ng/L) is 83% of the void-water PFOA mean (67% of the
+# Sum-17) -- so the ratio of means (4.4 L/kg) is set mostly by one field. Per site, the
+# censored geomean is 9.9 L/kg (KIM2019_PFOA_SITE_BAF below); the often-quoted 27 uses
+# only the 14 sites where rice was detected and is biased up. The long chains rest on
+# 1-4 detections (PFDoDA rice 1/30); the authors themselves analysed PFOA only.
+# (see docs/literature_db/raw_si/kim2019_field_conc.csv, kim2019_grain_baf.csv,
+#  kim2019_table1_sites.csv)
 KIM2019_FIELD: dict[str, tuple[float, float, float, float]] = {
     "PFHpA":  (24.7,   0.499,  0.00974, 13.0),
     "PFOA":   (78.7,   0.160,  0.349,   57.0),
@@ -521,10 +524,59 @@ def kim2019_grain_baf(basis: str = "porewater") -> dict[str, float]:
     ``basis="porewater"`` -> C_grain/C_porewater [L/kg] (the model's BAF, since
     C_w^o is pore water; ng/g == ug/kg, ng/L -> ug/L by /1000).  ``basis="soil"``
     -> C_grain/C_soil [kg/kg].  Field ensemble averages -> treat as approximate.
+
+    These are ratios of MEANS, kept for every congener because it is the only estimator
+    the non-PFOA congeners have (a chain-length series on mixed estimators would compare
+    unlike quantities). One WWTP field (A-2) is 67% of the void-water Sum-17, so the absolute
+    LEVEL of the series is A-2-weighted -- for PFOA, 4.4 vs the per-site 9.9
+    (KIM2019_PFOA_SITE_BAF; validation/kim2019_pfoa_anchor.py).
     """
     out = {}
     for sp, (pw, soil, rice, _df) in KIM2019_FIELD.items():
         out[sp] = rice / (pw / 1000.0) if basis == "porewater" else rice / soil
+    return out
+
+
+# Kim 2019 PFOA grain BAF per SITE (main-text Table 1, docs/literature_db/raw_si/
+# kim2019_table1_sites.csv): censored geometric mean of rice/water over the 26 sites with a
+# water value (14 exact, 12 rice < MDL as upper limits), with its 90% site bootstrap
+# interval [L/kg, pore-water basis]. validation/kim2019_pfoa_anchor.py (pre-registered in
+# bedadbf) derives it; the interval method matters at the low end (profile likelihood gives
+# 4.18-19.8, which contains the published 4.43). The per-site ratio is not a plant constant:
+# rice scales as water^0.52 [0.24, 0.87] while the model is linear (0.96), so the harvest
+# void water is a noisy proxy for the season exposure (site sd 0.82 log10).
+KIM2019_PFOA_SITE_BAF: tuple[float, float, float] = (9.94, 4.57, 20.16)
+
+# Kim 2019 SI Tables S5 (MDL) + S6 (detection frequency), for the non-detects the averages
+# above count as ZERO: (brown-rice MDL [ng/g], void-water MDL [ng/L], void-water DF [%]).
+# n = 30 rice / 27 void water (docs/literature_db/raw_si/kim2019_si_detection.csv).
+KIM2019_DETECTION: dict[str, tuple[float, float, float]] = {
+    "PFHpA":  (0.049, 0.267, 89.0),
+    "PFOA":   (0.088, 0.683, 96.0),
+    "PFNA":   (0.079, 0.220, 100.0),
+    "PFDA":   (0.037, 0.158, 85.0),
+    "PFUnDA": (0.038, 0.200, 19.0),
+    "PFDoDA": (0.030, 0.297, 11.0),
+}
+KIM2019_N_RICE, KIM2019_N_WATER = 30, 27
+
+
+def kim2019_grain_baf_bounds() -> dict[str, tuple[float, float, float]]:
+    """(lower, published, upper) brown-rice BAF [L/kg, pore-water basis], Kim et al. 2019.
+
+    The published averages count every non-detect as zero; a non-detect actually lies in
+    [0, MDL]. Putting all of them at 0 or all at the MDL bounds each average, so the
+    ratio of means lies in [rice_avg / water_hi, rice_hi / water_avg]. For the
+    low-detection congeners the range is wide (PFDoDA rice 1/30, water 3/27: 5.5-630).
+    """
+    out = {}
+    for sp, (pw, _soil, rice, df_rice) in KIM2019_FIELD.items():
+        mdl_r, mdl_w, df_w = KIM2019_DETECTION[sp]
+        nd_r = round(KIM2019_N_RICE * (1.0 - df_rice / 100.0))
+        nd_w = round(KIM2019_N_WATER * (1.0 - df_w / 100.0))
+        rice_hi = rice + nd_r * mdl_r / KIM2019_N_RICE
+        water_hi = pw + nd_w * mdl_w / KIM2019_N_WATER
+        out[sp] = (rice / (water_hi / 1000.0), rice / (pw / 1000.0), rice_hi / (pw / 1000.0))
     return out
 
 
@@ -637,95 +689,3 @@ def literature_paddy_soil(name: str | None = None, *,
     K_F = koc_to_KF(Koc, f_oc, n)
     return FreundlichSoil(K_F=K_F, n=n, theta_g=theta_g,
                           name=f"{name or 'PFAS'}/{redox}")
-
-
-# ===========================================================================
-# demo: show the QSPRs and an end-to-end literature-parametrised run
-# ===========================================================================
-def _demo():
-    from pfas_rice_plant_module import (
-        RiceUptakeModel, Compartment, binding_factors, _logistic,
-        ROOT, STEM, LEAF, FRUIT,
-    )
-    from soil_paddy import inputs_from_soil
-
-    print("== C6  f_d (fraction dissociated) at paddy pH  [goss2008, verified] ==")
-    for hg in ("carboxylate", "sulfonate"):
-        print(f"  {hg:11s} pKa={PKA[hg]:+.1f}  f_d(pH5)={float(f_d(PKA[hg],5)):.5f}  "
-              f"f_d(pH7)={float(f_d(PKA[hg],7)):.5f}")
-
-    print("\n== C3  Koc QSPR vs measured anchors  [higgins2006 + milinovic2015] ==")
-    for nm in ("PFBS", "PFBA", "PFHxA", "PFOA", "PFNA", "PFDA", "PFOS"):
-        _, npfc, hg = SPECIES[nm]
-        meas = KOC_ANCHORS_LKG.get(nm)
-        ms = f"   measured={meas:6.1f}" if meas else ""
-        print(f"  {nm:7s} nPFC={npfc:2d} {hg:11s} Koc_pred={float(koc(npfc,hg)):7.1f} L/kg{ms}")
-
-    print("\n== C4  MEASURED K_PL (chen2025 K_MW) & K_prot (zhou2025 dialysis K_prow) [L/kg] ==")
-    for nm in ("PFBA", "PFHxA", "PFOA", "PFDA", "PFDoDA", "PFOS"):
-        star = "" if nm in KPROW_ZHOU2025_LOG["soy"] else " (interp)"
-        print(f"  {nm:7s}  K_PL={k_pl(name=nm):9.1f}   "
-              f"K_prot(soy/plant)={k_prot(name=nm, plant=True):7.1f}   "
-              f"K_prot(BSA)={k_prot(name=nm, plant=False):7.1f}{star}")
-
-    print("\n== C1  MEASURED grain BAF (Kim 2019, porewater basis) [L/kg]  [kim2019] ==")
-    for nm, b in kim2019_grain_baf("porewater").items():
-        print(f"  {nm:7s}  grain BAF = {b:7.2f}")
-
-    print("\n== task 8  head-group f_xy offset (Tang2026 + Yamazaki2023 TF) ==")
-    for hg in ("carboxylate", "sulfonate", "ether"):
-        print(f"  {hg:11s}  f_xy x exp({FXY_HEADGROUP_LN_OFFSET[hg]:+.1f}) = "
-              f"x{np.exp(FXY_HEADGROUP_LN_OFFSET[hg]):.2f}  (PFCA f_xy=0.04 -> {f_xy_headgroup(0.04, hg):.4f})")
-
-    print("\n== end-to-end: literature-parametrised PFOA in paddy rice ==")
-    t = np.linspace(0.0, 120.0, 481)
-    C_total = np.full_like(t, 5.0)                       # ug/kg dry soil
-    Qtp = 0.05 + 0.35 * np.exp(-((t - 75.0) ** 2) / (2 * 25.0 ** 2))
-    M = np.column_stack([
-        _logistic(t, 1e-3, 0.030, 0.10, 20.0), _logistic(t, 1e-3, 0.040, 0.10, 25.0),
-        _logistic(t, 1e-3, 0.050, 0.12, 30.0), _logistic(t, 1e-5, 0.025, 0.18, 80.0)])
-    soil = literature_paddy_soil("PFOA", f_oc=0.02, n=0.85, theta_g=0.45)
-    inputs = inputs_from_soil(t, C_total, Qtp, M, soil)
-    env = literature_environment()
-    cmpd = literature_compound("PFOA")
-    comps = [Compartment("root",  0.70, 0.05, 0.010, 0.30),
-             Compartment("stem",  0.80, 0.01, 0.005, 0.08),
-             Compartment("leaf",  0.80, 0.03, 0.020, 0.04, S=20.0),
-             Compartment("grain", 0.15, 0.08, 0.010, 0.10, S=2.0)]
-    model = RiceUptakeModel(env=env, cmpd=cmpd, comps=comps, inputs=inputs)
-    sol = model.solve(t)
-    Cend = sol.y[:, -1]
-    B = binding_factors(comps, cmpd)
-    print(f"  E_m={env.E*1e3:.0f} mV  N={env.N:.3f}  e^N={np.exp(env.N):.1f}  f_d={cmpd.fd:.5f}")
-    print(f"  K_prot={cmpd.K_prot:.2f}  K_PL={cmpd.K_PL:.2f}  K_cw={cmpd.K_cw:.2f}  [L/kg]")
-    print(f"  soil: Koc={KOC_ANCHORS_LKG['PFOA']:.0f} L/kg -> K_F={soil.K_F:.3f} "
-          f"(f_oc=0.02), n={soil.n}; C_w^o(day45)={inputs.Cwo_(45):.4f} ug/L")
-    print(f"  B_k [L/kg]: " + ", ".join(f"{c.name}={b:.2f}" for c, b in zip(comps, B)))
-    Cwo_end = inputs.Cwo_(t[-1])
-    Mf = inputs.M_(t[-1])
-    straw = (Cend[STEM] * Mf[STEM] + Cend[LEAF] * Mf[LEAF]) / (Mf[STEM] + Mf[LEAF])
-    print(f"  final conc [ug/kg]: root={Cend[ROOT]:.3f}  straw={straw:.3f}  grain={Cend[FRUIT]:.3f}")
-    print(f"  model BAF  [L/kg] : root={Cend[ROOT]/Cwo_end:.2f}  straw={straw/Cwo_end:.2f}  "
-          f"grain={Cend[FRUIT]/Cwo_end:.3f}")
-    print(f"  Kim 2019 PFOA grain BAF (porewater) = {kim2019_grain_baf()['PFOA']:.2f} L/kg "
-          f"<- Tier-1 calibration target")
-    ok = Cend[ROOT] / Cwo_end > straw / Cwo_end > Cend[FRUIT] / Cwo_end
-    print(f"  ordering root > straw > grain: {'OK' if ok else 'VIOLATED (transport params need calibration)'}")
-
-    # Tier-1 calibration: fit phloem loading L_Ph to the Kim 2019 PFOA grain BAF.
-    try:
-        from calibration import calibrate, Param, ObservedBAF
-        tgt = kim2019_grain_baf()["PFOA"]
-        res = calibrate(model, [Param("L_Ph", 1e-4, 1.0)],
-                        [ObservedBAF("grain", tgt, sigma=0.3)], global_search=False)
-        print(f"\n== Tier-1 calibration to Kim 2019 PFOA grain BAF ({tgt:.2f} L/kg) ==")
-        print(f"  fitted L_Ph = {res.values['L_Ph']:.4f}  ->  grain BAF = "
-              f"{res.predicted['grain']:.3f}  (was {Cend[FRUIT]/Cwo_end:.3f})")
-        print("  NOTE: grain-only constraint -> fits the phloem knob; f_xy (root->shoot)"
-              " needs root/straw data (Kim is grain-only) -- a DB gap.")
-    except Exception as e:
-        print(f"  (calibration step skipped: {e})")
-
-
-if __name__ == "__main__":
-    _demo()

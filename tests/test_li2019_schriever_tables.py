@@ -8,10 +8,9 @@ These lock down three things that a later session could otherwise undo quietly:
     rows out of an a-priori score -- and, just as important, to leave the two
     tables WITHOUT that column (liu2023, ge2017) untouched, so the published
     0.281 / 0.783 cannot move because of it;
-  * the root-partition anchor discrepancy that validation/li2019_rcf_apriori.py
-    diagnoses. That one is deliberately NOT fixed, which is exactly why it needs
-    a test: an undocumented drift back toward "consistent" would erase a
-    recorded open question.
+  * the neutral composition of PREREG 5.10: lipid on a dry basis restated at the
+    organ water, each table on its own plant, and the Briggs anchor as the named
+    alternative for the root.
 """
 from __future__ import annotations
 
@@ -121,90 +120,65 @@ def test_subset_filter_actually_holds_back_the_calibration_rows():
 # --------------------------------------------------------------------------
 # the anchor discrepancy: recorded, not fixed
 # --------------------------------------------------------------------------
-def test_root_lipid_sits_below_the_briggs_anchor_by_the_documented_factor():
-    shipped = ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
-    anchor = 10.0 ** ND.RCF_INTERCEPT
-    assert anchor / shipped == pytest.approx(2.48, abs=0.02)
-    # the opt-in dict restores the product exactly and changes nothing else
-    assert (ND.BRIGGS_ANCHORED_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
-            == pytest.approx(anchor))
-    for organ in ("stem", "leaf", "grain"):
-        assert ND.BRIGGS_ANCHORED_LIPID_FW[organ] == ND.TRAPP1994_LIPID_FW[organ]
-
-
-def test_briggs_anchored_root_reproduces_briggs_rcf_and_the_default_does_not():
-    """The point of the discrepancy, as a number: with the anchor the rice root
-    IS the Briggs RCF curve above the water floor; with the shipped lipid it is
-    2.5x under it. Compared at a fixed log Kow, so nothing else can drift in."""
-    log_kow = 4.0
-    briggs = ND.briggs_rcf(log_kow)
-    W = ND.RICE_WATER["root"]
-
-    def kpw(lipids):
-        return ND.k_pw(log_kow, W=W, L=lipids["root"])
-
-    anchored, shipped = kpw(ND.BRIGGS_ANCHORED_LIPID_FW), kpw(ND.TRAPP1994_LIPID_FW)
-    # above the floor the anchored root and Briggs' RCF differ only by W vs 0.82
-    assert (anchored - W) == pytest.approx(briggs - ND.RCF_FLOOR, rel=1e-9)
-    assert (anchored - W) / (shipped - W) == pytest.approx(2.48, abs=0.02)
-
-
-def test_default_composition_is_untouched_by_the_new_constant():
-    """Importing the anchor must not have changed what the model runs."""
-    assert ND.TRAPP1994_LIPID_FW == {"root": 0.01, "stem": 0.03,
-                                     "leaf": 0.03, "grain": 0.03}
+def test_default_lipid_is_dry_basis_restated_at_the_organ_water():
+    """PREREG 5.10: the rice lipid is carried on a dry basis (Li 2019 cereal roots for the root,
+    rice straw ether extract for stem and leaf, brown rice crude fat for the grain) and restated
+    at the organ's water, so an override of the water moves the fresh lipid with it."""
+    import neutral_composition as NC
+    assert ND.RICE_LIPID_DW == pytest.approx({"root": 0.0835, "stem": 0.015, "leaf": 0.015,
+                                              "grain": 0.026})
     comps = {c.name: c for c in ND.rice_compartments()}
-    assert comps["root"].f_PL == pytest.approx(0.01 / (1.0 - 0.90))
+    for organ, c in comps.items():
+        assert c.f_PL == pytest.approx(ND.RICE_LIPID_DW[organ])      # f_PL = L_fw/(1-W) = L_dw
+        assert c.theta == ND.RICE_WATER[organ]
+    wet = {c.name: c for c in ND.rice_compartments(waters={"root": 0.90})}
+    assert wet["root"].f_PL * (1 - 0.90) == pytest.approx(0.0835 * 0.10)
+    # the rice root's fresh lipid at its sourced water sits near Briggs' fitted term
+    assert ND.RICE_LIPID_FW["root"] == pytest.approx(0.0835 * (1 - ND.RICE_WATER["root"]))
+    assert ND.RICE_LIPID_FW["root"] / ND.BRIGGS_ANCHORED_LIPID_FW["root"] == pytest.approx(
+        0.97, abs=0.02)
+    assert NC.MID == ("mid", "mid") and len(NC.CORNERS) == 4
 
 
-def test_partition_bias_is_flat_in_exposure_and_absent_at_low_kow():
-    """The part of section 3b that is ROBUST, pinned. The competing explanation
-    for the Li 2019 offset is non-equilibrium (Li et al.'s own alpha_pt), which
-    predicts the bias shrinks with exposure time; it does not. And the bias is
-    absent below log Kow 2, where the water floor dominates, but large above --
-    which is what puts the deficit in the sorption term.
-
-    NOT pinned here, deliberately: strict monotonicity across all four bins. It
-    holds on the raw rows but not once one study's replicates are collapsed
-    (section 3c), so asserting it would freeze an over-claim into the suite."""
-    rows = [r for r in _rows(LI2019) if r["subset"] == "apriori"]
+def test_briggs_anchored_root_reproduces_briggs_rcf():
+    """The named alternative: with the anchor the root IS the Briggs RCF curve above the
+    water floor. Compared at a fixed log Kow, so nothing else can drift in."""
+    log_kow = 4.0
     W = ND.RICE_WATER["root"]
-    La = ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
+    anchored = ND.k_pw(log_kow, W=W, L=ND.BRIGGS_ANCHORED_LIPID_FW["root"])
+    assert (anchored - W) == pytest.approx(ND.briggs_rcf(log_kow) - ND.RCF_FLOOR, rel=1e-9)
+    for organ in ("stem", "leaf", "grain"):
+        assert ND.BRIGGS_ANCHORED_LIPID_FW[organ] == ND.RICE_LIPID_FW[organ]
 
-    def bias(rs):
-        return float(np.mean([
-            np.log10(W + La * 10.0 ** (ND.RCF_SLOPE * float(r["log_kow"])))
-            - np.log10(float(r["value"])) for r in rs]))
 
-    short = bias([r for r in rows if 1 <= float(r["exposure_d"]) < 3])
-    long_ = bias([r for r in rows if float(r["exposure_d"]) >= 3])
-    assert abs(short - long_) < 0.05          # flat in exposure time
+def test_each_table_runs_on_its_own_plant():
+    """PREREG 5.10: a table's composition comes from its own plant (sources in
+    params/neutral_composition_sourced.csv); organs it gives no value for keep the rice
+    compartments'."""
+    import neutral_composition as NC
+    import organ_mass as om
+    W, L = NC.spec("li2019_rcf", species="Barley")
+    assert W["root"] == 0.90 and L["root"] == pytest.approx(0.0100)    # Li's own basis
+    W, L = NC.spec("li2019_rcf", species="Parrot feather")             # not in Li's list
+    assert L["root"] == pytest.approx(0.5 * (0.010 + 0.114) * 0.10)    # the 13-crop range
+    W, L = NC.spec("kodesova2019", species="radish")
+    assert W["root"] == pytest.approx(0.9365)
+    assert L["root"] == pytest.approx(0.010 * (1 - 0.9365))
+    W, L = NC.spec("ge2017")
+    assert W["root"] == pytest.approx(0.848) and W["leaf"] == 0.731
+    assert W["stem"] == om.THETA_FW["stem"]                            # no vegetative source
+    W, L = NC.spec("li2019_soil", f_lip=0.0053)
+    assert L["root"] == pytest.approx(0.0053)                          # the row's own f_lip
+    W, L = NC.spec("liu2023", corner=("low", "high"))
+    assert W["root"] == 0.824 and L["root"] == pytest.approx(0.114 * (1 - 0.824))
 
-    by_kow = [bias([r for r in rows if lo <= float(r["log_kow"]) < hi])
-              for lo, hi in ((-1, 2), (2, 3.5), (3.5, 4.5), (4.5, 9))]
-    assert by_kow[0] > -0.1                   # no bias where the water floor rules
-    assert all(b < -0.25 for b in by_kow[1:])  # large wherever the lipid term rules
 
-    # 3c: collapse each compound x study to one row -- the top two bins go flat,
-    # so the ladder is not monotone under a fair count. Pinned so the weaker,
-    # correct reading is the one the suite defends.
-    seen, reps = set(), []
-    for r in rows:
-        key = (r["compound"], r["source_study"])
-        if key not in seen:
-            seen.add(key)
-            reps.append(r)
-    top = [bias([r for r in reps if lo <= float(r["log_kow"]) < hi])
-           for lo, hi in ((3.5, 4.5), (4.5, 9))]
-    assert top[1] > top[0]                    # NOT still rising once collapsed
-
-    # 3c(ii): raising L is Kow-dependent by construction, so it is not the wrong
-    # shape of fix -- the earlier claim that it was is what this pins against.
-    La = ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
-    Lb = ND.BRIGGS_ANCHORED_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
-    shift = [np.log10((W + Lb * 10 ** (ND.RCF_SLOPE * k))
-                      / (W + La * 10 ** (ND.RCF_SLOPE * k))) for k in (1.0, 5.0)]
-    assert shift[0] < 0.1 and shift[1] > 0.35
+def test_ge2017_stem_rows_are_not_scored():
+    """No rice stem water at the vegetative stage was found, so Ge 2017's stem TFs stay out of
+    the score (PREREG 5.10) and only its leaf rows count."""
+    import neutral_dpu_validation as V
+    assert ("ge2017", "stem") in V.UNSCORED
+    assert V.table_of(os.path.join(ROOT, "data_obs", "neutral_obs_ge2017.csv")) == "ge2017"
 
 
 # --------------------------------------------------------------------------
@@ -281,21 +255,19 @@ def test_kodesova_isotherm_reading_gives_a_literature_koc():
     assert 0.05 < min(cw) and max(cw) < 2.0
 
 
-def test_kodesova_votes_against_restoring_the_anchor():
-    """The decision content. Carbamazepine at log Kow 2.25 separates the two
-    compositions by ~1.6x, so this is a well-conditioned vote -- and it goes the
-    opposite way to Li 2019. Both tables are pinned here so a later default
-    change has to confront the disagreement rather than inherit one side."""
+def test_sourced_root_beats_the_anchor_on_the_root_tables_but_not_li_hydroponic():
+    """On the sourced composition (PREREG 5.10) Kodesova, Liu and Li's soil half are closer to
+    the data than with Briggs' fitted root term; Li's hydroponic half is not."""
     import neutral_dpu_validation as V
 
     drv = V.drivers()
-    shipped = [V.compare_to_obs(p, drv, quiet=True, lipid_source="measured")
-               for p in (KODESOVA, LI2019)]
-    anchored = [V.compare_to_obs(p, drv, quiet=True, lipid_source="briggs_anchor")
-                for p in (KODESOVA, LI2019)]
-    assert shipped[0] < anchored[0]          # Kodesova prefers the shipped lipid
-    assert anchored[1] < shipped[1]          # Li 2019 prefers the anchor
-    assert shipped[0] < 0.25                 # and it is the best a-priori root fit
+    soil = os.path.join(ROOT, "data_obs", "neutral_obs_li2019_soil.csv")
+    liu = os.path.join(ROOT, "data_obs", "neutral_obs_liu2023.csv")
+    for p in (KODESOVA, liu, soil):
+        assert (V.compare_to_obs(p, drv, quiet=True)
+                < V.compare_to_obs(p, drv, quiet=True, lipid_source="briggs_anchor"))
+    assert (V.compare_to_obs(LI2019, drv, quiet=True, lipid_source="briggs_anchor")
+            < V.compare_to_obs(LI2019, drv, quiet=True))
 
 
 # --------------------------------------------------------------------------
@@ -309,24 +281,20 @@ def test_the_rice_ode_discounts_the_root_in_a_kow_dependent_way():
     Kodesova sits at log Kow 2.25, close to the worst point -- so its ODE-basis
     score is flattered. Pinned so the artifact cannot be forgotten again.
 
-    MOSTLY A MASS-BASIS ARTIFACT (src/organ_mass.py): that ~0.25-log discount was
-    measured with the biomass driver's DRY matter as the root mass, i.e. a root 10x
-    too light to keep up with its own xylem export. On the corrected FRESH mass the
-    ODE root sits within ~8% of K_PW everywhere -- both readings are pinned."""
+    MOSTLY A MASS-BASIS ARTIFACT (src/organ_mass.py): the large discount appeared with
+    crop dry matter used as the root mass, a root 10x too light to keep up with its own
+    xylem export. On fresh organ mass the ODE root sits within ~12% of K_PW everywhere."""
     import neutral_dpu_validation as V
 
-    for basis in ("dry", "fresh"):
-        drv = V.drivers(mass_basis=basis)
-        disc = {}
-        for lk in (-0.5, 1.78, 2.25, 5.0):
-            m = ND.simulate_neutral(ND.NeutralCompound("x", lk), drv)
-            disc[lk] = m["baf_final"]["root"] / V.equilibrium_rcf(lk)
-        assert disc[-0.5] > 0.85 and disc[5.0] > 0.95  # ~no discount at the ends
-        if basis == "dry":
-            assert disc[1.78] < 0.60                    # ~0.25 log at the peak
-            assert disc[2.25] < 0.65                    # and Kodesova sat there
-        else:
-            assert min(disc.values()) > 0.88            # the artifact is ~gone
+    drv = V.drivers()
+    disc = {}
+    for lk in (-0.5, 1.78, 2.25, 5.0):
+        m = ND.simulate_neutral(ND.NeutralCompound("x", lk), drv)
+        disc[lk] = m["baf_final"]["root"] / V.equilibrium_rcf(lk)
+    assert disc[-0.5] > 0.85 and disc[5.0] > 0.95      # ~no discount at the ends
+    # and at most ~20 % anywhere (the root is lighter on fresh mass at the sourced water 0.713
+    # than it was at 0.90, so it keeps up less with its xylem export)
+    assert min(disc.values()) > 0.78
 
 
 def test_equilibrium_mode_changes_the_root_tables_and_not_ge2017():
@@ -349,8 +317,8 @@ def test_equilibrium_mode_changes_the_root_tables_and_not_ge2017():
     li_ode, li_eq = both(LI2019)
     kod_ode, kod_eq = both(kod)
     assert liu_eq < liu_ode and li_eq < li_ode        # short-exposure: improves
-    assert kod_eq > kod_ode                            # Kodesova was flattered
-    assert liu_eq < kod_eq                             # Liu is the best, not Kodesova
+    assert kod_eq > kod_ode                            # the ODE flatters Kodesova (log Kow 2.25)
+    assert kod_eq < liu_eq                             # on its own plants Kodesova is the best
 
     # Ge 2017 carries only stem/leaf tf rows, so equilibrium mode cannot touch it
     assert both(ge)[0] == both(ge)[1]
@@ -359,31 +327,24 @@ def test_equilibrium_mode_changes_the_root_tables_and_not_ge2017():
     assert V.compare_to_obs(liu, drv, quiet=True) == liu_ode
 
 
-def test_equilibrium_mode_does_not_change_the_anchor_verdicts():
-    """The anchor tally survives removing the artifact -- and the margins widen,
-    which is the useful part: Kodesova's preference for the shipped lipid goes
-    from marginal to decisive, and Li 2019's for the anchor likewise."""
+def test_equilibrium_mode_keeps_the_kodesova_verdict():
     import neutral_dpu_validation as V
 
     drv = V.drivers()
-    kod = os.path.join(ROOT, "data_obs", "neutral_obs_kodesova2019.csv")
-    ship = [V.compare_to_obs(p, drv, quiet=True, mode="equilibrium",
-                             lipid_source="measured") for p in (kod, LI2019)]
-    anch = [V.compare_to_obs(p, drv, quiet=True, mode="equilibrium",
-                             lipid_source="briggs_anchor") for p in (kod, LI2019)]
-    assert ship[0] < anch[0] and anch[1] < ship[1]     # same opposite verdicts
-    assert anch[0] - ship[0] > 0.10                    # but a much wider margin
+    ship = V.compare_to_obs(KODESOVA, drv, quiet=True, mode="equilibrium")
+    anch = V.compare_to_obs(KODESOVA, drv, quiet=True, mode="equilibrium",
+                            lipid_source="briggs_anchor")
+    assert ship < anch - 0.10
 
 
 # --------------------------------------------------------------------------
 # lipid_source as a named mode
 # --------------------------------------------------------------------------
 def test_lipid_source_default_is_measured_and_changes_nothing():
-    """The mode is additive: selecting the default explicitly must be the same
-    object graph as not selecting anything. If this ever fails, every published
-    neutral number silently changed meaning."""
+    """The mode is additive: selecting the default explicitly must be the same composition
+    as not selecting anything."""
     assert ND.DEFAULT_LIPID_SOURCE == "measured"
-    assert ND.LIPID_SOURCES["measured"] is ND.TRAPP1994_LIPID_FW
+    assert ND.LIPID_SOURCES["measured"] is ND.RICE_LIPID_FW
     assert ND.LIPID_SOURCES["briggs_anchor"] is ND.BRIGGS_ANCHORED_LIPID_FW
 
     implicit = ND.rice_compartments()
@@ -395,60 +356,42 @@ def test_lipid_source_default_is_measured_and_changes_nothing():
 def test_lipid_source_selects_the_two_readings_and_lipids_still_overrides():
     anchored = {c.name: c for c in ND.rice_compartments(lipid_source="briggs_anchor")}
     measured = {c.name: c for c in ND.rice_compartments(lipid_source="measured")}
-    # 2.48x in the lipid term, root only
-    assert anchored["root"].f_PL / measured["root"].f_PL == pytest.approx(2.48, abs=0.02)
+    assert anchored["root"].f_PL / measured["root"].f_PL == pytest.approx(
+        ND.BRIGGS_ANCHORED_LIPID_FW["root"] / ND.RICE_LIPID_FW["root"])
     for organ in ("stem", "leaf", "grain"):
         assert anchored[organ].f_PL == pytest.approx(measured[organ].f_PL)
     # an explicit `lipids` dict still wins over the selected mode
-    forced = {c.name: c for c in ND.rice_compartments(lipid_source="briggs_anchor",
-                                                      lipids={"root": 0.01})}
+    forced = {c.name: c for c in ND.rice_compartments(
+        lipid_source="briggs_anchor", lipids={"root": ND.RICE_LIPID_FW["root"]})}
     assert forced["root"].f_PL == pytest.approx(measured["root"].f_PL)
     with pytest.raises(ValueError):
         ND.rice_compartments(lipid_source="nonsense")
 
 
 def test_lipid_source_reaches_the_forward_run_and_the_public_api():
-    """The selector has to survive the whole way to `model_api`, or the mode is
-    documentation rather than a switch. Checked on a lipophilic compound, where
-    the two readings are ~2.4x apart, and on a hydrophilic one, where they are
-    not -- the Kow dependence is the point (see LIPID_SOURCES)."""
+    """The selector has to survive the whole way to `model_api`, or the mode is documentation
+    rather than a switch."""
     import model_api as api
 
-    hi = [api.simulate_neutral(4.0, season=60.0, n_t=61, lipid_source=s)
-          for s in ("measured", "briggs_anchor")]
-    assert hi[1]["baf_final"]["root"] / hi[0]["baf_final"]["root"] > 2.0
+    hi = [api.simulate_neutral(4.0, lipid_source=s) for s in ("measured", "briggs_anchor")]
+    assert hi[1]["baf_final"]["root"] != hi[0]["baf_final"]["root"]
     assert hi[0]["params"]["lipid_source"] == "measured"
     assert hi[1]["params"]["lipid_source"] == "briggs_anchor"
-
-    lo = [api.simulate_neutral(0.0, season=60.0, n_t=61, lipid_source=s)
-          for s in ("measured", "briggs_anchor")]
-    assert lo[1]["baf_final"]["root"] / lo[0]["baf_final"]["root"] < 1.1
-
     # and omitting it is the default, bit-identical
-    dflt = api.simulate_neutral(4.0, season=60.0, n_t=61)
+    dflt = api.simulate_neutral(4.0)
     assert dflt["baf_final"]["root"] == hi[0]["baf_final"]["root"]
 
 
-def test_compare_lipid_sources_reproduces_the_three_to_one_tally():
-    """The anchor decision as a command. The docs claim 3 tables against and 1
-    for; this asserts the code still says so, so the doc claim cannot go stale
-    while the numbers underneath move."""
+def test_compare_lipid_sources_matches_the_per_table_scores():
+    """The two readings as a command, consistent with compare_to_obs table by table."""
     import neutral_dpu_validation as V
 
-    rows = V.compare_lipid_sources(drv=V.drivers())
-    by = {label: (m, a) for label, m, a in rows}
+    drv = V.drivers()
+    rows = V.compare_lipid_sources(drv=drv)
     assert len(rows) == 5
-    # the anchor wins only on the two the docs say it wins on
+    by = {label: (m, a) for label, m, a in rows}
     won = {label for label, (m, a) in by.items() if a < m}
     assert won == {"Ge 2017 (per-organ)", "Li 2019 hydroponic"}
-    # and the table it damages is the SOIL half of the paper it most helps
-    m_soil, a_soil = by["Li 2019 soil"]
-    assert a_soil - m_soil > 0.10
-    # NOTE the basis: this is mode="ode". docs section 4h quotes 0.639 -> 0.873
-    # for the same table, which is the EQUILIBRIUM basis that li2019_soil_table.py
-    # scores on (k_pw directly, no ODE). Both are right; neither number means
-    # anything without its mode, which is why they are labelled in the docs.
-    assert m_soil == pytest.approx(0.549, abs=0.02)
 
 
 def test_spearman_helper_handles_ties():
@@ -482,22 +425,20 @@ def test_li2019_soil_table_is_intact():
     assert min(fl) == pytest.approx(0.0009) and max(fl) == pytest.approx(0.0114)
 
 
-def test_the_two_halves_of_li2019_disagree_in_sign():
-    """The finding this table exists for. Same paper, same authors, same
-    fresh-weight convention -- but the hydroponic half says the model is LOW and
-    the soil half, twelve times larger, says it is HIGH. That is what makes 'the
-    root partition is too low' a property of one exposure route rather than of
-    the partition core, and it is why the anchor decision stays open."""
+def test_the_two_halves_of_li2019_disagree():
+    """Same paper, same fresh-weight convention, both on Li's water 0.90 and species lipid
+    (PREREG 5.10): the model is LOW on the hydroponic half and unbiased on the soil half,
+    twelve times larger."""
     import li2019_soil_table as S
 
     soil = S.load()
     n_hy, b_hy = S._hydroponic_bias()
     n_so, b_so, _ = S.bias(soil)
     assert n_hy == 29 and n_so == 376
-    assert b_hy < -0.3 and b_so > +0.2            # opposite signs, both large
+    assert b_hy < -0.3 and abs(b_so) < 0.05
 
 
-def test_soil_table_argues_against_the_anchor_and_own_lipid_removes_the_bias():
+def test_soil_table_prefers_each_crops_own_lipid():
     import li2019_soil_table as S
 
     rows = S.load()
@@ -509,17 +450,16 @@ def test_soil_table_argues_against_the_anchor_and_own_lipid_removes_the_bias():
     assert e_own < e_rice                         # and tighter
 
 
-def test_measured_kom_rows_are_nearly_unbiased():
-    """Where the exposure conversion is measured rather than estimated, the model
-    is close to unbiased -- which relocates most of this table's apparent error
-    from the plant model to the soil side."""
+def test_measured_and_estimated_kom_rows_differ():
+    """The soil-to-water conversion moves the result: the rows with a measured K_om sit below
+    the model's partition, those with an estimated one above."""
     import li2019_soil_table as S
 
     rows = S.load()
     n_exp, b_exp, _ = S.bias([r for r in rows if r["kom_source"] == "experimental"])
     n_est, b_est, _ = S.bias([r for r in rows if r["kom_source"] == "estimated"])
     assert n_exp == 62 and n_est == 261
-    assert abs(b_exp) < 0.10 < b_est
+    assert b_exp < 0.0 < b_est
 
 
 # --------------------------------------------------------------------------
@@ -543,40 +483,32 @@ def test_metabolism_is_measured_not_fitted_and_is_species_dependent():
     assert radish / lettuce > 3.0
 
 
-def test_metabolism_alone_cannot_close_the_leaf_root_gap():
-    """Section 6, and the warning it carries for Ge 2017: even a 1.5-day
-    half-life leaves the model far above the measured leaf/root, so a half-life
-    fitted to leaf data is absorbing the driver mismatch, not just metabolism.
-
-    TRUE ONLY ON THE PRE-FIX DRY ORGAN MASS (src/organ_mass.py). With the leaf mass on
-    the fresh basis the no-metabolism leaf/root falls 181 -> ~35 and a 1.5-d half-life
-    brings it to ~1.4x the measurement -- so most of the 55x excess was the mass basis,
-    and metabolism (which Kodesova MEASURED: leaf parent fraction 0.49) can account for
-    much of the rest. A rice-driver mismatch of ~10x without metabolism remains."""
+def test_metabolism_and_the_leaf_root_gap():
+    """Kodesova's leaf/root on fresh organ mass: without metabolism the model's leaf/root
+    is far above the measurement (a rice-driver mismatch remains), and a short in-planta
+    half-life -- which Kodesova MEASURED in effect (leaf parent fraction 0.49) -- closes
+    most of it. (With crop dry matter used as fresh mass the gap had looked like 55x and
+    metabolism-proof; that was the mass basis.)"""
     import kodesova2019_carbamazepine as K
     import neutral_dpu_validation as V
 
-    for basis in ("dry", "fresh"):
-        drv = V.drivers(mass_basis=basis)
-        t = np.asarray(drv["t"])
-        i = int(np.argmin(np.abs(t - K.HARVEST_D)))
-        obs = np.median([l / r for r, l in K.KOD_LEAF_ROOT])
-        assert 2.0 < obs < 5.0
+    drv = V.drivers()
+    t = np.asarray(drv["t"])
+    i = int(np.argmin(np.abs(t - K.HARVEST_D)))
+    obs = np.median([l / r for r, l in K.KOD_LEAF_ROOT])
+    assert 2.0 < obs < 5.0
 
-        def model_leaf_root(half_life):
-            g = 0.0 if half_life is None else float(np.log(2.0) / half_life)
-            comps = ND.rice_compartments(gammas={k: g for k in
-                                                 ("root", "stem", "leaf", "grain")})
-            m = ND.simulate_neutral(ND.NeutralCompound("carbamazepine", K.LOG_KOW),
-                                    drv, comps=comps)
-            return m["conc"]["leaf"][i] / m["conc"]["root"][i]
+    def model_leaf_root(half_life):
+        g = 0.0 if half_life is None else float(np.log(2.0) / half_life)
+        comps = ND.rice_compartments(gammas={k: g for k in ("root", "stem", "leaf", "grain")})
+        m = ND.simulate_neutral(ND.NeutralCompound("carbamazepine", K.LOG_KOW), drv, comps=comps)
+        return m["conc"]["leaf"][i] / m["conc"]["root"][i]
 
-        assert model_leaf_root(1.5) < model_leaf_root(7.0)   # shorter does help
-        if basis == "dry":
-            assert model_leaf_root(1.5) > 5.0 * obs          # still far above at 1.5 d
-        else:
-            assert model_leaf_root(None) > 5.0 * obs         # no metabolism: still far above
-            assert model_leaf_root(1.5) < 2.0 * obs          # a 1.5-d half-life ~closes it
+    assert model_leaf_root(1.5) < model_leaf_root(7.0)   # shorter does help
+    assert model_leaf_root(None) > 5.0 * obs             # no metabolism: still far above
+    # under PREREG 5.8 (root water 0.713: a lighter fresh root, a higher leaf/root) it takes a
+    # ~0.5-d half-life to reach the measurement; 1.5 d leaves it ~2.5x above
+    assert model_leaf_root(0.5) < 1.5 * obs < model_leaf_root(1.5)
 
 
 # --------------------------------------------------------------------------
@@ -593,36 +525,17 @@ def test_briggs1983_scf_reproduces_the_papers_own_stated_maximum():
     assert lk[i] == pytest.approx(4.5, abs=0.15)
 
 
-def test_stem_runs_above_its_anchor_but_the_observable_largely_cancels():
-    """The stem's mismatch, recorded and NOT fixed -- and recorded at the right
-    size. The coefficient gap is 4.1x, but against Briggs' steeper exponent the
-    observable (SCF) differs by at most ~0.13 log over the range where TSCF
-    delivers anything. A later session must not quote the 4.1x as if it were the
-    error in a prediction."""
-    shipped = ND.TRAPP1994_LIPID_FW["stem"] * ND.LIPID_OCTANOL_A
-    anchor = 10.0 ** ND.STEM_INTERCEPT
-    assert shipped / anchor == pytest.approx(4.1, abs=0.1)
+def test_barley_shoot_composition_against_the_stem_anchor():
+    """The stem anchor (Briggs 1983) against the barley shoot's sourced composition
+    (PREREG 5.10): a lower coefficient and a flatter exponent, so the two partitions cross."""
+    import neutral_composition as NC
+    W, L = NC.spec("briggs1983")
+    W, L = W["stem"], L["stem"]
     assert ND.STEM_SLOPE > ND.RCF_SLOPE          # steeper than the root's
-
-    W = ND.RICE_WATER["stem"]
-    L = ND.TRAPP1994_LIPID_FW["stem"]
-    diffs = [abs(np.log10(ND.k_pw(lk, W=W, L=L) * ND.tscf(lk) / ND.briggs_scf(lk)))
-             for lk in (0.0, 1.0, 1.78, 2.5, 3.5)]
-    assert max(diffs) < 0.15                     # the observable nearly cancels
-
-    # the two partitions cross, so this is a shape difference not an offset
-    below = ND.k_pw(2.0, W=W, L=L) > ND.briggs_stem_xylem_partition(2.0)
-    above = ND.k_pw(5.0, W=W, L=L) < ND.briggs_stem_xylem_partition(5.0)
+    assert L * ND.LIPID_OCTANOL_A < 10.0 ** ND.STEM_INTERCEPT
+    below = ND.k_pw(0.5, W=W, L=L) > ND.briggs_stem_xylem_partition(0.5)
+    above = ND.k_pw(3.0, W=W, L=L) < ND.briggs_stem_xylem_partition(3.0)
     assert below and above
-
-
-def test_root_and_stem_anchors_are_missed_in_opposite_directions():
-    """Read together, the two anchors say the neutral composition was assembled
-    from two unrelated sources and neither organ was checked against the anchor
-    that existed for it. No single correction fixes both."""
-    root_ratio = (ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A) / 10 ** ND.RCF_INTERCEPT
-    stem_ratio = (ND.TRAPP1994_LIPID_FW["stem"] * ND.LIPID_OCTANOL_A) / 10 ** ND.STEM_INTERCEPT
-    assert root_ratio < 1.0 < stem_ratio
 
 
 # --------------------------------------------------------------------------
@@ -652,7 +565,10 @@ def test_neutral_soil_side_plumbing_is_koc_driven_and_pfas_defaults_are_untouche
     Koc = float(lp.koc_neutral(2.45))
     # k_leach: the HYDRUS-calibrated per-congener TABLE is PFAS-only; a neutral takes
     # the log10(Koc) fallback fit, which is a property of the leaching model, not of PFAS
-    assert api.default_k_leach("PFOA") == pytest.approx(0.05)          # unchanged
+    rows = {r["congener"]: float(r["k_leach"]) for r in csv.DictReader(
+        l for l in open(os.path.join(os.path.dirname(__file__), "..", "params", "cwo_kleach.csv"))
+        if not l.startswith("#"))}
+    assert api.default_k_leach("PFOA") == pytest.approx(rows["PFOA"])  # the PFAS table answers
     kn = api.default_k_leach(Koc=Koc)
     assert 0.0 <= kn <= 0.15 and kn != pytest.approx(0.02)             # not the flat placeholder
     # the flooded shape runs off log_kow with no congener at all, and is mean-normalised
@@ -674,7 +590,7 @@ def test_neutral_bayesian_inverse_recovers_a_known_exposure():
     import model_api as api
     truth = 3.0
     fwd = api.simulate_neutral(2.45, half_life=7.0, Cwo=truth)
-    meas = {"root": fwd["conc"]["root"][-1], "grain": fwd["conc"]["grain"][-1]}
+    meas = {"root": fwd["conc_dw"]["root"][-1], "grain": fwd["conc_dw"]["grain"][-1]}
     est = api.estimate_exposure_bayesian(log_kow=2.45, measured_conc=meas,
                                          neutral_kw=dict(half_life=7.0))
     assert est["median"] == pytest.approx(truth, rel=0.10)
@@ -682,5 +598,5 @@ def test_neutral_bayesian_inverse_recovers_a_known_exposure():
     assert lo < truth < hi
     # the PFAS entry point is unchanged (congener positional, no log_kow)
     pf = api.simulate("PFOA", Cwo=2.0)
-    epf = api.estimate_exposure_bayesian("PFOA", {"grain": pf["conc"]["grain"][-1]})
+    epf = api.estimate_exposure_bayesian("PFOA", {"grain": pf["conc_dw"]["grain"][-1]})
     assert epf["median"] == pytest.approx(2.0, rel=0.10)

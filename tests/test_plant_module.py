@@ -16,6 +16,7 @@ from pfas_rice_plant_module import (
     Environment, Compound, Compartment, PlantInputs, RiceUptakeModel,
     binding_factors, root_uptake, _ghk_factor, ROOT, STEM, LEAF, FRUIT,
 )
+from model_api import PHI, T_C_PH   # the sourced phloem constants  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -56,7 +57,7 @@ def make_comps():
 def make_model(**cmpd_kw):
     t, inputs = make_inputs()
     model = RiceUptakeModel(env=Environment(), cmpd=make_compound(**cmpd_kw),
-                            comps=make_comps(), inputs=inputs)
+                            comps=make_comps(), inputs=inputs, phi=PHI, T_C_Ph=T_C_PH)
     return t, model
 
 
@@ -181,23 +182,20 @@ def test_mass_conservation_source_is_root_uptake():
         assert dmass == pytest.approx(src, rel=1e-6, abs=1e-9)
 
 
-def test_phloem_internal_transfer_conserves_mass():
-    """The phloem source (leaf) must supply exactly what the sinks receive:
-    grain (Q_Phl) + root recirculation (phi*Q_Phl)."""
+def test_phloem_streams_are_separate():
+    """The grain draws the sap its dry-matter growth needs; the recirculating fraction
+    phi of transpiration goes to the ROOT and does not pass through the grain. (Mass
+    conservation of the whole system is the test above.)"""
+    from pfas_rice_plant_module_4pool_surf import phloem_flows
     t, model = make_model()
-    sol = model.solve(t)
-    B = binding_factors(model.comps, model.cmpd)
-    ti = 95.0                                       # grain-filling window
-    C = sol.sol(ti)
-    Cw = C / B
-    dM = model.inputs.dM_(ti)
-    Qtp = model.inputs.Qtp_(ti)
-    Q_Phl = max(dM[FRUIT] * model.T_C_Ph + model.phi * Qtp, 0.0)
-    C_Phl = model.cmpd.L_Ph * Cw[LEAF]
-    leaf_out = (1.0 + model.phi) * Q_Phl * C_Phl
-    grain_in = Q_Phl * C_Phl
-    root_in = model.phi * Q_Phl * C_Phl
-    assert leaf_out == pytest.approx(grain_in + root_in)
+    dM = np.array([0.0, 0.0, 0.0, 0.002])
+    Q_g, Q_r = phloem_flows(model.comps, dM, 0.3, model.T_C_Ph, model.phi)
+    assert Q_g == pytest.approx(0.002 * model.T_C_Ph) and Q_r == pytest.approx(model.phi * 0.3)
+    assert phloem_flows(model.comps, dM, 3.0, model.T_C_Ph, model.phi)[0] == Q_g   # Q_TP-free
+    assert phloem_flows(model.comps, np.zeros(4), 0.3, model.T_C_Ph, model.phi) == (0.0, Q_r)
+    # on fresh organ mass the grain's growth is converted to dry matter first
+    Qf = phloem_flows(model.comps, dM, 0.3, model.T_C_Ph, model.phi, "fresh")[0]
+    assert Qf == pytest.approx(0.002 * (1 - model.comps[FRUIT].theta) * model.T_C_Ph)
 
 
 # ---------------------------------------------------------------------------
@@ -219,7 +217,7 @@ def test_concentrations_stay_nonnegative():
 def test_zero_soil_concentration_gives_zero_uptake():
     t, inputs = make_inputs(Cwo=0.0)
     model = RiceUptakeModel(env=Environment(), cmpd=make_compound(),
-                            comps=make_comps(), inputs=inputs)
+                            comps=make_comps(), inputs=inputs, phi=PHI, T_C_Ph=T_C_PH)
     C = model.solve(t).y[:, -1]
     assert np.allclose(C, 0.0, atol=1e-9)
 

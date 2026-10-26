@@ -87,12 +87,15 @@ def test_stem_base_runs_high_exactly_as_the_article_says(rows):
 def test_the_stem_a_priori_result(rows):
     """The headline: the repo's stem, nothing fitted, against measurement -- and
     against the paper's own FITTED equation, which had this data to fit."""
+    import json
     n, bias, rmse = B._score(rows, "stem_central", B.repo_scf)
     assert n == 30
-    assert rmse == pytest.approx(0.299, abs=0.02)
-    assert abs(bias) < 0.10
-    # indistinguishable from the fitted equation -- section 4j's "the 4.1x
-    # coefficient gap cancels in the observable", now measured rather than argued
+    rec = json.load(open(os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "params", "neutral_scores.json")))
+    assert rmse == pytest.approx(rec["scores"]["Briggs 1983 barley stem"], abs=1e-3)
+    assert 0.0 < bias < 0.35          # bias = log10(obs/model): the barley shoot composition
+                                      # (PREREG 5.10) runs under
+    # within 0.1 log of the paper's own fitted equation, which had this data to fit
     _, _, rmse_briggs = B._score(rows, "stem_central", B.briggs_eq3)
     assert abs(rmse - rmse_briggs) < 0.10
 
@@ -104,11 +107,8 @@ def test_the_stem_result_does_not_depend_on_the_open_root_anchor():
     assert (ND.LIPID_SOURCES["briggs_anchor"]["stem"]
             == ND.LIPID_SOURCES["measured"]["stem"])
     for lk in (0.0, 1.78, 3.0):
-        a = ND.k_pw(lk, W=ND.RICE_WATER["stem"],
-                    L=ND.LIPID_SOURCES["briggs_anchor"]["stem"])
-        m = ND.k_pw(lk, W=ND.RICE_WATER["stem"],
-                    L=ND.LIPID_SOURCES["measured"]["stem"])
-        assert a == pytest.approx(m)
+        assert B.repo_scf(lk) == pytest.approx(
+            ND.k_pw(lk, *B.barley_shoot("stem")) * ND.tscf(lk))
 
 
 def test_the_leaf_is_not_an_equilibrium_and_the_bias_grows(rows):
@@ -116,8 +116,8 @@ def test_the_leaf_is_not_an_equilibrium_and_the_bias_grows(rows):
     the drift GROWS with exposure -- the terminal-accumulator signature. This is
     why the leaf half of this table is not a partition test."""
     def leaf_eq(x):
-        return ND.k_pw(x, W=ND.RICE_WATER["leaf"],
-                       L=ND.TRAPP1994_LIPID_FW["leaf"],
+        return ND.k_pw(x, W=B.barley_shoot("leaf")[0],
+                       L=B.barley_shoot("leaf")[1],
                        b=ND.LEAF_SORPTION_EXPONENT) * ND.tscf(x)
 
     _, b24, _ = B._score(rows, "leaf", leaf_eq, hours=24)

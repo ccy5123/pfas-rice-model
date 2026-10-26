@@ -37,6 +37,7 @@ ROOT_DIR = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
 
 import neutral_dpu as ND                                       # noqa: E402
+import neutral_composition as NC                               # noqa: E402
 
 
 def section1_transcription():
@@ -57,16 +58,15 @@ def section2_gap():
     print("\n" + "=" * 84)
     print("2. WHAT THE REPO'S STEM RUNS, AGAINST THAT ANCHOR")
     print("=" * 84)
-    L = ND.TRAPP1994_LIPID_FW["stem"]
+    W, L = (lambda w, l: (w["stem"], l["stem"]))(*NC.spec("briggs1983"))
     shipped_La = L * ND.LIPID_OCTANOL_A
     anchor_La = 10.0 ** ND.STEM_INTERCEPT
     print(f"   Briggs 1983 anchored stem lipid term  L*a = {anchor_La:.5f}  b = {ND.STEM_SLOPE}")
-    print(f"   what rice_compartments runs             = {shipped_La:.5f}  b = {ND.RCF_SLOPE}"
-          f"   (L={L}, a={ND.LIPID_OCTANOL_A})")
-    print(f"   ratio {shipped_La / anchor_La:.1f}x HIGH in the coefficient, and a FLATTER slope.\n")
+    print(f"   barley shoot composition (PREREG 5.10)  = {shipped_La:.5f}  b = {ND.RCF_SLOPE}"
+          f"   (L={L:.4f} fw at W={W:.3f}, a={ND.LIPID_OCTANOL_A})")
+    print(f"   ratio {shipped_La / anchor_La:.2f}x in the coefficient, and a FLATTER slope.\n")
     print("   Because the slopes differ the two cross rather than sitting a constant")
     print("   factor apart, so the sign of the disagreement depends on lipophilicity:\n")
-    W = ND.RICE_WATER["stem"]
     print(f"   {'log Kow':>9}{'repo stem K_PW':>17}{'Briggs K_stem/xyl':>20}{'ratio':>9}")
     for lk in (0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0):
         repo = ND.k_pw(lk, W=W, L=L)
@@ -77,9 +77,12 @@ def section2_gap():
         if ND.k_pw(lk, W=W, L=L) < ND.briggs_stem_xylem_partition(lk):
             cross = lk
             break
-    print(f"\n   They cross at log Kow ~ {cross:.2f}: below it the repo's stem is the more")
-    print("   sorptive, above it Briggs' is. So this is not a simple 'too high' --")
-    print("   it is a different SHAPE, driven by b = 0.77 against b = 0.95.")
+    if cross is None:
+        print("\n   They do not cross over log Kow -1..7.")
+    else:
+        print(f"\n   They cross at log Kow ~ {cross:.2f}: below it the repo's stem is the more")
+        print("   sorptive, above it Briggs' is -- a different SHAPE, driven by b = 0.77")
+        print("   against b = 0.95.")
 
 
 def section3_scf():
@@ -90,8 +93,7 @@ def section3_scf():
     print("   solution, so it folds in the xylem loading. That makes it the quantity")
     print("   this model actually has to reproduce, and it is testable without any")
     print("   ODE -- the same discipline as compare_to_obs(mode='equilibrium').\n")
-    W = ND.RICE_WATER["stem"]
-    L = ND.TRAPP1994_LIPID_FW["stem"]
+    W, L = (lambda w, l: (w["stem"], l["stem"]))(*NC.spec("briggs1983"))
     print(f"   {'log Kow':>9}{'TSCF':>8}{'repo SCF':>11}{'Briggs SCF':>13}{'log10 diff':>12}")
     for lk in (0.0, 1.0, 1.78, 2.5, 3.5, 4.5, 5.5):
         t = ND.tscf(lk)
@@ -99,16 +101,9 @@ def section3_scf():
         briggs = ND.briggs_scf(lk)
         print(f"   {lk:>9.2f}{t:>8.3f}{repo:>11.2f}{briggs:>13.2f}"
               f"{np.log10(repo / briggs):>+12.3f}")
-    print("\n   The disagreement is MODEST where it matters and large where it does")
-    print("   not: at most +0.13 log (35%) across log Kow 0-3.5, the range in which")
-    print("   the TSCF bell actually delivers anything, then swinging to -0.20 and")
-    print("   -0.38 above 4.5 where TSCF has collapsed and the stem receives almost")
-    print("   nothing anyway. So the 4.1x coefficient gap in section 2 largely")
-    print("   CANCELS against the steeper Briggs exponent over the useful range --")
-    print("   which is the honest reading, and a weaker result than section 2 alone")
-    print("   suggests. Briggs never tested above log Kow 4.5 -- their own text")
-    print("   says 'the predicted decline in SCF for chemicals of log Kow > 4.5 was")
-    print("   not tested' -- so the right-hand rows are extrapolation on both sides.")
+    print("\n   Briggs never tested above log Kow 4.5 -- their own text says 'the predicted")
+    print("   decline in SCF for chemicals of log Kow > 4.5 was not tested' -- so the")
+    print("   right-hand rows are extrapolation on both sides.")
 
 
 def section4_verdict():
@@ -119,31 +114,20 @@ def section4_verdict():
     print("   Reading it next to the root result gives the honest summary of where")
     print("   this model's neutral composition stands:")
     print()
-    root_ship = ND.TRAPP1994_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
+    root_ship = ND.RICE_LIPID_FW["root"] * ND.LIPID_OCTANOL_A
     root_anch = 10.0 ** ND.RCF_INTERCEPT
-    stem_ship = ND.TRAPP1994_LIPID_FW["stem"] * ND.LIPID_OCTANOL_A
+    stem_ship = NC.spec("briggs1983")[1]["stem"] * ND.LIPID_OCTANOL_A
     stem_anch = 10.0 ** ND.STEM_INTERCEPT
-    print(f"   {'organ':8}{'shipped L*a':>14}{'Briggs anchor':>16}{'ratio':>9}{'exponent':>22}")
-    print(f"   {'root':8}{root_ship:>14.4f}{root_anch:>16.4f}"
+    print(f"   {'organ':22}{'sourced L*a':>14}{'Briggs anchor':>16}{'ratio':>9}{'exponent':>22}")
+    print(f"   {'rice root':22}{root_ship:>14.4f}{root_anch:>16.4f}"
           f"{root_ship / root_anch:>9.2f}{'0.77 vs 0.77 (same)':>22}")
-    print(f"   {'stem':8}{stem_ship:>14.4f}{stem_anch:>16.4f}"
+    print(f"   {'barley shoot (stem)':22}{stem_ship:>14.4f}{stem_anch:>16.4f}"
           f"{stem_ship / stem_anch:>9.2f}{'0.77 vs 0.95':>22}")
     print()
-    print("   The root runs 2.5x BELOW its anchor and the stem 4.1x ABOVE its own.")
-    print("   The two organs were parameterised from unrelated sources -- Briggs'")
-    print("   fitted coefficient for one, Trapp's soybean composition for the other --")
-    print("   and neither was ever checked against the anchor that existed for it.")
-    print("   That is the finding; the CONSEQUENCES differ sharply between them.")
-    print("   For the root the mismatch is the whole disagreement, because the")
-    print("   exponent is shared. For the stem it largely cancels (section 3): the")
-    print("   observable differs by at most 0.13 log where TSCF delivers anything.")
-    print("   So the stem is a provenance problem, not a prediction problem, and it")
-    print("   ranks well below the root question and the exposure-term work.")
-    print()
-    print("   NOTHING IS CHANGED HERE. The stem anchor is one species, is explicitly")
-    print("   a shoot BASE rather than a true stem, and -- unlike the root case --")
-    print("   there is no measured table in this repo that would arbitrate it. It is")
-    print("   recorded, exposed as briggs_scf(), and pinned by a test.")
+    print("   Both lipid terms now come from sources (PREREG 5.10): the rice root from")
+    print("   the cereal roots of Li 2019, the barley shoot from barley straw ether")
+    print("   extract. The anchors are Briggs' fitted coefficients, not measurements;")
+    print("   section 3 shows what the difference does to the observable SCF.")
 
 
 def main():

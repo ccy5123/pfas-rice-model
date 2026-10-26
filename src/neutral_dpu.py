@@ -93,19 +93,17 @@ Scope and honesty
   by an actual run.  The flux scales with the tissue's specific SURFACE AREA,
   which this repo has only ever used as a leaf/grain ratio -- see the `plant_air`
   header before trusting an absolute volatilisation magnitude.
-* Tissue lipid contents are taken from Trapp, McFarlane & Matthies 1994 (the
-  canonical validation of this framework): root 1%, stem and leaf 3% of FRESH
-  weight -- the same basis as the water contents, as `K_PW = W + L*a*Kow^b`
-  requires (see TRAPP1994_LIPID_FW).  Those are SOYBEAN values, not rice -- an
-  organ-resolved total-lipid measurement for rice remains a genuine gap -- but
-  they are a cited anchor and they are what the DPU base itself was exercised
-  with.  Note `params/parameters.json` cannot supply them: it carries
+* Tissue lipid is carried on a DRY basis from sources (PREREG 5.10;
+  `neutral_composition`, params/neutral_composition_sourced.csv): rice root = the
+  cereal root range of Li et al. 2019, stem and leaf = rice straw ether extract,
+  grain = brown rice crude fat. It is restated at the organ's water,
+  L_fw = L_dw*(1 - W), because `K_PW = W + L*a*Kow^b` needs both terms on the
+  fresh basis. Note `params/parameters.json` cannot supply them: it carries
   *phospholipid* fractions (membrane binding of anions), a lower bound on the
   total lipid Briggs partitioning refers to.
-  The ROOT value is the one live disagreement in this module: 1% fw sits 2.48x
-  below the lipid term Briggs' own regression implies, and which of the two is
-  right is NOT settled -- so it is a named mode, `lipid_source="measured"`
-  (default) vs `"briggs_anchor"`, not a constant.  See LIPID_SOURCES, and run
+  The ROOT value can still be read against the lipid term Briggs' own
+  regression implies -- a named mode, `lipid_source="measured"` (default) vs
+  `"briggs_anchor"`, not a constant.  See LIPID_SOURCES, and run
   `validation/neutral_dpu_validation.py --lipid-source both` for the evidence.
   Every published number from this module is on the default.
 * Metabolism `gamma` is genuinely non-zero for most neutral organics (unlike
@@ -118,6 +116,8 @@ import os
 from dataclasses import dataclass, replace
 
 import numpy as np
+
+import harvest as hv
 
 from pfas_rice_plant_module_4pool_surf import (
     Compartment, Compound, Environment, PlantInputs, RiceUptakeModel,
@@ -377,77 +377,44 @@ def briggs_root_compartment() -> Compartment:
     return neutral_compartment("root", W=RCF_FLOOR, L=L)
 
 
-# Tissue composition for NEUTRAL partitioning.
-#   WATER: the repo's own measured rice `theta_fw` (params/parameters.json).
-#   LIPID: from Trapp, McFarlane & Matthies 1994 (Environ. Toxicol. Chem.
-#     13:413-422), the canonical validation of this very framework, which states
-#     "root lipid content l_R = 1%; stem and leaf lipid content l_St = 3%,
-#     l_L = 3%" for its soybean runs. These are the values the DPU base itself was
-#     exercised with. They are NOT rice measurements -- rice-specific total lipid
-#     resolved by organ is still a genuine gap -- but they are a cited anchor
-#     rather than the guesses that stood here before.
-# BASIS (important, and easy to get wrong): these are FRESH-weight fractions, the
-# same basis as W. K_PW = W + L*a*Kow^b only adds up if both terms share a basis,
-# and Briggs' own barley anchor is L*a = 10^-1.52 => L = 0.0247, i.e. 2.5% of
-# FRESH weight -- next to his W = 0.82. Trapp likewise lists l_R = 1% alongside
-# "water content root W_R = 94.2%". Treating them as dry-weight fractions (as an
-# earlier revision of this file did) under-states K_PW ~10x for lipophilic
-# compounds; the Liu 2023 root data caught it (log10 RMSE 0.605 -> 0.198).
-RICE_WATER = {"root": 0.90, "stem": 0.83, "leaf": 0.78, "grain": 0.14}
-TRAPP1994_LIPID_FW = {"root": 0.01, "stem": 0.03, "leaf": 0.03, "grain": 0.03}
+# Tissue composition for NEUTRAL partitioning (PREREG 5.10).
+#   WATER: the sourced rice organ water, the same theta_fw that turns the crop's dry matter into
+#     the fresh organ mass (organ_mass.THETA_FW), so K_PW and M share one water per organ.
+#   LIPID: on a DRY basis from sources (neutral_composition.RICE_LIPID_DW; ranges run at their
+#     midpoints): root = cereal roots of Li et al. 2019 (maize 0.53 - wheat 1.14 % fw at Li's
+#     0.90 water -> 5.3-11.4 % dw; rice is absent from their list), stem and leaf = rice straw
+#     ether extract 0.9-2.1 % DM (Feedipedia, n = 161), grain = brown rice crude fat 1.9-3.3 % DW
+#     (FAO 1993 Table 14). Restated at the organ's water: L_fw = L_dw*(1 - W).
+# BASIS (important, and easy to get wrong): K_PW = W + L*a*Kow^b only adds up if both terms are
+# fresh-weight fractions. Briggs' own barley anchor is L*a = 10^-1.52 => L = 0.0247 of FRESH weight
+# next to his limiting RCF 0.82 (a fitted value, not a measured water content).
+import organ_mass as _om
+import neutral_composition as _nc
+RICE_WATER = dict(_om.THETA_FW)
+RICE_LIPID_DW = dict(_nc.RICE_LIPID_DW)
+RICE_LIPID_FW = _nc.fresh_lipid(RICE_LIPID_DW, RICE_WATER)
 
-# CORROBORATION of the root value, added when Acquisition_Queue.csv row A1
-# arrived. Li, Chiou, Li & Schnoor 2019 (Environ. Int. 126:46-53) tabulate root
-# lipid for 13 crops on an explicitly FRESH-weight basis (they convert dry-basis
-# reports at 90% root water) inside an RCF expression of this same form, so their
-# values are commensurable with L here. Their cereals -- barley 1.00%, wheat
-# 1.10-1.14%, maize 0.53% -- bracket the 1% above. RICE IS ABSENT from their
-# table, so the rice-specific gap is NOT closed; what improves is the provenance
-# of the number, from a soybean model run to measured cereal roots.
-#
-# THE ANCHOR DISCREPANCY -- read before changing anything here.
-# Briggs' fitted lipid term is L*a = 10^-1.52 = 0.0302. Substituting a measured
-# L = 0.01 while keeping the conventional a = 1.22 changes that product to
-# 0.0122, i.e. the rice root runs 2.5x BELOW the anchor this module claims. The
-# header says L and a are identifiable only as their product; this dict replaces
-# one factor and leaves the other, which is not a neutral substitution.
-# Measured on Briggs' own barley rows the cost is log10 RMSE 0.266 against the
-# anchor's 0.111 (validation/li2019_rcf_apriori.py section 3).
-# It is left as-is DELIBERATELY. Restoring the anchor improves Li 2019's
-# hydroponic rows and Ge 2017 but DEGRADES three tables -- Liu 2023 (the only
-# rice one), Kodesova 2019, and Li 2019's own 376-row SOIL half, which is 12x
-# larger than the hydroponic half arguing for it. Picking an intermediate L
-# would make the path's headline claim -- nothing is fitted -- false.
-# The physical reading is that Briggs' coefficient carries non-lipid
-# sorption (cell wall, lignin: this repo's f_cw*K_cw, GAP A) that the neutral
-# composition zeroes, so the fix is a measured cell-wall coefficient, not a
-# bigger lipid fraction. Run the anchor with the named mode instead:
+# THE ANCHOR -- the named alternative for the root. Briggs' fitted lipid term is
+# L*a = 10^-1.52 = 0.0302, i.e. L = 2.47 % fw at the conventional a = 1.22. Briggs measured no
+# lipid; the anchor is what his 1982 barley regression implies. At the sourced rice root water
+# the cereal-range midpoint gives L = 2.40 % fw, close to it. Run it with
 #     rice_compartments(lipid_source="briggs_anchor")
-BRIGGS_ANCHORED_LIPID_FW = dict(TRAPP1994_LIPID_FW,
+BRIGGS_ANCHORED_LIPID_FW = dict(RICE_LIPID_FW,
                                 root=10.0 ** RCF_INTERCEPT / LIPID_OCTANOL_A)
 
-# The two readings above as a NAMED MODE, in the repo's own idiom (`f_xy_source`,
-# `cwo_profile`, `biomass`, `tscf_model`). The point is that the question this
-# selects between is genuinely unsettled -- see the discrepancy note above and
-# docs/neutral_dpu_validation.md section 5 -- so the alternative is kept runnable
-# and testable rather than decided by whichever constant got written down.
+# The two root readings as a NAMED MODE, in the repo's own idiom (`f_xy_source`, `cwo_profile`,
+# `biomass`, `tscf_model`), so the alternative stays runnable and testable:
 #
-#   "measured"      L_root = 1% fw. Measured cereal root lipid (Li 2019 A1:
-#                   barley 1.00, wheat 1.10-1.14, maize 0.53%), adopted from
-#                   Trapp 1994. DEFAULT.
+#   "measured"      the sourced dry-basis lipid restated at the organ water
+#                   (root: cereal roots of Li 2019). DEFAULT.
 #   "briggs_anchor" L_root = 2.47% fw, i.e. L*a = 10^-1.52 exactly. NOT a
 #                   measurement -- the lipid term Briggs' 1982 barley regression
 #                   implies. Briggs measured no lipid at all.
 #
-# The evidence is 3 tables to 1 AGAINST restoring the anchor, and the one for it
-# is the hydroponic half of a paper whose own soil half (12x larger) says the
-# opposite; `validation/neutral_dpu_validation.py --lipid-source both` prints the
-# comparison on any table. The default is "measured" because the evidence no
-# longer supports moving -- NOT because 1% is validated for rice, which it is
-# not. Only the PRODUCT L*a is identifiable, so raising L to 0.0247 and raising
-# `a` to 3.02 are the same model; note `a = 1.22` itself has no citation here.
+# `validation/neutral_dpu_validation.py --lipid-source both` prints the comparison on any
+# table. Only the PRODUCT L*a is identifiable from partition data.
 LIPID_SOURCES = {
-    "measured": TRAPP1994_LIPID_FW,
+    "measured": RICE_LIPID_FW,
     "briggs_anchor": BRIGGS_ANCHORED_LIPID_FW,
 }
 DEFAULT_LIPID_SOURCE = "measured"
@@ -462,9 +429,10 @@ def rice_compartments(lipids: dict | None = None, waters: dict | None = None,
                       lipid_source: str = DEFAULT_LIPID_SOURCE) -> list[Compartment]:
     """[root, stem, leaf, grain] with neutral (Briggs) composition.
 
-    `lipids` are FRESH-weight fractions, the same basis as the water contents
-    (see the note on TRAPP1994_LIPID_FW -- mixing the bases is the classic error
-    here and understates K_PW by ~10x for lipophilic compounds).
+    `waters` override the organ water; under "measured" the lipid is then restated at
+    that water from its dry-basis value (L_fw = L_dw*(1 - W)). `lipids` are FRESH-weight
+    fractions, the same basis as the water contents (mixing the bases is the classic
+    error here and understates K_PW by ~10x for lipophilic compounds).
 
     `lipid_source` selects the tissue-lipid reading -- "measured" (default) or
     "briggs_anchor"; see LIPID_SOURCES for what each one is and why the choice is
@@ -475,7 +443,9 @@ def rice_compartments(lipids: dict | None = None, waters: dict | None = None,
         raise ValueError(f"unknown lipid_source {lipid_source!r}; "
                          f"expected one of {sorted(LIPID_SOURCES)}")
     W = dict(RICE_WATER, **(waters or {}))
-    L = dict(LIPID_SOURCES[lipid_source], **(lipids or {}))
+    base = (_nc.fresh_lipid(RICE_LIPID_DW, W) if lipid_source == "measured"
+            else LIPID_SOURCES[lipid_source])
+    L = dict(base, **(lipids or {}))
     g = dict.fromkeys(W, 0.0)
     g.update(gammas or {})
     return [neutral_compartment(k, W=W[k], L=L[k],
@@ -525,7 +495,8 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
                      phloem=False, phi: float = 0.1, T_C_Ph: float = 10.0,
                      L_Ph: float = 1.0, tscf_model=None, C0=None,
                      air=False, air_kw=None,
-                     lipid_source: str = DEFAULT_LIPID_SOURCE):
+                     lipid_source: str = DEFAULT_LIPID_SOURCE,
+                     dead_leaf_attached: float = 1.0):
     """Run the 4-compartment DPU for a NEUTRAL organic.
 
     drivers : {t, Cwo, Qtp, M} on a common grid -- the same driver contract as
@@ -580,7 +551,8 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
         core.L_Ph = float(L_Ph)
     env = neutral_environment()
     inputs = PlantInputs(t=t, Cwo=Cwo, Qtp=Qtp, M=M,
-                         leaf_loss=drivers.get("leaf_loss"))
+                         leaf_loss=drivers.get("leaf_loss"),
+                         M_basis=drivers.get("mass_basis", "fresh"))   # untagged M is fresh (§8)
     air_obj = None
     if air is not False and air is not None:
         air_obj = air_exchange(cmpd, **(air_kw or {})) if air is True else air
@@ -595,11 +567,19 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
     conc = {k: Y[i] for i, k in enumerate(names)}
     ref = float(Cwo[-1]) if Cwo[-1] > 0 else float(np.nanmax(Cwo)) or 1.0
     baf_final = {k: float(v[-1] / ref) for k, v in conc.items()}
-    Mf = M[-1]
-    straw = (conc["stem"] * Mf[STEM] + conc["leaf"] * Mf[LEAF]) / (Mf[STEM] + Mf[LEAF])
+    # harvest operator: attached dead blades stay in the leaf/straw (src/harvest.py)
+    obs = hv.harvest_observables(
+        t, conc, M, hv.dry_fractions({k: comps[i].theta for i, k in enumerate(names)},
+                                     inputs.M_basis),
+        leaf_loss=drivers.get("leaf_loss"), attached=dead_leaf_attached,
+        C_leaf_fn=lambda tt: sol.sol(tt)[LEAF])
+    straw = obs["straw_fw"]
     return dict(
         t=t, compound=cmpd.name, success=bool(sol.success), conc=conc,
         Cwo=Cwo, Qtp=Qtp, M=M, straw=straw,
+        conc_dw=obs["conc_dw"], baf_final_dw={k: float(v[-1] / ref)
+                                              for k, v in obs["conc_dw"].items()},
+        dead_leaf=dict(burden=obs["dead_burden"], dry=obs["dead_dry"], attached=obs["attached"]),
         baf={k: v / ref for k, v in conc.items()}, baf_final=baf_final,
         straw_baf=float(straw[-1] / ref),
         tf_final={k: baf_final[k] / max(baf_final["root"], 1e-12) for k in names},
@@ -629,7 +609,7 @@ if __name__ == "__main__":
     import organ_mass as om
     b = organ_biomass(t, season)
     drivers = dict(t=t, Cwo=np.full(n, 1.0), Qtp=fr.Q_TP(t, season),
-                   M=om.organ_matrix(b))                   # crop DRY matter -> ODE FRESH mass
+                   M=om.organ_matrix(b), mass_basis="fresh")   # crop DRY matter -> ODE FRESH mass
     print(f"{'compound':16}{'logKow':>8}{'TSCF':>8}{'K_PW root':>11}"
           f"{'root':>9}{'straw':>9}{'grain':>9}")
     for c in (NeutralCompound("thiamethoxam", -0.13),

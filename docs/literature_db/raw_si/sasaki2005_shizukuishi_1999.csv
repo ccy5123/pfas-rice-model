@@ -1,0 +1,28 @@
+# Sasaki H, Hara T, Ito S, Miura S, Hoque MM, Lieffering M, Kim H-Y, Okada M, Kobayashi K (2005) Seasonal changes in canopy
+# photosynthesis and respiration, and partitioning of photosynthate, in rice grown under free-air CO2 enrichment.
+# Plant Cell Physiol. 46:1704-1712. doi:10.1093/pcp/pci186 (PDF supplied by the user, NOT committed - copyright).
+# THE SAME Shizukuishi FACE experiment as Kim et al. 2001/2003 (cv. Akitakomachi, 1999, 19.05 hills m-2, 3 plants per hill,
+# 9 g N m-2: 63% basal / 20% mid-tillering / 17% PI). Read from Materials and methods and the figure captions.
+# Nursery: seeds germinated under running water, sown on fertilizer-impregnated rock-wool mats in trays kept in PLASTIC
+# CHAMBERS (ambient or +200 umol/mol CO2) -- a covered seedbed -- and transplanted 23 days after emergence on 20 May.
+# Season (transplanting to maturity) mean air temperature 20.8 C, total solar radiation 1877 MJ m-2.
+# THE POINT: the five 1999 samplings of Kim 2003 (DAT 32/62/88/105/123, labelled there tillering / PI / anthesis /
+# mid-ripening / maturity) are the dates this paper's Fig. 3 calls tillering (32), PRE-HEADING (62), EARLY grain filling (88),
+# late grain filling (105) and grain maturity (123); the events themselves were PI ~54 DAT and heading 78 DAT (ambient).
+# So Kim's "PI" sampling was ~8 d after PI and his "anthesis" sampling ~10 d after heading in 1999.
+item,date,doy_1999,dat,value,note
+emergence,1999-04-27,117,-23,,transplanted 23 d after emergence (Hasegawa et al. 2017 Table S1 gives sowing 23 Apr)
+transplanting,1999-05-20,140,0,,
+panicle_initiation,1999-07-13,194,54,,around 54 DAT
+heading_ambient,1999-08-06,218,78,,
+heading_FACE,1999-08-03,215,75,,
+growth_sampling,1999-06-22,173,33,,dry weight (4 hills): mid-tillering
+growth_sampling,1999-07-24,205,65,,dry weight: pre-heading
+growth_sampling,1999-08-22,234,94,,dry weight: grain filling
+growth_sampling,1999-09-16,259,119,,dry weight: grain maturity
+lai_sampling,,,32,,LAI (16 hills): tillering
+lai_sampling,,,62,,LAI: pre-heading
+lai_sampling,,,88,,LAI: early grain filling
+lai_sampling,,,105,,LAI: late grain filling
+lai_sampling,,,123,,LAI: grain maturity
+ambient_co2_season_mean,,,,392,umol/mol +-45 as stated (Hasegawa et al. 2017 gives the DAYLIGHT ambient mean 369 for 1999)

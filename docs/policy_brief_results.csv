@@ -1,0 +1,237 @@
+section,key,value,unit,note
+0_config,shoot,redistributed,-,
+0_config,lipid_loading,1.0,-,
+0_config,band_log10,0.489,log10,
+1_congeners,PFBA.root,6.802739881731132,L/kg dw,
+1_congeners,PFBA.straw,23.032577512900875,L/kg dw,
+1_congeners,PFBA.grain,1.4331935781672658,L/kg dw,
+1_congeners,PFBA.grain_prev,18.022817912137118,L/kg dw,
+1_congeners,PFBA.grain_flooded,1.5765599823271983,L/kg dw,
+1_congeners,PFBA.obs_grain,1.22859,L/kg dw,Yamazaki 2023 field (measured)
+1_congeners,PFBA.yz_grain,1.4383113638857707,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFBA.yz_grain_prev,18.087262903548925,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFPeA.root,2.6986999501762923,L/kg dw,
+1_congeners,PFPeA.straw,7.357476805392315,L/kg dw,
+1_congeners,PFPeA.grain,0.4578162678911581,L/kg dw,
+1_congeners,PFPeA.grain_prev,3.2857774959938566,L/kg dw,
+1_congeners,PFPeA.grain_flooded,0.523607720753696,L/kg dw,
+1_congeners,PFPeA.obs_grain,0.306912,L/kg dw,Yamazaki 2023 field (measured)
+1_congeners,PFPeA.yz_grain,0.45945108211975055,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFPeA.yz_grain_prev,3.297531191359685,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFHxA.root,2.7834999420592768,L/kg dw,
+1_congeners,PFHxA.straw,5.030229623362257,L/kg dw,
+1_congeners,PFHxA.grain,0.48171762433970633,L/kg dw,
+1_congeners,PFHxA.grain_prev,1.055158099846548,L/kg dw,
+1_congeners,PFHxA.grain_flooded,0.754466307679669,L/kg dw,
+1_congeners,PFHxA.obs_grain,0.483805,L/kg dw,Yamazaki 2023 field (measured)
+1_congeners,PFHxA.yz_grain,0.48380499106677866,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFHxA.yz_grain_prev,1.0589349705341555,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFHpA.root,7.804679794253858,L/kg dw,
+1_congeners,PFHpA.straw,10.32345059273627,L/kg dw,
+1_congeners,PFHpA.grain,0.6423729635425931,L/kg dw,
+1_congeners,PFHpA.grain_prev,0.7386480897286416,L/kg dw,
+1_congeners,PFHpA.grain_flooded,0.7476564828967531,L/kg dw,
+1_congeners,PFHpA.obs_grain,0.494032,L/kg dw,Yamazaki 2023 field (measured)
+1_congeners,PFHpA.yz_grain,0.6446668083266001,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFHpA.yz_grain_prev,0.7412960427674805,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFOA.root,4.865589738345428,L/kg dw,
+1_congeners,PFOA.straw,3.132347889678635,L/kg dw,
+1_congeners,PFOA.grain,0.5368892053422465,L/kg dw,
+1_congeners,PFOA.grain_prev,0.3301278878654695,L/kg dw,
+1_congeners,PFOA.grain_flooded,0.6000195545649986,L/kg dw,
+1_congeners,PFOA.obs_grain,0.538888,L/kg dw,Yamazaki 2023 field (measured)
+1_congeners,PFOA.yz_grain,0.5388879752493018,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFOA.yz_grain_prev,0.33078133410338595,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFNA.root,5.684919915584538,L/kg dw,
+1_congeners,PFNA.straw,2.5473809345060645,L/kg dw,
+1_congeners,PFNA.grain,0.4791614495462632,L/kg dw,
+1_congeners,PFNA.grain_prev,0.05069261365006548,L/kg dw,
+1_congeners,PFNA.grain_flooded,0.4787211706332766,L/kg dw,
+1_congeners,PFNA.obs_grain,0.480839,L/kg dw,Yamazaki 2023 field (measured)
+1_congeners,PFNA.yz_grain,0.4808390183695945,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFNA.yz_grain_prev,0.050819018689633275,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFDA.root,41.5739967810455,L/kg dw,
+1_congeners,PFDA.straw,11.155338312230612,L/kg dw,
+1_congeners,PFDA.grain,3.9120427116530023,L/kg dw,
+1_congeners,PFDA.grain_prev,0.05024920951643028,L/kg dw,
+1_congeners,PFDA.grain_flooded,3.9007303127277018,L/kg dw,
+1_congeners,PFDA.obs_grain,3.91963,L/kg dw,Yamazaki 2023 field (measured)
+1_congeners,PFDA.yz_grain,3.919630068604893,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFDA.yz_grain_prev,0.05046308541186304,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFUnDA.root,195.30595439204106,L/kg dw,
+1_congeners,PFUnDA.straw,101.05202282288174,L/kg dw,
+1_congeners,PFUnDA.grain,6.287959365294709,L/kg dw,
+1_congeners,PFUnDA.grain_prev,0.07958992267777563,L/kg dw,
+1_congeners,PFUnDA.grain_flooded,6.282817924365038,L/kg dw,
+1_congeners,PFUnDA.obs_grain,3.64434,L/kg dw,Yamazaki 2023 field (measured)
+1_congeners,PFUnDA.yz_grain,6.3104120134005575,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFUnDA.yz_grain_prev,0.08016387730063118,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFDoDA.root,692.819758865495,L/kg dw,
+1_congeners,PFDoDA.straw,212.79607389419928,L/kg dw,
+1_congeners,PFDoDA.grain,52.77019517094407,L/kg dw,
+1_congeners,PFDoDA.grain_prev,0.08501541674756928,L/kg dw,
+1_congeners,PFDoDA.grain_flooded,52.75799748784991,L/kg dw,
+1_congeners,PFDoDA.obs_grain,52.915,L/kg dw,Yamazaki 2023 field (measured)
+1_congeners,PFDoDA.yz_grain,52.915000794650155,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFDoDA.yz_grain_prev,0.0859981935880115,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFBS.root,22.782299522828385,L/kg dw,
+1_congeners,PFBS.straw,28.924544645987982,L/kg dw,
+1_congeners,PFBS.grain,1.7998193079139095,L/kg dw,
+1_congeners,PFBS.grain_prev,5.418502432969654,L/kg dw,
+1_congeners,PFBS.grain_flooded,1.8927186431898755,L/kg dw,
+1_congeners,PFBS.yz_grain,1.8062462685179694,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFBS.yz_grain_prev,5.437996635145954,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFHxS.root,31.480188373911044,L/kg dw,
+1_congeners,PFHxS.straw,20.485170907282328,L/kg dw,
+1_congeners,PFHxS.grain,1.3974691241133261,L/kg dw,
+1_congeners,PFHxS.grain_prev,1.6580052902413613,L/kg dw,
+1_congeners,PFHxS.grain_flooded,1.4706555075219516,L/kg dw,
+1_congeners,PFOS.root,59.325587282642935,L/kg dw,
+1_congeners,PFOS.straw,29.169633467607504,L/kg dw,
+1_congeners,PFOS.grain,2.2845419892136825,L/kg dw,
+1_congeners,PFOS.grain_prev,0.08163899902261586,L/kg dw,
+1_congeners,PFOS.grain_flooded,2.237718097231984,L/kg dw,
+1_congeners,PFOS.obs_grain,2.29398,L/kg dw,Yamazaki 2023 field (measured)
+1_congeners,PFOS.yz_grain,2.293980010515545,L/kg dw,"model, Yamazaki observable"
+1_congeners,PFOS.yz_grain_prev,0.08224487094712728,L/kg dw,"model, Yamazaki observable"
+1_congeners,GenX.root,2.525175361664966,L/kg dw,
+1_congeners,GenX.straw,5.900505985763216,L/kg dw,
+1_congeners,GenX.grain,0.6157249121145114,L/kg dw,
+1_congeners,GenX.grain_prev,5.563432441564529,L/kg dw,
+1_congeners,GenX.grain_flooded,0.9048780775123665,L/kg dw,
+1_congeners,mean_grain_shortchain_C4_C6_base,1.030956802423313,L/kg dw,
+1_congeners,mean_grain_longchain_C9_C12_base,15.86233967435951,L/kg dw,
+1_congeners,mean_grain_shortchain_C4_C6_prev,5.833948945458844,L/kg dw,
+1_congeners,mean_grain_longchain_C9_C12_prev,0.06638679064796017,L/kg dw,
+1_congeners,PFBA.yamazaki_grain_model_over_obs,1.170700855359209,x,
+1_congeners,PFPeA.yamazaki_grain_model_over_obs,1.4970124404381404,x,
+1_congeners,PFHxA.yamazaki_grain_model_over_obs,0.999999981535492,x,
+1_congeners,PFHpA.yamazaki_grain_model_over_obs,1.3049090106037666,x,
+1_congeners,PFOA.yamazaki_grain_model_over_obs,0.9999999540707935,x,
+1_congeners,PFNA.yamazaki_grain_model_over_obs,1.0000000382032124,x,
+1_congeners,PFDA.yamazaki_grain_model_over_obs,1.0000000175029002,x,
+1_congeners,PFUnDA.yamazaki_grain_model_over_obs,1.7315651156040757,x,
+1_congeners,PFDoDA.yamazaki_grain_model_over_obs,1.0000000150174837,x,
+1_congeners,PFOS.yamazaki_grain_model_over_obs,1.000000004583974,x,
+1_congeners,PFBA.yamazaki_grain_obs_over_prev,0.06792570034236285,x,
+1_congeners,PFPeA.yamazaki_grain_obs_over_prev,0.093073266692422,x,
+1_congeners,PFHxA.yamazaki_grain_obs_over_prev,0.45687885796797856,x,
+1_congeners,PFHpA.yamazaki_grain_obs_over_prev,0.6664435954030328,x,
+1_congeners,PFOA.yamazaki_grain_obs_over_prev,1.6291366665555869,x,
+1_congeners,PFNA.yamazaki_grain_obs_over_prev,9.461792305290771,x,
+1_congeners,PFDA.yamazaki_grain_obs_over_prev,77.67321336000909,x,
+1_congeners,PFUnDA.yamazaki_grain_obs_over_prev,45.46112442057872,x,
+1_congeners,PFDoDA.yamazaki_grain_obs_over_prev,615.3036219981319,x,
+1_congeners,PFOS.yamazaki_grain_obs_over_prev,27.892073676846422,x,
+2_pfoa,cwo,0.0787,ug/L,
+2_pfoa,conc.root,0.3829219124078071,ug/kg dw,
+2_pfoa,conc.straw,0.24651577891771254,ug/kg dw,
+2_pfoa,conc.grain,0.028712173041392307,ug/kg as eaten,
+2_pfoa,conc.grain_dw,0.04225318046033899,ug/kg dw,
+2_pfoa,grain.band_lo,0.009312495217513483,ug/kg as eaten,
+2_pfoa,grain.band_hi,0.0885250259466951,ug/kg as eaten,
+2_pfoa,grain.band_factor,3.083187950249354,x,
+2_pfoa,efsa_twi_percent,8.066673887229928,%,"EFSA 2020 4종 합 TWI 4.4 ng/kg bw/주, 백미 113.905 g/일, 체중 64.5 kg"
+2_pfoa,grain_via_xylem,0.48766696994811354,-,
+2_pfoa,grain_via_phloem,0.5123330300518865,-,
+2_pfoa,root_from_soil,0.9976928223959581,-,
+2_pfoa_50ngL,cwo,0.05,ug/L,
+2_pfoa_50ngL,conc.root,0.24327948691728535,ug/kg dw,
+2_pfoa_50ngL,conc.straw,0.15661739448393427,ug/kg dw,
+2_pfoa_50ngL,conc.grain,0.018241533063146305,ug/kg as eaten,
+2_pfoa_50ngL,conc.grain_dw,0.026844460267051437,ug/kg dw,
+2_pfoa_50ngL,grain.band_lo,0.005916451853566376,ug/kg as eaten,
+2_pfoa_50ngL,grain.band_hi,0.05624207493436788,ug/kg as eaten,
+2_pfoa_50ngL,grain.band_factor,3.083187950249354,x,
+2_pfoa_50ngL,efsa_twi_percent,5.124951643729301,%,"EFSA 2020 4종 합 TWI 4.4 ng/kg bw/주, 백미 113.905 g/일, 체중 64.5 kg"
+2_pfoa_50ngL,grain_via_xylem,0.48766696994811365,-,
+2_pfoa_50ngL,grain_via_phloem,0.5123330300518864,-,
+2_pfoa_50ngL,root_from_soil,0.9976928223959526,-,
+3_kim2019,PFHpA.porewater,24.7,ng/L,Kim 2019 field mean (ND as 0)
+3_kim2019,PFHpA.brownrice,0.00974,ug/kg,Kim 2019 field mean (ND as 0); freeze-dried grain (dry basis)
+3_kim2019,PFHpA.detection_freq,13.0,%,"brown rice, 30 fields"
+3_kim2019,PFHpA.obs_grain_baf,0.39433198380566803,L/kg,
+3_kim2019,PFHpA.obs_lo,0.39385892787340443,L/kg,every non-detect at 0
+3_kim2019,PFHpA.obs_hi,2.113630229419703,L/kg,every non-detect at the MDL
+3_kim2019,PFHpA.model_grain_baf,0.6423729635425931,L/kg,"pore water 1 ug/L, dry basis"
+3_kim2019,PFHpA.model_grain_baf_prev,0.7386480897286416,L/kg,
+3_kim2019,PFOA.porewater,78.7,ng/L,Kim 2019 field mean (ND as 0)
+3_kim2019,PFOA.brownrice,0.349,ug/kg,Kim 2019 field mean (ND as 0); freeze-dried grain (dry basis)
+3_kim2019,PFOA.detection_freq,57.0,%,"brown rice, 30 fields"
+3_kim2019,PFOA.obs_grain_baf,4.4345616264294785,L/kg,
+3_kim2019,PFOA.obs_lo,4.433136697084988,L/kg,every non-detect at 0
+3_kim2019,PFOA.obs_hi,4.919102075391783,L/kg,every non-detect at the MDL
+3_kim2019,PFOA.model_grain_baf,0.5368892053422465,L/kg,"pore water 1 ug/L, dry basis"
+3_kim2019,PFOA.model_grain_baf_prev,0.3301278878654695,L/kg,
+3_kim2019,PFNA.porewater,13.0,ng/L,Kim 2019 field mean (ND as 0)
+3_kim2019,PFNA.brownrice,0.0287,ug/kg,Kim 2019 field mean (ND as 0); freeze-dried grain (dry basis)
+3_kim2019,PFNA.detection_freq,20.0,%,"brown rice, 30 fields"
+3_kim2019,PFNA.obs_grain_baf,2.207692307692308,L/kg,
+3_kim2019,PFNA.obs_lo,2.207692307692308,L/kg,every non-detect at 0
+3_kim2019,PFNA.obs_hi,7.069230769230769,L/kg,every non-detect at the MDL
+3_kim2019,PFNA.model_grain_baf,0.4791614495462632,L/kg,"pore water 1 ug/L, dry basis"
+3_kim2019,PFNA.model_grain_baf_prev,0.05069261365006548,L/kg,
+3_kim2019,PFDA.porewater,3.54,ng/L,Kim 2019 field mean (ND as 0)
+3_kim2019,PFDA.brownrice,0.00551,ug/kg,Kim 2019 field mean (ND as 0); freeze-dried grain (dry basis)
+3_kim2019,PFDA.detection_freq,6.7,%,"brown rice, 30 fields"
+3_kim2019,PFDA.obs_grain_baf,1.5564971751412429,L/kg,
+3_kim2019,PFDA.obs_lo,1.5462728142019706,L/kg,every non-detect at 0
+3_kim2019,PFDA.obs_hi,11.311676082862522,L/kg,every non-detect at the MDL
+3_kim2019,PFDA.model_grain_baf,3.9120427116530023,L/kg,"pore water 1 ug/L, dry basis"
+3_kim2019,PFDA.model_grain_baf_prev,0.05024920951643028,L/kg,
+3_kim2019,PFUnDA.porewater,0.244,ng/L,Kim 2019 field mean (ND as 0)
+3_kim2019,PFUnDA.brownrice,0.00807,ug/kg,Kim 2019 field mean (ND as 0); freeze-dried grain (dry basis)
+3_kim2019,PFUnDA.detection_freq,13.0,%,"brown rice, 30 fields"
+3_kim2019,PFUnDA.obs_grain_baf,33.07377049180328,L/kg,
+3_kim2019,PFUnDA.obs_lo,19.82981434291955,L/kg,every non-detect at 0
+3_kim2019,PFUnDA.obs_hi,168.0464480874317,L/kg,every non-detect at the MDL
+3_kim2019,PFUnDA.model_grain_baf,6.287959365294709,L/kg,"pore water 1 ug/L, dry basis"
+3_kim2019,PFUnDA.model_grain_baf_prev,0.07958992267777563,L/kg,
+3_kim2019,PFDoDA.porewater,0.0488,ng/L,Kim 2019 field mean (ND as 0)
+3_kim2019,PFDoDA.brownrice,0.00172,ug/kg,Kim 2019 field mean (ND as 0); freeze-dried grain (dry basis)
+3_kim2019,PFDoDA.detection_freq,3.3,%,"brown rice, 30 fields"
+3_kim2019,PFDoDA.obs_grain_baf,35.24590163934426,L/kg,
+3_kim2019,PFDoDA.obs_lo,5.498721227621483,L/kg,every non-detect at 0
+3_kim2019,PFDoDA.obs_hi,629.5081967213115,L/kg,every non-detect at the MDL
+3_kim2019,PFDoDA.model_grain_baf,52.77019517094407,L/kg,"pore water 1 ug/L, dry basis"
+3_kim2019,PFDoDA.model_grain_baf_prev,0.08501541674756928,L/kg,
+3_kim2019,rmse_point_default,0.4890435407607781,log10,PFOA excluded
+3_kim2019,rmse_interval_default,0.3712102097370887,log10,PFOA excluded
+3_kim2019,rmse_point_prev,1.9335368353687936,log10,PFOA excluded
+3_kim2019,rmse_interval_prev,1.6687001738799945,log10,PFOA excluded
+3_kim2019,pfoa_site_geomean,9.94,L/kg,censored per-site geomean (kim2019_pfoa_anchor.py)
+3_kim2019,pfoa_site_geomean_lo90,4.57,L/kg,
+3_kim2019,pfoa_site_geomean_hi90,20.16,L/kg,
+4_inverse,deck_example.grain,0.5,ug/kg dw,
+4_inverse,deck_example.median,0.9312908418075714,ug/L,
+4_inverse,deck_example.ci95_lo,0.10248146666273875,ug/L,
+4_inverse,deck_example.ci95_hi,8.463019317325967,ug/L,
+4_inverse,synthetic.truth,0.0787,ug/L,
+4_inverse,synthetic.median,0.07869999999999992,ug/L,
+4_inverse,synthetic.ci95_lo,0.0220099542768265,ug/L,
+4_inverse,synthetic.ci95_hi,0.28140403755954657,ug/L,
+4_inverse,field.measured_brownrice,0.349,ug/kg,Kim 2019 PFOA 현미 평균
+4_inverse,field.median,0.65004100758167,ug/L,
+4_inverse,field.ci95_lo,0.07153206373059802,ug/L,
+4_inverse,field.ci95_hi,5.907187483492732,ug/L,
+4_inverse,field.overestimate_factor,8.259733260249936,x,
+4_inverse,field.overestimate_factor_prev,13.432859777756216,x,
+5_smiles,PFOA.root,4.865589738345428,L/kg dw,목록에 있는 물질 — 구조로 넣어도 실측 파라미터를 그대로 불러온다
+5_smiles,PFOA.straw,3.132347889678635,L/kg dw,목록에 있는 물질 — 구조로 넣어도 실측 파라미터를 그대로 불러온다
+5_smiles,PFOA.grain,0.5368892053422465,L/kg dw,목록에 있는 물질 — 구조로 넣어도 실측 파라미터를 그대로 불러온다
+5_smiles,PFOA.provisional,0.0,-,
+5_smiles,PFPeS.root,6.038837356137491,L/kg dw,"C5 술폰산 — 목록에 없음, QSPR 추정(잠정)"
+5_smiles,PFPeS.straw,7.854360664359424,L/kg dw,"C5 술폰산 — 목록에 없음, QSPR 추정(잠정)"
+5_smiles,PFPeS.grain,0.6665672881259999,L/kg dw,"C5 술폰산 — 목록에 없음, QSPR 추정(잠정)"
+5_smiles,PFPeS.provisional,1.0,-,
+5_smiles,ADONA형 에터.root,4.174295814322809,L/kg dw,에터 결합 신규 구조 — QSPR 추정(잠정)
+5_smiles,ADONA형 에터.straw,6.903387891644827,L/kg dw,에터 결합 신규 구조 — QSPR 추정(잠정)
+5_smiles,ADONA형 에터.grain,0.6189857381835941,L/kg dw,에터 결합 신규 구조 — QSPR 추정(잠정)
+5_smiles,ADONA형 에터.provisional,1.0,-,
+6_biocides,n_runnable,117,행,
+6_biocides,n_inside_scope,69,행,
+6_biocides,n_excluded_ionisation,31,행,
+6_biocides,rho_fishBCF_root,0.904,-,from docs/policy_biocides_results.csv
+6_biocides,rho_fishBCF_straw,-0.777,-,from docs/policy_biocides_results.csv
+6_biocides,rho_n,60.0,종,from docs/policy_biocides_results.csv
+6_biocides,max_tscf_bioaccumulative,0.02059196237382389,-,from docs/policy_biocides_results.csv

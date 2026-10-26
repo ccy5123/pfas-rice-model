@@ -110,3 +110,23 @@ the **filling grain** (endosperm vs aleurone vs pericarp), and phloem-sap [PFAS]
 peduncle, to decide between (i) higher effective `B_grain` and (ii) active phloem
 unloading. Until then, grain TF should be reported as an **order-of-magnitude** quantity
 with this known low bias (~3–8× for PFCA/PFSA on a dry-weight basis).
+
+## 6. Fresh organ mass and the white-rice reading (2026-10)
+The ~3–8× figure above is on the pre-fix DRY organ mass. On fresh mass the gap is
+model-dependent: with the lipid term the endosperm is 2.8× (PFOA) / 5.8× (PFOS) under,
+with the Tang-refit `f_xy` PFOA closes (1.61 vs 1.37) and PFOS is ~4× under.
+
+Whether Tang's endosperm is dehulled (brown) or MILLED (white) rice is not reported — the SI's
+white-rice moisture standard (Text S3) enters its intake calculation and does not describe the
+analysed sample (`docs/rice_sample_processing_KR.md` §4) — while the model's grain pool is the
+whole caryopsis. `tang_tf_validation(endosperm="white")`
+re-partitions the grain's free concentration into a white-rice composition
+(`model_api.TANG_ENDOSPERM`; membrane phospholipid counted the way the `grain_brown` row
+counts it — the `grain_white` row's own 0.003 is mostly starch-complexed lyso-PL, a pool
+the brown row excludes). It LOWERS the model endosperm 1.5–4× (factor PFOA 0.33, PFOS
+0.25, GenX 0.66) and makes every Tang score worse: lipid 0.520 → 0.700, refit 0.327 →
+0.513, free anion 1.483 → 1.647. So composition does not close the grain gap; if the
+endosperm is milled, the gap is larger. Measured endosperm TF ≥ 1 with a white-rice
+composition would mean bran and endosperm do NOT share one free concentration — phloem
+solute retained in the filling endosperm, i.e. the open follow-up in §5. Default stays
+"brown" because the milling method is not reported (`tests/test_tang_endosperm.py`).

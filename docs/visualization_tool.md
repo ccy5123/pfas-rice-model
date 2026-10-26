@@ -17,7 +17,7 @@ The app opens in a **Simple mode** for a general audience (policy makers, studen
 public): a plain-language intro, a friendly chemical dropdown + a low/medium/high
 **contamination preset**, three plain metric cards + a one-sentence summary, and five
 jargon-free tabs (🗺️ *Where it goes* · 📈 *Build-up over time* · 📊 *How much builds up* ·
-🔎 *Work backwards* · ℹ️ *About & glossary*) — no `BAF`/`Cwᵒ`/`f_xy`/`eᴺ` symbols in the
+🔎 *Work backwards* · ℹ️ *About & glossary*) — no `BAF`/`Cwᵒ`/`f_xy`/`r_eq` symbols in the
 default view. A prominent **research/educational disclaimer** sits on every screen (top +
 footer), and a **Download** expander exports the results (CSV; PNG when `kaleido` is present).
 
@@ -58,25 +58,26 @@ The compute is UI-agnostic and unit-tested head-less:
 
 ## Mechanism switches (sidebar → ⚙️ Mechanism, Expert only)
 
-Two of the model's open questions are *named modes*, not buried constants — the repo's idiom
-(`lipid_source`, `f_xy_source`, `cwo_profile`, `biomass`, `uptake`). Both default to the
-shipped model and, when either is on, a banner sits next to the headline metrics, because the
-sidebar expander is collapsed and the run would otherwise look like the shipped one.
+The model's alternatives are *named modes*, not buried constants — the repo's idiom
+(`lipid_source`, `f_xy_source`, `cwo_profile`, `biomass`, `shoot`). Each alternative is a
+variant fitted on its own (`validation/refit_sourced.py`; `model_api.variant_key`), so a switch
+runs that variant's fitted values. All default to the default model (redistributed shoot, lipid
+loading on) and, when one differs from it, a banner sits next to the headline metrics, because
+the sidebar expander is collapsed and the run would otherwise look like the default one.
 
-- **Root entry — carrier (default) vs apoplastic bypass** (`simulate(uptake=…)`,
-  `model_api.UPTAKE_MODES`). The Michaelis–Menten carrier is this repo's one addition to the
-  Trapp cell model, and it keeps its place **by default, not by evidence**: on Yamazaki the
-  carrier (log10 RMSE 1.035) and one global bypass `g_apo`=20 (0.996) are indistinguishable
-  (bootstrap 0.749), while adding nothing at all fails (2.640) — so *an* addition is necessary
-  and *which* is undecided (`validation/carrier_vs_bypass.py`). An "Override the entry
-  constants" checkbox exposes `Vmax ×`, `Km ×` and `g_apo` — the levers of that scan and of
-  the dose series (whose durable result is a POST-HOC bound: the carrier must have
-  `Km ≥ 500 µg/L`, 100× the fitted 5, to be as flat as Tang's 5 doses measure).
-- **Lipid-facilitated loading** (`simulate(lipid_loading=True)`) — the K_PL-gated,
-  B-independent `g_xy·C` / `g_ph·C` term. It is the repo's strongest cross-dataset result
-  (Tang per-organ 1.232 → 0.516 with **nothing re-fit to Tang**; best of the variants on Kim
-  2019 grain), but it supplies its own `f_xy`, so the sidebar's `f_xy` choice is ignored while
-  it is on, and against the *Yamazaki* bars it is in-sample. EXPLORATORY, default off.
+- **Shoot model — redistributed (default) vs single-straw 4-pool** (`simulate(shoot=…)`,
+  `model_api.SHOOTS`). The redistributed shoot: N = 4 stem segments + leaf, each organ keeping the
+  solute its own transpiration deposits (retention 1, derived); the sheath + culm share and the
+  panicle share of transpiration are sourced ranges run at their midpoints (`RANGE_INPUTS`). The
+  4-pool: one stem pool, the leaf/grain split by the same sourced panicle share.
+- **Root entry** is not a switch: it is the linear equilibrium `λ_eq·(r_eq·Cwᵒ − C_w,root)`
+  (`r_eq` fitted to Yamazaki's root, `λ_eq` numerical). The carrier and bypass modes left the
+  tool with amendment 1 — their constants had no source (`validation/archive/carrier_vs_bypass.py`).
+- **Lipid-facilitated loading** (`simulate(lipid_loading=…)`, default **on**) — the
+  B-independent loading term `g_xy·C` (one `f_xy` and one `g_xy` for every chain), its constants fitted on Yamazaki only (terms the data do not
+  identify are removed by backward elimination). It supplies its own `f_xy`, so the sidebar's
+  `f_xy` choice applies only with it off, and against the *Yamazaki* bars it is in-sample. The
+  transfer scores of every variant are in `validation/transfer_sourced.json`.
 
 Both switches propagate to every tab, the congener comparison **and** the Bayesian inverse
 (`estimate_exposure_bayesian(**sim_kw)`), so the inverse is never run under a different model
@@ -132,16 +133,15 @@ opt-in `plant_air` with MW/`K_AW`) and *Weak electrolyte (pKa) + apoplastic bypa
 A **soil Koc** field feeds the soil-side modes.
 
 **What is deliberately absent for a neutral compound**, rather than shown and ignored:
-`E_m` and the `f_xy` source (at `z = 0` a membrane potential has nothing to act on and `f_xy`
-*is* the computed TSCF), the PFAS mechanism switches (the carrier exists to overcome anion
-exclusion; the lipid term is K_PL-gated on PFAS binding), and the four PFAS-only tabs
-(Yamazaki BAF bars, chain-length trends, congener comparison, Tang per-organ TF). The
-headline's `eᴺ` metric is replaced by **TSCF**, since `eᴺ` is 1 by construction there.
+the `f_xy` source (`f_xy` *is* the computed TSCF there), the PFAS mechanism switches (the lipid
+term is fitted to PFAS data), and the four PFAS-only tabs (Yamazaki BAF bars, chain-length
+trends, congener comparison, Tang per-organ TF). The headline's root-entry `r_eq` metric is
+replaced by **TSCF**.
 
 The scope panel above the tabs states, in-UI, what the run is and is not: nothing is fitted;
-a-priori log10 RMSE **0.281** (Liu 2023 root partition) and **0.783** (Ge 2017 per-organ TF)
-on the season-ODE basis, **0.206** for Liu on the equilibrium basis proper to a root-partition
-measurement; the **grain compartment is UNTESTED** for neutrals; stem/leaf lipid are still
+the a-priori log10 RMSE of Liu 2023 (root partition) and Ge 2017 (per-organ TF) on the
+season-ODE basis, and Liu on the equilibrium basis proper to a root-partition measurement, read from
+`params/neutral_scores.json` (no number typed in the UI); the **grain compartment is UNTESTED** for neutrals; stem/leaf lipid are still
 Trapp 1994's soybean values; and with `half_life = 0` the leaf is an unbounded terminal
 accumulator, so the run is an upper bound (a warning fires in that case).
 
@@ -154,8 +154,8 @@ enters, so the neutral panel has a **🔎 Look up the compound** box that takes 
 since the CTX chemical search has no structure route.
 
 Three rules the module enforces, all for the same reason — this path's whole claim
-is that **nothing in it is fitted**, and its published a-priori errors (Liu
-0.206/0.281, Ge 0.783, Briggs stem 0.299) are on *measured* log Kow:
+is that **nothing in it is fitted**, and its a-priori errors (`params/neutral_scores.json`)
+are on *measured* log Kow:
 
 1. **Experimental beats predicted.** CompTox serves measured values and OPERA
    predictions side by side; when both exist the measured one is used.
@@ -183,7 +183,7 @@ warnings**.
 2. **The pKa is predicted** — a statement about the *source*, and **carbamazepine is
    the in-repo counterexample**: CompTox's OPERA returns an acidic pKa of **5.07**
    (→ f_n 0.036, 96% ionised at pH 6.5) while the measured value this repo's own
-   best-conditioned table is built on — Kodešová 2019 (§4f), whose a-priori 0.191/0.237
+   best-conditioned table is built on — Kodešová 2019 (§4f), whose a-priori score
    assumes CAR is **un-ionised everywhere** — is **13.9** (f_n 1.00). Nine log units
    apart, on the very compound the neutral path is validated with, and only the
    measured one reproduces the published result.
@@ -264,8 +264,8 @@ editable default of the sidebar's `soil Koc` field, and it drives the flooded `C
 and the live HYDRUS run (`hydrus_drivers(log_kow=…)` or `Kd=`, via `soil_hydrus.inputs_from_hydrus(Kd=…)`).
 It is flagged **PROVISIONAL** for a specific reason: no table in this repo scores a *predicted*
 Koc (the neutral tables either supply the exposure directly or carry the paper's own measured
-isotherm), and Li 2019's soil half shows exactly what is at stake — root bias **+0.033** with an
-experimental `K_om` against **+0.291** with an estimated one. Type a measured value whenever
+isotherm), and Li 2019's soil half shows what is at stake — its root bias differs between rows
+with an experimental and an estimated `K_om` (`validation/li2019_soil_table.py`). Type a measured value whenever
 you have one — or let the CompTox lookup above supply the dashboard's OPERA `Koc`
 (returned **linear, in L/kg**), which then replaces the Karickhoff default and is
 labelled as predicted.
@@ -285,78 +285,52 @@ Kow span, so the mismatch cannot come back.
 
 ## Tang 2026 validation tab (out-of-sample)
 
-The **✅ Tang TF (OOS)** tab checks the root→shoot loading `f_xy` against **Tang et al. 2026**
-(flooded paddy, Nipponbare, 150 d; PFOA/PFOS/GenX) — the per-organ transfer factor
-**TF = C_organ/C_root** (SI Table S8), shown for the selected congener as grouped bars:
-**Tang (measured)** vs **model** vs **model with the Tang-refit `f_xy`** (`model_api.tang_tf_validation`
-→ `plots.fig_tang_tf`). Only Tang's head-group *sign* went into the build, so the magnitudes are OOS.
+The **✅ Tang TF (OOS)** tab checks root→shoot transfer against **Tang et al. 2026** (flooded
+paddy pot, Nipponbare; PFOA/PFOS/GenX): the per-organ transfer factor **TF = C_organ/C_root**
+(SI Table S8, dry/dry), shown for the selected congener as grouped bars — **Tang (measured)** vs
+**model** (`model_api.tang_tf_validation` → `plots.fig_tang_tf`). The model runs the default
+configuration on the calibration site-year (Tang's site and dates are not in the repo) and is read
+through the harvest operator on dry basis, like the data.
 
-Three things the tab makes explicit (the rigor points from this work):
-- **Dry-weight basis.** Tang's TF is dry/dry; the model conc is fresh-weight, and the
-  `(1−θ)` factor differs by tissue, so `TF_dw = TF_fw·(1−θ_root)/(1−θ_tissue)` is applied
-  (comparing fresh model TF to dry Tang TF flatters the grain ~8×).
-- **`f_xy` is condition-dependent.** PFOS `f_xy` ≈ 0.14 (Yamazaki, paddy field) vs ~0.32
-  (Tang, flooded soil); GenX's provisional 0.233 is ~12× too high (refit ≈ 0.013). The refit
-  is **override-only** (`parameters.json` unchanged). Dose toggle (across-dose mean vs 0.1 µg/g)
-  and an optional ORYZA-biomass driver are exposed.
-- **Grain is structurally under-predicted** ~3–8× and is *not* closable by `L_Ph`/lipid
-  (`docs/tang2026_grain_units_exploration.md`).
-
-A **lipid loading (OOS)** checkbox adds a third model series
-(`tang_tf_validation(lipid_loading=True)` → `plots.fig_tang_tf(val, val_refit, val_extra)`).
-It is the honest counterpart of the refit bar: the green refit was calibrated *on* these
-measurements, while the lipid mechanism's constants were fit on **Yamazaki** and transferred
-untouched — yet it lands in the same place (0.516 vs 0.519 across Tang's three congeners) and
-fixes the dominant free-anion failure at the mechanism level (PFOS stalk 0.013 → 0.620 vs Tang
-0.571). Residuals it does not fix: GenX (provisional ether `f_xy`) and the PFOS endosperm
-(~5× under). See `validation/oos_tang_lipid.py`.
+- The default-model bars (grey) are the lipid-loading model, whose constants were fitted on
+  **Yamazaki** and transferred untouched; the panel computes the log10 RMSE for the congener and
+  dose shown. A **free anion (no lipid loading)** checkbox adds the same shoot without the lipid
+  term. The scored endpoint over the three congeners, for every variant, is in
+  `validation/transfer_sourced.json`; the per-organ detail is printed by
+  `validation/oos_tang_lipid.py`.
+- The in-sample Tang refit of `f_xy` (`TANG_REFIT_FXY`) left the tool with amendment 1
+  (`validation/archive/tang2026_fxy_refit.py`).
 
 ---
 
-## BAF vs observed — two-pool overlays
+## BAF vs observed
 
-The **📊 BAF vs observed** tab compares the model's root/straw/grain BAF to the fixed Yamazaki
-2023 bars. For a **curated congener** it can additionally overlay the EXPLORATORY **sequestration
-two-pool** model (checkbox, on by default) — `model_api.simulate_twopool_seq` → `plots.fig_baf(res, obs, extra=…)`.
-The two-pool seq model adds an irreversible non-K_PL `k_seq` root sink (mobile + sequestered pools)
-that captures the long-chain **root** BAF and the **PFOS/PFUnDA** split the single-pool 4-pool core
-misses, while keeping the monotone physical `f_xy` (overall log10 RMSE 0.251; `docs/twopool_root_exploration.md`).
-
-A second checkbox overlays the **structural merge** (`model_api.simulate_twopool_nstem`): the same
-two-pool sequestration root driving the *redistributed* N-stem+leaf shoot instead of the 4-pool
-pass-through stem. Swapping the whole shoot costs only ~0.04 log on Yamazaki (0.301 vs 0.278) with
-the root RMSE unchanged — the root mechanism is separable from the shoot model — and it is what makes
-a per-organ Tang test fair (that OOS moves 1.398 → 0.801, the recovery carried by the diagnosed
-stalk; `docs/twopool_root_exploration.md` Result 8).
-
-Caveats made explicit in the tab:
-- **EXPLORATORY / in-sample** (Yamazaki fit); opt-in. `parameters.json` and the canonical 4-pool core
-  are unchanged — the overlay does not alter the model bar.
-- The overlay runs at the two-pool's **calibrated operating point** (Cwᵒ=1, season≈120, demo forcings),
-  so it is comparable to the fixed Yamazaki bars but does **not** track the sidebar `f_xy`/Cwᵒ/biomass
-  (the 4-pool core bar does). Curated congeners only (the cached fit has no record for a novel SMILES).
-- The **carrier** two-pool (`close_longchain_2pool`, a saturated DOF-0 long-chain closure) is API-only —
-  it reproduces the observed bars by construction and is too slow (~1 min/congener) to render live.
+The **📊 BAF vs observed** tab compares the model's root/straw/grain BAF with the Yamazaki 2023
+bars (dry basis). The model bars are the model's own version of that observation
+(`yamazaki_harvest_baf`: the 2020 site-year, both harvest runs, the congener's irrigation-water
+level) under the sidebar's transport and mechanism choice; they do not follow the exposure
+settings. With `f_xy source = fit` the match is a reproduction; with `recommended` the straw is a
+prediction.
 
 ---
 
-## Biomass driver M(t) & the Tissue-dynamics mass plot
+## Crop drivers & the Tissue-dynamics mass plot
 
-The sidebar **“Biomass driver M(t)”** radio chooses the organ-biomass forcing for the built-in scenarios:
-- **ORYZA2000 (mechanistic)** — the Level-1 carbon balance (`oryza_growth`): radiation/temperature →
-  assimilation → respiration → DVS partitioning. **The app default** (the first-principles choice for this
-  mechanistic, HYDRUS-coupled model).
-- **growth_rice (partition + logistic)** — ORYZA IR72 partitioning imposed on a logistic total-biomass curve;
-  the lightweight reconstruction and the historical **calibration basis**.
+The sidebar **“Crop drivers (transpiration + organ mass)”** radio chooses:
+- **Calibration site-year (default)** — JMA Tsukuba 2020 weather, the ORYZA2000 port (IR72.D92)
+  transplanted on Yamazaki's date with phenology calibrated to its heading and harvest dates,
+  ORYZA2000 transpiration on FAO-56 terms (`src/site_scenario.py`). The season is transplanting to
+  harvest (117.5 d at the mean harvest date), so the season slider is hidden. The transport
+  parameters are fitted on it.
+- **Generic climatology** — `forcing_rice` transpiration with a biomass driver over the season
+  slider: the ORYZA2000 port, the reduced ORYZA re-coding (`oryza_growth`; matures 12 d late on the
+  manual's own experiment and never matures at temperate sites) or `growth_rice` (no leaf death).
+  Alternatives for sensitivity.
 
-The **Tissue dynamics** tab now shows two plots: tissue **concentration** `C_k(t)` [µg/kg] (top, intensive) and
-the per-tissue **PFAS mass / burden** `C_k(t)·M_k(t)` [µg/hill] (bottom, `plots.fig_burden`, extensive) — *where
-the chemical actually ends up* (a tissue can be high-concentration yet low-mass). The organ **biomass** `M_k(t)`
-itself is in the *Soil & drivers* tab (`fig_drivers`). **Caveat (biomass driver):** the
-`f_xy` calibration was done on `growth_rice`, so switching to ORYZA2000 shifts BAFs (short-chain straw/grain
-~+40–70%); pass `biomass="growth_rice"` to reproduce the legacy artifacts (`reproduce_demo.py` and
-`calibration.py` use their own drivers and are unaffected). Both the app and the code-level
-`simulate(biomass=)` default are **ORYZA2000**.
+Crop drivers produce dry matter; the model runs on fresh organ mass (`src/organ_mass.py`).
+The **Tissue dynamics** tab shows the tissue **concentration** `C_k(t)` and the per-tissue **PFAS
+mass** `C_k(t)·M_k(t)` [µg/hill] (`plots.fig_burden`) — where the chemical ends up. The organ
+biomass `M_k(t)` is in the *Soil & drivers* tab.
 
 ---
 

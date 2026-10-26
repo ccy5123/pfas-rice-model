@@ -1,0 +1,79 @@
+# ORYZA2000 example experiment IR72DS92 (IRRI, Los Banos, 1992 dry season; cv. IR72), transcribed from
+#   Bouman et al. (2001) ORYZA2000: modeling lowland rice, IRRI. Section 7.2, experimental data file IR72DS2.T92,
+#   part 8 "Measured data for model calibration and comparison" (pp. 159-162). http://books.irri.org/9712201716_content.pdf
+# Management (same file): emergence in seedbed day 4 (EMD), seedbed 12 d, transplanted day 16 (Jan 16 1992),
+#   25 hills m-2 x 5 plants hill-1; N 60+60+60+45 kg/ha (transplanting, mid-tillering, PI, flowering) = 225 kg N/ha;
+#   the file runs ORYZA in WATER BALANCE + NITROGEN BALANCE mode (irrigated, high N) -- near-potential, not potential.
+# Weather: PHIL1.992 (IRRI wetland site; only the first 7 days are printed in the manual, Section 7.5).
+# variable: WLVG green leaf, WLVD dead leaf, WST stem, WSO panicle, WAGT total aboveground [kg DM ha-1]; LAI [m2 m-2];
+#   FNLV leaf N weight basis [g N g-1]; NFLV leaf N area basis [g N m-2]; event rows give the day of year of a stage.
+year,doy,variable,value,unit
+1992,4,event_emergence,4,doy
+1992,16,event_transplanting,16,doy
+1992,58,event_panicle_initiation,58,doy
+1992,83,event_flowering,83,doy
+1992,114,event_maturity,114,doy
+1992,4,LAI,0.00,m2 m-2
+1992,16,LAI,0.03,m2 m-2
+1992,34,LAI,0.46,m2 m-2
+1992,58,LAI,5.22,m2 m-2
+1992,68,LAI,5.97,m2 m-2
+1992,83,LAI,5.88,m2 m-2
+1992,97,LAI,4.82,m2 m-2
+1992,114,LAI,2.45,m2 m-2
+1992,4,WLVG,0,kg ha-1
+1992,16,WLVG,6,kg ha-1
+1992,34,WLVG,138,kg ha-1
+1992,58,WLVG,1874,kg ha-1
+1992,68,WLVG,2840,kg ha-1
+1992,83,WLVG,3030,kg ha-1
+1992,97,WLVG,2828,kg ha-1
+1992,114,WLVG,1432,kg ha-1
+1992,4,WLVD,0,kg ha-1
+1992,16,WLVD,0,kg ha-1
+1992,34,WLVD,0,kg ha-1
+1992,58,WLVD,47,kg ha-1
+1992,68,WLVD,234,kg ha-1
+1992,83,WLVD,660,kg ha-1
+1992,97,WLVD,1448,kg ha-1
+1992,114,WLVD,2269,kg ha-1
+1992,4,WST,0,kg ha-1
+1992,16,WST,5,kg ha-1
+1992,34,WST,109,kg ha-1
+1992,58,WST,1577,kg ha-1
+1992,68,WST,2902,kg ha-1
+1992,83,WST,4771,kg ha-1
+1992,97,WST,4373,kg ha-1
+1992,114,WST,4243,kg ha-1
+1992,4,WSO,0,kg ha-1
+1992,16,WSO,0,kg ha-1
+1992,34,WSO,0,kg ha-1
+1992,58,WSO,0,kg ha-1
+1992,68,WSO,0,kg ha-1
+1992,83,WSO,1558,kg ha-1
+1992,97,WSO,5932,kg ha-1
+1992,114,WSO,9843,kg ha-1
+1992,5,WAGT,0,kg ha-1
+1992,16,WAGT,11,kg ha-1
+1992,34,WAGT,247,kg ha-1
+1992,58,WAGT,3498,kg ha-1
+1992,68,WAGT,5976,kg ha-1
+1992,83,WAGT,10019,kg ha-1
+1992,97,WAGT,14580,kg ha-1
+1992,114,WAGT,17787,kg ha-1
+1992,4,FNLV,0.027,g N g-1
+1992,16,FNLV,0.027,g N g-1
+1992,34,FNLV,0.051,g N g-1
+1992,58,FNLV,0.034,g N g-1
+1992,68,FNLV,0.033,g N g-1
+1992,83,FNLV,0.025,g N g-1
+1992,97,FNLV,0.023,g N g-1
+1992,114,FNLV,0.014,g N g-1
+1992,4,NFLV,0.54,g N m-2
+1992,16,NFLV,0.54,g N m-2
+1992,34,NFLV,1.53,g N m-2
+1992,58,NFLV,1.22,g N m-2
+1992,68,NFLV,1.56,g N m-2
+1992,83,NFLV,1.29,g N m-2
+1992,97,NFLV,1.37,g N m-2
+1992,114,NFLV,0.83,g N m-2

@@ -28,8 +28,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 import model_api as api          # noqa: E402
 import literature_params as lp   # noqa: E402
 
-SEASON = 120.0
-N_T = 121
 K_LEACH_SCAN = np.round(np.arange(0.0, 0.151, 0.0025), 4)
 OUT_CSV = os.path.join(os.path.dirname(__file__), "..", "params", "cwo_kleach.csv")
 
@@ -41,7 +39,7 @@ def _ratio(c):
 
 def calibrate(congeners=None):
     congeners = congeners or api.CONGENERS
-    t = np.linspace(0.0, SEASON, N_T)
+    t = api.scenario_drivers()["t"]                       # the calibration site-year grid
     rows = []
     for cong in congeners:
         c = api._CONG[cong]

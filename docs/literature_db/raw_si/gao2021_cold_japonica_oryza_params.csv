@@ -1,0 +1,45 @@
+# Gao Y, Xu X, Sun C, Ding S, Huo Z, Huang G (2021) Parameterization and modeling of paddy rice (Oryza sativa L. ssp. japonica)
+# growth and water use in cold regions: Yield and water-saving analysis. Agric. Water Manag. 250:106864.
+# doi:10.1016/j.agwat.2021.106864 (PDF supplied by the user, NOT committed - copyright). Transcribed from Table 3 (calibrated
+# values for cold-region japonica next to the ORYZA2000 defaults they list, which are IR72's) and Table A1 (supplementary inputs).
+# An ORYZA2000 crop parameter set calibrated (trial and error) on 2018 and validated on 2019 at Qing'an Irrigation Experiment
+# Station, Heilongjiang (46 58'06"N, 127 39'37"E), cultivar Suijing-18, traditional flood irrigation. Tables as "DVS:value;...".
+# Only these parameters are given; the rest of the crop file is the ORYZA2000 default (IR72). The paper's "default" column is
+# printed as here; note it lists SLA as a table, whereas IR72.D92 as printed in the manual uses the SLA function (SWISLA).
+# The paper uses ORYZA2000 with water/N balances (PADDY), not potential production.
+parameter,calibrated,default_as_printed,unit,definition,source
+TBD,8,8,oC,base temperature for development,Table 3
+TBLV,8,8,oC,base temperature for juvenile leaf area growth,Table 3
+TMD,42,42,oC,maximum temperature for development,Table 3
+TOD,30,30,oC,optimum temperature for development,Table 3
+COLDMIN,8,12,oC,lower air temperature threshold for growth (growth stops if Tavg stays below it for a few days),Table 3
+RGRLMX,0.0088,0.0085,oCd-1,maximum relative growth rate of leaf area,Table 3
+FRPAR,0.45,0.5,-,fraction of sunlight that is PAR,Table 3
+DVRJ,0.000890,0.000773,oCd-1,"development rate, juvenile phase",Table 3
+DVRI,0.000758,0.000758,oCd-1,"development rate, photoperiod-sensitive phase",Table 3
+DVRP,0.001055,0.000784,oCd-1,"development rate, panicle development phase",Table 3
+DVRR,0.002000,0.001784,oCd-1,"development rate, reproductive (post-anthesis) phase",Table 3
+FLVTB,0.00:0.60;0.50:0.50;0.75:0.30;1.00:0.00;1.20:0.00;2.00:0.00,0.00:0.60;0.50:0.60;0.75:0.30;1.00:0.00;1.20:0.00;2.50:0.00,-,fraction of shoot DM to leaves vs DVS,Table 3
+FSTTB,0.00:0.40;0.50:0.50;0.75:0.60;1.00:0.60;1.20:0.00;2.00:0.00,0.00:0.40;0.50:0.40;0.75:0.70;1.00:0.40;1.20:0.00;2.50:0.00,-,fraction of shoot DM to stems vs DVS,Table 3
+FSOTB,0.00:0.00;0.50:0.00;0.75:0.10;1.00:0.40;1.20:1.00;2.00:1.00,0.00:0.00;0.50:0.00;0.75:0.00;1.00:0.60;1.20:1.00;2.50:1.00,-,fraction of shoot DM to panicles vs DVS,Table 3
+DRLVT,0.00:0.000;0.40:0.010;1.00:0.024;1.60:0.020;2.10:0.020,0.00:0.000;0.60:0.000;1.00:0.015;1.60:0.025;2.10:0.050,d-1,leaf death coefficient vs DVS,Table 3
+SLATB,0.000:0.0010;0.313:0.0015;0.418:0.0020;0.559:0.0023;0.660:0.0023;0.868:0.0023;1.024:0.0020;1.382:0.0016;1.999:0.0014;2.500:0.0012,0.00:0.0045;0.16:0.0045;0.33:0.0033;0.65:0.0028;0.79:0.0024;2.10:0.0023;2.50:0.0023,ha kg-1,specific leaf area vs DVS,Table 3
+EMD,111,,doy,day of emergence (2018),Table A1
+IDOYTR,136,,doy,day of transplanting (2018),Table A1
+IDOYPI,191,,doy,day of panicle initiation (2018),Table A1
+IDOYFL,214,,doy,day of flowering (2018),Table A1
+IDOYM,261,,doy,day of maturity (2018),Table A1
+NPLH,5,,plants hill-1,plants per hill,Table A1
+NPLSB,1000,,plants m-2,plants in the seedbed,Table A1
+NH,20,,hills m-2,hills per m2,Table A1
+FSTR,0.2,,-,fraction of carbohydrates allocated to stems stored as reserves,Table A1
+WGRMX,0.0000249,,kg grain-1,maximum individual grain weight,Table A1
+KDF,0.4,,-,"extinction coefficient for leaves (a single value, not the IR72 KDFTB table)",Table A1
+MOPP,11.5,,h,maximum optimum photoperiod,Table A1
+RGRLMN,0.0040,,oCd-1,minimum relative growth rate of leaf area,Table A1
+SCP,0.2,,-,scattering coefficient of leaves for PAR,Table A1
+LRSTR,0.947,,-,fraction of allocated stem reserves available for growth,Table A1
+GZRT,0.01,,m d-1,growth rate of roots,Table A1
+ZRTMCW,0.25,,m,maximum root depth if no drought stress,Table A1
+ANGA,0.18,,-,Angstrom A,Table A1
+ANGB,0.58,,-,Angstrom B,Table A1
