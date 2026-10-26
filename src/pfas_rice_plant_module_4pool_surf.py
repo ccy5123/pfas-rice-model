@@ -44,6 +44,8 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
 
+import linear_expm as LE
+
 # ----------------------------------------------------------------------------
 # physical constants
 # ----------------------------------------------------------------------------
@@ -339,9 +341,10 @@ class PlantInputs:
         self._Cwo = interp1d(self.t, self.Cwo, **kw)
         self._Qtp = interp1d(self.t, self.Qtp, **kw)
         self._M = [interp1d(self.t, self.M[:, k], **kw) for k in range(4)]
-        # dM/dt by finite difference, then interpolate
+        # dM/dt by finite difference, then interpolate; the grain's as the interval slope (its
+        # growth draws its inflow; `linear_expm.interval_slopes`)
         dM = np.gradient(self.M, self.t, axis=0)
-        self._dM = [interp1d(self.t, dM[:, k], **kw) for k in range(4)]
+        dM[:, FRUIT] = LE.interval_slopes(self.t, self.M[:, FRUIT])
         ll = np.zeros(len(self.t)) if self.leaf_loss is None else np.asarray(self.leaf_loss, float)
         self._leaf_loss = interp1d(self.t, ll, **kw)
         # grain FORMATION gate gamma(t): 0 while the grain sits on the organ-mass floor (the
@@ -364,6 +367,8 @@ class PlantInputs:
         self._tg = np.asarray(self.t, dtype=float)
         self._tab = np.column_stack([np.asarray(self.Cwo, float), np.asarray(self.Qtp, float),
                                      self.M, dM, ll, gate, dv])
+        self._hold = np.zeros(self._tab.shape[1], bool)
+        self._hold[6 + FRUIT] = True                  # the grain's growth: held over the interval
         # the second table (PREREG 7.1/7.2): theta(t), the grain's DRY growth, the husk's dry
         # mass, growth and formation gate
         th = (np.full(self.M.shape, np.nan) if self.theta is None
@@ -372,33 +377,27 @@ class PlantInputs:
                 else np.full(len(self.t), np.nan))
         mh = (np.full(len(self.t), MASS_FLOOR) if self.M_husk is None
               else np.maximum(np.asarray(self.M_husk, float), MASS_FLOOR))
-        self._tab2 = np.column_stack([th, np.gradient(gdry, self.t), mh,
-                                      np.gradient(mh, self.t), grain_formed(mh)])
+        self._tab2 = np.column_stack([th, LE.interval_slopes(self.t, gdry), mh,
+                                      LE.interval_slopes(self.t, mh), grain_formed(mh)])
+        self._hold2 = np.zeros(self._tab2.shape[1], bool)
+        self._hold2[[4, 6]] = True                    # the grain dry growth and husk growth
 
     def extras_at(self, t):
         """(theta[4], grain dry growth, husk dry mass, husk growth, husk gate) at time t."""
-        tg = self._tg
-        i = int(np.searchsorted(tg, t, side="right")) - 1
-        i = min(max(i, 0), len(tg) - 2)
-        w = (t - tg[i]) / (tg[i + 1] - tg[i])
-        row = self._tab2[i] + w * (self._tab2[i + 1] - self._tab2[i])
+        row = LE.lerp_row(self._tg, self._tab2, t, self._hold2)
         return row[0:4], row[4], row[5], row[6], min(1.0, max(0.0, row[7]))
 
     def drivers_at(self, t):
         """(Cwo, Qtp, M[4], dM[4], leaf_loss, grain_gate, dvs) at time t, by one linear lerp
         (dvs is NaN for a driver set without a development stage)."""
-        tg = self._tg
-        i = int(np.searchsorted(tg, t, side="right")) - 1
-        i = min(max(i, 0), len(tg) - 2)
-        w = (t - tg[i]) / (tg[i + 1] - tg[i])
-        row = self._tab[i] + w * (self._tab[i + 1] - self._tab[i])
+        row = LE.lerp_row(self._tg, self._tab, t, self._hold)
         return (row[0], row[1], row[2:6], row[6:10], max(row[10], 0.0),
                 min(1.0, max(0.0, row[11])), row[12])
 
     def Cwo_(self, t):  return float(self._Cwo(t))
     def Qtp_(self, t):  return float(self._Qtp(t))
     def M_(self, t):    return np.array([float(f(t)) for f in self._M])
-    def dM_(self, t):   return np.array([float(f(t)) for f in self._dM])
+    def dM_(self, t):   return np.asarray(self.drivers_at(t)[3], float)
     def leaf_loss_(self, t):  return max(float(self._leaf_loss(t)), 0.0)
     def grain_gate_(self, t):  return min(1.0, max(0.0, float(self._grain_gate(t))))
     def dvs_(self, t):
@@ -677,8 +676,8 @@ class RiceUptakeModel:
         if kio is None:
             return None
         k_in, k_out = kio
-        row = LE.lerp_table(self.inputs._tg, self.inputs._tab, ts)
-        row2 = LE.lerp_table(self.inputs._tg, self.inputs._tab2, ts)
+        row = LE.lerp_table(self.inputs._tg, self.inputs._tab, ts, self.inputs._hold)
+        row2 = LE.lerp_table(self.inputs._tg, self.inputs._tab2, ts, self.inputs._hold2)
         Cwo, Q = row[:, 0], row[:, 1]
         M = np.maximum(row[:, 2:6], MASS_FLOOR)
         dM = row[:, 6:10]
@@ -765,11 +764,11 @@ class RiceUptakeModel:
         import linear_expm as LE
         inp = self.inputs
         ts = np.asarray(ts, float)
-        row = LE.lerp_table(inp._tg, inp._tab, ts)
+        row = LE.lerp_table(inp._tg, inp._tab, ts, inp._hold)
         D, dD = np.ones((len(ts), self.n_states)), np.zeros((len(ts), self.n_states))
         D[:, FRUIT], dD[:, FRUIT] = np.maximum(row[:, 5], MASS_FLOOR), row[:, 9]
         if self.husk:
-            row2 = LE.lerp_table(inp._tg, inp._tab2, ts)
+            row2 = LE.lerp_table(inp._tg, inp._tab2, ts, inp._hold2)
             D[:, self.HUSK], dD[:, self.HUSK] = row2[:, 5], row2[:, 6]
         return D, dD
 

@@ -693,7 +693,7 @@ Section 7.8 (written for the incumbent default; read on its records):
 - E24 HELD (`tests/test_amendment2a.py`: relative change < 1e-6).
 
 Band (`input_range_band`, median over 11 congeners, down / up): on the incumbent, root ÷1.29 / ×1.29,
-straw ÷1.86 / ×2.43, grain ÷3.80 / ×6.49 (amendment 1: ÷1.27 / ×1.25, ÷1.35 / ×1.32, ÷2.54 / ×2.07); the
+straw ÷1.87 / ×2.44, grain ÷3.75 / ×6.28 (amendment 1: ÷1.27 / ×1.25, ÷1.35 / ×1.32, ÷2.54 / ×2.07); the
 crop sets lead the straw band for 11/11. On the chosen default (redistributed_fit; the band the app
 and `ASSUMPTIONS.md` carry): root ÷1.29 / ×1.29, straw ÷1.40 / ×1.89, grain ÷2.97 / ×3.65; the crop sets
 lead the straw band 11/11 and the grain band 7/11 (phi 3/11, PFBS's L_Ph range 1/11), root composition
@@ -716,6 +716,13 @@ its limit is fixed in the model):
   gate, the concentration form has a relaxation time M_floor/dM ~ 1e-15 d at heading that BDF cannot
   step. After both, floor 1e-15 moves no number by more than 1e-5, and brown rice's pre-harvest water
   moves its dry value by 0 (it was 0.0012 log10; `tests/test_amendment2a.py` now holds it to 1e-9).
+  (iii) Without the gate, the central-difference growth assigned half of the first day's growth to the
+  day before, when brown rice still sits on the floor: its burden there was right but its
+  concentration (burden / floor) was ~1e5 x the harvest value at that one node
+  (`test_grain_formation_gate`). The growth that draws a terminal pool's inflow (the grain's dM, its
+  dry growth, the husk's growth) is now the slope of the linearly interpolated mass on each interval
+  (`linear_expm.interval_slopes`); this moved every Yamazaki cell by <= 0.0002 log10, below reporting
+  precision, so the re-fit was not repeated again (the transfer records and the brief were).
   At the fitted values the Yamazaki observable moved 0.1160 -> 0.1158 (redistributed_fit); the re-fit,
   the transfer runs, both bands and the brief were repeated on the corrected numerics, and the numbers
   in this section are those of the repeat (the first run's are in git history).

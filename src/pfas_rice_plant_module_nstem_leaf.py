@@ -83,6 +83,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
 import pfas_rice_plant_module_4pool_surf as _P4   # SOLVER / SUBSTEPS (one switch)
+import linear_expm as LE
 
 from pfas_rice_plant_module_4pool_surf import (
     Environment, Compound, Compartment, binding_factors, dry_binding, root_uptake, grain_formed,
@@ -123,8 +124,10 @@ class PlantInputsNL:
         # the RHS is called ~3k times per solve, so 2 scipy calls instead of 2*(N+3)
         # cuts the solve time ~3x. Same linear interpolant, same extrapolation.
         self._M = interp1d(self.t, self.M, axis=0, **kw)
+        # the grain's growth as the interval slope (it draws the grain's inflow;
+        # `linear_expm.interval_slopes`), the other organs' by central difference
         dM = np.gradient(self.M, self.t, axis=0)
-        self._dM = interp1d(self.t, dM, axis=0, **kw)
+        dM[:, -1] = LE.interval_slopes(self.t, self.M[:, -1])
         ll = np.zeros(len(self.t)) if self.leaf_loss is None else np.asarray(self.leaf_loss, float)
         self._leaf_loss = interp1d(self.t, ll, **kw)
         # grain FORMATION gate gamma(t): 0 while the grain (last column) sits on the
@@ -145,6 +148,8 @@ class PlantInputsNL:
         self._tab = np.column_stack([np.asarray(self.Cwo, float), np.asarray(self.Qtp, float),
                                      self.M, dM, ll, gate, dv])
         self._sl = (slice(2, 2 + n), slice(2 + n, 2 + 2 * n), 2 + 2 * n, 3 + 2 * n, 4 + 2 * n)
+        self._hold = np.zeros(self._tab.shape[1], bool)
+        self._hold[1 + 2 * n] = True                  # the grain's growth: held over the interval
         # the second table (PREREG 7.1/7.2): theta(t) per compartment, the grain's DRY growth,
         # the husk's dry mass, growth and formation gate; NaN/zeros when not given
         th = (np.full(self.M.shape, np.nan) if self.theta is None
@@ -153,35 +158,30 @@ class PlantInputsNL:
                 else np.full(len(self.t), np.nan))
         mh = (np.full(len(self.t), MASS_FLOOR) if self.M_husk is None
               else np.maximum(np.asarray(self.M_husk, float), MASS_FLOOR))
-        self._tab2 = np.column_stack([th, np.gradient(gdry, self.t), mh,
-                                      np.gradient(mh, self.t), grain_formed(mh)])
+        self._tab2 = np.column_stack([th, LE.interval_slopes(self.t, gdry), mh,
+                                      LE.interval_slopes(self.t, mh), grain_formed(mh)])
         self._sl2 = (slice(0, n), n, n + 1, n + 2, n + 3)
+        self._hold2 = np.zeros(self._tab2.shape[1], bool)
+        self._hold2[[n, n + 2]] = True                # the grain dry growth and husk growth
 
     def drivers_at(self, t):
-        """(Cwo, Qtp, M, dM, leaf_loss, grain_gate, dvs) at time t, by one linear lerp."""
-        tg = self._tg
-        i = int(np.searchsorted(tg, t, side="right")) - 1
-        i = min(max(i, 0), len(tg) - 2)
-        w = (t - tg[i]) / (tg[i + 1] - tg[i])
-        row = self._tab[i] + w * (self._tab[i + 1] - self._tab[i])
+        """(Cwo, Qtp, M, dM, leaf_loss, grain_gate, dvs) at time t, by one linear lerp (the
+        grain's growth held over the interval)."""
+        row = LE.lerp_row(self._tg, self._tab, t, self._hold)
         sM, sdM, ill, ig, idv = self._sl
         return (row[0], row[1], row[sM], row[sdM], max(row[ill], 0.0),
                 min(1.0, max(0.0, row[ig])), row[idv])
 
     def extras_at(self, t):
         """(theta[n], grain dry growth, husk dry mass, husk growth, husk gate) at time t."""
-        tg = self._tg
-        i = int(np.searchsorted(tg, t, side="right")) - 1
-        i = min(max(i, 0), len(tg) - 2)
-        w = (t - tg[i]) / (tg[i + 1] - tg[i])
-        row = self._tab2[i] + w * (self._tab2[i + 1] - self._tab2[i])
+        row = LE.lerp_row(self._tg, self._tab2, t, self._hold2)
         sth, igd, imh, idh, igh = self._sl2
         return row[sth], row[igd], row[imh], row[idh], min(1.0, max(0.0, row[igh]))
 
     def Cwo_(self, t): return float(self._Cwo(t))
     def Qtp_(self, t): return float(self._Qtp(t))
     def M_(self, t):   return np.asarray(self._M(t), dtype=float)
-    def dM_(self, t):  return np.asarray(self._dM(t), dtype=float)
+    def dM_(self, t):  return np.asarray(self.drivers_at(t)[3], dtype=float)
     def leaf_loss_(self, t):  return max(float(self._leaf_loss(t)), 0.0)
     def grain_gate_(self, t):  return min(1.0, max(0.0, float(self._grain_gate(t))))
     def dvs_(self, t):
@@ -370,8 +370,8 @@ class NStemLeafModel:
             return None
         k_in, k_out = kio
         inp = self.inputs
-        row = LE.lerp_table(inp._tg, inp._tab, ts)
-        row2 = LE.lerp_table(inp._tg, inp._tab2, ts)
+        row = LE.lerp_table(inp._tg, inp._tab, ts, inp._hold)
+        row2 = LE.lerp_table(inp._tg, inp._tab2, ts, inp._hold2)
         sM, sdM, ill, ig, idv = inp._sl
         sth, igd, imh, idh, igh = inp._sl2
         Cwo, Q = row[:, 0], row[:, 1]
@@ -453,14 +453,14 @@ class NStemLeafModel:
         import linear_expm as LE
         inp = self.inputs
         ts = np.asarray(ts, float)
-        row = LE.lerp_table(inp._tg, inp._tab, ts)
+        row = LE.lerp_table(inp._tg, inp._tab, ts, inp._hold)
         sM, sdM = inp._sl[0], inp._sl[1]
         Gr = self.GRAIN
         D, dD = np.ones((len(ts), self.n_states)), np.zeros((len(ts), self.n_states))
         D[:, Gr] = np.maximum(row[:, sM][:, Gr], MASS_FLOOR)
         dD[:, Gr] = row[:, sdM][:, Gr]
         if self.husk:
-            row2 = LE.lerp_table(inp._tg, inp._tab2, ts)
+            row2 = LE.lerp_table(inp._tg, inp._tab2, ts, inp._hold2)
             _, _, imh, idh, _ = inp._sl2
             D[:, self.HUSK], dD[:, self.HUSK] = row2[:, imh], row2[:, idh]
         return D, dD

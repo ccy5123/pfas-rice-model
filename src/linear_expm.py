@@ -98,13 +98,42 @@ def affine_parts(rhs, t, n):
     return A, b
 
 
-def lerp_table(tg, tab, ts):
+def lerp_table(tg, tab, ts, hold=None):
     """Row-wise linear interpolation of a driver table, exactly as `drivers_at` does it
-    (the same interval choice and linear extrapolation beyond the ends), at many times."""
+    (the same interval choice and linear extrapolation beyond the ends), at many times.
+    Columns flagged in `hold` keep the interval's left-node value (the slopes of
+    `interval_slopes`)."""
     ts = np.asarray(ts, float)
     i = np.clip(np.searchsorted(tg, ts, side="right") - 1, 0, len(tg) - 2)
     w = (ts - tg[i]) / (tg[i + 1] - tg[i])
-    return tab[i] + w[:, None] * (tab[i + 1] - tab[i])
+    out = tab[i] + w[:, None] * (tab[i + 1] - tab[i])
+    if hold is not None:
+        out[:, hold] = tab[i][:, hold]
+    return out
+
+
+def lerp_row(tg, tab, t, hold=None):
+    """One row of `lerp_table` at a scalar time (the rhs's driver read)."""
+    i = int(np.searchsorted(tg, t, side="right")) - 1
+    i = min(max(i, 0), len(tg) - 2)
+    w = (t - tg[i]) / (tg[i + 1] - tg[i])
+    row = tab[i] + w * (tab[i + 1] - tab[i])
+    if hold is not None:
+        row[hold] = tab[i][hold]
+    return row
+
+
+def interval_slopes(tg, y):
+    """The slope of y's piecewise-linear interpolant on each driver interval, stored at the
+    interval's left node (the last node repeats the last slope): the growth that matches the
+    linearly interpolated mass inside the interval. Used for the growth that draws an inflow
+    into a terminal pool (the grain's phloem, the husk): a central difference assigns half of
+    the first day's growth to the day before, when the organ still sits on the mass floor, and
+    the pool's concentration there is burden / floor (PREREG section 8)."""
+    y = np.asarray(y, float)
+    dt = np.diff(np.asarray(tg, float)).reshape((-1,) + (1,) * (y.ndim - 1))
+    s = np.diff(y, axis=0) / dt
+    return np.concatenate([s, s[-1:]], axis=0)
 
 
 def root_coefficients(root_uptake, cmpd, env):
@@ -204,8 +233,8 @@ class _BurdenDense:
     def __call__(self, tt):
         tt = np.atleast_1d(np.asarray(tt, float))
         D, _ = self._scale(tt)
-        y = np.asarray(self._sol(tt), float).reshape(D.shape[1], len(tt))
-        return y / D.T
+        y = np.asarray(self._sol(tt), float).reshape(D.shape[1], len(tt)) / D.T
+        return y if y.shape[1] > 1 else y[:, 0]          # as the wrapped dense output
 
 
 class BurdenSolution:
