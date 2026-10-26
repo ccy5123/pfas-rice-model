@@ -245,6 +245,45 @@ Expectations added before the fit:
   reported is the midpoint run; the ends are printed next to it.
 - No expectation is attached.
 
+### 5.10 Addendum (committed before the neutral-path re-runs on it; amendment 1's outcome is recorded in section 6)
+Addendum 5.8 put the sourced rice organ water into the neutral path but left the lipid fractions on the
+basis they were reported on (fresh weight at ~90 % water), and converted every table's dry-weight
+observations with the rice organ water whatever the plant (section 6, 5.8 diagnosis). Choices made by
+the user on 2026-10-26: where no species or organ value exists, use Li et al. 2019's stated convention
+(0.90 water for fresh roots; their 13-crop root lipid list as a range); Liu 2023's unstated basis is
+scored both ways.
+
+- **Lipid is carried on a dry basis** and restated at the organ's water: L_fw = L_dw·(1 − W). A source's
+  fresh lipid is turned to dry with that source's own water (Li 2019: 0.90, so L_dw = 10·L_fw).
+- **Rice compartments (the tool's neutral path)**: W = the sourced rice θ (unchanged); L_dw root =
+  the cereal range of Li 2019 (maize 0.53, barley 1.00, wheat 1.10-1.14 % fw at 0.90 -> 5.3-11.4 % dw);
+  stem and leaf = rice straw ether extract 0.9-2.1 % DM (Feedipedia, n = 161); grain = brown rice crude
+  fat 1.9-3.3 % DW (FAO 1993 Table 14). Trapp 1994's soybean 1 % / 3 % leave the default; the
+  `briggs_anchor` mode stays as the named alternative.
+- **Each validation table runs on its own plant's composition**, and its dry-weight observations are
+  converted with that same water (the ODE's dry -> fresh organ mass too, so K_PW and M share one water):
+
+  | table | basis | water | dry lipid |
+  |---|---|---|---|
+  | Liu 2023 rice root, hydroponic 25 d | fw (inferred) and dw, both reported | root 0.824-0.888 (hydroponic rice seedlings: Choe 2026, Ya 2026) | cereal range |
+  | Ge 2017 rice TF, soil pots 60 d | dw (stated) | root 0.845-0.851 (Saleh 2025, soil pots 56 d); leaf 0.731 (Hoang 2019, tillering) | rice compartments |
+  | Kodesova 2019, 4 vegetables | dw (stated) | radish 0.928-0.945 (Ievinsh 2023 Table 3); lamb's lettuce, spinach, arugula 0.90 (Li 2019 convention) | spinach 3.4 %, radish 1.0 % (Li 2019); lamb's lettuce, arugula: Li's 13-crop range 1.0-11.4 % |
+  | Li 2019 hydroponic | fw (Li, at 0.90) | 0.90 (Li) | barley 10.0 %, pumpkin (Cucurbita pepo) 7.0 %; rice cereal range; other species Li's 13-crop range |
+  | Li 2019 soil | fw (Li, at 0.90) | 0.90 (Li) | each row's own f_lip (Li Table S2) / 0.10 |
+  | Briggs 1983 barley shoot and stem, 11 d | fw | barley stem + leaf 0.861-0.875 (Wang 2017 Table 1; 34-d hydroponic plants) | barley straw ether extract 0.6-3.8 % DM (Feedipedia, n = 16) |
+
+  Organs a table gives no value for take the rice compartments' values. Ge's stem rows are not scored:
+  no rice stem water at the vegetative stage was found (the ODE's stem runs on the rice θ).
+  Li's 0.90 is stated for roots, so it is not used for Briggs' shoots, which have a barley shoot value.
+- **Ranges**: every score is reported at the midpoints, with its minimum and maximum over the corners
+  (each range at its low and high end) next to it.
+- The pre-5.8 code paths (rice water 0.90/0.83/0.78/0.14, unresolved) do not come back.
+- **Expectations** (misses will be recorded): N1 the Li 2019 hydroponic and soil scores move to within
+  0.05 of their pre-5.8 values (0.546, 0.550), since both return to Li's own basis; N2 Liu (fw reading)
+  and Kodesova score better than their 5.8 values (0.256, 0.469); N3 the default rice root K_PW rises
+  for lipophilic compounds (L_fw 1 % -> 2.4 %), close to the Briggs anchor (2.47 %); N4 no expectation for
+  Ge (3 leaf rows) or Briggs.
+
 ## 6. Outcome
 
 Runs of 2026-10-26 on amendment 1 (records: `validation/refit_sourced.json`,
