@@ -57,12 +57,13 @@ def test_forcing_and_fxy_toggles_run():
     with pytest.raises(ValueError):                 # the placeholder logistics were removed
         api.simulate("PFOA", measured_forcing=False)
     # the two f_xy sources differ for a long chain (recommended monotone vs the fit); the
-    # f_xy source applies only with lipid loading off (the default lipid model has its own f_xy)
+    # f_xy source applies only with lipid loading off (the lipid model has its own f_xy)
     rec = api.simulate("PFDA", f_xy_source="recommended", lipid_loading=False)["params"]["f_xy"]
     fit = api.simulate("PFDA", f_xy_source="fit", lipid_loading=False)["params"]["f_xy"]
     assert rec != fit
+    assert api.simulate("PFDA")["params"]["f_xy"] == fit           # the default (amendment 2a)
     with pytest.raises(ValueError):
-        api.simulate("PFDA", f_xy_source="fit")
+        api.simulate("PFDA", f_xy_source="fit", lipid_loading=True)
 
 
 def test_observed_baf_lookup():

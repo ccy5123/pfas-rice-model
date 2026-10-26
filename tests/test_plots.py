@@ -108,18 +108,19 @@ def test_fig_tang_tf_builds():
 
 
 def test_fig_tang_tf_lipid_extra_series():
-    """The app's Tang tab: the default model (lipid loading on; OOS here -- its constants
-    were fit on Yamazaki, not on Tang) is the main model bar, and the free anion on the same
-    shoot is drawn as its own third series."""
+    """The app's Tang tab: the default model (per-congener f_xy, lipid loading off; OOS here --
+    its constants were fit on Yamazaki, not on Tang) is the main model bar, and the lipid
+    loading on the same shoot is drawn as its own third series."""
     import model_api as api, plots
     val = api.tang_tf_validation("PFOS", dose="low")
+    vlip = api.tang_tf_validation("PFOS", dose="low", lipid_loading=True)
     vfree = api.tang_tf_validation("PFOS", dose="low", lipid_loading=False)
-    assert val["lipid_loading"] and not vfree["lipid_loading"]
-    fig = plots.fig_tang_tf(val, vfree)
-    assert len(fig.data) == 3                       # Tang + model + free anion
-    assert any("free anion" in (tr.name or "") for tr in fig.data)
+    assert not val["lipid_loading"] and vlip["lipid_loading"]
+    fig = plots.fig_tang_tf(val, vlip, extra_label="model · lipid loading")
+    assert len(fig.data) == 3                       # Tang + model + lipid loading
+    assert any("lipid loading" in (tr.name or "") for tr in fig.data)
     # the K_PL-gated lipid term carries the high-K_PL sulfonate into the stalk
-    assert val["model_tf"]["stalk"] > 3 * vfree["model_tf"]["stalk"]
+    assert vlip["model_tf"]["stalk"] > 3 * vfree["model_tf"]["stalk"]
 
 
 def test_fig_burden_builds():

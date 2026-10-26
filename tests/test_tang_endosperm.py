@@ -70,7 +70,8 @@ def test_the_honesty_band_uses_the_default_configuration_on_tang():
     assert api.APRIORI_OOS_SCORES[key] == pytest.approx(default, abs=1e-4)
     with open(os.path.join(ROOT, "validation", "transfer_sourced.json")) as f:
         rec = json.load(f)["errors"]
-    for v, kw in (("redistributed_lipid", {}), ("redistributed_free", dict(lipid_loading=False)),
+    for v, kw in (("redistributed_fit", {}), ("redistributed_lipid", dict(lipid_loading=True)),
+                  ("redistributed_free", dict(lipid_loading=False)),
                   ("4pool_free", dict(shoot="4pool", lipid_loading=False))):
         assert _rmse(**kw) == pytest.approx(float(np.sqrt(np.mean(np.square(rec[v]["tang"])))),
                                             abs=1e-6), v

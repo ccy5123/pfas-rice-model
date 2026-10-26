@@ -104,14 +104,14 @@ def test_pfas_path_is_unmoved(key, expected):
 
 
 PFAS_GOLDEN_DEFAULT = {
-    "PFOA": {"root": 1.7689643602154441, "grain": 0.4245762337693362},
-    "PFBA": {"root": 2.4730429956925484, "grain": 0.9672440874466282},
+    "PFOA": {"root": 1.7689644922415433, "grain": 0.4256529492927554},
+    "PFBA": {"root": 2.473042900671329, "grain": 0.9668122132998346},
 }
 
 
 @pytest.mark.parametrize("cong,expected", list(PFAS_GOLDEN_DEFAULT.items()))
 def test_pfas_path_is_unmoved_in_the_default(cong, expected):
-    """The same backstop on the default configuration (redistributed shoot + lipid)."""
+    """The same backstop on the default configuration (redistributed shoot, per-congener f_xy)."""
     r = api.simulate(cong)
     for tissue, want in expected.items():
         assert r["baf_final"][tissue] == pytest.approx(want, rel=GOLDEN_REL), tissue

@@ -107,8 +107,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
   ranges (run at the midpoint, reported as a band): organ composition, `φ`, `T_C,Ph`, the shoot
   transpiration shares.
 - **Tier 1** BAF-identifiable, fitted to Yamazaki (`validation/refit_sourced.py`): `r_eq` (root),
-  `L_Ph` (grain), the lipid-loading constants (straw; terms the data do not identify are removed
-  by backward elimination), and `f_xy` in the `*_fit` variant only.
+  `L_Ph` (grain), and for the straw `f_xy` per congener (the default, `*_fit`) or the lipid-loading
+  constants (`*_lipid`; terms the data do not identify are removed by backward elimination).
 - **Tier 2** need inhibitor/kinetic data: channel vs carrier entry, influx vs efflux asymmetry —
   not in the shipped model (the linear entry lumps them).
 - **Tier 3** QSPR/measurement (chain-length resolved): `K_prot, K_PL, K_cw`.
@@ -123,35 +123,44 @@ retired); git history holds the older states of this file. Every input the model
 with its source or its sensitivity range, is in **`docs/ASSUMPTIONS.md`**.
 
 ### 6.1 What the model is
-- **No value without a source** (amendment 1, `docs/PREREG_sourced_values.md` 5.1-5.9): every input
-  is a value read in a source, a fit the data identify, a removed mechanism, or a sourced range run at
-  its midpoint with its effect reported (`params/input_range_band.json`). Inventory:
-  `params/value_provenance.csv` (guarded by `tests/test_value_provenance.py`; the default-scope rows
-  still open are named there); quotes: `docs/literature_db/sourced_inputs.csv`.
-- **Default configuration**: `simulate()` runs the **redistributed shoot** (`shoot="redistributed"`,
-  `NStemLeafModel`: N = 4 stem segments + leaf; each organ keeps the solute its own transpiration deposits
-  — retention 1, derived; the sheath + culm share of transpiration 0.29 (0.22-0.36) split evenly over the
-  segments; the panicle's share 0 before heading, 0.21 (0.09-0.33) at DVS 1 and 0.07 (0-0.14) at DVS 2,
-  linear between) with **lipid loading** (`lipid_loading=True`; one `f_xy` and one `g_xy` for every chain) and the **linear equilibrium
-  root entry** `λ_eq·(r_eq·C_w^o − C_w,root)`. `model_api.DEFAULT_SHOOT` / `DEFAULT_LIPID_LOADING`;
-  `shoot="4pool"` is the single-straw core (same panicle share for its leaf/grain split).
+- **No value without a source** (amendments 1 and 2a, `docs/PREREG_sourced_values.md` 5.1-5.10, 7.1-7.13):
+  every input is a value read in a source, a fit the data identify, a removed mechanism, or a sourced range
+  run at its midpoint with its effect reported (`params/input_range_band.json`). Inventory:
+  `params/value_provenance.csv` (guarded by `tests/test_value_provenance.py`; the default-scope rows still
+  open are named there); quotes: `docs/literature_db/sourced_inputs.csv`.
+- **Default configuration** (re-decided after the amendment-2a re-fit, PREREG §8): `simulate()` runs the
+  **redistributed shoot** (`shoot="redistributed"`, `NStemLeafModel`: N = 4 stem segments + leaf; each organ
+  keeps the solute its own transpiration deposits — retention 1, derived; the sheath + culm share of
+  transpiration 0.29 (0.22-0.36) split evenly over the segments; the panicle's share 0 before heading, 0.21
+  (0.09-0.33) at DVS 1 and 0.07 (0-0.14) at DVS 2, linear between) with the **free anion and `f_xy` fitted
+  per congener** (`redistributed_fit`: `f_xy_source="fit"`, `lipid_loading=False`) and the **linear
+  equilibrium root entry** `λ_eq·(r_eq·C_w^o − C_w,root)`. `model_api.DEFAULT_SHOOT` /
+  `DEFAULT_F_XY_SOURCE` / `DEFAULT_LIPID_LOADING`; `resolve_loading` fills an unspecified loading per shoot
+  (`shoot="4pool"` alone runs `4pool_lipid`: the single-straw core has no `_fit` variant). On Yamazaki the
+  default is a **reproduction** (f_xy fitted to the straw), not a prediction of the straw.
 - **Variants, each with its own fitted values** (`model_api.variant_key`; parameters.json `r_eq__<v>`,
-  `L_Ph__<v>`, `f_xy__<v>`, `lipid_loading[shoot]`): `redistributed_lipid` (default), `redistributed_free`
-  (monotone a-priori `f_xy`), `redistributed_fit` (`f_xy` fitted to the straw too: a reproduction),
-  `4pool_lipid`, `4pool_free`. A switch never runs another variant's values. A record without a fit
+  `L_Ph__<v>`, `f_xy__<v>`, `lipid_loading[shoot]`): `redistributed_fit` (default), `redistributed_lipid`
+  (amendment 1's default: one `f_xy` and one `g_xy` for every chain), `redistributed_free` (monotone a-priori
+  `f_xy`), `4pool_lipid`, `4pool_free`. A switch never runs another variant's values. A record without a fit
   (GenX, SMILES) takes the fitted congeners' median.
 - **Root entry**: the GHK + Michaelis–Menten pair left the model (no source for E_m in a paddy root nor
   for any PFAS Km/Vmax; every dose series found is linear). `r_eq` is fitted to Yamazaki's root in closed
-  form (the model is linear in it); `λ_eq` = 1e6 is numerical (converged). The carrier-vs-bypass and
-  dose-series analyses are archived.
+  form (the model is linear in it); `λ_eq` = 1e6 is numerical (converged).
 - **4-pool core** (`pfas_rice_plant_module_4pool_surf`): basis-A 4-compartment ODE, xylem loading `f_xy`,
   mass-conserving phloem, grain formation gate (a step at the 1e-9 kg organ-mass floor), leaf senescence
   loss flux. `pfas_rice_plant_module` is an alias of it. Phloem constants `phi`, `T_C_Ph` have no class
   default: callers pass the sourced midpoints (`model_api.PHI`, `T_C_PH`).
-- **Organ mass is FRESH weight** (`src/organ_mass.py`): crop drivers produce DRY matter, converted with
-  the binding factor's θ_fw (sourced composition, `params/rice_composition_sourced.csv`; the neutral path
-  reads the same θ since 5.8). θ_fw is constant over the season; organ water in fact falls with stage (root
-  0.76-0.89 vegetative, 0.51-0.77 at maturity) — reopened, amendment 2.
+- **Organ water by stage** (amendment 2a, PREREG 7.1; `organ_water="stage"`): root, stem and leaf θ_fw
+  follow DVS linearly between sourced anchors (`params/rice_theta_stage_sourced.csv`: root 0.8245 at DVS ≤ 0.65
+  → 0.6365 at DVS 2; stem 0.816 → 0.7095; leaf 0.731 → 0.659); the fresh mass, the binding factor and the
+  harvest operator read the same θ(t). Brown rice is not staged (0.21). `organ_water="constant"` is amendment 1.
+- **Organ mass is FRESH weight** (`src/organ_mass.py`): crop drivers produce DRY matter, converted with θ_fw.
+- **Grain = brown rice** (PREREG 7.2; `grain_basis="brown"`, `src/panicle.py`): brown = (WSO − rachis) ×
+  (1 − h(t)), h the husk share of rough grain (1 at heading; Ansari 2017 Nipponbare course scaled to the
+  maturity anchor 0.2075 (0.161-0.254)); rachis = 0.5 (0-1) × WSO at DVS 0.95. Brown rice takes **no xylem**
+  (phloem only; Zee 1972, Oparka & Gates 1981): the panicle's transpiration deposit stays in a terminal husk +
+  rachis pool (per kg dry), reported as `conc_dw["husk"]`, with the rough grain `conc_dw["rough"]`.
+  `grain_basis="panicle"` is amendment 1 (ORYZA's whole panicle). A measured growth table's grain is taken as given.
 - **Phloem = two streams from the leaf** (`phloem_flows`): to the grain, the sap its DRY growth draws
   (`grain_dry_growth` × `T_C_Ph`, 6.1 L/kg (4.4-7.8)); to the root, φ·Q_TP (φ 0.06 (0.02-0.10)).
 - **Harvest observation operator** (`src/harvest.py`): the ODE carries GREEN leaves; dead blades are
@@ -159,78 +168,82 @@ with its source or its sensitivity range, is in **`docs/ASSUMPTIONS.md`**.
   rice does not shed its dead blades; 0 = all lost, a sensitivity). Results carry `conc_dw` /
   `baf_final_dw` (dry basis) next to the fresh-weight values.
 - **Default scenario `"yamazaki2020"`** (`src/site_scenario.py`): JMA Tsukuba 2020 weather, the ORYZA2000
-  port (IR72.D92 verbatim: no Koshihikari/Kasalath set is published — open) transplanted 2020-05-11, sown
-  04-13 (nursery 25.5 d after emergence, the 25- and 26-d drivers interpolated), seedbed cover 2.5 C
-  (0-5.0), 18.5 hills/m², 4.5 plants/hill (4-5), CO₂ 414 ppm; phenology calibrated DRATES-style to each
-  cultivar's measured heading (Kasalath 08-03, Koshihikari 08-11) and harvest (= DVS 2); transpiration
-  from ORYZA eq. 4.4 on FAO-56 terms. `simulate()` runs the mean-date harvest; the Yamazaki observable
-  (`yamazaki_harvest_baf`) combines the two cultivar runs by geometric mean. An explicit `season` other
-  than the site's raises; `scenario="generic"` is the alternative.
+  port (IR72.D92 verbatim) transplanted 2020-05-11, sown 04-13 (nursery 25.5 d after emergence, the 25- and
+  26-d drivers interpolated), seedbed cover 2.5 C (0-5.0), 18.5 hills/m², 4.5 plants/hill (4-5), CO₂ 414 ppm;
+  phenology calibrated DRATES-style to each cultivar's measured heading (Kasalath 08-03, Koshihikari 08-11) and
+  harvest (= DVS 2); transpiration from ORYZA eq. 4.4 on FAO-56 terms. **Japonica crop sets** (Gao 2021; Wu
+  2022 Huanren, Donggang, Liaozhong, Dawa; `src/crop_sets.py`) are a categorical band end, IR72 runs.
+  `simulate()` runs the mean-date harvest; the Yamazaki observable (`yamazaki_harvest_baf`) combines the two
+  cultivar runs by geometric mean. The generic scenario's planting density is defined once
+  (`oryza2000.GENERIC_HILLS_PER_M2`, the crop file's 25); its BAFs do not depend on it.
 - **Observations** (`data_obs/obs_baf_Yamazaki.csv`, built from the SI by
   `docs/literature_db/tools/yamazaki_obs_from_si.py`): dry basis; water from Table S16; straw = the height
   bands weighted by their share of straw dry mass (Tanaka et al. 2022 Fig. 3, mean of the 10 and 49 d after
   heading profiles, each profile a range end); brown rice at a white share of 0.88 (0.86-0.90); < MQL cells
   at the midpoint of [0, MQL); PFBS grain not scored (its censoring bound sets PFBS's L_Ph range).
 
-### 6.2 Calibration on the site-year — `validation/refit_sourced.py` (pre-registered; amendment 1)
-Every variant fits `r_eq` (root, closed form) and `L_Ph` (grain) per congener; the lipid variants add
-two constants shared by all chains (backward elimination left `f_xy = a` 0.0538 and `g_xy` 0.00494 on
-the default; `b`, `g_ph`, `pfsa_ln` and the K_PL gate were removed); `*_fit` adds `f_xy` per congener.
-Yamazaki two-harvest observable, log10 RMSE over 32 cells (records: `validation/refit_sourced.json`,
-outcome: `docs/PREREG_sourced_values.md` §6):
+### 6.2 Calibration on the site-year — `validation/refit_sourced.py` (pre-registered; amendment 2a)
+Every variant fits `r_eq` (root, closed form) and `L_Ph` (grain) per congener; `*_fit` adds `f_xy` per
+congener (straw); the lipid variants add two constants shared by all chains (backward elimination left
+`f_xy = a` 0.0672 and `g_xy` 0.00786 on `redistributed_lipid`). Yamazaki two-harvest observable, log10 RMSE
+over 32 cells (records: `validation/refit_sourced.json`; amendment 1's in `validation/archive/amendment1/`;
+outcome: `docs/PREREG_sourced_values.md` §8):
 
 | variant | all | root | straw | grain |
 |---|---|---|---|---|
-| **redistributed_lipid** (default) | **0.159** | 0.000 | 0.253 | 0.103 |
-| redistributed_fit (a reproduction) | 0.152 | 0.000 | 0.173 | 0.202 |
-| 4pool_lipid | 0.157 | 0.000 | 0.254 | 0.090 |
-| redistributed_free | 1.266 | 0.000 | 1.675 | 1.430 |
-| 4pool_free | 1.359 | 0.000 | 1.891 | 1.406 |
+| **redistributed_fit** (default; a reproduction) | **0.116** | 0.000 | 0.156 | 0.128 |
+| redistributed_lipid | 0.156 | 0.000 | 0.266 | 0.000 |
+| 4pool_lipid | 0.152 | 0.000 | 0.259 | 0.000 |
+| redistributed_free | 1.261 | 0.000 | 1.638 | 1.463 |
+| 4pool_free | 1.308 | 0.000 | 1.791 | 1.396 |
 
-- **Default**: the straw is predicted by the two shared constants (residuals −0.36 PFBA to +0.44
-  PFBS). `L_Ph` sits at 0 for PFBA, PFPeA, PFHpA, PFUnDA and PFBS with the grain still over (+0.07,
-  +0.18, +0.12, +0.24 log): their xylem alone over-delivers; PFDA (6.44) and PFDoDA (13.2) need a
-  phloem concentration above the leaf's.
-- **Free anion**: from PFOA up, and PFOS, the grain is out of reach at any `L_Ph` (PFOA −0.33 to
-  PFDoDA −2.75 log) and the straw is under by 0.9–3.1 log; the stored `L_Ph` of an unreachable chain is
-  merely large. `*_fit`: PFDoDA alone is out of reach (f_xy at 1; straw −0.57, grain −0.22).
-- **Input-range band** (`validation/input_range_band.py` → `params/input_range_band.json`; PREREG 5.4):
-  every sourced range moved to its ends with the fits held; median over 11 congeners grain ÷2.54 /
-  ×2.07, straw ÷1.35 / ×1.32, root ÷1.27 / ×1.25. The panicle's transpiration share at heading leads
-  the grain band (9/11; a shoot share 11/11), root composition (`f_cw`) the root band.
+- **Default**: every cell is reproduced except PFDoDA (f_xy at 1; straw −0.52, grain −0.40 log). Every
+  congener with a grain cell fits `L_Ph` > 0 in every variant (the panicle deposit now goes to the husk).
+- **Free anion**: from PFOA up, and PFOS, the grain is out of reach at any `L_Ph` and the straw is under
+  by 0.8–3.1 log; the stored `L_Ph` of an unreachable chain is merely large.
+- **Input-range band** (`validation/input_range_band.py` → `params/input_range_band.json`; PREREG 5.4, 7):
+  every sourced range moved to its ends with the fits held, now with the stage-water anchors, the husk
+  share, the rachis, the husk phloem draw and the crop sets; median over 11 congeners grain ÷2.98 / ×3.63,
+  straw ÷1.40 / ×1.90, root ÷1.29 / ×1.29. The crop sets lead the straw band (11/11) and the grain band
+  (7/11; φ 3/11), root composition the root band. The one-at-a-time envelope covers the all-corner run in
+  38/66 cases only (inputs interact). The incumbent's band (E19/E23 record):
+  `validation/input_range_band__redistributed_lipid.json`.
 - **Numerics** (`validation/numerics_convergence.py`): exponential integrator (`src/linear_expm.py`),
-  `λ_eq` 1e6, the grain gate step at the floor — every reported number unchanged at 0.0005 log10 under
-  finer settings or BDF at rtol 1e-8.
-- Pre-registered expectations: E1–E6 held (E5 confounded); E7 partly wrong (`λ_eq` 1e4 not
-  converged), E12 wrong (Li grain +0.509); E8–E11, E13–E16 held.
+  `λ_eq` 1e6, the grain gate step at the floor. The brown rice's pre-harvest water moves its dry value by
+  ≤ 0.0012 log10 on the daily driver grid (analytically 0).
+- Pre-registered expectations (amendment 2a): E17–E19, E21 (direction; Choi's husk/brown ratio is not
+  reached: PFOA −0.16, PFOS −0.85 log on the incumbent), E22, E24 held; E20 (the straw moved 0.108 with the
+  shared lipid constants) and E23 (the crop sets, not the panicle share, lead the grain band) wrong.
 - `python reproduce_demo.py` prints the default (`--fit`, `--free`: the other redistributed variants).
 
 ### 6.3 Transfer tests (no parameter fitted to the transfer data) — `validation/transfer_sourced.py`
-log10 RMSE (records: `validation/transfer_sourced.json`, `params/transfer_scores.json`).
+log10 RMSE (records: `validation/transfer_sourced.json`, `params/transfer_scores.json`). Li grain on brown
+rice (the decision basis, PREREG 7.13); the rough-grain value in brackets.
 
-| dataset | 4pool_free | redistributed_free | redistributed_fit | 4pool_lipid | **default** |
+| dataset | 4pool_free | redistributed_free | 4pool_lipid | redistributed_lipid | **default (redistributed_fit)** |
 |---|---|---|---|---|---|
-| Tang 2026 per-organ TF, 0.1 µg/g | 3.693 | 1.757 | 0.695 | 1.030 | **0.729** |
-| Kim 2019 grain BAF excl PFOA, point / [0, MDL] interval | 1.934 / 1.669 | 1.967 / 1.710 | 0.554 / 0.444 | 0.504 / 0.385 | **0.489 / 0.371** |
-| Li 2025 TF by stage, shoot / grain | 3.299 / 1.378 | 1.343 / 1.405 | 0.510 / 1.183 | 1.014 / 1.027 | **0.386 / 1.019** |
+| Tang 2026 per-organ TF, 0.1 µg/g | 1.872 | 1.737 | 0.916 | 0.676 | **0.686** |
+| Kim 2019 grain BAF excl PFOA, point / [0, MDL] interval | 2.038 / 1.778 | 2.119 / 1.867 | 0.559 / 0.445 | 0.559 / 0.444 | **0.562 / 0.443** |
+| Li 2025 TF by stage, shoot / grain [rough] | 1.490 / 1.817 | 1.278 / 1.864 | 0.937 / 1.375 | 0.376 / 1.363 [0.850] | **0.467 / 1.334 [1.044]** |
 
-- **Lipid loading transfers; the free anion does not.** The default stays (PREREG 5.3): no variant is
-  better on a transfer endpoint and not worse on all.
-- **Li grain**: under-predicted (mean −0.98 log) since the panicle's share is 0 before heading
-  (amendment 1); the earlier default reached 0.51 with a share that let the young panicle load early.
-- **Selection caveat**: Tang, Kim and Li chose the default at the earlier switch, so its scores on
-  them — and the band built from them — may be optimistic.
+- **Decision (PREREG 5.3, §8; applied by the user)**: `redistributed_fit` is better than the incumbent
+  (`redistributed_lipid`) on the Li grain (−0.029, 95 % [−0.046, −0.006]) and ties on every other endpoint
+  (Li shoot point 0.376 → 0.467, inside the tie). The margin is small and the chosen variant reproduces
+  Yamazaki's straw.
+- **Grain against amendment 1** (0.489 Kim, 1.019 Li): worse, since brown rice takes no xylem; Li's grain
+  is under-predicted; on the rough basis Li grain is 0.850 (incumbent).
+- **Selection caveat**: Tang, Kim and Li chose the default, so its scores on them — and the band built
+  from them — may be optimistic.
 - **Honesty band**: `model_api.APRIORI_OOS_SCORES` (read from `params/transfer_scores.json`; no number
-  typed in code); their median 0.489 log10 (**×3.1**) is the band the Simple view shows. Yamazaki is not
+  typed in code); their median 0.562 log10 (**×3.65**) is the band the Simple view shows. Yamazaki is not
   in the list (in-sample).
 - **Kim PFOA per site** (`kim2019_pfoa_anchor.py`): censored per-site geomean 9.94 L/kg [4.57, 20.16];
-  the default's 0.537 L/kg is below the interval (−1.27 log).
+  the default's 0.539 L/kg is below the interval (−1.27 log).
 - **Inverse** (`estimate_exposure_bayesian`, Kim PFOA brown rice 0.349 µg/kg dw, void water
-  0.0787 µg/L): the default estimates 0.650 µg/L (8.3× over; 95 % 0.072–5.91, which contains the
+  0.0787 µg/L): the default estimates 0.648 µg/L (8.2× over; 95 % 0.051–8.18, which contains the
   measured value) (`validation/policy_brief_runs.py`).
-- Earlier decisions on the pre-amendment model (the default switch, the panicle-size share, the gate
-  numerics) are records in `validation/archive/` and git history; their numbers do not describe the
-  current model.
+- Earlier decisions (the amendment-1 records, the pre-amendment default switch, the panicle-size share, the
+  gate numerics) are in `validation/archive/` and git history; their numbers do not describe the current model.
 - Every transfer dataset runs on the calibration site-year drivers (Tang/Kim/Li sites and dates
   are not in the repo) — see `docs/ASSUMPTIONS.md` §5.
 
@@ -360,20 +373,20 @@ is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested agains
 
 ## 9. Next tasks / open questions
 1. **Measurements that would narrow the sourced ranges** (`docs/ASSUMPTIONS.md`,
-   `params/value_provenance.csv`): a rice panicle transpiration share by stage (the largest grain
-   lever), organ composition and water over a season, rice phloem sap per grain DM (T_C,Ph), φ,
-   rice-root cell-wall / plaque PFAS sorption (K_cw, K_surf), Yamazaki 2023 SI raw values (MQL flags,
-   planting density, nursery), the site's paddy soil.
+   `params/value_provenance.csv`): japonica crop parameters for the site's cultivars (the largest straw and
+   grain lever since amendment 2a), a rice panicle transpiration share by stage, rice phloem sap per grain DM
+   (T_C,Ph), φ, organ composition over a season, the rachis share of the panicle, rice-root cell-wall / plaque
+   PFAS sorption (K_cw, K_surf), Yamazaki 2023 SI raw values (MQL flags, planting density, nursery), the
+   site's paddy soil.
 2. **Transfer datasets on their own drivers**: Tang (site, dates), Kim (field calendars), Li (stage
    dates) — each currently runs on the Yamazaki site-year.
-3. **Grain**: the free anion cannot reach the grain from PFOA up; the default fits Yamazaki's grain
-   (0.103) but under-predicts Li's grain by stage (1.019; the panicle's share is 0 before heading) and
-   PFBA/PFPeA/PFHpA/PFUnDA stay over at L_Ph = 0. The timing of grain loading is open; harvest-only
-   data cannot decide it.
-4. **Amendment 2** (pre-register first; draft, prototypes and a Korean handoff in `docs/amendment2/`): organ water θ(t) by stage; the grain pool as brown rice
-   (hull share sourced); the measured-table leaf loss; one density constant; japonica crop sets as a
-   band; SMILES K_cw; the neutral path's composition basis per dataset; site-sourced paddy soil; a
-   volatile-compound data search; then the final re-fit and a docs sweep.
+3. **Grain**: brown rice is phloem-fed only, and the default under-predicts Li's grain by stage (1.334;
+   rough basis better) and Kim's PFOA; the husk/brown ratio is below Choi 2018's (PFOS by ~1 log). The
+   timing and route of grain loading are open; harvest-only data cannot decide them.
+4. **Amendment 2b** (registered in PREREG 7.9; draft, prototypes and a Korean handoff in
+   `docs/amendment2/`): the neutral path (organ water, dry-basis lipid, the composition basis per dataset),
+   site-sourced paddy soil and the irrigation-source exposure shape, app values (KNHANES intake, the
+   white/brown basis), SMILES K_cw, a volatile-compound data search; then a docs sweep.
 5. **Method B** (tight HYDRUS coupling) — later.
 
 ## 10. Gotchas / external dependencies
