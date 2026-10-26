@@ -2,6 +2,16 @@
 
 > Persistent context for Claude Code. Read this first. Full math lives in `docs/`.
 
+## 0. Working rules (from the user — apply in every session)
+- **Full text not obtained → tell the user, as a DOI list.** Whenever a paper the work needs
+  could not be read in full (paywall, download error, page refused, only an abstract or a
+  search snippet seen), say so to the user right away and give a list: DOI · first author
+  year · journal · what is needed from it (table/figure/value) · why it failed. The user
+  obtains papers out of band. Never let an abstract- or snippet-only value pass as read:
+  mark it as such in the work and in `sourced_inputs.csv`. Try the open-access copy first
+  (OpenAlex `oa_url`, J-STAGE, publisher PDF) and list only what still fails.
+  Running list: `docs/literature_db/fulltext_needed.md`.
+
 ## 1. Goal
 Mechanistic **four-compartment dynamic model** for PFAS bioaccumulation in rice
 (*Oryza sativa*), built as an **ionizable-organic-compound (IOC) extension** of the
