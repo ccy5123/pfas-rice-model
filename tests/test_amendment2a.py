@@ -118,10 +118,27 @@ def test_pre_harvest_grain_water_moves_no_dry_basis_number():
     for shoot in ("redistributed", "4pool"):
         a = api.simulate("PFOA", shoot=shoot, drivers=d)["baf_final_dw"]
         b = api.simulate("PFOA", shoot=shoot, drivers=alt)["baf_final_dw"]
-        # analytically equal; the daily driver representation (M linear between nodes, dM by
-        # central differences) leaves ~0.0012 log10 (recorded in PREREG section 8)
-        assert abs(np.log10(b["grain"] / a["grain"])) < 0.002
+        # exact: the grain is integrated as burden (its own water never enters; PREREG section 8)
+        assert b["grain"] == pytest.approx(a["grain"], rel=1e-9)
         assert b["root"] == pytest.approx(a["root"], rel=1e-9)
+
+
+def test_terminal_pools_are_integrated_as_burden():
+    """PREREG section 8: the grain and the husk are carried as y = M*C in the solver, so their
+    growth dilution cancels exactly; the burden coordinates are the same system (affine of y
+    equals the transformed rhs) and brown rice's phloem is not gated by the mass floor."""
+    import linear_expm as LE
+    for shoot in ("redistributed", "4pool"):
+        m = _captured(shoot)
+        ts = np.linspace(m.inputs.t[0], m.inputs.t[-1], 61)
+        Ay, by = LE.burden_affine(m.affine, m._burden_scale)(ts)
+        f = LE.burden_rhs(m.rhs, m._burden_scale)
+        for j in range(0, len(ts), 6):
+            A2, b2 = LE.affine_parts(f, ts[j], Ay.shape[1])
+            assert np.allclose(Ay[j], A2, rtol=1e-9, atol=1e-9 * max(1.0, np.abs(A2).max()))
+            assert np.allclose(by[j], b2, rtol=1e-9, atol=1e-12)
+        g = m.GRAIN if shoot == "redistributed" else P4.FRUIT
+        assert np.allclose(Ay[:, g, g], 0.0)           # no dilution term: PFAS is not degraded
 
 
 def test_husk_share_follows_ansari_scaled_to_the_maturity_anchor():

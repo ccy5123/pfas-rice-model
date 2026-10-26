@@ -169,6 +169,65 @@ def solve_affine(affine, t_eval, n, C0=None, substeps=8):
     return LinearSolution(t_eval, ys[:, idx], _Dense(tg, ys, fs))
 
 
+# --- terminal pools carried as burden ---------------------------------------------------
+# A terminal pool (the grain, the husk) has no outflow but growth dilution, so in the
+# concentration form its rate dM/M diverges where the organ starts from the mass floor, and the
+# relaxation time M_floor/dM there is far below any step a solver can take. In burden
+# coordinates y_k = M_k C_k the dilution term cancels exactly and the pool's equation is its
+# inflow alone (PREREG section 8). `scale(ts) -> (D, dD)` gives D = M (dD = dM/dt) on those
+# rows and 1 (0) elsewhere; rhs and affine stay in the concentration form.
+def burden_affine(affine, scale):
+    """The affine system of y = D(t) C: A_y = D A D^-1 + diag(dD/D), b_y = D b."""
+    def aff(ts):
+        A, b = affine(ts)
+        D, dD = scale(ts)
+        Ay = D[:, :, None] * A / D[:, None, :]
+        k = np.arange(A.shape[1])
+        Ay[:, k, k] += dD / D
+        return Ay, D * b
+    return aff
+
+
+def burden_rhs(rhs, scale):
+    """dy/dt of y = D(t) C from the concentration-form rhs."""
+    def f(t, y):
+        D, dD = scale(np.array([t], float))
+        C = y / D[0]
+        return D[0] * np.asarray(rhs(t, C), float) + dD[0] * C
+    return f
+
+
+class _BurdenDense:
+    def __init__(self, sol, scale):
+        self._sol, self._scale = sol, scale
+
+    def __call__(self, tt):
+        tt = np.atleast_1d(np.asarray(tt, float))
+        D, _ = self._scale(tt)
+        y = np.asarray(self._sol(tt), float).reshape(D.shape[1], len(tt))
+        return y / D.T
+
+
+class BurdenSolution:
+    """A solution in burden coordinates, read back as concentrations (t, y, success, sol)."""
+    def __init__(self, sol, scale):
+        D, _ = scale(np.asarray(sol.t, float))
+        self.t, self.y = sol.t, np.asarray(sol.y, float) / D.T
+        self.success, self.status = sol.success, getattr(sol, "status", 0)
+        self.message = sol.message
+        self.sol = (_BurdenDense(sol.sol, scale) if getattr(sol, "sol", None) is not None
+                    else None)
+
+
+def solve_burden(affine, scale, t_eval, n, C0=None, substeps=8):
+    """`solve_affine` with the terminal pools as burden (`scale`), returned as concentrations."""
+    t_eval = np.asarray(t_eval, float)
+    D0, _ = scale(t_eval[:1])
+    y0 = None if C0 is None else np.asarray(C0, float) * D0[0]
+    return BurdenSolution(solve_affine(burden_affine(affine, scale), t_eval, n, y0, substeps),
+                          scale)
+
+
 def solve_linear(rhs, t_eval, n, C0=None, substeps=1):
     """Integrate dC/dt = rhs(t, C) (affine in C) on the grid `t_eval`."""
     t_eval = np.asarray(t_eval, float)

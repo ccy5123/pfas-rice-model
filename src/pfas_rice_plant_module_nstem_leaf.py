@@ -320,20 +320,24 @@ class NStemLeafModel:
         residual = (lg + (1.0 - r) * (self._tau_sum + ll)) * xyl_flux
         # the panicle's xylem goes to the grain, or, with the husk pool, to the husk: no xylem
         # flow reaches the intact caryopsis (Zee 1972; Oparka & Gates 1981; PREREG 7.2)
+        # brown rice (the husk pool on) draws phloem in proportion to its own dry growth, so an
+        # organ not yet growing draws nothing: its phloem stream is not gated (the mass-floor
+        # gate opened a day early or late on DVS rounding at heading; PREREG section 8)
         wx = gh if self.husk else gam
+        gq = 1.0 if self.husk else gam
 
         # --- leaf: own deposit (+ the panicle's rerouted residual pre-formation); phloem
         #     source (gated grain share + root recirc); senescence loss carries PFAS away ---
         dC[leaf] = (r * ll * xyl_flux / M[leaf]
                     + (1.0 - wx) * residual / M[leaf]
-                    - ((gam * Q_g + Q_r + Q_h) / M[leaf]) * C_Phl
+                    - ((gq * Q_g + Q_r + Q_h) / M[leaf]) * C_Phl
                     - g[leaf] * C[leaf] - mu[leaf] * C[leaf]
                     - leaf_loss * C[leaf])
 
         # --- grain (formation-gated): panicle deposit + non-retained residual xylem + phloem;
         #     brown rice with the husk pool: the phloem only ---
         dC[grain] = ((0.0 if self.husk else wx * residual / M[grain])
-                     + gam * (Q_g / M[grain]) * C_Phl
+                     + gq * (Q_g / M[grain]) * C_Phl
                      - g[grain] * C[grain] - mu[grain] * C[grain])
         if self.husk:                    # terminal, per kg DRY (no binding: nothing leaves it)
             dC[self.HUSK] = ((wx * residual + Q_h * C_Phl) / Mh
@@ -404,6 +408,7 @@ class NStemLeafModel:
         A = np.zeros((len(row), n, n))
         b = np.zeros((len(row), n))
         wx = gh if self.husk else gam
+        gq = np.ones_like(gam) if self.husk else gam   # brown rice: phloem not gated (rhs)
         A[:, R0, R0] = -k_out / B[:, R0] - Q * x / M[:, R0] - g[R0] - mu[:, R0]
         A[:, R0, Lf] = Q_r * p / M[:, R0]
         b[:, R0] = k_in * Cwo
@@ -411,9 +416,9 @@ class NStemLeafModel:
             A[:, s_, R0] = r * self.tau[s_ - 1] * Q * x / M[:, s_]
             A[:, s_, s_] = -g[s_] - mu[:, s_]
         A[:, Lf, R0] = r * lf * Q * x / M[:, Lf] + (1.0 - wx) * Rc / M[:, Lf]
-        A[:, Lf, Lf] = -(gam * Q_g + Q_r + Q_h) * p / M[:, Lf] - g[Lf] - mu[:, Lf] - lls
+        A[:, Lf, Lf] = -(gq * Q_g + Q_r + Q_h) * p / M[:, Lf] - g[Lf] - mu[:, Lf] - lls
         A[:, Gr, R0] = 0.0 if self.husk else gam * Rc / M[:, Gr]
-        A[:, Gr, Lf] = gam * Q_g * p / M[:, Gr]
+        A[:, Gr, Lf] = gq * Q_g * p / M[:, Gr]
         A[:, Gr, Gr] = -g[Gr] - mu[:, Gr]
         if self.husk:
             Hk = self.HUSK
@@ -429,15 +434,36 @@ class NStemLeafModel:
         return A, b
 
     def solve(self, t_eval, C0=None):
+        import linear_expm as LE
         if C0 is None:
             C0 = np.zeros(self.n_states)
         if _P4.SOLVER == "expm" and self.affine(np.asarray(t_eval[:1], float)) is not None:
-            import linear_expm as LE
-            return LE.solve_affine(self.affine, t_eval, self.n_states, C0,
+            return LE.solve_burden(self.affine, self._burden_scale, t_eval, self.n_states, C0,
                                    substeps=_P4.SUBSTEPS)
-        return solve_ivp(self.rhs, (float(t_eval[0]), float(t_eval[-1])), C0,
-                         t_eval=t_eval, method="BDF", rtol=1e-6, atol=1e-9,
-                         dense_output=True)
+        D0, _ = self._burden_scale(np.asarray(t_eval[:1], float))
+        sol = solve_ivp(LE.burden_rhs(self.rhs, self._burden_scale),
+                        (float(t_eval[0]), float(t_eval[-1])), C0 * D0[0],
+                        t_eval=t_eval, method="BDF", rtol=1e-6, atol=1e-9, dense_output=True)
+        return LE.BurdenSolution(sol, self._burden_scale)
+
+    def _burden_scale(self, ts):
+        """(D, dD) of the burden coordinates `solve` integrates in: the grain's fresh mass and
+        the husk's dry mass (and their growth) on those rows, 1 (0) elsewhere
+        (`linear_expm.burden_affine`)."""
+        import linear_expm as LE
+        inp = self.inputs
+        ts = np.asarray(ts, float)
+        row = LE.lerp_table(inp._tg, inp._tab, ts)
+        sM, sdM = inp._sl[0], inp._sl[1]
+        Gr = self.GRAIN
+        D, dD = np.ones((len(ts), self.n_states)), np.zeros((len(ts), self.n_states))
+        D[:, Gr] = np.maximum(row[:, sM][:, Gr], MASS_FLOOR)
+        dD[:, Gr] = row[:, sdM][:, Gr]
+        if self.husk:
+            row2 = LE.lerp_table(inp._tg, inp._tab2, ts)
+            _, _, imh, idh, _ = inp._sl2
+            D[:, self.HUSK], dD[:, self.HUSK] = row2[:, imh], row2[:, idh]
+        return D, dD
 
     def stem_aggregate(self, C, t):
         """Mass-weighted mean stem (stalk) concentration over the N segments."""

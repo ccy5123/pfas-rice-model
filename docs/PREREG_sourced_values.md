@@ -700,10 +700,24 @@ lead the straw band 11/11 and the grain band 7/11 (phi 3/11, PFBS's L_Ph range 1
 39/66; amendment 1 53/66): with the crop sets in, the inputs interact more than the one-at-a-time
 envelope assumes.
 
-Numerics and recorded deviations:
-- Brown rice's equation has no term in its own free concentration, so its pre-harvest water moves no
-  dry-basis number analytically; on the daily driver grid (M linear between nodes, dM by central
-  differences) a different water moves the grain by up to 0.0012 log10 (`tests/test_amendment2a.py`
-  tolerance 0.002).
+Numerics and recorded deviations (section 1: a number that moves as a numerical setting approaches
+its limit is fixed in the model):
+- **The grain was not converged in the organ-mass floor.** `numerics_convergence.py` on the records
+  above: floor 1e-12 kg moved the grain by 0.0011 log10 (1e-15: up to 0.0023), growing with log(floor).
+  Cause: brown rice is 0 at DVS 1 by construction (h = 1), and in the 2020-09-01 run the calibrated DVS
+  at the heading node is 1 + 2.3e-9, so brown rice there is 2.2e-11 kg -- below the 1e-9 floor, above
+  1e-12. The grain formation gate (a step at the floor) therefore opened a day earlier at a lower floor,
+  and the first day of filling took a full day of inflow instead of half. Two changes, no new number:
+  (i) brown rice's phloem draw is not gated (it is proportional to its own dry growth, so an organ not
+  growing draws nothing; the gate stays on the panicle basis, whose xylem share needs it); (ii) the
+  terminal pools (grain, husk) are integrated as burden y = M*C (`linear_expm.burden_affine`;
+  rhs and affine stay in concentration form), so their growth dilution cancels exactly -- without the
+  gate, the concentration form has a relaxation time M_floor/dM ~ 1e-15 d at heading that BDF cannot
+  step. After both, floor 1e-15 moves no number by more than 1e-5, and brown rice's pre-harvest water
+  moves its dry value by 0 (it was 0.0012 log10; `tests/test_amendment2a.py` now holds it to 1e-9).
+  At the fitted values the Yamazaki observable moved 0.1160 -> 0.1158 (redistributed_fit); the re-fit,
+  the transfer runs, the band and the brief were repeated on the corrected numerics (the numbers in
+  this section are those of the repeat). The incumbent's band (`input_range_band__redistributed_lipid.json`,
+  read for E19 and E23) is from before the correction; the lipid variant's Yamazaki score did not
+  move at 4 decimals.
 - The husk + rachis mass dips by up to ~5 % between Ansari anchors (7.11); kept.
-- NUMERICS_PLACEHOLDER

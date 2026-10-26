@@ -93,6 +93,7 @@ def flux_terms(model: RiceUptakeModel, t: float, C: np.ndarray) -> dict:
     jR = root_uptake(Cwo, Cw[ROOT], cmpd, model.env)
     g = [c.gamma for c in model.comps]
     wx = gh if model.husk else gam
+    gq = 1.0 if model.husk else gam              # brown rice: phloem not gated (as rhs)
 
     return dict(
         soil_uptake=jR * M[ROOT],
@@ -101,7 +102,7 @@ def flux_terms(model: RiceUptakeModel, t: float, C: np.ndarray) -> dict:
         xylem_stem_grain=0.0 if model.husk else gam * f4 * Qtp * Cw[STEM],
         xylem_stem_husk=wx * f4 * Qtp * Cw[STEM] if model.husk else 0.0,
         phloem_leaf_husk=Q_h * C_Phl,
-        phloem_leaf_grain=gam * Q_g * C_Phl,
+        phloem_leaf_grain=gq * Q_g * C_Phl,
         phloem_leaf_root=Q_r * C_Phl,
         leaf_loss=leaf_loss * C[LEAF] * M[LEAF],
         degr_root=g[ROOT] * C[ROOT] * M[ROOT],
@@ -240,6 +241,7 @@ def flux_terms_redistributed(model, t, C):
         lg, ll = model.lam_grain, model.lam_leaf
     residual = (lg + (1.0 - r) * (model.tau.sum() + ll)) * xyl
     wx = gh if model.husk else gam
+    gq = 1.0 if model.husk else gam              # brown rice: phloem not gated (as rhs)
     return dict(
         soil_uptake=float(M[model.ROOT] * jR),
         xylem_root_out=float(xyl),
@@ -248,7 +250,7 @@ def flux_terms_redistributed(model, t, C):
         xylem_to_grain=0.0 if model.husk else float(gam * residual),
         xylem_to_husk=float(wx * residual) if model.husk else 0.0,
         phloem_leaf_husk=float(Q_h * C_Phl),
-        phloem_leaf_grain=float(gam * Q_g * C_Phl),
+        phloem_leaf_grain=float(gq * Q_g * C_Phl),
         phloem_leaf_root=float(Q_r * C_Phl),
         leaf_loss=float(leaf_loss * M[leaf] * C[leaf]),
     )

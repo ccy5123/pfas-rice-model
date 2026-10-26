@@ -616,7 +616,11 @@ class RiceUptakeModel:
         dC = np.zeros(self.n_states)
         # the panicle's xylem: to the grain, or with the husk pool to the husk (no xylem flow
         # reaches the intact caryopsis; PREREG 7.2)
+        # brown rice (the husk pool on) draws phloem in proportion to its own dry growth, so an
+        # organ not yet growing draws nothing: its phloem stream is not gated (the mass-floor
+        # gate opened a day early or late on DVS rounding at heading; PREREG section 8)
         wx = gh if self.husk else gam
+        gq = 1.0 if self.husk else gam
 
         # root -> xylem loading: a fraction f_xy of the root FREE conc (TSCF;
         # endodermal barrier + binding) PLUS a B-independent lipid-bound term
@@ -643,13 +647,13 @@ class RiceUptakeModel:
         # phloem; its xylem share is rerouted to the leaf and its phloem stream is not
         # exported, so the balance still closes. gam->1 at formation (DPU-consistent).
         dC[LEAF] = ((f3 + (1.0 - wx) * f4) * (Qtp / M[LEAF]) * Cw[STEM]
-                    - ((gam * Q_g + Q_r + Q_h) / M[LEAF]) * C_Phl
+                    - ((gq * Q_g + Q_r + Q_h) / M[LEAF]) * C_Phl
                     - g[LEAF] * C[LEAF] - mu[LEAF] * C[LEAF]
                     - leaf_loss * C[LEAF])
         # fruit/grain (small xylem in; phloem-dominated; terminal sink) -- gated by gam;
         # brown rice with the husk pool: the phloem only
         dC[FRUIT] = ((0.0 if self.husk else gam * f4 * (Qtp / M[FRUIT]) * Cw[STEM])
-                     + gam * (Q_g / M[FRUIT]) * C_Phl
+                     + gq * (Q_g / M[FRUIT]) * C_Phl
                      - g[FRUIT] * C[FRUIT] - mu[FRUIT] * C[FRUIT])
         if self.husk:                                # terminal, per kg DRY
             dC[self.HUSK] = ((wx * f4 * Qtp * Cw[STEM] + Q_h * C_Phl) / Mh
@@ -708,6 +712,7 @@ class RiceUptakeModel:
         p = self.phloem_loading_factor() / B[:, LEAF] + self.cmpd.g_ph
         x = self.cmpd.f_xy / B[:, ROOT] + self.cmpd.g_xy
         wx = gh if self.husk else gam
+        gq = np.ones_like(gam) if self.husk else gam   # brown rice: phloem not gated (rhs)
         n = self.n_states
         A = np.zeros((len(row), n, n))
         b = np.zeros((len(row), n))
@@ -717,9 +722,9 @@ class RiceUptakeModel:
         A[:, STEM, ROOT] = Q * x / M[:, STEM]
         A[:, STEM, STEM] = -Q / (M[:, STEM] * B[:, STEM]) - g[STEM] - mu[:, STEM]
         A[:, LEAF, STEM] = (f3 + (1.0 - wx) * f4) * Q / (M[:, LEAF] * B[:, STEM])
-        A[:, LEAF, LEAF] = (-(gam * Q_g + Q_r + Q_h) * p / M[:, LEAF] - g[LEAF] - mu[:, LEAF] - ll)
+        A[:, LEAF, LEAF] = (-(gq * Q_g + Q_r + Q_h) * p / M[:, LEAF] - g[LEAF] - mu[:, LEAF] - ll)
         A[:, FRUIT, STEM] = 0.0 if self.husk else gam * f4 * Q / (M[:, FRUIT] * B[:, STEM])
-        A[:, FRUIT, LEAF] = gam * Q_g * p / M[:, FRUIT]
+        A[:, FRUIT, LEAF] = gq * Q_g * p / M[:, FRUIT]
         A[:, FRUIT, FRUIT] = -g[FRUIT] - mu[:, FRUIT]
         if self.husk:
             A[:, 4, STEM] = wx * f4 * Q / (Mh * B[:, STEM])
@@ -741,15 +746,32 @@ class RiceUptakeModel:
         included): exponential stepping (`linear_expm`, converged in
         validation/numerics_convergence.py); otherwise BDF. Returns a solution object with
         the scipy fields the callers read (t, y, success, sol)."""
+        import linear_expm as LE
         if C0 is None:
             C0 = np.zeros(self.n_states)
         if SOLVER == "expm" and self.affine(np.asarray(t_eval[:1], float)) is not None:
-            import linear_expm as LE
-            return LE.solve_affine(self.affine, t_eval, self.n_states, C0, substeps=SUBSTEPS)
+            return LE.solve_burden(self.affine, self._burden_scale, t_eval, self.n_states, C0,
+                                   substeps=SUBSTEPS)
         t_span = (float(t_eval[0]), float(t_eval[-1]))
-        sol = solve_ivp(self.rhs, t_span, C0, t_eval=t_eval,
-                        method="BDF", rtol=1e-6, atol=1e-9, dense_output=True)
-        return sol
+        D0, _ = self._burden_scale(np.asarray(t_eval[:1], float))
+        sol = solve_ivp(LE.burden_rhs(self.rhs, self._burden_scale), t_span, C0 * D0[0],
+                        t_eval=t_eval, method="BDF", rtol=1e-6, atol=1e-9, dense_output=True)
+        return LE.BurdenSolution(sol, self._burden_scale)
+
+    def _burden_scale(self, ts):
+        """(D, dD) of the burden coordinates `solve` integrates in: the grain's fresh mass and
+        the husk's dry mass (and their growth) on those rows, 1 (0) elsewhere
+        (`linear_expm.burden_affine`)."""
+        import linear_expm as LE
+        inp = self.inputs
+        ts = np.asarray(ts, float)
+        row = LE.lerp_table(inp._tg, inp._tab, ts)
+        D, dD = np.ones((len(ts), self.n_states)), np.zeros((len(ts), self.n_states))
+        D[:, FRUIT], dD[:, FRUIT] = np.maximum(row[:, 5], MASS_FLOOR), row[:, 9]
+        if self.husk:
+            row2 = LE.lerp_table(inp._tg, inp._tab2, ts)
+            D[:, self.HUSK], dD[:, self.HUSK] = row2[:, 5], row2[:, 6]
+        return D, dD
 
     def baf(self, C: np.ndarray, t: float) -> np.ndarray:
         """Bioaccumulation factor BAF_k = C_k / C_w^o  [L/kg]."""
