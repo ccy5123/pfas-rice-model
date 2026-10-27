@@ -903,3 +903,16 @@ chosen that the data do not identify:
 - **Pan solve.** The pan's Ks is solved with the pan's own K(h) (its base desaturates), not as a saturated
   layer: the saturated form under-estimated the resistance and gave 0.21 instead of 0.54 cm/d. Result:
   Ks_pan 0.046-0.056 cm/d over 2 cm (the order of Tournebize 2006's independently calibrated 0.08).
+
+### 9.11 Addendum (after the registered k_leach recalibration; before anything is built on it)
+The registered recalibration ran (E29 holds: k_leach rose for every congener). It also showed that the
+analytic `flooded` shape cannot represent the new scenario: 9 of 13 congeners end at the scan ceiling 0.15
+(`soil_kleach_max`), i.e. the result keeps moving with a numerical bound, which §1 calls structural. Cause,
+checked in the HYDRUS profiles: clean water drives a leaching FRONT down from the surface (PFNA, Kd 12.8: top
+5 cm flushed, 10 cm at 0.64, >= 15 cm untouched at harvest; solute balance error 0.015 %), and the root zone is
+weighted to the top; a well-mixed reservoir with first-order loss of its dissolved fraction cannot take that
+shape for any k_leach. Correction, no new number: the `flooded` profile and the soil-inventory mode read the
+scenario's own HYDRUS shapes, stored per congener as c(t)/c(0) on the site's season (`params/cwo_shapes_hydrus.csv`,
+built by `validation/cwo_shape_table.py`); a structure without a stored shape (SMILES, neutral) interpolates in
+log10 Kd between the stored ones. `k_leach`, its per-congener table and its cap are removed. Outside the site's
+season the shape is held at its end values (stated).
