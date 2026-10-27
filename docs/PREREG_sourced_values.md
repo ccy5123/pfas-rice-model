@@ -874,3 +874,17 @@ chosen that the data do not identify:
   ponded depth 2-3 cm ("浅水(2～3cm)", Ibaraki calendar), midpoint 2.5;
 - under ponding the top input is then the water the field takes (ET + percolation) and the pan, not an
   imposed flux, sets the percolation; during midsummer drainage the input is rain only.
+
+### 9.9 Addendum (committed before any soil run; found while implementing 9.2-9.3)
+- **The subsoil's initial PFAS is not measured** (Yamazaki sampled 0-15 cm). Its pore water runs from 0 to
+  the plough layer's value as range ends, at the midpoint (half); both ends are reported.
+- **Flooded water balance**: the field takes ET + percolation each day, rain first and irrigation for the
+  rest; rain beyond that leaves over the bund (not stored as ponding). While drained, all rain enters.
+- **Rain concentration** = the mean of Yamazaki's five rain samples (R1-R5); a value below its MQL is read as
+  half the MQL and flagged (none of the 12 model compounds is affected in the irrigation or soil columns).
+- The scenario needs the crop's transpiration and evaporation; there is no default (the old gaussian
+  transpiration and the flat 0.10 cm/d evaporation had no source). Generic forcing: `forcing_rice`
+  transpiration and its evaporation complement (1 - f_T) Kc ET0 (Nay Htoon 2018 split); the site: the
+  ORYZA2000 Tp and Ep of the Yamazaki run, JMA Tsukuba 2020 daily rain (`raw_si/jma_tsukuba_2020_precip.csv`).
+- `top_bc=3` of the old scenario was surface RUN-OFF, so the old "flooded" paddy never ponded; the
+  scenario now uses the surface layer (`top_bc=2`).
