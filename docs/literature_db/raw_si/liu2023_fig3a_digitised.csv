@@ -1,0 +1,15 @@
+# Liu S, Zhou J, Guo J, et al. (2023) Impact mechanisms of humic acid on the transmembrane transport of PFASs in wheat at the subcellular level.
+# Environ Sci Technol 57:8739-8749, doi:10.1021/acs.est.3c00504. Main-text Fig. 3a (wheat ROOT; F1 cell wall, F2 membrane + organelle, F3 cytoplasm + vacuole).
+# Hydroponic 1/4 Hoagland, each PFAS alone at 50 ug/L, 10 d uptake; HA = with 10 mg/L humic acid. Fractions of the root burden (sum 1).
+# Digitised 2026-10-27 (main session) from the PDF page rendered at 300 dpi: bar segments found by colour (orange F1, green F2, grey F3), measured along each
+# bar's middle row; 0 % = bar left edge (x 541 px), 100 % = bar right edge (x 1194 px). Check against the text (p. 8744): F1 47.74-58.96 %, F2 18.28-42.96 %,
+# F3 5.96-33.97 % over the eight bars; digitised 47.8-59.0, 18.4-42.7, 6.2-33.8. Reading uncertainty about +-0.003 (one pixel = 0.0015).
+pfas,treatment,f_F1_cell_wall,f_F2_membrane_organelle,f_F3_cytoplasm_vacuole
+PFHxS,PFAS,0.503,0.244,0.253
+PFHxS,PFAS+HA,0.478,0.184,0.338
+PFOA,PFAS,0.573,0.251,0.176
+PFOA,PFAS+HA,0.534,0.302,0.164
+PFOS,PFAS,0.560,0.357,0.083
+PFOS,PFAS+HA,0.511,0.427,0.062
+6:2 Cl-PFESA,PFAS,0.590,0.256,0.154
+6:2 Cl-PFESA,PFAS+HA,0.550,0.383,0.067

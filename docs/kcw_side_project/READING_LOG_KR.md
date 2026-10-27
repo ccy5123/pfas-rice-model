@@ -34,6 +34,11 @@ SI 원본(사용자 manifest `si_manifest.csv`):
 - **에테르 결합**(Muensterman Table S12): 지질 친화성(CHI log D)은 +0.10…+0.49로 오르지만, 막 분배(log K_IAM)는 −0.06…−0.31로 내려갑니다.
   막 분배의 부호는 Chen 2025의 K_MW 오프셋(−0.49/O)과 같습니다. 크기는 더 작습니다.
   (2026-10-27 오전의 계획서에 "부호가 반대"라고 쓴 것은 본문만 보고 CHI log D를 읽은 것이었고, SI를 보고 고쳤습니다.)
+- **Guo 2025 Supplementary Table 11**(SI p. S42)은 *O. rosea* 뿌리·잎의 펙틴과 헤미셀룰로오스 단당 조성만 담고 있습니다. GAP A 문서
+  "Experimental design"과 H8 handoff가 말한 "Guo Table 11 벼판(rice panel)"은 이 논문에 없습니다.
+- **디지털화**(2026-10-27): Liu 2023 Fig. 3a(밀 뿌리, 4종 ± 부식산)와 Yu 2021 Fig. 1b(상추 뿌리 PFOS)를 300 dpi 렌더링의 색 구간으로 읽었습니다.
+  본문 범위와 맞습니다(Liu F1 47.8–59.0 % 대 본문 47.74–58.96 %, Yu F1 46.4–62.0 % 대 본문 46–62 %).
+  Liu 뿌리 세포벽 비율: PFHxS 0.50, PFOS 0.56, PFOA 0.57, 6:2 Cl-PFESA 0.59.
 - **Muensterman Table S13의 HFPO-DA log K_IAM은 2.0**으로 PFHxA(2.0)와 같고, ADONA는 2.3입니다. 막 분배 쪽 비교값입니다(세포벽 값은 아님).
 
 ## 3. 찾지 못한 기록: "Prompt2 handoff"
