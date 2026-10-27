@@ -860,3 +860,17 @@ flux-weighted. Output: root-zone pore water / irrigation concentration over the 
   water extract 82 -> 40 pg/g), and its PFOA-PFDA ratios are within 0.3 log10 of 1 as measured.
   (Selection note: the measured post-season values were seen when Table S16 was read for the initial
   condition, before this was written; E31 is therefore not a blind expectation.)
+
+### 9.8 Addendum (committed before any soil run; found while building 9.2)
+9.2 dropped the plough pan. That was wrong: a flooded paddy's plough layer is saturated under standing
+water, and without a restricting layer the imposed percolation drains the Andosol at unit gradient, where
+the measured retention curves leave it at theta/theta_s = 0.998 (Tournebize layer 1) to 0.89 (layer 2) --
+up to 11 % below saturation, which enters retardation and pore velocity. The pan returns, with nothing
+chosen that the data do not identify:
+- below the 15-cm plough layer; thickness 2 cm (Tournebize 2006's; only Ks/thickness is identifiable from
+  percolation, so the thickness itself does not change the flux);
+- its Ks is solved so that steady percolation under the ponded depth equals the sourced percolation
+  (0.41-0.67 cm/d, midpoint 0.54), with the plough layer saturated and the subsoil at unit gradient;
+  ponded depth 2-3 cm ("浅水(2～3cm)", Ibaraki calendar), midpoint 2.5;
+- under ponding the top input is then the water the field takes (ET + percolation) and the pan, not an
+  imposed flux, sets the percolation; during midsummer drainage the input is rain only.
