@@ -11,6 +11,8 @@
   mark it as such in the work and in `sourced_inputs.csv`. Try the open-access copy first
   (OpenAlex `oa_url`, J-STAGE, publisher PDF) and list only what still fails.
   Running list: `docs/literature_db/fulltext_needed.md`.
+- **Never subscribe to PR activity** (`subscribe_pr_activity`), not even for a PR the session opened; it is
+  also denied in `.claude/settings.json`. Report CI/review state only when the user asks.
 
 ## 1. Goal
 Mechanistic **four-compartment dynamic model** for PFAS bioaccumulation in rice
