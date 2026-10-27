@@ -955,3 +955,45 @@ in that stage: Tournebize's stage-3 percolation 0.8 (1998) and 0.3 (1999) cm/d, 
 takes ET + percolation; the solute leaves with the percolation) as its base, and runs as the other end a field
 that receives no irrigation after midsummer drainage (rain only), reported beside the base in the irrigation-
 source check. No cycle is chosen. (Calendar re-read 2026-10-27: sha256 63e299e9...)
+
+### 9.14 Outcome of amendment 2b (records named; nothing fitted)
+**Expectations.**
+- E25 **held**: every PFAS `simulate()` output of the default and the Yamazaki observable are bit-identical
+  (137 cells, max |Δlog10| 0), re-checked after the last code change of 2b.
+- E26 **held**: the neutral root scores did not move (equilibrium and season ODE, 3 decimals).
+- E27 **held** (direction not predicted): Ge 2017 per-organ 0.631 → 0.606 (`params/neutral_scores.json`).
+- E28 **held**: the leaf air-exchange surface at heading is 14.1 m2/kg fresh (season 6.1-17.2).
+- E29 **held** for the registered recalibration (every k_leach rose), but that surrogate was then removed (9.11).
+- E30 **missed**: at the end of the first flooding period the C4-C6 root-zone pore water is still 1.7-2.0 x the
+  irrigation concentration (it starts at the soil's own pore water, 2.8-4.8 x at day 15), not tracking it.
+- E31 **partly missed**: the short chains fall over the season as measured (predicted post/pre -0.59 to -0.91
+  log10 against -0.03 to -0.30 measured, so too far), PFNA -0.25 and PFDA -0.07 are within 0.3 of 1, PFOA
+  (-0.60) is not. Post-season soil, predicted/measured: C4-C8 -0.46 to -0.62 log10 (over-leached), PFNA-PFDoDA
+  and PFOS -0.15 to +0.01; the subsoil end (0 / half / same) moves none of them by more than 0.01; the
+  rain-only end after midsummer drainage (9.13) moves C5-C7 and PFBS further down (to -1.39 for PFBS) and
+  the rest by <= 0.1 (`validation/irrigation_source_record.json`).
+
+**Deviations from the registration, with the reason.**
+- The irrigation-source scenario is **not merged into the input-range band** (9.3 said it would enter it
+  when it moves a cell by >= 0.0005). It fails its own out-of-sample check for C4-C8: it leaches those
+  chains several-fold faster than the field shows, so the Koc-QSPR Kd is too low for this Andosol (or a
+  sorption process is missing) and its pore-water course for them is not supported. Its plant deltas are
+  recorded (root/straw/grain +0.00 to +0.27 log10 for C4-C8, +0.47 to +1.18 for C9-C12 and PFOS, which
+  pass the soil check) and `obs_exposure_time` stays open.
+- The k_leach surrogate, its table and its cap were removed (9.11), not recalibrated.
+- The neutral **rough grain** is not predicted with the phloem off either (9.1c reported it): it carries the
+  brown rice's burden, which is unknown, so with the brown rice at 0 it was only a lower bound. The husk +
+  rachis pool is reported.
+- Downstream products rebuilt on 2b: the biocide census and its briefing now report the husk + rachis pool
+  (dry basis) where they reported a neutral "grain", and say that the brown rice is not predicted; the
+  half-equilibrium point moved 6.26 -> 6.40 (root water at harvest 0.6365); the rank correlations are
+  unchanged (+0.904 / -0.777). Two numbers that had already disagreed with the census record before 2b
+  (propiconazole 1.03x, triclosan +0.624) were corrected to the record (1.24x, -0.197). In the PFAS brief the
+  flooded-schedule grain is now per unit season-mean pore water (the harvest-day pore water of a short chain
+  leaches to ~0, so a BAF on it is meaningless).
+- `tr_li_grain_from` is not invariant (brown rice from heading 3.33 vs from filling 1.33 log10 on the default;
+  the variant ranking is the same): filling stays, both are recorded (`validation/li_grain_from_record.json`).
+
+**What 2b leaves open**: `obs_exposure_time` (default scope), `soil_root_beta`, `tr_drivers`, `smiles_kcw` and
+the curated K_cw (side project), the neutral phloem-sap concentration (Trapp 2007, 2011 requested).
+The input-range band is unchanged (no input of `simulate()` changed, E25).

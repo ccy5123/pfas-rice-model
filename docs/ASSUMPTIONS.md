@@ -98,15 +98,27 @@ Decision rule for every comparison: `validation/decision_stats.decide` (paired b
 interval; PREREG section 2). Scores: `validation/transfer_sourced.json` and
 `params/transfer_scores.json` (the honesty band).
 
-## 6. Soil side (HYDRUS-1D, flooded profile) -- `src/soil_hydrus.py` (not the default exposure)
+## 6. Soil side (HYDRUS-1D, the Tsukuba Andosol paddy) -- `src/soil_hydrus.py` (not the default exposure)
 
-| input | value | status |
-|---|---|---|
-| f_oc | 0.02 | **open**: Yamazaki SI Table S5 gives 3.7-3.8 % TOC (next amendment) |
-| bulk density | 1.3 g/cm3 | **open**: 0.61 measured at a Tsukuba Andosol paddy (Koyama & Hayashi 2017) |
-| percolation | 0.30 cm/d | **open**: 0.41-0.67 cm/d at an Ibaraki Andosol paddy (Kondo et al. 2019) |
-| flooding | continuous to day 90 | **open**: midsummer drainage 35-40 d after transplanting for 15-20 d (Ibaraki calendar) |
-| profile, dispersivity, node spacing | 100 cm, 5 cm, 2 cm | **open**: literature range or convergence |
+PREREG 9.2-9.14; every row is in `params/value_provenance.csv` (`soil_*`).
+
+| input | value | status | source |
+|---|---|---|---|
+| retention, Ks | (θs, α, n, Ks) = (0.709, 0.0050, 1.068, 11.1) / (0.717, 0.0098, 1.156, 93.0), midpoint run | measured | Tournebize 2006 Table 3 (Tsukuba Andisol cores) |
+| θr | 0.015 (0-0.030) | measured range | Rudiyanto 2013; Tokumoto 2010 |
+| l (Mualem) | 0.5 | convention | Mualem's general value; no paddy value |
+| air entry | -2 cm (HYDRUS model 3) | measured (recommendation) | HYDRUS-1D 4.17 manual pp.23-24, for 1.0 < n < 1.3 |
+| bulk density | plough 0.61; subsoil 0.70 / 0.57 | measured | Koyama & Hayashi 2017; Tournebize 2006 |
+| f_oc | 0.0375 (0.037-0.038) | measured | Yamazaki SI Table S5 |
+| plough layer / pan | 15 cm; 2-cm pan, Ks solved to the percolation (0.0256 cm/d) | measured / derived | Ibaraki calendar; Tournebize 2006 |
+| percolation | 0.54 (0.41-0.67) cm/d | measured | Kondo 2019 |
+| ponded depth | 2.5 (2-3) cm | measured | Ibaraki calendar |
+| water calendar | flooded; midsummer drainage 35-40 DAT for 15-20 d; intermittent irrigation to heading + 30 d (flooded water balance; rain-only end) | measured (cycle not reported) | Ibaraki calendar; Tournebize 2006 |
+| dispersivity | 0.6 (0.2-1.0) cm | measured | Tokumoto 2005; Tournebize 2006 |
+| root water uptake | no reduction above -15000 cm | structural | the crop driver is stress-free |
+| root distribution | linear to 0 at 30 cm | **open** | no source |
+| grid, depth, tolerances | dx 0.25 cm (pan base 0.005), 100 cm | numerical | converged <= 0.0004 log10 |
+| irrigation-source scenario | Yamazaki S16 soil, irrigation water and rain; subsoil 0 / half / same | measured; subsoil range | fails its post-season soil check for C4-C8: not in the band |
 
 ## 7. App
 

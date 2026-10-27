@@ -254,7 +254,7 @@ def test_mw_solubility_henry_are_structurally_inert():
     log Kow must return the SAME number, exactly."""
     a = BC.run_one(6.29, "cyphenothrin")
     b = BC.run_one(6.29, "difethialone")
-    for k in ("TSCF", "K_PW_root", "root", "stem", "leaf", "grain", "straw"):
+    for k in ("TSCF", "K_PW_root", "root", "stem", "leaf", "husk", "straw"):
         assert a[k] == b[k], k
 
 
@@ -265,7 +265,8 @@ def test_air_is_the_one_term_that_separates_them():
     RT = 8.314 * 293.15
     volatile = BC.run_one(6.30, "empenthrin", MW=274.4, K_AW=34.65 / RT, air=True)
     quiet = BC.run_one(6.30, "empenthrin", MW=274.4, K_AW=34.65 / RT, air=False)
-    assert volatile["leaf"] < 0.75 * quiet["leaf"]
+    # 17 % of the leaf burden on the sourced surface (2 x LAI per fresh leaf, PREREG 9.1f)
+    assert volatile["leaf"] < 0.9 * quiet["leaf"]
     involatile_on = BC.run_one(6.29, "cyphenothrin", MW=375.5, K_AW=0.0022 / RT, air=True)
     involatile_off = BC.run_one(6.29, "cyphenothrin", MW=375.5, K_AW=0.0022 / RT, air=False)
     assert involatile_on["leaf"] == pytest.approx(involatile_off["leaf"], rel=1e-3)

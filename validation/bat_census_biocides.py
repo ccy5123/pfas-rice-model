@@ -247,16 +247,19 @@ def run_one(log_kow, name, half_life=None, pKa=None, is_acid=True, pH=REPORT_PH,
                                pKa=pKa, is_acid=is_acid, pH=pH,
                                MW=MW, K_AW=K_AW, air=air)
     b = res["baf_final"]
+    # brown rice is phloem-fed and the neutral phloem sap is not read at source, so the neutral
+    # path does not predict it (PREREG 9.1c); what the xylem delivers to the panicle is the
+    # husk + rachis pool, per kg DRY (`baf_final_dw["husk"]`)
     return dict(TSCF=res["TSCF"], K_PW_root=res["K_PW"]["root"],
-                root=b["root"], stem=b["stem"], leaf=b["leaf"], grain=b["grain"],
-                straw=res["straw_baf"], res=res)
+                root=b["root"], stem=b["stem"], leaf=b["leaf"],
+                husk=res["baf_final_dw"]["husk"], straw=res["straw_baf"], res=res)
 
 
 def run_all(screened, quiet=False):
     """Two assumptions, mirroring the report's own Scenario A / Scenario B.
 
       P  gamma = 0            -- no in-planta loss. This is the neutral path's
-                                 documented UPPER BOUND (leaf and grain are
+                                 documented UPPER BOUND (leaf and husk are
                                  terminal accumulators), the exact counterpart of
                                  the report's "conservative" Scenario A.
       Q  gamma from the report's FISH kM half-life. That rate is a fish
@@ -278,11 +281,11 @@ def run_all(screened, quiet=False):
                    bat_caveat=(r.get("bat_caveat") or "").strip())
         p = run_one(o["log_kow"], o["substance"], pKa=pKa, is_acid=o["is_acid"])
         rec.update({f"P_{k}": p[k] for k in
-                    ("TSCF", "K_PW_root", "root", "stem", "leaf", "grain", "straw")})
+                    ("TSCF", "K_PW_root", "root", "stem", "leaf", "husk", "straw")})
         if km:
             q = run_one(o["log_kow"], o["substance"], half_life=km,
                         pKa=pKa, is_acid=o["is_acid"])
-            rec.update({f"Q_{k}": q[k] for k in ("root", "leaf", "grain", "straw")})
+            rec.update({f"Q_{k}": q[k] for k in ("root", "leaf", "husk", "straw")})
         out.append(rec)
     if not quiet:
         print()
@@ -290,27 +293,29 @@ def run_all(screened, quiet=False):
         print("3. THE RUNS -- rice BAF [L/kg fw], exposure held at Cwo = 1 ug/L")
         print("=" * 78)
         print(f"{'substance':<32s}{'logKow':>7s}{'TSCF':>9s}{'K_PW':>10s}"
-              f"{'root':>10s}{'straw':>9s}{'grain':>9s}  scope")
+              f"{'root':>10s}{'straw':>9s}{'husk dw':>9s}  scope")
         for rec in sorted(out, key=lambda d: d["log_kow"]):
             print(f"{rec['substance'][:31]:<32s}{rec['log_kow']:7.2f}"
                   f"{rec['P_TSCF']:9.2e}{rec['P_K_PW_root']:10.3g}"
-                  f"{rec['P_root']:10.3g}{rec['P_straw']:9.3g}{rec['P_grain']:9.3g}"
+                  f"{rec['P_root']:10.3g}{rec['P_straw']:9.3g}{rec['P_husk']:9.3g}"
                   f"  {rec['verdict']}")
         print()
-        print("  gamma = 0 above, so leaf/straw/grain are UPPER BOUNDS (docs section 3).")
+        print("  gamma = 0 above, so leaf/straw/husk are UPPER BOUNDS (docs section 3).")
+        print("  husk = the panicle's husk + rachis [L/kg DRY]; the brown rice is not predicted on")
+        print("  the neutral path (phloem-fed; the neutral sap is not read at source, PREREG 9.1c).")
         withq = [r for r in out if "Q_root" in r]
         if withq:
             print()
             print("  What the report's FISH kM does when transplanted into the plant"
                   " (SENSITIVITY ONLY -- a fish rate is not a plant rate):")
             print(f"    {'substance':<26s}{'t1/2 [d]':>9s}{'root P->Q':>12s}"
-                  f"{'straw P->Q':>12s}{'grain P->Q':>12s}")
+                  f"{'straw P->Q':>12s}{'husk P->Q':>12s}")
             for rec in sorted(withq, key=lambda d: d["log_kow"]):
                 fr_ = lambda a, b: (a / b if b else float("nan"))          # noqa: E731
                 print(f"    {rec['substance'][:25]:<26s}{rec['km_half_life_d']:9.2f}"
                       f"{fr_(rec['P_root'], rec['Q_root']):12.2f}x"
                       f"{fr_(rec['P_straw'], rec['Q_straw']):11.2f}x"
-                      f"{fr_(rec['P_grain'], rec['Q_grain']):11.2f}x")
+                      f"{fr_(rec['P_husk'], rec['Q_husk']):11.2f}x")
             print("    (a factor of 1.0 means the assumption does not reach that tissue)")
     return out
 
@@ -557,7 +562,7 @@ def cross_model(runs, fast=False, quiet=False):
             print("      shoot does not, and cannot: what reaches a rice shoot is")
             print("      gated by TSCF, which PEAKS at log Kow 1.78 and is ~0 for every")
             print("      substance the opinions call bioaccumulative. A bioaccumulation")
-            print("      class is not a statement about grain.")
+            print("      class is not a statement about the panicle.")
     return out
 
 
@@ -581,7 +586,7 @@ def figure(runs, cross, path=None):
     kept = [d for d in r if not d["verdict"].startswith("EXCLUDED")]
     excl = [d for d in r if d["verdict"].startswith("EXCLUDED")]
     for key, lab, c in (("P_root", "root", "#8c564b"), ("P_straw", "straw", "#2ca02c"),
-                        ("P_grain", "grain", "#d6a419")):
+                        ("P_husk", "husk + rachis (dw)", "#d6a419")):
         ax[0].semilogy([d["log_kow"] for d in kept], [d[key] for d in kept],
                        "o-", ms=4, lw=1.2, color=c, label=lab)
         ax[0].semilogy([d["log_kow"] for d in excl], [d[key] for d in excl],
@@ -629,7 +634,7 @@ def figure(runs, cross, path=None):
 def write_csv(runs, path=OUT_CSV):
     cols = ["substance", "log_kow", "verdict", "f_n", "pKa_used", "km_half_life_d",
             "bpc", "bat_A", "bat_B", "P_TSCF", "P_K_PW_root", "P_root", "P_stem",
-            "P_leaf", "P_grain", "P_straw", "Q_root", "Q_leaf", "Q_grain", "Q_straw"]
+            "P_leaf", "P_husk", "P_straw", "Q_root", "Q_leaf", "Q_husk", "Q_straw"]
     with open(path, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
@@ -647,8 +652,8 @@ def verdict(rows, screened, runs, ov, fig_path=None):
     excl = [o for o in screened if o["verdict"].startswith("EXCLUDED")]
     rootonly = [o for o in screened if o["verdict"] == "root only"]
     extrap = [o for o in screened if o["verdict"] == "extrapolation"]
-    grain_amp = max((r["P_grain"] / r["Q_grain"] for r in runs
-                     if r.get("Q_grain")), default=float("nan"))
+    husk_amp = max((r["P_husk"] / r["Q_husk"] for r in runs
+                    if r.get("Q_husk")), default=float("nan"))
     print()
     print("=" * 78)
     print("VERDICT")
@@ -688,16 +693,18 @@ def verdict(rows, screened, runs, ov, fig_path=None):
     print("     shoot loading is gated by a TSCF bell peaking at log Kow 1.78. Every")
     print(f"     substance the opinions call bioaccumulative has TSCF <= {pos_t[-1]:.2g} here")
     print(f"     ({sum(t < 1e-3 for t in pos_t)} of {len(pos_t)} below 1e-3):")
-    print("     the model predicts they load the ROOT and barely reach the grain.")
-    print("     'Bioaccumulative in fish' and 'reaches the edible part of a rice")
-    print("     plant' are different questions, and this is the size of the gap.")
+    print("     the model predicts they load the ROOT and barely reach the shoot.")
+    print("     'Bioaccumulative in fish' and 'reaches the shoot of a rice plant'")
+    print("     are different questions, and this is the size of the gap. (The")
+    print("     edible brown rice is phloem-fed and is NOT predicted on the neutral")
+    print("     path: the neutral phloem-sap concentration is not read at source.)")
     print("   * The report's single largest finding is AMPLIFIED here, not damped.")
     print("     Entering a metabolic rate moved its fish BCF by up to 82x (section")
-    print(f"     8.4); the same rates move this model's GRAIN by up to {grain_amp:,.0f}x,")
-    print("     because grain and leaf are terminal accumulators whose only other")
+    print(f"     8.4); the same rates move this model's HUSK by up to {husk_amp:,.0f}x,")
+    print("     because husk and leaf are terminal accumulators whose only other")
     print("     sink is growth dilution, which goes to zero at maturity. So the")
     print("     quantity the report identifies as its least defensible input is the")
-    print("     one the edible compartment is MOST sensitive to -- and for a plant")
+    print("     one the terminal compartments are MOST sensitive to -- and for a plant")
     print("     nobody has measured it at all (a fish rate is what was available).")
     print()
     print("  WHAT THIS DOES NOT ESTABLISH -- and cannot")
@@ -724,7 +731,7 @@ def verdict(rows, screened, runs, ov, fig_path=None):
     print("     them as in-planta dissipation, and this model's own leaf half-life is")
     print("     an open question (docs section 4i: metabolism is species-dependent by")
     print("     4.8x for one compound in one experiment).")
-    print("   * gamma = 0 makes every leaf and grain number an upper bound.")
+    print("   * gamma = 0 makes every leaf and husk number an upper bound.")
     print()
     print(f"  written: {os.path.relpath(OUT_CSV, ROOT_DIR)}")
     if fig_path:

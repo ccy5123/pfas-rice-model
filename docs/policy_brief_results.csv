@@ -7,7 +7,7 @@ section,key,value,unit,note
 1_congeners,PFBA.straw,52.33157711204965,L/kg dw,
 1_congeners,PFBA.grain,1.2230741673139134,L/kg dw,
 1_congeners,PFBA.grain_prev,1.2214748076589614,L/kg dw,
-1_congeners,PFBA.grain_flooded,3.7677749183341622,L/kg dw,
+1_congeners,PFBA.grain_flooded,0.13671321223838653,L/kg dw,
 1_congeners,PFBA.obs_grain,1.22859,L/kg dw,Yamazaki 2023 field (measured)
 1_congeners,PFBA.yz_grain,1.228743268736246,L/kg dw,"model, Yamazaki observable"
 1_congeners,PFBA.yz_grain_prev,1.228756416914954,L/kg dw,"model, Yamazaki observable"
@@ -15,7 +15,7 @@ section,key,value,unit,note
 1_congeners,PFPeA.straw,13.034325432075695,L/kg dw,
 1_congeners,PFPeA.grain,0.30557413631949737,L/kg dw,
 1_congeners,PFPeA.grain_prev,0.3051834312924222,L/kg dw,
-1_congeners,PFPeA.grain_flooded,0.8831139790810226,L/kg dw,
+1_congeners,PFPeA.grain_flooded,0.037817464927457446,L/kg dw,
 1_congeners,PFPeA.obs_grain,0.306912,L/kg dw,Yamazaki 2023 field (measured)
 1_congeners,PFPeA.yz_grain,0.30695014334210935,L/kg dw,"model, Yamazaki observable"
 1_congeners,PFPeA.yz_grain_prev,0.30695375648875994,L/kg dw,"model, Yamazaki observable"
@@ -23,7 +23,7 @@ section,key,value,unit,note
 1_congeners,PFHxA.straw,5.522006714119731,L/kg dw,
 1_congeners,PFHxA.grain,0.4827343610486144,L/kg dw,
 1_congeners,PFHxA.grain_prev,0.4814427756428932,L/kg dw,
-1_congeners,PFHxA.grain_flooded,1.0583388494771135,L/kg dw,
+1_congeners,PFHxA.grain_flooded,0.05413731974290533,L/kg dw,
 1_congeners,PFHxA.obs_grain,0.483805,L/kg dw,Yamazaki 2023 field (measured)
 1_congeners,PFHxA.yz_grain,0.48383987042383525,L/kg dw,"model, Yamazaki observable"
 1_congeners,PFHxA.yz_grain_prev,0.48386920382463416,L/kg dw,"model, Yamazaki observable"
@@ -31,7 +31,7 @@ section,key,value,unit,note
 1_congeners,PFHpA.straw,5.260612441073195,L/kg dw,
 1_congeners,PFHpA.grain,0.4930894950593385,L/kg dw,
 1_congeners,PFHpA.grain_prev,0.4918570028999113,L/kg dw,
-1_congeners,PFHpA.grain_flooded,0.8015263746671484,L/kg dw,
+1_congeners,PFHpA.grain_flooded,0.1271552451447013,L/kg dw,
 1_congeners,PFHpA.obs_grain,0.494032,L/kg dw,Yamazaki 2023 field (measured)
 1_congeners,PFHpA.yz_grain,0.4940828500034897,L/kg dw,"model, Yamazaki observable"
 1_congeners,PFHpA.yz_grain_prev,0.4940959330715149,L/kg dw,"model, Yamazaki observable"
@@ -39,7 +39,7 @@ section,key,value,unit,note
 1_congeners,PFOA.straw,4.100084999096007,L/kg dw,
 1_congeners,PFOA.grain,0.5383060945606912,L/kg dw,
 1_congeners,PFOA.grain_prev,0.2535154609875367,L/kg dw,
-1_congeners,PFOA.grain_flooded,0.6213829145082039,L/kg dw,
+1_congeners,PFOA.grain_flooded,0.3382828121842796,L/kg dw,
 1_congeners,PFOA.obs_grain,0.538888,L/kg dw,Yamazaki 2023 field (measured)
 1_congeners,PFOA.yz_grain,0.5389131039767739,L/kg dw,"model, Yamazaki observable"
 1_congeners,PFOA.yz_grain_prev,0.2543341539905054,L/kg dw,"model, Yamazaki observable"
@@ -47,7 +47,7 @@ section,key,value,unit,note
 1_congeners,PFNA.straw,3.4022698735598267,L/kg dw,
 1_congeners,PFNA.grain,0.48043317142722686,L/kg dw,
 1_congeners,PFNA.grain_prev,0.03845086152228216,L/kg dw,
-1_congeners,PFNA.grain_flooded,0.48086893614826015,L/kg dw,
+1_congeners,PFNA.grain_flooded,0.42760245896917193,L/kg dw,
 1_congeners,PFNA.obs_grain,0.480839,L/kg dw,Yamazaki 2023 field (measured)
 1_congeners,PFNA.yz_grain,0.48087276580339394,L/kg dw,"model, Yamazaki observable"
 1_congeners,PFNA.yz_grain_prev,0.03860469802088331,L/kg dw,"model, Yamazaki observable"
@@ -55,7 +55,7 @@ section,key,value,unit,note
 1_congeners,PFDA.straw,17.10129185352147,L/kg dw,
 1_congeners,PFDA.grain,3.916015192862792,L/kg dw,
 1_congeners,PFDA.grain_prev,0.03788867821251535,L/kg dw,
-1_congeners,PFDA.grain_flooded,3.9046803977912172,L/kg dw,
+1_congeners,PFDA.grain_flooded,3.7604583373598897,L/kg dw,
 1_congeners,PFDA.obs_grain,3.91963,L/kg dw,Yamazaki 2023 field (measured)
 1_congeners,PFDA.yz_grain,3.9193472399610743,L/kg dw,"model, Yamazaki observable"
 1_congeners,PFDA.yz_grain_prev,0.03813101658187916,L/kg dw,"model, Yamazaki observable"
@@ -63,7 +63,7 @@ section,key,value,unit,note
 1_congeners,PFUnDA.straw,41.48455980255269,L/kg dw,
 1_congeners,PFUnDA.grain,3.63757973124708,L/kg dw,
 1_congeners,PFUnDA.grain_prev,0.05976420352504092,L/kg dw,
-1_congeners,PFUnDA.grain_flooded,3.6345972553806294,L/kg dw,
+1_congeners,PFUnDA.grain_flooded,3.610618867469732,L/kg dw,
 1_congeners,PFUnDA.obs_grain,3.64434,L/kg dw,Yamazaki 2023 field (measured)
 1_congeners,PFUnDA.yz_grain,3.644599764381441,L/kg dw,"model, Yamazaki observable"
 1_congeners,PFUnDA.yz_grain_prev,0.06041467023078218,L/kg dw,"model, Yamazaki observable"
@@ -71,7 +71,7 @@ section,key,value,unit,note
 1_congeners,PFDoDA.straw,75.30298221179096,L/kg dw,
 1_congeners,PFDoDA.grain,20.923205431606306,L/kg dw,
 1_congeners,PFDoDA.grain_prev,0.06393545548959484,L/kg dw,
-1_congeners,PFDoDA.grain_flooded,20.9183641905145,L/kg dw,
+1_congeners,PFDoDA.grain_flooded,20.844118111858386,L/kg dw,
 1_congeners,PFDoDA.obs_grain,52.915,L/kg dw,Yamazaki 2023 field (measured)
 1_congeners,PFDoDA.yz_grain,20.981663125441163,L/kg dw,"model, Yamazaki observable"
 1_congeners,PFDoDA.yz_grain_prev,0.06524551421268314,L/kg dw,"model, Yamazaki observable"
@@ -79,19 +79,19 @@ section,key,value,unit,note
 1_congeners,PFBS.straw,10.588807907326347,L/kg dw,
 1_congeners,PFBS.grain,0.33376226953065025,L/kg dw,
 1_congeners,PFBS.grain_prev,0.29550052826635853,L/kg dw,
-1_congeners,PFBS.grain_flooded,0.8317834242591762,L/kg dw,
+1_congeners,PFBS.grain_flooded,0.04264923899027078,L/kg dw,
 1_congeners,PFBS.yz_grain,0.33503291886157927,L/kg dw,"model, Yamazaki observable"
 1_congeners,PFBS.yz_grain_prev,0.2971739951521208,L/kg dw,"model, Yamazaki observable"
 1_congeners,PFHxS.root,31.304794689271276,L/kg dw,
 1_congeners,PFHxS.straw,14.189595172501024,L/kg dw,
 1_congeners,PFHxS.grain,0.925940982983833,L/kg dw,
 1_congeners,PFHxS.grain_prev,1.1757532056419089,L/kg dw,
-1_congeners,PFHxS.grain_flooded,1.2485868486941576,L/kg dw,
+1_congeners,PFHxS.grain_flooded,0.40407276827808264,L/kg dw,
 1_congeners,PFOS.root,59.337041845461954,L/kg dw,
 1_congeners,PFOS.straw,21.1919438396611,L/kg dw,
 1_congeners,PFOS.grain,2.2907586165442333,L/kg dw,
 1_congeners,PFOS.grain_prev,0.061293790294212724,L/kg dw,
-1_congeners,PFOS.grain_flooded,2.243700066538207,L/kg dw,
+1_congeners,PFOS.grain_flooded,2.156316110706993,L/kg dw,
 1_congeners,PFOS.obs_grain,2.29398,L/kg dw,Yamazaki 2023 field (measured)
 1_congeners,PFOS.yz_grain,2.294111156540926,L/kg dw,"model, Yamazaki observable"
 1_congeners,PFOS.yz_grain_prev,0.061980976054020046,L/kg dw,"model, Yamazaki observable"
@@ -99,7 +99,7 @@ section,key,value,unit,note
 1_congeners,GenX.straw,8.13161565076787,L/kg dw,
 1_congeners,GenX.grain,2.1236237223693863,L/kg dw,
 1_congeners,GenX.grain_prev,4.0402207831460535,L/kg dw,
-1_congeners,GenX.grain_flooded,3.0442046829118725,L/kg dw,
+1_congeners,GenX.grain_flooded,0.04040073231974254,L/kg dw,
 1_congeners,mean_grain_shortchain_C4_C6_base,0.8991182732609824,L/kg dw,
 1_congeners,mean_grain_longchain_C9_C12_base,7.239308381785851,L/kg dw,
 1_congeners,mean_grain_shortchain_C4_C6_prev,1.2532625886080997,L/kg dw,

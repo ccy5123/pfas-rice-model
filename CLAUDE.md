@@ -258,10 +258,17 @@ rice (the decision basis, PREREG 7.13); the rough-grain value in brackets.
   `r_eq` are an exact ridge (cond 1.3e16: the linear entry carries only their product).
   `estimate_exposure_bayesian` (the app's inverse) estimates Cwo from DRY-weight tissue data with
   transport fixed.
-- **HYDRUS-1D coupling** (`hydrus_coupled_run.py`; Method A, the site-year transpiration drives the
-  soil run): weakly sorbed short chains leach during flooding, long chains stay buffered. The paddy
-  soil inputs (f_oc, bulk density, percolation, drainage calendar, the irrigation-water source) are
-  not yet site-sourced (amendment 2), so no soil-scenario number is reported here.
+- **HYDRUS-1D coupling** (Method A; amendment 2b, PREREG 9.2-9.14): the Tsukuba Andosol paddy of the
+  calibration site — measured retention/Ks (Tournebize 2006), bulk density 0.61, f_oc 0.0375, a 2-cm plough
+  pan whose Ks (0.0256 cm/d) makes the sourced percolation 0.54 cm/d, the Ibaraki water calendar (flooded,
+  midsummer drainage, intermittent irrigation to heading + 30 d with the flooded water balance; rain-only end
+  reported), the site-year Tp/Ep/rain, no root-uptake reduction (the crop is stress-free), HYDRUS model 3
+  (air entry −2 cm, n 1.07–1.16); grid-converged (≤ 0.0004 log10, 9.12). Short chains leach under the
+  percolation, long chains stay buffered. `cwo_profile="flooded"` reads the stored shapes
+  (`params/cwo_shapes_hydrus.csv`). The Yamazaki irrigation-source scenario
+  (`validation/irrigation_source_check.py`) over-leaches C4–C8 against the measured post-season soil
+  (−0.46 to −0.62 log10; C9–C12 and PFOS within 0.15), so it is **not** merged into the band and
+  `obs_exposure_time` stays open; the root distribution (`soil_root_beta`) has no source.
 
 ### 6.5 Crop driver — the ORYZA2000 port
 - `src/oryza2000.py` ports ORYZA2000 potential production from the manual (IR72.D92 verbatim;
@@ -393,10 +400,10 @@ is opt-in and exactly zero at K_AW = 0; no measured volatile-compound plant data
 3. **Grain**: brown rice is phloem-fed only, and the default under-predicts Li's grain by stage (1.334;
    rough basis better) and Kim's PFOA; the husk/brown ratio is below Choi 2018's (PFOS by ~1 log). The
    timing and route of grain loading are open; harvest-only data cannot decide them.
-4. **Amendment 2b** (registered in PREREG 7.9; draft, prototypes and a Korean handoff in
-   `docs/amendment2/`): the neutral path (organ water, dry-basis lipid, the composition basis per dataset),
-   site-sourced paddy soil and the irrigation-source exposure shape, app values (KNHANES intake, the
-   white/brown basis), SMILES K_cw, a volatile-compound data search; then a docs sweep.
+4. **After amendment 2b** (PREREG §9, outcome 9.14): the seasonal exposure (`obs_exposure_time`: the soil
+   scenario over-leaches C4–C8 — Kd for this Andosol, or a missing sorption process), a rice root
+   distribution for the soil scenario, the neutral phloem-sap concentration (Trapp 2007/2011) so the neutral
+   brown rice can be predicted, SMILES/curated K_cw (side project, PR ccy5123/pfas-rice-model#73).
 5. **Method B** (tight HYDRUS coupling) — later.
 
 ## 10. Gotchas / external dependencies

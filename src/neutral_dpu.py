@@ -599,12 +599,15 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
             conc["grain"], M[:, FRUIT], 1.0 - comps[FRUIT].theta, Y[model.HUSK], husk))
     # the brown rice is phloem-fed (PREREG 7.2): without the phloem it receives nothing, and the
     # neutral phloem-sap concentration is not yet read at source (PREREG 9.1c), so the brown rice
-    # is NOT PREDICTED rather than zero; the husk and the rough grain stay reported
+    # is NOT PREDICTED rather than zero. The rough grain holds the brown rice's burden, so it is
+    # not predicted either (with the brown rice at 0 it is only a lower bound); the husk + rachis
+    # pool (the panicle's transpired deposit) stays reported
     grain_predicted = bool(phloem) or not model.husk
     if not grain_predicted:
         nan = np.full(len(t), np.nan)
         conc["grain"] = nan
         obs["conc_dw"]["grain"] = nan
+        obs["conc_dw"]["rough"] = nan
     straw = obs["straw_fw"]
     baf_final = {k: float(v[-1] / ref) for k, v in conc.items()}
     S_end = (None if area is None

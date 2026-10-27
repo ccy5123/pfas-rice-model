@@ -179,7 +179,7 @@ def test_the_biocide_slide_quotes_the_biocide_record(brief, results):
     assert round(v(results, "6_biocides", "rho_fishBCF_straw"), 2) == -0.78
     assert v(results, "6_biocides", "max_tscf_bioaccumulative") < 0.021
     assert "+0.90" in brief and "−0.78" in brief and "0.021" in brief
-    assert "**1.03배**" in brief
+    assert "**1.24배**" in brief          # docs/bat_census_biocides.md section 4 (+0.095 log)
     assert v(results, "6_biocides", "n_runnable") == 117
 
 
