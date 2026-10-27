@@ -1,0 +1,15 @@
+# Guo X et al. (2025) Identification of a PFAS hyperaccumulator and elucidation of its translocation mechanism for sustainable phytoremediation.
+# Nat Commun 16:10283, doi:10.1038/s41467-025-65191-3 (open access). Source Data file MOESM7, sheet "Fig. 3b" (read by the main session 2026-10-27).
+# Oenothera rosea (hyperaccumulating field population), ROOT. Fractions of the tissue burden: membrane+soluble / organelle / cell wall (sum 1);
+# then the cell-wall burden split over pectin / hemicellulose 1 / hemicellulose 2 / cellulose+lignin (sum 1). Field plant, not equilibrium; a dicot, not rice.
+pfas,f_membrane_soluble,f_organelle,f_cell_wall,cw_pectin,cw_hc1,cw_hc2,cw_cellulose_lignin
+PFBA,0.3604,0.2987,0.3409,0.6641,0.2213,0.0417,0.0729
+PFOA,0.3449,0.0766,0.5784,0.6443,0.1326,0.0887,0.1345
+PFNA,0.2951,0.1462,0.5587,0.3683,0.3557,0.0293,0.2467
+HFPO-DA,0.4217,0.2134,0.3649,0.5795,0.1746,0.1124,0.1335
+HFPO-TrA,0.1927,0.3178,0.4895,0.2748,0.3246,0.1458,0.2548
+HFPO-TeA,0.2333,0.1551,0.6116,0.2432,0.5351,0.0514,0.1703
+PFOS,0.0282,0.2649,0.7069,0.3478,0.2249,0.1946,0.2327
+6:2 Cl-PFESA,0.0567,0.2276,0.7156,0.2632,0.4678,0.0117,0.2573
+wH-PFBA,0.3554,0.1058,0.5388,0.3535,0.1515,0.2798,0.2152
+wH-PFNA,0.3898,0.1351,0.4751,0.4123,0.2701,0.1946,0.1230

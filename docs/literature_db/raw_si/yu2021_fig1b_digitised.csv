@@ -1,0 +1,11 @@
+# Yu P-F, Li Y-W, Zou L-J, et al. (2021) Variety-selective rhizospheric activation, uptake, and subcellular distribution of PFOS in lettuce.
+# Environ Sci Technol 55:8730-8741, doi:10.1021/acs.est.1c01175. Main-text Fig. 1b (lettuce ROOTS, PFOS; F1 cell wall, F2 trophoplast, F3 membrane + organelle,
+# F4 cytoplasm + vacuole). LACV/HACV = low-/high-accumulating variety; soil pots spiked T1 0.2, T2 1.0 mg/kg PFOS. Fractions of the root burden (sum 1).
+# Digitised 2026-10-27 (main session) from the PDF page rendered at 300 dpi: stacked segments found by colour, measured down each bar's middle column;
+# 0 % = bar bottom, 100 % = bar top. Check against the text (p. 8733): F1 46-62 %; digitised 0.464-0.620. Reading uncertainty about +-0.004.
+# Shoot fractions (Fig. 1a) not digitised. Concentrations per fraction are in SI Fig. S6 (not digitised).
+variety,treatment_PFOS_mg_kg,f_F1_cell_wall,f_F2_trophoplast,f_F3_membrane_organelle,f_F4_cytoplasm_vacuole
+LACV,0.2,0.620,0.110,0.071,0.198
+HACV,0.2,0.617,0.111,0.061,0.211
+LACV,1.0,0.510,0.161,0.071,0.258
+HACV,1.0,0.464,0.131,0.123,0.282

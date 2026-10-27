@@ -1,0 +1,20 @@
+# Wang T-T, Ying G-G, et al. (2020) Uptake mechanism, subcellular distribution, and uptake process of PFOA and PFOS by wetland plant Alisma orientale. Sci Total Environ 733:139383, doi:10.1016/j.scitotenv.2020.139383.
+# SI (1-s2.0-S0048969720329004-mmc1.docx) table parsed from the docx XML as printed (main session 2026-10-27). Hydroponic 1/2 Hoagland, 1.0 mg/L PFOA or PFOS; time column in days (main text 2.3: 0.5-16 d exposure; 0-16 d dissipation). Concentrations per kg FRESH weight.
+"# Table S15. The water solubility, logKow, and subcellular distribution (e.g., cell walls, organelles, and soluble fraction) of organic chemicals in plant roots."
+Chemicals,Molecular weight,Water solubility (mg/L),logKow,Subcellular distribution,References
+PAEs,,,,,
+DEHP,390.6,2.4910-3,7.73,Walls>organelles>soluble fraction,"Zhao et al., 2015"
+DBP,278.3,9.9,4.27,Walls>organelles>soluble fraction,"Zhao et al., 2015"
+DnBP,278.34,11.2,4.50,Organelles>walls> soluble fraction,"Lin et al., 2016"
+PAHs,,,,,
+Anthracene,178.23,4.510-2,4.54,Organelles>walls>soluble fraction,"Gao et al., 2013"
+Anthraquinone,208.21,1.353,3.39,Organelles>wall>soluble fraction,"Gao et al., 2013"
+Phenanthrene,178.23,1.18,4.46,"(Wall, organelles)>>soluble fraction","Kang et al., 2010"
+Pyrene,202.26,0.12,5.32,"(Wall, organelles)>>soluble fraction","Kang et al., 2010"
+Pesticides,,,,,
+Avermectin,873.09,0.01,4.4,"Walls>>(soluble fraction, organelles)","Wang et al., 2019"
+Fenbuconzole,336.82,0.2,3.2,"Walls>>(soluble fraction, organelles)","Wang et al., 2019"
+Spirotetramat,373.45,33.4,2.51,"Wall>>(soluble fraction, organelles)","Wang et al., 2019"
+Thiamethoxam,291.71,4100,-0.13,"Soluble fraction>>(walls, organelles)","Wang et al., 2019"
+PPCPs,,,,,
+Triclosan,289.5,10,4.76,Walls and organelles>soluble fraction,"He et al., 2017"

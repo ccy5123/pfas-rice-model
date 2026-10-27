@@ -1,0 +1,23 @@
+# Muensterman et al. 2026, ES&T, doi:10.1021/acs.est.5c11716, SI Table S12 (p. S26): unit contributions at pH 7.4 for head-group /
+# backbone changes at equal fluorinated chain length (transcribed from the SI text layer, main session 2026-10-27).
+# For the ether bond (R-O-R): lipophilicity (CHI log D) rises but the membrane partition (log K_IAM) FALLS (-0.06 to -0.31),
+# the same sign as Chen 2025's K_MW ether offset (literature_params.KPL_ETHER_LOG_OFFSET = -0.49).
+from_pfas,to_pfas,unit_added,atoms_replaced,d_CHI_logD,d_log_K_IAM,d_log_K_HSA,d_log_k_AGP,note
+FOSA,FOSAA,CH2COOH,H,-1.2,0.13,0.18,0.00,
+MeFOSA,MeFOSAA,CH2COOH,H,-2.0,0.85,0.09,-0.19,
+EtFOSA,EtFOSAA,CH2COOH,H,-2.1,1.51,0.01,-0.16,
+PFBA,PFMPA,R-O-R,none,0.49,-0.15,1.2,-0.10,
+PFPeA,PFMBA,R-O-R,none,0.10,-0.06,-0.26,0.00,
+PFPeA,NFDHA,R-O-R,none,0.40,-0.31,-0.13,-0.11,
+PFBS,PFEESA,R-O-R,none,0.20,-0.24,-0.52,-0.07,
+PFOS,Cl-PFOS,Cl,F,0.08,0.41,0.06,0.15,CHI log D not significantly different
+FBSA,MeFASA,CH3,H,1.0,-0.85,-0.08,1.94,
+FOSA,MeFOSA,CH3,H,0.90,-1.43,-0.28,0.22,
+FOSAA,MeFOSAA,CH3,H,0.10,-0.71,-0.37,0.02,
+PFCA,n:2 FTCA (n=3),CH2,none,-0.20,0.10,0.1,0.03,
+PFCA,n:2 FTUCA (n=2),CFCH,none,-0.20,0.18,-0.10,-0.03,
+PFCA,n:3 FTCA (n=2),CH2CH2,none,0.42,1.09,-0.56 / -0.02,0.11 / 2.55,individual values (depend on chain length)
+PFSA,n:2 FTS (n=4),CH2CH2,none,1.08,0.39,-0.33,0.33,
+FASA,EtFASA (n=2),CH2CH3,H,1.3,0.83,-0.20,1.99 / 0.23,individual values (depend on chain length)
+FOSAA,EtFOSAA,CH2CH3,H,0.30,-0.52,-0.48,0.06,
+PFSA,sulfonamide (n=6),NH2,OH,0.55,-0.60,-0.22,0.14,
