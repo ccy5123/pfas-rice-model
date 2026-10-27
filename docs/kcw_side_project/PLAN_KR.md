@@ -136,10 +136,17 @@ opt-in으로 이어 붙입니다.
   CF₂ 하나의 CHI log D 기여는 0.25–0.38(Cl-PFESA만 0.62)이고, **에테르 결합의 기여는 양(+)**(Table S12)입니다.
   세포벽 기질에 대한 측정은 없어서 K_cw에 바로 쓸 값은 아닙니다. 다만 에테르 조각의 부호에 대한 독립 근거가 됩니다(§3 M2).
 
-### 2.4 K_poly 절대 크기의 출처(추적 중)
-GAP A 표와 "Prompt2 handoff"는 2026-06-10 커밋 `176e809`에서 외부 패키지로 들어왔습니다. 그때 handoff 원본은 업로드만 되었고
-커밋되지는 않았습니다(`docs/H8_handoff_S6_final.md` 136행). 저장소, git 이력, Google Drive, Notion에서는 찾지 못했습니다.
-그 세션의 기록을 확인하고 있고, 결과는 이 절에 적습니다.
+### 2.4 K_poly 절대 크기의 출처(찾지 못함)
+GAP A 표는 2026-06-10 커밋 `176e809`에서 외부 패키지(`pfas_rice_model.zip`)로 들어왔습니다. 2026-10-27에 찾아본 결과는 다음과 같습니다.
+- 그 패키지를 받은 Claude Code 세션의 기록에는 "Prompt2 handoff" 파일이 없습니다. 압축 파일에 든 것은 CSV, `DELIVERABLE_GAP_A_Kcw.md`,
+  `H8_handoff_S6_final.md`뿐입니다. H8 136행의 "본 세션"은 H8을 쓴 바깥 대화(S6)를 가리킵니다. handoff 원본은 그 대화에만 있었던 것으로 보입니다.
+- 저장소, git 이력, Google Drive, Notion에서도 "Prompt2", "component Kd", "dicot"에 해당하는 원문을 찾지 못했습니다.
+- 같은 세션에서 사용자가 붙여 넣은 GAP A 문헌 목록에 Mei 2021(`10.1016/j.envint.2021.106642`, 리뷰), Wang 2020(*Alisma*),
+  "cellulose/lignin biosorbent(선택, 미정)"이 있습니다. 이 셋 중 하나가 다당류 Kd의 출처일 수 있습니다. 하지만 기록에 K_cw_poly = 4.0(PFOA)과의 연결은 없습니다.
+  Wang 2020은 본문을 읽었고 성분 Kd가 없습니다. Mei 2021은 ScienceDirect PDF가 막혀 읽지 못했습니다.
+
+**판정.** 지금 상태로 K_poly는 **출처를 추적할 수 없는 값**(`value_provenance.csv`의 `untraceable`)입니다. 리그닌 쪽만 출처가 있습니다.
+§8의 4번 결정(다당류 항을 범위로 둘지, 리그닌만 둘지)이 0단계에서 꼭 필요해졌습니다.
 
 ---
 
