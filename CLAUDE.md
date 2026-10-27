@@ -246,8 +246,8 @@ rice (the decision basis, PREREG 7.13); the rough-grain value in brackets.
   measured value) (`validation/policy_brief_runs.py`).
 - Earlier decisions (the amendment-1 records, the pre-amendment default switch, the panicle-size share, the
   gate numerics) are in `validation/archive/` and git history; their numbers do not describe the current model.
-- Every transfer dataset runs on the calibration site-year drivers (Tang/Kim/Li sites and dates
-  are not in the repo) — see `docs/ASSUMPTIONS.md` §5.
+- Every transfer dataset runs on the calibration site-year drivers: neither the papers nor their SIs give a
+  crop calendar (PREREG 9.17) — see `docs/ASSUMPTIONS.md` §5.
 
 ### 6.4 Mechanism and identifiability checks
 - **Root entry**: linear (amendment 1). The carrier-vs-bypass and dose-series analyses (archived)
@@ -396,8 +396,9 @@ is opt-in and exactly zero at K_AW = 0; no measured volatile-compound plant data
    (T_C,Ph), φ, organ composition over a season, the rachis share of the panicle, rice-root cell-wall / plaque
    PFAS sorption (K_cw, K_surf), Yamazaki 2023 SI raw values (MQL flags, planting density, nursery), the
    site's paddy soil.
-2. **Transfer datasets on their own drivers**: Tang (site, dates), Kim (field calendars), Li (stage
-   dates) — each currently runs on the Yamazaki site-year.
+2. **Transfer datasets on their own drivers**: not possible from the papers — Tang's and Kim's SIs give no
+   crop calendar, Kim's regions are anonymised, Li gives no stage dates (PREREG 9.17); each runs on the
+   Yamazaki site-year, a stated limitation. Needs the authors' records.
 3. **Grain**: brown rice is phloem-fed only, and the default under-predicts Li's grain by stage (1.334;
    rough basis better) and Kim's PFOA; the husk/brown ratio is below Choi 2018's (PFOS by ~1 log). The
    timing and route of grain loading are open; harvest-only data cannot decide them.
