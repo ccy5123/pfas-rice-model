@@ -149,7 +149,10 @@ def drivers(level: int, season: float = 40.0, n_t: int = 161,
     stem = 0.01 * total
     leaf = np.maximum(total - root - stem, 1e-9)
     M = np.column_stack([root, stem, leaf, np.full_like(t, 1e-9)])
-    return dict(t=t, Cwo=exposure(level, t), Qtp=np.full_like(t, QW_L_PER_DAY), M=M)
+    # a rosette never heads: its development stage stays vegetative (DVS 0), where the panicle's
+    # share of the transpiration stream is 0 (PREREG 5.2, 9.1)
+    return dict(t=t, Cwo=exposure(level, t), Qtp=np.full_like(t, QW_L_PER_DAY), M=M,
+                dvs=np.zeros_like(t))
 
 
 def lettuce_compartments(half_life: float | None = None, waters: dict | None = None):

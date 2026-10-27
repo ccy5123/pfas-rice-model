@@ -24,6 +24,7 @@ from __future__ import annotations
 import os
 import sys
 
+import numpy as np
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -128,8 +129,9 @@ def test_neutral_path_is_unmoved():
     tolerance above is about the solver and not about the partition core.
     """
     r = api.simulate_neutral(2.45, name="carbamazepine", half_life=7.0)
-    assert r["baf_final"]["root"] == pytest.approx(2.4800832101100543, rel=GOLDEN_REL)   # PREREG 5.10 composition
-    assert r["K_PW"]["root"] == 2.9642732078564134
+    # PREREG 9.1: the root at its harvest water (0.6365, staged), lipid restated there
+    assert r["baf_final"]["root"] == pytest.approx(2.8015531388751085, rel=GOLDEN_REL)
+    assert r["K_PW"]["root"] == 3.4878512580341674
     # the compound the neutral path builds must carry NO speciation fields
     core = ND.neutral_compound(ND.NeutralCompound("x", 2.45))
     assert core.pKa is None and core.P_n == 0.0 and core.z is None
@@ -169,9 +171,13 @@ def test_weak_acid_far_above_its_pKa_reproduces_the_neutral_path():
     kw = dict(name="x")
     neutral = api.simulate_neutral(2.45, **kw)
     almost = api.simulate_neutral(2.45, pKa=12.0, **kw)
-    for tissue in ("root", "stem", "leaf", "grain"):
+    for tissue in ("root", "stem", "leaf"):
         assert almost["baf_final"][tissue] == pytest.approx(
             neutral["baf_final"][tissue], rel=1e-3), tissue
+    # the brown rice is not predicted on either (phloem off, PREREG 9.1c); the husk is
+    assert np.isnan(almost["baf_final"]["grain"]) and np.isnan(neutral["baf_final"]["grain"])
+    assert almost["baf_final_dw"]["husk"] == pytest.approx(
+        neutral["baf_final_dw"]["husk"], rel=1e-3)
 
 
 def test_uptake_falls_monotonically_as_the_acid_gets_stronger():

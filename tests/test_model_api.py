@@ -619,40 +619,38 @@ def test_simulate_neutral_matches_the_standalone_module():
 
     `model_api.simulate_neutral` and `neutral_dpu.simulate_neutral` have to agree
     BIT FOR BIT on the same forcings -- otherwise the published a-priori numbers
-    (Liu 0.281, Ge 0.783) would silently stop describing what the API returns.
-    Both entry points are checked: the built-in forcings and an explicit
-    `drivers=` dict.
+    would silently stop describing what the API returns. Both entry points are
+    checked: the built-in forcings and an explicit `drivers=` dict (the same 2a
+    plant: stage, staged water, husk pool; PREREG 9.1).
     """
     import neutral_dpu as ND
+    import literature_params as LP
 
     lk, season, n_t = 2.45, 120.0, 241
-    t = np.linspace(0.0, season, n_t)
-    Qtp, M = api.measured_forcing(t, season, biomass="growth_rice", scenario="generic")
-    drv = dict(t=t, Cwo=np.ones(n_t), Qtp=Qtp, M=M)
-    ref = ND.simulate_neutral(ND.NeutralCompound("probe", lk), drv)
+    drv = api._default_drivers(season, n_t, 1.0, True, "growth_rice", "generic", None)
+    ref = ND.simulate_neutral(ND.NeutralCompound("probe", lk, pH=LP.PADDY_PH), drv)
 
     built_in = api.simulate_neutral(lk, name="probe", biomass="growth_rice",
                                     season=season, n_t=n_t, scenario="generic")
     explicit = api.simulate_neutral(lk, name="probe", drivers=drv)
     for k in api.TISSUES:
-        assert np.array_equal(built_in["conc"][k], ref["conc"][k])
-        assert np.array_equal(explicit["conc"][k], ref["conc"][k])
+        assert np.array_equal(built_in["conc"][k], ref["conc"][k], equal_nan=True)
+        assert np.array_equal(explicit["conc"][k], ref["conc"][k], equal_nan=True)
 
 
-def test_neutral_path_keeps_the_amendment_one_forms():
-    """PREREG 7.9: the neutral path keeps the constant water and the whole panicle until 2b. A
-    2a driver dict handed to it is turned back to those forms (`neutral_forms`)."""
+def test_neutral_path_runs_the_2a_plant():
+    """PREREG 9.1: one plant for both paths. With the phloem off the brown rice (phloem-fed) and the
+    rough grain (which holds it) are not predicted; the husk + rachis pool is. A phloem run predicts
+    the brown rice with the sourced phi / T_C,Ph midpoints."""
     t = np.linspace(0.0, 117.5, 60)
     d2 = api.drivers_from_arrays(t, np.ones_like(t))
-    assert "theta" in d2 and "husk" in d2
-    back = api.neutral_forms(d2)
-    a1 = api._crop_grid(t, crop=api._A1_FORMS)
-    ok = a1["M"] > 1e-6
-    assert np.allclose(back["M"][ok], a1["M"][ok], rtol=1e-3)
-    assert "theta" not in back and "husk" not in back
-    r2 = api.simulate_neutral(2.45, drivers=d2)
-    r1 = api.simulate_neutral(2.45, drivers=dict(d2, M=a1["M"], theta=None, husk=None))
-    assert r2["baf_final"]["grain"] == pytest.approx(r1["baf_final"]["grain"], rel=1e-3)
+    assert "theta" in d2 and "husk" in d2 and "dvs" in d2
+    r = api.simulate_neutral(2.45, drivers=d2)
+    assert not r["grain_predicted"]
+    assert np.isnan(r["baf_final"]["grain"]) and np.isnan(r["baf_final_dw"]["rough"])
+    assert r["baf_final_dw"]["husk"] > 0
+    p = api.simulate_neutral(2.45, drivers=d2, phloem=True)
+    assert p["grain_predicted"] and p["baf_final"]["grain"] > 0
 
 
 def test_simulate_neutral_returns_the_simulate_contract():
@@ -687,7 +685,7 @@ def test_simulate_neutral_air_is_opt_in_and_zero_for_pfas_like_compounds():
     volatile = api.simulate_neutral(2.42, K_AW=0.1, air=True, **kw)
     assert off["air"] is False and on_zero["air"] is True
     for k in api.TISSUES:
-        assert np.array_equal(off["conc"][k], on_zero["conc"][k])
+        assert np.array_equal(off["conc"][k], on_zero["conc"][k], equal_nan=True)
     # a genuinely volatile compound loses the leaf; the root never volatilises
     assert volatile["baf_final"]["leaf"] < 1e-3 * off["baf_final"]["leaf"]
     # Two DISTINCT solves agreeing by physics, not by construction -- case 3 in
