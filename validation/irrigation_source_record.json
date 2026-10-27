@@ -1,0 +1,580 @@
+{
+ "source": "validation/irrigation_source_check.py (PREREG 9.3; nothing fitted)",
+ "soil": {
+  "ths": 0.713,
+  "alpha": 0.0074,
+  "n": 1.112,
+  "Ks": 52.05,
+  "rho_sub": 0.635,
+  "thr": 0.015,
+  "percolation": 0.54,
+  "pond": 2.5,
+  "disper": 0.6,
+  "drain_start": 37.5,
+  "drain_days": 17.5,
+  "f_oc": 0.0375
+ },
+ "congeners": {
+  "PFBA": {
+   "pre_soil": 92.0,
+   "post_soil_measured": 46.0,
+   "sub": {
+    "mid": {
+     "Kd": 0.02271446440128695,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 2.354029391256421,
+      "day15": 4.686978919553156,
+      "end_flood1": 1.9922702712175737,
+      "end": 1.368871472259709
+     },
+     "post_soil_pred": 11.26531517433071,
+     "log10_post_pred_over_obs": -0.6110144850173841,
+     "log10_post_pred_over_pre_pred": -0.9120486449652223
+    },
+    "zero": {
+     "Kd": 0.02271446440128695,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 2.2650432215132614,
+      "day15": 4.522308077747788,
+      "end_flood1": 1.9897645183685708,
+      "end": 1.368871472259709
+     },
+     "post_soil_pred": 11.26531517433071,
+     "log10_post_pred_over_obs": -0.6110144850173841,
+     "log10_post_pred_over_pre_pred": -0.9120486449652223
+    },
+    "same": {
+     "Kd": 0.02271446440128695,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 2.44301577125002,
+      "day15": 4.851647252136751,
+      "end_flood1": 1.9948521086744637,
+      "end": 1.368871472259709
+     },
+     "post_soil_pred": 11.26531517433071,
+     "log10_post_pred_over_obs": -0.6110144850173841,
+     "log10_post_pred_over_pre_pred": -0.9120486449652223
+    }
+   },
+   "plant_delta_log10": {
+    "root": 0.13642503613221332,
+    "straw": 0.15832006684081515,
+    "grain": 0.15177826928457896
+   },
+   "log10_post_obs_over_pre_obs": -0.3010299956639812
+  },
+  "PFPeA": {
+   "pre_soil": 83.0,
+   "post_soil_measured": 54.0,
+   "sub": {
+    "mid": {
+     "Kd": 0.0805939609884602,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 1.6252612470548264,
+      "day15": 2.811420204488778,
+      "end_flood1": 1.6908179418121363,
+      "end": 1.3170673501893415
+     },
+     "post_soil_pred": 18.473376643630562,
+     "log10_post_pred_over_obs": -0.4658474749043729,
+     "log10_post_pred_over_pre_pred": -0.6525356045399181
+    },
+    "zero": {
+     "Kd": 0.0805939609884602,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 1.575788651166632,
+      "day15": 2.7122486336473637,
+      "end_flood1": 1.688876833910594,
+      "end": 1.3170673501893415
+     },
+     "post_soil_pred": 18.473376643630562,
+     "log10_post_pred_over_obs": -0.4658474749043729,
+     "log10_post_pred_over_pre_pred": -0.6525356045399181
+    },
+    "same": {
+     "Kd": 0.0805939609884602,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 1.6747355198657958,
+      "day15": 2.9105571975616518,
+      "end_flood1": 1.6927519726609404,
+      "end": 1.3170673501893415
+     },
+     "post_soil_pred": 18.473376643630562,
+     "log10_post_pred_over_obs": -0.4658474749043729,
+     "log10_post_pred_over_pre_pred": -0.6525356045399181
+    }
+   },
+   "plant_delta_log10": {
+    "root": 0.11969168032273904,
+    "straw": 0.06748209615833299,
+    "grain": 0.05059715169381024
+   },
+   "log10_post_obs_over_pre_obs": -0.1866843325531054
+  },
+  "PFHxA": {
+   "pre_soil": 85.0,
+   "post_soil_measured": 80.0,
+   "sub": {
+    "mid": {
+     "Kd": 0.2859581645007413,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 1.6120363455600817,
+      "day15": 2.737222941101035,
+      "end_flood1": 1.7761492356645596,
+      "end": 1.3108577606485297
+     },
+     "post_soil_pred": 21.83738411509615,
+     "log10_post_pred_over_obs": -0.5638893736744682,
+     "log10_post_pred_over_pre_pred": -0.5902417367516173
+    },
+    "zero": {
+     "Kd": 0.2859581645007413,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 1.5616959749542005,
+      "day15": 2.613963515205642,
+      "end_flood1": 1.7713545109462305,
+      "end": 1.3108577606485297
+     },
+     "post_soil_pred": 21.83738411509615,
+     "log10_post_pred_over_obs": -0.5638893736744682,
+     "log10_post_pred_over_pre_pred": -0.5902417367516173
+    },
+    "same": {
+     "Kd": 0.2859581645007413,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 1.6623745538870838,
+      "day15": 2.8603575924246583,
+      "end_flood1": 1.7809149644591005,
+      "end": 1.3108577606485297
+     },
+     "post_soil_pred": 21.83738411509615,
+     "log10_post_pred_over_obs": -0.5638893736744682,
+     "log10_post_pred_over_pre_pred": -0.5902417367516173
+    }
+   },
+   "plant_delta_log10": {
+    "root": 0.11760834839279197,
+    "straw": 0.0690303825527025,
+    "grain": 0.0445464006379899
+   },
+   "log10_post_obs_over_pre_obs": -0.026328938722349152
+  },
+  "PFHpA": {
+   "pre_soil": 96.0,
+   "post_soil_measured": 75.0,
+   "sub": {
+    "mid": {
+     "Kd": 1.0146178552552032,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 2.039553079299395,
+      "day15": 3.802432634091923,
+      "end_flood1": 2.521659809422877,
+      "end": 1.2224575475977988
+     },
+     "post_soil_pred": 20.031490349620835,
+     "log10_post_pred_over_obs": -0.5733480012405099,
+     "log10_post_pred_over_pre_pred": -0.6805904952442278
+    },
+    "zero": {
+     "Kd": 1.0146178552552032,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 1.94624924141486,
+      "day15": 3.5175581640636624,
+      "end_flood1": 2.479052935185185,
+      "end": 1.2224466149784323
+     },
+     "post_soil_pred": 20.031490349620835,
+     "log10_post_pred_over_obs": -0.5733480012405099,
+     "log10_post_pred_over_pre_pred": -0.6805904952442278
+    },
+    "same": {
+     "Kd": 1.0146178552552032,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 2.1328571778144636,
+      "day15": 4.087245687565075,
+      "end_flood1": 2.564226038078239,
+      "end": 1.2224644641529079
+     },
+     "post_soil_pred": 20.031490349620835,
+     "log10_post_pred_over_obs": -0.5733480012405099,
+     "log10_post_pred_over_pre_pred": -0.6805904952442278
+    }
+   },
+   "plant_delta_log10": {
+    "root": 0.08722483636017918,
+    "straw": 0.12043378847247795,
+    "grain": 0.09580300037054217
+   },
+   "log10_post_obs_over_pre_obs": -0.10720996964786837
+  },
+  "PFOA": {
+   "pre_soil": 171.0,
+   "post_soil_measured": 176.0,
+   "sub": {
+    "mid": {
+     "Kd": 3.5999999999999996,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 2.2753816255325985,
+      "day15": 3.2285767432571952,
+      "end_flood1": 2.807966097109305,
+      "end": 1.3481380934314107
+     },
+     "post_soil_pred": 42.946304825445225,
+     "log10_post_pred_over_obs": -0.6125868654898795,
+     "log10_post_pred_over_pre_pred": -0.6000983691381859
+    },
+    "zero": {
+     "Kd": 3.5999999999999996,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 2.1289799757749983,
+      "day15": 2.875330026416312,
+      "end_flood1": 2.6269032089947095,
+      "end": 1.3412648133307525
+     },
+     "post_soil_pred": 42.94427687489787,
+     "log10_post_pred_over_obs": -0.6126073736227858,
+     "log10_post_pred_over_pre_pred": -0.6001188772710921
+    },
+    "same": {
+     "Kd": 3.5999999999999996,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 2.421776465988021,
+      "day15": 3.581825040908505,
+      "end_flood1": 2.9890457309007616,
+      "end": 1.355007153503678
+     },
+     "post_soil_pred": 42.94788916181036,
+     "log10_post_pred_over_obs": -0.6125708441848531,
+     "log10_post_pred_over_pre_pred": -0.6000823478331595
+    }
+   },
+   "plant_delta_log10": {
+    "root": 0.12981362220961887,
+    "straw": 0.2567498708538079,
+    "grain": 0.24812277024814147
+   },
+   "log10_post_obs_over_pre_obs": 0.012516557421995962
+  },
+  "PFNA": {
+   "pre_soil": 402.0,
+   "post_soil_measured": 302.0,
+   "sub": {
+    "mid": {
+     "Kd": 12.773282012408723,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 3.556551243649697,
+      "day15": 4.056093387863534,
+      "end_flood1": 3.8484917143922446,
+      "end": 2.9119708570096945
+     },
+     "post_soil_pred": 220.70352548882332,
+     "log10_post_pred_over_obs": -0.13619767237767452,
+     "log10_post_pred_over_pre_pred": -0.26036463898531126
+    },
+    "zero": {
+     "Kd": 12.773282012408723,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 3.180190807263595,
+      "day15": 3.524129451925455,
+      "end_flood1": 3.4079904972277126,
+      "end": 2.7153392590417598
+     },
+     "post_soil_pred": 220.32833848145276,
+     "log10_post_pred_over_obs": -0.13693658355213112,
+     "log10_post_pred_over_pre_pred": -0.2611035501597679
+    },
+    "same": {
+     "Kd": 12.773282012408723,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 3.9329097351562545,
+      "day15": 4.588154776286354,
+      "end_flood1": 4.28891238450783,
+      "end": 3.10863551230425
+     },
+     "post_soil_pred": 221.0805652715389,
+     "log10_post_pred_over_obs": -0.13545637661681664,
+     "log10_post_pred_over_pre_pred": -0.2596233432244534
+    }
+   },
+   "plant_delta_log10": {
+    "root": 0.46423391455239654,
+    "straw": 0.5180221626474903,
+    "grain": 0.5170410873183043
+   },
+   "log10_post_obs_over_pre_obs": -0.12421911012731943
+  },
+  "PFDA": {
+   "pre_soil": 289.0,
+   "post_soil_measured": 291.0,
+   "sub": {
+    "mid": {
+     "Kd": 45.32131482459003,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 9.46052607816941,
+      "day15": 9.926064717592592,
+      "end_flood1": 9.70994248287037,
+      "end": 8.807096160082306
+     },
+     "post_soil_pred": 244.35610332601894,
+     "log10_post_pred_over_obs": -0.0758697980354337,
+     "log10_post_pred_over_pre_pred": -0.07284892373178395
+    },
+    "zero": {
+     "Kd": 45.32131482459003,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 8.213356967949446,
+      "day15": 8.545829110323144,
+      "end_flood1": 8.40062554439671,
+      "end": 7.735621142490709
+     },
+     "post_soil_pred": 243.00186483185723,
+     "log10_post_pred_over_obs": -0.0782833825354236,
+     "log10_post_pred_over_pre_pred": -0.07526250823177388
+    },
+    "same": {
+     "Kd": 45.32131482459003,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 10.707722405067091,
+      "day15": 11.306195638374485,
+      "end_flood1": 11.019281570936215,
+      "end": 9.878448244547323
+     },
+     "post_soil_pred": 245.70601715345651,
+     "log10_post_pred_over_obs": -0.07347719683409323,
+     "log10_post_pred_over_pre_pred": -0.07045632253044354
+    }
+   },
+   "plant_delta_log10": {
+    "root": 0.9448497921570005,
+    "straw": 0.9639978612158219,
+    "grain": 0.9614164893777238
+   },
+   "log10_post_obs_over_pre_obs": 0.0029951462293594778
+  },
+  "PFUnDA": {
+   "pre_soil": 311.0,
+   "post_soil_measured": 291.0,
+   "sub": {
+    "mid": {
+     "Kd": 160.80609317434667,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 5.1776801266739625,
+      "day15": 5.234398987881944,
+      "end_flood1": 5.209809029956597,
+      "end": 5.093540994444444
+     },
+     "post_soil_pred": 297.8721940811261,
+     "log10_post_pred_over_obs": 0.010136975388082904,
+     "log10_post_pred_over_pre_pred": -0.018719107176685262
+    },
+    "zero": {
+     "Kd": 160.80609317434667,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 4.460521097859345,
+      "day15": 4.496534323396778,
+      "end_flood1": 4.482656433259055,
+      "end": 4.4047021886433715
+     },
+     "post_soil_pred": 295.8574625314541,
+     "log10_post_pred_over_obs": 0.0071895391492037145,
+     "log10_post_pred_over_pre_pred": -0.021666543415564454
+    },
+    "same": {
+     "Kd": 160.80609317434667,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 5.8948066130806485,
+      "day15": 5.9721979166666666,
+      "end_flood1": 5.93700451388889,
+      "end": 5.782347329687499
+     },
+     "post_soil_pred": 299.8858493853124,
+     "log10_post_pred_over_obs": 0.01306298434659169,
+     "log10_post_pred_over_pre_pred": -0.015793098218176437
+    }
+   },
+   "plant_delta_log10": {
+    "root": 0.7070236258957523,
+    "straw": 0.7117371876174658,
+    "grain": 0.712006316187429
+   },
+   "log10_post_obs_over_pre_obs": -0.028867400040930226
+  },
+  "PFDoDA": {
+   "pre_soil": 200.0,
+   "post_soil_measured": 224.0,
+   "sub": {
+    "mid": {
+     "Kd": 570.5615492860005,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 15.25503114669234,
+      "day15": 15.299787888888888,
+      "end_flood1": 15.275559752916667,
+      "end": 15.180330522222224
+     },
+     "post_soil_pred": 196.91572686759784,
+     "log10_post_pred_over_obs": -0.05596761545626746,
+     "log10_post_pred_over_pre_pred": -0.0067306886876268195
+    },
+    "zero": {
+     "Kd": 570.5615492860005,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 13.105769472936274,
+      "day15": 13.133614145567865,
+      "end_flood1": 13.118214670359455,
+      "end": 13.05452101109599
+     },
+     "post_soil_pred": 195.85660104695654,
+     "log10_post_pred_over_obs": -0.05830980497283652,
+     "log10_post_pred_over_pre_pred": -0.009072878204195802
+    },
+    "same": {
+     "Kd": 570.5615492860005,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 17.40432648704715,
+      "day15": 17.46596111111111,
+      "end_flood1": 17.433570833333334,
+      "end": 17.30605862361111
+     },
+     "post_soil_pred": 197.97371302630867,
+     "log10_post_pred_over_obs": -0.053640489918664866,
+     "log10_post_pred_over_pre_pred": -0.004403563150024159
+    }
+   },
+   "plant_delta_log10": {
+    "root": 1.1812826873123827,
+    "straw": 1.1826675024938784,
+    "grain": 1.1823869874704245
+   },
+   "log10_post_obs_over_pre_obs": 0.04921802267018165
+  },
+  "PFBS": {
+   "pre_soil": 5.0,
+   "post_soil_measured": 5.0,
+   "sub": {
+    "mid": {
+     "Kd": 0.136868182675402,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 1.5653531819446502,
+      "day15": 2.893166435702614,
+      "end_flood1": 1.6620772675245097,
+      "end": 1.2879237503267973
+     },
+     "post_soil_pred": 1.071315156088732,
+     "log10_post_pred_over_obs": -0.6690527553377502,
+     "log10_post_pred_over_pre_pred": -0.6690183871296816
+    },
+    "zero": {
+     "Kd": 0.136868182675402,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 1.5126118402920843,
+      "day15": 2.7803137025326796,
+      "end_flood1": 1.6593627618464053,
+      "end": 1.2879237503267973
+     },
+     "post_soil_pred": 1.071315156088732,
+     "log10_post_pred_over_obs": -0.6690527553377502,
+     "log10_post_pred_over_pre_pred": -0.6690183871296816
+    },
+    "same": {
+     "Kd": 0.136868182675402,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 1.6180968247850411,
+      "day15": 3.006157137581699,
+      "end_flood1": 1.664802739501634,
+      "end": 1.2879237503267973
+     },
+     "post_soil_pred": 1.071315156088732,
+     "log10_post_pred_over_obs": -0.6690527553377502,
+     "log10_post_pred_over_pre_pred": -0.6690183871296816
+    }
+   },
+   "plant_delta_log10": {
+    "root": 0.10997484713866301,
+    "straw": 0.026819024008346615,
+    "grain": 0.0017233835150657672
+   },
+   "log10_post_obs_over_pre_obs": 0.0
+  },
+  "PFOS": {
+   "pre_soil": 322.0,
+   "post_soil_measured": 313.0,
+   "sub": {
+    "mid": {
+     "Kd": 21.692145098676892,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 9.09461271438889,
+      "day15": 10.040375546965455,
+      "end_flood1": 9.593842960364146,
+      "end": 7.806818745098039
+     },
+     "post_soil_pred": 220.0112784390782,
+     "log10_post_pred_over_obs": -0.1530993929137572,
+     "log10_post_pred_over_pre_pred": -0.16556122573230533
+    },
+    "zero": {
+     "Kd": 21.692145098676892,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 7.986106814962253,
+      "day15": 8.674259376188589,
+      "end_flood1": 8.370559654835187,
+      "end": 7.02173952334267
+     },
+     "post_soil_pred": 219.27608090964807,
+     "log10_post_pred_over_obs": -0.1545530770294355,
+     "log10_post_pred_over_pre_pred": -0.16701490984798362
+    },
+    "same": {
+     "Kd": 21.692145098676892,
+     "ks_pan": 0.049403338107345665,
+     "pore_over_irrigation": {
+      "mean": 10.203245193610776,
+      "day15": 11.407249766573297,
+      "end_flood1": 10.817337929271709,
+      "end": 8.59197086694678
+     },
+     "post_soil_pred": 220.7525519811483,
+     "log10_post_pred_over_obs": -0.15163860466298337,
+     "log10_post_pred_over_pre_pred": -0.16410043748153147
+    }
+   },
+   "plant_delta_log10": {
+    "root": 0.8925098737289748,
+    "straw": 0.9356600081199751,
+    "grain": 0.9370520646124281
+   },
+   "log10_post_obs_over_pre_obs": -0.012311534149382419
+  }
+ }
+}

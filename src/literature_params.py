@@ -156,7 +156,11 @@ def species_info(name: str) -> tuple[int, int, str]:
 # PFCA pKa ~ -0.5..1 (Goss 2008; consensus near 0); PFSA pKa < 0 (strong acid).
 # f_d is robust to the pKa controversy: even pKa=3.8 gives f_d>=0.94 at pH 5-7.
 PKA: dict[str, float] = {"carboxylate": 0.5, "sulfonate": -3.0}   # goss2008 / torralba2023
-PADDY_PH = 6.5                                                    # paddy porewater (range 5-7)
+# Submerged-soil pore-water pH converges to 6.5-6.7 within 3 weeks of flooding (Yoshida 1981 p.173,
+# citing Ponnamperuma 1965) and to 6.5-7.0 from acid and alkaline starts (Moraes 1973 Pesq. Agropec.
+# Bras. 8:93, flooded pots without rice); the range runs at its midpoint (PREREG 5.4, 9.1).
+PADDY_PH_RANGE = (6.5, 7.0)
+PADDY_PH = 0.5 * (PADDY_PH_RANGE[0] + PADDY_PH_RANGE[1])
 
 
 def f_d(pKa: float, pH: float = PADDY_PH):

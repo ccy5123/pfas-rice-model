@@ -26,11 +26,47 @@ def test_paddy_kd_sulfonate_above_matched_carboxylate():
     assert sh.paddy_kd(8, "PFSA") > sh.paddy_kd(9, "PFCA")  # PFOS(8 CF) vs PFNA(8 CF)
 
 
+def test_soil_inputs_are_the_sourced_midpoints():
+    """PREREG 9.2: every scenario input is a sourced value or the midpoint of a sourced range."""
+    soil = sh.andosol_soil()
+    for k, (lo, hi) in sh.SOIL_RANGES.items():
+        assert soil[k] == pytest.approx(0.5 * (lo + hi))
+    a, b = sh.ANDOSOL_SETS["ash1"], sh.ANDOSOL_SETS["ash2"]
+    assert soil["ths"] == pytest.approx(0.5 * (a["ths"] + b["ths"]))
+    assert sh.FOC == pytest.approx(0.0375) and sh.RHO_PLOUGH == 0.61 and sh.PLOUGH_DEPTH == 15.0
+
+
+def test_pan_ks_reproduces_the_sourced_percolation():
+    """PREREG 9.8: the pan's Ks makes the steady flux equal the sourced percolation; integrating
+    the steady head through the pan with that Ks returns its thickness and the plough layer's head."""
+    for ret in ("ash1", "mid", "ash2"):
+        soil = sh.andosol_soil(ret)
+        ks, h_s = sh.pan_ks(soil, return_head=True)
+        assert 0.0 < ks < soil["percolation"]
+        top = sh._pan_profile(soil, ks, h_s, np.array([sh.PAN_THICKNESS]))[0]
+        assert top == pytest.approx(soil["pond"] + sh.PLOUGH_DEPTH
+                                    - soil["percolation"] * sh.PLOUGH_DEPTH / soil["Ks"], rel=1e-3)
+
+
+def test_irrigation_source_initial_pore_water():
+    """PREREG 9.3: the plough layer's initial pore water holds the measured pre-season soil at
+    equilibrium, C_T = c (Kd + theta_s / rho); the subsoil runs at half (9.9)."""
+    soil = sh.andosol_soil()
+    kw, _ = sh.yamazaki_source_kw("PFOA", 3.6, soil)
+    pre, _post = sh.post_season_soil("PFOA")
+    assert kw["c_init"] * (3.6 + soil["ths"] / sh.RHO_PLOUGH) == pytest.approx(pre)
+    assert kw["c_sub"] == pytest.approx(0.5 * kw["c_init"])
+    assert kw["c_irrigation"] == pytest.approx(8.61) and kw["source"] == "irrigation"
+
+
 # ---- engine runs -----------------------------------------------------------
+import forcing_rice as _fr                                    # noqa: E402
+_GEN = dict(tpot_fn=lambda d: _fr.transpiration_mm_d(d, 60.0),
+            evap_fn=lambda d: _fr.evaporation_mm_d(d, 60.0))
 @hydrus
 def test_run_paddy_short_chain_leaches():
     """A weakly-sorbed short chain must leach: pore water falls during flooding."""
-    res = sh.run_paddy_hydrus(sh.paddy_kd(4, "PFCA"), season=60.0)
+    res = sh.run_paddy_hydrus(sh.paddy_kd(4, "PFCA"), season=60.0, **_GEN)
     assert np.all(np.isfinite(res.Cw)) and np.all(np.isfinite(res.vroot))
     assert res.Cw[0] == pytest.approx(1.0, abs=0.05)        # initial pore water
     assert res.Cw.min() < 0.5 * res.Cw[0]                   # leached away
@@ -40,7 +76,7 @@ def test_run_paddy_short_chain_leaches():
 @hydrus
 def test_run_paddy_long_chain_buffered():
     """A strongly-sorbed long chain stays buffered: pore water ~ flat."""
-    res = sh.run_paddy_hydrus(sh.paddy_kd(12, "PFCA"), season=60.0)
+    res = sh.run_paddy_hydrus(sh.paddy_kd(12, "PFCA"), season=60.0, **_GEN)
     assert res.Cw.min() > 0.9 * res.Cw[0]                   # barely moves
 
 
@@ -73,15 +109,14 @@ def test_inputs_from_hydrus_honours_the_crop_selection():
 @hydrus
 def test_hydrus_qtp_matches_the_crop_transpiration_when_unstressed():
     """qtp_from_hydrus (default): HYDRUS's actual root water uptake reproduces the crop's
-    potential transpiration (the site-year's ORYZA2000 Tp) in a well-watered flooded paddy
-    -- consistent with, not a regression from, the crop physiology."""
+    potential transpiration (the site-year's ORYZA2000 Tp) all season -- the soil run imposes
+    no stress the stress-free crop driver does not have (PREREG 9.10); the ponded paddy holds its
+    water and percolates at the sourced rate."""
     import site_scenario as ss
     run = ss.yamazaki2020_mean_run()
-    inp, _ = sh.inputs_from_hydrus(8, "PFCA")
-    wet = (inp.t >= 1.0) & (inp.t <= 90.0)               # flooded (flood_until); HYDRUS starts on day 1
-    assert np.allclose(inp.Qtp[wet], run["Qtp"][wet], rtol=0.02, atol=1e-3)
-    # after drainage the drying soil limits uptake below the potential
-    assert inp.Qtp[-1] < run["Qtp"][-1]
+    inp, res = sh.inputs_from_hydrus(8, "PFCA")
+    on = inp.t >= 1.0                                     # HYDRUS starts on day 1
+    assert np.allclose(inp.Qtp[on], run["Qtp"][on], rtol=0.02, atol=1e-3)
 
 
 @hydrus

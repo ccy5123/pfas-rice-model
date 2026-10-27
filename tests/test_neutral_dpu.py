@@ -135,9 +135,11 @@ def test_volatile_compound_is_flagged():
     so the warning's job changed: it no longer says "not modelled", it names the
     remedy. `tests/test_plant_air.py` checks that the remedy actually works.
     """
-    assert ND.k_aw_warning(ND.NeutralCompound("nonvolatile", 2.0, K_AW=1e-7)) is None
-    w = ND.k_aw_warning(ND.NeutralCompound("volatile", 2.0, K_AW=0.1))
-    assert w and "UPPER bound" in w and "air=True" in w
+    assert ND.k_aw_warning(ND.NeutralCompound("nonvolatile", 2.0, K_AW=0.0)) is None
+    # no sourced K_AW below which the sink may be neglected (PREREG 9.1g): any K_AW > 0 is flagged
+    for k in (1e-7, 0.1):
+        w = ND.k_aw_warning(ND.NeutralCompound("volatile", 2.0, K_AW=k))
+        assert w and "UPPER bound" in w and "air=True" in w
 
 
 def test_bad_water_content_rejected():

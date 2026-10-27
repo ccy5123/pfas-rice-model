@@ -79,6 +79,13 @@ def transpiration_mm_d(t: np.ndarray, season: float = 120.0,
     return ft_curve(t, season) * kc_curve(t, season) * et0
 
 
+def evaporation_mm_d(t: np.ndarray, season: float = 120.0,
+                     et0: float = ET0_MEAN_MM_D) -> np.ndarray:
+    """Soil / ponded-water evaporation E(t) [mm/day] = (1 - f_T(t)) * Kc(t) * ET0, the rest of
+    the same ET (Nay Htoon 2018 split) -- the soil scenario's evaporation (PREREG 9.2)."""
+    return (1.0 - ft_curve(t, season)) * kc_curve(t, season) * et0
+
+
 def Q_TP(t: np.ndarray, season: float = 120.0, et0: float = ET0_MEAN_MM_D,
          area_per_hill: float = AREA_PER_HILL_M2) -> np.ndarray:
     """Transpiration stream Q_TP(t) [L/day per hill] for the plant ODE."""

@@ -225,6 +225,8 @@ class Compartment:
                              # speciation calculation at all, which is the PFAS path.
     K_cw: float | None = None  # this organ's cell-wall binding [L/kg cw]; None -> the
                              # compound's K_cw (one value for every compartment)
+    K_PL: float | None = None  # this organ's lipid binding [L/kg lipid]; None -> the
+                             # compound's K_PL (the neutral path's organ exponent, PREREG 9.1)
 
 
 M_BASES = (None, "fresh")
@@ -331,6 +333,8 @@ class PlantInputs:
     theta: np.ndarray | None = None       # organ water theta_fw(t) (len(t), 4) that made M fresh
                                           # (PREREG 7.1); None: the compartments' constant theta
     M_husk: np.ndarray | None = None      # panicle remainder (husk + rachis) DRY mass (PREREG 7.2)
+    area: np.ndarray | None = None        # plant-air exchange surface (len(t), 4) [m^2], all faces
+                                          # (PREREG 9.1); None: the compartments' constant S
 
     def __post_init__(self):
         if self.M_basis not in M_BASES:
@@ -381,6 +385,14 @@ class PlantInputs:
                                       LE.interval_slopes(self.t, mh), grain_formed(mh)])
         self._hold2 = np.zeros(self._tab2.shape[1], bool)
         self._hold2[[4, 6]] = True                    # the grain dry growth and husk growth
+        self._area = (None if self.area is None
+                      else np.asarray(self.area, float).reshape(self.M.shape))
+
+    def area_at(self, t):
+        """Plant-air exchange surface [m^2] per compartment at time t (None without one)."""
+        if self._area is None:
+            return None
+        return LE.lerp_row(self._tg, self._area, t, np.zeros(4, bool))
 
     def extras_at(self, t):
         """(theta[4], grain dry growth, husk dry mass, husk growth, husk gate) at time t."""
@@ -421,7 +433,7 @@ def binding_factors(comps: list[Compartment], cmpd: Compound) -> np.ndarray:
     """
     return np.array([
         c.theta + (1.0 - c.theta) * (
-            c.f_prot * cmpd.K_prot + c.f_PL * cmpd.K_PL
+            c.f_prot * cmpd.K_prot + c.f_PL * (cmpd.K_PL if c.K_PL is None else c.K_PL)
             + c.f_cw * (cmpd.K_cw if c.K_cw is None else c.K_cw))
         for c in comps
     ])
@@ -431,7 +443,7 @@ def dry_binding(comps: list[Compartment], cmpd: Compound) -> np.ndarray:
     """X_k = f_prot K_prot + f_PL K_PL + f_cw K_cw [L/kg DRY]: the dry-matter part of B_k, which
     does not depend on the organ's water. B_k(t) = theta_k(t) + (1 - theta_k(t)) X_k when the
     water follows the development stage (PREREG 7.1)."""
-    return np.array([c.f_prot * cmpd.K_prot + c.f_PL * cmpd.K_PL
+    return np.array([c.f_prot * cmpd.K_prot + c.f_PL * (cmpd.K_PL if c.K_PL is None else c.K_PL)
                      + c.f_cw * (cmpd.K_cw if c.K_cw is None else c.K_cw) for c in comps])
 
 
@@ -522,9 +534,6 @@ class RiceUptakeModel:
         self._staged = self.inputs.theta is not None
         if self.husk_phloem and not self.husk:
             raise ValueError("husk_phloem needs the husk pool (inputs.M_husk)")
-        if self._staged and self.air is not None:
-            raise ValueError("organ water by stage is not wired into plant-air exchange "
-                             "(the neutral path keeps the constant water until amendment 2b)")
 
     def _binding(self, th):
         """B at this step: the stage's water when the inputs carry theta(t) (PREREG 7.1)."""
@@ -663,8 +672,10 @@ class RiceUptakeModel:
         # transpiration stream, which is the same (f3, f4) split used above, with
         # the grain's share gated by its formation.
         if self.air is not None:
+            A_t = self.inputs.area_at(t)
             dC[:4] += self.air.flux(C=C[:4], M=M, K_PW=B, comps=self.comps, Qtp=Qtp,
-                                    xyl_share=(f3, gam * f4))
+                                    xyl_share=(f3, gam * f4),
+                                    S=(None if A_t is None else A_t / M))
         return dC
 
     def affine(self, ts):
@@ -732,9 +743,13 @@ class RiceUptakeModel:
         if self.air is not None and self.air.K_AW > 0.0:
             # plant-air exchange is affine in C too (volatilisation ~ C, gaseous uptake from a
             # fixed air concentration): read it off `AirExchange.flux` itself, time by time
+            area = (None if self.inputs._area is None
+                    else LE.lerp_table(self.inputs._tg, self.inputs._area, ts,
+                                       np.zeros(4, bool)))
             for i in range(len(row)):
                 kw = dict(M=M[i], K_PW=B[i], comps=self.comps, Qtp=Q[i],
-                          xyl_share=(f3[i], gam[i] * f4[i]))
+                          xyl_share=(f3[i], gam[i] * f4[i]),
+                          S=(None if area is None else area[i] / M[i]))
                 Aa, ba = LE.affine_parts(lambda _t, C: self.air.flux(C=C, **kw), 0.0, 4)
                 A[i, :4, :4] += Aa
                 b[i, :4] += ba

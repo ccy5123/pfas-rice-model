@@ -61,9 +61,6 @@ def _simulate(congener, **kw):
     drv = kw.pop("drivers_tuple", None)
     if drv is not None:
         kw["drivers"] = _drivers_from_tuple(drv)
-    kl = kw.pop("cwo_k_leach", None)                       # scalar (hashable) -> cwo_kw dict
-    if kl is not None and kw.get("cwo_profile", "constant") != "constant":
-        kw["cwo_kw"] = {"k_leach": float(kl)}
     return api.simulate(congener, **kw)
 
 
@@ -123,9 +120,6 @@ def _simulate_neutral(**kw):
     drv = kw.pop("drivers_tuple", None)
     if drv is not None:
         kw["drivers"] = _drivers_from_tuple(drv)
-    kl = kw.pop("cwo_k_leach", None)
-    if kl is not None and kw.get("cwo_profile", "constant") != "constant":
-        kw["cwo_kw"] = {"k_leach": float(kl)}
     log_kow = kw.pop("log_kow")
     return api.simulate_neutral(log_kow, **kw)
 
@@ -144,9 +138,6 @@ def _simulate_smiles(smiles, **kw):
     drv = kw.pop("drivers_tuple", None)
     if drv is not None:
         kw["drivers"] = _drivers_from_tuple(drv)
-    kl = kw.pop("cwo_k_leach", None)                       # scalar (hashable) -> cwo_kw dict
-    if kl is not None and kw.get("cwo_profile", "constant") != "constant":
-        kw["cwo_kw"] = {"k_leach": float(kl)}
     return api.simulate_from_smiles(smiles, **kw)
 
 
@@ -725,7 +716,6 @@ def run_model(cfg):
     season = cfg.season
     measured = cfg.measured
     cwo_profile = cfg.cwo_profile
-    cwo_kleach = cfg.cwo_kleach
     fxy_source = cfg.fxy_source
     biomass = cfg.biomass
     measured_bio = cfg.measured_bio
@@ -748,7 +738,7 @@ def run_model(cfg):
             else:
                 res = _simulate_neutral(Cwo=Cwo_const, season=season, **crop_kw(biomass),
                                         measured_forcing=measured, cwo_profile=cwo_profile,
-                                        cwo_k_leach=cwo_kleach, Koc=neutral.get("Koc"), **nk)
+                                        Koc=neutral.get("Koc"), **nk)
         congener = res["congener"]
     elif smiles:                                            # compound specified by structure
         if not api.rdkit_available():
@@ -761,7 +751,7 @@ def run_model(cfg):
             else:
                 res = _simulate_smiles(smiles, Cwo=Cwo_const, season=season,
                                        measured_forcing=measured, cwo_profile=cwo_profile,
-                                       cwo_k_leach=cwo_kleach, **sim_kw)
+                                       **sim_kw)
         except Exception as e:                              # noqa: BLE001
             st.error(f"Could not build a compound from that SMILES — check the structure.\n\n`{e}`")
             st.stop()
@@ -779,7 +769,7 @@ def run_model(cfg):
     else:
         with st.spinner("🌾 벼 한 철 축적을 계산하는 중…" if not cfg.expert else "Running the model…"):
             res = _simulate(congener, Cwo=Cwo_const, season=season, measured_forcing=measured,
-                            cwo_profile=cwo_profile, cwo_k_leach=cwo_kleach, **sim_kw)
+                            cwo_profile=cwo_profile, **sim_kw)
     # No observed neutral series exists (the a-priori tables are other compounds and
     # other exposures), so a neutral run has nothing to plot against -- an empty obs
     # keeps every "predicted vs observed" frame honest instead of drawing a blank bar.

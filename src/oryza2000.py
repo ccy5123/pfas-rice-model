@@ -109,6 +109,19 @@ def notnul(x: float) -> float:
     return x if x != 0.0 else 1.0
 
 
+def specific_leaf_area(dvs, crop: dict | None = None) -> np.ndarray:
+    """SLA [m^2 leaf (one side) per kg green-leaf DRY matter] at development stage `dvs`, the
+    crop file's own function (IR72.D92: ASLA + BSLA exp(CSLA (DVS - DSLA)), capped at SLAMAX;
+    or SLATB when the file switches to the table) -- the same SLA ORYZA grows its LAI with."""
+    c = crop or load_crop()
+    d = np.asarray(dvs, float)
+    if c.get("SWISLA", "FUNCTION") == "TABLE" and "SLATB" in c:
+        sla = np.interp(d, c["SLATB"][0], c["SLATB"][1])
+    else:
+        sla = np.minimum(c["SLAMAX"], c["ASLA"] + c["BSLA"] * np.exp(c["CSLA"] * (d - c["DSLA"])))
+    return sla * 1.0e4                                     # ha/kg -> m^2/kg
+
+
 # ---------------------------------------------------------------------------
 # Phenology (3.2.1)
 # ---------------------------------------------------------------------------
@@ -613,4 +626,6 @@ def organ_biomass(t, season: float = 120.0, weather: dict | None = None,
     t_mat = td[-1]
     out["leaf_death_rate"] = np.where(t >= t_mat, 0.0, np.maximum(np.interp(t, td, drlv), 0.0))
     out["dvs"] = np.interp(t, td, np.concatenate([[r["dvs"][i3]], r["dvs"][main]]))
+    lai = np.concatenate([[r["lai"][i3] * pltr], r["lai"][main]])
+    out["leaf_area"] = np.interp(t, td, lai) * AREA_PER_HILL_M2   # one side [m^2/hill]
     return out

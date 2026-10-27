@@ -345,7 +345,6 @@ def build():
         profile = None
         measured_bio = None
         cwo_profile = "constant"
-        cwo_kleach = 0.02
         smiles = None
         neutral = None            # NEUTRAL-organic kwargs (None = PFAS path)
         spec = "Curated congener"
@@ -492,24 +491,19 @@ def build():
                 if biomass != "site2020":
                     season = float(st.slider("Season length  [days]", 90, 160, 120, 5))
                 cwo_label = st.radio("Pore-water Cwᵒ(t) shape",
-                                     ["constant (flat)", "flooded (dilution + leaching)"],
-                                     help="constant → Cwᵒ held flat (tissue conc == BAF). flooded → analytic "
-                                          "Freundlich paddy shape: short chains LEACH (decline), long chains stay "
-                                          "buffered (~flat); the season-MEAN is held at Cwᵒ, so only the time shape "
-                                          "changes. No HYDRUS engine needed (for the real engine use the 'Run "
-                                          "HYDRUS-1D (live)' data source).")
+                                     ["constant (flat)", "flooded (the paddy's HYDRUS shape)"],
+                                     help="constant → Cwᵒ held flat (tissue conc == BAF). flooded → the "
+                                          "Tsukuba Andosol paddy's root-zone pore water from stored HYDRUS-1D "
+                                          "runs (contaminated soil, clean water): short chains LEACH as a front "
+                                          "passes the root zone, long chains stay buffered; the season-MEAN is "
+                                          "held at Cwᵒ, so only the time shape changes. No engine needed (for "
+                                          "a live run use the 'Run HYDRUS-1D (live)' data source).")
                 cwo_profile = "constant" if cwo_label.startswith("constant") else "flooded"
                 if cwo_profile == "flooded":
-                    cwo_kleach = st.slider("Leaching rate k_leach  [1/day]", 0.0, 0.15,
-                                           float(api.default_k_leach(
-                                               congener, Koc=(neutral or {}).get("Koc"))), 0.0025,
-                                           help="Default is CALIBRATED per congener to a HYDRUS-1D run "
-                                                "(short chains leach fast, long chains stay buffered ≈0). "
-                                                "Higher → faster short-chain pore-water decline.")
                     try:                                            # immediate shape feedback
                         st.plotly_chart(plots.fig_cwo_profile(congener, level=Cwo_const,
                                                               profile="flooded", season=season,
-                                                              k_leach=cwo_kleach),
+                                                              Koc=(neutral or {}).get("Koc")),
                                         width="stretch", theme=None)
                     except Exception:                               # noqa: BLE001 (preview is non-essential)
                         pass
@@ -615,24 +609,33 @@ def build():
                         st.error(f"HYDRUS run failed: {e}")
 
             elif mode == "Soil inventory → pore water":
-                st.caption("Freundlich paddy soil S = K_F·C_wⁿ inverts a total soil load to pore water Cwᵒ(t).")
-                C_total = st.number_input("Total soil inventory  [µg/kg dry]", 0.0, 1e4, 5.0, 0.5)
-                K_F = st.slider("Freundlich K_F  [L/kg]", 0.2, 20.0, 2.0, 0.2,
-                                help="Sorption capacity; long-chain PFAS sorb harder (higher K_F).")
-                n_F = st.slider("Freundlich exponent n", 0.6, 1.0, 0.85, 0.01)
-                theta_g = st.slider("Drained water content θ_g  [L/kg]", 0.2, 0.6, 0.35, 0.01)
-                flood = st.checkbox("Flooded early season (dilution + leaching)", value=True)
+                st.caption("A total soil load at transplanting is split between sorbed and dissolved at the "
+                           "flooded plough layer's water (Tsukuba Andosol), and the pore water then follows "
+                           "the paddy's own HYDRUS-1D shape for this sorption.")
+                pre = None
+                if congener and not neutral:
+                    import soil_hydrus as _sh
+                    try:
+                        pre = _sh.post_season_soil(api.YAMAZAKI_S16_NAME.get(congener, congener))[0] / 1000.0
+                    except KeyError:
+                        pre = None
+                C_total = st.number_input("Total soil inventory  [µg/kg dry]", 0.0, 1e4,
+                                          float(pre) if pre is not None else 0.0, 0.01, format="%.4g",
+                                          help=("Default: the Yamazaki field's measured pre-season soil "
+                                                "(SI Table S16, water + methanol extracts)." if pre is not None
+                                                else "Enter the measured inventory (no default for this "
+                                                     "compound)."))
+                kd_default = (float((neutral or {}).get("Koc") or 0.0) * api.SOIL_FOC if neutral
+                              else api.site_kd(congener) if congener else 1.0)
+                K_F = st.number_input("Isotherm K_F  [L/kg]", 1e-4, 1e5, max(float(kd_default), 1e-4),
+                                      format="%.4g",
+                                      help="Default: the compound's linear Kd on the site soil (Koc × f_oc 3.75 %).")
+                n_F = st.slider("Isotherm exponent n", 0.6, 1.0, 1.0, 0.01,
+                                help="1 = linear, the form the soil scenario runs on.")
                 t = np.linspace(0.0, season, 241)
-                flooded = t < (0.75 * season) if flood else None
-                # Unified with the parametric flooded mode: default to the per-congener
-                # HYDRUS-calibrated k_leach, same 0–0.15 range.
-                k_leach = st.slider("Leaching rate k_leach  [1/day]", 0.0, 0.15,
-                                    float(api.default_k_leach(
-                                        congener, Koc=(neutral or {}).get("Koc"))), 0.0025,
-                                    help="Per-congener HYDRUS-calibrated default (short chains leach "
-                                         "fast, long chains stay buffered ≈0).") if flood else 0.0
                 Cwo, soil_obj = api.pore_water_from_inventory(
-                    t, C_total, K_F=K_F, n=n_F, theta_g=theta_g, flooded=flooded, k_leach=k_leach)
+                    t, C_total, K_F=K_F, n=n_F, congener=None if neutral else congener,
+                    Koc=(neutral or {}).get("Koc"))
                 drivers = api.drivers_from_arrays(t, Cwo, season=season, **_CM.crop_kw(biomass))
 
             else:  # Biomonitoring
@@ -673,7 +676,6 @@ def build():
     cfg.profile = profile
     cfg.measured_bio = measured_bio
     cfg.cwo_profile = cwo_profile
-    cfg.cwo_kleach = cwo_kleach
     cfg.smiles = smiles
     cfg.neutral = neutral
     cfg.spec = spec

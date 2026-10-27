@@ -26,7 +26,6 @@ import harvest as hv
 import site_scenario as ss
 from organ_mass import MASS_BASIS          # crop-model DRY matter -> ODE FRESH mass (tag)
 from soil_paddy import FreundlichSoil
-from soil_paddy_redox_corrected import PaddyRedoxCorrected
 
 with open(os.path.join(_ROOT, "params", "parameters.json")) as _f:
     PARAMS = json.load(_f)
@@ -34,6 +33,17 @@ _COMP = PARAMS["tissue_composition_recommended"]
 _CONG = {c["name"]: c for c in PARAMS["congeners"]}
 
 CONGENERS = [c["name"] for c in PARAMS["congeners"]]            # 12, ordered
+# the paddy soil of the Yamazaki field (soil_hydrus, PREREG 9.2): its f_oc, and each congener's linear
+# Kd on it; Yamazaki's SI tables name GenX "HFPO-DA"
+import soil_hydrus as _soil                                       # noqa: E402
+SOIL_FOC = _soil.FOC
+YAMAZAKI_S16_NAME = {"GenX": "HFPO-DA"}
+
+
+def site_kd(congener):
+    """Linear Kd [L/kg] of a curated congener on the Yamazaki field's soil (Koc QSPR x f_oc)."""
+    c = _CONG[congener]
+    return _soil.paddy_kd(c["n_C"], {"ether": "PFCA"}.get(c["group"], c["group"]))
 TISSUES = ("root", "stem", "leaf", "grain")
 # built-in drivers: the calibration site-year (default) or the generic climatology drivers
 SCENARIOS = ("yamazaki2020", "generic")
@@ -132,54 +142,43 @@ _CROP_KEYS = ("organ_water", "grain_basis", "theta_anchors", "panicle_kw")
 # is this large (validation/numerics_convergence.py)
 LAM_EQ = 1.0e6
 
-# Per-congener flooded-profile leaching rate k_leach, calibrated to a real HYDRUS-1D
-# run (validation/cwo_kleach_calibration.py -> params/cwo_kleach.csv). Short chains
-# leach faster (larger k_leach); long chains stay buffered (k_leach -> 0). Loaded once.
-_KLEACH_MAX = 0.15
+# The paddy scenario's own root-zone pore-water shapes c(t)/c(0) per congener (PREREG 9.11):
+# `cwo_profile="flooded"` and the soil-inventory mode read them; built by
+# validation/cwo_shape_table.py from the Tsukuba Andosol HYDRUS-1D scenario (soil_hydrus). They
+# replace the analytic first-order surrogate and its k_leach, which could not take the leaching
+# front (9 of 13 congeners ended on its numerical ceiling).
+def _load_cwo_shapes():
+    import csv
+    path = os.path.join(_ROOT, "params", "cwo_shapes_hydrus.csv")
+    with open(path) as f:
+        rows = list(csv.reader(line for line in f if not line.startswith("#")))
+    names = rows[0][1:]
+    kd = np.array([float(x) for x in rows[1][1:]])
+    data = np.array([[float(x) for x in r] for r in rows[2:]])
+    return names, kd, data[:, 0], data[:, 1:]
 
 
-def _load_cwo_kleach():
-    path = os.path.join(_ROOT, "params", "cwo_kleach.csv")
-    table, xs, ys = {}, [], []
-    try:
-        with open(path) as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#") or line.startswith("congener"):
-                    continue
-                p = line.split(",")
-                table[p[0]] = float(p[4])
-                xs.append(np.log10(float(p[3])))
-                ys.append(float(p[4]))
-        b, a = np.polyfit(xs, ys, 1) if len(xs) >= 2 else (0.0, 0.02)
-        return table, (float(a), float(b))
-    except (OSError, ValueError, IndexError):
-        return {}, (0.02, 0.0)                                 # flat fallback if missing
+_CWO_SHAPE_NAMES, _CWO_SHAPE_KD, _CWO_SHAPE_T, _CWO_SHAPES = _load_cwo_shapes()
 
 
-_CWO_KLEACH, _CWO_KLEACH_FALLBACK = _load_cwo_kleach()
+def hydrus_shape(t, congener=None, Kd=None):
+    """The scenario's root-zone pore water c(t)/c(0) on `t` [days after transplanting] for a curated
+    congener's column, or for a linear `Kd` [L/kg] by interpolation in log10 Kd between the columns
+    (held at the end columns outside their range). Outside the scenario's season the shape is held
+    at its end values (PREREG 9.11)."""
+    t = np.asarray(t, float)
+    if congener in _CWO_SHAPE_NAMES and Kd is None:
+        col = _CWO_SHAPES[:, _CWO_SHAPE_NAMES.index(congener)]
+    else:
+        if Kd is None:
+            raise ValueError("give a curated congener or its linear Kd [L/kg]")
+        order = np.argsort(_CWO_SHAPE_KD)
+        lk, sh_ = np.log10(_CWO_SHAPE_KD[order]), _CWO_SHAPES[:, order]
+        x = float(np.clip(np.log10(float(Kd)), lk[0], lk[-1]))
+        col = np.array([np.interp(x, lk, row) for row in sh_])
+    return np.interp(t, _CWO_SHAPE_T, col)
 
 
-def default_k_leach(congener=None, n_C=None, group=None, Koc=None):
-    """Per-congener default leaching rate for `cwo_profile='flooded'`, calibrated to
-    HYDRUS-1D. Known congeners use the calibrated table; a novel/SMILES compound falls
-    back to k_leach(log10 Koc) (short chains leach faster, long chains -> ~0).
-
-    `Koc` [L/kg] takes that same fallback without a congener at all -- the route for a
-    NEUTRAL organic, whose Koc comes from log Kow (`literature_params.koc_neutral`) or
-    a measurement, not from the PFAS chain-length QSPR. The fit itself is a property of
-    the paddy leaching model rather than of PFAS, so it transfers; what does not
-    transfer is the per-congener table, which is why a neutral never reads it."""
-    if congener and congener in _CWO_KLEACH:
-        return _CWO_KLEACH[congener]
-    if Koc is None and n_C is not None:
-        import literature_params as lp
-        Koc = lp.koc(n_C, {"PFCA": "carboxylate", "PFSA": "sulfonate",
-                           "ether": "ether"}.get(group, "carboxylate"))
-    if Koc is not None:
-        a, b = _CWO_KLEACH_FALLBACK
-        return float(np.clip(a + b * np.log10(float(Koc)), 0.0, _KLEACH_MAX))
-    return 0.02
 # tissue keys that compose "straw" (the bulk shoot reported in agronomy)
 STRAW_PARTS = ("stem", "leaf")
 
@@ -531,6 +530,9 @@ def _crop_drivers(t, b, crop):
     M = om.organ_matrix(b, stage=stage, anchors=anchors)
     if stage:
         extras["theta"] = om.theta_matrix(b, len(t), stage=True, anchors=anchors)
+    if has_dvs:                       # the leaf's air-exchange surface (PREREG 9.1)
+        import plant_air as pa
+        extras["area"] = pa.exchange_area(b["leaf"], b["dvs"], leaf_area=b.get("leaf_area"))
     return M, extras
 
 
@@ -1201,7 +1203,7 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=None, n_t=241,
                      air=False, air_kw=None, waters=None, lipids=None,
                      biomass="oryza", measured_forcing=True, drivers=None,
                      tscf=None, lipid_source=None,
-                     pKa=None, is_acid=True, pH=6.5, g_apo=0.0,
+                     pKa=None, is_acid=True, pH=None, g_apo=0.0,
                      cwo_profile="constant", cwo_kw=None, Koc=None,
                      dead_leaf_attached=1.0, scenario=DEFAULT_SCENARIO, scenario_kw=None):
     """Run the 4-compartment DPU for a NEUTRAL (non-ionised) organic.
@@ -1266,34 +1268,34 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=None, n_t=241,
     """
     import neutral_dpu as ND
 
+    # one plant for both paths (PREREG 9.1): the organ water by stage, brown rice + the husk pool,
+    # the stage that places the panicle and the leaf's air-exchange surface, as `simulate()`
     if drivers is not None:
-        drivers = neutral_forms(drivers)
-        t = np.asarray(drivers["t"], dtype=float)
-        season = float(t[-1])
-        Cwo_series = np.asarray(drivers["Cwo"], dtype=float)
-        Qtp = np.asarray(drivers["Qtp"], dtype=float)
-        M = np.asarray(drivers["M"], dtype=float)
-        leaf_loss = drivers.get("leaf_loss")
-        M_basis = drivers.get("mass_basis", "fresh")
+        d = drivers
     else:
-        # the neutral path keeps the constant organ water and the whole panicle until
-        # amendment 2b decides them (PREREG 7.9)
         d = _default_drivers(season, n_t, Cwo, measured_forcing, biomass, scenario,
-                             dict(scenario_kw or {}, organ_water="constant", grain_basis="panicle"))
-        t, Cwo_series, Qtp, M, leaf_loss, M_basis = (d["t"], d["Cwo"], d["Qtp"], d["M"],
-                                                     d["leaf_loss"], d["mass_basis"])
-        season = float(t[-1])
+                             scenario_kw)
         if cwo_profile != "constant":
-            Cwo_series = cwo_profile_series(
-                t, level=Cwo, profile=cwo_profile, log_kow=float(log_kow), Koc=Koc,
-                scenario=scenario if measured_forcing else "generic", **(cwo_kw or {}))
+            d = dict(d, Cwo=cwo_profile_series(
+                d["t"], level=Cwo, profile=cwo_profile, log_kow=float(log_kow), Koc=Koc,
+                scenario=scenario if measured_forcing else "generic", **(cwo_kw or {})))
+    t = np.asarray(d["t"], dtype=float)
+    season = float(t[-1])
+    Cwo_series = np.asarray(d["Cwo"], dtype=float)
+    Qtp = np.asarray(d["Qtp"], dtype=float)
+    M = np.asarray(d["M"], dtype=float)
+    leaf_loss = d.get("leaf_loss")
+    M_basis = d.get("mass_basis", "fresh")
     drv = dict(t=t, Cwo=Cwo_series, Qtp=Qtp, M=M, leaf_loss=leaf_loss, mass_basis=M_basis)
+    drv.update({k: d[k] for k in ("dvs", "theta", "husk", "area") if d.get(k) is not None})
 
     gam = float(np.log(2.0) / half_life) if half_life else 0.0
     lipid_source = lipid_source or ND.DEFAULT_LIPID_SOURCE
     comps = ND.rice_compartments(lipids=lipids, waters=waters,
                                  gammas=dict.fromkeys(TISSUES, gam),
                                  lipid_source=lipid_source)
+    import literature_params as LP
+    pH = LP.PADDY_PH if pH is None else float(pH)       # paddy pore water (PREREG 9.1)
     cmpd = ND.NeutralCompound(name=name, log_kow=float(log_kow), MW=float(MW),
                               K_AW=float(K_AW), kappa_d=float(kappa_d),
                               tscf=tscf, tscf_model=tscf_model,
@@ -1357,7 +1359,7 @@ def _crop_grid(t, scenario=DEFAULT_SCENARIO, biomass="oryza2000", season=None, c
                           if np.ndim(a) == 2 else np.interp(t, d["t"], a))
         out = dict(Qtp=lerp(d["Qtp"]), M=lerp(d["M"]),
                    leaf_loss=np.interp(t, d["t"], d["leaf_loss"], right=0.0), dvs=lerp(d["dvs"]))
-        out.update({k: lerp(d[k]) for k in ("theta", "husk", "panicle") if k in d})
+        out.update({k: lerp(d[k]) for k in ("theta", "husk", "panicle", "area") if k in d})
         return out
     if scenario != "generic":
         raise ValueError(f"scenario must be one of {SCENARIOS}, got {scenario!r}")
@@ -1503,32 +1505,42 @@ def load_driver_csv(path_or_buffer, biomass="oryza2000", scenario=DEFAULT_SCENAR
     return drivers_from_arrays(t, Cwo, Qtp=Qtp, M=M, biomass=biomass, scenario=scenario)
 
 
-def pore_water_from_inventory(t, C_total, K_F=2.0, n=0.85, theta_g=0.35,
-                              theta_g_flooded=0.60, flooded=None, k_leach=0.0):
-    """Invert a soil PFAS inventory to pore-water C_w^o(t) via a Freundlich paddy soil.
+def pore_water_from_inventory(t, C_total, K_F=None, n=1.0, congener=None, Koc=None):
+    """Invert a total soil PFAS inventory to the root-zone pore water C_w^o(t) (PREREG 9.11).
 
-    C_total : total soil inventory [µg/kg dry] (scalar or series on `t`).
-    K_F, n  : Freundlich capacity / exponent (S = K_F*C_w^n); long chains sorb harder.
-    theta_g : drained gravimetric water content [L/kg dry].
-    flooded : optional boolean schedule on `t`; when given, flooded steps use the
-        redox-corrected soil (higher water content -> dilution) plus first-order
-        `k_leach` on the dissolved pool. None -> single drained isotherm.
-    Returns (Cwo_series, soil_object) -- soil_object exposes the isotherm for plots.
-    """
+    C_total : total soil inventory [µg/kg dry] at transplanting (scalar).
+    K_F, n  : the soil's isotherm S = K_F C_w^n [µg/kg dry per (µg/L)^n]; K_F defaults to the
+        congener's linear Kd on the site soil (Koc QSPR x f_oc, or `Koc` x f_oc for another
+        structure) and n to 1, the form the soil scenario runs on.
+    The inventory is split at the flooded plough layer's water per dry mass (theta_s / rho_b of the
+    Tsukuba Andosol): C_total = K_F c0^n + theta_g c0. The time course is the scenario's own
+    HYDRUS shape (`hydrus_shape`) at the congener's column or, for another isotherm, at the linear
+    Kd the isotherm has at c0. Returns (Cwo_series, FreundlichSoil) -- the soil object exposes the
+    isotherm for plots."""
+    import soil_hydrus as sh
+    from scipy.optimize import brentq
     t = np.asarray(t, float)
-    C_total = np.full_like(t, float(C_total)) if np.ndim(C_total) == 0 else np.asarray(C_total, float)
-    if flooded is None:
-        soil = FreundlichSoil(K_F=K_F, n=n, theta_g=theta_g, name="paddy soil")
-        Cwo = soil.pore_water_series(C_total)
-        return Cwo, soil
-    flooded = np.asarray(flooded, bool)
-    redox = PaddyRedoxCorrected(
-        drained=FreundlichSoil(K_F=K_F, n=n, theta_g=theta_g, name="drained/aerobic"),
-        flooded=FreundlichSoil(K_F=K_F, n=n, theta_g=theta_g_flooded, name="flooded (diluted)"),
-        k_leach=k_leach)
-    C_T = redox.apply_leaching(t, C_total, flooded) if k_leach > 0 else C_total
-    Cwo = redox.pore_water_series(C_T, flooded)
-    return Cwo, redox
+    theta_g = sh.andosol_soil()["ths"] / sh.RHO_PLOUGH
+    if K_F is None:
+        if Koc is not None:
+            K_F = float(Koc) * sh.FOC
+        elif congener in _CONG:
+            K_F = sh.paddy_kd(_CONG[congener]["n_C"],
+                              {"ether": "PFCA"}.get(_CONG[congener]["group"], _CONG[congener]["group"]))
+        else:
+            raise ValueError("give K_F, a curated congener, or Koc")
+    K_F, n, C_T = float(K_F), float(n), float(C_total)
+    if C_T <= 0:
+        c0 = 0.0
+    elif n == 1.0:
+        c0 = C_T / (K_F + theta_g)
+    else:
+        c0 = brentq(lambda c: K_F * c ** n + theta_g * c - C_T, 0.0, C_T / theta_g)
+    linear_kd = K_F * c0 ** (n - 1.0) if c0 > 0 else K_F
+    own = congener in _CWO_SHAPE_NAMES and Koc is None and n == 1.0
+    shape = hydrus_shape(t, congener=congener) if own else hydrus_shape(t, Kd=linear_kd)
+    soil = FreundlichSoil(K_F=K_F, n=n, theta_g=theta_g, name="Tsukuba Andosol plough layer (flooded)")
+    return c0 * shape, soil
 
 
 # ---------------------------------------------------------------------------
@@ -1572,44 +1584,63 @@ def build_hydrus_engine():
     return sh.build_hydrus_engine()
 
 
-def hydrus_drivers(congener=None, season=None, Cwo_ref=1.0, f_oc=0.02, n_t=241,
+def hydrus_drivers(congener=None, season=None, Cwo_ref=1.0, f_oc=None, n_t=241,
                    qtp_from_hydrus=True, biomass="oryza", Kd=None, log_kow=None,
-                   scenario=DEFAULT_SCENARIO, **run_kw):
-    """Run a real HYDRUS-1D paddy soil model for `congener` and return a `drivers`
-    dict (+ the raw PaddyResult) for `simulate(drivers=…)`.
+                   scenario=DEFAULT_SCENARIO, source="soil", sub="mid", **run_kw):
+    """Run the HYDRUS-1D paddy soil model (the Tsukuba Andosol, PREREG 9.2) for `congener` and
+    return a `drivers` dict (+ the raw PaddyResult) for `simulate(drivers=…)`.
 
-    HYDRUS supplies the congener-dependent pore-water `Cwᵒ(t)` (short chains leach
-    under flooding, long chains stay buffered) and the actual root water uptake
-    `Q_TP(t)`; the crop side (transpiration driving the soil run, `M(t)`) is `scenario`'s
-    -- the calibration site-year by default (`soil_hydrus.inputs_from_hydrus`).
-    `Cwᵒ(t)` is normalised to season-mean `Cwo_ref` so the average exposure matches a
-    constant-Cwo run. Extra `run_kw` (flood_until, percolation, …) pass through to
-    `soil_hydrus.run_paddy_hydrus`.
+    HYDRUS supplies the root-zone pore water `Cwᵒ(t)` and the actual root water uptake
+    `Q_TP(t)`; the plant side (organ mass with its staged water, the husk pool, the stage, the
+    leaf's air-exchange surface) is `scenario`'s own crop, as every other driver set.
 
-    For a NEUTRAL organic there is no congener: pass `log_kow` (Kd = Koc(log Kow)·f_oc
-    via the PROVISIONAL Karickhoff QSPR, `literature_params.koc_neutral`) or, better,
-    an explicit measured `Kd` [L/kg], which overrides everything else."""
+    source "soil" (generic): a contaminated soil under clean water; `Cwᵒ(t)` is normalised to
+        season-mean `Cwo_ref` (the `cwo_profile` convention: only the shape).
+    source "irrigation": the Yamazaki field (PREREG 9.3) -- PFAS arrive with irrigation and rain
+        onto the measured pre-season soil (`soil_hydrus.yamazaki_source_kw`; `sub` = the unmeasured
+        subsoil's end); `Cwᵒ(t)` is the root-zone pore water over the irrigation grab times
+        `Cwo_ref`, so a BAF on the grab compares with the observed one.
+
+    f_oc defaults to the site's (Yamazaki SI Table S5). For a NEUTRAL organic pass `log_kow`
+    (Kd = Koc(log Kow) f_oc, the PROVISIONAL Karickhoff QSPR) or, better, a measured `Kd`."""
     import soil_hydrus as sh
+    f_oc = sh.FOC if f_oc is None else float(f_oc)
     n_C, group = None, "PFCA"
     if Kd is None and log_kow is not None:
         import literature_params as lp
-        Kd = float(lp.koc_neutral(float(log_kow))) * float(f_oc)
+        Kd = float(lp.koc_neutral(float(log_kow))) * f_oc
     if Kd is None:
         if congener not in _CONG:
             raise KeyError(f"unknown congener {congener!r}; known: {CONGENERS}. "
                            "For a neutral organic pass log_kow= or Kd= instead.")
         n_C, group = _CONG[congener]["n_C"], _CONG[congener]["group"]
+    c_irr = None
+    if source == "irrigation":
+        if congener is None or scenario != "yamazaki2020":
+            raise ValueError("the irrigation-source scenario is the Yamazaki field: a curated "
+                             "congener on scenario 'yamazaki2020'")
+        Kd_run = float(Kd) if Kd is not None else sh.paddy_kd(n_C, group, f_oc)
+        kw, _flags = sh.yamazaki_source_kw(congener, Kd_run, sub=sub)
+        run_kw = dict(run_kw, **kw)
+        c_irr = kw["c_irrigation"]
+    elif source != "soil":
+        raise ValueError(f"source must be 'soil' or 'irrigation', got {source!r}")
     pin, res = sh.inputs_from_hydrus(n_C, group, season=season,
                                      Cwo_ref=Cwo_ref, f_oc=f_oc, n_t=n_t, Kd=Kd,
                                      qtp_from_hydrus=qtp_from_hydrus, biomass=biomass,
                                      scenario=scenario, **run_kw)
-    drivers = dict(t=np.asarray(pin.t, float), Cwo=np.asarray(pin.Cwo, float),
-                   Qtp=np.asarray(pin.Qtp, float), M=np.asarray(pin.M, float),
-                   mass_basis=pin.M_basis)
-    if getattr(pin, "leaf_loss", None) is not None:
-        drivers["leaf_loss"] = np.asarray(pin.leaf_loss, float)
-    if getattr(pin, "dvs", None) is not None:          # the panicle share follows DVS
-        drivers["dvs"] = np.asarray(pin.dvs, float)
+    t = np.asarray(pin.t, float)
+    if c_irr is not None:                      # absolute, over the grab (PREREG 9.3)
+        Cwo = np.interp(t, res.t, res.Cw) / c_irr * float(Cwo_ref)
+    else:
+        Cwo = np.asarray(pin.Cwo, float)
+    crop = _crop_grid(t, scenario, biomass, None if scenario == "yamazaki2020" else float(t[-1]))
+    drivers = dict(t=t, Cwo=Cwo, Qtp=np.asarray(pin.Qtp, float), M=np.asarray(crop["M"], float),
+                   mass_basis=MASS_BASIS, dvs=np.asarray(crop["dvs"], float))
+    if crop.get("leaf_loss") is not None:
+        drivers["leaf_loss"] = np.asarray(crop["leaf_loss"], float)
+    drivers.update({k: np.asarray(crop[k], float) for k in ("theta", "husk", "area")
+                    if crop.get(k) is not None})
     return drivers, res
 
 
@@ -1628,41 +1659,31 @@ _HEADGROUP = {"PFCA": "carboxylate", "PFSA": "sulfonate", "ether": "ether"}
 
 
 def cwo_profile_series(t, level=1.0, profile="constant", *, n_C=8, group="PFCA",
-                       congener=None, flood_fraction=1.0, k_leach=None, f_oc=0.02,
-                       C_total=5.0, theta_g_drained=0.35, theta_g_flooded=0.60,
-                       log_kow=None, Koc=None, scenario=DEFAULT_SCENARIO, **hydrus_kw):
+                       congener=None, f_oc=None, log_kow=None, Koc=None,
+                       scenario=DEFAULT_SCENARIO, **hydrus_kw):
     """Time-resolved pore-water C_w^o(t) on grid `t`, normalised to mean == `level`.
 
     profile:
       'constant' -> flat at `level` (the default; conc == BAF).
-      'flooded'  -> analytic Freundlich paddy shape (dilution + first-order
-                    leaching of the dissolved pool; `soil_paddy_redox_corrected`).
-                    The per-congener capacity K_F = Koc(n_C, head_group)*f_oc comes
-                    from the C3 Koc QSPR, so SHORT chains (low K_F -> large dissolved
-                    fraction) LEACH to a steep decline while LONG chains stay buffered
-                    (~flat). Needs NO HYDRUS engine -- pure Python, works everywhere.
-                    `k_leach` defaults (None) to the per-congener value CALIBRATED to a
-                    real HYDRUS-1D run (`default_k_leach`); pass a float to override.
-      'hydrus'   -> the Cwᵒ(t) shape from a real HYDRUS-1D run (needs the built
-                    engine; raises if absent) whose crop side is `scenario`'s; under
-                    "yamazaki2020" `t` must end at the site's harvest. Only the Cwᵒ shape
-                    is taken (Qtp/M stay the caller's), so the three profiles are
-                    directly comparable.
+      'flooded'  -> the Tsukuba Andosol paddy's root-zone shape from the stored HYDRUS-1D runs
+                    (`hydrus_shape`, params/cwo_shapes_hydrus.csv; PREREG 9.11): a curated congener
+                    reads its own column, any other structure interpolates in log10 Kd (Kd = Koc
+                    x the site's f_oc). Short chains leach to near zero as a front passes the root
+                    zone, long chains stay buffered. No engine needed.
+      'hydrus'   -> a live HYDRUS-1D run of the same scenario (needs the built engine) whose crop
+                    side is `scenario`'s; under "yamazaki2020" `t` must end at the site's harvest.
+                    Only the Cwᵒ shape is taken (Qtp/M stay the caller's).
 
-    `flood_fraction` of the season is flooded (remainder drained -> terminal
-    concentration). Defaults give continuous flooding (=1.0): a monotone leaching
-    decline for short chains, ~flat for long chains.
-
-    NEUTRAL organics take the same shapes through `log_kow` (Koc from the PROVISIONAL
-    Karickhoff QSPR) or an explicit measured `Koc` [L/kg], either of which replaces the
-    PFAS chain-length QSPR. Sorption is the only compound-specific input here, so the
-    shape logic itself is unchanged.
+    NEUTRAL organics take the same shapes through `log_kow` (Koc from the PROVISIONAL Karickhoff
+    QSPR) or an explicit measured `Koc` [L/kg], either of which replaces the PFAS chain-length QSPR.
     """
     t = np.asarray(t, float)
     if profile == "constant":
         return np.full_like(t, float(level))
     season = float(t[-1]) if t[-1] > 0 else 1.0
     import literature_params as lp
+    import soil_hydrus as sh
+    f_oc = sh.FOC if f_oc is None else float(f_oc)
     if Koc is None and log_kow is not None:
         Koc = float(lp.koc_neutral(float(log_kow)))
 
@@ -1672,22 +1693,19 @@ def cwo_profile_series(t, level=1.0, profile="constant", *, n_C=8, group="PFCA",
                              "or log_kow=/Koc= for a neutral organic")
         hd, _ = hydrus_drivers(congener, season=season, Cwo_ref=float(level),
                                f_oc=f_oc, n_t=len(t), scenario=scenario,
-                               Kd=(None if Koc is None else float(Koc) * float(f_oc)),
+                               Kd=(None if Koc is None else float(Koc) * f_oc),
                                **hydrus_kw)
         return np.interp(t, hd["t"], hd["Cwo"])
 
     if profile == "flooded":
-        if Koc is None:
-            Koc = lp.koc(n_C, _HEADGROUP.get(group, "carboxylate"))
-        if k_leach is None:                              # per-congener HYDRUS-calibrated default
-            k_leach = default_k_leach(congener, n_C, group, Koc=Koc)
-        K_F = lp.koc_to_KF(Koc, f_oc, n=1.0)             # linear Kd (stable; n=1)
-        flooded = t < (flood_fraction * season)
-        Cwo, _ = pore_water_from_inventory(
-            t, C_total, K_F=K_F, n=1.0, theta_g=theta_g_drained,
-            theta_g_flooded=theta_g_flooded, flooded=flooded, k_leach=k_leach)
-        m = float(np.mean(Cwo))
-        return Cwo * (float(level) / m) if m > 0 else np.full_like(t, float(level))
+        if Koc is None and congener in _CWO_SHAPE_NAMES and f_oc == sh.FOC:
+            shape = hydrus_shape(t, congener=congener)
+        else:
+            Kd = (float(Koc) * f_oc if Koc is not None
+                  else sh.paddy_kd(n_C, {"ether": "PFCA"}.get(group, group), f_oc))
+            shape = hydrus_shape(t, Kd=Kd)
+        m = float(np.mean(shape))
+        return shape * (float(level) / m) if m > 0 else np.full_like(t, float(level))
 
     raise ValueError(f"unknown cwo_profile {profile!r}; "
                      "use 'constant', 'flooded', or 'hydrus'")

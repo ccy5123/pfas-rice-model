@@ -223,6 +223,7 @@ def plant_run(harvest, w=None, sbdur=SBDUR, tmpsb=TMPSB, nh=NH, nplh=NPLH, co2=C
     out["leaf_death_rate"] = np.where(t > td[-1], 0.0, np.maximum(np.interp(t, td, drlv), 0.0))
     out["dvs"] = np.interp(t, td, np.concatenate([[r["dvs"][i3]], r["dvs"][main]]))
     out["lai"] = lai
+    out["leaf_area"] = lai / nh                         # one-side green leaf area [m^2/hill]
     k = int(tp - w["doy0"]) + np.floor(t).astype(int)
     doy = tp + t
     alb = F.field_reflection(lai, flooded=True)
@@ -263,6 +264,8 @@ def drivers_from_run(run, Cwo=1.0, organ_water="constant", grain_basis="panicle"
     if grain_basis == "brown":
         d["husk"] = np.asarray(b["husk"], float)
         d["panicle"] = np.asarray(b["panicle"], float)
+    import plant_air as pa                             # the leaf's air-exchange surface (PREREG 9.1)
+    d["area"] = pa.exchange_area(b["leaf"], b["dvs"], leaf_area=run.get("leaf_area"))
     return d
 
 
