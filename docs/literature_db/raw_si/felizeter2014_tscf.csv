@@ -1,6 +1,6 @@
 # Felizeter S, McLachlan MS, De Voogt P (2014) Root uptake and translocation of perfluorinated alkyl acids by three hydroponically grown crops. J. Agric. Food Chem. 62:3334-3342. DOI 10.1021/jf500674j
 # SOURCE: Figure 5 (TSCF, p.3340) and Figure 1 (RCF, p.3337). NO numeric TSCF/RCF table in the main article; values are FIGURE-READ (digitised).
-#   Tissue concentrations / mass distributions are in SI Tables S9-S11, S14 and the growth calendar in SI Table S3 - SI NOT available to this extraction.
+#   Tissue concentrations / mass distributions are in SI Tables S9-S11, S14 and the growth calendar in SI Table S3 - SI read 2026-10-27: dates in raw_si/felizeter2014_si_table_s3_dates.csv; the SI has no TSCF table (the figure-read values stand).
 # CONDITIONS (p.3335-3336): greenhouse, 14 h light (temperature not controlled to a stated value; >25 C "for several days" during cabbage growth, 7/26 cabbages lost).
 #   Plants pregrown in soil to BBCH 10, then hydroponic (8 L half-strength Hoagland in 10 L buckets, solution renewed several times). Mixture of 14 PFAAs.
 #   Nominal exposure: tomato 10, 100, 1000, 10000 ng/L; zucchini and cabbage 10, 100, 500, 1000 ng/L (each PFAA). Replicates: 6 (cabbage, tomato), 4 (zucchini).

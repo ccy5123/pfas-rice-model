@@ -1035,3 +1035,13 @@ Expectations:
   the sources' assumption (less polar neutrals; no polar-end log Kow is given). The biocide census and briefing
   report the brown rice again, beside the husk + rachis pool (dry); the fish-kM sensitivity moves the brown
   rice by up to 8,344×. `grain_feed=None` keeps the unpredicted reading.
+
+### 9.17 Record (the requested SIs; no model change)
+The Tang 2026, Kim 2019 and Felizeter 2012/2014 SIs were read (uploaded by the user). `tr_drivers` cannot be resolved from
+the papers: neither Tang's SI nor Kim's gives a sowing, transplanting, heading or harvest date, and Kim's regions are
+anonymised without coordinates. The transfers stay on the calibration site-year's drivers, now as a limitation of the data,
+not a pending request (row `tr_drivers` closed). Felizeter's SIs give the experiment dates and tissue tables but no TSCF
+table; TSCF (their eq. 4) uses a modelled solution concentration, so the figure-read TSCFs stand. The repo's earlier
+transcriptions were checked against the SIs: Tang S7/S8, 75 cells, one SD corrected (PFOS 0.1 ug/g BCF 0.025 -> 0.0254; no
+code reads it); Kim S5/S6, 51 rows, all equal. New transcriptions: `raw_si/tang2026_si_table_s2_soil.csv`,
+`raw_si/kim2019_si_table_s2_sites.csv`, `raw_si/felizeter2014_si_table_s3_dates.csv`.

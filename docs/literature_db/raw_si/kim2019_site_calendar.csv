@@ -1,7 +1,7 @@
 # Kim et al. 2019 Sci Total Environ 671:714-721; DOI 10.1016/j.scitotenv.2019.03.240
 # Main-text extraction of site / crop-calendar / water-management / exposure / soil / biomass / transpiration information needed to
 #   drive the model on this dataset's OWN site and calendar. 'NOT REPORTED' = searched the full main text, not found. Quotes verbatim (line-break hyphens removed).
-# SI (Appendix A) referenced for Tables S1-S6 (site sources/distances + physicochemical parameters = Table S2); SI NOT available to this extraction.
+# SI (Appendix A) referenced for Tables S1-S6 (site sources/distances + physicochemical parameters = Table S2); SI read 2026-10-27: Table S2 = raw_si/kim2019_si_table_s2_sites.csv (no dates, no coordinates).
 # Main text: 8 pages (714-721), read in full.
 # literature subagent, 2026-10-27, not re-checked by main
 item,value,unit,page,quote,note

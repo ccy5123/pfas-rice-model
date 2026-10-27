@@ -9,9 +9,6 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 
 | DOI | paper | needed for | why it failed |
 |---|---|---|---|
-| 10.1016/j.jhazmat.2025.141017 (SI) | Tang et al. 2026 J Hazard Mater, Supplementary Tables S1-S8 | soil properties (Table S2), the experiment's dates (`tr_drivers`, PREREG 9.4) | main text read (re-supplied 2026-10-27 as the main text again); SI not supplied |
-| 10.1016/j.scitotenv.2019.03.240 (SI) | Kim et al. 2019 Sci Total Environ, SI Table S2 | site regions, distances, soil and water properties (`tr_drivers`) | main text read (re-supplied 2026-10-27 as the main text again); SI not supplied |
-| 10.1021/es302398u (SI), 10.1021/jf500674j (SI) | Felizeter et al. 2012 / 2014, SI | concentration, growth and transpiration tables; experiment dates | main texts read (re-supplied 2026-10-27 as the main texts again); SI not supplied |
 
 Leads, not yet requested (ask before relying on them):
 - Kobayashi & Horie 1994, Jpn. J. Crop Sci. 63:193-199 (spikelet and rachis-branch differentiation) —
@@ -48,4 +45,10 @@ Leads, not yet requested (ask before relying on them):
   phloem sap (PREREG 9.15); Vogel, van Genuchten & Cislerova 2001 (10.1016/S0309-1708(00)00037-3; sha256 b007f8f9...)
   -- `soil_hentry`. The same upload's Tang 2026, Kim 2019 and Felizeter 2012/2014 files are the main texts
   (sha256 fb2dbd93..., c2faf194..., c70492c6..., d79aa6f8...); their SIs are still needed (table above).
+- SIs uploaded by the user 2026-10-27 (papers_SI.zip), read in the main session: Tang 2026 SI (docx, sha256 deb3d35b...),
+  Kim 2019 SI (docx, sha256 352711e3...), Felizeter 2012 SI (sha256 9270ca0e...), Felizeter 2014 SI (sha256 fe7bdafb...).
+  None of them gives a crop calendar for Tang or Kim (`tr_drivers` cannot be resolved from the papers); Felizeter's SIs give
+  dates and tissue tables but no TSCF table. Transcriptions: `raw_si/tang2026_si_table_s2_soil.csv`,
+  `raw_si/kim2019_si_table_s2_sites.csv`, `raw_si/felizeter2014_si_table_s3_dates.csv`; checks: Tang S7/S8 (75 cells; one SD
+  0.025 -> 0.0254 corrected) and Kim S5/S6 (51 rows, all equal) against the repo's earlier transcriptions.
 SHA-256 of every file: in the session record (PREREG 9 commit message).

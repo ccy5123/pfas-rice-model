@@ -94,6 +94,9 @@ decisions (`model_api.WITHDRAWN_VARIANTS`; PREREG 9.4: their f_xy is untraceable
 | Kim 2019 (30 Korean fields) | calibration site-year | harvest window Oct 6-18 2016 only; fields anonymised |
 | Li 2025 (Tianjin, Jinyu Japonica No.22) | calibration site-year, stages by ORYZA DVS | samples July-October 2023; no stage dates. Stage -> DVS from sources (PREREG 5.9): heading 1 and ripening 2 by definition, tillering the midpoint of [transplanting, panicle initiation 0.65], filling and milk-ripening the centre (4/3, 5/3) of their ordered range; the range ends are printed |
 
+The SIs of Tang 2026 and Kim 2019 were read (2026-10-27): neither gives a crop calendar, and Kim's regions are
+anonymised, so the transfers cannot run on their own drivers from the papers (`tr_drivers`, PREREG 9.17).
+
 Decision rule for every comparison: `validation/decision_stats.decide` (paired bootstrap, 95 %
 interval; PREREG section 2). Scores: `validation/transfer_sourced.json` and
 `params/transfer_scores.json` (the honesty band).

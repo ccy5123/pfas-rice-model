@@ -1,0 +1,19 @@
+# Tang et al. 2026 J Hazard Mater 502:141017, SI Table S2 (10.1016/j.jhazmat.2025.141017; SI docx sha256 deb3d35b...)
+# "The physical and chemical properties of the planting soil", mean +- standard error (n = 3), the uncontaminated soil (CK).
+# The SI gives NO sowing/transplanting/harvest dates (only 'monthly' sampling over 150 d): tr_drivers stays unresolved.
+# Transcribed from the SI file, 2026-10-27, main session.
+property,unit,value,se
+pH,-,5.46,0.25
+TN,g/kg,1.47,0.11
+AP,mg/kg,16.36,0.18
+AK,mg/kg,93.45,1.65
+OM,g/kg,27.40,0.42
+CEC,cmol/kg,10.74,0.58
+Cd,mg/kg,0.21,0.04
+Pb,mg/kg,14.25,0.86
+Cr,mg/kg,15.50,1.12
+Hg,mg/kg,0.15,0.06
+As,mg/kg,8.65,0.45
+Cu,mg/kg,20.62,0.80
+Zn,mg/kg,75.34,1.23
+Ni,mg/kg,20.23,0.35

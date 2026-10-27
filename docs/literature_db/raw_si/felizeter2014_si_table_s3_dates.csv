@@ -1,0 +1,8 @@
+# Felizeter et al. 2014 J Agric Food Chem 62:3334-3342, SI Table S3 (10.1021/jf500674j; SI pdf sha256 fe7bdafb...)
+# Dates of seed sowing, start and end of exposure, harvest window. Greenhouse, hydroponic. Transcribed 2026-10-27, main session.
+# The SI holds tissue concentrations (Tables S11-S13) but NO TSCF table: TSCF (main text eq.4) uses the modelled, transpiration-weighted
+# solution concentration, so it cannot be recomputed from the SI tables; the figure-read TSCFs (felizeter2014_tscf.csv) stand.
+crop,sowing,start_exposure,harvest_from,harvest_to,end_experiment_from,end_experiment_to
+tomato,2010-07-13,2010-07-27,2010-10-18,2010-11-12,2010-11-30,2010-12-17
+cabbage,2011-02-11,2011-02-25,2011-06-07,2011-06-27,2011-06-07,2011-06-27
+zucchini,2011-03-22,2011-03-30,2011-05-23,2011-06-07,2011-06-09,2011-06-09
