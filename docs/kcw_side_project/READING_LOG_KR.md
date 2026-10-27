@@ -2,6 +2,8 @@
 
 받은 논문·SI·기록과 거기서 얻은 것을 모두 적습니다. 원문 PDF와 DOCX는 저작권 때문에 커밋하지 않습니다
 (`docs/literature_db/raw_si/README.md`). 대신 추출값을 `raw_si/`에 두고, 원본은 아래 SHA-256으로 확인합니다.
+원문 보관처: Google Drive 폴더 `pfas-rice-model`(사용자 소유, 2026-10-27 생성). 파일 목록과 SHA-256은 그 폴더의
+`kcw_papers_file_index.csv`에 있습니다. 커넥터는 대용량 파일을 올릴 수 없어서 원문 파일은 사용자가 직접 올립니다.
 
 ## 1. 원문과 SI (2026-10-27)
 
