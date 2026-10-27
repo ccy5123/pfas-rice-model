@@ -24,6 +24,22 @@ Leads, not yet requested (ask before relying on them):
 - 10.1016/j.ecoenv.2022.113683 Luo et al. 2022 (Cd by panicle organ)
 - 10.1007/s10333-005-0028-0 Tournebize et al. 2006 (PCPF-SWMS; for amendment 2b soil — not yet read)
 - 10.1021/acs.est.5c11716 Muensterman et al. 2026 ES&T 60:1207 + correction 10.1021/acs.est.6c07668 (eq. 4:
-  log kIAM = 0.046 CHI_IAM + 0.42) — biomimetic K_PL / K_prot for PFAS; not yet read (binding work, not 2a)
+  log kIAM = 0.046 CHI_IAM + 0.42) — biomimetic K_PL / K_prot for PFAS; read 2026-10-27 with its SI (below)
 - 10.3329/baj.v19i2.31861 Ansari et al. 2017 (open access; hull and brown-rice weight in Fig. 1, to digitise)
 - 10.1626/pps.15.258 Fukuoka et al. 2012; 10.1007/s11270-007-9425-x Rahman et al. 2007 (open access)
+
+## Obtained (2026-10-27, uploaded by the user) — read in the K_cw side-project session
+Main texts and SI read; extracted values in `raw_si/` (file named per entry); reading log in
+`docs/kcw_side_project/READING_LOG_KR.md`.
+- 10.1016/j.jhazmat.2024.136016 Mel et al. 2024 (lignin Kd, 4 PFAS; SI Table S1 is an image) → `raw_si/mel2024_lignin_kd.csv`
+- 10.1021/acs.est.5c11716 Muensterman et al. 2026 + 10.1021/acs.est.6c07668 (SI Tables S12, S13) → `raw_si/muensterman2026_tableS12_units.csv`, `raw_si/muensterman2026_tableS13_kiam.csv`
+- 10.1016/j.scitotenv.2020.139383 Wang et al. 2020 (*Alisma*; SI Tables S10, S11, S13, S15) → `raw_si/wang2020_table*.csv`
+- 10.1021/acs.est.3c00504 Liu et al. 2023 (wheat; root fractions only in main-text Fig. 3a, to digitise; SI has no table of them)
+- 10.1021/acs.est.1c01175 Yu et al. 2021 (lettuce PFOS; fractions in Fig. 1 and SI Fig. S6, to digitise)
+- 10.1016/j.envint.2021.106642 Mei et al. 2021 (review; no cell-wall component Kd — not the K_cw_poly source)
+- 10.1038/s41467-025-65191-3 Guo et al. 2025 (open access; Source Data Fig. 3b) → `raw_si/guo2025_fig3b_subcellular.csv`
+
+## Not found
+- The "Prompt2 handoff" that came with `params/Kcw_Klignin_params_v2.csv` (source of the K_cw_poly absolute scale, the
+  0.40 sulfonate offset and the 0.10/CF2 slope): not in the repo, its history, the importing session's transcript,
+  Google Drive or Notion; the user could not obtain it (2026-10-27). K_cw_poly is untraceable until a source is found.

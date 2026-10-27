@@ -1,0 +1,26 @@
+# Wang T-T, Ying G-G, et al. (2020) Uptake mechanism, subcellular distribution, and uptake process of PFOA and PFOS by wetland plant Alisma orientale. Sci Total Environ 733:139383, doi:10.1016/j.scitotenv.2020.139383.
+# SI (1-s2.0-S0048969720329004-mmc1.docx) table parsed from the docx XML as printed (main session 2026-10-27). Hydroponic 1/2 Hoagland, 1.0 mg/L PFOA or PFOS; time column in days (main text 2.3: 0.5-16 d exposure; 0-16 d dissipation). Concentrations per kg FRESH weight.
+"# Table S10. Concentrations of PFOS and PFOA in the subcellular components of roots, stems, and leaves in uptake experiment at different exposure time."
+,Concentration of PFOA in subecellular components (10 µg/kg fw),,Concentration of PFOS in subecellular components (10 µg/kg fw)
+,Soluble fraction,Organelles,Cell walls,,Soluble fraction,Organelles,Cell walls
+Root,,,,,,,
+0.5,29.2±1.3 a,3.3±0.6,9.7±0.5,,48.8±1.7,48.0±3.0,81.3±2.2
+1,47.5±0.3,5.3±0.6,17.3±1.5,,68.3±1.5,77.0±0.4,132.1±7.6
+2,59.6±1.4,6.6±0.6,23.9±0.8,,85.8±1.2,106.4±2.5,169.1±7.6
+4,81.8±0.7,10.1±0.6,35.1±2.6,,115.2±4.3,150.4±4.3,237.8±7.7
+8,103.0±4.2,16.2±0.9,47.9±1.4,,185.3±5.7,257.1±0.6,395.2±22.3
+16,111.8±1.9,14.9±1.1,51.3±1.0,,207.6±1.4,287.2±1.2,451.8±8.4
+Stem,,,,,,,
+0.5,5.5±1.2,0.5±0.1,1.8±0.7,,5.0±0.1,0.5±0.0,1.0±0.0
+1,6.8±0.8,0.8±0.3,2.8±0.5,,5.4±0.1,1.1±0.1,2.3±0.1
+2,8.4±0.8,1.0±0.0,3.8±0.2,,5.6±0.2,1.4±0.1,3.2±0.1
+4,12.6±1.2,1.4±0.2,6.8±0.2,,6.8±0.3,2.3±0.1,4.6±0.1
+8,16.9±0.2,2.5±0.5,10.8±2.3,,7.7±0.2,3.5±0.1,6.1±0.4
+16,30.7±1.4,5.5±0.4,18.1±1.1,,11.0±0.1,5.9±0.2,8.5±0.2
+Leaf,,,,,,,
+0.5,3.5±0.1,0.3±0.0,1.3±0.4,,4.7±0.1,0.3±0.0,1.1±0.1
+1,4.9±0.2,0.5±0.1,2.4±0.4,,4.8±0.1,0.8±0.0,2.4±0.2
+2,8.3±0.7,1.1±0.2,5.6±1.3,,5.6±0.2,2.3±0.1,7.4±0.3
+4,16.5±2.1,3.4±1.1,13.3±2.9,,7.7±0.0,6.1±0.4,16.8±0.5
+8,34.5±2.4,8.2±0.8,30.3±1.3,,11.0±0.3,12.1±0.0,32.3±0.3
+16,63.4±1.9,18.2±4.6,55.8±2.7,,15.6±0.3,25.3±0.5,55.6±4.1
