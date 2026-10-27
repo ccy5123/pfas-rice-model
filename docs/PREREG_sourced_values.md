@@ -888,3 +888,18 @@ chosen that the data do not identify:
   ORYZA2000 Tp and Ep of the Yamazaki run, JMA Tsukuba 2020 daily rain (`raw_si/jma_tsukuba_2020_precip.csv`).
 - `top_bc=3` of the old scenario was surface RUN-OFF, so the old "flooded" paddy never ponded; the
   scenario now uses the surface layer (`top_bc=2`).
+
+### 9.10 Addendum (committed before any scored soil run; found in the first test runs)
+- **Root water uptake.** The old scenario kept HYDRUS's generic Feddes reduction (p0 = -10 cm), which stops
+  uptake in saturated soil -- an upland crop's anaerobiosis. It never acted there because the old top boundary
+  ran water off and the soil never saturated; with ponding it halves the transpiration and the ponded depth
+  climbs to 17 cm. The crop side of the model is ORYZA2000 in potential production (no water stress), and the
+  transpiration driving the soil run is that crop's (site) or one measured in flooded paddies (generic), so a
+  reduction in HYDRUS would contradict its own driver. No reduction above the wilting point: uptake at the
+  potential rate from ponding (p0 = popt above any ponded head) down to -15000 cm (-1.5 MPa), where it stops.
+  No rice-specific Feddes set was found (searched: HYDRUS database, SWAP crop files).
+- **Grid.** Under the steady state the pan's base is unsaturated over 0.04-0.37 cm (`pan_ks`), so the node
+  spacing there is dx/100 (graded grid, `_graded_profile`); convergence (§1) covers it.
+- **Pan solve.** The pan's Ks is solved with the pan's own K(h) (its base desaturates), not as a saturated
+  layer: the saturated form under-estimated the resistance and gave 0.21 instead of 0.54 cm/d. Result:
+  Ks_pan 0.046-0.056 cm/d over 2 cm (the order of Tournebize 2006's independently calibrated 0.08).
