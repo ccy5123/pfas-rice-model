@@ -997,3 +997,29 @@ source check. No cycle is chosen. (Calendar re-read 2026-10-27: sha256 63e299e9.
 **What 2b leaves open**: `obs_exposure_time` (default scope), `soil_root_beta`, `tr_drivers`, `smiles_kcw` and
 the curated K_cw (side project), the neutral phloem-sap concentration (Trapp 2007, 2011 requested).
 The input-range band is unchanged (no input of `simulate()` changed, E25).
+
+### 9.15 Addendum (the neutral brown rice; committed before its runs)
+9.1c left the neutral brown rice unpredicted because the neutral phloem-sap concentration had not been read at
+source. Trapp 2007 and Rein, Legind & Trapp 2011 are now read (rows `neu_phloem_xylem_eq`, `neu_phloem_fruit_flow`,
+`neu_phloem_downward`):
+- Trapp 2007 p.374: "no difference is made between chemical concentration in phloem and in xylem ... For the less
+  polar neutral compounds, xylem and phloem concentrations will equilibrate within a short distance".
+- Rein 2011 p.194, eqs 4-5: the phloem flux to the fruit, T_C,Ph x the fruit's dry growth, is taken "under the
+  assumption of phase equilibrium to xylem flux": subtracted from the flow to the leaves and added to the flow
+  to the fruit.
+- Rein 2011 p.208: downward phloem transport is irrelevant for the less polar neutrals (it matters for weak
+  acids, by the ion trap, and for very polar neutrals, which leave the sieve tubes slowly).
+Change (neutral path only): the brown rice is fed by a phloem stream at the stem's xylem-sap concentration, of
+volume T_C,Ph (the rice value, 6.1 L/kg, 4.4-7.8, PREREG 5.1) x its dry growth, taken out of the leaf's xylem
+inflow (never more than that inflow); no downward stream (phi = 0, as before); the husk keeps the panicle's
+transpiration deposit. The brown rice is then predicted by default, and the rough grain with it. `phloem=True`
+(the leaf-source stream with the weak-acid trap) stays as it was. No log Kow below which a neutral counts as
+"very polar" is given in either source, so none is set: the equality is reported as the sources' assumption and
+its polar-end limit is stated in the outputs. The PFAS path is untouched (the core's default is unchanged).
+Expectations:
+- E32 Every PFAS `simulate()` output of the default and the Yamazaki observable are bit-identical.
+- E33 No neutral validation table has a grain row, so no neutral score changes by more than 0.01 log10; the root
+  scores do not change at 3 decimals.
+- E34 The neutral brown rice (dry) is below the husk + rachis pool (dry) for every log Kow in the biocide census:
+  per kg dry, the brown rice draws 6.1 L of sap, the hull the panicle's transpiration share.
+- E35 The census rank correlations (root +0.904, straw -0.777) do not change at 3 decimals.

@@ -9,11 +9,9 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 
 | DOI | paper | needed for | why it failed |
 |---|---|---|---|
-| 10.1016/j.jhazmat.2025.141017 (SI) | Tang et al. 2026 J Hazard Mater, Supplementary Tables S1-S8 | soil properties (Table S2), the experiment's dates (`tr_drivers`, PREREG 9.4) | main text read; SI not supplied |
-| 10.1016/j.scitotenv.2019.03.240 (SI) | Kim et al. 2019 Sci Total Environ, SI Table S2 | site regions, distances, soil and water properties (`tr_drivers`) | main text read; SI not supplied |
-| 10.1021/es302398u (SI), 10.1021/jf500674j (SI) | Felizeter et al. 2012 / 2014, SI | concentration, growth and transpiration tables; experiment dates | main texts read; SI not supplied |
-| 10.1080/10629360701303693 | Trapp 2007, "Fruit Tree model for uptake of organic compounds from soil and air", SAR QSAR Environ Res 18:367 | the neutral phloem-sap concentration (PREREG 9.1c) | closed access |
-| 10.1080/1062936X.2010.548829 | Trapp 2011 (Rein, Legind & Trapp), "New concepts for dynamic plant uptake models", SAR QSAR Environ Res 22:191 | same | closed access |
+| 10.1016/j.jhazmat.2025.141017 (SI) | Tang et al. 2026 J Hazard Mater, Supplementary Tables S1-S8 | soil properties (Table S2), the experiment's dates (`tr_drivers`, PREREG 9.4) | main text read (re-supplied 2026-10-27 as the main text again); SI not supplied |
+| 10.1016/j.scitotenv.2019.03.240 (SI) | Kim et al. 2019 Sci Total Environ, SI Table S2 | site regions, distances, soil and water properties (`tr_drivers`) | main text read (re-supplied 2026-10-27 as the main text again); SI not supplied |
+| 10.1021/es302398u (SI), 10.1021/jf500674j (SI) | Felizeter et al. 2012 / 2014, SI | concentration, growth and transpiration tables; experiment dates | main texts read (re-supplied 2026-10-27 as the main texts again); SI not supplied |
 
 Leads, not yet requested (ask before relying on them):
 - Kobayashi & Horie 1994, Jpn. J. Crop Sci. 63:193-199 (spikelet and rachis-branch differentiation) —
@@ -44,6 +42,10 @@ Leads, not yet requested (ask before relying on them):
 - Malaviya 2025 (10.1139/er-2025-0116): the accepted manuscript (R1) is open at hdl.handle.net/1807/151243
 - HYDRUS-1D manuals 4.17 (sha256 286f4aedaf30064fbc723aba3f0e7f9e9b45c1ed933b04b184888a8bd9462755) and 4.08
   (sha256 20c29f1bb6d0567cb5f63a725a877c9d5aa277ed284a6255c718730f0fc03847), pc-progress.com, open: the air-entry
-  model 3 (`soil_hentry`). Vogel, van Genuchten & Cislerova 2001 (10.1016/S0309-1708(00)00037-3), its primary
-  source, is closed access and was not read.
+  model 3 (`soil_hentry`).
+- Uploaded by the user 2026-10-27 (papers_6.zip), read in the main session: Trapp 2007 (10.1080/10629360701303693;
+  sha256 a34d2a7f...), Rein, Legind & Trapp 2011 (10.1080/1062936X.2010.548829; sha256 943a0511...) -- the neutral
+  phloem sap (PREREG 9.15); Vogel, van Genuchten & Cislerova 2001 (10.1016/S0309-1708(00)00037-3; sha256 b007f8f9...)
+  -- `soil_hentry`. The same upload's Tang 2026, Kim 2019 and Felizeter 2012/2014 files are the main texts
+  (sha256 fb2dbd93..., c2faf194..., c70492c6..., d79aa6f8...); their SIs are still needed (table above).
 SHA-256 of every file: in the session record (PREREG 9 commit message).
