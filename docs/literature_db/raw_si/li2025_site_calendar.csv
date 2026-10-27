@@ -1,0 +1,16 @@
+# Li et al. 2025 J Hazard Mater 492:138256; DOI 10.1016/j.jhazmat.2025.138256
+# Main-text extraction of site / crop-calendar / water-management / exposure / soil / biomass / transpiration information needed to
+#   drive the model on this dataset's OWN site and calendar. 'NOT REPORTED' = searched the full main text, not found. Quotes verbatim (line-break hyphens removed).
+# SI ('Supplementary Material') referenced for Tables S1-S7; SI NOT available to this extraction (the repo's raw_si/li2025_* were transcribed from it earlier).
+# Main text: 8 pages, read in full.
+# literature subagent, 2026-10-27, not re-checked by main
+item,value,unit,page,quote,note
+site_location,"suburban Tianjin, northern China; 38deg34'N, 116deg43'E (as printed)",-,main p.2,"The studied paddy fields were located in a suburban area of Tianjin (38◦ 34′N, 116◦ 43′E) in northern China.",coordinates transcribed as printed; not checked against a map
+setting,field; single rice crop per year; fields >100 m x 100 m; triplicate samples each of five sub-samples from 20 m x 20 m,-,main p.2,"Expansive paddy fields that cultivate one crop of rice annually, which exceed 100 m × 100 m, were chosen for this study.",
+season,July 2023 - October 2023 (sampling window),-,main p.2,All samples were collected between July 2023 and October 2023.,sowing/transplanting dates not given; the 5 stage samplings are undated (stage order already in sourced_inputs.csv tr_li_dvs)
+cultivar,Jinyu Japonica No.22,-,main p.2,"Paddy plants (Jinyu Japonica NO.22), as well as the surface soils (0–10 cm) and irrigation water, were collected during 5 five primary growth stages",
+water_management,NOT REPORTED,-,"main p.2 (introduction, generic)","Given the unique environmental conditions of rice, which experience alternating flooded and dry-wet phases throughout their entire growth cycle","this sentence is a GENERAL statement in the introduction, not a description of the study site's water regime; irrigation source not named"
+exposure_medium,irrigation water (sampled at each stage; class sums in SI Table S5) + surface soil 0-10 cm,ng/L; ng/g dw,main p.2-3,The concentration of Σ10PFASs in irrigation water ranged from 62.9 (tillering stage) to 72.1 ng/L (ripening stage),already in raw_si/li2025_stage_water_soil.csv and li2025_fig2a_water_shares.csv; no pore-water measurement
+soil_properties,NOT REPORTED,-,-,,"no soil pH, OC, texture or bulk density in the main text (SI Tables S1-S7 per text are analytical/concentration/EDI tables)"
+biomass,NOT REPORTED,-,main p.4,"Paddy plants grow continuously, with a relatively high growth rate during the heading and fillling stages, and their body mass surges.",qualitative only; no biomass numbers
+transpiration_weather,NOT REPORTED,-,-,,no weather or transpiration data

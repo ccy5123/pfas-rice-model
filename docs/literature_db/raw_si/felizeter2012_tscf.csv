@@ -1,0 +1,33 @@
+# Felizeter S, McLachlan MS, de Voogt P (2012) Uptake of perfluorinated alkyl acids by hydroponically grown lettuce (Lactuca sativa). Environ. Sci. Technol. 46:11735-11743. DOI 10.1021/es302398u
+# SOURCE: Figure 3 (TSCF, p.11740) and Figure 1 (RCF, p.11738). NO numeric table of TSCF/RCF in the main article; values are FIGURE-READ (digitised).
+#   Underlying concentrations are in SI Table S6 (NOT available to this extraction -> not cross-checked against tabulated numbers).
+# CONDITIONS (p.11736-11737): greenhouse 25 C, 14 h light; lettuce var. 'attraction' pregrown 2 weeks in soil, then 40 d in 8 L modified half-strength
+#   Hoagland solution in 10 L PP buckets; nominal 10 ng/L, 100 ng/L, 1 ug/L, 10 ug/L of EACH of 14 PFAAs (mixture); 6 replicates/level; solution exchanged twice.
+#   Plants grew from <1 g to >300 g total biomass; mean transpired water 10.96 mL/g biomass (SI Fig S3). Harvest after 40 d (foliage, roots).
+#   Uptake factors use MEASURED (not nominal) solution concentrations ("The average of concentrations measured in the solution was used", p.11738).
+# TSCF DEFINITION (p.11739, eq.): TSCF = [conc in foliage (ng/g) x foliage weight (g)] / [conc in nutrient solution (ng/mL) x water transpired (mL)]
+#   = cumulative foliage MASS at harvest (40 d) / (solution conc x cumulative transpired volume). Solution-normalised, dimensionless, whole-exposure (0-40 d) integral.
+#   Fig 3 caption: "Mean and standard error are displayed (n between 11 and 20)". Pooled over spiking levels (caption does not say which levels).
+# RCF DEFINITION (p.11739): RCF = conc in root (ng/g) / conc in nutrient solution (ng/mL); units mL/g = L/kg. Root basis: homogenate of washed, superficially dried
+#   roots (fresh weight implied by the extraction text; the article does not write "fresh weight" for RCF). Fig 1 uses ONLY spiking levels in the linear part of the
+#   isotherm (highest level excluded for nonlinear compounds), "n between 14 and 21". Log axis.
+# DIGITISATION: native 300-ppi figure bitmaps (pdfimages). Linear TSCF axis calibrated on tick marks (0.0..0.4 lower segment: 69.75 px/0.1; 0.7..1.0 upper segment
+#   above the axis break: 62.3 px/0.1). Value = centre of the bar's top border; reading +-1 px = +-0.0014 (lower) / +-0.0016 (upper). se = half the cap-to-cap distance;
+#   blank se = error bar not resolvable from the bar top (< ~0.0015). RCF log axis: 186.2 px/decade, +-1 px = +-1.2 %.
+# n_C_total = total carbons (PFBA = 4). head_group: CA = carboxylate (PFCA), SA = sulfonate (PFSA). PFOS = sum of linear + branched isomers (p.11738).
+# literature subagent, 2026-10-27, not re-checked by main
+compound,head_group,n_C_total,species,tissue,TSCF,TSCF_se,RCF_mL_per_g,RCF_lo_cap,RCF_hi_cap,source_fig,read
+PFBA,CA,4,lettuce (Lactuca sativa var. attraction),foliage,0.780,0.050,4.69,4.36,5.09,Fig3;Fig1,figure-read
+PFPeA,CA,5,lettuce (Lactuca sativa var. attraction),foliage,0.211,0.011,2.84,2.66,3.08,Fig3;Fig1,figure-read
+PFHxA,CA,6,lettuce (Lactuca sativa var. attraction),foliage,0.067,0.003,1.28,1.16,1.41,Fig3;Fig1,figure-read
+PFHpA,CA,7,lettuce (Lactuca sativa var. attraction),foliage,0.047,,2.38,2.18,2.59,Fig3;Fig1,figure-read
+PFOA,CA,8,lettuce (Lactuca sativa var. attraction),foliage,0.070,0.005,12.3,10.6,14.1,Fig3;Fig1,figure-read
+PFNA,CA,9,lettuce (Lactuca sativa var. attraction),foliage,0.138,0.009,53.7,45.7,61.5,Fig3;Fig1,figure-read
+PFDA,CA,10,lettuce (Lactuca sativa var. attraction),foliage,0.169,0.020,212,176,250,Fig3;Fig1,figure-read
+PFUnA,CA,11,lettuce (Lactuca sativa var. attraction),foliage,0.269,0.036,661,549,776,Fig3;Fig1,figure-read
+PFDoA,CA,12,lettuce (Lactuca sativa var. attraction),foliage,0.292,0.078,712,584,841,Fig3;Fig1,figure-read
+PFTrA,CA,13,lettuce (Lactuca sativa var. attraction),foliage,0.245,0.044,479,403,552,Fig3;Fig1,figure-read
+PFTeA,CA,14,lettuce (Lactuca sativa var. attraction),foliage,0.063,0.014,536,445,633,Fig3;Fig1,figure-read
+PFBS,SA,4,lettuce (Lactuca sativa var. attraction),foliage,0.038,,1.78,1.62,1.96,Fig3;Fig1,figure-read
+PFHxS,SA,6,lettuce (Lactuca sativa var. attraction),foliage,0.035,,6.88,6.16,7.65,Fig3;Fig1,figure-read
+PFOS,SA,8,lettuce (Lactuca sativa var. attraction),foliage,0.070,0.007,61.9,53.0,71.3,Fig3;Fig1,figure-read

@@ -1,0 +1,66 @@
+# Felizeter S, McLachlan MS, De Voogt P (2014) Root uptake and translocation of perfluorinated alkyl acids by three hydroponically grown crops. J. Agric. Food Chem. 62:3334-3342. DOI 10.1021/jf500674j
+# SOURCE: Figure 5 (TSCF, p.3340) and Figure 1 (RCF, p.3337). NO numeric TSCF/RCF table in the main article; values are FIGURE-READ (digitised).
+#   Tissue concentrations / mass distributions are in SI Tables S9-S11, S14 and the growth calendar in SI Table S3 - SI NOT available to this extraction.
+# CONDITIONS (p.3335-3336): greenhouse, 14 h light (temperature not controlled to a stated value; >25 C "for several days" during cabbage growth, 7/26 cabbages lost).
+#   Plants pregrown in soil to BBCH 10, then hydroponic (8 L half-strength Hoagland in 10 L buckets, solution renewed several times). Mixture of 14 PFAAs.
+#   Nominal exposure: tomato 10, 100, 1000, 10000 ng/L; zucchini and cabbage 10, 100, 500, 1000 ng/L (each PFAA). Replicates: 6 (cabbage, tomato), 4 (zucchini).
+#   Water uptake (mean per plant): tomato 46.7 L, cabbage 24.6 L, zucchini 41.4 L. Harvest at maturity (dates in SI Table S3, not seen). Tomato: only LOWER plant parts analysed (plants trimmed).
+# SOLUTION CONCENTRATION used in all factors (p.3336-3337): daily bulk concentration modelled with eqs.(1)-(2) (air-water interface partitioning K, uptake effectiveness f fitted
+#   per PFAA x species), then averaged WEIGHTED BY TRANSPIRED VOLUME -- i.e. NOT a directly measured mean.
+# TSCF DEFINITION (p.3339, eq.4): TSCF = [concn in foliage (ng/g) x foliage wt (g)] / [concn in nutrient solution (ng/mL) x water transpired (mL)];
+#   the text above eq.4 says "dividing the mass of the PFAAs in the aerial plant parts by the PFAA concentration in the nutrient solution multiplied by the volume of
+#   water transpired". Cumulative over the whole exposure, evaluated at harvest; dimensionless; solution-normalised.
+# Fig 5 caption (verbatim): "The mean RCFs from each spiking level were averaged. The error bars denote the standard error." (caption says RCFs; the figure is TSCF)
+# RCF DEFINITION (p.3337, eq.3): RCF = concn in root (ng/g FW) / concn in nutrient solution (ng/mL)  [mL/g = L/kg, FRESH weight]; mean of per-level means, a level
+#   excluded when ANOVA-Tukey showed it significantly different from all others (tomato PFDoA/PFTrA/PFTeA at 10000 ng/L lower). Log axis.
+# DIGITISATION: native 300-ppi bitmaps (pdfimages). TSCF linear axis on gridlines 0..0.3 (78.6 px per 0.05 => +-1 px = +-0.0006); value = median over bar-interior columns of the
+#   top of the filled bar; se = (upper cap - bar top). PFTrA/PFTeA tiny bars read on a 6x zoom (+-0.001). RCF log axis gridlines 0.1..1000 (118 px/decade => +-1 px = +-2 %).
+#   Cross-check vs text: "TSCF values ... ranged between 0.05 and 0.23, with much lower values for the C12-C14 PFCAs" (p.3339); read range excl. C12-C14 = 0.055-0.229.
+# PFTeA cabbage: no bar drawn in Fig 5 (not reported). n_C_total = total carbons. head_group CA = carboxylate, SA = sulfonate. PFOS split into branched (Br-) and linear (L-).
+# literature subagent, 2026-10-27, not re-checked by main
+compound,head_group,n_C_total,species,tissue_TSCF,TSCF,TSCF_se,RCF_mL_per_g_fw,source_fig,read
+PFBA,CA,4,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),0.205,0.017,7.11,Fig5;Fig1,figure-read
+PFBA,CA,4,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.068,0.007,1.78,Fig5;Fig1,figure-read
+PFBA,CA,4,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.194,0.015,1.07,Fig5;Fig1,figure-read
+PFPeA,CA,5,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),0.168,0.015,8.64,Fig5;Fig1,figure-read
+PFPeA,CA,5,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.059,0.0045,3.81,Fig5;Fig1,figure-read
+PFPeA,CA,5,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.142,0.011,1.03,Fig5;Fig1,figure-read
+PFHxA,CA,6,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),0.124,0.013,12.0,Fig5;Fig1,figure-read
+PFHxA,CA,6,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.06,0.005,5.62,Fig5;Fig1,figure-read
+PFHxA,CA,6,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.124,0.0095,2.34,Fig5;Fig1,figure-read
+PFHpA,CA,7,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),0.145,0.014,16.5,Fig5;Fig1,figure-read
+PFHpA,CA,7,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.062,0.007,11.8,Fig5;Fig1,figure-read
+PFHpA,CA,7,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.18,0.015,3.01,Fig5;Fig1,figure-read
+PFOA,CA,8,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),0.21,0.022,29.0,Fig5;Fig1,figure-read
+PFOA,CA,8,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.084,0.0095,30.1,Fig5;Fig1,figure-read
+PFOA,CA,8,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.229,0.019,13.0,Fig5;Fig1,figure-read
+PFNA,CA,9,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),0.159,0.019,68.4,Fig5;Fig1,figure-read
+PFNA,CA,9,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.087,0.011,64.5,Fig5;Fig1,figure-read
+PFNA,CA,9,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.221,0.025,53.0,Fig5;Fig1,figure-read
+PFDA,CA,10,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),0.159,0.02,149,Fig5;Fig1,figure-read
+PFDA,CA,10,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.08,0.009,123,Fig5;Fig1,figure-read
+PFDA,CA,10,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.189,0.023,116,Fig5;Fig1,figure-read
+PFUnA,CA,11,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),0.0945,0.019,253,Fig5;Fig1,figure-read
+PFUnA,CA,11,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.056,0.007,268,Fig5;Fig1,figure-read
+PFUnA,CA,11,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.132,0.021,225,Fig5;Fig1,figure-read
+PFDoA,CA,12,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),0.019,0.004,149,Fig5;Fig1,figure-read
+PFDoA,CA,12,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.027,0.006,208,Fig5;Fig1,figure-read
+PFDoA,CA,12,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.028,0.0025,185,Fig5;Fig1,figure-read
+PFTrA,CA,13,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),0.0017,0.0005,185,Fig5;Fig1,figure-read
+PFTrA,CA,13,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.0067,0.0015,149,Fig5;Fig1,figure-read
+PFTrA,CA,13,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.0124,0.0017,161,Fig5;Fig1,figure-read
+PFTeA,CA,14,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),,,216,Fig5;Fig1,not reported (no bar)
+PFTeA,CA,14,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.002,0.0016,541,Fig5;Fig1,figure-read
+PFTeA,CA,14,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.0124,0.003,192,Fig5;Fig1,figure-read
+PFBS,SA,4,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),0.208,0.021,17.1,Fig5;Fig1,figure-read
+PFBS,SA,4,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.061,0.008,10.7,Fig5;Fig1,figure-read
+PFBS,SA,4,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.17,0.0185,11.6,Fig5;Fig1,figure-read
+PFHxS,SA,6,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),0.167,0.0165,36.6,Fig5;Fig1,figure-read
+PFHxS,SA,6,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.064,0.007,25.3,Fig5;Fig1,figure-read
+PFHxS,SA,6,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.128,0.0095,15.2,Fig5;Fig1,figure-read
+Br-PFOS,SA,8,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),0.148,0.018,73.9,Fig5;Fig1,figure-read
+Br-PFOS,SA,8,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.075,0.01,88.1,Fig5;Fig1,figure-read
+Br-PFOS,SA,8,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.108,0.01,58.5,Fig5;Fig1,figure-read
+L-PFOS,SA,8,cabbage (Brassica oleracea convar. capitata var. alba),aerial parts (eq.4: foliage),0.133,0.022,168,Fig5;Fig1,figure-read
+L-PFOS,SA,8,zucchini (Cucurbita pepo var. Black Beauty),aerial parts (eq.4: foliage),0.055,0.0064,111,Fig5;Fig1,figure-read
+L-PFOS,SA,8,tomato (Solanum lycopersicum var. Moneymaker),aerial parts (eq.4: foliage),0.137,0.0115,84.7,Fig5;Fig1,figure-read

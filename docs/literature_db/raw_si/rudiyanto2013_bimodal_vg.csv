@@ -1,0 +1,26 @@
+# Rudiyanto (2013) Hydraulic Properties for Unsaturated Water Flow in Aggregated Volcanic Ash Soils. PhD thesis, Graduate School of Bioresources, Mie University. hdl.handle.net/10076/13878
+# Table 3.1 (thesis p.55; PDF p.67): bimodal VG (Durner, m_i = 1-1/n_i) parameters from evaporation experiments + HYDRUS-1D 4.08 inverse (p.48). SE/CV rows omitted here (see the table).
+# "initial" = RETC fit to independently measured retention data (Fig.3.1, p.47; hanging water -5..-200 cm, pressure plate to -1.2e4 cm, WP4 to about -3e3..-1e5 cm), with thetas fixed from column mass balance, thetar fixed 0 (p.50), Ks initial = falling head, l initial 0.5 (p.50).
+# Cases (pp.51,57): 1 = Ks,l only; 2 = + alpha1,n1,w2; 3 = + alpha2,n2; 4 = as 3 but retention data only for h > -1e3 cm; 5-7 = further variants (definitions in thesis Ch.3, not transcribed here). Blank = fixed at initial value ("-" in the table).
+# Soils (p.45): Kumamoto = NARO Kyushu-Okinawa ARC (same upland soil as Tokumoto 2005), packed 0.48 g/cm3; Mie = NARO Inst. Vegetable and Tea Science (upland), packed 0.75 g/cm3; both 2-mm sieved, 16 cm x 3.8 cm columns. Falling-head Ks ~200 (Kumamoto) and ~1000 cm/d (Mie).
+# Table 5.1 (p.91) reprints Kumamoto case 3 as: 0.000, 0.780, 0.044, 1.96, 343.2, 0.435, 0.549, 0.000132, 1.39 (l 0.435 vs 0.436 in Table 3.1).
+# Table 4.1 (p.77): hysteretic bimodal fit to main drying/wetting curves of Mie Andisol (repacked 0.75 g/cm3, multistep outflow-inflow): thetar 0, thetas 0.542, alpha1d 0.139, alpha1w 0.219, n1 2.8, w2 0.559, alpha2 0.00047, n2 1.29.
+# All soils are UPLAND, repacked; no paddy, no puddled layer, no plough pan. Retention points are figure-only (Fig.3.1), not tabulated.
+# Read by: literature subagent, 2026-10-27, not re-checked by main.
+soil,case,thetar,thetas,alpha1_per_cm,n1,Ks_cm_d,l,w2,alpha2_per_cm,n2
+Kumamoto,initial,0,0.78,0.057,1.88,200,0.5,0.544,0.00011,1.44
+Kumamoto,1,,,,,703,0.751,,,
+Kumamoto,2,,,0.045,1.92,312,0.054,0.544,,
+Kumamoto,3,,,0.044,1.96,343,0.436,0.549,0.00013,1.39
+Kumamoto,4,,,0.055,1.87,312,0.614,0.541,0.00025,1.55
+Kumamoto,5,,,,,971,2.301,,,
+Kumamoto,6,,,,,208,0.007,,,
+Kumamoto,7,,,,,28,0.001,,,
+Mie,initial,0,0.629,0.129,2.41,1000,0.5,0.509,0.00062,1.28
+Mie,1,,,,,969,0.040,,,
+Mie,2,,,0.101,4.36,968,0.044,0.532,,
+Mie,3,,,0.111,3.57,555,0.011,0.545,0.00125,1.25
+Mie,4,,,0.131,2.42,507,0.330,0.513,0.00072,1.74
+Mie,5,,,,,850,0.620,,,
+Mie,6,,,,,617,0.407,,,
+Mie,7,,,,,391,0.018,,,

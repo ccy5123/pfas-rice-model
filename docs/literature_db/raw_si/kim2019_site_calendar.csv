@@ -1,0 +1,18 @@
+# Kim et al. 2019 Sci Total Environ 671:714-721; DOI 10.1016/j.scitotenv.2019.03.240
+# Main-text extraction of site / crop-calendar / water-management / exposure / soil / biomass / transpiration information needed to
+#   drive the model on this dataset's OWN site and calendar. 'NOT REPORTED' = searched the full main text, not found. Quotes verbatim (line-break hyphens removed).
+# SI (Appendix A) referenced for Tables S1-S6 (site sources/distances + physicochemical parameters = Table S2); SI NOT available to this extraction.
+# Main text: 8 pages (714-721), read in full.
+# literature subagent, 2026-10-27, not re-checked by main
+item,value,unit,page,quote,note
+site_location,"30 paddy fields in five regions A (n=5), B (6), C (8), D (7), E (4) of South Korea; regions not named, no coordinates",-,main p.715,"from a total of 30 paddy fields located in five different regions, designated as A (n = 5), B (n = 6), C (n = 8), D (n = 7), and E (n = 4).","region names/coordinates NOT in main text; 'Information on these sources, their distance from the sampling sites and the physicochemical parameters of void water and paddy soil samples are shown in Table S2' (SI not available here)"
+setting,field survey (farmers' paddies cultivated only with rice for >10 years),-,main p.715,Most of the land at these sampling sites comprised paddy fields for cultivating rice and those paddy fields have been cultivated only rice for more than a decade.,
+sampling_date,"Oct 6-18, 2016 (harvest period); single sampling",date,main p.715,"The paddy soil (n = 30), void water (n = 27), and brown rice (n = 30) samples were collected during the harvest period (Oct. 6–18, 2016)",already recorded in raw_si/kim2019_table1_sites.csv header; no per-site date in the main text
+cultivar,Oryza sativa subsp. japonica (cultivar not named),-,main p.715,"At each sampling site, a rice plant (Oryza sativa subsp. japonica) was taken.",
+sowing_transplanting_heading,NOT REPORTED,-,-,,no crop calendar at any site
+water_management,NOT REPORTED,-,-,,"no flooding/drainage description; void water still collectable at harvest except region E ('because of an insufficient quantity of void water', p.715)"
+irrigation_source,site A-2: river receiving textile-industry WWTP effluent is used for irrigation,-,main p.717,"the textile industrial WWTP near site A-2 has discharged effluents into the river, which is used for irrigated water",irrigation source for the other 29 sites not stated
+pore_water_sampling,"PVC cylinder 200 mm dia x 300 mm inserted, lidded 2 d, water collected inside; GF/F filtered",-,main p.715-716,"a polyvinyl chloride cylinder (200 mm diameter, 300 mm long) was inserted into the sampled paddy soil and covered with a lid, to avoid external contamination, for 2 days",already in raw_si/kim2019_table1_sites.csv header
+soil_properties,in SI Table S2 (physicochemical parameters),-,main p.715,the physicochemical parameters of void water and paddy soil samples are shown in Table S2.,VALUES NOT IN MAIN TEXT; SI not available to this extraction
+biomass,NOT REPORTED,-,-,,"one plant per site, brown rice only; no biomass or yield"
+transpiration_weather,NOT REPORTED,-,-,,no weather or transpiration data
