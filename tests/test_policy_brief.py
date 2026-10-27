@@ -66,6 +66,7 @@ def test_the_csv_was_made_on_the_current_default(results):
     import model_api as api
     assert results[("0_config", "shoot")]["value"] == api.DEFAULT_SHOOT
     assert bool(v(results, "0_config", "lipid_loading")) == api.DEFAULT_LIPID_LOADING
+    assert results[("0_config", "variant")]["value"] == api.variant_key()
     assert v(results, "0_config", "band_log10") == pytest.approx(api.APRIORI_LOG10_RMSE, abs=1e-4)
 
 
@@ -73,18 +74,19 @@ def test_worked_example_matches_the_document(brief, results):
     """Slide 4's table is the one a policy audience will read off the screen."""
     assert v(results, "2_pfoa", "cwo") == pytest.approx(0.0787)
     assert v(results, "2_pfoa", "conc.root") == pytest.approx(0.383, abs=5e-4)
-    assert v(results, "2_pfoa", "conc.straw") == pytest.approx(0.247, abs=5e-4)
-    assert v(results, "2_pfoa", "conc.grain") == pytest.approx(0.0287, abs=5e-5)
-    for s in ("**0.383**", "**0.247**", "**0.0287**"):
+    assert v(results, "2_pfoa", "conc.straw") == pytest.approx(0.323, abs=5e-4)
+    assert v(results, "2_pfoa", "conc.grain") == pytest.approx(0.0288, abs=5e-5)
+    for s in ("**0.383**", "**0.323**", "**0.0288**"):
         assert s in brief
-    assert v(results, "2_pfoa", "efsa_twi_percent") == pytest.approx(8.07, abs=0.01)
+    assert v(results, "2_pfoa", "efsa_twi_percent") == pytest.approx(8.08, abs=0.01)
     assert "**8 %**" in brief
-    assert v(results, "2_pfoa", "grain.band_factor") == pytest.approx(3.08, abs=0.01)
-    assert "×/÷3.1" in brief
-    assert v(results, "2_pfoa", "grain_via_xylem") == pytest.approx(0.49, abs=0.005)
-    assert "물관 **49 %** · 체관 **51 %**" in brief
-    assert v(results, "2_pfoa", "root_from_soil") == pytest.approx(0.998, abs=5e-4)
-    assert "**99.8 %**" in brief
+    assert v(results, "2_pfoa", "grain.band_factor") == pytest.approx(3.65, abs=0.01)
+    assert "×/÷3.6" in brief
+    # brown rice is phloem-fed only (amendment 2a): the panicle's deposit stays in the husk
+    assert v(results, "2_pfoa", "grain_via_xylem") == 0.0
+    assert "체관 **100 %**" in brief
+    assert v(results, "2_pfoa", "root_from_soil") == pytest.approx(0.999, abs=5e-4)
+    assert "**99.9 %**" in brief
     # the root entry is linear: the 50 ng/L example is the 78.7 ng/L one scaled
     for k in ("conc.root", "conc.straw", "conc.grain"):
         assert v(results, "2_pfoa_50ngL", k) / v(results, "2_pfoa", k) == pytest.approx(
@@ -92,44 +94,42 @@ def test_worked_example_matches_the_document(brief, results):
     assert "농도는 노출에 비례합니다" in brief
     # the deck's 50 ng/L example
     assert v(results, "2_pfoa_50ngL", "conc.grain") == pytest.approx(0.018, abs=5e-4)
-    assert v(results, "2_pfoa_50ngL", "efsa_twi_percent") == pytest.approx(5.12, abs=0.01)
+    assert v(results, "2_pfoa_50ngL", "efsa_twi_percent") == pytest.approx(5.14, abs=0.01)
     assert "EFSA 대비 5 %" in brief
     # Kim's PFOA brown rice against the model's, both dry
-    assert 0.349 / v(results, "2_pfoa", "conc.grain_dw") == pytest.approx(8.26, abs=0.01)
+    assert 0.349 / v(results, "2_pfoa", "conc.grain_dw") == pytest.approx(8.24, abs=0.01)
     assert "**약 8배 낮게**" in brief
 
 
 def test_the_field_grain_table_matches(brief, results):
-    """Slide 5: the Yamazaki brown-rice comparison. The grain is fitted per congener
-    (L_Ph), so the table is in-sample: six congeners sit on the measurement and four
-    stay above it at L_Ph = 0 -- the document must say both, with the CSV's ratios."""
+    """Slide 5: the Yamazaki brown-rice comparison. The default fits f_xy, L_Ph and r_eq
+    per congener, so the table is in-sample: nine congeners sit on the measurement and
+    PFDoDA stays below it with f_xy at 1 -- the document must say both, with the CSV's ratios."""
     ratios = {}
     for c in ("PFBA", "PFPeA", "PFHxA", "PFHpA", "PFOA", "PFNA", "PFDA",
               "PFUnDA", "PFDoDA", "PFOS"):
         ratios[c] = v(results, "1_congeners", f"{c}.yz_grain") / \
             v(results, "1_congeners", f"{c}.obs_grain")
-    assert not [r for r in ratios.values() if r >= 2.0 or r < 0.99]
-    on = sorted(c for c, r in ratios.items() if abs(r - 1.0) < 0.005)
-    assert on == sorted(("PFHxA", "PFOA", "PFNA", "PFDA", "PFDoDA", "PFOS"))
-    assert "10종 중 6종(PFHxA·PFOA·PFNA·PFDA·PFDoDA·PFOS)" in brief
-    for c, s in (("PFUnDA", 1.7), ("PFPeA", 1.5), ("PFHpA", 1.3), ("PFBA", 1.2)):
-        assert round(ratios[c], 1) == s and f"{c} {s}배" in brief
+    off = sorted(c for c, r in ratios.items() if abs(r - 1.0) >= 0.005)
+    assert off == ["PFDoDA"] and round(ratios["PFDoDA"], 1) == 0.4
+    assert "10종 중 9종은 맞춘 대로 실측과 같고" in brief and "실측의 0.4배" in brief
     assert "표본 내 비교" in brief
     prev_miss = v(results, "1_congeners", "PFDoDA.obs_grain") / \
         v(results, "1_congeners", "PFDoDA.yz_grain_prev")
-    assert 600 < prev_miss < 630 and "약 615배" in brief
-    assert v(results, "1_congeners", "mean_grain_shortchain_C4_C6_base") == pytest.approx(1.03, abs=0.005)
-    assert v(results, "1_congeners", "mean_grain_longchain_C9_C12_base") == pytest.approx(15.9, abs=0.05)
+    assert 800 < prev_miss < 825 and "약 809배" in brief
+    assert v(results, "1_congeners", "mean_grain_shortchain_C4_C6_base") == pytest.approx(0.90, abs=0.005)
+    assert v(results, "1_congeners", "mean_grain_longchain_C9_C12_base") == pytest.approx(7.24, abs=0.005)
+    assert "단쇄(C4–C6) 0.90, 장쇄(C9–C12) 7.24 L/kg" in brief
 
 
 def test_kim2019_scores_are_the_documented_result(brief, results):
     """Slide 6: no parameter is fitted to Kim, but Kim helped choose the default,
     so the document must say both."""
-    assert v(results, "3_kim2019", "rmse_point_default") == pytest.approx(0.49, abs=0.005)
-    assert v(results, "3_kim2019", "rmse_interval_default") == pytest.approx(0.37, abs=0.005)
-    assert v(results, "3_kim2019", "rmse_point_prev") == pytest.approx(1.93, abs=0.005)
-    assert v(results, "3_kim2019", "rmse_interval_prev") == pytest.approx(1.67, abs=0.005)
-    for s in ("**0.49**", "**0.37**", "1.93", "1.67"):
+    assert v(results, "3_kim2019", "rmse_point_default") == pytest.approx(0.56, abs=0.005)
+    assert v(results, "3_kim2019", "rmse_interval_default") == pytest.approx(0.44, abs=0.005)
+    assert v(results, "3_kim2019", "rmse_point_prev") == pytest.approx(2.04, abs=0.005)
+    assert v(results, "3_kim2019", "rmse_interval_prev") == pytest.approx(1.78, abs=0.005)
+    for s in ("**0.56**", "**0.44**", "2.04", "1.78"):
         assert s in brief
     # Kim weighed freeze-dried grain: the comparison is on the dry basis
     assert v(results, "3_kim2019", "PFOA.model_grain_baf") == pytest.approx(
@@ -157,10 +157,11 @@ def test_inverse_recovers_a_known_truth_but_misses_the_field(brief, results):
         v(results, "4_inverse", "synthetic.ci95_hi")
     assert "계산 절차의 점검일 뿐 정확도의 증거가 아닙니다" in brief
     f = v(results, "4_inverse", "field.overestimate_factor")
-    assert f == pytest.approx(8.26, abs=0.01)
+    assert f == pytest.approx(8.24, abs=0.01)
     assert v(results, "4_inverse", "field.ci95_lo") < truth < v(results, "4_inverse", "field.ci95_hi")
     assert "약 8배 과대추정" in brief and "실측을 겨우 포함함" in brief
-    assert v(results, "4_inverse", "field.overestimate_factor_prev") == pytest.approx(13.4, abs=0.05)
+    assert v(results, "4_inverse", "field.overestimate_factor_prev") == pytest.approx(17.5, abs=0.05)
+    assert "약 17.5배" in brief
 
 
 def test_structure_input_flags_the_unknown_ones(results):
@@ -191,19 +192,24 @@ def test_superseded_numbers_are_named_and_not_quoted(brief):
     head, body = brief.split("---", 1)
     for old in ("±7배", "0.0136", "451배",                        # 2026-10-25 revision
                 "0.376", "0.113", "45 %", "80 %", "2.3–7.3배", "2,300배",   # amendment 1
-                "2.7배", "1.05배", "Km"):
+                "2.7배", "1.05배", "Km",
+                "0.247", "×/÷3.1", "물관 49 %", "615배", "÷2.5", "1.93", "같은 시험에서 13배",   # amendment 2a
+                "15.9", "물관 적재 상수는 모든 물질에 같은 값 하나씩"):
         assert old in head
         assert old not in body
     assert "2026-10-26 개정(사전등록 개정 1)" in head
+    assert "2026-10-26 개정(사전등록 개정 2a)" in head
 
 
 def test_the_model_description_is_the_shipped_model(brief):
     """Amendment 1: a linear equilibrium root entry (no GHK exclusion, no carrier as
-    the mechanism), retention 1, one loading constant for every chain."""
+    the mechanism), retention 1. Amendment 2a: the xylem loading fitted per congener (the
+    default chosen by the transfer rule), brown rice fed by the phloem only."""
     head, body = brief.split("---", 1)
     assert "공극수 농도에 비례하는 평형형" in body
     assert "보유율 1" in body
-    assert "물관 적재 상수는 모든 물질에 같은 값 하나씩" in body
+    assert "물질마다 일본 논 현장의 짚 실측에 맞춘 값" in body
+    assert "낟알은 현미(먹는 부분)로 계산하며 체관으로만 채워집니다" in body
     for gone in ("약 100배 배제", "서로 밀어냅니다", "단순 비례하지 않습니다", "포화형(비선형)"):
         assert gone not in body
 

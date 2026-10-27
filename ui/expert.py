@@ -42,6 +42,8 @@ def render(cfg):
     neutral = getattr(cfg, "neutral", None)
     _mech = ([] if lipid_loading == api.DEFAULT_LIPID_LOADING else
              [f"**lipid loading {'ON' if lipid_loading else 'OFF'}**"]) + \
+            ([] if lipid_loading or fxy_source == api.DEFAULT_F_XY_SOURCE else
+             [f"f_xy: **{fxy_source}**"]) + \
             ([] if shoot == api.DEFAULT_SHOOT else [f"shoot: **{shoot}**"])
     if neutral:
         st.subheader(f"{congener}  (neutral organic · log Kow {p['log_kow']:.2f})  ·  source: {mode}")
@@ -70,6 +72,12 @@ def render(cfg):
     else:
         c4.metric("root entry r_eq", f"{p['r_eq']:.3g}", "fitted to Yamazaki's root",
                   delta_color="off")
+    if res.get("interp_spread"):
+        # a measured growth table: the form between its samples is not measured (PREREG 7.3)
+        sp = res["interp_spread"]
+        st.caption("Growth table interpolated piecewise-linearly (shown). The monotone-cubic "
+                   "form moves the dry BAF by " + ", ".join(f"{k} {sp[k]:+.3f}" for k in sp)
+                   + " log10 — the spread from the unmeasured form between samples.")
 
     # ---- neutral scope panel (what this path is, and what it is not) --------
     if neutral:
@@ -250,9 +258,13 @@ def render(cfg):
                 st.caption("Measured biomonitoring BAF (tissue conc ÷ pore water) vs the model prediction.")
             else:
                 if lipid_loading:
-                    st.info("**Lipid-facilitated loading is ON** (the default), so against these "
-                            "Yamazaki bars the model is *in-sample* — its six lipid constants were fit "
-                            "on them. Its out-of-sample record is on Tang, Kim and Li.")
+                    st.info("**Lipid-facilitated loading is ON**, so against these Yamazaki bars "
+                            "the model is *in-sample* — its two lipid constants were fit on them. "
+                            "Its out-of-sample record is on Tang, Kim and Li.")
+                elif fxy_source == "fit":
+                    st.info("**f_xy 'fit'** (the default): f_xy, L_Ph and r_eq were fitted per "
+                            "congener to these Yamazaki bars, so here the model is a "
+                            "*reproduction*. Its out-of-sample record is on Tang, Kim and Li.")
                 if obs and spec == "Curated congener":
                     # the model's version of the observation: dry basis, the two harvest runs of
                     # the 2020 site-year, the congener's irrigation-water level -- it tracks the
@@ -332,15 +344,15 @@ def render(cfg):
                 c1, c3 = st.columns([2, 1])
                 dose = ("low" if c1.radio("Tang dose", ["across-dose mean", "0.1 µg/g (env-closest)"],
                                           horizontal=True).startswith("0.1") else "mean")
-                show_free = c3.checkbox(
-                    "free anion (no lipid loading)", value=False,
-                    help="Add the same shoot without the lipid loading. The grey bars are "
-                         "the default model, whose fitted constants come from YAMAZAKI with nothing "
-                         "fitted to Tang (a transfer, not a fit).")
+                show_lipid = c3.checkbox(
+                    "lipid loading (amendment-1 default)", value=False,
+                    help="Add the same shoot with the lipid loading instead of the per-congener "
+                         "f_xy. The grey bars are the default model, whose fitted constants come "
+                         "from YAMAZAKI with nothing fitted to Tang (a transfer, not a fit).")
                 val = api.tang_tf_validation(congener, dose=dose)
-                vall = (api.tang_tf_validation(congener, dose=dose, lipid_loading=False)
-                        if show_free else None)
-                st.plotly_chart(plots.fig_tang_tf(val, vall),
+                vall = (api.tang_tf_validation(congener, dose=dose, lipid_loading=True)
+                        if show_lipid else None)
+                st.plotly_chart(plots.fig_tang_tf(val, vall, extra_label="model · lipid loading"),
                                 width="stretch")
                 err = [np.log10(val["model_tf"][o] / val["tang_tf"][o]) for o in val["organs"]
                        if val["tang_tf"].get(o)]

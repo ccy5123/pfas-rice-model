@@ -1,0 +1,20 @@
+# Ansari TH, et al. (2017) Status of nutrient elements in rice grain in relation to silicon accumulation pattern during
+# grain filling. Bangladesh Agron. J. 19(2):125-140, doi:10.3329/baj.v19i2.31861 (open access), Fig. 1 (p.135):
+# dry weight of (A) a hull and (B) a brown rice per grain [mg], cultivar Nipponbare (japonica; open triangles), sampled at
+# heading, 10, 20, 30 d after heading (DAH) and maturity; grains from the composite sample separated into hull and brown
+# rice and weighed (Materials and Methods). Panel B's y label is misprinted "A hull weight (mg)"; the caption says brown
+# rice. Digitised from the PDF's own bitmaps (page 11) by marker detection: value = the triangle's bounding-box centre on
+# the tick calibration (A: 0 mg at row 402, 8 mg at row 32; B: 0 at 404, 50 at 32). flag = clear (marker stands alone,
+# re-detected by the check tool) | merged (overlaps another cultivar's marker: value and reading range from the merged
+# blob, check the overlay). Check: python docs/literature_db/tools/ansari2017_fig1_check.py <pdf>
+# Used for PREREG 7.2: husk share of rough grain h = hull / (hull + brown).
+panel,time,value_mg,value_lo,value_hi,flag
+A,heading,3.02,3.00,3.04,clear
+A,10DAH,3.80,3.75,3.85,merged
+A,20DAH,3.84,3.82,3.86,clear
+A,30DAH,4.05,4.03,4.07,clear
+A,maturity,3.80,3.75,3.85,merged
+B,10DAH,7.5,7.0,8.0,merged
+B,20DAH,16.67,16.5,16.8,merged
+B,30DAH,20.50,20.4,20.6,clear
+B,maturity,19.8,19.6,20.0,merged

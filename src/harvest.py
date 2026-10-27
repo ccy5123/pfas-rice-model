@@ -56,8 +56,11 @@ def dead_leaf_pool(t, C_leaf, M_leaf, leaf_loss, dry_fraction_leaf, C_leaf_fn=No
     else:
         tf, cl, ml, ll = t, np.asarray(C_leaf, float), np.asarray(M_leaf, float), np.asarray(leaf_loss, float)
     ll = np.maximum(ll, 0.0)
+    dfl = np.asarray(dry_fraction_leaf, float)
+    if dfl.ndim:                                    # the leaf's water follows the stage (PREREG 7.1)
+        dfl = np.interp(tf, t, dfl)
     burden = cumulative_trapezoid(ll * cl * ml, tf, initial=0.0)
-    dry = cumulative_trapezoid(ll * ml * dry_fraction_leaf, tf, initial=0.0)
+    dry = cumulative_trapezoid(ll * ml * dfl, tf, initial=0.0)
     return np.interp(t, tf, burden), np.interp(t, tf, dry)
 
 
@@ -67,7 +70,9 @@ def harvest_observables(t, conc, M, dry_fraction, leaf_loss=None, attached=1.0,
 
     conc          dict root/stem/leaf/grain -> concentration series [µg/kg on M's basis]
     M             (n, 4) organ mass [root, stem, leaf, grain] on the ODE's basis
-    dry_fraction  dict organ -> dry matter per unit of M (1 - theta_fw)
+    dry_fraction  dict organ -> dry matter per unit of M (1 - theta_fw): a number, or an array
+                  on `t` when the organ's water follows the development stage (PREREG 7.1; the
+                  dry basis is then the dry matter at each time, at harvest at harvest)
 
     Returns dict with conc_dw {root, stem, leaf_green, leaf, grain, straw}, straw_fw (dead blades
     at their dry mass), dead_burden, dead_dry, attached."""
@@ -89,6 +94,17 @@ def harvest_observables(t, conc, M, dry_fraction, leaf_loss=None, attached=1.0,
 
 
 def dry_fractions(theta, M_basis="fresh"):
-    """Dry matter per unit of M for each organ: 1 - theta_fw. (The basis-free placeholder,
-    M_basis None, is read as fresh too.)"""
-    return {o: 1.0 - float(theta[o]) for o in ORGANS}
+    """Dry matter per unit of M for each organ: 1 - theta_fw (numbers, or arrays when theta
+    follows the stage). (The basis-free placeholder, M_basis None, is read as fresh too.)"""
+    return {o: 1.0 - np.asarray(theta[o], float) if np.ndim(theta[o]) else 1.0 - float(theta[o])
+            for o in ORGANS}
+
+
+def panicle_observables(conc_grain, M_grain, dry_fraction_grain, C_husk, M_husk_dry):
+    """Dry-basis husk + rachis and rough-grain concentrations (PREREG 7.2): the husk state is
+    per kg DRY already; rough grain = (brown burden + husk burden) / (brown dry + husk dry)."""
+    gd = np.asarray(M_grain, float) * dry_fraction_grain
+    hb = np.asarray(C_husk, float) * np.asarray(M_husk_dry, float)
+    return dict(husk=np.asarray(C_husk, float),
+                rough=(np.asarray(conc_grain, float) * np.asarray(M_grain, float) + hb)
+                / (gd + np.asarray(M_husk_dry, float)))

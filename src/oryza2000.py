@@ -556,7 +556,14 @@ def simulate(weather: dict, crop: dict | None = None, mgmt: Management | None = 
 # ---------------------------------------------------------------------------
 # Bridge to the PFAS model: per-organ dry biomass [kg/hill] on days after transplanting
 # ---------------------------------------------------------------------------
-HA_PER_HILL = 0.04 / 1.0e4          # 25 hills m-2 (= Management.nh), as oryza_growth / forcing_rice
+# The generic scenario's planting density: the crop run's own NH (IR72DS92, inherited verbatim with
+# the crop file), so the per-hill conversion and the run agree. Defined here ONCE; forcing_rice,
+# growth_rice and oryza_growth read it (PREREG 7.4, 7.12). Every BAF is invariant to it (Q_TP and M
+# per hill scale together); only per-hill absolute amounts depend on it. The site-year scenario
+# uses its own sourced density (site_scenario.NH, 18.5 hills/m2).
+GENERIC_HILLS_PER_M2 = Management().nh
+AREA_PER_HILL_M2 = 1.0 / GENERIC_HILLS_PER_M2
+HA_PER_HILL = AREA_PER_HILL_M2 / 1.0e4
 
 
 def default_weather(transplant_doy: int = 180, sbdur: int = 12, n_days: int = 200) -> dict:

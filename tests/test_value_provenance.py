@@ -38,10 +38,8 @@ def test_no_unsourced_value_in_the_default_model():
 # of the next amendment (docs/PREREG_sourced_values.md). A row joins only when new evidence
 # reopens it, with the reason here.
 OPEN = {
-    "crop_cultivar",        # IR72 crop parameters for Koshihikari/Kasalath (no ORYZA calibration found yet)
-    "obs_exposure_time",    # exposure held at the one irrigation-water grab over the season
-    "tis_theta",            # reopened: organ water falls over the season (root 0.89 -> 0.51-0.77) while
-                            # the model holds one value; how to represent it is amendment 2
+    "obs_exposure_time",    # exposure held at the one irrigation-water grab over the season; its
+                            # seasonal shape is built with the irrigation-source soil scenario (2b)
 }
 
 

@@ -169,9 +169,13 @@ def _dw_at(res, days):
     return {k: np.interp(days, t, res["conc_dw"][k]) for k in ("root", "stem", "leaf", "grain")}
 
 
-def model_tf(res, days):
-    """Per-stage model TF (dry weight, harvest operator) at the given days."""
+def model_tf(res, days, grain="grain"):
+    """Per-stage model TF (dry weight, harvest operator) at the given days. `grain` = "grain"
+    (brown rice) or "rough" (brown + husk + rachis): Li's "paddy rice / grains" is undefined
+    (PREREG 7.2), so it is scored on both."""
     dw = _dw_at(res, days)
+    if grain == "rough":
+        dw["grain"] = np.interp(days, res["t"], res["conc_dw"]["rough"])
     return {k: dw[k] / dw["root"] for k in ("stem", "leaf", "grain")}
 
 

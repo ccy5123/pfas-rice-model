@@ -82,13 +82,13 @@ from model_api import PHI, T_C_PH   # the sourced phloem constants  # noqa: E402
 GOLDEN_REL = 1e-3
 
 # Goldens on two fitted variants (calibration site-year, fresh organ mass, harvest at the mean
-# date) and on the DEFAULT configuration (redistributed shoot + lipid loading), regenerated for
-# amendment 1 (docs/PREREG_sourced_values.md). Regenerate them only when the model itself is
-# deliberately changed.
+# date) and on the DEFAULT configuration (redistributed_fit), regenerated for amendment 2a
+# (docs/PREREG_sourced_values.md sections 7-8: staged organ water, brown-rice grain, the
+# terminal pools as burden, re-fit). Regenerate them only when the model itself is deliberately changed.
 PFAS_GOLDEN = {
-    ("PFOA", "4pool_free"): {"root": 1.3964242626962549, "grain": 0.2608010314137209},
-    ("PFOS", "redistributed_fit"): {"root": 17.026443688382177, "grain": 1.8044310983194625},
-    ("PFBA", "4pool_free"): {"root": 1.952386051986818, "grain": 14.238026150588324},
+    ("PFOA", "4pool_free"): {"root": 1.7687909049187536, "grain": 0.20021364082263676},
+    ("PFOS", "redistributed_fit"): {"root": 21.569014721901613, "grain": 1.8083563015803177},
+    ("PFBA", "4pool_free"): {"root": 2.4728430001475936, "grain": 0.9640453467296496},
 }
 _VARIANT_KW = {"4pool_free": dict(api.FOUR_POOL_FREE),
                "redistributed_fit": dict(f_xy_source="fit", lipid_loading=False)}
@@ -104,14 +104,14 @@ def test_pfas_path_is_unmoved(key, expected):
 
 
 PFAS_GOLDEN_DEFAULT = {
-    "PFOA": {"root": 1.396424254905138, "grain": 0.4241424722203747},
-    "PFBA": {"root": 1.9523863460568354, "grain": 1.1322229267521402},
+    "PFOA": {"root": 1.7689644924094703, "grain": 0.424960408461994},
+    "PFBA": {"root": 2.4730429003189482, "grain": 0.9653576963292074},
 }
 
 
 @pytest.mark.parametrize("cong,expected", list(PFAS_GOLDEN_DEFAULT.items()))
 def test_pfas_path_is_unmoved_in_the_default(cong, expected):
-    """The same backstop on the default configuration (redistributed shoot + lipid)."""
+    """The same backstop on the default configuration (redistributed shoot, per-congener f_xy)."""
     r = api.simulate(cong)
     for tissue, want in expected.items():
         assert r["baf_final"][tissue] == pytest.approx(want, rel=GOLDEN_REL), tissue

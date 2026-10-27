@@ -15,9 +15,12 @@
 #
 # Inputs: the shoot and phloem shares (model_api.RANGE_INPUTS: stem_transp_frac,
 # lam_grain at heading and at maturity, phi, T_C_Ph), the site inputs (sbdur, tmpsb, nplh;
-# the crop is re-run), every organ-composition cell with a range (theta_fw, f_prot, f_PL,
-# f_cw, lignin share -> K_cw; parameters.json tissue_composition_ranges), and PFBS's L_Ph
-# range [0, L_MQL] (its grain is censored).
+# the crop is re-run), every organ-composition cell with a range (f_prot, f_PL, f_cw, lignin
+# share -> K_cw, the grain's harvest water; parameters.json tissue_composition_ranges), the
+# organ water's stage anchors one anchor at a time (PREREG 7.1; root, stem and leaf water no
+# longer enter as constants), the husk share at maturity, the rachis and the husk's phloem draw
+# (7.2), the published japonica crop sets (7.5; a categorical input: every set is an "end", the
+# band takes the extreme deviations), and PFBS's L_Ph range [0, L_MQL] (its grain is censored).
 #
 #   python validation/input_range_band.py     (writes params/input_range_band.json)
 # =============================================================================
@@ -35,6 +38,8 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "src"))
 import model_api as api                 # noqa: E402
 import organ_mass as om                 # noqa: E402
+import panicle as pn                    # noqa: E402
+import crop_sets as CS                  # noqa: E402
 
 PRECISION = 0.0005
 TISS = ("root", "straw", "grain")
@@ -60,8 +65,19 @@ def inputs():
     rng = api.PARAMS["tissue_composition_ranges"]
     for organ in ORGAN_OF:
         for q, (lo, hi) in rng[organ].items():
+            if q == "theta_fw" and ORGAN_OF[organ] in om.THETA_STAGE:
+                continue                        # staged: its anchors below (PREREG 7.1)
             if hi > lo:
                 out.append((f"{organ}.{q}", tuple({"comp": (organ, q, v)} for v in (lo, hi))))
+    for organ, a in om.THETA_STAGE.items():
+        for i, d in enumerate(a["dvs"]):
+            if a["high"][i] > a["low"][i]:
+                out.append((f"{organ}.theta@DVS{d:g}",
+                            tuple({"anchor": (organ, i, v)} for v in (a["low"][i], a["high"][i]))))
+    out.append(("husk_share_maturity", tuple({"panicle": {"h_mat": v}} for v in pn.H_MAT_RANGE)))
+    out.append(("rachis", tuple({"panicle": {"rachis_frac": v}} for v in pn.RACHIS_FRAC_RANGE)))
+    out.append(("husk_phloem", ({"sim": {"husk_phloem": False}}, {"sim": {"husk_phloem": True}})))
+    out.append(("crop_set", tuple({"site": {"crop_set": cs}} for cs in CS.BAND_SETS)))
     out.append(("PFBS.L_Ph", ({"pfbs_L": 0.0}, {"pfbs_L": "mql"})))
     return out
 
@@ -97,10 +113,16 @@ def _restore(organ, saved):
 def observable(job):
     """log10 {root, straw, grain} of the two-run observable for one congener and settings."""
     c, settings = job
-    sim, site, patched = {}, {}, []
+    sim, site, patched, anchors, pan = {}, {}, [], {}, {}
     for st in settings:
         sim.update(st.get("sim", {}))
         site.update(st.get("site", {}))
+        pan.update(st.get("panicle", {}))
+        if "anchor" in st:                      # merged per organ, so a corner moves several
+            organ, i, v = st["anchor"]
+            a = om.THETA_STAGE[organ]
+            vals = anchors.setdefault(organ, list(0.5 * (a["low"] + a["high"])))
+            vals[i] = v
         if "comp" in st:
             organ, q, v = st["comp"]
             patched.append((organ, _apply_comp(organ, q, v)))
@@ -108,6 +130,10 @@ def observable(job):
             v = st["pfbs_L"]
             sim["L_Ph_override"] = (api._CONG["PFBS"]["L_Ph_MQL__" + api.variant_key()]
                                     if v == "mql" else v)
+    if anchors:
+        site["theta_anchors"] = anchors
+    if pan:
+        site["panicle_kw"] = pan
     try:
         b = api.yamazaki_harvest_baf(c, scenario_kw=site or None, **sim)
     finally:
@@ -132,14 +158,14 @@ def main():
                     c, v = next(it)
                     d[c] = {k: v[k] - base[c][k] for k in TISS}
                 delta[name].append(d)
-        band, attrib = {}, {}
+        band, attrib, counted = {}, {}, {}
         for c in CONG:
-            band[c], attrib[c] = {}, {}
+            band[c], attrib[c], counted[c] = {}, {}, {}
             for k in TISS:
                 dn = up = 0.0
                 contrib = {}
                 for name in delta:
-                    ds = [delta[name][i][c][k] for i in (0, 1)]
+                    ds = [d_[c][k] for d_ in delta[name]]
                     if max(abs(x) for x in ds) < PRECISION:
                         continue
                     dn += min(0.0, *ds)
@@ -147,6 +173,7 @@ def main():
                     contrib[name] = max(abs(x) for x in ds)
                 band[c][k] = [dn, up]
                 attrib[c][k] = dict(sorted(contrib.items(), key=lambda z: -z[1])[:5])
+                counted[c][k] = sorted(contrib)           # every input that entered
         # corner check: every counted input at the end that moved this number this way
         corner_jobs, keys = [], []
         for c in CONG:
@@ -154,7 +181,7 @@ def main():
                 for sgn in (-1, 1):
                     sts = []
                     for name, ends in ins:
-                        ds = [delta[name][i][c][k] for i in (0, 1)]
+                        ds = [d_[c][k] for d_ in delta[name]]
                         if max(abs(x) for x in ds) < PRECISION:
                             continue
                         i = int(np.argmin(ds)) if sgn < 0 else int(np.argmax(ds))
@@ -181,7 +208,7 @@ def main():
     with open(OUT, "w") as f:
         json.dump(dict(source="validation/input_range_band.py (PREREG 5.4)",
                        variant=api.variant_key(), units="log10 [down, up] around the default",
-                       band=band, corner=corner, attribution=attrib,
+                       band=band, corner=corner, attribution=attrib, counted=counted,
                        inputs=[n for n, _ in ins], base=base), f, indent=1)
     print(f"[written] {os.path.relpath(OUT, ROOT)}")
 

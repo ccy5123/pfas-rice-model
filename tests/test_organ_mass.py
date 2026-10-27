@@ -36,13 +36,24 @@ def test_to_model_mass_keeps_relative_rates():
 
 
 def test_default_simulate_runs_on_fresh_site_year_mass():
+    """The default runs on fresh mass with each organ's water at the run's stage (PREREG 7.1)
+    and brown rice as the grain (7.2); the amendment-1 forms reproduce the constant water and
+    the whole panicle."""
     import site_scenario as ss
+    import panicle as pn
     run = ss.yamazaki2020_mean_run()
     r = api.simulate("PFOA")
     assert r["params"]["mass_basis"] == "fresh" and r["params"]["scenario"] == "yamazaki2020"
+    assert r["params"]["organ_water"] == "stage" and r["params"]["grain_basis"] == "brown"
+    brown, _ = pn.split(run["t"], run["grain"], run["dvs"])
+    for i, organ in enumerate(api.TISSUES):
+        dry = brown if organ == "grain" else run[organ]
+        expect = np.maximum(dry / (1.0 - om.theta_at(organ, run["dvs"])), om.MASS_FLOOR)
+        assert np.allclose(r["M"][:, i], expect)
+    a1 = api.simulate("PFOA", organ_water="constant", grain_basis="panicle")
     for i, organ in enumerate(api.TISSUES):
         expect = np.maximum(run[organ] * om.fresh_factor(organ), om.MASS_FLOOR)
-        assert np.allclose(r["M"][:, i], expect)
+        assert np.allclose(a1["M"][:, i], expect)
 
 
 def test_placeholder_forcing_is_refused():

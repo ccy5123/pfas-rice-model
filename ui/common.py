@@ -84,24 +84,34 @@ def _drivers_tuple(d):
     """A driver dict as a hashable tuple for the run caches. It must carry EVERY key the
     model reads: dropping `leaf_loss` silently turned off the ORYZA leaf-senescence
     correction in every driver mode, `mass_basis` decides the xylem split, and `dvs` sets
-    the panicle's share of transpiration."""
+    the panicle's share of transpiration; `theta` (the organ water that made M fresh) and `husk`
+    (the panicle remainder) carry amendment 2a's structure -- dropping them would pair a staged
+    fresh mass with constant binding and put the panicle deposit back into brown rice."""
     ll = d.get("leaf_loss")
     dv = d.get("dvs")
+    th = d.get("theta")
+    hk = d.get("husk")
     return (tuple(d["t"]), tuple(d["Cwo"]), tuple(d["Qtp"]),
             tuple(np.asarray(d["M"]).ravel()), int(np.asarray(d["M"]).shape[1]),
             None if ll is None else tuple(np.asarray(ll, float)),
             d.get("mass_basis", "fresh"),
-            None if dv is None else tuple(np.asarray(dv, float)))
+            None if dv is None else tuple(np.asarray(dv, float)),
+            None if th is None else tuple(np.asarray(th, float).ravel()),
+            None if hk is None else tuple(np.asarray(hk, float)))
 
 
 def _drivers_from_tuple(drv):
-    t, Cwo, Qtp, Mflat, ncol, ll, basis, dv = drv
+    t, Cwo, Qtp, Mflat, ncol, ll, basis, dv, th, hk = drv
     d = dict(t=np.array(t), Cwo=np.array(Cwo), Qtp=np.array(Qtp),
              M=np.array(Mflat).reshape(-1, ncol), mass_basis=basis)
     if ll is not None:
         d["leaf_loss"] = np.array(ll)
     if dv is not None:
         d["dvs"] = np.array(dv)
+    if th is not None:
+        d["theta"] = np.array(th).reshape(-1, ncol)
+    if hk is not None:
+        d["husk"] = np.array(hk)
     return d
 
 
@@ -455,6 +465,11 @@ def _render_custom_tables(*, biomass, Cwo_const, season0, key, ko=False):
         cwo = _clean_table(cdf, ["Cwo"])
         drivers = api.drivers_from_tables(growth, cwo, growth_units=gunit,
                                           Cwo_const=Cwo_const, **crop_kw(biomass))
+        # the form between the table's samples is not measured (PREREG 7.3): the monotone-cubic
+        # run rides along so the results can show the spread next to the linear run
+        drivers["_pchip"] = api.drivers_from_tables(growth, cwo, growth_units=gunit,
+                                                    Cwo_const=Cwo_const, interp="pchip",
+                                                    **crop_kw(biomass))
     except Exception as e:                                   # noqa: BLE001
         st.warning(_t("ct.read_error", lang, e=e))
         return None, density
@@ -756,6 +771,11 @@ def run_model(cfg):
     elif drivers is not None:
         with st.spinner("🌾 벼 한 철 축적을 계산하는 중…" if not cfg.expert else "Running the model…"):
             res = _simulate(congener, drivers_tuple=_drivers_tuple(drivers), **sim_kw)
+            if drivers.get("_pchip") is not None:          # a measured table: both forms
+                alt = _simulate(congener, drivers_tuple=_drivers_tuple(drivers["_pchip"]),
+                                **sim_kw)["baf_final_dw"]
+                res = dict(res, interp_spread={k: float(np.log10(alt[k] / res["baf_final_dw"][k]))
+                                               for k in ("root", "straw", "grain")})
     else:
         with st.spinner("🌾 벼 한 철 축적을 계산하는 중…" if not cfg.expert else "Running the model…"):
             res = _simulate(congener, Cwo=Cwo_const, season=season, measured_forcing=measured,

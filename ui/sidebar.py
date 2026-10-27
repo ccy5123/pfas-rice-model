@@ -349,8 +349,8 @@ def build():
         smiles = None
         neutral = None            # NEUTRAL-organic kwargs (None = PFAS path)
         spec = "Curated congener"
-        fxy_source = "recommended"
-        biomass = "site2020"      # crop scenario key: ui.common.CROPS / crop_kw
+        fxy_source = api.DEFAULT_F_XY_SOURCE
+        biomass = "site2020"     # crop scenario key: ui.common.CROPS / crop_kw
         lipid_loading = api.DEFAULT_LIPID_LOADING
         shoot = api.DEFAULT_SHOOT
         compare = []
@@ -447,13 +447,15 @@ def build():
             # f_xy is a PFAS lever and is MEANINGLESS on the neutral path (there it is the
             # computed Briggs TSCF, not a fitted loading factor), so it is absent there.
             if not neutral:
-                fxy_label = st.radio("Root→shoot loading f_xy",
-                                     ["recommended (monotone, a priori)", "fit (reproduces Yamazaki)"],
-                                     help="Applies only with lipid loading OFF (⚙️ Mechanism below; on by "
-                                          "default), which supplies its own f_xy. recommended: the "
-                                          "monotone physical f_xy, with L_Ph and r_eq fitted to Yamazaki's root "
-                                          "and grain given it — straw is a prediction. fit: f_xy fitted to the "
-                                          "straw as well (a saturated reproduction). "
+                _fxy = ["fit (reproduces Yamazaki)", "recommended (monotone, a priori)"]
+                fxy_label = st.radio("Root→shoot loading f_xy", _fxy,
+                                     index=0 if api.DEFAULT_F_XY_SOURCE == "fit" else 1,
+                                     help="Applies only with lipid loading OFF (⚙️ Mechanism below; off by "
+                                          "default); lipid loading supplies its own f_xy. fit (DEFAULT): f_xy "
+                                          "fitted per congener to Yamazaki's straw with L_Ph and r_eq to its "
+                                          "grain and root (a saturated reproduction; chosen by the transfer "
+                                          "tests, PREREG 5.3). recommended: the monotone physical f_xy, with "
+                                          "L_Ph and r_eq fitted given it — straw is a prediction. "
                                           "validation/refit_sourced.py.")
                 fxy_source = "recommended" if fxy_label.startswith("recommended") else "fit"
             _bm = {v: k for k, v in _CM.CROPS.items()}
@@ -477,6 +479,10 @@ def build():
                 if lipid_loading and fxy_source == "fit":
                     st.warning("f_xy 'fit' is a free-anion fit and applies only with lipid loading "
                                "off (⚙️ Mechanism); this run uses lipid loading's own f_xy.")
+                    fxy_source = "recommended"
+                if shoot == "4pool" and fxy_source == "fit":
+                    st.warning("f_xy 'fit' was fitted on the redistributed shoot only (no 4-pool fit); "
+                               "this 4-pool run uses the monotone 'recommended' f_xy.")
                     fxy_source = "recommended"
 
             st.header("3 · Scenario")

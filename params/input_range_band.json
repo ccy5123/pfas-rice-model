@@ -1,558 +1,1036 @@
 {
  "source": "validation/input_range_band.py (PREREG 5.4)",
- "variant": "redistributed_lipid",
+ "variant": "redistributed_fit",
  "units": "log10 [down, up] around the default",
  "band": {
   "PFBA": {
    "root": [
-    -0.29476342398903543,
-    0.22700868539988994
+    -0.39966133800944215,
+    0.3571230530767381
    ],
    "straw": [
-    -0.06481060907908764,
-    0.0642637226784255
+    -0.07828667376537046,
+    0.21505698816677743
    ],
    "grain": [
-    -0.40561261610091026,
-    0.28932251383352225
+    -0.5129769632130169,
+    0.9499251923944039
    ]
   },
   "PFPeA": {
    "root": [
-    -0.27591088711569817,
-    0.21692290185880364
+    -0.35099068650246673,
+    0.3161670117614492
    ],
    "straw": [
-    -0.07157361033542509,
-    0.07055035315035862
+    -0.07871832106554866,
+    0.2152418661735409
    ],
    "grain": [
-    -0.4123756195071772,
-    0.2956091466564493
+    -0.5134252446428719,
+    0.9505436267321605
    ]
   },
   "PFHxA": {
    "root": [
-    -0.22407168847564163,
-    0.18552778174514212
+    -0.2683516746394831,
+    0.2508521115616653
    ],
    "straw": [
-    -0.13989082846931034,
-    0.12812432296846288
+    -0.17335593746804567,
+    0.27896488664446284
    ],
    "grain": [
-    -0.40827072924165486,
-    0.3739831976601541
+    -0.4983943301025354,
+    0.7251481999692438
    ]
   },
   "PFHpA": {
    "root": [
-    -0.16112425864178992,
-    0.1417375111589343
+    -0.1819371920278141,
+    0.17631857441291476
    ],
    "straw": [
-    -0.08435402568682582,
-    0.08253918304405161
+    -0.1662556225306936,
+    0.27748874701020554
    ],
    "grain": [
-    -0.4251560392218465,
-    0.3075979825110309
+    -0.4730309975173139,
+    0.6761396600900066
    ]
   },
   "PFOA": {
    "root": [
-    -0.10270571495310621,
-    0.09529428828889919
+    -0.11117184490080712,
+    0.110804826279849
    ],
    "straw": [
-    -0.19639700098849372,
-    0.19813206783588921
+    -0.1758927049232737,
+    0.28988804712490124
    ],
    "grain": [
-    -0.37754249308928156,
-    0.3590860557208378
+    -0.441108680308253,
+    0.5555509021257748
    ]
   },
   "PFNA": {
    "root": [
-    -0.06520175308600829,
-    0.06194785132784597
+    -0.06817356204734637,
+    0.06772016382860535
    ],
    "straw": [
-    -0.1788498574865543,
-    0.1889288384377607
+    -0.15918259681874947,
+    0.2800479908140472
    ],
    "grain": [
-    -0.35030490635842837,
-    0.3328479913945146
+    -0.4147648481331196,
+    0.509383491893831
    ]
   },
   "PFDA": {
    "root": [
-    -0.04845264436842056,
-    0.04599704468533172
+    -0.04959158820746912,
+    0.04826559087252025
    ],
    "straw": [
-    -0.18979851945054071,
-    0.22483292423867596
+    -0.15700881203175943,
+    0.3090393135035032
    ],
    "grain": [
-    -0.3270314860384884,
-    0.3552116905084214
+    -0.43801330520916226,
+    0.45962567637147633
    ]
   },
   "PFUnDA": {
    "root": [
-    -0.042173050283776714,
-    0.039829707283998594
+    -0.04274170714316394,
+    0.04097452556104875
    ],
    "straw": [
-    -0.06712984952984535,
-    0.06584872772727968
+    -0.11019798390703439,
+    0.23797342852632575
    ],
    "grain": [
-    -0.40793174868165605,
-    0.2909074853458028
+    -0.36003006125865955,
+    0.5617998935887272
    ]
   },
   "PFDoDA": {
    "root": [
-    -0.03865814422659808,
-    0.036342949991632345
+    -0.038952705310867586,
+    0.036941549450330236
    ],
    "straw": [
-    -0.1664497419586759,
-    0.18854230532348604
+    -0.146123438295787,
+    0.311215987146334
    ],
    "grain": [
-    -0.3187256625737618,
-    0.31542132876764684
+    -0.473646317525352,
+    0.49223991204228823
    ]
   },
   "PFBS": {
    "root": [
-    -0.29052360782062747,
-    0.22821469882235612
+    -0.31514719574881433,
+    0.26287623780473646
    ],
    "straw": [
-    -0.1299769271767055,
-    0.1218099886193238
+    -0.1422364973845487,
+    0.2740275564139434
    ],
    "grain": [
-    -0.4707789621894782,
-    0.34686880973565404
+    -30.06345425976914,
+    1.2028046385813957
    ]
   },
   "PFOS": {
    "root": [
-    -0.04245161450425705,
-    0.04010918437206534
+    -0.043018868268611676,
+    0.04125061601745994
    ],
    "straw": [
-    -0.08312084956357868,
-    0.08177434482915968
+    -0.1258614938152054,
+    0.249660090378389
    ],
    "grain": [
-    -0.36871227474114016,
-    0.2920092192990677
+    -0.3742592881657823,
+    0.5306612513580135
    ]
   }
  },
  "corner": {
   "PFBA": {
    "root": [
-    -0.21630864684880313,
-    0.2504994650663315
+    -0.3672577303524295,
+    0.33289719949642793
    ],
    "straw": [
-    -0.039340248749978546,
-    0.06324286256197453
+    -0.08536062156664559,
+    0.21643394768549973
    ],
    "grain": [
-    -0.14094760954645996,
-    0.14019680962527592
+    -0.49399828344350216,
+    0.8919954714743002
    ]
   },
   "PFPeA": {
    "root": [
-    -0.20472559684586938,
-    0.2394211956386305
+    -0.3081869810119272,
+    0.30326378299749696
    ],
    "straw": [
-    -0.04432598850939462,
-    0.07068512719468112
+    -0.08563179582668523,
+    0.21658970904332797
    ],
    "grain": [
-    -0.14593335112779832,
-    0.147639077609703
+    -0.49425139238832205,
+    0.8927742711910098
    ]
   },
   "PFHxA": {
    "root": [
-    -0.16854080740706817,
-    0.20660424304003333
+    -0.22557251432962597,
+    0.2508508772672805
    ],
    "straw": [
-    -0.1367470923883789,
-    0.11184073686163576
+    -0.1876363893714551,
+    0.27282340341194367
    ],
    "grain": [
-    -0.22257686176105212,
-    0.28544498745366986
+    -0.46055606573107555,
+    0.7069297844069373
    ]
   },
   "PFHpA": {
    "root": [
-    -0.12267934728046681,
-    0.16048251105733824
+    -0.1476467560807173,
+    0.18581563420740466
    ],
    "straw": [
-    -0.05544724459797601,
-    0.08330410424841572
+    -0.17135761416013462,
+    0.275042100047289
    ],
    "grain": [
-    -0.1570546125557065,
-    0.1602580649026332
+    -0.4377475028002793,
+    0.6772030233569697
    ]
   },
   "PFOA": {
    "root": [
-    -0.08148321807447889,
-    0.10854668334144746
+    -0.0911177324037229,
+    0.12102719685249164
    ],
    "straw": [
-    -0.18357944650770353,
-    0.17300536471791705
+    -0.18480059972597696,
+    0.2822374480198173
    ],
    "grain": [
-    -0.26652229660488,
-    0.29733302160650354
+    -0.39940081839020447,
+    0.5983580243364187
    ]
   },
   "PFNA": {
    "root": [
-    -0.05542596106707598,
-    0.06917864678737762
+    -0.05870045412086855,
+    0.07418752078445634
    ],
    "straw": [
-    -0.16901005590030643,
-    0.16722227044628657
+    -0.16976637772687775,
+    0.2777980173210709
    ],
    "grain": [
-    -0.2548254934058643,
-    0.27128676591845746
+    -0.3721757469387579,
+    0.5763981320434926
    ]
   },
   "PFDA": {
    "root": [
-    -0.043807112829374883,
-    0.04971704350067929
+    -0.04504225926903538,
+    0.051766087995031906
    ],
    "straw": [
-    -0.18555908489828288,
-    0.20983855231272308
+    -0.1546981785177195,
+    0.3011072622729176
    ],
    "grain": [
-    -0.2714288337336202,
-    0.3103643512207379
+    -0.3851780525541535,
+    0.4929169938034488
    ]
   },
   "PFUnDA": {
    "root": [
-    -0.039272667295563224,
-    0.04222524979863396
+    -0.039883999872519116,
+    0.04327813369020239
    ],
    "straw": [
-    -0.05104010612816756,
-    0.0568699923670648
+    -0.10675012856125043,
+    0.2512797805656879
    ],
    "grain": [
-    -0.15264750105890745,
-    0.13382401931300625
+    -0.3282462165075695,
+    0.6262976091708463
    ]
   },
   "PFDoDA": {
    "root": [
-    -0.03686515317408201,
-    0.03784928064806614
+    -0.03717948970877094,
+    0.038407538423582466
    ],
    "straw": [
-    -0.16444189630301764,
-    0.16637653856015167
+    -0.1475127413567967,
+    0.30741376439619117
    ],
    "grain": [
-    -0.2487463451521894,
-    0.2599148227113943
+    -0.42243741574182825,
+    0.49505843924254656
    ]
   },
   "PFBS": {
    "root": [
-    -0.21685799886835078,
-    0.24952410410907766
+    -0.24954207384637694,
+    0.2713930859934066
    ],
    "straw": [
-    -0.08534124232512852,
-    0.13051972113327892
+    -0.2235478280832366,
+    0.24018787123553187
    ],
    "grain": [
-    -0.18694862480429156,
-    0.20747371030717454
+    -29.525036675477956,
+    1.042860442141194
    ]
   },
   "PFOS": {
    "root": [
-    -0.04003804352011975,
-    0.04209855789493444
+    -0.040649355503257434,
+    0.04314822963109455
    ],
    "straw": [
-    -0.06988452116182531,
-    0.07046428059370236
+    -0.1576735950028969,
+    0.2620355234460583
    ],
    "grain": [
-    -0.17445275501303387,
-    0.15837316180057803
+    -0.3378948399420765,
+    0.6056874661203924
    ]
   }
  },
  "attribution": {
   "PFBA": {
    "root": {
-    "root.f_cw": 0.15334667673822522,
-    "root.lignin_share": 0.12230613606699614,
-    "root.f_prot": 0.014758145505354259,
-    "root.f_PL": 0.004352465678459816
+    "root.f_cw": 0.17770279044778226,
+    "root.lignin_share": 0.14089191212229968,
+    "root.theta@DVS2": 0.1042339205630699,
+    "root.f_prot": 0.01669584190416107,
+    "root.f_PL": 0.004916208131325761
    },
    "straw": {
-    "root.f_cw": 0.019087205536485907,
-    "root.lignin_share": 0.015686570451486137,
-    "lam_grain_heading": 0.013294290636911121,
-    "lam_grain_maturity": 0.006838130663929576,
-    "tmpsb": 0.005281996340205097
+    "crop_set": 0.14776943998479863,
+    "phi": 0.01692929201964133,
+    "leaf.f_cw": 0.013634513318701913,
+    "lam_grain_heading": 0.01317902276764249,
+    "leaf.lignin_share": 0.007810498199918747
    },
    "grain": {
-    "lam_grain_heading": 0.25253915791709025,
-    "lam_grain_maturity": 0.11258558308681546,
-    "root.f_cw": 0.019087212376336482,
-    "root.lignin_share": 0.01568657609443172,
-    "tmpsb": 0.004154883820084693
+    "crop_set": 0.4171004625566631,
+    "leaf.f_cw": 0.139829170195964,
+    "T_C_Ph": 0.1393114669797813,
+    "leaf.lignin_share": 0.0859265700534996,
+    "leaf.f_prot": 0.07812416393717864
    }
   },
   "PFPeA": {
    "root": {
-    "root.f_cw": 0.1424871223653983,
-    "root.lignin_share": 0.11208329228977304,
-    "root.f_prot": 0.013052296816945086,
-    "root.f_PL": 0.008288175643581752
+    "root.f_cw": 0.15909715453711948,
+    "root.lignin_share": 0.12461951900587726,
+    "root.theta@DVS2": 0.08047558484693301,
+    "root.f_prot": 0.014334619154084238,
+    "root.f_PL": 0.009097534299920662
    },
    "straw": {
-    "root.f_cw": 0.022370658695904155,
-    "root.lignin_share": 0.018104559590431668,
-    "lam_grain_heading": 0.013294290841220135,
-    "lam_grain_maturity": 0.00683813078107387,
-    "tmpsb": 0.005281995903996917
+    "crop_set": 0.14771538714161503,
+    "phi": 0.017048446961548613,
+    "leaf.f_cw": 0.014099509793245701,
+    "lam_grain_heading": 0.013182703528179074,
+    "leaf.lignin_share": 0.007909193583898855
    },
    "grain": {
-    "lam_grain_heading": 0.25253915777283087,
-    "lam_grain_maturity": 0.1125855832697426,
-    "root.f_cw": 0.02237066702462226,
-    "root.lignin_share": 0.018104566363888852,
-    "tmpsb": 0.004154883173984825
+    "crop_set": 0.4169888573066687,
+    "leaf.f_cw": 0.14243987420970072,
+    "T_C_Ph": 0.13930362809064378,
+    "leaf.lignin_share": 0.08605636011638829,
+    "leaf.f_prot": 0.07449947841138921
    }
   },
   "PFHxA": {
    "root": {
-    "root.f_cw": 0.11257300222488975,
-    "root.lignin_share": 0.08718076788281165,
-    "root.f_PL": 0.014196672543062894,
-    "root.f_prot": 0.010121245824877334
+    "root.f_cw": 0.12080690377794684,
+    "root.lignin_share": 0.09335213566848094,
+    "root.theta@DVS2": 0.05453096225991283,
+    "root.f_PL": 0.01511357287852061,
+    "root.f_prot": 0.010771658691121067
    },
    "straw": {
-    "root.f_cw": 0.024912188784210643,
-    "phi": 0.02126359081805851,
-    "root.lignin_share": 0.019725922489984615,
-    "leaf.f_cw": 0.016644632321651365,
-    "lam_grain_heading": 0.013214940174035572
+    "crop_set": 0.12387165338017803,
+    "phi": 0.055240739011823914,
+    "leaf.f_cw": 0.03676598659519126,
+    "leaf.lignin_share": 0.020856891511788156,
+    "leaf.f_prot": 0.017368040508524363
    },
    "grain": {
-    "lam_grain_heading": 0.15833020865531844,
-    "lam_grain_maturity": 0.07619589423891976,
-    "leaf.f_cw": 0.03882776052180076,
-    "T_C_Ph": 0.034452412828289536,
-    "root.f_cw": 0.024912195033491902
+    "crop_set": 0.24790193086079845,
+    "T_C_Ph": 0.13238868072061027,
+    "leaf.f_cw": 0.0904489767478687,
+    "phi": 0.08383675484131842,
+    "leaf.lignin_share": 0.055064047439038644
    }
   },
   "PFHpA": {
    "root": {
-    "root.f_cw": 0.07573240237274881,
-    "root.lignin_share": 0.05904166660765964,
-    "root.f_PL": 0.021186695510443943,
-    "root.f_prot": 0.005163494150937531
+    "root.f_cw": 0.07854979403122475,
+    "root.lignin_share": 0.06119360936184348,
+    "root.theta@DVS2": 0.030051444679786155,
+    "root.f_PL": 0.021924277018238847,
+    "root.f_prot": 0.005339837033941253
    },
    "straw": {
-    "root.f_cw": 0.026504408609813623,
-    "root.lignin_share": 0.020919810013611873,
-    "lam_grain_heading": 0.01329429235237356,
-    "root.f_PL": 0.007718521695153857,
-    "lam_grain_maturity": 0.006838131647482371
+    "crop_set": 0.12229480071221943,
+    "phi": 0.05860188543078948,
+    "leaf.f_cw": 0.03276686561581976,
+    "leaf.lignin_share": 0.01884823596788321,
+    "stem_transp_frac": 0.016380682051717277
    },
    "grain": {
-    "lam_grain_heading": 0.25253915670551963,
-    "lam_grain_maturity": 0.11258558462311033,
-    "root.f_cw": 0.026504421399464073,
-    "root.lignin_share": 0.020919820172939446,
-    "root.f_PL": 0.007718525500610224
+    "crop_set": 0.23281162010726025,
+    "T_C_Ph": 0.13170050057287308,
+    "phi": 0.09024479794557191,
+    "leaf.f_cw": 0.07501453517555651,
+    "stem_transp_frac": 0.05071864199872289
    }
   },
   "PFOA": {
    "root": {
-    "root.f_cw": 0.041516038136511835,
-    "root.lignin_share": 0.032169473193082054,
-    "root.f_PL": 0.02677920829991931,
-    "root.f_prot": 0.002240995323593009
+    "root.f_cw": 0.042194309943718755,
+    "root.lignin_share": 0.032689245941350475,
+    "root.f_PL": 0.027209137479573764,
+    "root.theta@DVS2": 0.014080759951095367,
+    "root.f_prot": 0.0022759500576952085
    },
    "straw": {
-    "phi": 0.05767704247416128,
-    "root.f_cw": 0.022642402596831757,
-    "leaf.f_cw": 0.021764107095456953,
-    "root.lignin_share": 0.017630771372716736,
-    "stem_transp_frac": 0.017207212888961876
+    "crop_set": 0.11598192024479581,
+    "phi": 0.07513386746115425,
+    "leaf.f_cw": 0.025193524443659188,
+    "stem_transp_frac": 0.023986930077762647,
+    "leaf.lignin_share": 0.014831628365867933
    },
    "grain": {
-    "lam_grain_heading": 0.09349506859282253,
-    "T_C_Ph": 0.06093572056520524,
-    "lam_grain_maturity": 0.04841690444341562,
-    "phi": 0.04559740287141775,
-    "leaf.f_cw": 0.02624246203096095
+    "crop_set": 0.15426174286309263,
+    "T_C_Ph": 0.12758674318624236,
+    "phi": 0.12580375556552423,
+    "stem_transp_frac": 0.05119316819033415,
+    "leaf.f_cw": 0.038703958659531995
    }
   },
   "PFNA": {
    "root": {
-    "root.f_PL": 0.03019015188430907,
-    "root.f_cw": 0.01906584892816321,
-    "root.lignin_share": 0.014769983097161488,
-    "root.f_prot": 0.0011757691763745193
+    "root.f_PL": 0.030373533493568527,
+    "root.f_cw": 0.019180162990596217,
+    "root.lignin_share": 0.014858098012572318,
+    "root.theta@DVS2": 0.005417930152181394,
+    "root.f_prot": 0.0011826737344605709
    },
    "straw": {
-    "phi": 0.06379549830624498,
-    "root.f_PL": 0.022991496537235256,
-    "stem_transp_frac": 0.020035807005674255,
-    "root.f_cw": 0.014564123015841202,
-    "lam_grain_heading": 0.012271368712993225
+    "crop_set": 0.115069324122681,
+    "phi": 0.07894680078819127,
+    "stem_transp_frac": 0.026183128466984673,
+    "leaf.f_cw": 0.0129257711934464,
+    "lam_grain_heading": 0.011406579461248567
    },
    "grain": {
-    "lam_grain_heading": 0.0866801376757051,
-    "T_C_Ph": 0.06338954660736301,
-    "phi": 0.054677452815765026,
-    "lam_grain_maturity": 0.04537170851713507,
-    "stem_transp_frac": 0.025762162484137485
+    "phi": 0.13568038882411435,
+    "crop_set": 0.13542994644480952,
+    "T_C_Ph": 0.12647166085042338,
+    "stem_transp_frac": 0.051335267669107176,
+    "lam_grain_heading": 0.028327004249021126
    }
   },
   "PFDA": {
    "root": {
-    "root.f_PL": 0.03168775630470444,
-    "root.f_cw": 0.009116404259479793,
-    "root.lignin_share": 0.007017009019977483,
-    "root.f_prot": 0.0006314747842588453
+    "root.f_PL": 0.03176261963153659,
+    "root.f_cw": 0.009137385391047026,
+    "root.lignin_share": 0.007033119360772666,
+    "root.theta@DVS2": 0.002166359613904767,
+    "root.f_prot": 0.0006329139550746987
    },
    "straw": {
-    "phi": 0.08965938157058684,
-    "stem_transp_frac": 0.051407675315601864,
-    "root.f_PL": 0.028239390147015264,
-    "T_C_Ph": 0.011481245059013379,
-    "lam_grain_heading": 0.008194233697796038
+    "crop_set": 0.11921419167608716,
+    "phi": 0.09654741232260022,
+    "stem_transp_frac": 0.048397377765012184,
+    "T_C_Ph": 0.010118994191959496,
+    "lam_grain_heading": 0.008368002156112109
    },
    "grain": {
-    "phi": 0.14316737834715143,
-    "T_C_Ph": 0.06897199869288684,
-    "lam_grain_heading": 0.054953772123926936,
-    "stem_transp_frac": 0.032148583651382734,
-    "lam_grain_maturity": 0.030721226750242914
+    "phi": 0.22320622468651874,
+    "T_C_Ph": 0.1159390295851862,
+    "stem_transp_frac": 0.052796785532981394,
+    "crop_set": 0.0421432466771805,
+    "lam_grain_heading": 0.034586143731327734
    }
   },
   "PFUnDA": {
    "root": {
-    "root.f_PL": 0.03224289760630805,
-    "root.f_cw": 0.005609505919348834,
-    "root.lignin_share": 0.004320646758119828
+    "root.f_PL": 0.03228016010807311,
+    "root.f_cw": 0.005615794042606037,
+    "root.lignin_share": 0.004325483001788033,
+    "root.theta@DVS2": 0.0011016289313912075
    },
    "straw": {
-    "root.f_PL": 0.030432742165837467,
-    "lam_grain_heading": 0.01329436152828678,
-    "lam_grain_maturity": 0.006838171311086327,
-    "root.f_cw": 0.005303627252360776,
-    "tmpsb": 0.00528184481382965
+    "crop_set": 0.12364446607905055,
+    "phi": 0.05611940005066263,
+    "stem_transp_frac": 0.015370171431245971,
+    "lam_grain_heading": 0.012510600712004827,
+    "lam_grain_maturity": 0.00748010685990419
    },
    "grain": {
-    "lam_grain_heading": 0.25253910785564526,
-    "lam_grain_maturity": 0.11258564656557357,
-    "root.f_PL": 0.030432912137061452,
-    "root.f_cw": 0.005303657737289358,
-    "tmpsb": 0.004154659612456424
+    "crop_set": 0.24528975381756246,
+    "T_C_Ph": 0.13234225565246793,
+    "phi": 0.08581129423382095,
+    "stem_transp_frac": 0.05066103300241864,
+    "lam_grain_heading": 0.025382802179022113
    }
   },
   "PFDoDA": {
    "root": {
-    "root.f_PL": 0.03256191669222597,
-    "root.f_cw": 0.003429052637849317,
-    "root.lignin_share": 0.002667174896522795
+    "root.f_PL": 0.03258038768522464,
+    "root.f_cw": 0.0034309361018753926,
+    "root.lignin_share": 0.002668638661722511,
+    "root.theta@DVS2": 0.0005792606385619514
    },
    "straw": {
-    "phi": 0.08046192339565472,
-    "root.f_PL": 0.03165160551325297,
-    "stem_transp_frac": 0.030689307894918194,
-    "T_C_Ph": 0.01146153548272455,
-    "lam_grain_heading": 0.011119285699336068
+    "crop_set": 0.1298839099527176,
+    "phi": 0.0887066201596185,
+    "stem_transp_frac": 0.06655486871826932,
+    "T_C_Ph": 0.008054973394709508,
+    "leaf.f_PL": 0.007052910926979017
    },
    "grain": {
-    "phi": 0.08748098603600352,
-    "lam_grain_heading": 0.07004071912333387,
-    "T_C_Ph": 0.06814455716800794,
-    "lam_grain_maturity": 0.03782712285328538,
-    "root.f_PL": 0.031651729106432436
+    "phi": 0.28062644592642383,
+    "T_C_Ph": 0.10881158138811453,
+    "stem_transp_frac": 0.05412332219321003,
+    "lam_grain_heading": 0.04005410734712189,
+    "husk_phloem": 0.03699230277525789
    }
   },
   "PFBS": {
    "root": {
-    "root.f_cw": 0.14190782664444646,
-    "root.lignin_share": 0.12057595102866436,
-    "root.f_PL": 0.014594350315642268,
-    "root.f_prot": 0.013445479831874385
+    "root.f_cw": 0.1472628764252264,
+    "root.lignin_share": 0.1250054416156967,
+    "root.theta@DVS2": 0.028143502444682778,
+    "root.f_PL": 0.015065259301386913,
+    "root.f_prot": 0.01387872344785901
    },
    "straw": {
-    "root.f_cw": 0.04936269184082187,
-    "root.lignin_share": 0.04260530260429296,
-    "lam_grain_heading": 0.013294292516344397,
-    "lam_grain_maturity": 0.006838131741498721,
-    "root.f_PL": 0.005567461566392762
+    "crop_set": 0.14376038250387158,
+    "PFBS.L_Ph": 0.046515719216093654,
+    "phi": 0.022809875906406374,
+    "leaf.f_cw": 0.020893317073823026,
+    "lam_grain_heading": 0.013142852735540833
    },
    "grain": {
-    "lam_grain_heading": 0.2525391565897304,
-    "lam_grain_maturity": 0.11258558476993108,
-    "root.f_cw": 0.049362715635561355,
-    "root.lignin_share": 0.042605323299267306,
-    "root.f_PL": 0.005567464387412457
+    "PFBS.L_Ph": 29.525036675477956,
+    "crop_set": 0.3932870119816205,
+    "leaf.f_cw": 0.14832792709807874,
+    "T_C_Ph": 0.13842424209741544,
+    "leaf.lignin_share": 0.096394386037984
    }
   },
   "PFOS": {
    "root": {
-    "root.f_PL": 0.032116611158060415,
-    "root.f_cw": 0.006549511710282951,
-    "root.lignin_share": 0.0037854916359136848
+    "root.f_PL": 0.03215357448307543,
+    "root.f_cw": 0.006556832052061257,
+    "root.lignin_share": 0.003789709357306714,
+    "root.theta@DVS2": 0.0010981059388963654
    },
    "straw": {
-    "root.f_PL": 0.030320224180164335,
-    "lam_grain_heading": 0.013274535315606517,
-    "phi": 0.010637830844014484,
-    "lam_grain_maturity": 0.006986403189995771,
-    "root.f_cw": 0.006193286529160069
+    "crop_set": 0.11923872078545084,
+    "phi": 0.06584927705965615,
+    "stem_transp_frac": 0.01935272628528728,
+    "lam_grain_heading": 0.012149944486237185,
+    "T_C_Ph": 0.008087283048748395
    },
    "grain": {
-    "lam_grain_heading": 0.19484808554655195,
-    "lam_grain_maturity": 0.09086426245584933,
-    "root.f_PL": 0.030320355929787268,
-    "T_C_Ph": 0.020166166801617813,
-    "stem_transp_frac": 0.0077140772666689505
+    "crop_set": 0.19970764050548645,
+    "T_C_Ph": 0.13012176931980082,
+    "phi": 0.10496885050782673,
+    "stem_transp_frac": 0.05090997862065422,
+    "lam_grain_heading": 0.026475537975198804
    }
+  }
+ },
+ "counted": {
+  "PFBA": {
+   "root": [
+    "root.f_PL",
+    "root.f_cw",
+    "root.f_prot",
+    "root.lignin_share",
+    "root.theta@DVS2"
+   ],
+   "straw": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "stem_transp_frac",
+    "tmpsb"
+   ],
+   "grain": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "sbdur",
+    "stem_transp_frac",
+    "tmpsb"
+   ]
+  },
+  "PFPeA": {
+   "root": [
+    "root.f_PL",
+    "root.f_cw",
+    "root.f_prot",
+    "root.lignin_share",
+    "root.theta@DVS2"
+   ],
+   "straw": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "stem_transp_frac",
+    "tmpsb"
+   ],
+   "grain": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "sbdur",
+    "stem_transp_frac",
+    "tmpsb"
+   ]
+  },
+  "PFHxA": {
+   "root": [
+    "root.f_PL",
+    "root.f_cw",
+    "root.f_prot",
+    "root.lignin_share",
+    "root.theta@DVS2"
+   ],
+   "straw": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "stem_transp_frac",
+    "tmpsb"
+   ],
+   "grain": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "sbdur",
+    "stem_transp_frac",
+    "tmpsb"
+   ]
+  },
+  "PFHpA": {
+   "root": [
+    "root.f_PL",
+    "root.f_cw",
+    "root.f_prot",
+    "root.lignin_share",
+    "root.theta@DVS2"
+   ],
+   "straw": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "stem_transp_frac",
+    "tmpsb"
+   ],
+   "grain": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "sbdur",
+    "stem_transp_frac",
+    "tmpsb"
+   ]
+  },
+  "PFOA": {
+   "root": [
+    "root.f_PL",
+    "root.f_cw",
+    "root.f_prot",
+    "root.lignin_share",
+    "root.theta@DVS2"
+   ],
+   "straw": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "phi",
+    "rachis",
+    "stem_transp_frac",
+    "tmpsb"
+   ],
+   "grain": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "sbdur",
+    "stem_transp_frac",
+    "tmpsb"
+   ]
+  },
+  "PFNA": {
+   "root": [
+    "root.f_PL",
+    "root.f_cw",
+    "root.f_prot",
+    "root.lignin_share",
+    "root.theta@DVS2"
+   ],
+   "straw": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "phi",
+    "rachis",
+    "stem_transp_frac",
+    "tmpsb"
+   ],
+   "grain": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "sbdur",
+    "stem_transp_frac",
+    "tmpsb"
+   ]
+  },
+  "PFDA": {
+   "root": [
+    "root.f_PL",
+    "root.f_cw",
+    "root.f_prot",
+    "root.lignin_share",
+    "root.theta@DVS2"
+   ],
+   "straw": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "phi",
+    "rachis",
+    "stem_transp_frac",
+    "tmpsb"
+   ],
+   "grain": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "stem_transp_frac",
+    "tmpsb"
+   ]
+  },
+  "PFUnDA": {
+   "root": [
+    "root.f_PL",
+    "root.f_cw",
+    "root.lignin_share",
+    "root.theta@DVS2"
+   ],
+   "straw": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "stem_transp_frac",
+    "tmpsb"
+   ],
+   "grain": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "sbdur",
+    "stem_transp_frac",
+    "tmpsb"
+   ]
+  },
+  "PFDoDA": {
+   "root": [
+    "root.f_PL",
+    "root.f_cw",
+    "root.lignin_share",
+    "root.theta@DVS2"
+   ],
+   "straw": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "stem_transp_frac",
+    "tmpsb"
+   ],
+   "grain": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "nplh",
+    "phi",
+    "rachis",
+    "stem_transp_frac",
+    "tmpsb"
+   ]
+  },
+  "PFBS": {
+   "root": [
+    "root.f_PL",
+    "root.f_cw",
+    "root.f_prot",
+    "root.lignin_share",
+    "root.theta@DVS2"
+   ],
+   "straw": [
+    "PFBS.L_Ph",
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "stem_transp_frac",
+    "tmpsb"
+   ],
+   "grain": [
+    "PFBS.L_Ph",
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "sbdur",
+    "stem_transp_frac",
+    "tmpsb"
+   ]
+  },
+  "PFOS": {
+   "root": [
+    "root.f_PL",
+    "root.f_cw",
+    "root.lignin_share",
+    "root.theta@DVS2"
+   ],
+   "straw": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "stem_transp_frac",
+    "tmpsb"
+   ],
+   "grain": [
+    "T_C_Ph",
+    "crop_set",
+    "husk_phloem",
+    "husk_share_maturity",
+    "lam_grain_heading",
+    "lam_grain_maturity",
+    "leaf.f_PL",
+    "leaf.f_cw",
+    "leaf.f_prot",
+    "leaf.lignin_share",
+    "nplh",
+    "phi",
+    "rachis",
+    "sbdur",
+    "stem_transp_frac",
+    "tmpsb"
+   ]
   }
  },
  "inputs": [
@@ -568,12 +1046,10 @@
   "root.f_PL",
   "root.f_cw",
   "root.lignin_share",
-  "stem.theta_fw",
   "stem.f_prot",
   "stem.f_PL",
   "stem.f_cw",
   "stem.lignin_share",
-  "leaf.theta_fw",
   "leaf.f_prot",
   "leaf.f_PL",
   "leaf.f_cw",
@@ -583,63 +1059,71 @@
   "grain_brown.f_PL",
   "grain_brown.f_cw",
   "grain_brown.lignin_share",
+  "root.theta@DVS0.65",
+  "root.theta@DVS2",
+  "stem.theta@DVS0.65",
+  "stem.theta@DVS2",
+  "husk_share_maturity",
+  "rachis",
+  "husk_phloem",
+  "crop_set",
   "PFBS.L_Ph"
  ],
  "base": {
   "PFBA": {
-   "root": 0.8326838713803519,
-   "straw": 1.3696878310188407,
-   "grain": 0.15785291176305033
+   "root": 0.8326838585079667,
+   "straw": 1.7257025690220233,
+   "grain": 0.08940858862344822
   },
   "PFPeA": {
-   "root": 0.43115460764625446,
-   "straw": 0.8740741912090513,
-   "grain": -0.3377607212667416
+   "root": 0.4311546043467733,
+   "straw": 1.122032285897149,
+   "grain": -0.5129846295496003
   },
   "PFHxA": {
-   "root": 0.4445912231031003,
-   "straw": 0.7084837981211034,
-   "grain": -0.315329655648426
+   "root": 0.4445912184491162,
+   "straw": 0.7484330198415476,
+   "grain": -0.3153388825069948
   },
   "PFHpA": {
-   "root": 0.8923550984002642,
-   "straw": 1.0211701727898244,
-   "grain": -0.19066468954022772
+   "root": 0.8923551064572626,
+   "straw": 0.7273671437551906,
+   "grain": -0.3062387852329742
   },
   "PFOA": {
-   "root": 0.68713549660131,
-   "straw": 0.5022375316048155,
-   "grain": -0.26850150714648546
+   "root": 0.6871355218648958,
+   "straw": 0.6190849884349967,
+   "grain": -0.2685082274267101
   },
   "PFNA": {
-   "root": 0.754724369397658,
-   "straw": 0.41242069447350505,
-   "grain": -0.3180002981287419
+   "root": 0.7547243791573667,
+   "straw": 0.5380947135697152,
+   "grain": -0.31799263437265113
   },
   "PFDA": {
-   "root": 1.6188218192144053,
-   "straw": 1.0542693873904834,
-   "grain": 0.5932450806059731
+   "root": 1.6188218102707213,
+   "straw": 1.23984481923452,
+   "grain": 0.5932450725274079
   },
   "PFUnDA": {
-   "root": 2.290715584167816,
-   "straw": 2.011890282439694,
-   "grain": 0.800057715710818
+   "root": 2.2907155836588813,
+   "straw": 1.624294474669905,
+   "grain": 0.5616108527295269
   },
   "PFDoDA": {
-   "root": 2.840620419848438,
-   "straw": 2.3343184877618226,
-   "grain": 1.723578806984587
+   "root": 2.840620413667237,
+   "straw": 1.8840007726477346,
+   "grain": 1.3219504055373257
   },
   "PFBS": {
-   "root": 1.3575975661339863,
-   "straw": 1.468611819791378,
-   "grain": 0.25677696290271074
+   "root": 1.3575975675985954,
+   "straw": 1.0317032861829656,
+   "grain": -0.47496332452204293
   },
   "PFOS": {
-   "root": 1.7732421416076305,
-   "straw": 1.4720420999831187,
-   "grain": 0.36058962918834436
+   "root": 1.773242162228016,
+   "straw": 1.3325132289916792,
+   "grain": 0.36058096418696134
   }
  }
 }

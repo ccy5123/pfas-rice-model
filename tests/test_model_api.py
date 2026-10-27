@@ -57,12 +57,13 @@ def test_forcing_and_fxy_toggles_run():
     with pytest.raises(ValueError):                 # the placeholder logistics were removed
         api.simulate("PFOA", measured_forcing=False)
     # the two f_xy sources differ for a long chain (recommended monotone vs the fit); the
-    # f_xy source applies only with lipid loading off (the default lipid model has its own f_xy)
+    # f_xy source applies only with lipid loading off (the lipid model has its own f_xy)
     rec = api.simulate("PFDA", f_xy_source="recommended", lipid_loading=False)["params"]["f_xy"]
     fit = api.simulate("PFDA", f_xy_source="fit", lipid_loading=False)["params"]["f_xy"]
     assert rec != fit
+    assert api.simulate("PFDA")["params"]["f_xy"] == fit           # the default (amendment 2a)
     with pytest.raises(ValueError):
-        api.simulate("PFDA", f_xy_source="fit")
+        api.simulate("PFDA", f_xy_source="fit", lipid_loading=True)
 
 
 def test_observed_baf_lookup():
@@ -123,7 +124,9 @@ def test_drivers_from_arrays_respects_the_crop_selection():
     site = api.scenario_drivers()
     assert np.allclose(ds["Qtp"], np.interp(t, site["t"], site["Qtp"]))
     assert "leaf_loss" in ds and Ms[-1] < 0.7 * Ms.max()    # the ORYZA leaf senesces
-    assert "leaf_loss" not in dg and Mg[-1] >= 0.95 * Mg.max()  # growth_rice monotonic
+    # growth_rice's DRY leaf is monotonic (its fresh mass also follows the staged water, 7.1)
+    dry = Mg * (1.0 - dg["theta"][:, li])
+    assert "leaf_loss" not in dg and dry[-1] >= 0.95 * dry.max()
 
 
 def test_load_driver_csv_without_M_uses_the_crop_selection():
@@ -136,7 +139,8 @@ def test_load_driver_csv_without_M_uses_the_crop_selection():
     ds = api.load_driver_csv(io.StringIO(csv))
     dg = api.load_driver_csv(io.StringIO(csv), scenario="generic", biomass="growth_rice")
     assert "leaf_loss" in ds and ds["M"][:, li][-1] < 0.7 * ds["M"][:, li].max()
-    assert "leaf_loss" not in dg and dg["M"][:, li][-1] >= 0.95 * dg["M"][:, li].max()
+    dry = dg["M"][:, li] * (1.0 - dg["theta"][:, li])            # staged water (7.1)
+    assert "leaf_loss" not in dg and dry[-1] >= 0.95 * dry.max()
     assert np.allclose(ds["Qtp"], 0.05)                       # a supplied Qtp is kept
 
 
@@ -650,6 +654,22 @@ def test_simulate_neutral_matches_the_standalone_module():
     for k in api.TISSUES:
         assert np.array_equal(built_in["conc"][k], ref["conc"][k])
         assert np.array_equal(explicit["conc"][k], ref["conc"][k])
+
+
+def test_neutral_path_keeps_the_amendment_one_forms():
+    """PREREG 7.9: the neutral path keeps the constant water and the whole panicle until 2b. A
+    2a driver dict handed to it is turned back to those forms (`neutral_forms`)."""
+    t = np.linspace(0.0, 117.5, 60)
+    d2 = api.drivers_from_arrays(t, np.ones_like(t))
+    assert "theta" in d2 and "husk" in d2
+    back = api.neutral_forms(d2)
+    a1 = api._crop_grid(t, crop=api._A1_FORMS)
+    ok = a1["M"] > 1e-6
+    assert np.allclose(back["M"][ok], a1["M"][ok], rtol=1e-3)
+    assert "theta" not in back and "husk" not in back
+    r2 = api.simulate_neutral(2.45, drivers=d2)
+    r1 = api.simulate_neutral(2.45, drivers=dict(d2, M=a1["M"], theta=None, husk=None))
+    assert r2["baf_final"]["grain"] == pytest.approx(r1["baf_final"]["grain"], rel=1e-3)
 
 
 def test_simulate_neutral_returns_the_simulate_contract():

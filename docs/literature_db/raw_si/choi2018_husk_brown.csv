@@ -1,0 +1,11 @@
+# Choi G-H, Lee D-Y, Bae J-Y, Rho J-H, Moon B-C, Kim J-H (2018) Bioconcentration factor of perfluorochemicals for each
+# aerial part of rice. J Appl Biol Chem 61(2):191-194, doi:10.3839/jabc.2018.028, Table 1 (read in full, main session).
+# Cultivar Sindongjin, greenhouse, 1/2000 a pots of soil spiked with PFOA and PFOS (nominal 1 and 5 mg/kg, aged 30 d),
+# transplanted early June, harvested 138 d after transplanting; threshed, air-dried in a hood, dehulled (Kett TR200) into
+# brown rice and husk. Concentrations mg/kg on the air-dried sample (moisture not reported); soil = measured at transplanting.
+# "Steam" in the printed table header is the straw (text: 볏짚). Used as a CHECK only (PREREG 7.2, E21), never fitted.
+group,compound,soil_mg_kg,straw_mg_kg,husk_mg_kg,brown_rice_mg_kg
+low,PFOA,0.968,1.427,0.035,0.004
+low,PFOS,0.789,3.708,0.074,0.002
+high,PFOA,4.844,3.723,0.125,0.030
+high,PFOS,4.370,7.641,0.376,0.008

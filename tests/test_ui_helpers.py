@@ -114,6 +114,8 @@ def test_the_run_cache_keeps_every_driver_key():
     assert set(r) == set(d)
     np.testing.assert_array_equal(r["leaf_loss"], d["leaf_loss"])
     np.testing.assert_array_equal(r["dvs"], d["dvs"])        # the panicle share follows it
+    np.testing.assert_array_equal(r["theta"], d["theta"])    # PREREG 7.1: M was made fresh with it
+    np.testing.assert_array_equal(r["husk"], d["husk"])      # PREREG 7.2: the panicle remainder
     assert r["mass_basis"] == d["mass_basis"] == "fresh"
     bare = dict(t=t, Cwo=np.ones_like(t), Qtp=d["Qtp"], M=d["M"])   # a user CSV: no tags
     rb = _drivers_from_tuple(_drivers_tuple(bare))

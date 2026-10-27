@@ -44,6 +44,8 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
 
+import linear_expm as LE
+
 # ----------------------------------------------------------------------------
 # physical constants
 # ----------------------------------------------------------------------------
@@ -326,6 +328,9 @@ class PlantInputs:
     M_basis: str | None = None            # 'fresh' | None -- see the docstring
     dvs: np.ndarray | None = None         # crop development stage (ORYZA DVS); needed when the
                                           # panicle's xylem share follows the stage
+    theta: np.ndarray | None = None       # organ water theta_fw(t) (len(t), 4) that made M fresh
+                                          # (PREREG 7.1); None: the compartments' constant theta
+    M_husk: np.ndarray | None = None      # panicle remainder (husk + rachis) DRY mass (PREREG 7.2)
 
     def __post_init__(self):
         if self.M_basis not in M_BASES:
@@ -336,9 +341,10 @@ class PlantInputs:
         self._Cwo = interp1d(self.t, self.Cwo, **kw)
         self._Qtp = interp1d(self.t, self.Qtp, **kw)
         self._M = [interp1d(self.t, self.M[:, k], **kw) for k in range(4)]
-        # dM/dt by finite difference, then interpolate
+        # dM/dt by finite difference, then interpolate; the grain's as the interval slope (its
+        # growth draws its inflow; `linear_expm.interval_slopes`)
         dM = np.gradient(self.M, self.t, axis=0)
-        self._dM = [interp1d(self.t, dM[:, k], **kw) for k in range(4)]
+        dM[:, FRUIT] = LE.interval_slopes(self.t, self.M[:, FRUIT])
         ll = np.zeros(len(self.t)) if self.leaf_loss is None else np.asarray(self.leaf_loss, float)
         self._leaf_loss = interp1d(self.t, ll, **kw)
         # grain FORMATION gate gamma(t): 0 while the grain sits on the organ-mass floor (the
@@ -361,22 +367,37 @@ class PlantInputs:
         self._tg = np.asarray(self.t, dtype=float)
         self._tab = np.column_stack([np.asarray(self.Cwo, float), np.asarray(self.Qtp, float),
                                      self.M, dM, ll, gate, dv])
+        self._hold = np.zeros(self._tab.shape[1], bool)
+        self._hold[6 + FRUIT] = True                  # the grain's growth: held over the interval
+        # the second table (PREREG 7.1/7.2): theta(t), the grain's DRY growth, the husk's dry
+        # mass, growth and formation gate
+        th = (np.full(self.M.shape, np.nan) if self.theta is None
+              else np.asarray(self.theta, float).reshape(self.M.shape))
+        gdry = (self.M[:, FRUIT] * (1.0 - th[:, FRUIT]) if self.theta is not None
+                else np.full(len(self.t), np.nan))
+        mh = (np.full(len(self.t), MASS_FLOOR) if self.M_husk is None
+              else np.maximum(np.asarray(self.M_husk, float), MASS_FLOOR))
+        self._tab2 = np.column_stack([th, LE.interval_slopes(self.t, gdry), mh,
+                                      LE.interval_slopes(self.t, mh), grain_formed(mh)])
+        self._hold2 = np.zeros(self._tab2.shape[1], bool)
+        self._hold2[[4, 6]] = True                    # the grain dry growth and husk growth
+
+    def extras_at(self, t):
+        """(theta[4], grain dry growth, husk dry mass, husk growth, husk gate) at time t."""
+        row = LE.lerp_row(self._tg, self._tab2, t, self._hold2)
+        return row[0:4], row[4], row[5], row[6], min(1.0, max(0.0, row[7]))
 
     def drivers_at(self, t):
         """(Cwo, Qtp, M[4], dM[4], leaf_loss, grain_gate, dvs) at time t, by one linear lerp
         (dvs is NaN for a driver set without a development stage)."""
-        tg = self._tg
-        i = int(np.searchsorted(tg, t, side="right")) - 1
-        i = min(max(i, 0), len(tg) - 2)
-        w = (t - tg[i]) / (tg[i + 1] - tg[i])
-        row = self._tab[i] + w * (self._tab[i + 1] - self._tab[i])
+        row = LE.lerp_row(self._tg, self._tab, t, self._hold)
         return (row[0], row[1], row[2:6], row[6:10], max(row[10], 0.0),
                 min(1.0, max(0.0, row[11])), row[12])
 
     def Cwo_(self, t):  return float(self._Cwo(t))
     def Qtp_(self, t):  return float(self._Qtp(t))
     def M_(self, t):    return np.array([float(f(t)) for f in self._M])
-    def dM_(self, t):   return np.array([float(f(t)) for f in self._dM])
+    def dM_(self, t):   return np.asarray(self.drivers_at(t)[3], float)
     def leaf_loss_(self, t):  return max(float(self._leaf_loss(t)), 0.0)
     def grain_gate_(self, t):  return min(1.0, max(0.0, float(self._grain_gate(t))))
     def dvs_(self, t):
@@ -404,6 +425,14 @@ def binding_factors(comps: list[Compartment], cmpd: Compound) -> np.ndarray:
             + c.f_cw * (cmpd.K_cw if c.K_cw is None else c.K_cw))
         for c in comps
     ])
+
+
+def dry_binding(comps: list[Compartment], cmpd: Compound) -> np.ndarray:
+    """X_k = f_prot K_prot + f_PL K_PL + f_cw K_cw [L/kg DRY]: the dry-matter part of B_k, which
+    does not depend on the organ's water. B_k(t) = theta_k(t) + (1 - theta_k(t)) X_k when the
+    water follows the development stage (PREREG 7.1)."""
+    return np.array([c.f_prot * cmpd.K_prot + c.f_PL * cmpd.K_PL
+                     + c.f_cw * (cmpd.K_cw if c.K_cw is None else c.K_cw) for c in comps])
 
 
 def _ghk_factor(N: float) -> float:
@@ -480,11 +509,28 @@ class RiceUptakeModel:
     # sieve-tube sap pH for the weak-electrolyte phloem ion trap; inert unless the
     # compound carries a pKa AND the leaf compartment carries a pH.
     phloem_pH: float = PHLOEM_PH
+    husk_phloem: bool = False           # the husk's dry growth draws phloem sap too (a band end)
 
     def __post_init__(self):
         if self.phi is None or self.T_C_Ph is None:
             raise ValueError("phi and T_C_Ph have no default: pass the sourced values "
                              "(model_api.PHI, model_api.T_C_PH)")
+        # panicle remainder (husk + rachis) as a terminal state 4 (PREREG 7.2)
+        self.husk = self.inputs.M_husk is not None
+        self.HUSK = 4 if self.husk else None
+        self.n_states = 5 if self.husk else 4
+        self._staged = self.inputs.theta is not None
+        if self.husk_phloem and not self.husk:
+            raise ValueError("husk_phloem needs the husk pool (inputs.M_husk)")
+        if self._staged and self.air is not None:
+            raise ValueError("organ water by stage is not wired into plant-air exchange "
+                             "(the neutral path keeps the constant water until amendment 2b)")
+
+    def _binding(self, th):
+        """B at this step: the stage's water when the inputs carry theta(t) (PREREG 7.1)."""
+        if not self._staged:
+            return binding_factors(self.comps, self.cmpd)
+        return th + (1.0 - th) * dry_binding(self.comps, self.cmpd)
 
     def phloem_loading_factor(self) -> float:
         """Effective leaf->phloem loading partition [-]  (`C_Phl = L * Cw_leaf`).
@@ -536,11 +582,12 @@ class RiceUptakeModel:
     def rhs(self, t: float, C: np.ndarray) -> np.ndarray:
         """RHS of dC/dt for the 4 compartments (Eqs. root, stem, leaf, fruit)."""
         Cwo, Qtp, M, dM, leaf_loss, gam, dvs = self.inputs.drivers_at(t)
+        th, gdry, Mh, dMh, gh = self.inputs.extras_at(t)
         M = np.maximum(M, MASS_FLOOR)                # the drivers are floored already; a guard
         mu = dM / M                                  # growth-dilution rates [1/day]
 
-        B = binding_factors(self.comps, self.cmpd)   # [L/kg]
-        Cw = C / B                                   # free aqueous conc [ug/L]
+        B = self._binding(th)                        # [L/kg]
+        Cw = C[:4] / B                               # free aqueous conc [ug/L]
 
         # leaf/fruit xylem split: the panicle's sourced share of transpiration at the crop's
         # development stage (lam_grain_dvs); without it, the transpiring-surface split
@@ -557,12 +604,22 @@ class RiceUptakeModel:
         # dry-matter growth needs (T_C_Ph per kg DM); a fraction phi of transpiration
         # recirculates to the ROOT. The two are separate streams from the same leaf source.
         Q_g, Q_r = phloem_flows(self.comps, dM, Qtp, self.T_C_Ph, self.phi, self.inputs.M_basis)
+        if self._staged:                             # the dry driver's own growth (PREREG 7.1)
+            Q_g = max(gdry * self.T_C_Ph, 0.0)
+        Q_h = max(dMh * self.T_C_Ph, 0.0) * gh if self.husk_phloem else 0.0
         # L_Ph_eff == cmpd.L_Ph unless a weak-electrolyte pH trap is configured
         C_Phl = (self.phloem_loading_factor() * Cw[LEAF]
                  + self.cmpd.g_ph * C[LEAF])          # free + lipid-bound [ug/L]
 
         g = [c.gamma for c in self.comps]
-        dC = np.zeros(4)
+        dC = np.zeros(self.n_states)
+        # the panicle's xylem: to the grain, or with the husk pool to the husk (no xylem flow
+        # reaches the intact caryopsis; PREREG 7.2)
+        # brown rice (the husk pool on) draws phloem in proportion to its own dry growth, so an
+        # organ not yet growing draws nothing: its phloem stream is not gated (the mass-floor
+        # gate opened a day early or late on DVS rounding at heading; PREREG section 8)
+        wx = gh if self.husk else gam
+        gq = 1.0 if self.husk else gam
 
         # root -> xylem loading: a fraction f_xy of the root FREE conc (TSCF;
         # endodermal barrier + binding) PLUS a B-independent lipid-bound term
@@ -588,22 +645,26 @@ class RiceUptakeModel:
         # grain FORMATION gate: before the panicle sets (gam~0) the grain takes NO xylem/
         # phloem; its xylem share is rerouted to the leaf and its phloem stream is not
         # exported, so the balance still closes. gam->1 at formation (DPU-consistent).
-        dC[LEAF] = ((f3 + (1.0 - gam) * f4) * (Qtp / M[LEAF]) * Cw[STEM]
-                    - ((gam * Q_g + Q_r) / M[LEAF]) * C_Phl
+        dC[LEAF] = ((f3 + (1.0 - wx) * f4) * (Qtp / M[LEAF]) * Cw[STEM]
+                    - ((gq * Q_g + Q_r + Q_h) / M[LEAF]) * C_Phl
                     - g[LEAF] * C[LEAF] - mu[LEAF] * C[LEAF]
                     - leaf_loss * C[LEAF])
-        # fruit/grain (small xylem in; phloem-dominated; terminal sink) -- gated by gam
-        dC[FRUIT] = (gam * f4 * (Qtp / M[FRUIT]) * Cw[STEM]
-                     + gam * (Q_g / M[FRUIT]) * C_Phl
+        # fruit/grain (small xylem in; phloem-dominated; terminal sink) -- gated by gam;
+        # brown rice with the husk pool: the phloem only
+        dC[FRUIT] = ((0.0 if self.husk else gam * f4 * (Qtp / M[FRUIT]) * Cw[STEM])
+                     + gq * (Q_g / M[FRUIT]) * C_Phl
                      - g[FRUIT] * C[FRUIT] - mu[FRUIT] * C[FRUIT])
+        if self.husk:                                # terminal, per kg DRY
+            dC[self.HUSK] = ((wx * f4 * Qtp * Cw[STEM] + Q_h * C_Phl) / Mh
+                             - (dMh / Mh) * C[self.HUSK])
         # plant-air exchange (gaseous uptake - volatilisation), opt-in and OFF by
         # default: for `air=None` this branch is skipped, so the PFAS path is
         # untouched. The stomatal pathway needs each shoot organ's share of the
         # transpiration stream, which is the same (f3, f4) split used above, with
         # the grain's share gated by its formation.
         if self.air is not None:
-            dC += self.air.flux(C=C, M=M, K_PW=B, comps=self.comps, Qtp=Qtp,
-                                xyl_share=(f3, gam * f4))
+            dC[:4] += self.air.flux(C=C[:4], M=M, K_PW=B, comps=self.comps, Qtp=Qtp,
+                                    xyl_share=(f3, gam * f4))
         return dC
 
     def affine(self, ts):
@@ -615,7 +676,8 @@ class RiceUptakeModel:
         if kio is None:
             return None
         k_in, k_out = kio
-        row = LE.lerp_table(self.inputs._tg, self.inputs._tab, ts)
+        row = LE.lerp_table(self.inputs._tg, self.inputs._tab, ts, self.inputs._hold)
+        row2 = LE.lerp_table(self.inputs._tg, self.inputs._tab2, ts, self.inputs._hold2)
         Cwo, Q = row[:, 0], row[:, 1]
         M = np.maximum(row[:, 2:6], MASS_FLOOR)
         dM = row[:, 6:10]
@@ -623,7 +685,11 @@ class RiceUptakeModel:
         gam = np.clip(row[:, 11], 0.0, 1.0)
         dvs = row[:, 12]
         mu = dM / M
-        B = binding_factors(self.comps, self.cmpd)
+        B = (row2[:, 0:4] + (1.0 - row2[:, 0:4]) * dry_binding(self.comps, self.cmpd)
+             if self._staged else np.broadcast_to(binding_factors(self.comps, self.cmpd),
+                                                  (len(row), 4)))
+        Mh, dMh = row2[:, 5], row2[:, 6]
+        gh = np.clip(row2[:, 7], 0.0, 1.0)
         g = np.array([c.gamma for c in self.comps])
         if self.lam_grain_dvs is not None:
             if self.inputs.dvs is None:
@@ -633,33 +699,45 @@ class RiceUptakeModel:
             f4 = 1.0 - np.array([xylem_leaf_share(self.comps, Mi, self.inputs.M_basis,
                                                   self.s_grain_dry) for Mi in M])
         f3 = 1.0 - f4
-        dMg = (dM[:, FRUIT] * (1.0 - self.comps[FRUIT].theta)
-               if self.inputs.M_basis == "fresh" else dM[:, FRUIT])
+        if self._staged:
+            dMg = row2[:, 4]
+        else:
+            dMg = (dM[:, FRUIT] * (1.0 - self.comps[FRUIT].theta)
+                   if self.inputs.M_basis == "fresh" else dM[:, FRUIT])
         Q_g = np.maximum(dMg * self.T_C_Ph, 0.0)
         Q_r = np.maximum(self.phi * Q, 0.0)
-        p = self.phloem_loading_factor() / B[LEAF] + self.cmpd.g_ph
-        x = self.cmpd.f_xy / B[ROOT] + self.cmpd.g_xy
-        A = np.zeros((len(row), 4, 4))
-        b = np.zeros((len(row), 4))
-        A[:, ROOT, ROOT] = -k_out / B[ROOT] - Q * x / M[:, ROOT] - g[ROOT] - mu[:, ROOT]
+        Q_h = (np.maximum(dMh * self.T_C_Ph, 0.0) * gh if self.husk_phloem
+               else np.zeros(len(row)))
+        p = self.phloem_loading_factor() / B[:, LEAF] + self.cmpd.g_ph
+        x = self.cmpd.f_xy / B[:, ROOT] + self.cmpd.g_xy
+        wx = gh if self.husk else gam
+        gq = np.ones_like(gam) if self.husk else gam   # brown rice: phloem not gated (rhs)
+        n = self.n_states
+        A = np.zeros((len(row), n, n))
+        b = np.zeros((len(row), n))
+        A[:, ROOT, ROOT] = -k_out / B[:, ROOT] - Q * x / M[:, ROOT] - g[ROOT] - mu[:, ROOT]
         A[:, ROOT, LEAF] = Q_r * p / M[:, ROOT]
         b[:, ROOT] = k_in * Cwo
         A[:, STEM, ROOT] = Q * x / M[:, STEM]
-        A[:, STEM, STEM] = -Q / (M[:, STEM] * B[STEM]) - g[STEM] - mu[:, STEM]
-        A[:, LEAF, STEM] = (f3 + (1.0 - gam) * f4) * Q / (M[:, LEAF] * B[STEM])
-        A[:, LEAF, LEAF] = (-(gam * Q_g + Q_r) * p / M[:, LEAF] - g[LEAF] - mu[:, LEAF] - ll)
-        A[:, FRUIT, STEM] = gam * f4 * Q / (M[:, FRUIT] * B[STEM])
-        A[:, FRUIT, LEAF] = gam * Q_g * p / M[:, FRUIT]
+        A[:, STEM, STEM] = -Q / (M[:, STEM] * B[:, STEM]) - g[STEM] - mu[:, STEM]
+        A[:, LEAF, STEM] = (f3 + (1.0 - wx) * f4) * Q / (M[:, LEAF] * B[:, STEM])
+        A[:, LEAF, LEAF] = (-(gq * Q_g + Q_r + Q_h) * p / M[:, LEAF] - g[LEAF] - mu[:, LEAF] - ll)
+        A[:, FRUIT, STEM] = 0.0 if self.husk else gam * f4 * Q / (M[:, FRUIT] * B[:, STEM])
+        A[:, FRUIT, LEAF] = gq * Q_g * p / M[:, FRUIT]
         A[:, FRUIT, FRUIT] = -g[FRUIT] - mu[:, FRUIT]
+        if self.husk:
+            A[:, 4, STEM] = wx * f4 * Q / (Mh * B[:, STEM])
+            A[:, 4, LEAF] = Q_h * p / Mh
+            A[:, 4, 4] = -dMh / Mh
         if self.air is not None and self.air.K_AW > 0.0:
             # plant-air exchange is affine in C too (volatilisation ~ C, gaseous uptake from a
             # fixed air concentration): read it off `AirExchange.flux` itself, time by time
             for i in range(len(row)):
-                kw = dict(M=M[i], K_PW=B, comps=self.comps, Qtp=Q[i],
+                kw = dict(M=M[i], K_PW=B[i], comps=self.comps, Qtp=Q[i],
                           xyl_share=(f3[i], gam[i] * f4[i]))
                 Aa, ba = LE.affine_parts(lambda _t, C: self.air.flux(C=C, **kw), 0.0, 4)
-                A[i] += Aa
-                b[i] += ba
+                A[i, :4, :4] += Aa
+                b[i, :4] += ba
         return A, b
 
     def solve(self, t_eval: np.ndarray, C0: np.ndarray | None = None):
@@ -667,15 +745,32 @@ class RiceUptakeModel:
         included): exponential stepping (`linear_expm`, converged in
         validation/numerics_convergence.py); otherwise BDF. Returns a solution object with
         the scipy fields the callers read (t, y, success, sol)."""
+        import linear_expm as LE
         if C0 is None:
-            C0 = np.zeros(4)
+            C0 = np.zeros(self.n_states)
         if SOLVER == "expm" and self.affine(np.asarray(t_eval[:1], float)) is not None:
-            import linear_expm as LE
-            return LE.solve_affine(self.affine, t_eval, 4, C0, substeps=SUBSTEPS)
+            return LE.solve_burden(self.affine, self._burden_scale, t_eval, self.n_states, C0,
+                                   substeps=SUBSTEPS)
         t_span = (float(t_eval[0]), float(t_eval[-1]))
-        sol = solve_ivp(self.rhs, t_span, C0, t_eval=t_eval,
-                        method="BDF", rtol=1e-6, atol=1e-9, dense_output=True)
-        return sol
+        D0, _ = self._burden_scale(np.asarray(t_eval[:1], float))
+        sol = solve_ivp(LE.burden_rhs(self.rhs, self._burden_scale), t_span, C0 * D0[0],
+                        t_eval=t_eval, method="BDF", rtol=1e-6, atol=1e-9, dense_output=True)
+        return LE.BurdenSolution(sol, self._burden_scale)
+
+    def _burden_scale(self, ts):
+        """(D, dD) of the burden coordinates `solve` integrates in: the grain's fresh mass and
+        the husk's dry mass (and their growth) on those rows, 1 (0) elsewhere
+        (`linear_expm.burden_affine`)."""
+        import linear_expm as LE
+        inp = self.inputs
+        ts = np.asarray(ts, float)
+        row = LE.lerp_table(inp._tg, inp._tab, ts, inp._hold)
+        D, dD = np.ones((len(ts), self.n_states)), np.zeros((len(ts), self.n_states))
+        D[:, FRUIT], dD[:, FRUIT] = np.maximum(row[:, 5], MASS_FLOOR), row[:, 9]
+        if self.husk:
+            row2 = LE.lerp_table(inp._tg, inp._tab2, ts, inp._hold2)
+            D[:, self.HUSK], dD[:, self.HUSK] = row2[:, 5], row2[:, 6]
+        return D, dD
 
     def baf(self, C: np.ndarray, t: float) -> np.ndarray:
         """Bioaccumulation factor BAF_k = C_k / C_w^o  [L/kg]."""
