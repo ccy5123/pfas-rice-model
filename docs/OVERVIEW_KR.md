@@ -246,7 +246,7 @@ Liu 2023 벼 뿌리 분배 0.212(평형 0.204; 건중으로 읽으면 0.821) · 
 | `K_F, n` | Freundlich 용량·지수 (`S=K_F·C_w^n`) | – |
 | `Kd = Koc·f_oc` | 선형 분배계수(HYDRUS 실행) | L/kg |
 | `R = 1+ρKd/θ` | 지연계수 | – |
-| `k_leach` | 해석적 담수 형상의 용탈 속도(HYDRUS에 congener별 보정) | 1/day |
+| `c(t)/c(0)` | 담수 형상: Tsukuba Andosol 논 HYDRUS 실행의 근권 공극수 형상(congener별 저장, log Kd 보간; PREREG 9.11) | – |
 
 ### 6.7 출력 지표 + 구조 어댑터
 | 기호 | 의미 |

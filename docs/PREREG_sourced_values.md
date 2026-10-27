@@ -943,3 +943,15 @@ Nicolson) every check -- dx 0.5 / 0.125, pan 0.01 / 0.002, the near-pan spacing,
 fully implicit time weighting moves PFBA by 0.0023 log10; Crank-Nicolson (second order) is kept. The shape
 table (9.11) and the irrigation-source check (9.3) are rebuilt on these settings; their earlier numbers
 (dx 0.5, upstream weighting, fully implicit) are superseded.
+
+### 9.13 Addendum (water after midsummer drainage; found re-reading the calendar for 9.12)
+9.2 read the Ibaraki calendar as "flooded again to 30 d after heading". The calendar says the field is kept in
+INTERMITTENT irrigation after midsummer drainage ("中干し後は、根の活力を維持するため、引き続き間断かんがいを
+行う"; "出穂後30日までの間断かんがい"; "出穂後30日頃まで水を入れて"), and Tournebize 2006 (the NIAES Tsukuba paddy)
+the same ("intermittent irrigation was performed until 1 week before the harvest"; 0-5 cm ponded water depth).
+Neither gives the wetting/drying cycle, and none was found. What is measured is the water passing the profile
+in that stage: Tournebize's stage-3 percolation 0.8 (1998) and 0.3 (1999) cm/d, which brackets the flooded
+0.41-0.67 cm/d used. The scenario therefore keeps the flooded water balance after midsummer drainage (the field
+takes ET + percolation; the solute leaves with the percolation) as its base, and runs as the other end a field
+that receives no irrigation after midsummer drainage (rain only), reported beside the base in the irrigation-
+source check. No cycle is chosen. (Calendar re-read 2026-10-27: sha256 63e299e9...)

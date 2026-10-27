@@ -64,7 +64,7 @@ midpoint and both ends (`lo`, `hi`).
 | lam_eq | 1e6 per day per kg | numerical | converged (`numerics_convergence.py`; 1e4 was not: 0.0008 log10) |
 | L_Ph | per congener and variant, >= 0, no upper bound | fitted | Yamazaki grain; 0 where the xylem alone already over-feeds the grain; PFBS: midpoint of [0, L at the censoring bound] |
 | lipid loading constants | per shoot model; terms not identified are removed | fitted | Yamazaki straw (and grain at L_Ph = 0), backward elimination by the bootstrap rule (`validation/refit_sourced.py`) |
-| free-anion f_xy (`*_free` variants only) | monotone logistic | derived, **points of the fit not recorded** | `docs/DELIVERABLE_GAP_B_fxy.md` (Felizeter TSCF level, theory shape) |
+| free-anion f_xy (`*_free` variants only) | monotone logistic | **untraceable**: its coefficients cannot be recovered from any recorded point set, and Felizeter 2012/2014's TSCFs (flat 0.05-0.23 from C4 to C11) contradict it; the `*_free` variants are withdrawn from scoring and decisions (PREREG 9.4) | `raw_si/felizeter201*_tscf.csv` |
 | phi (phloem stream to the root) | 0.06 (range 0.02-0.10) | measured (non-cereal) | Windt et al. 2006 daytime phloem/xylem volume flow; no cereal value exists |
 | T_C,Ph (phloem sap per kg grain DM) | 6.1 L/kg (range 4.4-7.8) | derived | rice sieve-tube sucrose (Chino 1988; Hayashi & Chino 1990) |
 | panicle share of transpiration | 0 before heading; 0.21 (0.09-0.33) at DVS 1; 0.07 (0-0.14) at DVS 2; linear in DVS between | measured anchors; the linear form between them is stated as an assumption | Sugimoto 1973, 1975; Roberts & Batchelor 1983; Takahashi & Kurata 2007 |
@@ -80,9 +80,10 @@ midpoint and both ends (`lo`, `hi`).
 
 Variants, each with its own fitted values: `redistributed_fit` (the default since amendment 2a:
 f_xy fitted per congener to the straw as well, so on Yamazaki a reproduction; chosen by the
-transfer rule, PREREG section 8), `redistributed_lipid` (amendment 1's default), `redistributed_free`,
-`4pool_lipid`, `4pool_free` (the single-straw core has no `_fit` variant; unspecified, it runs
-`4pool_lipid`). Results: `validation/refit_sourced.json`; parameters:
+transfer rule, PREREG section 8), `redistributed_lipid` (amendment 1's default), `4pool_lipid`
+(the single-straw core has no `_fit` variant; unspecified, it runs `4pool_lipid`), and
+`redistributed_free` / `4pool_free`, which are fitted and runnable but withdrawn from scoring and
+decisions (`model_api.WITHDRAWN_VARIANTS`; PREREG 9.4: their f_xy is untraceable). Results: `validation/refit_sourced.json`; parameters:
 `params/refit_sourced.csv`, `params/lipid_loading_sourced.json` -> `parameters.json`.
 
 ## 5. Transfer datasets
@@ -115,5 +116,5 @@ interval; PREREG section 2). Scores: `validation/transfer_sourced.json` and
 | body weight | 64.5 kg | measured | KNHANES 2013-2016 adults (Yoon et al. 2022) |
 | rice eaten | white rice at 14 % moisture, from the dry brown-rice value and the white-rice composition | derived | `model_api.white_rice_conc` |
 | intake signal | green below / red at or above the TWI | structural | EFSA 2020 TWI (the only sourced threshold) |
-| tissue density (per-volume view) | 1.0 / 0.30 / 0.30 / 1.20 | **open** | no source |
-| SMILES K_cw | 20 L/kg placeholder | **open** | no source |
+| tissue density (per-volume view) | removed (PREREG 9.5) | -- | it entered no result and had no source |
+| SMILES K_cw | 20 L/kg placeholder | **open** | no source; decided by the K_cw side project (`docs/kcw_side_project/`, PREREG 9.5) |

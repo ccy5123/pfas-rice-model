@@ -281,19 +281,26 @@ rice (the decision basis, PREREG 7.13); the rough-grain value in brackets.
 
 ### 6.6 Neutral organics (Briggs/Kow path; nothing fitted)
 `src/neutral_dpu.py` — the same ODE with z = 0, no carrier, K_PW = W + L·a·Kow^b, f_xy = TSCF(log Kow),
-phloem off. Composition (addendum 5.10, `src/neutral_composition.py`, `params/neutral_composition_sourced.csv`):
+phloem off. Amendment 2b (PREREG 9.1): the rice tool runs it on the 2a plant (staged organ water, brown rice
++ husk pool, the crop's DVS); the stem's xylem splits by the sourced panicle share lam_grain(DVS); b per organ
+(root/stem 0.77, leaf 0.95 — Trapp 1994 p.417; grain 0.86, range 0.77–0.95); a = 1.22 is the octanol density
+correction (Trapp & Matthies 1996). With the phloem off the neutral BROWN RICE is not predicted (NaN; the
+neutral sap concentration is not read at source); rough grain and husk are reported. A phloem run takes the
+sourced φ and T_C,Ph midpoints. Air exchange (opt-in): both faces of the green leaf from the crop's LAI per
+fresh leaf mass (14.1 m²/kg at heading); stem and panicle none; any K_AW > 0 with air off is flagged.
+Composition (addendum 5.10, `src/neutral_composition.py`, `params/neutral_composition_sourced.csv`):
 lipid carried on a dry basis and restated at the organ water (rice root = Li 2019 cereal roots, stem/leaf =
 rice straw ether extract, grain = brown rice crude fat); each validation table runs on its own plant's water
 and lipid, with its dry-weight observations converted by that water. The tables run on the generic drivers.
 Current a-priori scores (log10 RMSE at the midpoints, [corners]; `validation/neutral_scores.py` →
 `params/neutral_scores.json`): Liu 2023 rice root 0.212 [0.208, 0.278] (equilibrium 0.204; read as dry
-weight 0.821) · Ge 2017 leaf TF 0.631 (stem rows unscored: no vegetative rice stem water found) · Kodešová
-2019 0.157 (equilibrium 0.172) · Li 2019 hydroponic 0.677 [0.525, 1.115] · Li 2019 soil 0.418 (equilibrium
-0.461) · Briggs 1983 barley stem 0.357. Expectations: N1 wrong (both Li halves moved > 0.05, opposite ways),
-N2 and N3 held.
+weight 0.821) · Ge 2017 leaf TF 0.606 (was 0.631 before 2b; stem rows unscored: no vegetative rice stem water
+found) · Kodešová 2019 0.157 (equilibrium 0.172) · Li 2019 hydroponic 0.677 [0.525, 1.115] · Li 2019 soil
+0.418 (equilibrium 0.461) · Briggs 1983 barley stem 0.357. Expectations: N1 wrong (both Li halves moved > 0.05,
+opposite ways), N2 and N3 held.
 Weak electrolytes (`pKa=`, `weak_electrolyte_tscf.py`, 67 ionisable Schriever rows): the direction is
 supported but the scale is not; nothing adopted (`docs/neutral_dpu_validation.md`). Plant–air exchange
-is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested against data.
+is opt-in and exactly zero at K_AW = 0; no measured volatile-compound plant dataset was found.
 
 ### 6.7 Data provenance
 - `docs/literature_db/` (curated parameter DB + `raw_si/` transcriptions) and
@@ -323,7 +330,7 @@ is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested agains
   `validation/input_range_band.py` (the sourced-range band), `validation/neutral_scores.py`,
   `validation/prereg_a1_outcome.py` (reads E7–E16 off the records),
   `validation/numerics_convergence.py` (the numerical settings).
-- **Transfer tests** (per dataset): `oos_tang_lipid.py`, `kim2019_censored.py`,
+- **Transfer tests** (per dataset): `oos_tang_lipid.py`, `kim2019_censored.py`, `li_grain_from_check.py`,
   `kim2019_pfoa_anchor.py`, `li2025_stage_resolved.py`.
 - **Mechanism checks**: `bayesian_inverse_demo.py` (`--emcee`). Superseded analyses (default switch,
   sensitivity, panicle share, gate numerics, carrier vs bypass, dose series, θ_fw) are in
@@ -338,7 +345,8 @@ is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested agains
   `weak_electrolyte_tscf.py` (`--fast`).
 - **HYDRUS-1D** (vendored source): `cp external/hydrus_source/makefile external/hydrus_source/source/ &&
   (cd external/hydrus_source/source && make)`; `python src/soil_hydrus.py`;
-  `python validation/hydrus_coupled_run.py`; `python validation/cwo_kleach_calibration.py`. On Claude
+  `python validation/hydrus_coupled_run.py`; `python validation/cwo_shape_table.py` (the stored flooded shapes);
+  `python validation/irrigation_source_check.py` (the Yamazaki irrigation-source scenario, ~10 min). On Claude
   Code on the web the SessionStart hook builds the engine.
 - **Policy briefs** (Korean slide scripts, every number from a script): `docs/POLICY_BRIEF_KR.md` (PFAS;
   `python validation/policy_brief_runs.py` → `docs/policy_brief_results.csv`, ~3 min) and

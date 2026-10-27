@@ -189,7 +189,7 @@ RHO_PLOUGH = 0.61                    # g/cm3, Tsukuba Andosol paddy topsoil (Koy
 PLOUGH_DEPTH = 15.0                  # cm, "耕深15cmの確保" (Ibaraki calendar)
 PAN_THICKNESS = 2.0                  # cm, Tournebize 2006; only Ks/thickness is identified (9.8)
 L_MUALEM = 0.5                       # Mualem's general value; no paddy value exists
-H_ENTRY = 2.0                        # air-entry head [cm] of HYDRUS model 3 (Vogel et al. 2001; n < 1.2)
+H_ENTRY = 2.0                        # cm, air entry of HYDRUS model 3 (HYDRUS-1D 4.17 manual pp.23-24: n 1.0-1.3)
 REFLOOD_TO_HEADING_DAYS = 30.0       # water kept in to ~30 d after heading (Ibaraki calendar)
 FOC = 0.5 * sum(SOIL_RANGES["f_oc"])
 
@@ -321,6 +321,7 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, soil: dict | None = No
                      tpot_fn=None, evap_fn=None, rain_fn=None, heading: float | None = None,
                      source: str = "soil", c_init: float = 1.0, c_sub: float | None = None,
                      c_irrigation: float = 0.0, c_rain: float = 0.0,
+                     after_drainage: str = "supplied",
                      exe: str = HYDRUS_EXE, workspace: str | None = None,
                      keep: bool = False) -> PaddyResult:
     """One season of the Tsukuba Andosol paddy in HYDRUS-1D for a linear Kd [L/kg] (PREREG 9.2).
@@ -329,10 +330,13 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, soil: dict | None = No
     percolation under the ponded depth equal the sourced percolation (`pan_ks`), the subsoil to
     `depth` with free drainage; retention from the Tsukuba Andisol cores (`andosol_soil`). The top
     is an atmospheric boundary with a surface layer, so water ponds. Water calendar: flooded from
-    transplanting, midsummer drainage (`drain_start`, `drain_days`), flooded again to 30 d after
-    `heading` (or to the end of the season if no heading is given). While flooded the field takes
-    ET + percolation, rain first and irrigation for the rest (rain beyond it leaves over the bund);
-    while drained the input is the rain. `tpot_fn`, `evap_fn`, `rain_fn`: day -> mm/day.
+    transplanting, midsummer drainage (`drain_start`, `drain_days`), then intermittent irrigation to
+    30 d after `heading` (or to the end of the season if no heading is given; PREREG 9.13). While
+    flooded the field takes ET + percolation, rain first and irrigation for the rest (rain beyond it
+    leaves over the bund); while drained the input is the rain. The intermittent stage has no
+    sourced cycle: `after_drainage` "supplied" (base) gives it the flooded water balance (its
+    measured percolation brackets the flooded one), "rain" no irrigation at all (the other end).
+    `tpot_fn`, `evap_fn`, `rain_fn`: day -> mm/day.
 
     source "soil": the soil holds the PFAS (pore water `c_init` everywhere) and the water is clean
     (the generic contaminated-field case). source "irrigation": pore water `c_init` in the plough
@@ -352,6 +356,8 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, soil: dict | None = No
             "(see module docstring).")
     if source not in ("soil", "irrigation"):
         raise ValueError(f"source must be 'soil' or 'irrigation', got {source!r}")
+    if after_drainage not in ("supplied", "rain"):
+        raise ValueError(f"after_drainage must be 'supplied' or 'rain', got {after_drainage!r}")
     soil = dict(andosol_soil() if soil is None else soil)
     kpan, h_sub = pan_ks(soil, return_head=True)
     soil["Ks_pan"] = kpan
@@ -365,7 +371,7 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, soil: dict | None = No
     rain = mm(rain_fn) if rain_fn is not None else np.zeros_like(days)    # generic: no weather
     d0, d1 = soil["drain_start"], soil["drain_start"] + soil["drain_days"]
     end_flood = season if heading is None else min(season, heading + REFLOOD_TO_HEADING_DAYS)
-    flooded = ((days <= d0) | (days > d1)) & (days <= end_flood)
+    flooded = ((days <= d0) | ((days > d1) & (after_drainage == "supplied"))) & (days <= end_flood)
     demand = evap + tpot + soil["percolation"]
     rain_in = np.where(flooded, np.minimum(rain, demand), rain)
     irr = np.where(flooded, demand - rain_in, 0.0)

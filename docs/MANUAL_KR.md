@@ -154,11 +154,11 @@ PFSA C4/C6/C8: PFBS·PFHxS·PFOS, 에터 PFAS: GenX)이며, 전문가 모드에�
   - 이 스위치들은 모든 탭·congener 비교·**베이지안 역추정**까지 함께 적용됩니다(역추정만 다른 모델로 도는 일이 없도록).
 
 ### 5.4 시나리오 (3 · Scenario) — 모드별 컨트롤
-- **Model (parametric)**: `Pore-water Cwᵒ [µg/L]`, `Season length [days]`(일반 드라이버에서만), `Cwᵒ(t) shape`(constant / flooded(dilution+leaching), per-congener `k_leach` HYDRUS-보정 기본), `Measured forcings` 토글.
+- **Model (parametric)**: `Pore-water Cwᵒ [µg/L]`, `Season length [days]`(일반 드라이버에서만), `Cwᵒ(t) shape`(constant / flooded = Tsukuba Andosol 논의 저장된 HYDRUS 형상), `Measured forcings` 토글.
 - **Custom tables**: 본문 패널에서 표 입력(아래 6.2).
 - **HYDRUS/CSV**: 드라이버 CSV 업로드 또는 번들 예시. 컬럼은 [7장](#7-입력-데이터-형식-csv).
 - **Run HYDRUS-1D (live)**: `f_oc`, `Flooded until [day]`, `Percolation [cm/day]`. 엔진 미빌드 시 "Build the engine" 버튼.
-- **Soil inventory**: `Total soil inventory [µg/kg dry]`, Freundlich `K_F`/`n`/`θ_g`, flooded 여부, `k_leach`.
+- **Soil inventory**: `Total soil inventory [µg/kg dry]`, Freundlich `K_F`/`n` (θ_g = 현장 토양 θ_s/ρ_b); 시간 형상은 저장된 HYDRUS 형상.
 - **Biomonitoring**: 수동 입력(root/straw/grain conc + Cwᵒ) 또는 CSV.
 
 ### 5.5 전문가 탭(PFAS 9개 · 중성 물질 5개)

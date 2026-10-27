@@ -633,12 +633,11 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source=None,
     K_surf : root surface/plaque sorption [L/kg] added to the *measured* root BAF
         only (dead-end pool; leaves the ODE untouched). 0 for low-carbon soils.
     cwo_profile : pore-water exposure SHAPE when `drivers` is not supplied --
-        'constant' (default; flat at Cwo, so conc == BAF), 'flooded' (analytic
-        Freundlich dilution+leaching; short chains leach, long chains buffered;
-        no HYDRUS engine needed) or 'hydrus' (the shape from a real HYDRUS-1D run;
-        needs the built engine). The shape is normalised to season-mean == Cwo, so
-        Cwo stays the AVERAGE exposure. `cwo_kw` passes extra options to
-        `cwo_profile_series` (flood_fraction, k_leach, C_total, ...). Ignored when
+        'constant' (default; flat at Cwo, so conc == BAF), 'flooded' (the Tsukuba
+        Andosol paddy's stored HYDRUS shapes, `hydrus_shape`; no engine needed) or
+        'hydrus' (a live HYDRUS-1D run; needs the built engine). The shape is
+        normalised to season-mean == Cwo, so Cwo stays the AVERAGE exposure. `cwo_kw`
+        passes extra options to `cwo_profile_series` (f_oc, Koc, HYDRUS run options). Ignored when
         `drivers` are given (those carry their own Cwo).
     shoot : "4pool" or "redistributed" (None -> `DEFAULT_SHOOT`); see `SHOOTS`.
     stem_transp_frac : the sheath + culm share of transpiration (redistributed shoot; None ->

@@ -59,6 +59,26 @@ def test_irrigation_source_initial_pore_water():
     assert kw["c_irrigation"] == pytest.approx(8.61) and kw["source"] == "irrigation"
 
 
+def test_air_entry_conductivity():
+    """PREREG 9.12: the hydraulic function has HYDRUS model 3's air entry (-2 cm): saturated above
+    it, continuous at it, falling below; h_entry = 0 is the plain van Genuchten-Mualem."""
+    soil = sh.andosol_soil()
+    vg = (soil["ths"], soil["thr"], soil["alpha"], soil["n"], soil["Ks"])
+    assert sh._vg_K(-1.0, *vg) == pytest.approx(soil["Ks"])
+    assert sh._vg_K(-2.0 - 1e-9, *vg) == pytest.approx(soil["Ks"], rel=1e-6)
+    assert sh._vg_K(-50.0, *vg) < sh._vg_K(-10.0, *vg) < soil["Ks"]
+    m = 1 - 1 / soil["n"]
+    se = (1 + (soil["alpha"] * 2.0) ** soil["n"]) ** -m
+    plain = soil["Ks"] * se ** 0.5 * (1 - (1 - se ** (1 / m)) ** m) ** 2
+    assert sh._vg_K(-2.0, *vg, h_entry=0.0) == pytest.approx(plain)
+    assert plain < 0.2 * soil["Ks"]                    # the near-saturation drop model 3 removes
+
+
+def test_after_drainage_options():
+    with pytest.raises(ValueError, match="after_drainage"):
+        sh.run_paddy_hydrus(1.0, 10.0, after_drainage="wet", tpot_fn=np.ones_like, evap_fn=np.ones_like)
+
+
 # ---- engine runs -----------------------------------------------------------
 import forcing_rice as _fr                                    # noqa: E402
 _GEN = dict(tpot_fn=lambda d: _fr.transpiration_mm_d(d, 60.0),
@@ -128,3 +148,18 @@ def test_hydrus_drivers_run_the_default_configuration():
     assert "dvs" in drv and len(drv["dvs"]) == len(drv["t"])
     r = api.simulate("PFOA", drivers=drv)
     assert r["success"]
+
+
+@hydrus
+def test_water_flow_is_converged_and_balanced(tmp_path):
+    """PREREG 9.12: the pan's material spans the 15 and 17 cm nodes, so HYDRUS reproduces the pan
+    solve's percolation at the start (within 3 %), and the water balance closes (< 0.5 %)."""
+    import re
+    soil = sh.andosol_soil()
+    sh.run_paddy_hydrus(500.0, 20.0, workspace=str(tmp_path), keep=True, **_GEN)
+    rows = [l.split() for l in open(tmp_path / "T_LEVEL.OUT").read().splitlines()
+            if l.strip()[:1].isdigit()]
+    v_bot = -float(rows[0][5])
+    assert v_bot == pytest.approx(soil["percolation"], rel=0.03)
+    bal = re.findall(r"WatBalR\s*\[%\]\s*([-\d.E+]+)", open(tmp_path / "BALANCE.OUT").read())
+    assert abs(float(bal[-1])) < 0.5
