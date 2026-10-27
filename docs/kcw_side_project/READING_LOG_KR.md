@@ -41,7 +41,16 @@ SI 원본(사용자 manifest `si_manifest.csv`):
   Liu 뿌리 세포벽 비율: PFHxS 0.50, PFOS 0.56, PFOA 0.57, 6:2 Cl-PFESA 0.59.
 - **Muensterman Table S13의 HFPO-DA log K_IAM은 2.0**으로 PFHxA(2.0)와 같고, ADONA는 2.3입니다. 막 분배 쪽 비교값입니다(세포벽 값은 아님).
 
-## 3. 찾지 못한 기록: "Prompt2 handoff"
+## 3. K_poly 문헌 탐색 (2026-10-27, 하위 에이전트 + 주 세션 확인)
+- 찾은 것: 분리 다당류(셀룰로오스, 자일란, 펙틴, 전분)나 식물 세포벽에서 PFAS Kd를 잰 자료는 없습니다.
+- 쓸 만한 유사 기질 하나: Makselon 2019 석사논문(SLU, 오픈 액세스, PDF SHA-256은 `raw_si/makselon2019_peatOi_tableA9_logkoc.csv` 머리말)의 Sphagnum 이탄 Oi.
+  Table A 9를 주 세션이 한 줄씩 대조했고, pH ≥ 5.8의 평균 Kd를 다시 계산했습니다(PFOA 9.3 L/kg dw). 하위 에이전트의 값(9.1)과 조금 다릅니다.
+- 상한만 주는 것: Bitaraf 2026(`10.1021/acsestwater.5c00960`) 생 톱밥 "흡착 없음"(본문과 SI 읽음, 하위 에이전트).
+- 제외: 개질 흡착제(4급화 셀룰로오스, 아민화 왕겨, PEI 셀룰로오스), 바이오차, 퇴비, 주사기 필터 회수율, 단백질 분말.
+- 원문 미확보: `fulltext_needed.md`의 Open 표(Campos-Pereira 2022, Sörengård 2020, Mokwena 2022, Tian 2019).
+- Mel 2024 인용 [42]는 Xiao et al. 2017 ES&T `10.1021/acs.est.7b00970`(바이오차·GAC)입니다. Fig. 2의 "quaternized cellulose" 값의 출처는 확인되지 않았습니다.
+
+## 4. 찾지 못한 기록: "Prompt2 handoff"
 - 찾는 것: `params/Kcw_Klignin_params_v2.csv`와 함께 왔다는 handoff. K_cw_poly 절대 크기(PFOA 4.0), 설폰산 오프셋 0.40, 기울기 0.10의 출처.
 - 찾은 곳:
   - 저장소와 git 이력(`git log --all -S`)

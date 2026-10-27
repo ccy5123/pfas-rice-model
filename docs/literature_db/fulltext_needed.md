@@ -9,6 +9,10 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 
 | DOI | paper | needed for | why it failed |
 |---|---|---|---|
+| 10.1016/j.chemosphere.2022.134167 | Campos-Pereira et al. 2022, Chemosphere | the paper's own Kd table and 13C-NMR for the Sphagnum peat (checked so far through the Makselon 2019 thesis on the same soils) — K_cw side project, K_poly analogue | ScienceDirect 403; SLU repository links go to the portal home |
+| 10.1016/j.jece.2020.103744 | Sörengård et al. 2020, J. Environ. Chem. Eng. | Kd of 17 PFAS on 44 sorbents: any pine bark, peat or cellulose-type entries (K_poly) | paywalled, no OA copy |
+| 10.1016/j.emcon.2022.01.001 | Mokwena et al. 2022, Emerg. Contam. | raw maize tassel PFOA/PFOS isotherm units and conditions (abstract: pH 2, mg/L — likely off-range) | listed OA but ScienceDirect 403 |
+| hdl 2376/111903 | Tian 2019, WSU PhD dissertation | whether it holds lignin/cellulose PFAS sorbent data (Mel 2024 ref 35) | JavaScript-only repository page |
 | 10.1139/er-2025-0116 | Malaviya, Singh, Sharma et al. 2025, "The interplay of per- and polyfluoroalkyl substances (PFAS) uptake, translocation, and toxicity in plants: a critical review", Environ. Rev. | corroboration of the long-chain lipid mechanism (CLAUDE.md §6 history) | paywalled; the user expects to obtain it later |
 
 Leads, not yet requested (ask before relying on them):
