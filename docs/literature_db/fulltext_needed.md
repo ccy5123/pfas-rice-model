@@ -42,4 +42,8 @@ Leads, not yet requested (ask before relying on them):
 - Yamazaki 2023 SI (figshare, open access): Tables S5, S16 newly transcribed
 - Chang 2020 (10.1186/s13007-020-00633-1), Meera 2019 (10.1007/s13197-019-03631-x), Setter 1995, Dharni 2022 -- panicle area
 - Malaviya 2025 (10.1139/er-2025-0116): the accepted manuscript (R1) is open at hdl.handle.net/1807/151243
+- HYDRUS-1D manuals 4.17 (sha256 286f4aedaf30064fbc723aba3f0e7f9e9b45c1ed933b04b184888a8bd9462755) and 4.08
+  (sha256 20c29f1bb6d0567cb5f63a725a877c9d5aa277ed284a6255c718730f0fc03847), pc-progress.com, open: the air-entry
+  model 3 (`soil_hentry`). Vogel, van Genuchten & Cislerova 2001 (10.1016/S0309-1708(00)00037-3), its primary
+  source, is closed access and was not read.
 SHA-256 of every file: in the session record (PREREG 9 commit message).

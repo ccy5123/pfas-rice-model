@@ -189,6 +189,7 @@ RHO_PLOUGH = 0.61                    # g/cm3, Tsukuba Andosol paddy topsoil (Koy
 PLOUGH_DEPTH = 15.0                  # cm, "耕深15cmの確保" (Ibaraki calendar)
 PAN_THICKNESS = 2.0                  # cm, Tournebize 2006; only Ks/thickness is identified (9.8)
 L_MUALEM = 0.5                       # Mualem's general value; no paddy value exists
+H_ENTRY = 2.0                        # air-entry head [cm] of HYDRUS model 3 (Vogel et al. 2001; n < 1.2)
 REFLOOD_TO_HEADING_DAYS = 30.0       # water kept in to ~30 d after heading (Ibaraki calendar)
 FOC = 0.5 * sum(SOIL_RANGES["f_oc"])
 
@@ -206,11 +207,17 @@ def andosol_soil(retention="mid", **ends):
     return soil
 
 
-def _vg_K(h, ths, thr, alpha, n, Ks, l=L_MUALEM):
-    """Mualem-van Genuchten conductivity [cm/d] at pressure head h [cm] (h <= 0)."""
+def _vg_K(h, ths, thr, alpha, n, Ks, l=L_MUALEM, h_entry=H_ENTRY):
+    """Mualem-van Genuchten conductivity [cm/d] at pressure head h [cm] (h <= 0), with the air-entry
+    value `h_entry` of HYDRUS-1D's model 3 (Vogel et al. 2001): saturated above it, the curve
+    rescaled to it below (MATERIAL.FOR FK). h_entry = 0 is the plain van Genuchten-Mualem."""
     m = 1.0 - 1.0 / n
-    Se = (1.0 + np.abs(alpha * np.minimum(h, 0.0)) ** n) ** (-m)
-    return Ks * Se ** l * (1.0 - (1.0 - Se ** (1.0 / m)) ** m) ** 2
+    w = lambda x: (1.0 + np.abs(alpha * np.minimum(x, 0.0)) ** n) ** (-m)
+    F = lambda se: 1.0 - (1.0 - se ** (1.0 / m)) ** m
+    see = w(-abs(h_entry))
+    se = w(h)
+    K = Ks * (se / see) ** l * (F(se) / F(see)) ** 2
+    return np.where(np.asarray(h) >= -abs(h_entry), Ks, K)
 
 
 def pan_ks(soil: dict, return_head: bool = False):
@@ -283,13 +290,18 @@ def _parse_nod_inf(path: str):
     return {k: (v[:, 0], v[:, 1], v[:, 2], v[:, 3]) for k, v in out.items()}
 
 
-def _graded_profile(ps, depth, dx):
-    """The node grid: `dx` [cm] away from the pan, dx/5 within 2.5 cm of it, and dx/100 across the
-    pan's base and the top of the subsoil, where the steady head climbs from the subsoil's suction to
-    saturation within 0.04-0.37 cm (`pan_ks`). Numerical (converged, PREREG 9.2)."""
+def _graded_profile(ps, depth, dx, dx_deep=1.0, dx_pan=0.005, dx_near=None):
+    """The node grid: `dx` [cm] over the plough layer and down to 40 cm (where the leaching front
+    is), `dx_near` (default dx/5) in the pan and the top of the subsoil, `dx_pan` across the pan's
+    base (the steady head climbs from the subsoil's suction to near saturation within ~0.2 cm,
+    `_pan_profile`), and `dx_deep` below 40 cm. The saturated plough layer is NOT refined: its
+    elements are highly conductive and a fine grid there degrades HYDRUS's head iteration (water
+    balance errors up to 93 %; PREREG 9.12). Converged at the defaults (PREREG 9.12, §1)."""
     zb = PLOUGH_DEPTH + PAN_THICKNESS
-    edges = [(0.0, PLOUGH_DEPTH - 1.0, dx), (PLOUGH_DEPTH - 1.0, zb - 0.5, dx / 5),
-             (zb - 0.5, zb + 0.5, dx / 100), (zb + 0.5, zb + 3.0, dx / 5), (zb + 3.0, abs(depth), dx)]
+    near = dx / 5 if dx_near is None else dx_near
+    edges = [(0.0, PLOUGH_DEPTH, dx), (PLOUGH_DEPTH, zb - 0.5, near),
+             (zb - 0.5, zb + 0.5, dx_pan), (zb + 0.5, zb + 3.0, near), (zb + 3.0, 40.0, dx),
+             (40.0, abs(depth), dx_deep)]
     x = np.unique(np.round(np.concatenate([np.arange(a, b, h) for a, b, h in edges]
                                           + [[abs(depth)]]), 6))
     if len(x) > 1001:
@@ -303,7 +315,9 @@ def _graded_profile(ps, depth, dx):
 
 
 def run_paddy_hydrus(Kd: float, season: float = 120.0, *, soil: dict | None = None,
-                     depth: float = 100.0, dx: float = 0.5,
+                     depth: float = 100.0, dx: float = 0.25, dx_deep: float = 1.0,
+                     upstream: bool = False, epsi: float = 0.5, grid_kw: dict | None = None,
+                     tolth: float = 1e-3, tolh: float = 1.0, maxit: int = 20,
                      tpot_fn=None, evap_fn=None, rain_fn=None, heading: float | None = None,
                      source: str = "soil", c_init: float = 1.0, c_sub: float | None = None,
                      c_irrigation: float = 0.0, c_rain: float = 0.0,
@@ -370,8 +384,8 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, soil: dict | None = No
             prints = np.concatenate([[0.5], prints])   # which HYDRUS misreads: one more print time
         ml.add_time_info(tinit=0, tmax=season, dt=1e-4, dtmin=1e-7, dtmax=0.25,
                          print_times=True, print_array=prints)
-        ml.add_waterflow(model=0, top_bc=2, bot_bc=4, maxit=20, tolth=1e-3, tolh=1)
-        ml.add_solute_transport(model=0, top_bc=-1, bot_bc=0, epsi=1.0, lupw=True, pecr=2)
+        ml.add_waterflow(model=3, top_bc=2, bot_bc=4, maxit=maxit, tolth=tolth, tolh=tolh)
+        ml.add_solute_transport(model=0, top_bc=-1, bot_bc=0, epsi=epsi, lupw=upstream, pecr=2)
 
         m = ml.get_empty_material_df(n=3)
         for mat, ks, rho in ((1, soil["Ks"], RHO_PLOUGH), (2, kpan, soil["rho_sub"]),
@@ -389,10 +403,14 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, soil: dict | None = No
         ml.add_material(m)
 
         zb = PLOUGH_DEPTH + PAN_THICKNESS
-        prof = _graded_profile(ps, depth, dx)
+        prof = _graded_profile(ps, depth, dx, dx_deep, **(grid_kw or {}))
         z = prof["x"].values                                   # 0 .. -depth
-        prof.loc[z >= -PLOUGH_DEPTH, "Mat"] = 1
-        prof.loc[(z < -PLOUGH_DEPTH) & (z >= -zb), "Mat"] = 2
+        # the pan's material spans the nodes at 15 and 17 cm exactly: HYDRUS averages K
+        # arithmetically between nodes, so an element joining the plough (or subsoil) to the pan
+        # carries no pan resistance, and a pan starting one node lower would be thinner by that
+        # element (an O(dx) error in the percolation; PREREG 9.12)
+        prof.loc[z > -PLOUGH_DEPTH, "Mat"] = 1
+        prof.loc[(z <= -PLOUGH_DEPTH) & (z >= -zb), "Mat"] = 2
         # puddled at transplanting, at the steady state `pan_ks` solves: the plough layer saturated
         # and hydrostatic under the ponded depth, the head falling across the pan, the subsoil at
         # its unit-gradient head

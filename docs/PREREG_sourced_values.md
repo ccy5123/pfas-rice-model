@@ -916,3 +916,30 @@ scenario's own HYDRUS shapes, stored per congener as c(t)/c(0) on the site's sea
 built by `validation/cwo_shape_table.py`); a structure without a stored shape (SMILES, neutral) interpolates in
 log10 Kd between the stored ones. `k_leach`, its per-congener table and its cap are removed. Outside the site's
 season the shape is held at its end values (stated).
+
+### 9.12 Addendum (soil numerics; before the shape table and the irrigation check are rebuilt on it)
+The §1 convergence check of the soil scenario failed as first built: the root-zone shape moved with the
+node spacing (mean c/c0 0.456-0.480 for PFOA over dx 0.5-0.1, non-monotone) and so did the water flow
+(season percolation 0.44-0.53 cm/d, ponded depth at harvest 1.6-6.3 cm). Three causes, each found in the
+HYDRUS output and fixed without a new number:
+- **The grid refined the saturated plough layer.** Its elements are highly conductive (Ks 11-93 cm/d), and
+  HYDRUS's head iteration (TolH 1 cm) stops with a large flux residual there: water balance errors grew to
+  93 % on a 0.01-cm grid. The grid is now refined only inside the pan and the top of the subsoil (where the
+  steady head climbs ~250 cm within ~0.2 cm, `_pan_profile`); the plough layer keeps `dx`.
+- **The pan's thickness depended on the grid.** HYDRUS averages K arithmetically between nodes, so the
+  element joining the plough layer to the pan carries no pan resistance; with the pan's material starting
+  one node below 15 cm, the pan was thinner by that element (an O(dx) error, 2.4 % of the percolation at
+  dx/5 = 0.05 cm). The pan's material now spans the nodes at 15 and 17 cm exactly, as `pan_ks` assumes.
+- **The hydraulic function near saturation.** The Tsukuba Andisol retention has n = 1.068-1.156; for
+  1.0 < n < 1.3 the van Genuchten-Mualem conductivity falls steeply just below saturation (K(-2 cm) is 14 %
+  of Ks at the midpoint set), which the HYDRUS-1D manual (4.17, pp.23-24) says can change the
+  conductivity function "considerably" and for which it recommends its model with an air-entry value of
+  -2 cm (Vogel & Cislerova 1988 form, theta_m extrapolated; row `soil_hentry`). The scenario uses that model,
+  and `pan_ks` solves the pan with the same function (Ks_pan 0.0256 cm/d at the midpoints, h below the pan
+  -256 cm). The primary source (Vogel et al. 2001) is closed access and was not read.
+Result (PFBA, PFOA, PFDoDA): at dx 0.25 cm (pan base 0.005 cm, dx_deep 1 cm, 100 cm, TolH 1 cm, Crank-
+Nicolson) every check -- dx 0.5 / 0.125, pan 0.01 / 0.002, the near-pan spacing, dx_deep 0.5, 150 cm, TolH
+0.1 -- moves the season-mean shape by <= 0.0004 log10 (§1: 0.0005); water balance errors 0.003-0.07 %. The
+fully implicit time weighting moves PFBA by 0.0023 log10; Crank-Nicolson (second order) is kept. The shape
+table (9.11) and the irrigation-source check (9.3) are rebuilt on these settings; their earlier numbers
+(dx 0.5, upstream weighting, fully implicit) are superseded.

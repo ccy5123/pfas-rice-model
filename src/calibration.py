@@ -23,8 +23,8 @@ Usage
 -----
     params = [Param("f_xy", 1e-3, 1.0), Param("L_Ph", 1e-4, 0.5),
               Param("kappa_d", 1e-2, 5.0), Param("K_prot", 1.0, 500.0)]
-    obs = [ObservedBAF("root", 9.0), ObservedBAF("straw", 4.3),
-           ObservedBAF("grain", 2.3)]
+    obs = [ObservedBAF("root", 9.0, 0.2), ObservedBAF("straw", 4.3, 0.2),
+           ObservedBAF("grain", 2.3, 0.2)]   # log10 sigmas: the data's own
     result = calibrate(model, params, obs)
 
 ``model`` is a configured :class:`RiceUptakeModel`; calibration mutates a copy.
@@ -70,10 +70,11 @@ class Param:
 
 @dataclass
 class ObservedBAF:
-    """An observed tissue BAF (C_tissue/C_w^o) with a log-space 1-sigma."""
+    """An observed tissue BAF (C_tissue/C_w^o) with its log10-space 1-sigma. The sigma has no
+    default: it is the observation's own (PREREG 9.6, `calib_sigma`)."""
     tissue: str
     value: float
-    sigma: float = 0.3            # ~ relative error in log10 space
+    sigma: float                  # 1-sigma in log10 space
     compound: str = ""            # optional label (chain-length series)
 
     def __post_init__(self):
@@ -211,15 +212,16 @@ def calibrate(model: RiceUptakeModel, params: list[Param], obs: list[ObservedBAF
 # data loading
 # ---------------------------------------------------------------------------
 def load_baf_csv(path: str) -> list[ObservedBAF]:
-    """Load observed BAFs from a CSV with header ``compound,tissue,baf[,sigma]``."""
+    """Load observed BAFs from a CSV with header ``compound,tissue,baf,sigma`` (sigma required)."""
     out: list[ObservedBAF] = []
     data = np.genfromtxt(path, delimiter=",", names=True, dtype=None, encoding="utf-8")
     data = np.atleast_1d(data)
-    has_sigma = "sigma" in (data.dtype.names or ())
+    if "sigma" not in (data.dtype.names or ()):
+        raise ValueError(f"{path}: a 'sigma' column is required (log10 1-sigma per observation)")
     for row in data:
         out.append(ObservedBAF(
             tissue=str(row["tissue"]).strip(), value=float(row["baf"]),
-            sigma=float(row["sigma"]) if has_sigma else 0.3,
+            sigma=float(row["sigma"]),
             compound=str(row["compound"]).strip() if "compound" in data.dtype.names else ""))
     return out
 
@@ -265,7 +267,8 @@ def synthetic_recovery(noise=0.0, seed=0, global_search=True):
     obs = []
     for tis in ("root", "straw", "grain"):
         val = pred[tis] * (np.exp(rng.normal(0, noise)) if noise else 1.0)
-        obs.append(ObservedBAF(tis, val, sigma=max(noise, 0.1)))
+        # one sigma for all three: equal weights, so its value does not move the optimum
+        obs.append(ObservedBAF(tis, val, sigma=1.0))
     params = [Param("f_xy", 1e-3, 1.0), Param("L_Ph", 1e-4, 0.5),
               Param("kappa_d", 1e-2, 5.0)]
     result = calibrate(model, params, obs, global_search=global_search, seed=seed)

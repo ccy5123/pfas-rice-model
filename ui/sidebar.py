@@ -513,7 +513,7 @@ def build():
 
             elif mode == "Custom tables (Cwᵒ + growth)":
                 st.caption("Enter the **growth** and **pore-water Cwᵒ(t)** tables in the main panel → "
-                           "(editable grids + per-compartment density). Q_TP defaults to the measured "
+                           "(editable grids). Q_TP defaults to the measured "
                            "transpiration; omit either table to fall back to the built-in value.")
 
             elif mode == "HYDRUS / CSV drivers":

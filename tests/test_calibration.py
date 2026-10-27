@@ -55,7 +55,7 @@ def test_set_get_param_roundtrip():
 
 def test_observed_baf_validates_tissue():
     with pytest.raises(ValueError):
-        ObservedBAF("xylem", 1.0)
+        ObservedBAF("xylem", 1.0, 1.0)
 
 
 def test_predict_bafs_keys_and_finite():
@@ -72,7 +72,7 @@ def test_calibrate_fits_and_does_not_mutate_input():
     # observations generated from a *different* parameter set
     truth = {"f_xy": 0.03, "L_Ph": 0.01, "kappa_d": 0.6}
     gen, _ = build_model(f_xy=truth["f_xy"], L_Ph=truth["L_Ph"], kappa_d=truth["kappa_d"])
-    obs = [ObservedBAF(tis, v) for tis, v in predict_bafs(gen, t).items()
+    obs = [ObservedBAF(tis, v, 1.0) for tis, v in predict_bafs(gen, t).items()
            if tis in ("root", "straw", "grain")]
     params = [Param("f_xy", 1e-3, 1.0), Param("L_Ph", 1e-4, 0.5), Param("kappa_d", 1e-2, 5.0)]
     before = get_param(model, "f_xy")
@@ -111,3 +111,10 @@ def test_load_baf_csv(tmp_path):
     assert obs[0].tissue == "root" and obs[0].value == pytest.approx(9.0)
     assert obs[0].sigma == pytest.approx(0.2)
     assert obs[2].tissue == "grain"
+
+
+def test_load_baf_csv_requires_sigma(tmp_path):
+    p = tmp_path / "baf.csv"
+    p.write_text("compound,tissue,baf\nPFOA,root,9.0\n")
+    with pytest.raises(ValueError, match="sigma"):
+        load_baf_csv(str(p))

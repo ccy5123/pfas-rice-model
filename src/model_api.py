@@ -710,6 +710,8 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source=None,
     f_xy, L_Ph, r_eq, g_xy, g_ph = _resolve_transport(
         c, f_xy_source, lipid_loading, shoot, f_xy_override, L_Ph_override, r_eq_override,
         g_xy_override, g_ph_override)
+    withdrawn = (None if f_xy_override is not None else
+                 WITHDRAWN_VARIANTS.get(variant_key(shoot, f_xy_source, lipid_loading)))
     # every compartment binds with its own organ's cell-wall K (before 2026-10-25 the
     # redistributed shoot used the stem's for all and the 4-pool the root's, an unsourced
     # convention; `kcw_organ=` reproduces it)
@@ -728,7 +730,7 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source=None,
             K_PL=c["K_PL_Lkg"], K_prot=c["K_prot_Lkg"], K_cw=dict(kcw), K_surf=float(K_surf),
             n_C=c["n_C"], group=c["group"], r_eq=r_eq, lam_eq=float(lam_eq), mass_basis=M_basis,
             scenario=(None if user_drivers or not measured_forcing else scenario),
-            shoot=shoot, lipid_loading=lipid_loading)
+            shoot=shoot, lipid_loading=lipid_loading, withdrawn=withdrawn)
         res["root_baf_total"] = float(res["baf_final"]["root"] + cmpd.K_surf)
         return res
     if isinstance(lam_grain, (int, float)):
@@ -777,7 +779,7 @@ def simulate(congener="PFOA", Cwo=1.0, f_xy_source=None,
                     phi=float(phi), T_C_Ph=float(T_C_Ph),
                     mass_basis=M_basis,
                     scenario=(None if user_drivers or not measured_forcing else scenario),
-                    shoot=shoot, lipid_loading=lipid_loading,
+                    shoot=shoot, lipid_loading=lipid_loading, withdrawn=withdrawn,
                     organ_water=("stage" if theta is not None else "constant"),
                     grain_basis=("brown" if husk is not None else "panicle"),
                     husk_phloem=bool(husk_phloem)),
@@ -872,6 +874,13 @@ def simulate_from_smiles(smiles, *, name=None, f_xy=None, f_xy_override=None, **
 
 
 F_XY_SOURCES = ("recommended", "fit")
+# Variants withdrawn from scoring and decisions (PREREG 9.4): the free-anion `*_free` runs read
+# the monotone `f_xy_recommended`, whose coefficients cannot be traced to any recorded point set
+# and which the cited Felizeter 2012/2014 TSCFs contradict. Kept runnable, labelled.
+WITHDRAWN_VARIANTS = {
+    "redistributed_free": "f_xy_recommended untraceable (PREREG 9.4)",
+    "4pool_free": "f_xy_recommended untraceable (PREREG 9.4)",
+}
 
 
 def variant_key(shoot=None, f_xy_source=None, lipid_loading=None):
@@ -1407,13 +1416,6 @@ def drivers_from_arrays(t, Cwo, Qtp=None, M=None, season=None, biomass="oryza200
     return drv
 
 
-# Per-compartment FRESH-weight density [kg/L] (for the growth-table mass<->volume
-# bridge / per-volume reporting). The transport ODE itself is mass-based, so these
-# default to ~water for the watery organs; rice leaf/culm hold aerenchyma (air spaces)
-# so are < 1, and the dense grain is > 1. Editable in the app.
-DEFAULT_TISSUE_DENSITY = {"root": 1.0, "stem": 0.30, "leaf": 0.30, "grain": 1.20}
-
-
 def drivers_from_tables(growth=None, cwo=None, *, growth_units="g/hill", Cwo_const=1.0,
                         n_t=241, season=None, Qtp=None, biomass="oryza2000",
                         plants_per_hill=None, hills_per_m2=None, scenario=DEFAULT_SCENARIO,
@@ -1433,9 +1435,8 @@ def drivers_from_tables(growth=None, cwo=None, *, growth_units="g/hill", Cwo_con
     `dead_leaf` column, same units, is used when given), so the green leaf is not concentrated
     by its own senescence. The table's grain column is taken as given and receives the panicle's
     transpiration deposit (no husk column: the amendment-1 grain). Returns the same dict
-    shape as `drivers_from_arrays` (t, Cwo, Qtp, M[, leaf_loss]). The per-compartment
-    DENSITY is a display/consistency property handled by the caller (the transport ODE
-    is fresh-mass based, so it is not needed to integrate).
+    shape as `drivers_from_arrays` (t, Cwo, Qtp, M[, leaf_loss]). The transport ODE is
+    fresh-mass based; no tissue density enters (per-volume reporting was removed, PREREG 9.6).
     """
     import measured_biomass as mb
 

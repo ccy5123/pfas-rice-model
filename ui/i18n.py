@@ -228,21 +228,9 @@ STRINGS = {
         "ko": "💧 공극수 오염 Cwᵒ(t) — 절대 µg/L",
     },
     "ct.cwo_upload": {"en": "…or upload a Cwᵒ CSV (day,Cwo)", "ko": "…또는 Cwᵒ CSV 업로드 (day,Cwo)"},
-    "ct.density_md": {
-        "en": ("**Compartment density** ρ [kg/L, fresh] — links the entered weight to tissue "
-               "volume (rice leaf/culm hold air spaces ⇒ < 1; grain is denser ⇒ > 1)."),
-        "ko": ("**구획 밀도** ρ [kg/L, 신선] — 입력한 무게를 조직 부피와 연결합니다 "
-               "(벼 잎/줄기는 통기조직으로 < 1, 낟알은 더 조밀해 > 1)."),
-    },
     "ct.read_error": {
         "en": "Using the default scenario — couldn't read the tables: {e}",
         "ko": "표를 읽지 못해 기본 시나리오를 사용합니다: {e}",
-    },
-    "ct.implied_volume": {
-        "en": ("Implied end-of-season organ **volume** (fresh mass ÷ density): {rows}. "
-               "The transport model integrates on fresh mass; density sets the mass↔volume scale."),
-        "ko": ("추정된 수확기 기관 **부피** (신선중 ÷ 밀도): {rows}. "
-               "수송 모델은 신선중(질량)으로 적분하며, 밀도는 질량↔부피 환산용입니다."),
     },
     "ct.panel_title": {
         "en": "📋 Your data tables — growth curve + pore-water contamination",
@@ -283,8 +271,3 @@ STRINGS = {
     },
 }
 
-# organ labels for the custom-tables density inputs / volume readout (not a t() string)
-ORGAN_LABELS = {
-    "en": {"root": "root", "stem": "stem", "leaf": "leaf", "grain": "grain"},
-    "ko": {"root": "뿌리", "stem": "줄기", "leaf": "잎", "grain": "낟알"},
-}
