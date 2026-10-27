@@ -53,17 +53,16 @@ Modelling assumptions, quoted from the derivation
 
 Scope and honesty
 -----------------
-* **Specific surface area `S` is the weak input, not the equations.**  The flux
-  scales linearly with the tissue's specific surface `S` [m^2/kg], and `S` entered
-  this repo as a leaf/grain RATIO for splitting the xylem stream -- only the ratio
-  was ever load-bearing, so the absolute values (leaf 20, grain 2 m^2/kg) have
-  never been calibrated as areas.  Using them as absolute areas is a new demand on
-  them.  `AirExchange.S` therefore exists to override them with measured values,
-  and the shipped rice compartments give the **stem S = 0**, which makes the stem
-  term inert until a real stem surface area is supplied.  Treat the ABSOLUTE
-  magnitude of a volatilisation loss from this module as order-of-magnitude until
-  the areas are measured; the DIRECTION and the Kow/K_AW dependence are the
-  derivation's.
+* **The exchange surface comes from the crop model (PREREG 9.1).**  The flux scales
+  linearly with the organ's surface per mass `S` [m^2/kg fw].  The leaf's is its
+  green leaf area on BOTH faces (cuticle and boundary layer exchange on every face
+  the air reaches; the permeabilities are per area of that face), from the crop
+  file's own SLA: `exchange_area` = 2 x SLA(DVS) x green-leaf dry mass, divided by the
+  fresh leaf mass at each step.  The stem has no sourced cuticle area and the
+  panicle's exposed surface is the hull, a pool (husk + rachis, PREREG 7.2) without a
+  partition coefficient in the model, so both carry no exchange.  The earlier
+  constants (leaf 20, grain 2 m^2/kg) had no source and are gone; a measured area can
+  still be passed as `AirExchange.S`.
 * **Particle deposition (eq:Qdep) is NOT implemented.**  It is a separate
   atmospheric-deposition pathway needing a particle-bound air concentration and a
   deposition velocity, not part of the plant-air equilibrium exchange, and the
@@ -84,6 +83,20 @@ from dataclasses import dataclass
 import numpy as np
 
 from pfas_rice_plant_module_4pool_surf import ROOT, STEM, LEAF, FRUIT
+
+
+def exchange_area(leaf_dry, dvs, leaf_area=None, crop: dict | None = None) -> np.ndarray:
+    """Plant-air exchange surface [m^2] per compartment (len(t), 4) from the crop record: the
+    green leaf on both faces. `leaf_area` [m^2 one side] is the crop model's own LAI x ground
+    area when it has one; otherwise SLA(DVS) x green-leaf DRY mass with the crop file's SLA
+    (`oryza2000.specific_leaf_area`). Root, stem and panicle none (see the header)."""
+    leaf_dry = np.asarray(leaf_dry, float)
+    if leaf_area is None:
+        import oryza2000 as o2k
+        leaf_area = o2k.specific_leaf_area(dvs, crop) * np.maximum(leaf_dry, 0.0)
+    A = np.zeros((len(leaf_dry), 4))
+    A[:, LEAF] = 2.0 * np.maximum(np.asarray(leaf_area, float), 0.0)
+    return A
 
 # --- unit conversions (the SI -> repo bridge; see note 1 in the header) --------
 SEC_PER_DAY = 86400.0     # s/day: the correlations are per SECOND
@@ -286,7 +299,7 @@ class AirExchange:
         return float(comps[idx].S)
 
     def flux(self, C, M, K_PW, comps, Qtp: float = 0.0,
-             xyl_share=(0.0, 0.0)) -> np.ndarray:
+             xyl_share=(0.0, 0.0), S=None) -> np.ndarray:
         """Net air exchange per compartment [ug/(kg day)]: gaseous uptake MINUS
         volatilisation, ready to add to the ODE's `dC/dt`.
 
@@ -300,6 +313,9 @@ class AirExchange:
         Qtp : transpiration stream [L/day].
         xyl_share : (leaf, grain) fractions of `Qtp` reaching each organ, i.e. the
             core's surface-area split (and, for the grain, its formation gate).
+        S : optional specific surface per compartment at this time [m^2/kg fw], the
+            driver's exchange area over the organ's mass (PREREG 9.1); it overrides
+            `self.S` and the compartments' constant `S`.
 
         Units, derived once so the 1000 is not a magic number:
             volatilisation   (A rho / M) * (P C / K_PA)                  (eq:Qvol)
@@ -322,7 +338,7 @@ class AirExchange:
         M = np.asarray(M, dtype=float)
         shares = {LEAF: float(xyl_share[0]), FRUIT: float(xyl_share[1])}
         for idx in self._EXCHANGING:
-            S_k = self.specific_area(comps, idx)
+            S_k = self.specific_area(comps, idx) if S is None else float(S[idx])
             if S_k <= 0.0:
                 continue                    # no area -> no exchange (stem default)
             stomata = idx in self._STOMATAL
@@ -343,7 +359,7 @@ class AirExchange:
 
     # -- reporting -------------------------------------------------------------
     def summary(self, comps, K_PW, M=None, Qtp: float = 0.0,
-                xyl_share=(1.0, 0.0)) -> dict:
+                xyl_share=(1.0, 0.0), S=None) -> dict:
         """Per-organ permeabilities and the implied volatilisation half-life.
 
         The half-life is the diagnostic that makes the term interpretable: it is
@@ -360,7 +376,7 @@ class AirExchange:
         shares = {LEAF: float(xyl_share[0]), FRUIT: float(xyl_share[1])}
         rows = {}
         for idx in self._EXCHANGING:
-            S_k = self.specific_area(comps, idx)
+            S_k = self.specific_area(comps, idx) if S is None else float(S[idx])
             stomata = idx in self._STOMATAL
             q_per_area = 0.0
             if stomata and S_k > 0 and M[idx] > 0:

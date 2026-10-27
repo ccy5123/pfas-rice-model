@@ -155,11 +155,11 @@ Three classes, chosen in the sidebar because the compound is a scenario input, n
   - The switches propagate to every tab, the congener comparison and the **Bayesian inverse**, so the inverse is never run under a different model than the forward tabs.
 
 ### 5.4 Scenario (3 · Scenario) — per-mode controls
-- **Model (parametric)**: `Pore-water Cwᵒ [µg/L]`, `Season length [days]` (generic drivers only), `Cwᵒ(t) shape` (constant / flooded(dilution+leaching), per-congener HYDRUS-calibrated `k_leach`), `Measured forcings` toggle.
+- **Model (parametric)**: `Pore-water Cwᵒ [µg/L]`, `Season length [days]` (generic drivers only), `Cwᵒ(t) shape` (constant / flooded = the Tsukuba Andosol paddy's stored HYDRUS shapes), `Measured forcings` toggle.
 - **Custom tables**: the tables are entered in the main panel ([6.2](#62-your-own-data-tables-growth--pore-water)).
 - **HYDRUS/CSV**: upload a driver CSV or use the bundled example. Columns in [§7](#7-input-data-formats-csv).
 - **Run HYDRUS-1D (live)**: `f_oc`, `Flooded until [day]`, `Percolation [cm/day]`. A "Build the engine" button appears if unbuilt.
-- **Soil inventory**: `Total soil inventory [µg/kg dry]`, Freundlich `K_F`/`n`/`θ_g`, flooded flag, `k_leach`.
+- **Soil inventory**: `Total soil inventory [µg/kg dry]`, Freundlich `K_F`/`n` (θ_g = the site soil's θ_s/ρ_b); the time course is the stored HYDRUS shape.
 - **Biomonitoring**: manual input (root/straw/grain conc + Cwᵒ) or CSV.
 
 ### 5.5 Expert tabs (9 for PFAS, 5 for a neutral organic)

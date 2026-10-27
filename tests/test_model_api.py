@@ -144,15 +144,20 @@ def test_load_driver_csv_without_M_uses_the_crop_selection():
     assert np.allclose(ds["Qtp"], 0.05)                       # a supplied Qtp is kept
 
 
-def test_pore_water_from_inventory_drained_and_flooded():
-    t = np.linspace(0.0, 120.0, 121)
-    Cwo_d, soil = api.pore_water_from_inventory(t, 5.0, K_F=2.0, n=0.85, theta_g=0.35)
-    assert np.all(Cwo_d > 0) and hasattr(soil, "K_F")
-    # flooded (higher water content) dilutes -> same inventory gives LOWER pore water
-    flooded = np.ones_like(t, bool)
-    Cwo_f, redox = api.pore_water_from_inventory(
-        t, 5.0, K_F=2.0, n=0.85, theta_g=0.35, theta_g_flooded=0.60, flooded=flooded)
-    assert Cwo_f[10] < Cwo_d[10]
+def test_pore_water_from_inventory_on_the_site_soil():
+    """PREREG 9.11: the inventory splits at the flooded plough layer's water per dry mass
+    (theta_s / rho_b of the Tsukuba Andosol) and follows the scenario's own HYDRUS shape."""
+    import soil_hydrus as sh
+    t = np.linspace(0.0, 117.0, 118)
+    Cwo, soil = api.pore_water_from_inventory(t, 5.0, congener="PFOA")
+    theta_g = sh.andosol_soil()["ths"] / sh.RHO_PLOUGH
+    assert soil.K_F == pytest.approx(api.site_kd("PFOA")) and soil.theta_g == pytest.approx(theta_g)
+    assert Cwo[0] == pytest.approx(5.0 / (api.site_kd("PFOA") + theta_g), rel=1e-6)
+    assert np.allclose(Cwo / Cwo[0], api.hydrus_shape(t, congener="PFOA"))
+    # below c = 1 a Freundlich exponent < 1 sorbs more (c^n > c), so less stays in solution
+    lin, _ = api.pore_water_from_inventory(t, 0.5, congener="PFOA")
+    nl, _ = api.pore_water_from_inventory(t, 0.5, K_F=api.site_kd("PFOA"), n=0.8)
+    assert lin[0] < 1.0 and nl[0] < lin[0]
 
 
 def test_load_driver_csv_example():
@@ -559,43 +564,28 @@ def test_cwo_profile_constant_is_default():
 
 
 def test_cwo_profile_flooded_shape_no_engine():
-    """The analytic 'flooded' shape (Freundlich dilution+leaching) needs NO HYDRUS
-    engine and is congener-resolved: a SHORT chain (low K_F -> large dissolved
-    fraction) leaches to a steep decline, a LONG chain stays buffered (~flat). The
-    season-mean is preserved (== level), so Cwo stays the average exposure."""
+    """The 'flooded' shape is the paddy scenario's stored HYDRUS shape (PREREG 9.11): no engine,
+    congener-resolved -- a SHORT chain leaches as the front passes the root zone, a LONG chain
+    stays buffered. The season-mean is preserved (== level), so Cwo stays the average exposure."""
     short = api.simulate("PFBA", Cwo=2.0, cwo_profile="flooded")["Cwo"]
     long = api.simulate("PFDoDA", Cwo=2.0, cwo_profile="flooded")["Cwo"]
-    # mean preserved == level for both
     assert np.mean(short) == pytest.approx(2.0, rel=1e-6)
     assert np.mean(long) == pytest.approx(2.0, rel=1e-6)
-    # short chain declines (leaches), long chain is essentially flat (buffered)
-    assert short[-1] < 0.5 * short[0]                         # steep decline
+    assert short[-1] < 0.05 * short[0]                        # leached
     assert long[-1] > 0.95 * long[0]                          # buffered
-    assert short.std() > long.std()                          # short more time-variable
+    assert short.std() > long.std()
 
 
-def test_cwo_profile_flooded_leach_rate_steepens_decline():
-    """A larger leaching rate makes the short-chain pore water decline faster
-    (end/start ratio smaller); a knob exposed via cwo_kw."""
-    gentle = api.simulate("PFBA", Cwo=1.0, cwo_profile="flooded",
-                          cwo_kw=dict(k_leach=0.01))["Cwo"]
-    harsh = api.simulate("PFBA", Cwo=1.0, cwo_profile="flooded",
-                         cwo_kw=dict(k_leach=0.08))["Cwo"]
-    assert harsh[-1] / harsh[0] < gentle[-1] / gentle[0]
-
-
-def test_default_k_leach_is_hydrus_calibrated():
-    """flooded defaults k_leach to a per-congener value CALIBRATED to HYDRUS-1D:
-    short chains leach (larger k_leach), long chains are buffered (~0). A novel/SMILES
-    compound (no table entry) falls back to k_leach(log10 Koc), clipped to [0, max]."""
-    short, long = api.default_k_leach("PFBA"), api.default_k_leach("PFDoDA")
-    assert short > 0.02 and long == pytest.approx(0.0, abs=1e-9) and short > long
-    # PFBA's flooded decline with the auto (calibrated) default leaches harder than the old flat 0.02
-    auto = api.simulate("PFBA", Cwo=1.0, cwo_profile="flooded")["Cwo"]
-    flat = api.simulate("PFBA", Cwo=1.0, cwo_profile="flooded", cwo_kw=dict(k_leach=0.02))["Cwo"]
-    assert auto[-1] / auto[0] < flat[-1] / flat[0]
-    nov = api.default_k_leach(None, n_C=8, group="PFCA")          # novel -> Koc fallback
-    assert 0.0 <= nov <= api._KLEACH_MAX
+def test_hydrus_shape_reads_the_table_and_interpolates_in_kd():
+    """A curated congener reads its column; a Kd between two columns lies between their shapes
+    (log10 Kd interpolation), and outside the table's range it holds the end column."""
+    t = np.linspace(0.0, 117.0, 60)
+    a, b = api.hydrus_shape(t, congener="PFOA"), api.hydrus_shape(t, congener="PFNA")
+    assert np.allclose(api.hydrus_shape(t, Kd=api.site_kd("PFOA")), a)
+    mid = api.hydrus_shape(t, Kd=np.sqrt(api.site_kd("PFOA") * api.site_kd("PFNA")))
+    assert np.all(mid >= np.minimum(a, b) - 1e-12) and np.all(mid <= np.maximum(a, b) + 1e-12)
+    assert np.allclose(api.hydrus_shape(t, Kd=1e6), api.hydrus_shape(t, congener="PFDoDA"))
+    assert not hasattr(api, "default_k_leach")                # the surrogate and its cap are gone
 
 
 @pytest.mark.skipif(not api.hydrus_available(),
@@ -611,21 +601,14 @@ def test_cwo_profile_hydrus_shape():
 
 @pytest.mark.skipif(not api.hydrus_available(),
                     reason="HYDRUS-1D engine/phydrus not available")
-def test_cwo_profile_flooded_matches_hydrus_direction():
-    """The engine-free analytic 'flooded' shape reproduces the HYDRUS-1D DIRECTION:
-    a short chain leaches (declines) under BOTH, a long chain stays buffered (~flat)
-    under BOTH. (Quantitative k_leach calibration: validation/cwo_profile_check.py.)"""
-    t = api.scenario_drivers()["t"]                       # the site-year grid (its HYDRUS run)
-    for cong, declines in (("PFBA", True), ("PFDoDA", False)):
-        c = api._CONG[cong]
-        hyd = api.cwo_profile_series(t, 1.0, "hydrus", n_C=c["n_C"], group=c["group"],
-                                     congener=cong)
-        flo = api.cwo_profile_series(t, 1.0, "flooded", n_C=c["n_C"], group=c["group"],
-                                     congener=cong)
-        if declines:                                         # short chain: both fall
-            assert hyd[-1] < 0.5 * hyd[0] and flo[-1] < 0.7 * flo[0]
-        else:                                                # long chain: both ~flat
-            assert hyd[-1] > 0.9 * hyd[0] and flo[-1] > 0.95 * flo[0]
+def test_cwo_profile_flooded_is_the_live_hydrus_shape():
+    """The stored 'flooded' shape is the live scenario's (PREREG 9.11): on the site-year grid the
+    two agree for a short and a long chain (both mean-normalised)."""
+    t = api.scenario_drivers()["t"]
+    for cong in ("PFBA", "PFOA", "PFDoDA"):
+        hyd = api.cwo_profile_series(t, 1.0, "hydrus", congener=cong)
+        flo = api.cwo_profile_series(t, 1.0, "flooded", congener=cong)
+        assert np.allclose(hyd, flo, rtol=0.02, atol=0.02)
 
 
 # ---------------------------------------------------------------------------
@@ -636,40 +619,44 @@ def test_simulate_neutral_matches_the_standalone_module():
 
     `model_api.simulate_neutral` and `neutral_dpu.simulate_neutral` have to agree
     BIT FOR BIT on the same forcings -- otherwise the published a-priori numbers
-    (Liu 0.281, Ge 0.783) would silently stop describing what the API returns.
-    Both entry points are checked: the built-in forcings and an explicit
-    `drivers=` dict.
+    would silently stop describing what the API returns. Both entry points are
+    checked: the built-in forcings and an explicit `drivers=` dict (the same 2a
+    plant: stage, staged water, husk pool; PREREG 9.1).
     """
     import neutral_dpu as ND
+    import literature_params as LP
 
     lk, season, n_t = 2.45, 120.0, 241
-    t = np.linspace(0.0, season, n_t)
-    Qtp, M = api.measured_forcing(t, season, biomass="growth_rice", scenario="generic")
-    drv = dict(t=t, Cwo=np.ones(n_t), Qtp=Qtp, M=M)
-    ref = ND.simulate_neutral(ND.NeutralCompound("probe", lk), drv)
+    drv = api._default_drivers(season, n_t, 1.0, True, "growth_rice", "generic", None)
+    ref = ND.simulate_neutral(ND.NeutralCompound("probe", lk, pH=LP.PADDY_PH), drv)
 
     built_in = api.simulate_neutral(lk, name="probe", biomass="growth_rice",
                                     season=season, n_t=n_t, scenario="generic")
     explicit = api.simulate_neutral(lk, name="probe", drivers=drv)
     for k in api.TISSUES:
-        assert np.array_equal(built_in["conc"][k], ref["conc"][k])
-        assert np.array_equal(explicit["conc"][k], ref["conc"][k])
+        assert np.array_equal(built_in["conc"][k], ref["conc"][k], equal_nan=True)
+        assert np.array_equal(explicit["conc"][k], ref["conc"][k], equal_nan=True)
 
 
-def test_neutral_path_keeps_the_amendment_one_forms():
-    """PREREG 7.9: the neutral path keeps the constant water and the whole panicle until 2b. A
-    2a driver dict handed to it is turned back to those forms (`neutral_forms`)."""
+def test_neutral_path_runs_the_2a_plant():
+    """PREREG 9.1 / 9.15: one plant for both paths. The brown rice (phloem-fed) takes a sap stream at
+    the xylem-sap concentration (Trapp 2007; Rein 2011), T_C,Ph x its dry growth, out of the leaf's
+    xylem inflow; the husk + rachis pool keeps the panicle's transpired deposit. Without that feed
+    (grain_feed=None) the brown rice and the rough grain are not predicted."""
     t = np.linspace(0.0, 117.5, 60)
     d2 = api.drivers_from_arrays(t, np.ones_like(t))
-    assert "theta" in d2 and "husk" in d2
-    back = api.neutral_forms(d2)
-    a1 = api._crop_grid(t, crop=api._A1_FORMS)
-    ok = a1["M"] > 1e-6
-    assert np.allclose(back["M"][ok], a1["M"][ok], rtol=1e-3)
-    assert "theta" not in back and "husk" not in back
-    r2 = api.simulate_neutral(2.45, drivers=d2)
-    r1 = api.simulate_neutral(2.45, drivers=dict(d2, M=a1["M"], theta=None, husk=None))
-    assert r2["baf_final"]["grain"] == pytest.approx(r1["baf_final"]["grain"], rel=1e-3)
+    assert "theta" in d2 and "husk" in d2 and "dvs" in d2
+    r = api.simulate_neutral(2.45, drivers=d2)
+    assert r["grain_predicted"] and r["grain_feed"] == "xylem"
+    dw = r["baf_final_dw"]
+    assert 0 < dw["grain"] < dw["husk"]                 # 6.1 L/kg dry against the hull's share
+    assert min(dw["grain"], dw["husk"]) < dw["rough"] < max(dw["grain"], dw["husk"])
+    off = api.simulate_neutral(2.45, drivers=d2, grain_feed=None)
+    assert not off["grain_predicted"]
+    assert np.isnan(off["baf_final"]["grain"]) and np.isnan(off["baf_final_dw"]["rough"])
+    # the feed is taken out of the leaf's xylem inflow: the leaf loses what the grain gains
+    assert r["baf_final"]["leaf"] < off["baf_final"]["leaf"]
+    assert r["baf_final"]["root"] == off["baf_final"]["root"]     # no downward stream
 
 
 def test_simulate_neutral_returns_the_simulate_contract():
@@ -704,7 +691,7 @@ def test_simulate_neutral_air_is_opt_in_and_zero_for_pfas_like_compounds():
     volatile = api.simulate_neutral(2.42, K_AW=0.1, air=True, **kw)
     assert off["air"] is False and on_zero["air"] is True
     for k in api.TISSUES:
-        assert np.array_equal(off["conc"][k], on_zero["conc"][k])
+        assert np.array_equal(off["conc"][k], on_zero["conc"][k], equal_nan=True)
     # a genuinely volatile compound loses the leaf; the root never volatilises
     assert volatile["baf_final"]["leaf"] < 1e-3 * off["baf_final"]["leaf"]
     # Two DISTINCT solves agreeing by physics, not by construction -- case 3 in

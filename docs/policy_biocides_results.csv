@@ -18,8 +18,8 @@ section,key,value,unit,note
 3_rank,rho_straw,-0.777,-,
 4_bioacc,n_classified,7,종,규제기관 생물축적성 분류
 4_bioacc,max_tscf,0.02059196237382389,-,이들 중 최대 TSCF — 낟알 도달 여부의 척도
-5_meaning,half_equilibrium_logkow,6.26,log Kow,뿌리 BAF 가 K_PW 의 절반으로 떨어지는 지점
-5_meaning,ratio_at_logkow_3.9,0.9631,-,뿌리 BAF / K_PW (1 = 평형)
-5_meaning,ratio_at_logkow_6.3,0.4761,-,뿌리 BAF / K_PW (1 = 평형)
-5_meaning,ratio_at_logkow_8.4,0.0158,-,뿌리 BAF / K_PW (1 = 평형)
-5_meaning,ratio_at_logkow_10.5,0.0004,-,뿌리 BAF / K_PW (1 = 평형)
+5_meaning,half_equilibrium_logkow,6.4,log Kow,뿌리 BAF 가 K_PW 의 절반으로 떨어지는 지점
+5_meaning,ratio_at_logkow_3.9,0.9557,-,뿌리 BAF / K_PW (1 = 평형)
+5_meaning,ratio_at_logkow_6.3,0.5568,-,뿌리 BAF / K_PW (1 = 평형)
+5_meaning,ratio_at_logkow_8.4,0.0203,-,뿌리 BAF / K_PW (1 = 평형)
+5_meaning,ratio_at_logkow_10.5,0.0005,-,뿌리 BAF / K_PW (1 = 평형)

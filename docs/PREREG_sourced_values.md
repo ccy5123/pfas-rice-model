@@ -732,3 +732,316 @@ its limit is fixed in the model):
   step grading (0.05), BDF at rtol 1e-8, the harvest grid (96/day), N (8, 16) and lam_eq (1e5, 1e7) move
   every reported number by < 0.0005 (largest 0.0002, BDF).
 - The husk + rachis mass dips by up to ~5 % between Ansari anchors (7.11); kept.
+
+## 9. Amendment 2b -- the remaining values without a source (committed before its runs)
+
+The user's principle for this amendment (2026-10-27): what the tool runs on must be scientifically
+correct and supported by a source; plans and procedure come second. Decision rules (§1, §2, 5.3, 5.4)
+and the default variant (`redistributed_fit`) are unchanged. Every item below is a correction of a
+value or form without a source and is adopted whatever the scores do (as 7.7). Sources are rows of
+`docs/literature_db/sourced_inputs.csv` (ids given); papers not readable here are listed in
+`fulltext_needed.md`. The literature for this section was read before this text was written; no
+model run of 2b had been made.
+
+### 9.1 Neutral path
+- (a) **One plant for both paths.** The rice tool runs the neutral path on the forms of 7.1-7.2: organ
+  water by development stage, brown rice plus the husk/rachis pool, the crop's DVS. `neutral_forms`
+  stays for back-comparison only. The validation tables keep their own plants' composition (5.10); their
+  drivers carry the crop's DVS (`growth_rice` provides it).
+- (b) **Leaf/panicle split of the stem's xylem stream** = the sourced panicle share lam_grain(DVS) (5.2).
+  The neutral path used the transpiring-surface split with `S_XYLEM_DRY` (leaf 20, grain 0.5116), a
+  literal the code calls "NOT measured" and the provenance table did not list (new row `neu_xylem_split`).
+- (c) **The brown rice is phloem-fed** (7.2: the panicle's transpired solute stays in the husk). With
+  the phloem off (the neutral base) the neutral brown rice receives nothing; the neutral phloem-sap
+  concentration (passive equilibration with the leaf's free water, as the DPU fruit models assume) is
+  not yet read at source (Trapp 2007 SAR QSAR 18:367; Trapp 2011 SAR QSAR 22:191 -- requested). Until it
+  is, the neutral BROWN RICE is reported as not predicted (NaN); rough grain and husk are reported.
+  A phloem run (opt-in) uses the sourced phi and T_C_Ph midpoints (5.1); the unsourced defaults
+  0.1 / 10 L/kg are removed (new row `neu_phloem_defaults`).
+- (d) **Lipid-sorption exponent per organ.** Trapp, Matthies & McFarlane 1994 p.417: "0.77 for roots and
+  stem [3,4], and 0.95 for leaves [5]" (Briggs 1982 macerated roots; Briggs 1983 macerated shoots). The
+  ODE used 0.77 for every organ (the leaf's 0.95 reached only the equilibrium diagnostics). Root and stem
+  0.77, leaf 0.95; the grain has no measured value and runs at the midpoint of the two measured cereal-
+  tissue values, 0.77-0.95 (5.4). Rows `neu_leafexp`, `neu_leafexp2`.
+- (e) **a = 1.22** is the octanol density correction 1/0.822 (Trapp & Matthies 1996, ES&T 30:360); the
+  plant-lipid = octanol factor (x1) is the stated assumption of that source ("no values are known").
+  Value unchanged; status derived (`neu_lipid_a`).
+- (f) **Air-exchange surface.** Both faces of the green leaf (cuticle and boundary layer exchange on every
+  face the air reaches; the permeabilities are per area of that face): 2 x the crop model's leaf area
+  (ORYZA LAI x ground area per hill where the run records it; otherwise SLA(DVS) x green-leaf dry mass
+  with the IR72.D92 SLA function), divided by the fresh leaf mass at each step. Stem: no sourced cuticle
+  area, no exchange. Panicle: its exposed surface is the hull, i.e. the husk/rachis pool, which has no
+  partition coefficient in the model, so no exchange (the sourced panicle areas -- Chang 2020, Meera
+  2019, `neu_surface_grain*` -- are recorded for when a husk partition is sourced). The constants
+  20 / 2 m2/kg are removed. Air exchange now runs with the staged water (B(t)).
+- (g) **The K_AW threshold 1e-4 is removed.** The warning is raised for any K_AW > 0 with air off; the
+  size of the sink is what `air=True` computes.
+- (h) **Pore-water pH** 6.5-7.0 (Yoshida 1981 p.173; Moraes 1973), run at 6.75 (`pw_ph`, `soil_ph_*`).
+- (i) No measured volatile-compound plant dataset was found; air exchange stays an opt-in sensitivity.
+
+### 9.2 Soil: the HYDRUS paddy scenario (Tsukuba Andosol)
+- Profile: plough layer 0-15 cm ("耕深15cmの確保", Ibaraki calendar), subsoil below. Bulk density: plough
+  layer 0.61 g/cm3 (Koyama & Hayashi 2017, Tsukuba Andosol paddy topsoil); subsoil 0.70 / 0.57 (Tournebize
+  2006 Table 3, the two Tsukuba Andisol layers) as range ends.
+- Retention (van Genuchten, single porosity): the Tsukuba Andisol undisturbed cores of Tournebize 2006
+  Table 3 -- (theta_s, alpha, n) = (0.709, 0.0050, 1.068) and (0.717, 0.0098, 1.156) as range ends, for
+  both layers (transfer from the subsoil to the puddled plough layer stated); theta_r not printed there:
+  0-0.030 (Rudiyanto 2013 fixed 0; Tokumoto 2010 fitted 0.030); Ks = the measured 11.1 / 93 cm/d of the
+  same layers; l = 0.5 (Mualem's general value; no paddy value exists, Rudiyanto's fits are unstable).
+- Water management: top boundary = the water input; under ponding the profile percolation is the sourced
+  0.41-0.67 cm/d (Kondo 2019, Ibaraki Andosol paddy), imposed as the input excess over ET. No plough pan
+  is modelled: no pan Ks is measured anywhere (Tournebize's is calibrated, in alluvial soil) and with the
+  sourced percolation imposed it is not needed. Flooded from transplanting; midsummer drainage from
+  35-40 DAT for 15-20 d (range ends; midpoints 37.5 / 17.5); flooded again to 30 d after heading
+  ("出穂後30日頃まで水を入れて"), which at the Yamazaki site is harvest.
+- Dispersivity 0.2-1 cm (Tokumoto 2005 columns; Tournebize 2006 field tracer 1 cm), midpoint 0.6.
+- f_oc 0.037-0.038 (Yamazaki SI Table S5); Kd = Koc(QSPR) x f_oc as before.
+- The root zone's exposure = the root-weighted mean pore water over the profile, replacing the single node
+  at 10 cm (no source for a depth). The root profile (linear to 30 cm) has no source in the repo
+  (new row `soil_root_beta`); it is checked against Beyrouty et al. 1997 if obtainable, else run as is
+  and flagged.
+- Profile depth, node spacing and the k_leach cap: convergence (§1).
+- The analytic `flooded` shape's per-congener k_leach table (`params/cwo_kleach.csv`) is recalibrated on
+  this scenario.
+
+### 9.3 The irrigation-source scenario (`obs_exposure_time`)
+The Yamazaki field's PFAS arrive with irrigation water and rain onto a soil that already holds them.
+Scenario: initial pore water from the measured pre-season soil (Yamazaki SI Table S16, water extract +
+methanol extract after water, pg/g dw, 0-15 cm) at equilibrium with the scenario's Kd; the top input =
+irrigation water (S16) and rain (S16 R1-R5 mean, wet-deposition volumes from the site's JMA weather),
+flux-weighted. Output: root-zone pore water / irrigation concentration over the season, per congener.
+- **Out-of-sample check** (not used to set anything): the predicted post-season 0-15 cm total soil
+  concentration against the measured post-season soil (S16 "After cultivation"), per congener, log10
+  ratio recorded. Single composite samples, so no statistical decision; recorded.
+- The default observable stays on the irrigation grab held constant (the BAF's own denominator). The
+  plant model is also run on the scenario's Cw(t) (normalised to the grab, the `cwo_profile` convention)
+  and the change of each Yamazaki cell is recorded; under 5.4 it enters the input-range band when it
+  moves a number by 0.0005 log10 or more.
+
+### 9.4 Analysis rows
+- `fxy_recommended`: **untraceable.** Its coefficients (logit 4.061 - 0.857 n) cannot be recovered from any
+  recorded point set nor from the shipped table (4.377 / -0.913), and the cited absolute anchor contradicts
+  it: Felizeter 2012/2014 solution-normalised TSCF is roughly flat at 0.05-0.23 from C4 to C11 in cabbage,
+  zucchini and tomato (lettuce U-shaped), against the curve's 15-35x lower PFDA. f_xy is not a TSCF, so
+  Felizeter cannot replace it either. The `*_free` configurations that read it are withdrawn from scoring
+  and decisions (kept runnable, labelled). The Felizeter points are recorded (`raw_si/felizeter201*_tscf.csv`).
+- `tr_drivers`: no dataset reports its own site calendar and weather in the main text (Tang: no dates;
+  Kim: anonymous regions, harvest window only; Li: coordinates and year, no stage dates). The SI holding
+  them is requested; until read the transfers stay on the Yamazaki drivers, documented as a limitation.
+- `tr_li_grain_from`: grain scored from heading vs from filling, both recorded; reported if they differ.
+- `calib_sigma`: the default 0.3 is removed from the synthetic-recovery machinery; sigma is required.
+
+### 9.5 App
+- `app_density` (per-volume reporting): removed; it entered no result and its values had no source.
+- `smiles_kcw` and the K_cw of the curated congeners (`bind_kcw`: the polysaccharide scale has no
+  traceable source, the lignin value is a Kraft lignin): the K_cw side project (`docs/kcw_side_project/`)
+  decides them; they are recorded as open here and will be a later addendum.
+
+### 9.6 Runs
+- PFAS default: no input of `simulate()` changes in 9.1-9.5 (pH reaches f_d only; f_d at pKa 0.5 moves
+  in the 7th decimal). No re-fit. Every scored Yamazaki/transfer endpoint is re-run to show it.
+- Re-run: `validation/neutral_scores.py` (old vs new), the HYDRUS scenario per congener, the k_leach
+  recalibration, the irrigation-source scenario and its post-season soil check, numerics convergence of
+  the soil inputs, and the input-range band.
+
+### 9.7 Expectations (written before the runs; misses will be recorded)
+- E25 Every PFAS `simulate()` output of the default variant is unchanged to 4 decimals in log10, and the
+  Yamazaki observable is unchanged.
+- E26 The equilibrium-basis neutral root scores do not change (3 decimals); the season-ODE root scores move
+  by less than 0.02.
+- E27 The Ge 2017 per-organ score changes (leaf exponent, staged water); the direction is not predicted.
+- E28 The neutral leaf air-exchange surface at heading is 14-17 m2/kg fresh (2 x SLA 24.5 x (1 - theta_leaf)).
+- E29 Retardation falls (rho_b/theta_s 0.61/0.71 against 1.3/0.46) and percolation rises (0.54 against
+  0.30), so every congener's pore water leaches faster than in the old scenario: the recalibrated k_leach
+  rises for every congener with a non-zero value.
+- E30 In the irrigation-source scenario the root-zone pore water of C4-C6 PFCAs tracks the irrigation
+  concentration within the first flooding period, while C >= 10 stays set by the soil.
+- E31 The post-season soil check: the model's short-chain post/pre ratio is below 1 as measured (PFBA
+  water extract 82 -> 40 pg/g), and its PFOA-PFDA ratios are within 0.3 log10 of 1 as measured.
+  (Selection note: the measured post-season values were seen when Table S16 was read for the initial
+  condition, before this was written; E31 is therefore not a blind expectation.)
+
+### 9.8 Addendum (committed before any soil run; found while building 9.2)
+9.2 dropped the plough pan. That was wrong: a flooded paddy's plough layer is saturated under standing
+water, and without a restricting layer the imposed percolation drains the Andosol at unit gradient, where
+the measured retention curves leave it at theta/theta_s = 0.998 (Tournebize layer 1) to 0.89 (layer 2) --
+up to 11 % below saturation, which enters retardation and pore velocity. The pan returns, with nothing
+chosen that the data do not identify:
+- below the 15-cm plough layer; thickness 2 cm (Tournebize 2006's; only Ks/thickness is identifiable from
+  percolation, so the thickness itself does not change the flux);
+- its Ks is solved so that steady percolation under the ponded depth equals the sourced percolation
+  (0.41-0.67 cm/d, midpoint 0.54), with the plough layer saturated and the subsoil at unit gradient;
+  ponded depth 2-3 cm ("浅水(2～3cm)", Ibaraki calendar), midpoint 2.5;
+- under ponding the top input is then the water the field takes (ET + percolation) and the pan, not an
+  imposed flux, sets the percolation; during midsummer drainage the input is rain only.
+
+### 9.9 Addendum (committed before any soil run; found while implementing 9.2-9.3)
+- **The subsoil's initial PFAS is not measured** (Yamazaki sampled 0-15 cm). Its pore water runs from 0 to
+  the plough layer's value as range ends, at the midpoint (half); both ends are reported.
+- **Flooded water balance**: the field takes ET + percolation each day, rain first and irrigation for the
+  rest; rain beyond that leaves over the bund (not stored as ponding). While drained, all rain enters.
+- **Rain concentration** = the mean of Yamazaki's five rain samples (R1-R5); a value below its MQL is read as
+  half the MQL and flagged (none of the 12 model compounds is affected in the irrigation or soil columns).
+- The scenario needs the crop's transpiration and evaporation; there is no default (the old gaussian
+  transpiration and the flat 0.10 cm/d evaporation had no source). Generic forcing: `forcing_rice`
+  transpiration and its evaporation complement (1 - f_T) Kc ET0 (Nay Htoon 2018 split); the site: the
+  ORYZA2000 Tp and Ep of the Yamazaki run, JMA Tsukuba 2020 daily rain (`raw_si/jma_tsukuba_2020_precip.csv`).
+- `top_bc=3` of the old scenario was surface RUN-OFF, so the old "flooded" paddy never ponded; the
+  scenario now uses the surface layer (`top_bc=2`).
+
+### 9.10 Addendum (committed before any scored soil run; found in the first test runs)
+- **Root water uptake.** The old scenario kept HYDRUS's generic Feddes reduction (p0 = -10 cm), which stops
+  uptake in saturated soil -- an upland crop's anaerobiosis. It never acted there because the old top boundary
+  ran water off and the soil never saturated; with ponding it halves the transpiration and the ponded depth
+  climbs to 17 cm. The crop side of the model is ORYZA2000 in potential production (no water stress), and the
+  transpiration driving the soil run is that crop's (site) or one measured in flooded paddies (generic), so a
+  reduction in HYDRUS would contradict its own driver. No reduction above the wilting point: uptake at the
+  potential rate from ponding (p0 = popt above any ponded head) down to -15000 cm (-1.5 MPa), where it stops.
+  No rice-specific Feddes set was found (searched: HYDRUS database, SWAP crop files).
+- **Grid.** Under the steady state the pan's base is unsaturated over 0.04-0.37 cm (`pan_ks`), so the node
+  spacing there is dx/100 (graded grid, `_graded_profile`); convergence (§1) covers it.
+- **Pan solve.** The pan's Ks is solved with the pan's own K(h) (its base desaturates), not as a saturated
+  layer: the saturated form under-estimated the resistance and gave 0.21 instead of 0.54 cm/d. Result:
+  Ks_pan 0.046-0.056 cm/d over 2 cm (the order of Tournebize 2006's independently calibrated 0.08).
+
+### 9.11 Addendum (after the registered k_leach recalibration; before anything is built on it)
+The registered recalibration ran (E29 holds: k_leach rose for every congener). It also showed that the
+analytic `flooded` shape cannot represent the new scenario: 9 of 13 congeners end at the scan ceiling 0.15
+(`soil_kleach_max`), i.e. the result keeps moving with a numerical bound, which §1 calls structural. Cause,
+checked in the HYDRUS profiles: clean water drives a leaching FRONT down from the surface (PFNA, Kd 12.8: top
+5 cm flushed, 10 cm at 0.64, >= 15 cm untouched at harvest; solute balance error 0.015 %), and the root zone is
+weighted to the top; a well-mixed reservoir with first-order loss of its dissolved fraction cannot take that
+shape for any k_leach. Correction, no new number: the `flooded` profile and the soil-inventory mode read the
+scenario's own HYDRUS shapes, stored per congener as c(t)/c(0) on the site's season (`params/cwo_shapes_hydrus.csv`,
+built by `validation/cwo_shape_table.py`); a structure without a stored shape (SMILES, neutral) interpolates in
+log10 Kd between the stored ones. `k_leach`, its per-congener table and its cap are removed. Outside the site's
+season the shape is held at its end values (stated).
+
+### 9.12 Addendum (soil numerics; before the shape table and the irrigation check are rebuilt on it)
+The §1 convergence check of the soil scenario failed as first built: the root-zone shape moved with the
+node spacing (mean c/c0 0.456-0.480 for PFOA over dx 0.5-0.1, non-monotone) and so did the water flow
+(season percolation 0.44-0.53 cm/d, ponded depth at harvest 1.6-6.3 cm). Three causes, each found in the
+HYDRUS output and fixed without a new number:
+- **The grid refined the saturated plough layer.** Its elements are highly conductive (Ks 11-93 cm/d), and
+  HYDRUS's head iteration (TolH 1 cm) stops with a large flux residual there: water balance errors grew to
+  93 % on a 0.01-cm grid. The grid is now refined only inside the pan and the top of the subsoil (where the
+  steady head climbs ~250 cm within ~0.2 cm, `_pan_profile`); the plough layer keeps `dx`.
+- **The pan's thickness depended on the grid.** HYDRUS averages K arithmetically between nodes, so the
+  element joining the plough layer to the pan carries no pan resistance; with the pan's material starting
+  one node below 15 cm, the pan was thinner by that element (an O(dx) error, 2.4 % of the percolation at
+  dx/5 = 0.05 cm). The pan's material now spans the nodes at 15 and 17 cm exactly, as `pan_ks` assumes.
+- **The hydraulic function near saturation.** The Tsukuba Andisol retention has n = 1.068-1.156; for
+  1.0 < n < 1.3 the van Genuchten-Mualem conductivity falls steeply just below saturation (K(-2 cm) is 14 %
+  of Ks at the midpoint set), which the HYDRUS-1D manual (4.17, pp.23-24) says can change the
+  conductivity function "considerably" and for which it recommends its model with an air-entry value of
+  -2 cm (Vogel & Cislerova 1988 form, theta_m extrapolated; row `soil_hentry`). The scenario uses that model,
+  and `pan_ks` solves the pan with the same function (Ks_pan 0.0256 cm/d at the midpoints, h below the pan
+  -256 cm). The primary source (Vogel et al. 2001) is closed access and was not read.
+Result (PFBA, PFOA, PFDoDA): at dx 0.25 cm (pan base 0.005 cm, dx_deep 1 cm, 100 cm, TolH 1 cm, Crank-
+Nicolson) every check -- dx 0.5 / 0.125, pan 0.01 / 0.002, the near-pan spacing, dx_deep 0.5, 150 cm, TolH
+0.1 -- moves the season-mean shape by <= 0.0004 log10 (§1: 0.0005); water balance errors 0.003-0.07 %. The
+fully implicit time weighting moves PFBA by 0.0023 log10; Crank-Nicolson (second order) is kept. The shape
+table (9.11) and the irrigation-source check (9.3) are rebuilt on these settings; their earlier numbers
+(dx 0.5, upstream weighting, fully implicit) are superseded.
+
+### 9.13 Addendum (water after midsummer drainage; found re-reading the calendar for 9.12)
+9.2 read the Ibaraki calendar as "flooded again to 30 d after heading". The calendar says the field is kept in
+INTERMITTENT irrigation after midsummer drainage ("中干し後は、根の活力を維持するため、引き続き間断かんがいを
+行う"; "出穂後30日までの間断かんがい"; "出穂後30日頃まで水を入れて"), and Tournebize 2006 (the NIAES Tsukuba paddy)
+the same ("intermittent irrigation was performed until 1 week before the harvest"; 0-5 cm ponded water depth).
+Neither gives the wetting/drying cycle, and none was found. What is measured is the water passing the profile
+in that stage: Tournebize's stage-3 percolation 0.8 (1998) and 0.3 (1999) cm/d, which brackets the flooded
+0.41-0.67 cm/d used. The scenario therefore keeps the flooded water balance after midsummer drainage (the field
+takes ET + percolation; the solute leaves with the percolation) as its base, and runs as the other end a field
+that receives no irrigation after midsummer drainage (rain only), reported beside the base in the irrigation-
+source check. No cycle is chosen. (Calendar re-read 2026-10-27: sha256 63e299e9...)
+
+### 9.14 Outcome of amendment 2b (records named; nothing fitted)
+**Expectations.**
+- E25 **held**: every PFAS `simulate()` output of the default and the Yamazaki observable are bit-identical
+  (137 cells, max |Δlog10| 0), re-checked after the last code change of 2b.
+- E26 **held**: the neutral root scores did not move (equilibrium and season ODE, 3 decimals).
+- E27 **held** (direction not predicted): Ge 2017 per-organ 0.631 → 0.606 (`params/neutral_scores.json`).
+- E28 **held**: the leaf air-exchange surface at heading is 14.1 m2/kg fresh (season 6.1-17.2).
+- E29 **held** for the registered recalibration (every k_leach rose), but that surrogate was then removed (9.11).
+- E30 **missed**: at the end of the first flooding period the C4-C6 root-zone pore water is still 1.7-2.0 x the
+  irrigation concentration (it starts at the soil's own pore water, 2.8-4.8 x at day 15), not tracking it.
+- E31 **partly missed**: the short chains fall over the season as measured (predicted post/pre -0.59 to -0.91
+  log10 against -0.03 to -0.30 measured, so too far), PFNA -0.25 and PFDA -0.07 are within 0.3 of 1, PFOA
+  (-0.60) is not. Post-season soil, predicted/measured: C4-C8 -0.46 to -0.62 log10 (over-leached), PFNA-PFDoDA
+  and PFOS -0.15 to +0.01; the subsoil end (0 / half / same) moves none of them by more than 0.01; the
+  rain-only end after midsummer drainage (9.13) moves C5-C7 and PFBS further down (to -1.39 for PFBS) and
+  the rest by <= 0.1 (`validation/irrigation_source_record.json`).
+
+**Deviations from the registration, with the reason.**
+- The irrigation-source scenario is **not merged into the input-range band** (9.3 said it would enter it
+  when it moves a cell by >= 0.0005). It fails its own out-of-sample check for C4-C8: it leaches those
+  chains several-fold faster than the field shows, so the Koc-QSPR Kd is too low for this Andosol (or a
+  sorption process is missing) and its pore-water course for them is not supported. Its plant deltas are
+  recorded (root/straw/grain +0.00 to +0.27 log10 for C4-C8, +0.47 to +1.18 for C9-C12 and PFOS, which
+  pass the soil check) and `obs_exposure_time` stays open.
+- The k_leach surrogate, its table and its cap were removed (9.11), not recalibrated.
+- The neutral **rough grain** is not predicted with the phloem off either (9.1c reported it): it carries the
+  brown rice's burden, which is unknown, so with the brown rice at 0 it was only a lower bound. The husk +
+  rachis pool is reported.
+- Downstream products rebuilt on 2b: the biocide census and its briefing now report the husk + rachis pool
+  (dry basis) where they reported a neutral "grain", and say that the brown rice is not predicted; the
+  half-equilibrium point moved 6.26 -> 6.40 (root water at harvest 0.6365); the rank correlations are
+  unchanged (+0.904 / -0.777). Two numbers that had already disagreed with the census record before 2b
+  (propiconazole 1.03x, triclosan +0.624) were corrected to the record (1.24x, -0.197). In the PFAS brief the
+  flooded-schedule grain is now per unit season-mean pore water (the harvest-day pore water of a short chain
+  leaches to ~0, so a BAF on it is meaningless).
+- `tr_li_grain_from` is not invariant (brown rice from heading 3.33 vs from filling 1.33 log10 on the default;
+  the variant ranking is the same): filling stays, both are recorded (`validation/li_grain_from_record.json`).
+
+**What 2b leaves open**: `obs_exposure_time` (default scope), `soil_root_beta`, `tr_drivers`, `smiles_kcw` and
+the curated K_cw (side project), the neutral phloem-sap concentration (Trapp 2007, 2011 requested).
+The input-range band is unchanged (no input of `simulate()` changed, E25).
+
+### 9.15 Addendum (the neutral brown rice; committed before its runs)
+9.1c left the neutral brown rice unpredicted because the neutral phloem-sap concentration had not been read at
+source. Trapp 2007 and Rein, Legind & Trapp 2011 are now read (rows `neu_phloem_xylem_eq`, `neu_phloem_fruit_flow`,
+`neu_phloem_downward`):
+- Trapp 2007 p.374: "no difference is made between chemical concentration in phloem and in xylem ... For the less
+  polar neutral compounds, xylem and phloem concentrations will equilibrate within a short distance".
+- Rein 2011 p.194, eqs 4-5: the phloem flux to the fruit, T_C,Ph x the fruit's dry growth, is taken "under the
+  assumption of phase equilibrium to xylem flux": subtracted from the flow to the leaves and added to the flow
+  to the fruit.
+- Rein 2011 p.208: downward phloem transport is irrelevant for the less polar neutrals (it matters for weak
+  acids, by the ion trap, and for very polar neutrals, which leave the sieve tubes slowly).
+Change (neutral path only): the brown rice is fed by a phloem stream at the stem's xylem-sap concentration, of
+volume T_C,Ph (the rice value, 6.1 L/kg, 4.4-7.8, PREREG 5.1) x its dry growth, taken out of the leaf's xylem
+inflow (never more than that inflow); no downward stream (phi = 0, as before); the husk keeps the panicle's
+transpiration deposit. The brown rice is then predicted by default, and the rough grain with it. `phloem=True`
+(the leaf-source stream with the weak-acid trap) stays as it was. No log Kow below which a neutral counts as
+"very polar" is given in either source, so none is set: the equality is reported as the sources' assumption and
+its polar-end limit is stated in the outputs. The PFAS path is untouched (the core's default is unchanged).
+Expectations:
+- E32 Every PFAS `simulate()` output of the default and the Yamazaki observable are bit-identical.
+- E33 No neutral validation table has a grain row, so no neutral score changes by more than 0.01 log10; the root
+  scores do not change at 3 decimals.
+- E34 The neutral brown rice (dry) is below the husk + rachis pool (dry) for every log Kow in the biocide census:
+  per kg dry, the brown rice draws 6.1 L of sap, the hull the panicle's transpiration share.
+- E35 The census rank correlations (root +0.904, straw -0.777) do not change at 3 decimals.
+
+### 9.16 Outcome of 9.15
+- E32 **held**: the PFAS default and the Yamazaki observable are bit-identical (137 cells, max |Δlog10| 0).
+- E33 **missed**: Ge 2017 per-organ moved 0.606 → 0.593 (0.013 > 0.01). The grain's stream is taken out of the
+  leaf's xylem inflow, so the leaf's TF falls. The root scores did not move (no downward stream).
+- E34 **held**: brown rice (dry) < husk + rachis (dry) on all 117 census rows (triclosan 0.119 against 1.64).
+- E35 **held**: census rank correlations +0.904 / −0.777.
+- The two solvers agree on the new stream (exponential integrator against BDF, ≤ 5e-6 log10; tested).
+- 9.14's neutral outcome is superseded where it says the brown and rough grain are not predicted: they are, on
+  the sources' assumption (less polar neutrals; no polar-end log Kow is given). The biocide census and briefing
+  report the brown rice again, beside the husk + rachis pool (dry); the fish-kM sensitivity moves the brown
+  rice by up to 8,344×. `grain_feed=None` keeps the unpredicted reading.
+
+### 9.17 Record (the requested SIs; no model change)
+The Tang 2026, Kim 2019 and Felizeter 2012/2014 SIs were read (uploaded by the user). `tr_drivers` cannot be resolved from
+the papers: neither Tang's SI nor Kim's gives a sowing, transplanting, heading or harvest date, and Kim's regions are
+anonymised without coordinates. The transfers stay on the calibration site-year's drivers, now as a limitation of the data,
+not a pending request (row `tr_drivers` closed). Felizeter's SIs give the experiment dates and tissue tables but no TSCF
+table; TSCF (their eq. 4) uses a modelled solution concentration, so the figure-read TSCFs stand. The repo's earlier
+transcriptions were checked against the SIs: Tang S7/S8, 75 cells, one SD corrected (PFOS 0.1 ug/g BCF 0.025 -> 0.0254; no
+code reads it); Kim S5/S6, 51 rows, all equal. New transcriptions: `raw_si/tang2026_si_table_s2_soil.csv`,
+`raw_si/kim2019_si_table_s2_sites.csv`, `raw_si/felizeter2014_si_table_s3_dates.csv`.

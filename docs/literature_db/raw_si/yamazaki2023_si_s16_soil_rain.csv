@@ -1,0 +1,20 @@
+# Yamazaki et al. 2023, Environ. Sci. Technol. 57:3727, doi:10.1021/acs.est.2c08767, Supporting Information (figshare 10.1021/acs.est.2c08767.s001,
+# open access; SHA-256 e2e53c9aaff71b7270198dbd425d9b9a4be320a229f870fcb6a55120c00b2a26). Table S16 p.S31, read from the SI text layer by the main session 2026-10-27.
+# Rainwater R1-R5 and irrigation water (one grab, 2020-06-08) [ng/L]; paddy soil 0-15 cm, W-shaped transect, [pg/g dw]:
+#   water = water extract; wtmeoh = methanol extract after the water extract; meoh = methanol extract (a separate, parallel extraction).
+#   Before cultivation 2020-04-16 (moisture 9.7 %, total carbon 3.8 %), after cultivation 2020-09-28 (10.6 %, 3.7 %) -- Table S5 p.S19.
+# "<x" = below the MQL x (kept as printed). The 12 compounds the model runs + PFHxS.
+compound,rain_R1,rain_R2,rain_R3,rain_R4,rain_R5,irrigation_ng_L,pre_water,pre_wtmeoh,pre_meoh,post_water,post_wtmeoh,post_meoh
+PFBS,0.16,0.03,0.06,0.14,0.05,0.68,4,1,3,4,1,3
+PFHxS,0.36,0.07,<0.05,<0.07,<0.05,0.43,7,4,3,3,5,5
+PFOS,0.41,0.33,0.21,0.27,0.09,1.19,26,296,271,17,296,204
+PFBA,9.74,1.36,6.72,7.15,2.41,7.41,82,10,37,40,6,14
+PFPeA,7.36,0.99,5.75,4.96,1.27,12.03,68,15,43,41,13,17
+PFHxA,7.95,0.87,6.26,4.64,1.25,12.13,68,17,43,62,18,30
+PFHpA,2.40,1.27,1.34,2.30,1.60,7.47,71,25,58,54,21,29
+PFOA,1.84,0.50,0.46,0.63,0.44,8.61,82,89,111,82,94,88
+PFNA,1.26,1.23,0.84,0.91,0.44,5.96,83,319,265,56,246,157
+PFDA,0.32,0.29,0.18,0.17,0.10,0.54,18,271,188,13,278,167
+PFUnDA,0.30,0.42,0.36,0.26,0.08,0.32,3,308,170,3,288,180
+PFDoDA,0.13,0.20,0.15,0.09,0.05,0.02,2,198,120,1,223,129
+HFPO-DA,3.47,0.93,4.22,1.05,8.80,3.79,53,9,32,11,3,8

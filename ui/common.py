@@ -61,9 +61,6 @@ def _simulate(congener, **kw):
     drv = kw.pop("drivers_tuple", None)
     if drv is not None:
         kw["drivers"] = _drivers_from_tuple(drv)
-    kl = kw.pop("cwo_k_leach", None)                       # scalar (hashable) -> cwo_kw dict
-    if kl is not None and kw.get("cwo_profile", "constant") != "constant":
-        kw["cwo_kw"] = {"k_leach": float(kl)}
     return api.simulate(congener, **kw)
 
 
@@ -123,9 +120,6 @@ def _simulate_neutral(**kw):
     drv = kw.pop("drivers_tuple", None)
     if drv is not None:
         kw["drivers"] = _drivers_from_tuple(drv)
-    kl = kw.pop("cwo_k_leach", None)
-    if kl is not None and kw.get("cwo_profile", "constant") != "constant":
-        kw["cwo_kw"] = {"k_leach": float(kl)}
     log_kow = kw.pop("log_kow")
     return api.simulate_neutral(log_kow, **kw)
 
@@ -144,9 +138,6 @@ def _simulate_smiles(smiles, **kw):
     drv = kw.pop("drivers_tuple", None)
     if drv is not None:
         kw["drivers"] = _drivers_from_tuple(drv)
-    kl = kw.pop("cwo_k_leach", None)                       # scalar (hashable) -> cwo_kw dict
-    if kl is not None and kw.get("cwo_profile", "constant") != "constant":
-        kw["cwo_kw"] = {"k_leach": float(kl)}
     return api.simulate_from_smiles(smiles, **kw)
 
 
@@ -433,11 +424,10 @@ def _clean_table(df, value_cols):
 
 def _render_custom_tables(*, biomass, Cwo_const, season0, key, ko=False):
     # `biomass` is the sidebar crop choice (see CROPS / crop_kw)
-    """Editable growth + pore-water tables (+ per-compartment density). Returns
-    (drivers_dict_or_None, density_dict). Used by both Simple (Korean) and Expert."""
+    """Editable growth + pore-water tables. Returns drivers_dict_or_None. Used by both Simple
+    (Korean) and Expert."""
     import pandas as pd
     lang = "ko" if ko else "en"
-    organ = i18n.ORGAN_LABELS[lang]
     st.markdown(_t("ct.intro", lang))
     c1, c2 = st.columns(2)
     with c1:
@@ -455,11 +445,6 @@ def _render_custom_tables(*, biomass, Cwo_const, season0, key, ko=False):
         c_seed = pd.read_csv(up_c) if up_c is not None else _default_cwo_df(season0, Cwo_const)
         cdf = st.data_editor(c_seed, num_rows="dynamic", width="stretch",
                              key=f"{key}_cwo_{up_c.name if up_c else 'def'}")
-    st.markdown(_t("ct.density_md", lang))
-    dc = st.columns(4)
-    density = {o: dc[i].number_input(f"ρ {organ[o]}", 0.05, 2.0,
-                                     float(api.DEFAULT_TISSUE_DENSITY[o]), 0.05, key=f"{key}_rho_{o}")
-               for i, o in enumerate(_ORGANS4)}
     try:
         growth = _clean_table(gdf, list(_ORGANS4))
         cwo = _clean_table(cdf, ["Cwo"])
@@ -472,12 +457,8 @@ def _render_custom_tables(*, biomass, Cwo_const, season0, key, ko=False):
                                                     **crop_kw(biomass))
     except Exception as e:                                   # noqa: BLE001
         st.warning(_t("ct.read_error", lang, e=e))
-        return None, density
-    Mf = np.asarray(drivers["M"], float)[-1]
-    vols = {o: Mf[i] / max(density[o], 1e-6) for i, o in enumerate(_ORGANS4)}
-    rows = " · ".join(f"{organ[o]} {vols[o] * 1e3:.0f} mL" for o in _ORGANS4)
-    st.caption(_t("ct.implied_volume", lang, rows=rows))
-    return drivers, density
+        return None
+    return drivers
 
 
 # A small, theme-agnostic CSS polish on top of the config.toml design tokens. Uses
@@ -704,16 +685,14 @@ def render_custom_tables_panel(cfg):
     Cwo_const = cfg.Cwo_const
     season = cfg.season
     drivers = cfg.drivers
-    custom_density = None
     if use_custom_tables:
         _tbl_title = _t("ct.panel_title", "en" if expert else "ko")
         with st.expander(_tbl_title, expanded=True):
-            _drv, custom_density = _render_custom_tables(biomass=biomass, Cwo_const=Cwo_const,
+            _drv = _render_custom_tables(biomass=biomass, Cwo_const=Cwo_const,
                                                          season0=season, key="ctbl", ko=not expert)
             if _drv is not None:
                 drivers = _drv
     cfg.drivers = drivers
-    cfg.custom_density = custom_density
 
 
 def run_model(cfg):
@@ -725,7 +704,6 @@ def run_model(cfg):
     season = cfg.season
     measured = cfg.measured
     cwo_profile = cfg.cwo_profile
-    cwo_kleach = cfg.cwo_kleach
     fxy_source = cfg.fxy_source
     biomass = cfg.biomass
     measured_bio = cfg.measured_bio
@@ -748,7 +726,7 @@ def run_model(cfg):
             else:
                 res = _simulate_neutral(Cwo=Cwo_const, season=season, **crop_kw(biomass),
                                         measured_forcing=measured, cwo_profile=cwo_profile,
-                                        cwo_k_leach=cwo_kleach, Koc=neutral.get("Koc"), **nk)
+                                        Koc=neutral.get("Koc"), **nk)
         congener = res["congener"]
     elif smiles:                                            # compound specified by structure
         if not api.rdkit_available():
@@ -761,7 +739,7 @@ def run_model(cfg):
             else:
                 res = _simulate_smiles(smiles, Cwo=Cwo_const, season=season,
                                        measured_forcing=measured, cwo_profile=cwo_profile,
-                                       cwo_k_leach=cwo_kleach, **sim_kw)
+                                       **sim_kw)
         except Exception as e:                              # noqa: BLE001
             st.error(f"Could not build a compound from that SMILES — check the structure.\n\n`{e}`")
             st.stop()
@@ -779,7 +757,7 @@ def run_model(cfg):
     else:
         with st.spinner("🌾 벼 한 철 축적을 계산하는 중…" if not cfg.expert else "Running the model…"):
             res = _simulate(congener, Cwo=Cwo_const, season=season, measured_forcing=measured,
-                            cwo_profile=cwo_profile, cwo_k_leach=cwo_kleach, **sim_kw)
+                            cwo_profile=cwo_profile, **sim_kw)
     # No observed neutral series exists (the a-priori tables are other compounds and
     # other exposures), so a neutral run has nothing to plot against -- an empty obs
     # keeps every "predicted vs observed" frame honest instead of drawing a blank bar.

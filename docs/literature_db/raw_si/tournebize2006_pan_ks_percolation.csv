@@ -1,0 +1,11 @@
+# Tournebize et al. 2006 Paddy Water Environ 4:39-51, DOI 10.1007/s10333-005-0028-0
+# Calibrated hard-pan Ks (21-23 cm layer, 2 cm thick in the model) by season stage, and the model's SIMULATED percolation; text pp.46-49.
+# Stage 1 Ks: calibrated to tensiometer pressure-head profiles (-10/-15/-30/-45/-85 cm). Post-drainage Ks: calibrated to Cl- tracer peak at -45 cm.
+# Percolation values are model outputs (Darcy flux in SWMS), not measurements. Dispersivity fitted 1 cm (all layers, whole season; pp.47-48).
+# Read by: literature subagent, 2026-10-27, not re-checked by main.
+year,period,DATA_range,pan_Ks_cm_d,simulated_percolation_cm_d,page,note
+1998,continuous ponding,1-44,0.08,0.24,p.46-47,two Ks values assigned in 1998 because the -45 cm matric potential declined
+1998,continuous ponding,45-65,0.04,0.084,p.47,new Ks 0.04 'for the period after 40 DATA'
+1999,continuous ponding,1-63,0.08,0.24,p.46-47,percolation 0.22-0.26 with ponded depth
+1998,intermittent irrigation after 17-d mid-term drainage,after 83,0.8,,p.49,
+1999,intermittent irrigation after 10-d mid-term drainage,after 73,0.3,,p.49,

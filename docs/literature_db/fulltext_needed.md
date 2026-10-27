@@ -9,7 +9,6 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 
 | DOI | paper | needed for | why it failed |
 |---|---|---|---|
-| 10.1139/er-2025-0116 | Malaviya, Singh, Sharma et al. 2025, "The interplay of per- and polyfluoroalkyl substances (PFAS) uptake, translocation, and toxicity in plants: a critical review", Environ. Rev. | corroboration of the long-chain lipid mechanism (CLAUDE.md §6 history) | paywalled; the user expects to obtain it later |
 
 Leads, not yet requested (ask before relying on them):
 - Kobayashi & Horie 1994, Jpn. J. Crop Sci. 63:193-199 (spikelet and rachis-branch differentiation) —
@@ -27,3 +26,29 @@ Leads, not yet requested (ask before relying on them):
   log kIAM = 0.046 CHI_IAM + 0.42) — biomimetic K_PL / K_prot for PFAS; not yet read (binding work, not 2a)
 - 10.3329/baj.v19i2.31861 Ansari et al. 2017 (open access; hull and brown-rice weight in Fig. 1, to digitise)
 - 10.1626/pps.15.258 Fukuoka et al. 2012; 10.1007/s11270-007-9425-x Rahman et al. 2007 (open access)
+
+## Obtained (2026-10-27, uploaded by the user or open access) -- read in the main session or by subagents
+- Trapp, Matthies & McFarlane 1994 (10.1002/etc.5620130308); Trapp & Matthies 1995 (10.1021/es00009a027) and its
+  correction 1996 (10.1021/es951008p); Trapp 2004 (10.1065/espr2003.08.169) -- neutral constants (PREREG 9.1)
+- Felizeter 2012 / 2014 main texts; Tang 2026, Kim 2019, Li 2025 main texts (`tr_drivers`)
+- Tournebize 2006 (read this time); Matsumoto, Yoshida & Nishida 2016 (10.11408/jjsidre.84.10_847)
+- Tokumoto 2005 (10.3178/jjshwr.18.401, open access); Tokumoto 2010 (10.1016/j.coldregions.2010.03.005);
+  Rudiyanto 2013 thesis (hdl.handle.net/10076/13878, open access); Moraes 1973 (Embrapa, open access)
+- Yamazaki 2023 SI (figshare, open access): Tables S5, S16 newly transcribed
+- Chang 2020 (10.1186/s13007-020-00633-1), Meera 2019 (10.1007/s13197-019-03631-x), Setter 1995, Dharni 2022 -- panicle area
+- Malaviya 2025 (10.1139/er-2025-0116): the accepted manuscript (R1) is open at hdl.handle.net/1807/151243
+- HYDRUS-1D manuals 4.17 (sha256 286f4aedaf30064fbc723aba3f0e7f9e9b45c1ed933b04b184888a8bd9462755) and 4.08
+  (sha256 20c29f1bb6d0567cb5f63a725a877c9d5aa277ed284a6255c718730f0fc03847), pc-progress.com, open: the air-entry
+  model 3 (`soil_hentry`).
+- Uploaded by the user 2026-10-27 (papers_6.zip), read in the main session: Trapp 2007 (10.1080/10629360701303693;
+  sha256 a34d2a7f...), Rein, Legind & Trapp 2011 (10.1080/1062936X.2010.548829; sha256 943a0511...) -- the neutral
+  phloem sap (PREREG 9.15); Vogel, van Genuchten & Cislerova 2001 (10.1016/S0309-1708(00)00037-3; sha256 b007f8f9...)
+  -- `soil_hentry`. The same upload's Tang 2026, Kim 2019 and Felizeter 2012/2014 files are the main texts
+  (sha256 fb2dbd93..., c2faf194..., c70492c6..., d79aa6f8...); their SIs are still needed (table above).
+- SIs uploaded by the user 2026-10-27 (papers_SI.zip), read in the main session: Tang 2026 SI (docx, sha256 deb3d35b...),
+  Kim 2019 SI (docx, sha256 352711e3...), Felizeter 2012 SI (sha256 9270ca0e...), Felizeter 2014 SI (sha256 fe7bdafb...).
+  None of them gives a crop calendar for Tang or Kim (`tr_drivers` cannot be resolved from the papers); Felizeter's SIs give
+  dates and tissue tables but no TSCF table. Transcriptions: `raw_si/tang2026_si_table_s2_soil.csv`,
+  `raw_si/kim2019_si_table_s2_sites.csv`, `raw_si/felizeter2014_si_table_s3_dates.csv`; checks: Tang S7/S8 (75 cells; one SD
+  0.025 -> 0.0254 corrected) and Kim S5/S6 (51 rows, all equal) against the repo's earlier transcriptions.
+SHA-256 of every file: in the session record (PREREG 9 commit message).

@@ -64,7 +64,7 @@ midpoint and both ends (`lo`, `hi`).
 | lam_eq | 1e6 per day per kg | numerical | converged (`numerics_convergence.py`; 1e4 was not: 0.0008 log10) |
 | L_Ph | per congener and variant, >= 0, no upper bound | fitted | Yamazaki grain; 0 where the xylem alone already over-feeds the grain; PFBS: midpoint of [0, L at the censoring bound] |
 | lipid loading constants | per shoot model; terms not identified are removed | fitted | Yamazaki straw (and grain at L_Ph = 0), backward elimination by the bootstrap rule (`validation/refit_sourced.py`) |
-| free-anion f_xy (`*_free` variants only) | monotone logistic | derived, **points of the fit not recorded** | `docs/DELIVERABLE_GAP_B_fxy.md` (Felizeter TSCF level, theory shape) |
+| free-anion f_xy (`*_free` variants only) | monotone logistic | **untraceable**: its coefficients cannot be recovered from any recorded point set, and Felizeter 2012/2014's TSCFs (flat 0.05-0.23 from C4 to C11) contradict it; the `*_free` variants are withdrawn from scoring and decisions (PREREG 9.4) | `raw_si/felizeter201*_tscf.csv` |
 | phi (phloem stream to the root) | 0.06 (range 0.02-0.10) | measured (non-cereal) | Windt et al. 2006 daytime phloem/xylem volume flow; no cereal value exists |
 | T_C,Ph (phloem sap per kg grain DM) | 6.1 L/kg (range 4.4-7.8) | derived | rice sieve-tube sucrose (Chino 1988; Hayashi & Chino 1990) |
 | panicle share of transpiration | 0 before heading; 0.21 (0.09-0.33) at DVS 1; 0.07 (0-0.14) at DVS 2; linear in DVS between | measured anchors; the linear form between them is stated as an assumption | Sugimoto 1973, 1975; Roberts & Batchelor 1983; Takahashi & Kurata 2007 |
@@ -80,9 +80,10 @@ midpoint and both ends (`lo`, `hi`).
 
 Variants, each with its own fitted values: `redistributed_fit` (the default since amendment 2a:
 f_xy fitted per congener to the straw as well, so on Yamazaki a reproduction; chosen by the
-transfer rule, PREREG section 8), `redistributed_lipid` (amendment 1's default), `redistributed_free`,
-`4pool_lipid`, `4pool_free` (the single-straw core has no `_fit` variant; unspecified, it runs
-`4pool_lipid`). Results: `validation/refit_sourced.json`; parameters:
+transfer rule, PREREG section 8), `redistributed_lipid` (amendment 1's default), `4pool_lipid`
+(the single-straw core has no `_fit` variant; unspecified, it runs `4pool_lipid`), and
+`redistributed_free` / `4pool_free`, which are fitted and runnable but withdrawn from scoring and
+decisions (`model_api.WITHDRAWN_VARIANTS`; PREREG 9.4: their f_xy is untraceable). Results: `validation/refit_sourced.json`; parameters:
 `params/refit_sourced.csv`, `params/lipid_loading_sourced.json` -> `parameters.json`.
 
 ## 5. Transfer datasets
@@ -93,19 +94,34 @@ transfer rule, PREREG section 8), `redistributed_lipid` (amendment 1's default),
 | Kim 2019 (30 Korean fields) | calibration site-year | harvest window Oct 6-18 2016 only; fields anonymised |
 | Li 2025 (Tianjin, Jinyu Japonica No.22) | calibration site-year, stages by ORYZA DVS | samples July-October 2023; no stage dates. Stage -> DVS from sources (PREREG 5.9): heading 1 and ripening 2 by definition, tillering the midpoint of [transplanting, panicle initiation 0.65], filling and milk-ripening the centre (4/3, 5/3) of their ordered range; the range ends are printed |
 
+The SIs of Tang 2026 and Kim 2019 were read (2026-10-27): neither gives a crop calendar, and Kim's regions are
+anonymised, so the transfers cannot run on their own drivers from the papers (`tr_drivers`, PREREG 9.17).
+
 Decision rule for every comparison: `validation/decision_stats.decide` (paired bootstrap, 95 %
 interval; PREREG section 2). Scores: `validation/transfer_sourced.json` and
 `params/transfer_scores.json` (the honesty band).
 
-## 6. Soil side (HYDRUS-1D, flooded profile) -- `src/soil_hydrus.py` (not the default exposure)
+## 6. Soil side (HYDRUS-1D, the Tsukuba Andosol paddy) -- `src/soil_hydrus.py` (not the default exposure)
 
-| input | value | status |
-|---|---|---|
-| f_oc | 0.02 | **open**: Yamazaki SI Table S5 gives 3.7-3.8 % TOC (next amendment) |
-| bulk density | 1.3 g/cm3 | **open**: 0.61 measured at a Tsukuba Andosol paddy (Koyama & Hayashi 2017) |
-| percolation | 0.30 cm/d | **open**: 0.41-0.67 cm/d at an Ibaraki Andosol paddy (Kondo et al. 2019) |
-| flooding | continuous to day 90 | **open**: midsummer drainage 35-40 d after transplanting for 15-20 d (Ibaraki calendar) |
-| profile, dispersivity, node spacing | 100 cm, 5 cm, 2 cm | **open**: literature range or convergence |
+PREREG 9.2-9.14; every row is in `params/value_provenance.csv` (`soil_*`).
+
+| input | value | status | source |
+|---|---|---|---|
+| retention, Ks | (θs, α, n, Ks) = (0.709, 0.0050, 1.068, 11.1) / (0.717, 0.0098, 1.156, 93.0), midpoint run | measured | Tournebize 2006 Table 3 (Tsukuba Andisol cores) |
+| θr | 0.015 (0-0.030) | measured range | Rudiyanto 2013; Tokumoto 2010 |
+| l (Mualem) | 0.5 | convention | Mualem's general value; no paddy value |
+| air entry | -2 cm (HYDRUS model 3) | measured (recommendation) | HYDRUS-1D 4.17 manual pp.23-24, for 1.0 < n < 1.3 |
+| bulk density | plough 0.61; subsoil 0.70 / 0.57 | measured | Koyama & Hayashi 2017; Tournebize 2006 |
+| f_oc | 0.0375 (0.037-0.038) | measured | Yamazaki SI Table S5 |
+| plough layer / pan | 15 cm; 2-cm pan, Ks solved to the percolation (0.0256 cm/d) | measured / derived | Ibaraki calendar; Tournebize 2006 |
+| percolation | 0.54 (0.41-0.67) cm/d | measured | Kondo 2019 |
+| ponded depth | 2.5 (2-3) cm | measured | Ibaraki calendar |
+| water calendar | flooded; midsummer drainage 35-40 DAT for 15-20 d; intermittent irrigation to heading + 30 d (flooded water balance; rain-only end) | measured (cycle not reported) | Ibaraki calendar; Tournebize 2006 |
+| dispersivity | 0.6 (0.2-1.0) cm | measured | Tokumoto 2005; Tournebize 2006 |
+| root water uptake | no reduction above -15000 cm | structural | the crop driver is stress-free |
+| root distribution | linear to 0 at 30 cm | **open** | no source |
+| grid, depth, tolerances | dx 0.25 cm (pan base 0.005), 100 cm | numerical | converged <= 0.0004 log10 |
+| irrigation-source scenario | Yamazaki S16 soil, irrigation water and rain; subsoil 0 / half / same | measured; subsoil range | fails its post-season soil check for C4-C8: not in the band |
 
 ## 7. App
 
@@ -115,5 +131,5 @@ interval; PREREG section 2). Scores: `validation/transfer_sourced.json` and
 | body weight | 64.5 kg | measured | KNHANES 2013-2016 adults (Yoon et al. 2022) |
 | rice eaten | white rice at 14 % moisture, from the dry brown-rice value and the white-rice composition | derived | `model_api.white_rice_conc` |
 | intake signal | green below / red at or above the TWI | structural | EFSA 2020 TWI (the only sourced threshold) |
-| tissue density (per-volume view) | 1.0 / 0.30 / 0.30 / 1.20 | **open** | no source |
-| SMILES K_cw | 20 L/kg placeholder | **open** | no source |
+| tissue density (per-volume view) | removed (PREREG 9.5) | -- | it entered no result and had no source |
+| SMILES K_cw | 20 L/kg placeholder | **open** | no source; decided by the K_cw side project (`docs/kcw_side_project/`, PREREG 9.5) |

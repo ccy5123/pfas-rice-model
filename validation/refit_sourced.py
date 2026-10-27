@@ -75,6 +75,8 @@ VARIANTS = {
     "4pool_lipid": ("4pool", "lipid"),
     "4pool_free": ("4pool", "free"),
 }
+# the *_free variants are fitted for the record; they are withdrawn from scoring and decisions
+# (model_api.WITHDRAWN_VARIANTS, PREREG 9.4: their f_xy_recommended is untraceable)
 # starting point only: the constants of the previous fit (refit_site_year.py, on the 4-pool)
 START = dict(a=0.1177, b=0.09053, g_xy=0.01577, g_ph=0.005005, K_half=800.1, pfsa_ln=0.6213)
 OUT = os.path.join(HERE, "refit_sourced.json")

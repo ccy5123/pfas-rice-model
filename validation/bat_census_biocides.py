@@ -247,16 +247,19 @@ def run_one(log_kow, name, half_life=None, pKa=None, is_acid=True, pH=REPORT_PH,
                                pKa=pKa, is_acid=is_acid, pH=pH,
                                MW=MW, K_AW=K_AW, air=air)
     b = res["baf_final"]
+    # the brown rice is fed by a sap stream at the xylem-sap concentration (Trapp 2007; Rein
+    # 2011; PREREG 9.15; fresh weight like the other organs); the panicle's transpired deposit
+    # stays in the husk + rachis pool, per kg DRY (`baf_final_dw["husk"]`)
     return dict(TSCF=res["TSCF"], K_PW_root=res["K_PW"]["root"],
                 root=b["root"], stem=b["stem"], leaf=b["leaf"], grain=b["grain"],
-                straw=res["straw_baf"], res=res)
+                husk=res["baf_final_dw"]["husk"], straw=res["straw_baf"], res=res)
 
 
 def run_all(screened, quiet=False):
     """Two assumptions, mirroring the report's own Scenario A / Scenario B.
 
       P  gamma = 0            -- no in-planta loss. This is the neutral path's
-                                 documented UPPER BOUND (leaf and grain are
+                                 documented UPPER BOUND (leaf and husk are
                                  terminal accumulators), the exact counterpart of
                                  the report's "conservative" Scenario A.
       Q  gamma from the report's FISH kM half-life. That rate is a fish
@@ -278,11 +281,11 @@ def run_all(screened, quiet=False):
                    bat_caveat=(r.get("bat_caveat") or "").strip())
         p = run_one(o["log_kow"], o["substance"], pKa=pKa, is_acid=o["is_acid"])
         rec.update({f"P_{k}": p[k] for k in
-                    ("TSCF", "K_PW_root", "root", "stem", "leaf", "grain", "straw")})
+                    ("TSCF", "K_PW_root", "root", "stem", "leaf", "grain", "husk", "straw")})
         if km:
             q = run_one(o["log_kow"], o["substance"], half_life=km,
                         pKa=pKa, is_acid=o["is_acid"])
-            rec.update({f"Q_{k}": q[k] for k in ("root", "leaf", "grain", "straw")})
+            rec.update({f"Q_{k}": q[k] for k in ("root", "leaf", "grain", "husk", "straw")})
         out.append(rec)
     if not quiet:
         print()
@@ -290,21 +293,23 @@ def run_all(screened, quiet=False):
         print("3. THE RUNS -- rice BAF [L/kg fw], exposure held at Cwo = 1 ug/L")
         print("=" * 78)
         print(f"{'substance':<32s}{'logKow':>7s}{'TSCF':>9s}{'K_PW':>10s}"
-              f"{'root':>10s}{'straw':>9s}{'grain':>9s}  scope")
+              f"{'root':>10s}{'straw':>9s}{'brown':>9s}{'husk dw':>9s}  scope")
         for rec in sorted(out, key=lambda d: d["log_kow"]):
             print(f"{rec['substance'][:31]:<32s}{rec['log_kow']:7.2f}"
                   f"{rec['P_TSCF']:9.2e}{rec['P_K_PW_root']:10.3g}"
-                  f"{rec['P_root']:10.3g}{rec['P_straw']:9.3g}{rec['P_grain']:9.3g}"
+                  f"{rec['P_root']:10.3g}{rec['P_straw']:9.3g}{rec['P_grain']:9.3g}{rec['P_husk']:9.3g}"
                   f"  {rec['verdict']}")
         print()
-        print("  gamma = 0 above, so leaf/straw/grain are UPPER BOUNDS (docs section 3).")
+        print("  gamma = 0 above, so leaf/straw/brown/husk are UPPER BOUNDS (docs section 3).")
+        print("  brown = brown rice [L/kg fw], fed by sap at the xylem-sap concentration (Trapp 2007,")
+        print("  Rein 2011: less polar neutrals; PREREG 9.15); husk = husk + rachis [L/kg DRY].")
         withq = [r for r in out if "Q_root" in r]
         if withq:
             print()
             print("  What the report's FISH kM does when transplanted into the plant"
                   " (SENSITIVITY ONLY -- a fish rate is not a plant rate):")
             print(f"    {'substance':<26s}{'t1/2 [d]':>9s}{'root P->Q':>12s}"
-                  f"{'straw P->Q':>12s}{'grain P->Q':>12s}")
+                  f"{'straw P->Q':>12s}{'brown P->Q':>12s}")
             for rec in sorted(withq, key=lambda d: d["log_kow"]):
                 fr_ = lambda a, b: (a / b if b else float("nan"))          # noqa: E731
                 print(f"    {rec['substance'][:25]:<26s}{rec['km_half_life_d']:9.2f}"
@@ -581,7 +586,7 @@ def figure(runs, cross, path=None):
     kept = [d for d in r if not d["verdict"].startswith("EXCLUDED")]
     excl = [d for d in r if d["verdict"].startswith("EXCLUDED")]
     for key, lab, c in (("P_root", "root", "#8c564b"), ("P_straw", "straw", "#2ca02c"),
-                        ("P_grain", "grain", "#d6a419")):
+                        ("P_grain", "brown rice", "#d6a419")):
         ax[0].semilogy([d["log_kow"] for d in kept], [d[key] for d in kept],
                        "o-", ms=4, lw=1.2, color=c, label=lab)
         ax[0].semilogy([d["log_kow"] for d in excl], [d[key] for d in excl],
@@ -629,7 +634,8 @@ def figure(runs, cross, path=None):
 def write_csv(runs, path=OUT_CSV):
     cols = ["substance", "log_kow", "verdict", "f_n", "pKa_used", "km_half_life_d",
             "bpc", "bat_A", "bat_B", "P_TSCF", "P_K_PW_root", "P_root", "P_stem",
-            "P_leaf", "P_grain", "P_straw", "Q_root", "Q_leaf", "Q_grain", "Q_straw"]
+            "P_leaf", "P_grain", "P_husk", "P_straw", "Q_root", "Q_leaf", "Q_grain", "Q_husk",
+            "Q_straw"]
     with open(path, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
@@ -691,9 +697,11 @@ def verdict(rows, screened, runs, ov, fig_path=None):
     print("     the model predicts they load the ROOT and barely reach the grain.")
     print("     'Bioaccumulative in fish' and 'reaches the edible part of a rice")
     print("     plant' are different questions, and this is the size of the gap.")
+    print("     (The brown rice rests on the sources' assumption that a less polar")
+    print("     neutral's phloem sap equals its xylem sap; Trapp 2007, Rein 2011.)")
     print("   * The report's single largest finding is AMPLIFIED here, not damped.")
     print("     Entering a metabolic rate moved its fish BCF by up to 82x (section")
-    print(f"     8.4); the same rates move this model's GRAIN by up to {grain_amp:,.0f}x,")
+    print(f"     8.4); the same rates move this model's BROWN RICE by up to {grain_amp:,.0f}x,")
     print("     because grain and leaf are terminal accumulators whose only other")
     print("     sink is growth dilution, which goes to zero at maturity. So the")
     print("     quantity the report identifies as its least defensible input is the")
@@ -724,7 +732,7 @@ def verdict(rows, screened, runs, ov, fig_path=None):
     print("     them as in-planta dissipation, and this model's own leaf half-life is")
     print("     an open question (docs section 4i: metabolism is species-dependent by")
     print("     4.8x for one compound in one experiment).")
-    print("   * gamma = 0 makes every leaf and grain number an upper bound.")
+    print("   * gamma = 0 makes every leaf, grain and husk number an upper bound.")
     print()
     print(f"  written: {os.path.relpath(OUT_CSV, ROOT_DIR)}")
     if fig_path:

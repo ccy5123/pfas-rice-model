@@ -11,6 +11,8 @@
   mark it as such in the work and in `sourced_inputs.csv`. Try the open-access copy first
   (OpenAlex `oa_url`, J-STAGE, publisher PDF) and list only what still fails.
   Running list: `docs/literature_db/fulltext_needed.md`.
+- **Never subscribe to PR activity** (`subscribe_pr_activity`), not even for a PR the session opened; it is
+  also denied in `.claude/settings.json`. Report CI/review state only when the user asks.
 
 ## 1. Goal
 Mechanistic **four-compartment dynamic model** for PFAS bioaccumulation in rice
@@ -246,8 +248,8 @@ rice (the decision basis, PREREG 7.13); the rough-grain value in brackets.
   measured value) (`validation/policy_brief_runs.py`).
 - Earlier decisions (the amendment-1 records, the pre-amendment default switch, the panicle-size share, the
   gate numerics) are in `validation/archive/` and git history; their numbers do not describe the current model.
-- Every transfer dataset runs on the calibration site-year drivers (Tang/Kim/Li sites and dates
-  are not in the repo) — see `docs/ASSUMPTIONS.md` §5.
+- Every transfer dataset runs on the calibration site-year drivers: neither the papers nor their SIs give a
+  crop calendar (PREREG 9.17) — see `docs/ASSUMPTIONS.md` §5.
 
 ### 6.4 Mechanism and identifiability checks
 - **Root entry**: linear (amendment 1). The carrier-vs-bypass and dose-series analyses (archived)
@@ -258,10 +260,17 @@ rice (the decision basis, PREREG 7.13); the rough-grain value in brackets.
   `r_eq` are an exact ridge (cond 1.3e16: the linear entry carries only their product).
   `estimate_exposure_bayesian` (the app's inverse) estimates Cwo from DRY-weight tissue data with
   transport fixed.
-- **HYDRUS-1D coupling** (`hydrus_coupled_run.py`; Method A, the site-year transpiration drives the
-  soil run): weakly sorbed short chains leach during flooding, long chains stay buffered. The paddy
-  soil inputs (f_oc, bulk density, percolation, drainage calendar, the irrigation-water source) are
-  not yet site-sourced (amendment 2), so no soil-scenario number is reported here.
+- **HYDRUS-1D coupling** (Method A; amendment 2b, PREREG 9.2-9.14): the Tsukuba Andosol paddy of the
+  calibration site — measured retention/Ks (Tournebize 2006), bulk density 0.61, f_oc 0.0375, a 2-cm plough
+  pan whose Ks (0.0256 cm/d) makes the sourced percolation 0.54 cm/d, the Ibaraki water calendar (flooded,
+  midsummer drainage, intermittent irrigation to heading + 30 d with the flooded water balance; rain-only end
+  reported), the site-year Tp/Ep/rain, no root-uptake reduction (the crop is stress-free), HYDRUS model 3
+  (air entry −2 cm, n 1.07–1.16); grid-converged (≤ 0.0004 log10, 9.12). Short chains leach under the
+  percolation, long chains stay buffered. `cwo_profile="flooded"` reads the stored shapes
+  (`params/cwo_shapes_hydrus.csv`). The Yamazaki irrigation-source scenario
+  (`validation/irrigation_source_check.py`) over-leaches C4–C8 against the measured post-season soil
+  (−0.46 to −0.62 log10; C9–C12 and PFOS within 0.15), so it is **not** merged into the band and
+  `obs_exposure_time` stays open; the root distribution (`soil_root_beta`) has no source.
 
 ### 6.5 Crop driver — the ORYZA2000 port
 - `src/oryza2000.py` ports ORYZA2000 potential production from the manual (IR72.D92 verbatim;
@@ -281,19 +290,27 @@ rice (the decision basis, PREREG 7.13); the rough-grain value in brackets.
 
 ### 6.6 Neutral organics (Briggs/Kow path; nothing fitted)
 `src/neutral_dpu.py` — the same ODE with z = 0, no carrier, K_PW = W + L·a·Kow^b, f_xy = TSCF(log Kow),
-phloem off. Composition (addendum 5.10, `src/neutral_composition.py`, `params/neutral_composition_sourced.csv`):
+phloem off. Amendment 2b (PREREG 9.1): the rice tool runs it on the 2a plant (staged organ water, brown rice
++ husk pool, the crop's DVS); the stem's xylem splits by the sourced panicle share lam_grain(DVS); b per organ
+(root/stem 0.77, leaf 0.95 — Trapp 1994 p.417; grain 0.86, range 0.77–0.95); a = 1.22 is the octanol density
+correction (Trapp & Matthies 1996). The neutral BROWN RICE takes a sap stream at the xylem-sap concentration,
+T_C,Ph × its dry growth, out of the leaf's xylem inflow (Trapp 2007 p.374; Rein 2011 eqs 4–5: less polar
+neutrals; PREREG 9.15; `grain_feed=None` leaves it unpredicted); the husk keeps the panicle's transpired
+deposit. `phloem=True` (leaf-source stream, weak-acid trap) takes the sourced φ and T_C,Ph midpoints. Air exchange (opt-in): both faces of the green leaf from the crop's LAI per
+fresh leaf mass (14.1 m²/kg at heading); stem and panicle none; any K_AW > 0 with air off is flagged.
+Composition (addendum 5.10, `src/neutral_composition.py`, `params/neutral_composition_sourced.csv`):
 lipid carried on a dry basis and restated at the organ water (rice root = Li 2019 cereal roots, stem/leaf =
 rice straw ether extract, grain = brown rice crude fat); each validation table runs on its own plant's water
 and lipid, with its dry-weight observations converted by that water. The tables run on the generic drivers.
 Current a-priori scores (log10 RMSE at the midpoints, [corners]; `validation/neutral_scores.py` →
 `params/neutral_scores.json`): Liu 2023 rice root 0.212 [0.208, 0.278] (equilibrium 0.204; read as dry
-weight 0.821) · Ge 2017 leaf TF 0.631 (stem rows unscored: no vegetative rice stem water found) · Kodešová
-2019 0.157 (equilibrium 0.172) · Li 2019 hydroponic 0.677 [0.525, 1.115] · Li 2019 soil 0.418 (equilibrium
-0.461) · Briggs 1983 barley stem 0.357. Expectations: N1 wrong (both Li halves moved > 0.05, opposite ways),
-N2 and N3 held.
+weight 0.821) · Ge 2017 leaf TF 0.593 (0.631 before 2b; stem rows unscored: no vegetative rice stem water
+found) · Kodešová 2019 0.157 (equilibrium 0.172) · Li 2019 hydroponic 0.677 [0.525, 1.115] · Li 2019 soil
+0.418 (equilibrium 0.461) · Briggs 1983 barley stem 0.357. Expectations: N1 wrong (both Li halves moved > 0.05,
+opposite ways), N2 and N3 held.
 Weak electrolytes (`pKa=`, `weak_electrolyte_tscf.py`, 67 ionisable Schriever rows): the direction is
 supported but the scale is not; nothing adopted (`docs/neutral_dpu_validation.md`). Plant–air exchange
-is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested against data.
+is opt-in and exactly zero at K_AW = 0; no measured volatile-compound plant dataset was found.
 
 ### 6.7 Data provenance
 - `docs/literature_db/` (curated parameter DB + `raw_si/` transcriptions) and
@@ -323,7 +340,7 @@ is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested agains
   `validation/input_range_band.py` (the sourced-range band), `validation/neutral_scores.py`,
   `validation/prereg_a1_outcome.py` (reads E7–E16 off the records),
   `validation/numerics_convergence.py` (the numerical settings).
-- **Transfer tests** (per dataset): `oos_tang_lipid.py`, `kim2019_censored.py`,
+- **Transfer tests** (per dataset): `oos_tang_lipid.py`, `kim2019_censored.py`, `li_grain_from_check.py`,
   `kim2019_pfoa_anchor.py`, `li2025_stage_resolved.py`.
 - **Mechanism checks**: `bayesian_inverse_demo.py` (`--emcee`). Superseded analyses (default switch,
   sensitivity, panicle share, gate numerics, carrier vs bypass, dose series, θ_fw) are in
@@ -338,7 +355,8 @@ is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested agains
   `weak_electrolyte_tscf.py` (`--fast`).
 - **HYDRUS-1D** (vendored source): `cp external/hydrus_source/makefile external/hydrus_source/source/ &&
   (cd external/hydrus_source/source && make)`; `python src/soil_hydrus.py`;
-  `python validation/hydrus_coupled_run.py`; `python validation/cwo_kleach_calibration.py`. On Claude
+  `python validation/hydrus_coupled_run.py`; `python validation/cwo_shape_table.py` (the stored flooded shapes);
+  `python validation/irrigation_source_check.py` (the Yamazaki irrigation-source scenario, ~10 min). On Claude
   Code on the web the SessionStart hook builds the engine.
 - **Policy briefs** (Korean slide scripts, every number from a script): `docs/POLICY_BRIEF_KR.md` (PFAS;
   `python validation/policy_brief_runs.py` → `docs/policy_brief_results.csv`, ~3 min) and
@@ -349,7 +367,7 @@ is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested agains
   first version (ccy5123/pfas-rice-model#65) carried pre-correction numbers.
 - **Compound lookup** (EPA CompTox): `python src/chem_lookup.py carbamazepine` (needs `CTX_API_KEY`;
   base URL `https://comptox.epa.gov/ctx-api`).
-- **Tests**: `pytest` (503 pass with the full stack, plus 1 module-level skip for `test_sci_adk_rigor.py` without sci-adk; ~8 min). CI (`.github/workflows/tests.yml`) runs the whole suite;
+- **Tests**: `pytest` (510 pass with the full stack, 2 skipped (`test_sci_adk_rigor.py` without sci-adk); ~11 min). CI (`.github/workflows/tests.yml`) runs the whole suite;
   `rigor.yml` runs the sci-adk over-claim guard on the frozen `runs/` records.
 
 ## 8. Conventions
@@ -380,15 +398,16 @@ is opt-in and exactly zero at K_AW = 0; volatile compounds are not tested agains
    (T_C,Ph), φ, organ composition over a season, the rachis share of the panicle, rice-root cell-wall / plaque
    PFAS sorption (K_cw, K_surf), Yamazaki 2023 SI raw values (MQL flags, planting density, nursery), the
    site's paddy soil.
-2. **Transfer datasets on their own drivers**: Tang (site, dates), Kim (field calendars), Li (stage
-   dates) — each currently runs on the Yamazaki site-year.
+2. **Transfer datasets on their own drivers**: not possible from the papers — Tang's and Kim's SIs give no
+   crop calendar, Kim's regions are anonymised, Li gives no stage dates (PREREG 9.17); each runs on the
+   Yamazaki site-year, a stated limitation. Needs the authors' records.
 3. **Grain**: brown rice is phloem-fed only, and the default under-predicts Li's grain by stage (1.334;
    rough basis better) and Kim's PFOA; the husk/brown ratio is below Choi 2018's (PFOS by ~1 log). The
    timing and route of grain loading are open; harvest-only data cannot decide them.
-4. **Amendment 2b** (registered in PREREG 7.9; draft, prototypes and a Korean handoff in
-   `docs/amendment2/`): the neutral path (organ water, dry-basis lipid, the composition basis per dataset),
-   site-sourced paddy soil and the irrigation-source exposure shape, app values (KNHANES intake, the
-   white/brown basis), SMILES K_cw, a volatile-compound data search; then a docs sweep.
+4. **After amendment 2b** (PREREG §9, outcome 9.14): the seasonal exposure (`obs_exposure_time`: the soil
+   scenario over-leaches C4–C8 — Kd for this Andosol, or a missing sorption process), a rice root
+   distribution for the soil scenario, a polar-end limit for the neutral sap assumption (Trapp 2007, Rein 2011 give
+   none), SMILES/curated K_cw (side project, PR ccy5123/pfas-rice-model#73).
 5. **Method B** (tight HYDRUS coupling) — later.
 
 ## 10. Gotchas / external dependencies

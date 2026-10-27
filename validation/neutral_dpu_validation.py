@@ -53,11 +53,15 @@ def drivers(season=SEASON, n_t=NT, Cwo=1.0, waters=None):
     with the crop model's DRY matter converted to the FRESH mass the ODE runs on
     (`organ_mass`), at the organ waters `waters` (default: the rice organ water)."""
     import organ_mass as om
+    import plant_air as pa
     t = np.linspace(0.0, float(season), int(n_t))
     b = organ_biomass(t, season)
     M = om.organ_matrix(b, theta=waters)
+    # the crop's DVS places the panicle's share of transpiration (PREREG 9.1b); the leaf's
+    # air-exchange surface from the crop file's SLA (9.1f)
     return dict(t=t, Cwo=np.full(len(t), float(Cwo)), Qtp=fr.Q_TP(t, season), M=M,
-                mass_basis=om.MASS_BASIS)
+                mass_basis=om.MASS_BASIS, dvs=b["dvs"],
+                area=pa.exchange_area(b["leaf"], b["dvs"]))
 
 
 # ---------------------------------------------------------------------------
@@ -193,12 +197,8 @@ def check_air_exchange(drv=None, log_kow=2.42, MW=131.4):
     print("   The root never volatilises (below ground), so it is flat across the")
     print("   ladder while the leaf, the terminal accumulator, is bounded by it.")
     print(f"   -> {'PASS' if ok else 'FAIL'} (leaf falls monotonically, root invariant)")
-    print("\n   The ladder also CHECKS the pre-existing warning threshold, which was a")
-    print(f"   judgement call: `k_aw_warning` flags K_AW > {ND.K_AW_VOLATILE:.0e}, and the")
-    print("   implemented physics puts the crossover just above it (leaf half-life")
-    print("   787 d at 1e-4, still negligible against a season, but 8 d at 1e-3, which")
-    print("   dominates). So the threshold errs on the side of flagging early — the")
-    print("   safe direction — rather than missing a volatile compound.")
+    print("\n   `k_aw_warning` has no threshold (PREREG 9.1g): any K_AW > 0 with air off is")
+    print("   flagged, and the ladder above is how large the left-out sink is.")
     print("\n   CAVEAT: the flux scales with the tissue's specific SURFACE AREA, which")
     print("   this repo has only ever used as a leaf/grain RATIO for the xylem split.")
     print("   Treat the absolute magnitude as order-of-magnitude until the areas are")

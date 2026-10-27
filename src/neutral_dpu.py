@@ -121,7 +121,7 @@ import harvest as hv
 
 from pfas_rice_plant_module_4pool_surf import (
     Compartment, Compound, Environment, PlantInputs, RiceUptakeModel,
-    binding_factors, ROOT, STEM, LEAF, FRUIT,
+    binding_factors, dry_binding, ROOT, STEM, LEAF, FRUIT,
     _speciation, P_N_OVER_P_D, LEAF_CYTOSOL_PH,
 )
 
@@ -418,10 +418,15 @@ LIPID_SOURCES = {
     "briggs_anchor": BRIGGS_ANCHORED_LIPID_FW,
 }
 DEFAULT_LIPID_SOURCE = "measured"
-RICE_SURFACE = {"leaf": 20.0, "grain": 2.0}
-# Briggs' sorption exponent b is 0.77 for roots and stems; Trapp 1994 uses 0.95
-# for LEAVES (their eq. 1 discussion), i.e. leaf lipid is closer to octanol.
-LEAF_SORPTION_EXPONENT = 0.95
+# The lipid-sorption exponent b of K_PW = W + L a Kow^b, PER ORGAN (PREREG 9.1). Trapp, Matthies &
+# McFarlane 1994 (ETC 13:413, p.417): "0.77 for roots and stem [3,4], and 0.95 for leaves [5]" -- the
+# root value is Briggs 1982's macerated barley roots, the leaf value Briggs 1983's macerated barley
+# shoots. No grain value exists; the grain runs at the midpoint of the two measured cereal-tissue
+# values and the ends are carried as a range (PREREG 5.4).
+GRAIN_SORPTION_EXPONENT_RANGE = (RCF_SLOPE, 0.95)
+ORGAN_SORPTION_EXPONENT = {"root": RCF_SLOPE, "stem": RCF_SLOPE, "leaf": 0.95,
+                           "grain": 0.5 * sum(GRAIN_SORPTION_EXPONENT_RANGE)}
+LEAF_SORPTION_EXPONENT = ORGAN_SORPTION_EXPONENT["leaf"]
 
 
 def rice_compartments(lipids: dict | None = None, waters: dict | None = None,
@@ -448,26 +453,20 @@ def rice_compartments(lipids: dict | None = None, waters: dict | None = None,
     L = dict(base, **(lipids or {}))
     g = dict.fromkeys(W, 0.0)
     g.update(gammas or {})
-    return [neutral_compartment(k, W=W[k], L=L[k],
-                                S=RICE_SURFACE.get(k, 0.0), gamma=g[k])
+    # no constant surface: the air-exchange surface comes with the drivers (PREREG 9.1)
+    return [neutral_compartment(k, W=W[k], L=L[k], gamma=g[k])
             for k in ("root", "stem", "leaf", "grain")]
 
 
-K_AW_VOLATILE = 1e-4      # above this, volatilisation rivals the other leaf sinks
-
-
 def k_aw_warning(c: NeutralCompound) -> str | None:
-    """Flag a compound whose result is an upper bound because air exchange is OFF.
+    """Flag a compound whose shoot result is an upper bound because air exchange is OFF.
 
-    K_AW above ~1e-4 puts volatilisation on a par with the other loss terms for a
-    leaf, so a run without air terms over-predicts the shoot. Returns None when
-    the non-volatile assumption is defensible.
-
-    This is the warning for a run with `air` disabled. Air exchange is now
-    IMPLEMENTED (`plant_air`, `simulate_neutral(air=True)`), so the remedy is to
-    run it rather than to caveat it -- which is what the message says.
+    Any K_AW > 0 means the leaf has a volatilisation sink this run leaves out. How large it is
+    depends on the compound and the leaf, and `simulate_neutral(..., air=True)` computes it;
+    there is no sourced K_AW below which it may be neglected (PREREG 9.1), so the flag carries
+    no threshold. None for K_AW = 0.
     """
-    if c.K_AW and c.K_AW > K_AW_VOLATILE:
+    if c.K_AW and c.K_AW > 0.0:
         return (f"{c.name}: K_AW={c.K_AW:.2e} -- volatilisation is not included in "
                 "THIS run, so shoot concentrations are an UPPER bound. Re-run with "
                 "simulate_neutral(..., air=True) to model it (needs MW); see "
@@ -492,11 +491,12 @@ def air_exchange(c: NeutralCompound, **kw):
 # forward run
 # ---------------------------------------------------------------------------
 def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
-                     phloem=False, phi: float = 0.1, T_C_Ph: float = 10.0,
+                     phloem=False, phi: float | None = None, T_C_Ph: float | None = None,
                      L_Ph: float = 1.0, tscf_model=None, C0=None,
                      air=False, air_kw=None,
                      lipid_source: str = DEFAULT_LIPID_SOURCE,
-                     dead_leaf_attached: float = 1.0):
+                     dead_leaf_attached: float = 1.0, organ_b: dict | None = None,
+                     lam_grain_dvs: tuple | None = None, grain_feed: str | None = "xylem"):
     """Run the 4-compartment DPU for a NEUTRAL organic.
 
     drivers : {t, Cwo, Qtp, M} on a common grid -- the same driver contract as
@@ -527,21 +527,33 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
         accumulator of small mass, to BAF ~20-60, which is a statement about
         assuming unrestricted loading, not a prediction of the neutral base.
 
+    grain_feed : with the phloem off, how the grain's sap reaches it. "xylem" (default, PREREG
+        9.15): a phloem stream at the stem's XYLEM-SAP concentration, of volume T_C,Ph (the
+        sourced rice midpoint) x the grain's dry growth, taken out of the leaf's xylem inflow
+        (Rein, Legind & Trapp 2011 eqs 4-5; Trapp 2007 p.374: for less polar neutrals the two
+        saps equilibrate). Neither source gives the log Kow below which a neutral is "very
+        polar" and is retained in the sieve tubes instead (Rein 2011 p.208), so none is set.
+        None: no sap stream, and the brown rice (phloem-fed, PREREG 7.2) is not predicted.
+
     Returns a dict with the usual tissue series plus the neutral diagnostics
     (K_PW per tissue, the Briggs TSCF actually used, RCF/TF at maturity).
     """
+    import model_api as _api              # the sourced midpoints (phloem, panicle share)
     t = np.asarray(drivers["t"], dtype=float)
     Cwo = np.asarray(drivers["Cwo"], dtype=float)
     Qtp = np.asarray(drivers["Qtp"], dtype=float)
     M = np.asarray(drivers["M"], dtype=float)
+    dvs, theta, husk = drivers.get("dvs"), drivers.get("theta"), drivers.get("husk")
     comps = (comps if comps is not None
              else rice_compartments(lipid_source=lipid_source))
+    # each organ's own lipid-sorption exponent (PREREG 9.1): K_PL = a Kow^b_organ
+    b = dict(ORGAN_SORPTION_EXPONENT, **(organ_b or {}))
+    comps = [replace(c, K_PL=LIPID_OCTANOL_A * 10.0 ** (b[k] * cmpd.log_kow))
+             for c, k in zip(comps, ("root", "stem", "leaf", "grain"))]
     if cmpd.pKa is not None and comps[LEAF].pH is None:
         # give the leaf a cytosolic pH so the phloem ION TRAP is available. It only
         # does anything when `phloem=True`; with the neutral base's default
-        # (phloem off, L_Ph=0) this is inert. Copy rather than mutate a
-        # caller-supplied compartment list.
-        comps = list(comps)
+        # (phloem off, L_Ph=0) this is inert.
         comps[LEAF] = replace(comps[LEAF], pH=LEAF_CYTOSOL_PH)
 
     if tscf_model is not None:
@@ -550,30 +562,66 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
     if phloem:
         core.L_Ph = float(L_Ph)
     env = neutral_environment()
+    # the panicle's share of the stem's xylem stream follows the crop's development stage
+    # (sourced, PREREG 5.2/9.1); a driver set without a stage cannot place the panicle
+    if dvs is None:
+        raise ValueError("the neutral path needs the crop's development stage ('dvs' in the "
+                         "drivers): the panicle's share of transpiration follows it (PREREG 9.1)")
+    area = drivers.get("area")
     inputs = PlantInputs(t=t, Cwo=Cwo, Qtp=Qtp, M=M,
                          leaf_loss=drivers.get("leaf_loss"),
-                         M_basis=drivers.get("mass_basis", "fresh"))   # untagged M is fresh (§8)
+                         M_basis=drivers.get("mass_basis", "fresh"),   # untagged M is fresh (§8)
+                         dvs=dvs, theta=theta, M_husk=husk, area=area)
     air_obj = None
     if air is not False and air is not None:
         air_obj = air_exchange(cmpd, **(air_kw or {})) if air is True else air
+        if area is None and getattr(air_obj, "S", None) is None:
+            raise ValueError("air exchange needs the leaf's exchange surface: drivers with "
+                             "'area' (a crop model with a leaf record) or a measured "
+                             "AirExchange(S=...) (PREREG 9.1)")
+    if grain_feed not in ("xylem", None):
+        raise ValueError(f"grain_feed must be 'xylem' or None, got {grain_feed!r}")
+    xylem_feed = (not phloem) and grain_feed == "xylem"
     model = RiceUptakeModel(env=env, cmpd=core, comps=comps, inputs=inputs,
-                            phi=(phi if phloem else 0.0),
-                            T_C_Ph=(T_C_Ph if phloem else 0.0),
-                            air=air_obj)
+                            phi=((_api.PHI if phi is None else phi) if phloem else 0.0),
+                            T_C_Ph=((_api.T_C_PH if T_C_Ph is None else T_C_Ph)
+                                    if (phloem or xylem_feed) else 0.0),
+                            lam_grain_dvs=(_api.LAM_GRAIN_DVS if lam_grain_dvs is None
+                                           else tuple(lam_grain_dvs)),
+                            air=air_obj, grain_phloem_xylem=xylem_feed)
     sol = model.solve(t, C0=C0)
     Y = sol.y
-    K = binding_factors(comps, core)
     names = ("root", "stem", "leaf", "grain")
+    th_end = (np.asarray(theta, float).reshape(M.shape)[-1] if theta is not None
+              else np.array([c.theta for c in comps]))
+    K = th_end + (1.0 - th_end) * dry_binding(comps, core)   # K_PW at harvest water
     conc = {k: Y[i] for i, k in enumerate(names)}
     ref = float(Cwo[-1]) if Cwo[-1] > 0 else float(np.nanmax(Cwo)) or 1.0
-    baf_final = {k: float(v[-1] / ref) for k, v in conc.items()}
-    # harvest operator: attached dead blades stay in the leaf/straw (src/harvest.py)
+    # harvest operator: attached dead blades stay in the leaf/straw (src/harvest.py); the
+    # organ water that made M fresh when it follows the stage (PREREG 7.1)
+    th = ({k: np.asarray(theta, float).reshape(M.shape)[:, i] for i, k in enumerate(names)}
+          if theta is not None else {k: comps[i].theta for i, k in enumerate(names)})
     obs = hv.harvest_observables(
-        t, conc, M, hv.dry_fractions({k: comps[i].theta for i, k in enumerate(names)},
-                                     inputs.M_basis),
+        t, conc, M, hv.dry_fractions(th, inputs.M_basis),
         leaf_loss=drivers.get("leaf_loss"), attached=dead_leaf_attached,
         C_leaf_fn=lambda tt: sol.sol(tt)[LEAF])
+    if model.husk:                         # brown rice + husk/rachis pool (PREREG 7.2)
+        obs["conc_dw"].update(hv.panicle_observables(
+            conc["grain"], M[:, FRUIT], 1.0 - comps[FRUIT].theta, Y[model.HUSK], husk))
+    # the brown rice is phloem-fed (PREREG 7.2): with neither the phloem nor the xylem-sap feed
+    # (PREREG 9.15) it receives nothing, so it is NOT PREDICTED rather than zero. The rough grain
+    # holds the brown rice's burden, so it is not predicted either (with the brown rice at 0 it
+    # is only a lower bound); the husk + rachis pool (the panicle's transpired deposit) stays
+    grain_predicted = bool(phloem) or xylem_feed or not model.husk
+    if not grain_predicted:
+        nan = np.full(len(t), np.nan)
+        conc["grain"] = nan
+        obs["conc_dw"]["grain"] = nan
+        obs["conc_dw"]["rough"] = nan
     straw = obs["straw_fw"]
+    baf_final = {k: float(v[-1] / ref) for k, v in conc.items()}
+    S_end = (None if area is None
+             else np.asarray(area, float).reshape(M.shape)[-1] / np.maximum(M[-1], 1e-12))
     return dict(
         t=t, compound=cmpd.name, success=bool(sol.success), conc=conc,
         Cwo=Cwo, Qtp=Qtp, M=M, straw=straw,
@@ -584,14 +632,16 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
         straw_baf=float(straw[-1] / ref),
         tf_final={k: baf_final[k] / max(baf_final["root"], 1e-12) for k in names},
         K_PW={k: float(K[i]) for i, k in enumerate(names)},
-        phloem=bool(phloem),
+        sorption_exponent={k: float(b[k]) for k in names},
+        grain_predicted=grain_predicted,
+        phloem=bool(phloem), grain_feed=("phloem" if phloem else grain_feed),
         TSCF=float(core.f_xy), log_kow=float(cmpd.log_kow),
         rcf_briggs=briggs_rcf(cmpd.log_kow),
         # air exchange: the diagnostics (per-organ permeabilities and the implied
         # volatilisation half-life) only when it is actually on; the "this is an
         # upper bound" warning only when it is not.
         air=air_obj is not None,
-        air_summary=(air_obj.summary(comps, K, M=M[-1], Qtp=float(Qtp[-1]))
+        air_summary=(air_obj.summary(comps, K, M=M[-1], Qtp=float(Qtp[-1]), S=S_end)
                      if air_obj is not None else None),
         warning=(None if air_obj is not None else k_aw_warning(cmpd)),
         N=float(env.N), eN=float(np.exp(env.N)),      # 0 and 1: no exclusion

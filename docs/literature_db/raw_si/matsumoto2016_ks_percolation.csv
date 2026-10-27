@@ -1,0 +1,15 @@
+# Matsumoto Y, Yoshida S, Nishida K (2016) 地下水で灌漑される火山灰土水田の過大な電力消費の実態 [Huge power consumption by groundwater irrigation in paddy fields of volcanic ash soils]. 農業農村工学会誌 (J. JSIDRE / Water, Land and Environ. Eng.) 84(10):847-850. DOI 10.11408/jjsidre.84.10_847 (DOI not printed in the PDF; confirmed via doi.org metadata 2026-10-27).
+# NOTE: first author is MATSUMOTO; the earlier repo note "Yoshida & Nishida 2016" omits him.
+# Site (p.847): Univ. Tokyo farm (生態調和農学機構), Nishitokyo, Tokyo; Kanto-loam terrace; ~1.6 ha volcanic-ash paddy; Andosol (黒ボク土, humic) 0-27 cm over brown loam; groundwater ~20 m; 2015 season. Puddling is NOT mentioned. No drainage channel (high percolation).
+# Table-1 (p.848): Ks of each layer in paddy B, in situ, derived by Darcy from tensiometer heads (5,10,20,30 cm) and night-time percolation; geometric mean of values at 00:00 on Aug 4, 5 and 28.
+# Table-2 (p.848): percolation (mean ± SD) from night-time ponded-water-level fall (no rain, no irrigation; ET ignored), loggers 22 May - 16 Sep 2015.
+# Read by: literature subagent, 2026-10-27, not re-checked by main.
+table,item,depth_cm,Ks_cm_s,Ks_mm_d,percolation_mean_mm_d,percolation_sd_mm_d
+Table-1,paddy B,0-5,1.05e-5,9.1,,
+Table-1,paddy B,5-12.5,1.86e-5,16.1,,
+Table-1,paddy B,12.5-25,1.35e-5,11.7,,
+Table-1,paddy B,25-32,1.81e-5,15.6,,
+Table-2,paddy A,,,,37.8,3.8
+Table-2,paddy B,,,,35.6,7.8
+Table-2,paddy C,,,,53.1,22.5
+Table-2,paddy D,,,,42.5,17.4

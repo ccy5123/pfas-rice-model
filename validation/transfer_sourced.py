@@ -132,7 +132,8 @@ def main():
     ends = TRANSFER + ("yamazaki",)
     print(f"{'variant':22}" + "".join(f"{k:>14}" for k in ends))
     for v in VARIANTS:
-        print(f"{v:22}" + "".join(f"{rmse(err[v][k]):>14.3f}" for k in ends))
+        print(f"{v:22}" + "".join(f"{rmse(err[v][k]):>14.3f}" for k in ends)
+              + (f"   [withdrawn: {api.WITHDRAWN_VARIANTS[v]}]" if v in api.WITHDRAWN_VARIANTS else ""))
     print("reported, not decided on (PREREG 7.13): Li 2025 grain on the rough-grain basis "
           + "  ".join(f"{v} {rmse(err[v]['li_grain_rough']):.3f}" for v in VARIANTS
                       if err[v].get("li_grain_rough")))
@@ -145,7 +146,8 @@ def main():
         for k in ends:
             d = dec[v][k]
             print(f"  {k:14} {d['verdict']:6s} delta {d['delta']:+.3f} [{d['lo']:+.3f}, {d['hi']:+.3f}]")
-    switch = [v for v in dec if any(dec[v][k]["verdict"] == "better" for k in TRANSFER)
+    # a withdrawn variant (PREREG 9.4) is scored for the record but cannot become the default
+    switch = [v for v in dec if v not in api.WITHDRAWN_VARIANTS and any(dec[v][k]["verdict"] == "better" for k in TRANSFER)
               and all(dec[v][k]["verdict"] != "worse" for k in ends)]
     default = DEFAULT if not switch else min(
         switch, key=lambda v: np.median([rmse(err[v][k]) for k in TRANSFER]))
@@ -157,6 +159,7 @@ def main():
           + f"   median (band) {band:.3f} log10 = x{10 ** band:.2f}")
     with open(OUT, "w") as f:
         json.dump(dict(errors=err, decisions=dec, default=default, switch_candidates=switch,
+                       withdrawn=api.WITHDRAWN_VARIANTS,
                        default_scores=scores, band_log10=band), f, indent=1, default=float)
     print(f"[written] {os.path.relpath(OUT, ROOT)}")
     labels = {"tang": "Tang 2026 per-organ TF, 0.1 ug/g", "kim_point": "Kim 2019 grain BAF (point)",

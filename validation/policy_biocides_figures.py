@@ -91,7 +91,7 @@ def _labels():
         root_y="this model, root BAF  (L/kg)",
         straw_y="this model, straw BAF  (L/kg)",
         rho="Spearman rho",
-        ratio_title="Above log Kow ~6.7 the root number changes meaning",
+        ratio_title="Past the half-equilibrium point the root number changes meaning",
         ratio_sub="one season (117.5 d) cannot equilibrate the root: past the red line "
                   "(root BAF = K_PW / 2) it is a rate, not a partition coefficient",
         ratio_y="root BAF / K_PW  (1 = equilibrated)",
@@ -120,7 +120,7 @@ def load_census():
             rows.append(dict(substance=r["substance"], verdict=r["verdict"],
                              log_kow=f("log_kow"), bpc=(r.get("bpc") or "").strip(),
                              bat_A=f("bat_A"), tscf=f("P_TSCF"), kpw=f("P_K_PW_root"),
-                             root=f("P_root"), straw=f("P_straw"), grain=f("P_grain")))
+                             root=f("P_root"), straw=f("P_straw"), grain=f("P_grain"), husk=f("P_husk")))
     return rows
 
 

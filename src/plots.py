@@ -761,7 +761,7 @@ def fig_drivers(res):
 
 
 def fig_cwo_profile(congener, level=1.0, profile="flooded", season=120.0,
-                    n_t=121, k_leach=0.02, height=230):
+                    n_t=121, Koc=None, height=230):
     """Compact preview of the pore-water exposure shape C_w^o(t) for the chosen
     `cwo_profile`, overlaid on the flat constant baseline (both season-mean ==
     `level`, so only the temporal shape differs). Short chains leach to a decline,
@@ -773,7 +773,7 @@ def fig_cwo_profile(congener, level=1.0, profile="flooded", season=120.0,
     t = np.linspace(0.0, float(season), int(n_t))
     flat = api.cwo_profile_series(t, level, "constant")
     shaped = api.cwo_profile_series(t, level, profile, n_C=n_C, group=group,
-                                    congener=congener, k_leach=k_leach)
+                                    congener=congener, Koc=Koc)
     fig = go.Figure()
     fig.add_scatter(x=t, y=flat, name="constant", line=dict(color="#bbb", width=1.5, dash="dash"),
                     hovertemplate="constant: %{y:.3g}<extra></extra>")

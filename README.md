@@ -97,9 +97,14 @@ pip install phydrus
 python validation/hydrus_coupled_run.py
 ```
 
-Weakly sorbed short chains leach during flooding, long chains stay buffered (the paddy-soil inputs
-are not yet site-sourced, so no soil-scenario number is reported). `simulate(cwo_profile="flooded")` gives an engine-free analytic
-shape whose `k_leach` is calibrated per congener to the HYDRUS run. On Claude Code on the web the
+The paddy is the Tsukuba Andosol of the calibration site (amendment 2b, PREREG 9.2-9.13): the
+measured retention, Ks, bulk density and f_oc, a plough pan whose Ks makes the sourced percolation,
+the Ibaraki water calendar, the site-year's transpiration, evaporation and rain; grid-converged.
+Weakly sorbed short chains leach under the percolation, long chains stay buffered.
+`simulate(cwo_profile="flooded")` reads that scenario's own stored shapes
+(`params/cwo_shapes_hydrus.csv`, `validation/cwo_shape_table.py`) with no engine needed. The
+Yamazaki irrigation-source scenario (`validation/irrigation_source_check.py`) fails its own
+post-season soil check for C4-C8 and is not merged into the band. On Claude Code on the web the
 SessionStart hook builds the engine.
 
 ## Interactive app
@@ -146,8 +151,8 @@ the solute it deposits. Grain and leaf are terminal accumulators, so the model i
 
 What is still open is listed in `docs/ASSUMPTIONS.md` (marked **open**) and
 `params/value_provenance.csv`: a crop parameter set for Koshihikari/Kasalath, the seasonal course
-of the irrigation-water exposure, the soil-side values, the neutral path's composition, the app's
-per-volume density. The transfer datasets still run on the calibration site-year's drivers because
+of the irrigation-water exposure (its soil scenario over-leaches C4-C8), the root distribution of the
+soil scenario, the K_cw of novel structures (side project). The transfer datasets still run on the calibration site-year's drivers because
 their own sites and dates are not in the papers. How the growth and PFAS papers
 physically processed their rice (sampling, organ separation, washing, drying, milling), and a
 checklist for new sampling, is in `docs/rice_sample_processing_KR.md`. Korean policy-briefing scripts built

@@ -1,0 +1,16 @@
+# Tokumoto I, Toride N, Inoue M (2005) Hydrodynamic dispersion for an Andisol with aggregated soil structure. J. Jpn. Soc. Hydrol. & Water Resour. 18(4):401-410. DOI 10.3178/jjshwr.18.401
+# Japanese text (read via PyMuPDF text layer + page images; poppler lacked the CJK pack). English abstract p.401.
+# Soil (p.402-403): NARO Kyushu-Okinawa Agric. Res. Center, Nishigoshi, Kumamoto; turf-covered, uncropped; clay 39.1 %, silt 35.9 %, sand 25 % (LiC); organic matter 30.0 % (loss on ignition).
+# Columns: 2-mm sieved, packed at dry density 0.48 (printed "kgm-3", i.e. Mg/m3 = g/cm3), 4.5 cm i.d., 25-30 cm long; CaCl2 0.06 -> 0.09 mol/L step (EC), R = 1 assumed and checked (Fig.6).
+# Table 1 (p.405): example CDE fits for the BTCs of Fig.4 (saturated theta ~0.72, unsaturated theta ~0.52). D in cm2/d, v and Jw in cm/d, z in cm.
+# Summary rows from text: lambda ~0.2 cm constant for theta 0.5-0.6 (unsat.), ~0.4 cm near saturation; saturated lambda = 0.0035 v + 0.25 (Fig.10 p.408, r2 0.861), >2 cm at the highest v.
+# Fig.11 caption (p.408): VG fit to the LOW-SUCTION part only (h 0 to about -100 cm): thetas 0.737, thetar 0.446, alpha 0.0376 /cm, n 2.692 (thetar here = intra-aggregate water, not residual).
+# Retention data (Fig.1, to h = -11780 cm) and all lambda points (Figs.7,8,10) are plotted only; no table of them exists in the paper.
+# Read by: literature subagent, 2026-10-27, not re-checked by main.
+flow,r2,theta_est_cm3_cm3,D_cm2_d,v_cm_d,z_cm,Jw_cm_d,lambda_cm_computed_D_over_v
+saturated,0.9997,0.864,1500,1617,8.4,1409,0.93
+saturated,0.9996,0.867,1378,1632,12.4,1409,0.84
+saturated,0.9994,0.928,1315,1506,16.2,1409,0.87
+unsaturated,0.9995,0.575,0.637,3.11,11.5,1.79,0.20
+unsaturated,0.9986,0.585,0.534,3.05,17.0,1.79,0.18
+# lambda_cm_computed_D_over_v is computed here (D/v, the paper's eq.2 definition), not printed in Table 1. Jw is printed once per flow block in Table 1 and is assumed to apply to all depths of that block.

@@ -1,0 +1,13 @@
+# Tokumoto I, Noborio K, Koga K (2010) Coupled water and heat flow in a grass field with aggregated Andisol during soil-freezing periods. Cold Regions Sci Technol 62:98-106. DOI 10.1016/j.coldregions.2010.03.005
+# Table 1 "Estimated parameters of the bimodal retention functional model for Eq. (7)" (Durner 1994), p.102.
+# Site (p.100): grass field (reed canary grass), 39°48'N 141°05'E, northeastern Japan; flat site with 0.3-0.4 m volcanic-ash (Andisol) layer; "predominant soil texture was sandy loam". UPLAND, never puddled.
+# Undisturbed cores; retention by hanging water column (0 to -1.2 m) then centrifuge on the same samples (p.100); points plotted in Fig.5 (p.101), NOT tabulated. Fit r2 = 0.999.
+# Depth column as PRINTED (0.075, 0.015, 0.03 m); the text (p.100) says cores from 0.075, 0.15 and 0.30 m -> the printed 0.015/0.03 are probably typos for 0.15/0.30.
+# alpha unit NOT stated; given air entry h ~ -0.3 m and the second drop near h ~ -10 m (text), the values are consistent with 1/cm, not 1/m (inference, flagged).
+# w2 = weight of sub-curve 2 (fine, intra-aggregate pores); w1 = 1 - w2. m_i = 1 - 1/n_i assumed (not stated explicitly in the table).
+# No Ks and no l were fitted (retention only). Mean thetas of the three depths 0.72 (p.100); mean bulk density 0.15-0.30 m 0.63 Mg/m3 (p.100); Fig.4 bulk density / Ks profile is figure-only.
+# Read by: literature subagent, 2026-10-27, not re-checked by main.
+depth_m_as_printed,thetas,thetar,alpha1,n1,alpha2,n2,w2
+0.075,0.707,0.030,0.028,3.716,0.0014,1.168,0.967
+0.015,0.705,0.030,0.033,2.386,0.0005,1.227,0.902
+0.03,0.732,0.030,0.022,3.717,0.0014,1.178,0.950

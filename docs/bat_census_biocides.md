@@ -5,7 +5,7 @@ Run it (`python validation/bat_census_biocides.py`, ~3 min; `--fast` skips the l
 sweep) rather than quoting this file — every number below is printed by that script.*
 
 **한 줄 요약.** BAT 보고서에 나오는 물질들을 이 저장소의 **중성 유기물 경로**
-(`model_api.simulate_neutral`)에 넣어 벼 뿌리/짚/낟알 축적을 계산했다. **117행이 돌아간다**
+(`model_api.simulate_neutral`)에 넣어 벼 뿌리/짚/현미/왕겨 축적을 계산했다(현미의 체관액 = 물관액 농도, Trapp 2007·Rein 2011, PREREG 9.15). **117행이 돌아간다**
 (초판 24 → 요청으로 받은 값 19종 추가 → BAT가 실제로 입력한 감사본 61종 전체를 받아 21종 더
 → BAT에 **입력된 적 없는** 수집시트에서 품질 플래그를 통과하고 pKa까지 가진 52종). 그중
 **69개**가 이 저장소가 측정 데이터를 가진 log Kow 구간 안에 있고, **31개**는 이온화 때문에
@@ -139,22 +139,26 @@ would have been wrong in the same direction with nothing to catch it.
 ## What the model says
 
 Rice BAF [L/kg fresh weight] at a held exposure (pore water 1 µg/L) over one season
-of the calibration site-year (Tsukuba 2020, transplanting → harvest 117.5 d), γ = 0,
-so leaf/straw/grain are **upper bounds**:
+of the calibration site-year (Tsukuba 2020, transplanting → harvest 117.5 d), on the amendment-2b
+plant (staged organ water, brown rice + husk pool), γ = 0, so leaf/straw/brown/husk are **upper bounds**.
+The **brown rice** is phloem-fed (PREREG 7.2); its sap is taken at the xylem-sap concentration, the
+sources' assumption for less polar neutrals (Trapp 2007 p.374; Rein, Legind & Trapp 2011 eqs 4-5;
+PREREG 9.15) -- very polar neutrals may be retained in the sieve tubes, and no log Kow cut is given for
+that. The panicle's transpired deposit is the husk + rachis pool, per kg **dry** ("husk dw"):
 
-| substance | log Kow | TSCF | K_PW root | root | straw | grain | scope |
-|---|---:|---:|---:|---:|---:|---:|---|
-| Chlorophacinone | 2.46 | 6.5e-01 | 1.67 | 1.39 | 63.6 | 4.00 | inside |
-| Propiconazole | 3.72 | 1.7e-01 | 9.64 | 9.19 | 20.0 | 1.20 | inside |
-| Tralopyril | 4.08 | 9.0e-02 | 17.6 | 16.7 | 10.5 | 0.571 | inside |
-| Permethrin | 4.60 | 3.0e-02 | 43.2 | 42.8 | 3.73 | 0.139 | inside |
-| Triclosan | 4.76 | 2.1e-02 | 57.1 | 56.7 | 2.51 | 0.080 | inside |
-| Triflumuron | 4.91 | 1.4e-02 | 74.3 | 74.0 | 1.72 | 0.046 | inside |
-| Epsilon-metofluthrin | 5.00 | 1.1e-02 | 87.1 | 86.8 | 1.35 | 0.032 | inside |
-| Hexaflumuron | 5.68 | 1.5e-03 | 289 | 284 | 0.157 | 0.0014 | root only |
-| Difethialone | 6.29 | 1.9e-04 | 851 | 667 | 0.0124 | 3.8e-05 | root only |
-| Empenthrin | 6.30 | 1.8e-04 | 866 | 674 | 0.0118 | 3.6e-05 | root only |
-| Cholecalciferol | 10.24 | 1.4e-13 | 9.4e+05 | 1370 | 1.4e-14 | 4.0e-20 | extrapolation |
+| substance | log Kow | TSCF | K_PW root | root | straw | brown rice | husk dw | scope |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| Chlorophacinone | 2.46 | 6.5e-01 | 3.54 | 2.83 | 65.0 | 2.46 | 44.8 | inside |
+| Propiconazole | 3.72 | 1.7e-01 | 27.7 | 26.1 | 19.6 | 0.768 | 13.9 | inside |
+| Tralopyril | 4.08 | 9.0e-02 | 51.9 | 49.0 | 10.2 | 0.412 | 7.43 | inside |
+| Permethrin | 4.60 | 3.0e-02 | 130 | 128 | 3.51 | 0.142 | 2.50 | inside |
+| Triclosan | 4.76 | 2.1e-02 | 172 | 171 | 2.34 | 0.094 | 1.64 | inside |
+| Triflumuron | 4.91 | 1.4e-02 | 224 | 223 | 1.59 | 0.062 | 1.07 | inside |
+| Epsilon-metofluthrin | 5.00 | 1.1e-02 | 263 | 261 | 1.24 | 0.047 | 0.805 | inside |
+| Hexaflumuron | 5.68 | 1.5e-03 | 876 | 784 | 0.132 | 0.0030 | 0.050 | root only |
+| Difethialone | 6.29 | 1.9e-04 | 2580 | 1450 | 0.0091 | 9.1e-05 | 0.00148 | root only |
+| Empenthrin | 6.30 | 1.8e-04 | 2630 | 1460 | 0.0086 | 8.6e-05 | 0.00138 | root only |
+| Cholecalciferol | 10.24 | 1.4e-13 | 2.8e+06 | 2230 | 8.9e-15 | 9.4e-20 | 1.5e-18 | extrapolation |
 
 The pattern is one sentence: **everything the opinions call bioaccumulative loads
 the root and does not reach the grain**, because rice shoot loading is gated by a
@@ -202,12 +206,12 @@ Kow and of nothing else that varies (its §8.11: difethialone and cyphenothrin, 
 539.5 vs 375.5, solubility 39× apart, Henry 16,000× apart, return the same
 number). Here the same statement is **structural** — `K_PW` and `TSCF` are
 functions of log Kow, and MW, solubility and Henry appear in no term of the core
-ODE — and the two substances come back **bit-identical** (root 653.508 both).
+ODE — and the two substances come back **bit-identical** (root 1453.46 both).
 
 **(b) The one property that is not inert here is the one BAT proved inert.**
 Henry's constant reaches the answer through the opt-in air term
 (`src/plant_air.py`, identically zero at `K_AW = 0`). Empenthrin (K_AW 1.4e-2)
-loses about 30 % of its leaf burden to volatilisation (leaf BAF 5.8e-4 → 4.1e-4);
+loses part of its leaf burden to volatilisation (leaf BAF 4.82e-3 → 3.98e-3, about 17 %);
 cyphenothrin (9e-7) loses nothing. So the three substances BAT cannot tell apart are separable here — but
 only through a term that is off by default and whose absolute magnitude is
 surface-area-limited (docs §plant-air).
@@ -218,8 +222,8 @@ their own neutral end:
 
 | pKa | f_neutral | Henderson–Hasselbalch | BAT fish BCF | rice root | rice leaf |
 |---:|---:|---:|---:|---:|---:|
-| 6.000 | 0.091 | 0.091 | 0.245 | **0.875** | 0.582 |
-| 8.065 | 0.921 | 0.921 | 0.937 | 1.000 | 0.994 |
+| 6.000 | 0.091 | 0.091 | 0.245 | **0.722** | 0.544 |
+| 8.065 | 0.921 | 0.921 | 0.937 | 0.999 | 0.994 |
 | 10.000 | 0.999 | 0.999 | 1.000 | 1.000 | 1.000 |
 
 Both models damp ionisation far below what the chemistry predicts — the report's
@@ -235,8 +239,8 @@ with a caveat.**
 9.00 (its §8.11/§8.16). This model's root has no such turnover — the Briggs RCF
 has no descending limb — and its straw peaks at the TSCF bell, log Kow **1.75**,
 about 4.5 log units below BAT's peak. What the root does instead is **saturate
-kinetically**: root BAF / K_PW is 0.96 at log Kow 3.9, 0.48 at 6.3, 0.016 at 8.4
-and 0.0004 at 10.5 (half at 6.26). Above that the season is too short to equilibrate the root, so
+kinetically**: root BAF / K_PW is 0.96 at log Kow 3.9, 0.56 at 6.3, 0.020 at 8.4
+and 0.0005 at 10.5 (half at 6.40). Above that the season is too short to equilibrate the root, so
 the model's root number stops being a partition coefficient and becomes a rate.
 That is a limit of this model, stated here rather than discovered later.
 
@@ -258,7 +262,7 @@ chosen here.
 **(f) The report's largest finding is amplified here, not damped.** Entering a
 metabolic rate moved BAT's fish BCF by up to 82× (its §8.4). Those same fish kM
 half-lives, transplanted into the plant as a **labelled sensitivity**, move this
-model's **grain** by up to **2,616×** — because grain and leaf are terminal
+model's **brown rice** by up to **8,344×** — because grain and leaf are terminal
 accumulators whose only other sink is growth dilution, which goes to zero at
 maturity. The quantity the report identifies as its least defensible input is the
 one the edible compartment is most sensitive to, and for a plant nobody has
@@ -338,7 +342,7 @@ both defect groups and never entered BAT, so no result here is touched by it.
   because the question the report makes unavoidable is worth asking of this model
   too. This repo's own in-planta half-life is itself open (§4i: measured parent
   fractions differ 4.8× between species for one compound in one experiment).
-* **γ = 0** makes every leaf and grain number an upper bound.
+* **γ = 0** makes every leaf, grain and husk number an upper bound.
 * **The exposure is a held pore-water concentration**, not a soil inventory. Any
   real use of these numbers needs the soil side (`cwo_profile=`, or HYDRUS) and a
   substance-specific Koc — which for these biocides this repo does not have.

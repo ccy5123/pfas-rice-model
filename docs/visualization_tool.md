@@ -260,7 +260,7 @@ The soil modes need a Kd, and the PFAS chain-length `Koc` QSPR is a per-CF2 grou
 with no meaning for a neutral. `literature_params.koc_neutral` supplies the standard
 hydrophobic QSPR instead — **Karickhoff 1981**, `log Koc = 0.989·log Kow − 0.346` — as the
 editable default of the sidebar's `soil Koc` field, and it drives the flooded `Cwᵒ(t)` shape
-(`cwo_profile_series(log_kow=…)`), that shape's `k_leach` default (`default_k_leach(Koc=…)`)
+(`cwo_profile_series(log_kow=…)`, interpolated in log10 Kd between the stored HYDRUS shapes)
 and the live HYDRUS run (`hydrus_drivers(log_kow=…)` or `Kd=`, via `soil_hydrus.inputs_from_hydrus(Kd=…)`).
 It is flagged **PROVISIONAL** for a specific reason: no table in this repo scores a *predicted*
 Koc (the neutral tables either supply the exposure directly or carry the paper's own measured

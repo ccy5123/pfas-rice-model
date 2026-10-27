@@ -1,0 +1,14 @@
+# Moraes JFV (1973) Efeitos da inundação do solo. 1. Influência sobre o pH, o potencial de óxido-redução e a disponibilidade do fósforo no solo. Pesq. Agropec. Bras., Sér. Agron. 8:93-101. (no DOI)
+# Scanned PDF (OCR text layer has errors); values below read from the rendered page images.
+# Quadro 1 (p.94): four MEXICAN soils characterised at the Colegio de Postgraduados, Escuela Nacional de Agricultura (Mexico). Not Andosols; not Japanese.
+# Experiment (pp.94-95): greenhouse INCUBATION, 1 kg soil in 3-kg pots, 3 cm standing water to the end, 4 P levels x 3 reps; no rice plants. pH (glass electrode) and Eh (Pt) measured in situ at 4 cm depth every 7 days (p.95-96).
+# Temperature (p.96): -5 °C nights to 45 °C days initially; heating only from day 35; author attributes the slow pH change to the low temperatures.
+# Result (p.96, Fig.2; English abstract p.101): final pH 6.5-7.0 in all four soils; Piedras Negras (alkaline) stable after ~2 weeks, the three acid soils after ~7 weeks. Eh stable at -200 to -300 mV after week 7.
+# Note: La Granja sand+silt+clay as printed = 31+44+35 = 110 % (an error in Quadro 1; transcribed as printed). Soil name printed "Mesilhas" in Quadro 1, "Mesillas" in the text.
+# Note: initial pH of Mesillas is 5.42 in Quadro 1 but 5,40 in the text (p.96). pH-time series is figure-only (Fig.2), not tabulated.
+# Read by: literature subagent, 2026-10-27, not re-checked by main.
+soil,texture_class,sand_pct,silt_pct,clay_pct,pH_initial_Quadro1,EC_mmhos_cm_25C,pH_final_range,weeks_to_stable_pH
+Hogamacho,argila (clay),23,36,41,5.42,0.027,6.5-7.0,7
+Mesillas,argila (clay),19,28,53,5.42,0.025,6.5-7.0,7
+La Granja,franco (loam),31,44,35,5.60,0.047,6.5-7.0,7
+Piedras Negras,argila (clay),3,22,75,7.90,0.112,6.5-7.0,2

@@ -79,13 +79,15 @@ def section1(quiet=False):
     for c in api.chain_table():
         n = c["name"]
         base = api.simulate(n)
-        flood = api.simulate(n, cwo_profile="flooded")
+        flood = api.simulate(n, Cwo=1.0, cwo_profile="flooded")
         prev = api.simulate(n, **PREV)
         d = dict(name=n, n_C=c["n_C"], group=c["group"],
                  root=base["baf_final_dw"]["root"], straw=base["baf_final_dw"]["straw"],
                  grain=base["baf_final_dw"]["grain"],
                  grain_prev=prev["baf_final_dw"]["grain"],
-                 grain_flooded=flood["baf_final_dw"]["grain"],
+                 # per unit SEASON-MEAN pore water (the flooded shape is normalised to it; a BAF
+                 # on the harvest-day pore water is meaningless where that pore water leached to ~0)
+                 grain_flooded=float(flood["conc_dw"]["grain"][-1]) / 1.0,
                  obs_grain=None, yz_grain=None, yz_grain_prev=None)
         if n in obs_all:
             o = api.observed_baf(n)

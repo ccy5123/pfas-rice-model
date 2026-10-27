@@ -558,19 +558,11 @@ def test_koc_neutral_is_karickhoff_and_separate_from_the_pfas_qspr():
 
 def test_neutral_soil_side_plumbing_is_koc_driven_and_pfas_defaults_are_untouched():
     """The neutral compound reaches every soil-side entry point through its own Koc:
-    the flooded Cwᵒ(t) shape, its k_leach default and the HYDRUS Kd. The PFAS table
-    must not answer for a neutral, and the PFAS defaults must not move."""
+    the flooded Cwᵒ(t) shape (interpolated in Kd between the stored HYDRUS shapes) and the
+    HYDRUS Kd. The PFAS defaults must not move."""
     import model_api as api
     import literature_params as lp
     Koc = float(lp.koc_neutral(2.45))
-    # k_leach: the HYDRUS-calibrated per-congener TABLE is PFAS-only; a neutral takes
-    # the log10(Koc) fallback fit, which is a property of the leaching model, not of PFAS
-    rows = {r["congener"]: float(r["k_leach"]) for r in csv.DictReader(
-        l for l in open(os.path.join(os.path.dirname(__file__), "..", "params", "cwo_kleach.csv"))
-        if not l.startswith("#"))}
-    assert api.default_k_leach("PFOA") == pytest.approx(rows["PFOA"])  # the PFAS table answers
-    kn = api.default_k_leach(Koc=Koc)
-    assert 0.0 <= kn <= 0.15 and kn != pytest.approx(0.02)             # not the flat placeholder
     # the flooded shape runs off log_kow with no congener at all, and is mean-normalised
     t = np.linspace(0.0, 120.0, 241)
     flooded = api.cwo_profile_series(t, level=1.0, profile="flooded", log_kow=2.45)

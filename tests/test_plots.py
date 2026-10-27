@@ -83,7 +83,7 @@ def test_soil_profile_heatmap_and_isotherm():
                 conc=np.outer(np.linspace(1, 0.5, 9), np.ones_like(res["t"])))
     fig = plots.fig_soil_profile(res, profile=prof)
     assert any(d.type == "heatmap" for d in fig.data)
-    _, soil = api.pore_water_from_inventory(res["t"], 5.0)
+    _, soil = api.pore_water_from_inventory(res["t"], 5.0, congener="PFOA")
     iso = plots.fig_isotherm(soil, Cwo_now=1.0)
     assert isinstance(iso, go.Figure) and len(iso.data) >= 1
 

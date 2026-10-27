@@ -39,6 +39,11 @@ def drv():
     return V.drivers()
 
 
+# a leaf surface per fresh mass of the size the crop gives (2 x SLA x (1 - theta), PREREG 9.1f);
+# root, stem and panicle carry none
+_S = np.array([0.0, 0.0, 16.0, 0.0])
+
+
 def _setup(log_kow=2.0, MW=150.0, **kw):
     """An AirExchange plus the compartments / K_PW it acts on."""
     comps = ND.rice_compartments()
@@ -135,24 +140,23 @@ def test_no_exchange_from_roots():
 
 
 def test_stem_is_cuticle_only_and_inert_without_a_surface_area():
-    """'Only the cuticular pathway is considered for the stem.' And the shipped
-    rice compartments give the stem S = 0, so the term stays inert until a real
-    stem surface area is supplied -- a documented scope limit, pinned here so it
-    cannot silently become a hidden number."""
+    """'Only the cuticular pathway is considered for the stem.' The crop gives the leaf a
+    surface and the stem and panicle none (PREREG 9.1f: no sourced stem cuticle area; the
+    panicle's exposed hull is the husk pool), and the shipped compartments carry no constant
+    surface at all -- pinned so neither can silently become a hidden number."""
     air, comps, K_PW = _setup(K_AW=0.5)
-    assert comps[STEM].S == 0.0
-    rows = air.summary(comps, K_PW, M=np.full(4, 0.05), Qtp=0.1)
+    assert all(c.S == 0.0 for c in comps)
+    rows = air.summary(comps, K_PW, M=np.full(4, 0.05), Qtp=0.1, S=_S)
     assert rows["stem"]["P_stomatal"] == 0.0        # no stomata on the stem
     assert rows["leaf"]["P_stomatal"] > 0.0
     assert rows["stem"]["rate"] == 0.0              # S = 0 -> inert
+    assert rows["grain"]["rate"] == 0.0
+    assert air.summary(comps, K_PW, M=np.full(4, 0.05), Qtp=0.1)["leaf"]["rate"] == 0.0
     with_area = PA.AirExchange(K_AW=0.5, MW=150.0, log_kow=2.0,
                                S=dict(stem=5.0, leaf=20.0, grain=2.0))
     assert with_area.summary(comps, K_PW, M=np.full(4, 0.05), Qtp=0.1)["stem"]["rate"] > 0.0
 
 
-# --------------------------------------------------------------------------
-# the K_AW = 0 constraint: PFAS must be untouched
-# --------------------------------------------------------------------------
 def test_core_defaults_to_no_air_exchange():
     """The hook must be opt-in: with `air=None` the term is not merely zero, it is
     never evaluated -- which is what keeps every PFAS result bit-identical."""
@@ -238,8 +242,9 @@ def test_equilibrium_with_the_air_gives_zero_net_flux():
     K_AW = 1e-3
     air = PA.AirExchange(K_AW=K_AW, MW=150.0, log_kow=2.0,
                          C_air=PA.M3_TO_L * K_AW * C[LEAF] / K_PW[LEAF])
+    S = np.array([0.0, 3.0, 16.0, 2.0])                 # every shoot organ given an area here
     f = air.flux(C=C, M=np.array([0.03, 0.04, 0.05, 0.02]), K_PW=K_PW, comps=comps,
-                 Qtp=0.1, xyl_share=(0.9, 0.1))
+                 Qtp=0.1, xyl_share=(0.9, 0.1), S=S)
     assert f[LEAF] == pytest.approx(0.0, abs=1e-12)
     # the grain sits at a different concentration, so it is NOT at equilibrium
     assert f[FRUIT] < 0.0
@@ -253,7 +258,7 @@ def test_volatilisation_half_life_is_reported_and_ordered():
     K_PW = binding_factors(comps, core)
     M, Q = np.array([0.03, 0.04, 0.05, 0.02]), 0.1
     hl = [PA.AirExchange(K_AW=k, MW=150.0, log_kow=2.0)
-          .summary(comps, K_PW, M=M, Qtp=Q)["leaf"]["half_life"]
+          .summary(comps, K_PW, M=M, Qtp=Q, S=_S)["leaf"]["half_life"]
           for k in (0.0, 1e-4, 1e-2)]
     assert np.isinf(hl[0])                       # PFAS: no air pathway at all
     assert hl[1] > hl[2] > 0.0                   # more volatile -> faster loss
