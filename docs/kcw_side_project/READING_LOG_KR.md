@@ -57,6 +57,13 @@ SI 원본(사용자 manifest `si_manifest.csv`):
 | Sörengård 2020 J. Environ. Chem. Eng. `10.1016/j.jece.2020.103744` | 본문(SI 없음) | Fig. 1의 식물 유래 흡착제 PFOA·PFOS log Kd(색으로 읽음) → `raw_si/sorengard2020_fig1_plant_sorbents.csv` | 05a6e1a16e55ada754154d91ce509cad4749aad4b2c95b2087a62629415ced6b |
 | Mokwena & Okonkwo 2022 Emerg. Contam. `10.1016/j.emcon.2022.01.001` | 본문 | pH 2, mg/L 조건이라 쓸 수 없음. 추출하지 않음 | 676f7a2c05e76683dc3bece27094356a05ac656414f8cf5a86614b727536aab9 |
 
+### 3.2 Tian 2019 WSU 박사논문 (사용자가 Drive에 올림)
+- 하위 에이전트가 전체를 읽었고, 주 세션이 핵심 문장 두 곳(p. 116, p. 144)을 원문과 대조했습니다. SHA-256 1f57b8a82043ffb03623f544eb64856a8fc815469b237685e5828797073e08f3.
+- 셀룰로오스는 다루지 않습니다. 리그닌은 모두 Kraft 리그닌(Indulin AT)과 그 아민 개질체입니다.
+- 개질하지 않은 Kraft 리그닌은 PFOA, PFBA, PFBS를 거의 흡착하지 않았습니다(흡착제 50 mg/L, PFAS 1–5 mg/L, pH ≈ 6). 수치 Kd는 없습니다.
+  이 투입량에서는 Kd < 약 1000 L/kg만 말하므로 Mel 2024(17 L/kg)와 모순되지 않습니다.
+- Mel 2024 Fig. 2의 "quaternized cellulose" 값의 출처가 아닙니다. raw_si에 넣을 수치가 없습니다.
+
 ## 4. 찾지 못한 기록: "Prompt2 handoff"
 - 찾는 것: `params/Kcw_Klignin_params_v2.csv`와 함께 왔다는 handoff. K_cw_poly 절대 크기(PFOA 4.0), 설폰산 오프셋 0.40, 기울기 0.10의 출처.
 - 찾은 곳:

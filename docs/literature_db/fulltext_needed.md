@@ -9,7 +9,6 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 
 | DOI | paper | needed for | why it failed |
 |---|---|---|---|
-| hdl 2376/111903 | Tian 2019, WSU PhD dissertation | whether it holds lignin/cellulose PFAS sorbent data (Mel 2024 ref 35) | JavaScript-only repository page |
 
 Leads, not yet requested (ask before relying on them):
 - Kobayashi & Horie 1994, Jpn. J. Crop Sci. 63:193-199 (spikelet and rachis-branch differentiation) —
@@ -52,3 +51,8 @@ Main texts and SI read; extracted values in `raw_si/` (file named per entry); re
 - 10.1139/er-2025-0116 Malaviya et al. 2025, Environ. Rev. — open accepted manuscript found 2026-10-27 (University of Toronto
   repository, utoronto.scholaris.ca bitstream b9636f7f-77fd-4aef-b9f9-eb82fef09469; SHA-256 65ae5c0a59fb26ec7fa3d878baddbe30e930811c587919c488d4b00145e28091).
   Checked only for cell-wall K data (none). NOT yet read for its purpose here (the long-chain lipid mechanism); not the version of record.
+- hdl 2376/111903 Tian 2019, WSU PhD dissertation "Novel adsorbents for per- and polyfluoroalkyl substances" (uploaded by the user to Drive,
+  same file as the repository copy, SHA-256 1f57b8a82043ffb03623f544eb64856a8fc815469b237685e5828797073e08f3; read in full by a subagent, key
+  sentences re-checked by the main session). No cellulose at all; unmodified Kraft lignin (Indulin AT) showed "no adsorption" of PFOA (§4.3.2,
+  p. 116) and "nearly no adsorption" of PFBA/PFBS (§5.3.2.1, p. 144) at 50 mg/L sorbent — a non-detect that bounds Kd only to < ~1000 L/kg.
+  Not the source of Mel 2024's "quaternized cellulose" values; nothing extracted to raw_si (no numbers for a native material).
