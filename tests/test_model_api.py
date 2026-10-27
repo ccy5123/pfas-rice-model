@@ -639,18 +639,24 @@ def test_simulate_neutral_matches_the_standalone_module():
 
 
 def test_neutral_path_runs_the_2a_plant():
-    """PREREG 9.1: one plant for both paths. With the phloem off the brown rice (phloem-fed) and the
-    rough grain (which holds it) are not predicted; the husk + rachis pool is. A phloem run predicts
-    the brown rice with the sourced phi / T_C,Ph midpoints."""
+    """PREREG 9.1 / 9.15: one plant for both paths. The brown rice (phloem-fed) takes a sap stream at
+    the xylem-sap concentration (Trapp 2007; Rein 2011), T_C,Ph x its dry growth, out of the leaf's
+    xylem inflow; the husk + rachis pool keeps the panicle's transpired deposit. Without that feed
+    (grain_feed=None) the brown rice and the rough grain are not predicted."""
     t = np.linspace(0.0, 117.5, 60)
     d2 = api.drivers_from_arrays(t, np.ones_like(t))
     assert "theta" in d2 and "husk" in d2 and "dvs" in d2
     r = api.simulate_neutral(2.45, drivers=d2)
-    assert not r["grain_predicted"]
-    assert np.isnan(r["baf_final"]["grain"]) and np.isnan(r["baf_final_dw"]["rough"])
-    assert r["baf_final_dw"]["husk"] > 0
-    p = api.simulate_neutral(2.45, drivers=d2, phloem=True)
-    assert p["grain_predicted"] and p["baf_final"]["grain"] > 0
+    assert r["grain_predicted"] and r["grain_feed"] == "xylem"
+    dw = r["baf_final_dw"]
+    assert 0 < dw["grain"] < dw["husk"]                 # 6.1 L/kg dry against the hull's share
+    assert min(dw["grain"], dw["husk"]) < dw["rough"] < max(dw["grain"], dw["husk"])
+    off = api.simulate_neutral(2.45, drivers=d2, grain_feed=None)
+    assert not off["grain_predicted"]
+    assert np.isnan(off["baf_final"]["grain"]) and np.isnan(off["baf_final_dw"]["rough"])
+    # the feed is taken out of the leaf's xylem inflow: the leaf loses what the grain gains
+    assert r["baf_final"]["leaf"] < off["baf_final"]["leaf"]
+    assert r["baf_final"]["root"] == off["baf_final"]["root"]     # no downward stream
 
 
 def test_simulate_neutral_returns_the_simulate_contract():

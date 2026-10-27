@@ -1023,3 +1023,15 @@ Expectations:
 - E34 The neutral brown rice (dry) is below the husk + rachis pool (dry) for every log Kow in the biocide census:
   per kg dry, the brown rice draws 6.1 L of sap, the hull the panicle's transpiration share.
 - E35 The census rank correlations (root +0.904, straw -0.777) do not change at 3 decimals.
+
+### 9.16 Outcome of 9.15
+- E32 **held**: the PFAS default and the Yamazaki observable are bit-identical (137 cells, max |Δlog10| 0).
+- E33 **missed**: Ge 2017 per-organ moved 0.606 → 0.593 (0.013 > 0.01). The grain's stream is taken out of the
+  leaf's xylem inflow, so the leaf's TF falls. The root scores did not move (no downward stream).
+- E34 **held**: brown rice (dry) < husk + rachis (dry) on all 117 census rows (triclosan 0.119 against 1.64).
+- E35 **held**: census rank correlations +0.904 / −0.777.
+- The two solvers agree on the new stream (exponential integrator against BDF, ≤ 5e-6 log10; tested).
+- 9.14's neutral outcome is superseded where it says the brown and rough grain are not predicted: they are, on
+  the sources' assumption (less polar neutrals; no polar-end log Kow is given). The biocide census and briefing
+  report the brown rice again, beside the husk + rachis pool (dry); the fish-kM sensitivity moves the brown
+  rice by up to 8,344×. `grain_feed=None` keeps the unpredicted reading.

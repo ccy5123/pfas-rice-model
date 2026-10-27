@@ -1213,7 +1213,8 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=None, n_t=241,
                      tscf=None, lipid_source=None,
                      pKa=None, is_acid=True, pH=None, g_apo=0.0,
                      cwo_profile="constant", cwo_kw=None, Koc=None,
-                     dead_leaf_attached=1.0, scenario=DEFAULT_SCENARIO, scenario_kw=None):
+                     dead_leaf_attached=1.0, scenario=DEFAULT_SCENARIO, scenario_kw=None,
+                     grain_feed="xylem"):
     """Run the 4-compartment DPU for a NEUTRAL (non-ionised) organic.
 
     The neutral analogue of `simulate()`: same driver machinery, same result-dict
@@ -1273,6 +1274,8 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=None, n_t=241,
         neutral, so it comes from `log_kow` via the PROVISIONAL Karickhoff QSPR unless
         an explicit measured `Koc` [L/kg] is given -- prefer the measurement.
     drivers / biomass / measured_forcing / scenario : exactly as `simulate()`.
+    grain_feed : "xylem" (default; the brown rice is fed by a sap stream at the xylem-sap
+        concentration, PREREG 9.15) or None (not predicted); see `neutral_dpu.simulate_neutral`.
     """
     import neutral_dpu as ND
 
@@ -1310,7 +1313,8 @@ def simulate_neutral(log_kow, name="neutral", Cwo=1.0, season=None, n_t=241,
                               pKa=pKa, is_acid=bool(is_acid), pH=float(pH),
                               g_apo=float(g_apo))
     res = ND.simulate_neutral(cmpd, drv, comps=comps, phloem=phloem, L_Ph=L_Ph,
-                              air=air, air_kw=air_kw, dead_leaf_attached=dead_leaf_attached)
+                              air=air, air_kw=air_kw, dead_leaf_attached=dead_leaf_attached,
+                              grain_feed=grain_feed)
 
     # re-shape onto the `simulate()` contract (the neutral module normalises the
     # BAF on the final exposure; keep that reference explicit for the caller)

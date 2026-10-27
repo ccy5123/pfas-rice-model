@@ -291,9 +291,10 @@ rice (the decision basis, PREREG 7.13); the rough-grain value in brackets.
 phloem off. Amendment 2b (PREREG 9.1): the rice tool runs it on the 2a plant (staged organ water, brown rice
 + husk pool, the crop's DVS); the stem's xylem splits by the sourced panicle share lam_grain(DVS); b per organ
 (root/stem 0.77, leaf 0.95 — Trapp 1994 p.417; grain 0.86, range 0.77–0.95); a = 1.22 is the octanol density
-correction (Trapp & Matthies 1996). With the phloem off the neutral BROWN RICE is not predicted (NaN; the
-neutral sap concentration is not read at source); rough grain and husk are reported. A phloem run takes the
-sourced φ and T_C,Ph midpoints. Air exchange (opt-in): both faces of the green leaf from the crop's LAI per
+correction (Trapp & Matthies 1996). The neutral BROWN RICE takes a sap stream at the xylem-sap concentration,
+T_C,Ph × its dry growth, out of the leaf's xylem inflow (Trapp 2007 p.374; Rein 2011 eqs 4–5: less polar
+neutrals; PREREG 9.15; `grain_feed=None` leaves it unpredicted); the husk keeps the panicle's transpired
+deposit. `phloem=True` (leaf-source stream, weak-acid trap) takes the sourced φ and T_C,Ph midpoints. Air exchange (opt-in): both faces of the green leaf from the crop's LAI per
 fresh leaf mass (14.1 m²/kg at heading); stem and panicle none; any K_AW > 0 with air off is flagged.
 Composition (addendum 5.10, `src/neutral_composition.py`, `params/neutral_composition_sourced.csv`):
 lipid carried on a dry basis and restated at the organ water (rice root = Li 2019 cereal roots, stem/leaf =
@@ -301,7 +302,7 @@ rice straw ether extract, grain = brown rice crude fat); each validation table r
 and lipid, with its dry-weight observations converted by that water. The tables run on the generic drivers.
 Current a-priori scores (log10 RMSE at the midpoints, [corners]; `validation/neutral_scores.py` →
 `params/neutral_scores.json`): Liu 2023 rice root 0.212 [0.208, 0.278] (equilibrium 0.204; read as dry
-weight 0.821) · Ge 2017 leaf TF 0.606 (was 0.631 before 2b; stem rows unscored: no vegetative rice stem water
+weight 0.821) · Ge 2017 leaf TF 0.593 (0.631 before 2b; stem rows unscored: no vegetative rice stem water
 found) · Kodešová 2019 0.157 (equilibrium 0.172) · Li 2019 hydroponic 0.677 [0.525, 1.115] · Li 2019 soil
 0.418 (equilibrium 0.461) · Briggs 1983 barley stem 0.357. Expectations: N1 wrong (both Li halves moved > 0.05,
 opposite ways), N2 and N3 held.
@@ -402,8 +403,8 @@ is opt-in and exactly zero at K_AW = 0; no measured volatile-compound plant data
    timing and route of grain loading are open; harvest-only data cannot decide them.
 4. **After amendment 2b** (PREREG §9, outcome 9.14): the seasonal exposure (`obs_exposure_time`: the soil
    scenario over-leaches C4–C8 — Kd for this Andosol, or a missing sorption process), a rice root
-   distribution for the soil scenario, the neutral phloem-sap concentration (Trapp 2007/2011) so the neutral
-   brown rice can be predicted, SMILES/curated K_cw (side project, PR ccy5123/pfas-rice-model#73).
+   distribution for the soil scenario, a polar-end limit for the neutral sap assumption (Trapp 2007, Rein 2011 give
+   none), SMILES/curated K_cw (side project, PR ccy5123/pfas-rice-model#73).
 5. **Method B** (tight HYDRUS coupling) — later.
 
 ## 10. Gotchas / external dependencies

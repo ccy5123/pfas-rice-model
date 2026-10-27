@@ -171,11 +171,9 @@ def test_weak_acid_far_above_its_pKa_reproduces_the_neutral_path():
     kw = dict(name="x")
     neutral = api.simulate_neutral(2.45, **kw)
     almost = api.simulate_neutral(2.45, pKa=12.0, **kw)
-    for tissue in ("root", "stem", "leaf"):
+    for tissue in ("root", "stem", "leaf", "grain"):
         assert almost["baf_final"][tissue] == pytest.approx(
             neutral["baf_final"][tissue], rel=1e-3), tissue
-    # the brown rice is not predicted on either (phloem off, PREREG 9.1c); the husk is
-    assert np.isnan(almost["baf_final"]["grain"]) and np.isnan(neutral["baf_final"]["grain"])
     assert almost["baf_final_dw"]["husk"] == pytest.approx(
         neutral["baf_final_dw"]["husk"], rel=1e-3)
 

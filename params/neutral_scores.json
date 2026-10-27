@@ -3,7 +3,7 @@
  "units": "log10 RMSE",
  "scores": {
   "Liu 2023 rice root": 0.2123,
-  "Ge 2017 per-organ TF": 0.6063,
+  "Ge 2017 per-organ TF": 0.5931,
   "Kodesova 2019 carbamazepine root": 0.1569,
   "Li 2019 hydroponic": 0.6775,
   "Li 2019 soil, through the ODE": 0.4178,
@@ -20,8 +20,8 @@
    0.2784
   ],
   "Ge 2017 per-organ TF": [
-   0.5439,
-   0.7
+   0.5308,
+   0.6869
   ],
   "Kodesova 2019 carbamazepine root": [
    0.1601,

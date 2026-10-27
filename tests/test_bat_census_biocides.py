@@ -254,7 +254,7 @@ def test_mw_solubility_henry_are_structurally_inert():
     log Kow must return the SAME number, exactly."""
     a = BC.run_one(6.29, "cyphenothrin")
     b = BC.run_one(6.29, "difethialone")
-    for k in ("TSCF", "K_PW_root", "root", "stem", "leaf", "husk", "straw"):
+    for k in ("TSCF", "K_PW_root", "root", "stem", "leaf", "grain", "husk", "straw"):
         assert a[k] == b[k], k
 
 

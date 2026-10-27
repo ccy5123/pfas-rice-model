@@ -496,7 +496,7 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
                      air=False, air_kw=None,
                      lipid_source: str = DEFAULT_LIPID_SOURCE,
                      dead_leaf_attached: float = 1.0, organ_b: dict | None = None,
-                     lam_grain_dvs: tuple | None = None):
+                     lam_grain_dvs: tuple | None = None, grain_feed: str | None = "xylem"):
     """Run the 4-compartment DPU for a NEUTRAL organic.
 
     drivers : {t, Cwo, Qtp, M} on a common grid -- the same driver contract as
@@ -526,6 +526,14 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
         an unrestricted neutral phloem (L_Ph=1) drives the grain, a terminal
         accumulator of small mass, to BAF ~20-60, which is a statement about
         assuming unrestricted loading, not a prediction of the neutral base.
+
+    grain_feed : with the phloem off, how the grain's sap reaches it. "xylem" (default, PREREG
+        9.15): a phloem stream at the stem's XYLEM-SAP concentration, of volume T_C,Ph (the
+        sourced rice midpoint) x the grain's dry growth, taken out of the leaf's xylem inflow
+        (Rein, Legind & Trapp 2011 eqs 4-5; Trapp 2007 p.374: for less polar neutrals the two
+        saps equilibrate). Neither source gives the log Kow below which a neutral is "very
+        polar" and is retained in the sieve tubes instead (Rein 2011 p.208), so none is set.
+        None: no sap stream, and the brown rice (phloem-fed, PREREG 7.2) is not predicted.
 
     Returns a dict with the usual tissue series plus the neutral diagnostics
     (K_PW per tissue, the Briggs TSCF actually used, RCF/TF at maturity).
@@ -571,13 +579,16 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
             raise ValueError("air exchange needs the leaf's exchange surface: drivers with "
                              "'area' (a crop model with a leaf record) or a measured "
                              "AirExchange(S=...) (PREREG 9.1)")
+    if grain_feed not in ("xylem", None):
+        raise ValueError(f"grain_feed must be 'xylem' or None, got {grain_feed!r}")
+    xylem_feed = (not phloem) and grain_feed == "xylem"
     model = RiceUptakeModel(env=env, cmpd=core, comps=comps, inputs=inputs,
                             phi=((_api.PHI if phi is None else phi) if phloem else 0.0),
                             T_C_Ph=((_api.T_C_PH if T_C_Ph is None else T_C_Ph)
-                                    if phloem else 0.0),
+                                    if (phloem or xylem_feed) else 0.0),
                             lam_grain_dvs=(_api.LAM_GRAIN_DVS if lam_grain_dvs is None
                                            else tuple(lam_grain_dvs)),
-                            air=air_obj)
+                            air=air_obj, grain_phloem_xylem=xylem_feed)
     sol = model.solve(t, C0=C0)
     Y = sol.y
     names = ("root", "stem", "leaf", "grain")
@@ -597,12 +608,11 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
     if model.husk:                         # brown rice + husk/rachis pool (PREREG 7.2)
         obs["conc_dw"].update(hv.panicle_observables(
             conc["grain"], M[:, FRUIT], 1.0 - comps[FRUIT].theta, Y[model.HUSK], husk))
-    # the brown rice is phloem-fed (PREREG 7.2): without the phloem it receives nothing, and the
-    # neutral phloem-sap concentration is not yet read at source (PREREG 9.1c), so the brown rice
-    # is NOT PREDICTED rather than zero. The rough grain holds the brown rice's burden, so it is
-    # not predicted either (with the brown rice at 0 it is only a lower bound); the husk + rachis
-    # pool (the panicle's transpired deposit) stays reported
-    grain_predicted = bool(phloem) or not model.husk
+    # the brown rice is phloem-fed (PREREG 7.2): with neither the phloem nor the xylem-sap feed
+    # (PREREG 9.15) it receives nothing, so it is NOT PREDICTED rather than zero. The rough grain
+    # holds the brown rice's burden, so it is not predicted either (with the brown rice at 0 it
+    # is only a lower bound); the husk + rachis pool (the panicle's transpired deposit) stays
+    grain_predicted = bool(phloem) or xylem_feed or not model.husk
     if not grain_predicted:
         nan = np.full(len(t), np.nan)
         conc["grain"] = nan
@@ -624,7 +634,7 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
         K_PW={k: float(K[i]) for i, k in enumerate(names)},
         sorption_exponent={k: float(b[k]) for k in names},
         grain_predicted=grain_predicted,
-        phloem=bool(phloem),
+        phloem=bool(phloem), grain_feed=("phloem" if phloem else grain_feed),
         TSCF=float(core.f_xy), log_kow=float(cmpd.log_kow),
         rcf_briggs=briggs_rcf(cmpd.log_kow),
         # air exchange: the diagnostics (per-organ permeabilities and the implied

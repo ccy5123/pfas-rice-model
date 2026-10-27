@@ -279,3 +279,15 @@ def test_obs_loader_reads_and_converts(tmp_path):
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
+
+
+def test_xylem_sap_grain_feed_rhs_and_affine_agree(monkeypatch):
+    """PREREG 9.15: the grain's sap stream at the xylem-sap concentration is written twice in the
+    core (rhs for BDF, affine for the exponential integrator); both must give the same harvest."""
+    import model_api as api
+    import pfas_rice_plant_module_4pool_surf as P
+    e = api.simulate_neutral(2.45, name="x")["baf_final_dw"]
+    monkeypatch.setattr(P, "SOLVER", "bdf")
+    b = api.simulate_neutral(2.45, name="x")["baf_final_dw"]
+    for k in ("root", "leaf", "grain", "husk"):
+        assert e[k] == pytest.approx(b[k], rel=1e-4), k

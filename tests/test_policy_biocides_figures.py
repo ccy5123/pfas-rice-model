@@ -154,9 +154,9 @@ def test_the_forbidden_phrase_table_covers_this_briefing_s_own_traps(doc):
     for phrase in ("117종을 검증했다", "모델이 검증되었다", "안전하다"):
         assert phrase in tail, phrase
     # 적용범위를 한 구간처럼 말하는 것이 이 발표 고유의 함정
-    assert "뿌리는" in tail and "지상부는" in tail
-    # 2b: 중성 경로는 현미를 예측하지 않는다 -- 낟알에 대한 단정이 금지 목록에 있어야 한다
-    assert "현미는 이 경로가 예측하지 않는다" in tail
+    assert "뿌리는" in tail and "먹는 부위는" in tail
+    # 9.15: 현미는 출처의 가정(체관액 = 물관액) 위의 예측 -- 측정처럼 말하는 것이 금지 목록에 있어야 한다
+    assert "현미 값이 측정으로 확인됐다" in tail
 
 
 def test_figure_labels_are_english_on_purpose(P):

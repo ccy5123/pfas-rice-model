@@ -522,6 +522,11 @@ class RiceUptakeModel:
     # compound carries a pKa AND the leaf compartment carries a pH.
     phloem_pH: float = PHLOEM_PH
     husk_phloem: bool = False           # the husk's dry growth draws phloem sap too (a band end)
+    # the grain's phloem stream at the xylem-sap concentration, taken out of the leaf's xylem
+    # inflow (Rein, Legind & Trapp 2011 eqs 4-5; Trapp 2007 p.374: for less polar NEUTRALS the
+    # phloem and xylem saps equilibrate). The neutral path sets it (PREREG 9.15); the PFAS
+    # path keeps the leaf-source carrier stream (L_Ph), so the default is off.
+    grain_phloem_xylem: bool = False
 
     def __post_init__(self):
         if self.phi is None or self.T_C_Ph is None:
@@ -629,6 +634,11 @@ class RiceUptakeModel:
         # gate opened a day early or late on DVS rounding at heading; PREREG section 8)
         wx = gh if self.husk else gam
         gq = 1.0 if self.husk else gam
+        # grain stream at the xylem-sap concentration (never more than the leaf's xylem inflow)
+        # or from the leaf at the phloem-loaded concentration (the default)
+        xg = self.grain_phloem_xylem
+        Qgx = min(gq * Q_g, (f3 + (1.0 - wx) * f4) * Qtp) if xg else 0.0
+        gql = 0.0 if xg else gq
 
         # root -> xylem loading: a fraction f_xy of the root FREE conc (TSCF;
         # endodermal barrier + binding) PLUS a B-independent lipid-bound term
@@ -655,13 +665,15 @@ class RiceUptakeModel:
         # phloem; its xylem share is rerouted to the leaf and its phloem stream is not
         # exported, so the balance still closes. gam->1 at formation (DPU-consistent).
         dC[LEAF] = ((f3 + (1.0 - wx) * f4) * (Qtp / M[LEAF]) * Cw[STEM]
-                    - ((gq * Q_g + Q_r + Q_h) / M[LEAF]) * C_Phl
+                    - (Qgx / M[LEAF]) * Cw[STEM]
+                    - ((gql * Q_g + Q_r + Q_h) / M[LEAF]) * C_Phl
                     - g[LEAF] * C[LEAF] - mu[LEAF] * C[LEAF]
                     - leaf_loss * C[LEAF])
         # fruit/grain (small xylem in; phloem-dominated; terminal sink) -- gated by gam;
         # brown rice with the husk pool: the phloem only
         dC[FRUIT] = ((0.0 if self.husk else gam * f4 * (Qtp / M[FRUIT]) * Cw[STEM])
-                     + gq * (Q_g / M[FRUIT]) * C_Phl
+                     + gql * (Q_g / M[FRUIT]) * C_Phl
+                     + (Qgx / M[FRUIT]) * Cw[STEM]
                      - g[FRUIT] * C[FRUIT] - mu[FRUIT] * C[FRUIT])
         if self.husk:                                # terminal, per kg DRY
             dC[self.HUSK] = ((wx * f4 * Qtp * Cw[STEM] + Q_h * C_Phl) / Mh
@@ -723,6 +735,11 @@ class RiceUptakeModel:
         x = self.cmpd.f_xy / B[:, ROOT] + self.cmpd.g_xy
         wx = gh if self.husk else gam
         gq = np.ones_like(gam) if self.husk else gam   # brown rice: phloem not gated (rhs)
+        if self.grain_phloem_xylem:                    # PREREG 9.15 (rhs)
+            Qgx = np.minimum(gq * Q_g, (f3 + (1.0 - wx) * f4) * Q)
+            gql = np.zeros_like(gq)
+        else:
+            Qgx, gql = np.zeros_like(Q), gq
         n = self.n_states
         A = np.zeros((len(row), n, n))
         b = np.zeros((len(row), n))
@@ -731,10 +748,12 @@ class RiceUptakeModel:
         b[:, ROOT] = k_in * Cwo
         A[:, STEM, ROOT] = Q * x / M[:, STEM]
         A[:, STEM, STEM] = -Q / (M[:, STEM] * B[:, STEM]) - g[STEM] - mu[:, STEM]
-        A[:, LEAF, STEM] = (f3 + (1.0 - wx) * f4) * Q / (M[:, LEAF] * B[:, STEM])
-        A[:, LEAF, LEAF] = (-(gq * Q_g + Q_r + Q_h) * p / M[:, LEAF] - g[LEAF] - mu[:, LEAF] - ll)
-        A[:, FRUIT, STEM] = 0.0 if self.husk else gam * f4 * Q / (M[:, FRUIT] * B[:, STEM])
-        A[:, FRUIT, LEAF] = gq * Q_g * p / M[:, FRUIT]
+        A[:, LEAF, STEM] = ((f3 + (1.0 - wx) * f4) * Q / (M[:, LEAF] * B[:, STEM])
+                            - Qgx / (M[:, LEAF] * B[:, STEM]))
+        A[:, LEAF, LEAF] = (-(gql * Q_g + Q_r + Q_h) * p / M[:, LEAF] - g[LEAF] - mu[:, LEAF] - ll)
+        A[:, FRUIT, STEM] = ((0.0 if self.husk else gam * f4 * Q / (M[:, FRUIT] * B[:, STEM]))
+                             + Qgx / (M[:, FRUIT] * B[:, STEM]))
+        A[:, FRUIT, LEAF] = gql * Q_g * p / M[:, FRUIT]
         A[:, FRUIT, FRUIT] = -g[FRUIT] - mu[:, FRUIT]
         if self.husk:
             A[:, 4, STEM] = wx * f4 * Q / (Mh * B[:, STEM])
