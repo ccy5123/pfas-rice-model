@@ -9,9 +9,6 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 
 | DOI | paper | needed for | why it failed |
 |---|---|---|---|
-| 10.1016/j.chemosphere.2022.134167 | Campos-Pereira et al. 2022, Chemosphere | the paper's own Kd table and 13C-NMR for the Sphagnum peat (checked so far through the Makselon 2019 thesis on the same soils) — K_cw side project, K_poly analogue | ScienceDirect 403; SLU repository links go to the portal home |
-| 10.1016/j.jece.2020.103744 | Sörengård et al. 2020, J. Environ. Chem. Eng. | Kd of 17 PFAS on 44 sorbents: any pine bark, peat or cellulose-type entries (K_poly) | paywalled, no OA copy |
-| 10.1016/j.emcon.2022.01.001 | Mokwena et al. 2022, Emerg. Contam. | raw maize tassel PFOA/PFOS isotherm units and conditions (abstract: pH 2, mg/L — likely off-range) | listed OA but ScienceDirect 403 |
 | hdl 2376/111903 | Tian 2019, WSU PhD dissertation | whether it holds lignin/cellulose PFAS sorbent data (Mel 2024 ref 35) | JavaScript-only repository page |
 | 10.1139/er-2025-0116 | Malaviya, Singh, Sharma et al. 2025, "The interplay of per- and polyfluoroalkyl substances (PFAS) uptake, translocation, and toxicity in plants: a critical review", Environ. Rev. | corroboration of the long-chain lipid mechanism (CLAUDE.md §6 history) | paywalled; the user expects to obtain it later |
 
@@ -47,3 +44,9 @@ Main texts and SI read; extracted values in `raw_si/` (file named per entry); re
 - The "Prompt2 handoff" that came with `params/Kcw_Klignin_params_v2.csv` (source of the K_cw_poly absolute scale, the
   0.40 sulfonate offset and the 0.10/CF2 slope): not in the repo, its history, the importing session's transcript,
   Google Drive or Notion; the user could not obtain it (2026-10-27). K_cw_poly is untraceable until a source is found.
+
+## Obtained (2026-10-27, second batch, uploaded by the user) — read in the K_cw side-project session
+- 10.1016/j.chemosphere.2022.134167 Campos-Pereira et al. 2022 (main text; SI not obtained) → `raw_si/campos2022_table1_nmr.csv`
+- 10.1016/j.jece.2020.103744 Sörengård et al. 2020 (main text; SI not obtained) → `raw_si/sorengard2020_fig1_plant_sorbents.csv`
+- 10.1016/j.emcon.2022.01.001 Mokwena & Okonkwo 2022 (main text): raw maize tassel at pH 2 and mg/L — not usable for K_poly; nothing extracted
+- Makselon 2019 SLU MSc thesis (open access, stud.epsilon.slu.se/15180) → `raw_si/makselon2019_peatOi_*.csv`

@@ -50,6 +50,13 @@ SI 원본(사용자 manifest `si_manifest.csv`):
 - 원문 미확보: `fulltext_needed.md`의 Open 표(Campos-Pereira 2022, Sörengård 2020, Mokwena 2022, Tian 2019).
 - Mel 2024 인용 [42]는 Xiao et al. 2017 ES&T `10.1021/acs.est.7b00970`(바이오차·GAC)입니다. Fig. 2의 "quaternized cellulose" 값의 출처는 확인되지 않았습니다.
 
+### 3.1 추가 원문 (사용자 제공, 같은 날)
+| 자료 | 읽은 범위 | 얻은 것 → 저장 위치 | SHA-256 |
+|---|---|---|---|
+| Campos-Pereira 2022 Chemosphere `10.1016/j.chemosphere.2022.134167` | 본문 | Table 1(NMR 탄소 구성, 혼합 모형) → `raw_si/campos2022_table1_nmr.csv`. 흡착이 탄수화물 C와 양의 관계, 방향족 C와 음의 관계 | eb1b6eddf8d31a6eb1fadd1e4de3731c0b01b6c868a2943f4a5b7749315d3bb9 |
+| Sörengård 2020 J. Environ. Chem. Eng. `10.1016/j.jece.2020.103744` | 본문(SI 없음) | Fig. 1의 식물 유래 흡착제 PFOA·PFOS log Kd(색으로 읽음) → `raw_si/sorengard2020_fig1_plant_sorbents.csv` | 05a6e1a16e55ada754154d91ce509cad4749aad4b2c95b2087a62629415ced6b |
+| Mokwena & Okonkwo 2022 Emerg. Contam. `10.1016/j.emcon.2022.01.001` | 본문 | pH 2, mg/L 조건이라 쓸 수 없음. 추출하지 않음 | 676f7a2c05e76683dc3bece27094356a05ac656414f8cf5a86614b727536aab9 |
+
 ## 4. 찾지 못한 기록: "Prompt2 handoff"
 - 찾는 것: `params/Kcw_Klignin_params_v2.csv`와 함께 왔다는 handoff. K_cw_poly 절대 크기(PFOA 4.0), 설폰산 오프셋 0.40, 기울기 0.10의 출처.
 - 찾은 곳:
