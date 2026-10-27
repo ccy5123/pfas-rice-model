@@ -10,7 +10,6 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 | DOI | paper | needed for | why it failed |
 |---|---|---|---|
 | hdl 2376/111903 | Tian 2019, WSU PhD dissertation | whether it holds lignin/cellulose PFAS sorbent data (Mel 2024 ref 35) | JavaScript-only repository page |
-| 10.1139/er-2025-0116 | Malaviya, Singh, Sharma et al. 2025, "The interplay of per- and polyfluoroalkyl substances (PFAS) uptake, translocation, and toxicity in plants: a critical review", Environ. Rev. | corroboration of the long-chain lipid mechanism (CLAUDE.md §6 history) | paywalled; the user expects to obtain it later |
 
 Leads, not yet requested (ask before relying on them):
 - Kobayashi & Horie 1994, Jpn. J. Crop Sci. 63:193-199 (spikelet and rachis-branch differentiation) —
@@ -50,3 +49,6 @@ Main texts and SI read; extracted values in `raw_si/` (file named per entry); re
 - 10.1016/j.jece.2020.103744 Sörengård et al. 2020 (main text; SI not obtained) → `raw_si/sorengard2020_fig1_plant_sorbents.csv`
 - 10.1016/j.emcon.2022.01.001 Mokwena & Okonkwo 2022 (main text): raw maize tassel at pH 2 and mg/L — not usable for K_poly; nothing extracted
 - Makselon 2019 SLU MSc thesis (open access, stud.epsilon.slu.se/15180) → `raw_si/makselon2019_peatOi_*.csv`
+- 10.1139/er-2025-0116 Malaviya et al. 2025, Environ. Rev. — open accepted manuscript found 2026-10-27 (University of Toronto
+  repository, utoronto.scholaris.ca bitstream b9636f7f-77fd-4aef-b9f9-eb82fef09469; SHA-256 65ae5c0a59fb26ec7fa3d878baddbe30e930811c587919c488d4b00145e28091).
+  Checked only for cell-wall K data (none). NOT yet read for its purpose here (the long-chain lipid mechanism); not the version of record.
