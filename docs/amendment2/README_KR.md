@@ -8,6 +8,27 @@
 8(중성 경로), 9(휘발성), 10(앱 노출 기본값). 원문을 못 구한 논문은 `docs/literature_db/fulltext_needed.md`
 (10.1139/er-2025-0116 대기 중).
 
+## 2b 시작 방법 (다음 세션: "개정 2b 시작")
+
+- **브랜치**: 2a는 `claude/clever-carson-yktrl0` (PR ccy5123/pfas-rice-model#72, 초안, CI 통과, 마지막 fa57547)이고
+  개정 1 PR(#70, `claude/confident-newton-82t0qo`) 위에 쌓여 있습니다. 둘 다 아직 병합 전이므로 2b는 2a 브랜치 위에서
+  시작합니다(새 세션에 지정되는 브랜치를 2a 머리에서 만들기).
+- **첫 단계 = 사전 등록**: `docs/PREREG_sourced_values.md` §7.9의 2b 항목을 §9(개정 2b)로 풀어 쓰고, 범위·규칙·예상(E25~)을
+  실행 전에 커밋합니다. 2a에서 정한 결정 규칙(§2, 5.3)과 기본 변형(`redistributed_fit`)은 그대로입니다.
+- **남은 출처 없는 값** (`params/value_provenance.csv`의 `done=no`):
+  - 중성 경로: `neu_lipid_a` 1.22, `neu_leafexp` 0.95, `neu_surface` 20/2, `neu_kaw_cut` 1e-4, `mem_ph` 6.5
+    (→ 논 공극수 pH 6.5–7.0 출처). 중성 경로는 아직 상수 수분·이삭 전체 기준(`model_api.neutral_forms`)이라
+    θ(t)·현미 기준 적용 여부를 함께 정합니다.
+  - 토양: `soil_foc`, `soil_rho`, `soil_depth`, `soil_disp`, `soil_perc`, `soil_flood` (Yamazaki 현장 Andosol;
+    f_oc 3.7–3.8 %, 용적밀도 0.61, 침투 0.41–0.67 cm/d, 중간 낙수 — 출처 확인 필요), 관개수 오염원 시나리오
+    (`obs_exposure_time`).
+  - 앱: `app_density`, `smiles_kcw`(프로토타입 0004), KNHANES 섭취량·체중, 백미/현미 기준.
+  - 분석: `tr_drivers`, `tr_li_grain_from`, `calib_sigma`, `fxy_recommended`.
+- **원문 대기**: 10.1139/er-2025-0116 (Malaviya 외 2025, Environ. Rev.) — 사용자가 올려 주기로 함.
+- **작업 규칙**: 원문을 못 읽으면 즉시 DOI 목록으로 알림(CLAUDE.md §0). 재적합은 약 75분
+  (`validation/refit_sourced.py --write` → `build_parameters.py` → `transfer_sourced.py` → `input_range_band.py`),
+  전체 테스트 약 9분(503개).
+
 아래는 개정 2 시작 전에 남긴 원래 작업 기록입니다.
 
 - `draft.md` — 개정 2 초안(영문). 항목, 찾은 문헌, 외부 검토(P1–P9) 확인 결과, θ(t) 설계, P3(현미 기준 낟알) 문헌.
