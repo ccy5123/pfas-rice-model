@@ -118,8 +118,8 @@ def test_the_field_grain_table_matches(brief, results):
         v(results, "1_congeners", "PFDoDA.yz_grain_prev")
     assert 800 < prev_miss < 825 and "약 809배" in brief
     assert v(results, "1_congeners", "mean_grain_shortchain_C4_C6_base") == pytest.approx(0.90, abs=0.005)
-    assert v(results, "1_congeners", "mean_grain_longchain_C9_C12_base") == pytest.approx(7.24, abs=0.005)
-    assert "단쇄(C4–C6) 0.90, 장쇄(C9–C12) 7.24 L/kg" in brief
+    assert v(results, "1_congeners", "mean_grain_longchain_C9_C12_base") == pytest.approx(7.30, abs=0.005)
+    assert "단쇄(C4–C6) 0.90, 장쇄(C9–C12) 7.30 L/kg" in brief
 
 
 def test_kim2019_scores_are_the_documented_result(brief, results):
@@ -127,9 +127,9 @@ def test_kim2019_scores_are_the_documented_result(brief, results):
     so the document must say both."""
     assert v(results, "3_kim2019", "rmse_point_default") == pytest.approx(0.56, abs=0.005)
     assert v(results, "3_kim2019", "rmse_interval_default") == pytest.approx(0.44, abs=0.005)
-    assert v(results, "3_kim2019", "rmse_point_prev") == pytest.approx(2.04, abs=0.005)
-    assert v(results, "3_kim2019", "rmse_interval_prev") == pytest.approx(1.78, abs=0.005)
-    for s in ("**0.56**", "**0.44**", "2.04", "1.78"):
+    assert v(results, "3_kim2019", "rmse_point_prev") == pytest.approx(2.03, abs=0.005)
+    assert v(results, "3_kim2019", "rmse_interval_prev") == pytest.approx(1.77, abs=0.005)
+    for s in ("**0.56**", "**0.44**", "2.03", "1.77"):
         assert s in brief
     # Kim weighed freeze-dried grain: the comparison is on the dry basis
     assert v(results, "3_kim2019", "PFOA.model_grain_baf") == pytest.approx(
@@ -160,8 +160,8 @@ def test_inverse_recovers_a_known_truth_but_misses_the_field(brief, results):
     assert f == pytest.approx(8.24, abs=0.01)
     assert v(results, "4_inverse", "field.ci95_lo") < truth < v(results, "4_inverse", "field.ci95_hi")
     assert "약 8배 과대추정" in brief and "실측을 겨우 포함함" in brief
-    assert v(results, "4_inverse", "field.overestimate_factor_prev") == pytest.approx(17.5, abs=0.05)
-    assert "약 17.5배" in brief
+    assert v(results, "4_inverse", "field.overestimate_factor_prev") == pytest.approx(17.3, abs=0.05)
+    assert "약 17.3배" in brief
 
 
 def test_structure_input_flags_the_unknown_ones(results):

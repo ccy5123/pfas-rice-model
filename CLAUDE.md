@@ -164,7 +164,8 @@ with its source or its sensitivity range, is in **`docs/ASSUMPTIONS.md`**.
   rachis pool (per kg dry), reported as `conc_dw["husk"]`, with the rough grain `conc_dw["rough"]`.
   `grain_basis="panicle"` is amendment 1 (ORYZA's whole panicle). A measured growth table's grain is taken as given.
 - **Phloem = two streams from the leaf** (`phloem_flows`): to the grain, the sap its DRY growth draws
-  (`grain_dry_growth` × `T_C_Ph`, 6.1 L/kg (4.4-7.8)); to the root, φ·Q_TP (φ 0.06 (0.02-0.10)).
+  (`grain_dry_growth` × `T_C_Ph`, 5.88 L/kg (4.68-7.08), the grain-filling sap of Hayashi & Chino 1990); to the
+  root, φ·Q_TP (φ 0.057 (0.014-0.10); barley, Jiang 2003, to Windt 2006) (PREREG 10.7).
 - **Harvest observation operator** (`src/harvest.py`): the ODE carries GREEN leaves; dead blades are
   reconstructed from the ORYZA leaf death rate and kept in the leaf and straw (`dead_leaf_attached=1`:
   rice does not shed its dead blades; 0 = all lost, a sensitivity). Results carry `conc_dw` /
@@ -193,11 +194,11 @@ outcome: `docs/PREREG_sourced_values.md` §8):
 
 | variant | all | root | straw | grain |
 |---|---|---|---|---|
-| **redistributed_fit** (default; a reproduction) | **0.116** | 0.000 | 0.156 | 0.127 |
-| redistributed_lipid | 0.154 | 0.000 | 0.262 | 0.011 |
+| **redistributed_fit** (default; a reproduction) | **0.115** | 0.000 | 0.156 | 0.126 |
+| redistributed_lipid | 0.153 | 0.000 | 0.261 | 0.011 |
 | 4pool_lipid | 0.151 | 0.000 | 0.258 | 0.000 |
-| redistributed_free | 1.261 | 0.000 | 1.639 | 1.461 |
-| 4pool_free | 1.309 | 0.000 | 1.794 | 1.394 |
+| redistributed_free | 1.260 | 0.000 | 1.638 | 1.458 |
+| 4pool_free | 1.307 | 0.000 | 1.791 | 1.391 |
 
 - **Default**: every cell is reproduced except PFDoDA (f_xy at 1; straw −0.52, grain −0.40 log). Every
   congener with a grain cell fits `L_Ph` > 0 in every variant (the panicle deposit now goes to the husk).
@@ -207,8 +208,8 @@ outcome: `docs/PREREG_sourced_values.md` §8):
   every sourced range moved to its ends with the fits held, now with the stage-water anchors, the husk
   share, the rachis, the husk phloem draw, the crop sets (Artacho 2011 added, PREREG 10.5) and the exposure
   course of the six congeners the site-Kd soil check admits (PREREG 10.1; an upward end); median over 11
-  congeners grain ÷2.97 / ×9.36, straw ÷1.40 / ×2.61, root ÷1.29 / ×2.40 (before amendment 3: ×3.65, ×1.89,
-  ×1.29). The exposure end leads the bands of PFPeA, PFNA-PFDoDA and PFOS (+0.09 to +1.37 log10); otherwise the
+  congeners grain ÷2.77 / ×9.35, straw ÷1.41 / ×2.62, root ÷1.29 / ×2.40 (before amendment 3: ÷2.97 / ×3.65,
+  ×1.89, ×1.29). The exposure end leads the bands of PFPeA, PFNA-PFDoDA and PFOS (+0.09 to +1.37 log10); otherwise the
   crop sets lead straw and grain, root composition the root. The one-at-a-time envelope covers the all-corner run in
   38/66 cases only (inputs interact). The incumbent's band (E19/E23 record):
   `validation/input_range_band__redistributed_lipid.json`.
@@ -230,7 +231,7 @@ rice (the decision basis, PREREG 7.13); the rough-grain value in brackets.
 |---|---|---|---|---|---|
 | Tang 2026 per-organ TF, 0.1 µg/g | 1.876 | 1.738 | 0.916 | 0.687 | **0.686** |
 | Kim 2019 grain BAF excl PFOA, point / [0, MDL] interval | 2.037 / 1.777 | 2.118 / 1.866 | 0.559 / 0.445 | 0.554 / 0.444 | **0.562 / 0.443** |
-| Li 2025 TF by stage, shoot / grain [rough] | 1.494 / 1.815 | 1.279 / 1.863 | 0.937 / 1.373 | 0.364 / 1.361 [0.864] | **0.467 / 1.334 [1.042]** |
+| Li 2025 TF by stage, shoot / grain [rough] | 1.494 / 1.815 | 1.279 / 1.863 | 0.937 / 1.373 | 0.364 / 1.361 [0.864] | **0.468 / 1.334 [1.042]** |
 
 - **Decision (PREREG 5.3, §8; applied by the user)**: `redistributed_fit` is better than the incumbent
   (`redistributed_lipid`) on the Li grain (−0.027, 95 % [−0.045, −0.003]) and ties on every other endpoint
@@ -246,7 +247,7 @@ rice (the decision basis, PREREG 7.13); the rough-grain value in brackets.
 - **Kim PFOA per site** (`kim2019_pfoa_anchor.py`): censored per-site geomean 9.94 L/kg [4.57, 20.16];
   the default's 0.538 L/kg is below the interval (−1.27 log).
 - **Inverse** (`estimate_exposure_bayesian`, Kim PFOA brown rice 0.349 µg/kg dw, void water
-  0.0787 µg/L): the default estimates 0.649 µg/L (8.2× over; 95 % 0.051–8.20, which contains the
+  0.0787 µg/L): the default estimates 0.648 µg/L (8.2× over; 95 % 0.051–8.18, which contains the
   measured value) (`validation/policy_brief_runs.py`).
 - Earlier decisions (the amendment-1 records, the pre-amendment default switch, the panicle-size share, the
   gate numerics) are in `validation/archive/` and git history; their numbers do not describe the current model.
@@ -302,7 +303,8 @@ phloem off. Amendment 2b (PREREG 9.1): the rice tool runs it on the 2a plant (st
 correction (Trapp & Matthies 1996). The neutral BROWN RICE takes a sap stream at the xylem-sap concentration,
 T_C,Ph × its dry growth, out of the leaf's xylem inflow (Trapp 2007 p.374; Rein 2011 eqs 4–5: less polar
 neutrals; PREREG 9.15; `grain_feed=None` leaves it unpredicted); the husk keeps the panicle's transpired
-deposit. `phloem=True` (leaf-source stream, weak-acid trap) takes the sourced φ and T_C,Ph midpoints. Air exchange (opt-in): both faces of the green leaf from the crop's LAI per
+deposit; below log Kow 0 the brown rice is not predicted (neutrals retained in the phloem: Bromilow 1990 p.312,
+PREREG 10.7c). `phloem=True` (leaf-source stream, weak-acid trap) takes the sourced φ and T_C,Ph midpoints. Air exchange (opt-in): both faces of the green leaf from the crop's LAI per
 fresh leaf mass (14.1 m²/kg at heading); stem and panicle none; any K_AW > 0 with air off is flagged.
 Composition (addendum 5.10, `src/neutral_composition.py`, `params/neutral_composition_sourced.csv`):
 lipid carried on a dry basis and restated at the organ water (rice root = Li 2019 cereal roots, stem/leaf =
@@ -403,7 +405,7 @@ is opt-in and exactly zero at K_AW = 0; no measured volatile-compound plant data
 1. **Measurements that would narrow the sourced ranges** (`docs/ASSUMPTIONS.md`,
    `params/value_provenance.csv`): japonica crop parameters for the site's cultivars (the largest straw and
    grain lever since amendment 2a), a rice panicle transpiration share by stage, rice phloem sap per grain DM
-   (T_C,Ph; Hayashi & Chino 1990, Tcherkez 2023 requested), φ, organ composition over a season, the rachis share of the panicle, rice-root cell-wall / plaque
+   (T_C,Ph: one dwarf hydroponic cultivar at one stage, Hayashi & Chino 1990), φ (one vegetative barley budget), organ composition over a season, the rachis share of the panicle, rice-root cell-wall / plaque
    PFAS sorption (K_cw, K_surf), Yamazaki 2023 SI raw values (MQL flags, planting density, nursery), the
    site's paddy soil.
 2. **Transfer datasets on their own drivers**: not possible from the papers — Tang's and Kim's SIs give no
@@ -416,8 +418,8 @@ is opt-in and exactly zero at K_AW = 0; no measured volatile-compound plant data
    panicle organs through filling, so timing and route stay open.
 4. **After amendment 3** (PREREG §10, outcome 10.6): the seasonal exposure of PFBA, PFHxA, PFHpA, PFOA, PFBS (no
    linear-equilibrium Kd the site's soil allows explains their retention; needs in-season water, percolation, soil
-   by depth or precursors), a polar-end limit for the neutral sap assumption (no source states one: Tyree 1979,
-   Kleier 1988, Hsu 1988; Bromilow 1990 and Hsu & Kleier 1990/1996 requested), SMILES/curated K_cw (side project,
+   by depth or precursors), the PFOS husk/brown ratio (Yamazaki 2019
+   lysimeter >= 38 against the 2023 field 1.4), SMILES/curated K_cw (side project,
    PR ccy5123/pfas-rice-model#73).
 5. **Method B** (tight HYDRUS coupling) — later.
 

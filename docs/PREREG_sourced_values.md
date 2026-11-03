@@ -1253,3 +1253,20 @@ flow into brown rice" stands. Roots: Yamaguchi & Tanaka 1990 (Sapporo paddy, aft
 moves by < 0.02. E45 after the re-fit no Yamazaki observable cell of the default moves by more than 0.02 log10.
 E46 the census brown rice becomes NaN exactly for the rows with log Kow < 0; the census rank correlations (root
 +0.904, straw -0.777) do not change. E47 the neutral validation scores do not change (3 decimals).
+
+### 10.8 Outcome of 10.7
+- Re-fit (`validation/refit_sourced.py`, 60 min; `build_parameters.py`): Yamazaki log10 RMSE redistributed_fit 0.1159 ->
+  0.1153 (root 0.000, straw 0.156, grain 0.126), redistributed_lipid 0.154 -> 0.153, 4pool_lipid 0.151, redistributed_free
+  1.261 -> 1.260, 4pool_free 1.309 -> 1.307. E43 **held**.
+- Transfers (`transfer_sourced.py`), default: Tang 0.686, Kim point 0.562 / interval 0.443, Li shoot 0.4674 -> 0.4678, Li
+  grain 1.3335 -> 1.334 (largest move 0.0005; every variant within 0.005). Decisions unchanged. E44 **held**.
+- Default outputs after the re-fit: max |Δlog10| 0.0058 over the 165 snapshot cells (0.019 before re-fitting). E45 **held**.
+- Neutral polar edge: the census brown rice is NaN for exactly the 17 rows with log Kow < 0 and for no other; rank
+  correlations +0.904 / -0.777 unchanged. E46 **held**.
+- Neutral scores: Ge 2017 per-organ 0.5931 -> 0.5936 (the brown rice's sap stream, T_C,Ph x dry growth, comes out of the
+  leaf's xylem inflow, so the leaf TF moves); the rest unchanged. E47 **missed** at the third decimal (0.593 -> 0.594).
+- Band (`params/input_range_band.json`): median over 11 congeners root ÷1.29 / ×2.40, straw ÷1.41 / ×2.62, grain ÷2.77 /
+  ×9.35 (10.6: ÷2.97 / ×9.36 for the grain; the narrower T_C,Ph range shrinks the downward grain end).
+- Policy briefs rebuilt (`policy_brief_runs.py`, `bat_census_biocides.py`, `policy_biocides_figures.py`); the PFAS brief's
+  numbers that moved (long-chain grain mean 7.24 -> 7.30 L/kg; previous default's Kim RMSE 2.04/1.78 -> 2.03/1.77, its
+  inverse 17.5x -> 17.3x; the inverse 0.649 (0.051-8.20) -> 0.648 (0.051-8.18) ug/L) are corrected in the brief and its guard.
