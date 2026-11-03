@@ -1122,3 +1122,33 @@ limit is implemented; the outputs keep stating the assumption and its polar-end 
 - E39 The Morita profile moves no stored flooded shape's season mean by more than 0.05 log10 (its cumulative
   fractions are within 0.06 of the linear profile's at 5, 10, 15, 20 cm).
 - E40 Every PFAS `simulate()` output of the default and the Yamazaki observable are bit-identical.
+
+### 10.5 Addendum (items 4-5; committed before their runs; the 10.1-10.2 runs had been made, 10.6 records them)
+**Grain route (no model change).** No PFAS study samples panicle organs through filling, and none uses a tracer,
+girdling, flag-leaf removal or a detached panicle (literature search 2026-11-03; rows `grain_route_*`), so the
+timing and route stay open (harvest-only data cannot decide them; CLAUDE.md 9.3). One harvest check is possible
+on data already in the repo and never scored: Yamazaki SI Tables S18/S19 give husk, bran and white rice per
+cultivar. Check (a record, nothing fitted, no model change): the default's husk ÷ brown rice (dry, the two-run
+observable, `conc_dw["husk"]` / `conc_dw["grain"]`) against Yamazaki's (brown = 0.88 white + 0.12 bran, the
+white share of 6.1; < MQL at the midpoint of [0, MQL); geometric mean of the two cultivars), per congener, log10
+difference recorded beside Choi 2018's. Expectation E41: the observed ratio falls with chain length (C4-C8
+about 4-22, C9+ and PFOS 1-6), and the model's ratio rises with chain length (the husk keeps a transpired deposit
+that grows with the free anion's xylem loading, the brown rice a phloem stream whose L_Ph was fitted to its own
+cell), so the model is above the observed ratio for the long chains. HFPO-DA (in husk and bran, below the MQL in
+every stem band) is recorded as a pattern a xylem-only husk deposit cannot produce.
+
+**Crop sets (7.5 rule: every published temperate japonica ORYZA2000 set is a categorical band end).** Artacho,
+Meza & Alcalde 2011 (Chilean J Agric Res 71:23, Table 2, read in full by the main session; raw_si/
+artacho2011_japonica_oryza_params.csv) calibrate ORYZA2000 for the temperate japonica Diamante-INIA: cardinal
+temperatures, DVR*, RGRL max/min, SLA table, SSGA, FSTR, WGRMX, FLV/FST/FSO, DRLV; everything else IR72 ("All other
+parameters were set to values from the standard crop data file ... IR72"). It is added to `crop_sets.BAND_SETS`
+as `artacho2011` (the DVR* re-calibrated to the site's heading and harvest like every set). Stated: broadcast-sown,
+N-limited calibration, run here in potential production as the other sets. Espe 2016 (ORYZA v3, M-206) gives DVR*
+and RGRLMX only, so it is not a set; the ORYZA v3 Nipponbare and Takanari crop files it mentions could not be
+obtained. Expectation E42: the straw and grain band ends move by less than 0.1 log10 in the median congener
+(Artacho's partitioning sits inside the Gao/Wu tables at DVS 1).
+
+**Ranges not narrowed (no change).** Panicle transpiration: Ishihara, Kiyota & Imaizumi 1990 (Jpn J Crop Sci 59:321,
+Nipponbare pots) measure the panicle's transpiration per panicle area falling to ~1/3 of its heading peak by 7 d
+after heading and staying there; it gives no share of canopy transpiration, so lam_grain is unchanged (recorded,
+`lam_grain_ishihara`). T_C,Ph and phi: every candidate full text was closed (requested; fulltext_needed.md).
