@@ -73,10 +73,6 @@ Requested 2026-11-03 for items 4-5 (PREREG 10.5):
 New open (2026-11-03, after the user's papers (4).zip):
 | DOI | paper | needed for | why |
 |---|---|---|---|
-| 10.1021/acs.est.0c05705 (SI) | Nguyen et al. 2020 ES&T | SI Tables S1, S6, S7: per-soil short-chain Kd and soil properties | main text only supplied |
-| 10.1016/j.chemosphere.2023.138133 (Appendix A) | Campos-Pereira et al. 2023 | Tables A.6-A.10 | main text only |
-| 10.1016/j.scitotenv.2021.149343 (SI) | Fabregat-Palau et al. 2021 | Table S5: desorption Kd / hysteresis | pre-proof main text only |
-| 10.1016/j.chemosphere.2019.05.022 (SI) | Yamazaki et al. 2019 | SI Tables S8-S12: per-organ PFAS (hull, bran, white rice) | accepted manuscript only |
 | -- | Iwatsuki 1932, 農業及園芸 7:64 (岩槻信次「水稲の根に関する研究」) | root profile (pot study, per Kawata 1963) | no DOI; low priority |
 
 ## Obtained 2026-11-03 (user, Google Drive `papers (4).zip`, sha256 ddb7bff0c31867f341194589631155fa2a3f9911ab5f72004a34a506e52c1291)
@@ -86,3 +82,5 @@ c0a6bd63..., kleier1994 5eb01238..., kleier1996 f18e0cca..., grayson1990 fe44eb9
 jiang2003 ab219215..., pate1983 b0c4d755..., yamaguchi1990 7b24de2c..., nguyen2020 89f92567..., campospereira2023 0e7344b0...,
 brusseau2023 67782d65..., fabregatpalau2021 1682c066..., kookana2022 03e3480b..., li2018 f62352fb..., yamazaki2019 3f39d762...,
 wen2014 3ee40c99..., attia2026 d51ed3c8..., krippner2015 a19ccff6..., stahl2009 3539c5f3..., Liu 2019 SI (docx) b637df14....
+- SIs uploaded by the user 2026-11-03 (papers_SI.zip, sha256 5f98567b...): Nguyen 2020 SI 9ea6c31c..., Fabregat-Palau 2021 SI
+  f23d9409..., Campos-Pereira 2023 Appendix A a21915e5..., Yamazaki 2019 SI (docx) 6d545c00... -- read by a subagent (PREREG 10.7d).
