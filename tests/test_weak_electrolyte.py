@@ -85,11 +85,11 @@ GOLDEN_REL = 1e-3
 # Goldens on two fitted variants (calibration site-year, fresh organ mass, harvest at the mean
 # date) and on the DEFAULT configuration (redistributed_fit), regenerated for amendment 2a
 # (docs/PREREG_sourced_values.md sections 7-8: staged organ water, brown-rice grain, the
-# terminal pools as burden, re-fit). Regenerate them only when the model itself is deliberately changed.
+# terminal pools as burden, re-fit) and again for PREREG 10.7 (T_C,Ph and phi ranges, re-fit). Regenerate them only when the model itself is deliberately changed.
 PFAS_GOLDEN = {
-    ("PFOA", "4pool_free"): {"root": 1.7687909049187536, "grain": 0.20021364082263676},
-    ("PFOS", "redistributed_fit"): {"root": 21.569014721901613, "grain": 1.8083563015803177},
-    ("PFBA", "4pool_free"): {"root": 2.4728430001475936, "grain": 0.9640453467296496},
+    ("PFOA", "4pool_free"): {"root": 1.7687909029452402, "grain": 0.20239855613237331},
+    ("PFOS", "redistributed_fit"): {"root": 21.569014623279944, "grain": 1.8095250270107746},
+    ("PFBA", "4pool_free"): {"root": 2.472842996508735, "grain": 0.9648339822445856},
 }
 _VARIANT_KW = {"4pool_free": dict(api.FOUR_POOL_FREE),
                "redistributed_fit": dict(f_xy_source="fit", lipid_loading=False)}
