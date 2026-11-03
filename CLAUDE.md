@@ -64,7 +64,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── neutral_dpu.py                        # NEUTRAL-organic (Briggs/Kow) path: same ODE with z=0
 │   ├── plant_air.py                          # plant-air exchange (opt-in; 0 at K_AW=0)
 │   ├── soil_paddy.py / soil_paddy_redox_corrected.py  # Freundlich soil -> C_w^o(t)
-│   ├── soil_hydrus.py                        # REAL HYDRUS-1D run via phydrus -> Cwo(t), Qtp(t) (Method A)
+│   ├── soil_hydrus.py                        # REAL HYDRUS-1D run via phydrus -> Cwo(t), Qtp(t) (Method A); site Kd, roots
 │   ├── calibration.py                        # Tier-1 calibration machinery (synthetic recovery)
 │   ├── literature_params.py                  # literature QSPRs/anchors (cited) + Kim 2019 tables
 │   ├── model_api.py                          # UI-agnostic API: simulate(), scenario_drivers(), yamazaki_harvest_baf(), ...
@@ -174,7 +174,7 @@ with its source or its sensitivity range, is in **`docs/ASSUMPTIONS.md`**.
   26-d drivers interpolated), seedbed cover 2.5 C (0-5.0), 18.5 hills/m², 4.5 plants/hill (4-5), CO₂ 414 ppm;
   phenology calibrated DRATES-style to each cultivar's measured heading (Kasalath 08-03, Koshihikari 08-11) and
   harvest (= DVS 2); transpiration from ORYZA eq. 4.4 on FAO-56 terms. **Japonica crop sets** (Gao 2021; Wu
-  2022 Huanren, Donggang, Liaozhong, Dawa; `src/crop_sets.py`) are a categorical band end, IR72 runs.
+  2022 Huanren, Donggang, Liaozhong, Dawa; Artacho 2011 Diamante-INIA; `src/crop_sets.py`) are a categorical band end, IR72 runs.
   `simulate()` runs the mean-date harvest; the Yamazaki observable (`yamazaki_harvest_baf`) combines the two
   cultivar runs by geometric mean. The generic scenario's planting density is defined once
   (`oryza2000.GENERIC_HILLS_PER_M2`, the crop file's 25); its BAFs do not depend on it.
@@ -205,9 +205,11 @@ outcome: `docs/PREREG_sourced_values.md` §8):
   by 0.8–3.1 log; the stored `L_Ph` of an unreachable chain is merely large.
 - **Input-range band** (`validation/input_range_band.py` → `params/input_range_band.json`; PREREG 5.4, 7):
   every sourced range moved to its ends with the fits held, now with the stage-water anchors, the husk
-  share, the rachis, the husk phloem draw and the crop sets; median over 11 congeners grain ÷2.97 / ×3.65,
-  straw ÷1.40 / ×1.89, root ÷1.29 / ×1.29. The crop sets lead the straw band (11/11) and the grain band
-  (7/11; φ 3/11), root composition the root band. The one-at-a-time envelope covers the all-corner run in
+  share, the rachis, the husk phloem draw, the crop sets (Artacho 2011 added, PREREG 10.5) and the exposure
+  course of the six congeners the site-Kd soil check admits (PREREG 10.1; an upward end); median over 11
+  congeners grain ÷2.97 / ×9.36, straw ÷1.40 / ×2.61, root ÷1.29 / ×2.40 (before amendment 3: ×3.65, ×1.89,
+  ×1.29). The exposure end leads the bands of PFPeA, PFNA-PFDoDA and PFOS (+0.09 to +1.37 log10); otherwise the
+  crop sets lead straw and grain, root composition the root. The one-at-a-time envelope covers the all-corner run in
   38/66 cases only (inputs interact). The incumbent's band (E19/E23 record):
   `validation/input_range_band__redistributed_lipid.json`.
 - **Numerics** (`validation/numerics_convergence.py`): exponential integrator (`src/linear_expm.py`),
@@ -265,12 +267,16 @@ rice (the decision basis, PREREG 7.13); the rough-grain value in brackets.
   pan whose Ks (0.0256 cm/d) makes the sourced percolation 0.54 cm/d, the Ibaraki water calendar (flooded,
   midsummer drainage, intermittent irrigation to heading + 30 d with the flooded water balance; rain-only end
   reported), the site-year Tp/Ep/rain, no root-uptake reduction (the crop is stress-free), HYDRUS model 3
-  (air entry −2 cm, n 1.07–1.16); grid-converged (≤ 0.0004 log10, 9.12). Short chains leach under the
+  (air entry −2 cm, n 1.07–1.16), rice roots from Morita et al. 1988 (root length density by layer, plot C;
+  plots A-F a band; PREREG 10.2); grid-converged (≤ 0.0004 log10, 9.12). Short chains leach under the
   percolation, long chains stay buffered. `cwo_profile="flooded"` reads the stored shapes
-  (`params/cwo_shapes_hydrus.csv`). The Yamazaki irrigation-source scenario
-  (`validation/irrigation_source_check.py`) over-leaches C4–C8 against the measured post-season soil
-  (−0.46 to −0.62 log10; C9–C12 and PFOS within 0.15), so it is **not** merged into the band and
-  `obs_exposure_time` stays open; the root distribution (`soil_root_beta`) has no source.
+  (`params/cwo_shapes_hydrus.csv`). The Yamazaki irrigation-source scenario runs on the **site desorption Kd**
+  (`soil_hydrus.site_desorption_kd`: the pre-season sequential water/methanol extraction of SI Table S16; no
+  measured Andosol PFAS Kd exists) (`validation/site_kd_check.py`, PREREG 10.1): its post-season soil check
+  passes (0.3 log10) for PFPeA, PFNA–PFDoDA and PFOS, whose exposure course is a band end; PFBA, PFHxA, PFHpA,
+  PFOA and PFBS stay over-leached (−0.33 to −0.51; at the most retentive sourced corner PFHpA, PFOA, PFBS still
+  below −0.3), so `obs_exposure_time` stays open for them (an in-season water series, site percolation, soil by
+  depth or a precursor inventory would decide it).
 
 ### 6.5 Crop driver — the ORYZA2000 port
 - `src/oryza2000.py` ports ORYZA2000 potential production from the manual (IR72.D92 verbatim;
@@ -356,7 +362,9 @@ is opt-in and exactly zero at K_AW = 0; no measured volatile-compound plant data
 - **HYDRUS-1D** (vendored source): `cp external/hydrus_source/makefile external/hydrus_source/source/ &&
   (cd external/hydrus_source/source && make)`; `python src/soil_hydrus.py`;
   `python validation/hydrus_coupled_run.py`; `python validation/cwo_shape_table.py` (the stored flooded shapes);
-  `python validation/irrigation_source_check.py` (the Yamazaki irrigation-source scenario, ~10 min). On Claude
+  `python validation/irrigation_source_check.py` (the Yamazaki irrigation-source scenario, ~10 min). Amendment 3: `python validation/site_kd_check.py`
+  (the scenario on the site Kd + its exposure shapes, ~40 min), `root_profile_check.py` (~6 min),
+  `yamazaki_husk_check.py` (husk/brown record). On Claude
   Code on the web the SessionStart hook builds the engine.
 - **Policy briefs** (Korean slide scripts, every number from a script): `docs/POLICY_BRIEF_KR.md` (PFAS;
   `python validation/policy_brief_runs.py` → `docs/policy_brief_results.csv`, ~3 min) and
@@ -395,19 +403,22 @@ is opt-in and exactly zero at K_AW = 0; no measured volatile-compound plant data
 1. **Measurements that would narrow the sourced ranges** (`docs/ASSUMPTIONS.md`,
    `params/value_provenance.csv`): japonica crop parameters for the site's cultivars (the largest straw and
    grain lever since amendment 2a), a rice panicle transpiration share by stage, rice phloem sap per grain DM
-   (T_C,Ph), φ, organ composition over a season, the rachis share of the panicle, rice-root cell-wall / plaque
+   (T_C,Ph; Hayashi & Chino 1990, Tcherkez 2023 requested), φ, organ composition over a season, the rachis share of the panicle, rice-root cell-wall / plaque
    PFAS sorption (K_cw, K_surf), Yamazaki 2023 SI raw values (MQL flags, planting density, nursery), the
    site's paddy soil.
 2. **Transfer datasets on their own drivers**: not possible from the papers — Tang's and Kim's SIs give no
    crop calendar, Kim's regions are anonymised, Li gives no stage dates (PREREG 9.17); each runs on the
    Yamazaki site-year, a stated limitation. Needs the authors' records.
 3. **Grain**: brown rice is phloem-fed only, and the default under-predicts Li's grain by stage (1.334;
-   rough basis better) and Kim's PFOA; the husk/brown ratio is below Choi 2018's (PFOS by ~1 log). The
-   timing and route of grain loading are open; harvest-only data cannot decide them.
-4. **After amendment 2b** (PREREG §9, outcome 9.14): the seasonal exposure (`obs_exposure_time`: the soil
-   scenario over-leaches C4–C8 — Kd for this Andosol, or a missing sorption process), a rice root
-   distribution for the soil scenario, a polar-end limit for the neutral sap assumption (Trapp 2007, Rein 2011 give
-   none), SMILES/curated K_cw (side project, PR ccy5123/pfas-rice-model#73).
+   rough basis better) and Kim's PFOA. The model's husk/brown ratio is within 0.45 log10 of Yamazaki's own
+   husk/brown for every congener and falls with chain length as observed (`validation/yamazaki_husk_check.py`,
+   PREREG 10.5); Choi 2018's PFOS ratio (37–47) disagrees with Yamazaki's field (1.4). No PFAS study samples
+   panicle organs through filling, so timing and route stay open.
+4. **After amendment 3** (PREREG §10, outcome 10.6): the seasonal exposure of PFBA, PFHxA, PFHpA, PFOA, PFBS (no
+   linear-equilibrium Kd the site's soil allows explains their retention; needs in-season water, percolation, soil
+   by depth or precursors), a polar-end limit for the neutral sap assumption (no source states one: Tyree 1979,
+   Kleier 1988, Hsu 1988; Bromilow 1990 and Hsu & Kleier 1990/1996 requested), SMILES/curated K_cw (side project,
+   PR ccy5123/pfas-rice-model#73).
 5. **Method B** (tight HYDRUS coupling) — later.
 
 ## 10. Gotchas / external dependencies
