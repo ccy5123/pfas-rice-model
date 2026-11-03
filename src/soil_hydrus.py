@@ -524,6 +524,54 @@ def post_season_soil(compound):
     return (r["pre_water"][0] + r["pre_wtmeoh"][0], r["post_water"][0] + r["post_wtmeoh"][0])
 
 
+# Yamazaki SI p.S6 (soil extraction): 20 g wet weight of the air-dried soil, extracted three times
+# with 25 mL water (shaken 24 h, centrifuged), then three times with 25 mL methanol; Table S5: the
+# moisture of the air-dried soil 9.7 % (before) and 10.6 % (after cultivation). PREREG 10.1.
+EXTRACT_WET_G, EXTRACT_WATER_ML, EXTRACT_STEPS = 20.0, 25.0, 3
+EXTRACT_MOISTURE = {"pre": 0.097, "post": 0.106}
+
+
+def extraction_vr_max(compound="PFBA", when="pre"):
+    """The largest pellet-retained water V_r [mL/g dw] the sequential extraction allows: the V_r at
+    which `compound`'s desorption Kd reaches 0 (PREREG 10.1; PFBA, the least sorbed, sets it)."""
+    from scipy.optimize import brentq
+    r = _s16(compound)
+    R = r[f"{when}_wtmeoh"][0] / r[f"{when}_water"][0]
+    m = EXTRACT_WET_G * (1.0 - EXTRACT_MOISTURE[when])
+    rr, w0 = EXTRACT_WATER_ML / m, EXTRACT_WET_G * EXTRACT_MOISTURE[when] / m
+    f = lambda V: V / (w0 + rr) * (V / (V + rr)) ** (EXTRACT_STEPS - 1) - R / (1.0 + R)
+    return float(brentq(f, 1e-9, w0 + rr))
+
+
+def site_desorption_kd(compound, v_r=0.0, when="pre"):
+    """Linear desorption Kd [L/kg] of `compound` in the Yamazaki field's 0-15 cm soil, from the
+    sequential extraction of Table S16 (PREREG 10.1). Per g dry soil, three equilibrium steps; step 1
+    holds the soil's moisture w0 plus r = 25 mL / m_dw, steps 2-3 the pellet-retained water V_r plus r;
+    each step removes all liquid but V_r; the methanol takes what is left (sorbed + retained). The
+    fraction left after the water steps is
+        F = (V_r + Kd)/(w0 + r + Kd) * ((V_r + Kd)/(V_r + r + Kd))**2,
+    and F/(1 - F) = methanol-after-water / water extract. Solved for Kd. V_r is not reported: 0 gives
+    the largest Kd the extraction allows; `extraction_vr_max()` the smallest (PFBA's Kd -> 0).
+    Returns nan where the extraction allows no Kd >= 0 at this V_r."""
+    from scipy.optimize import brentq
+    r = _s16(compound)
+    R = r[f"{when}_wtmeoh"][0] / r[f"{when}_water"][0]
+    m = EXTRACT_WET_G * (1.0 - EXTRACT_MOISTURE[when])
+    rr, w0 = EXTRACT_WATER_ML / m, EXTRACT_WET_G * EXTRACT_MOISTURE[when] / m
+    V = float(v_r)
+
+    def g(lk):
+        K = 10.0 ** lk
+        F = (V + K) / (w0 + rr + K) * ((V + K) / (V + rr + K)) ** (EXTRACT_STEPS - 1)
+        return F / (1.0 - F) - R
+    lo, hi = -8.0, 6.0
+    if g(lo) > 0:                    # no Kd >= 0 at this V_r (0 at extraction_vr_max, to rounding)
+        return 0.0 if abs(g(lo)) < 1e-6 * R else float("nan")
+    if g(hi) < 0:
+        return float("nan")
+    return float(10.0 ** brentq(g, lo, hi, xtol=1e-12))
+
+
 def inputs_from_hydrus(congener_n_C: int = None, group: str = "PFCA", *, season: float | None = None,
                        Cwo_ref: float = 1.0, f_oc: float | None = None,
                        qtp_from_hydrus: bool = True, area_per_hill_m2: float | None = None,
