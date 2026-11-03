@@ -9,20 +9,6 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 
 | DOI | paper | needed for | why it failed |
 |---|---|---|---|
-| 10.1021/acs.est.0c05705 | Nguyen et al. 2020 ES&T | per-soil, per-congener log Kd, AEC, oxalate Fe/Al, pH series (PREREG 10.1) | ACS 403 (Cloudflare); no PMC copy |
-| 10.1016/j.chemosphere.2023.138133 | Campos-Pereira et al. 2023 Chemosphere | Kd vs pH, oxalate Fe/Al (10.1) | Elsevier 403; SLU/DiVA repository failed |
-| 10.3390/environments10100175 | Brusseau 2023 Environments | short- vs long-chain Kd vs soil properties (10.1) | MDPI 403; repository 403 |
-| 10.1016/j.scitotenv.2021.149343 | Fabregat-Palau et al. 2021 STOTEN | Koc and Kmin coefficients by chain length (10.1) | Elsevier 403 |
-| 10.1071/SR22183 | Kookana et al. 2022 Soil Research | soil properties governing PFAS sorption (AEC, oxides) (10.1) | CSIRO blocked |
-| 10.1016/j.scitotenv.2018.01.167 | Li, Oliver & Kookana 2018 STOTEN | compiled Kd dataset (10.1) | Elsevier 403 |
-| 10.1017/S0043174500056575 | Bromilow, Chamberlain & Evans 1990 Weed Sci | log Kow-pKa map of phloem mobility; polar end for neutrals (10.3) | Cambridge paywall |
-| 10.1017/S0043174500056587 | Hsu & Kleier 1990 Weed Sci | optimum log Kow vs membrane permeability (10.3) | Cambridge paywall |
-| 10.1093/jxb/47.Special_Issue.1265 | Hsu & Kleier 1996 J Exp Bot | review; any stated cut (10.3) | OUP paywall |
-| 10.1002/ps.2780300108; 10.1002/ps.2780420102 | Grayson & Kleier 1990; Kleier 1994 Pestic Sci | phloem mobility IV, V (10.3) | Wiley paywall |
-| 10.1017/s0043174500094637 | Kleier 1996 Weed Sci | phloem mobility VII (10.3) | Cambridge paywall |
-| 10.1007/bf00024777 | Brudenell 1995 Plant Growth Regul | tabulated properties vs mobility (10.3) | Springer paywall |
-| 10.1007/BF00239934 | Grimm et al. 1995 Planta | polar compounds retained/leaking in Cyclamen petiole (10.3) | Springer bot challenge |
-| 10.1071/fp13267 | Zhivotovsky Castello 2014 Funct Plant Biol | xylem discontinuity at the cereal grain (grain route, item 4) | no open copy |
 | -- | Iwatsuki 1932, 農業及園芸 7:64 | seasonal rice root profile to 89 cm (10.2) | no DOI; cited only |
 
 Leads, not yet requested (ask before relying on them):
@@ -82,14 +68,21 @@ SHA-256 of every file: in the session record (PREREG 9 commit message).
 Requested 2026-11-03 for items 4-5 (PREREG 10.5):
 | DOI | paper | needed for | why it failed |
 |---|---|---|---|
-| 10.1016/j.chemosphere.2019.05.022 | Yamazaki et al. 2019 Chemosphere | hull, unhulled, bran, white rice per congener (IR40 lysimeter) | Elsevier closed; NII repository down |
-| 10.1016/j.envpol.2013.09.040 | Wen et al. 2014 Environ Pollut | wheat husk vs grain per congener | closed |
-| 10.1021/acs.jafc.5c13184 | Attia et al. 2026 J Agric Food Chem | per-organ PFAS incl. husk; foliar route | ACS closed |
-| 10.1021/acs.jafc.5b00012 | Krippner et al. 2015 J Agric Food Chem | maize kernel vs cob/straw | ACS closed |
-| 10.1007/s00244-008-9272-9 | Stahl et al. 2009 Arch Environ Contam Toxicol | grain vs straw (wheat, oats, maize) | Springer closed |
-| 10.1093/oxfordjournals.pcp.a077899 | Hayashi & Chino 1990 Plant Cell Physiol | rice sieve-tube sucrose by stage (T_C,Ph) | OUP 403 |
-| 10.1093/oxfordjournals.pcp.a076347 | Fukumorita & Chino 1982 Plant Cell Physiol | rice phloem sap sugar (T_C,Ph) | OUP 403 |
-| 10.1111/pce.14646 | Tcherkez et al. 2023 Plant Cell Environ | phloem sap volume per grain DM (T_C,Ph) | Wiley 403; HAL bot check |
-| 10.1093/jxb/erg212 | Jiang, Jeschke & Hartung 2003 J Exp Bot | barley xylem vs phloem water flows (phi) | 403 |
-| 10.1104/pp.71.4.835 | Pate et al. 1983 Plant Physiol | phloem/xylem water flows (phi) | PMC blocked |
 | -- | ORYZA v3 Nipponbare / Takanari crop files (Espe 2016 p.126) | a Japanese-cultivar crop set | IRRI download folder unreadable |
+
+New open (2026-11-03, after the user's papers (4).zip):
+| DOI | paper | needed for | why |
+|---|---|---|---|
+| 10.1021/acs.est.0c05705 (SI) | Nguyen et al. 2020 ES&T | SI Tables S1, S6, S7: per-soil short-chain Kd and soil properties | main text only supplied |
+| 10.1016/j.chemosphere.2023.138133 (Appendix A) | Campos-Pereira et al. 2023 | Tables A.6-A.10 | main text only |
+| 10.1016/j.scitotenv.2021.149343 (SI) | Fabregat-Palau et al. 2021 | Table S5: desorption Kd / hysteresis | pre-proof main text only |
+| 10.1016/j.chemosphere.2019.05.022 (SI) | Yamazaki et al. 2019 | SI Tables S8-S12: per-organ PFAS (hull, bran, white rice) | accepted manuscript only |
+| -- | Iwatsuki 1932, 農業及園芸 7:64 (岩槻信次「水稲の根に関する研究」) | root profile (pot study, per Kawata 1963) | no DOI; low priority |
+
+## Obtained 2026-11-03 (user, Google Drive `papers (4).zip`, sha256 ddb7bff0c31867f341194589631155fa2a3f9911ab5f72004a34a506e52c1291)
+Read in the main session (values set) or by subagents (records): bromilow1990 2f9c0d53..., hsu1990 c856b6b3..., hsu1996
+c0a6bd63..., kleier1994 5eb01238..., kleier1996 f18e0cca..., grayson1990 fe44eb98..., brudenell1995 1ab4b058..., grimm1995
+0daeda7a..., zhivotovskycastello2014 f785d89c..., hayashi1990 87bb6899..., fukumorita1982 c55a8e0f..., tcherkez2023 e718b07d...,
+jiang2003 ab219215..., pate1983 b0c4d755..., yamaguchi1990 7b24de2c..., nguyen2020 89f92567..., campospereira2023 0e7344b0...,
+brusseau2023 67782d65..., fabregatpalau2021 1682c066..., kookana2022 03e3480b..., li2018 f62352fb..., yamazaki2019 3f39d762...,
+wen2014 3ee40c99..., attia2026 d51ed3c8..., krippner2015 a19ccff6..., stahl2009 3539c5f3..., Liu 2019 SI (docx) b637df14....

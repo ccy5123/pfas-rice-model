@@ -490,6 +490,13 @@ def air_exchange(c: NeutralCompound, **kw):
 # ---------------------------------------------------------------------------
 # forward run
 # ---------------------------------------------------------------------------
+# The polar edge of "phloem sap = xylem sap" for neutrals (PREREG 10.7c): Bromilow, Chamberlain &
+# Evans 1990 Weed Sci 38:305 p.312, "For nonionized compounds, only those of log Kow <0 such as amitrole
+# and aldicarb sulphone were well retained in the phloem of castor bean"; p.308: log Kow 0 to 3 cross
+# membranes most freely. Below it the xylem-sap feed of the brown rice is outside its sources.
+POLAR_EDGE_LOG_KOW = 0.0
+
+
 def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
                      phloem=False, phi: float | None = None, T_C_Ph: float | None = None,
                      L_Ph: float = 1.0, tscf_model=None, C0=None,
@@ -531,8 +538,10 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
         9.15): a phloem stream at the stem's XYLEM-SAP concentration, of volume T_C,Ph (the
         sourced rice midpoint) x the grain's dry growth, taken out of the leaf's xylem inflow
         (Rein, Legind & Trapp 2011 eqs 4-5; Trapp 2007 p.374: for less polar neutrals the two
-        saps equilibrate). Neither source gives the log Kow below which a neutral is "very
-        polar" and is retained in the sieve tubes instead (Rein 2011 p.208), so none is set.
+        saps equilibrate). The polar edge is sourced (PREREG 10.7c): nonionized compounds of
+        log Kow < 0 are retained in the phloem (Bromilow et al. 1990 p.312; Ricinus data,
+        Grayson & Kleier 1990 Table 1), so below POLAR_EDGE_LOG_KOW the brown rice and rough
+        grain are NOT PREDICTED (NaN; `grain_feed_outside` True); the husk is reported.
         None: no sap stream, and the brown rice (phloem-fed, PREREG 7.2) is not predicted.
 
     Returns a dict with the usual tissue series plus the neutral diagnostics
@@ -612,7 +621,9 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
     # (PREREG 9.15) it receives nothing, so it is NOT PREDICTED rather than zero. The rough grain
     # holds the brown rice's burden, so it is not predicted either (with the brown rice at 0 it
     # is only a lower bound); the husk + rachis pool (the panicle's transpired deposit) stays
-    grain_predicted = bool(phloem) or xylem_feed or not model.husk
+    grain_feed_outside = bool(xylem_feed and float(cmpd.log_kow) < POLAR_EDGE_LOG_KOW)
+    grain_predicted = (bool(phloem) or (xylem_feed and not grain_feed_outside)
+                       or not model.husk)
     if not grain_predicted:
         nan = np.full(len(t), np.nan)
         conc["grain"] = nan
@@ -633,7 +644,7 @@ def simulate_neutral(cmpd: NeutralCompound, drivers: dict, comps=None,
         tf_final={k: baf_final[k] / max(baf_final["root"], 1e-12) for k in names},
         K_PW={k: float(K[i]) for i, k in enumerate(names)},
         sorption_exponent={k: float(b[k]) for k in names},
-        grain_predicted=grain_predicted,
+        grain_predicted=grain_predicted, grain_feed_outside=grain_feed_outside,
         phloem=bool(phloem), grain_feed=("phloem" if phloem else grain_feed),
         TSCF=float(core.f_xy), log_kow=float(cmpd.log_kow),
         rcf_briggs=briggs_rcf(cmpd.log_kow),

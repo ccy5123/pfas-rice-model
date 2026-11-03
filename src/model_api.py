@@ -106,8 +106,8 @@ RANGE_INPUTS = {
     "lam_grain_heading": (0.09, 0.33),    # panicle share at heading (Sugimoto; Roberts & Batchelor 1983;
                                           #   Takahashi & Kurata 2007)
     "lam_grain_maturity": (0.0, 0.14),    # panicle share at maturity (Sugimoto 1973 Table 2)
-    "phi": (0.02, 0.10),                  # phloem/xylem volume flow, daytime (Windt et al. 2006)
-    "T_C_Ph": (4.4, 7.8),                 # phloem sap per kg grain DM [L/kg] (rice sieve-tube sucrose)
+    "phi": (0.014, 0.10),                 # phloem water to root / transpiration: barley 0.014 (Jiang 2003 Fig. 7A) to Windt 2006 0.10 (PREREG 10.7)
+    "T_C_Ph": (4.68, 7.08),               # phloem sap per kg grain DM [L/kg]: grain-filling sap, Hayashi & Chino 1990 Table 1 (PREREG 10.7)
     # site-year inputs the paper does not report (src/site_scenario.py has the derivations)
     "sbdur": ss.SBDUR_RANGE,              # nursery days after emergence (ORYZA: whole days)
     "tmpsb": ss.TMPSB_RANGE,              # seedbed cover on the daily maximum [C]
