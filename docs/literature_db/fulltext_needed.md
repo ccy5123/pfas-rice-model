@@ -9,6 +9,21 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 
 | DOI | paper | needed for | why it failed |
 |---|---|---|---|
+| 10.1021/acs.est.0c05705 | Nguyen et al. 2020 ES&T | per-soil, per-congener log Kd, AEC, oxalate Fe/Al, pH series (PREREG 10.1) | ACS 403 (Cloudflare); no PMC copy |
+| 10.1016/j.chemosphere.2023.138133 | Campos-Pereira et al. 2023 Chemosphere | Kd vs pH, oxalate Fe/Al (10.1) | Elsevier 403; SLU/DiVA repository failed |
+| 10.3390/environments10100175 | Brusseau 2023 Environments | short- vs long-chain Kd vs soil properties (10.1) | MDPI 403; repository 403 |
+| 10.1016/j.scitotenv.2021.149343 | Fabregat-Palau et al. 2021 STOTEN | Koc and Kmin coefficients by chain length (10.1) | Elsevier 403 |
+| 10.1071/SR22183 | Kookana et al. 2022 Soil Research | soil properties governing PFAS sorption (AEC, oxides) (10.1) | CSIRO blocked |
+| 10.1016/j.scitotenv.2018.01.167 | Li, Oliver & Kookana 2018 STOTEN | compiled Kd dataset (10.1) | Elsevier 403 |
+| 10.1017/S0043174500056575 | Bromilow, Chamberlain & Evans 1990 Weed Sci | log Kow-pKa map of phloem mobility; polar end for neutrals (10.3) | Cambridge paywall |
+| 10.1017/S0043174500056587 | Hsu & Kleier 1990 Weed Sci | optimum log Kow vs membrane permeability (10.3) | Cambridge paywall |
+| 10.1093/jxb/47.Special_Issue.1265 | Hsu & Kleier 1996 J Exp Bot | review; any stated cut (10.3) | OUP paywall |
+| 10.1002/ps.2780300108; 10.1002/ps.2780420102 | Grayson & Kleier 1990; Kleier 1994 Pestic Sci | phloem mobility IV, V (10.3) | Wiley paywall |
+| 10.1017/s0043174500094637 | Kleier 1996 Weed Sci | phloem mobility VII (10.3) | Cambridge paywall |
+| 10.1007/bf00024777 | Brudenell 1995 Plant Growth Regul | tabulated properties vs mobility (10.3) | Springer paywall |
+| 10.1007/BF00239934 | Grimm et al. 1995 Planta | polar compounds retained/leaking in Cyclamen petiole (10.3) | Springer bot challenge |
+| 10.1071/fp13267 | Zhivotovsky Castello 2014 Funct Plant Biol | xylem discontinuity at the cereal grain (grain route, item 4) | no open copy |
+| -- | Iwatsuki 1932, 農業及園芸 7:64 | seasonal rice root profile to 89 cm (10.2) | no DOI; cited only |
 
 Leads, not yet requested (ask before relying on them):
 - Kobayashi & Horie 1994, Jpn. J. Crop Sci. 63:193-199 (spikelet and rachis-branch differentiation) —
@@ -51,4 +66,15 @@ Leads, not yet requested (ask before relying on them):
   dates and tissue tables but no TSCF table. Transcriptions: `raw_si/tang2026_si_table_s2_soil.csv`,
   `raw_si/kim2019_si_table_s2_sites.csv`, `raw_si/felizeter2014_si_table_s3_dates.csv`; checks: Tang S7/S8 (75 cells; one SD
   0.025 -> 0.0254 corrected) and Kim S5/S6 (51 rows, all equal) against the repo's earlier transcriptions.
+## Read 2026-11-03 (open access; amendment 3, PREREG 10)
+- Yamazaki 2023 SI re-read for the extraction method (p.S6; sha256 e2e53c9a..., same file as before).
+- Morita, Suga & Yamazaki 1988 (10.1626/jcs.57.438; sha256 8c2e5493...; main session, Table 2), Kang 1994
+  (10.1626/jcs.63.118; 400a1206...), Tanaka 1985 (10.1626/jcs.54.379; 18aab139...), Kawata 1980 (10.1626/jcs.49.311;
+  7930828e...), Arai-Sanoh 2014 (10.1038/srep05563; 514d66e2...), Kawata 1963 (10.1626/jcs.32.163; 70414c82...) -- roots.
+- Tyree 1979 (10.1104/pp.63.2.367; d37f7afc...), Kleier 1988 (10.1104/pp.86.3.803; 1353450f...), Hsu, Kleier &
+  Melander 1988 (10.1104/pp.86.3.811; 3e07b090...) -- phloem mobility.
+- Campos-Pereira 2020 (PMC7745537), Oliver 2020 (accepted MS), Fabregat-Palau 2025 (PMC12020356), Evich 2025
+  (PMC11962083), Eun 2022 (PMC9408263), Eun 2026 (10.5917/jagh.68.59), Yamazaki 2024 (10.2116/bunsekikagaku.73.31),
+  Endo 2026 (10.5985/jec.36.s9) -- PFAS sorption (subagent; no Andosol Kd in any).
+
 SHA-256 of every file: in the session record (PREREG 9 commit message).

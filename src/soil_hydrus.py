@@ -193,6 +193,32 @@ H_ENTRY = 2.0                        # cm, air entry of HYDRUS model 3 (HYDRUS-1
 REFLOOD_TO_HEADING_DAYS = 30.0       # water kept in to ~30 d after heading (Ibaraki calendar)
 FOC = 0.5 * sum(SOIL_RANGES["f_oc"])
 
+# Rice root profile (PREREG 10.2): root length density [cm/cm3] by layer, Morita, Suga & Yamazaki 1988,
+# Jpn J Crop Sci 57:438, Table 2 (transplanted, continuously flooded; ripening; six plots, C = control).
+# Layer tops/bottoms [cm below the surface]; 0 below 30 cm (not sampled). "linear30" = the old unsourced
+# profile (surface -> 0 at 30 cm), kept for back-comparison.
+ROOT_LAYERS_CM = (0.0, 5.0, 10.0, 20.0, 30.0)
+ROOT_RLD_MORITA1988 = {
+    "A": (4.4, 6.6, 2.3, 1.1), "B": (7.3, 8.0, 2.6, 1.4), "C": (7.6, 8.0, 3.1, 1.4),
+    "D": (7.5, 8.8, 4.1, 1.4), "E": (4.2, 6.2, 2.4, 1.1), "F": (6.8, 7.0, 2.6, 1.5),
+}
+ROOT_PROFILE_DEFAULT = "morita_C"
+
+
+def root_density(z, profile: str = ROOT_PROFILE_DEFAULT):
+    """Relative root density at elevation z [cm, <= 0 below the surface] (PREREG 10.2)."""
+    z = np.asarray(z, float)
+    d = -z
+    if profile == "linear30":
+        return np.where(d <= 30.0, np.clip(1.0 - d / 30.0, 0.0, None), 0.0)
+    if not profile.startswith("morita_") or profile[7:] not in ROOT_RLD_MORITA1988:
+        raise ValueError(f"root profile {profile!r}: 'linear30' or 'morita_A'..'morita_F'")
+    rld = ROOT_RLD_MORITA1988[profile[7:]]
+    out = np.zeros_like(d)
+    for (top, bot), v in zip(zip(ROOT_LAYERS_CM[:-1], ROOT_LAYERS_CM[1:]), rld):
+        out = np.where((d >= top) & (d < bot), v, out)
+    return out
+
 
 def andosol_soil(retention="mid", **ends):
     """The soil dict of the scenario: `retention` "ash1" / "ash2" (an end) or "mid" (the scalar
@@ -322,6 +348,7 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, soil: dict | None = No
                      source: str = "soil", c_init: float = 1.0, c_sub: float | None = None,
                      c_irrigation: float = 0.0, c_rain: float = 0.0,
                      after_drainage: str = "supplied",
+                     root_profile: str = ROOT_PROFILE_DEFAULT,
                      exe: str = HYDRUS_EXE, workspace: str | None = None,
                      keep: bool = False) -> PaddyResult:
     """One season of the Tsukuba Andosol paddy in HYDRUS-1D for a linear Kd [L/kg] (PREREG 9.2).
@@ -342,8 +369,8 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, soil: dict | None = No
     (the generic contaminated-field case). source "irrigation": pore water `c_init` in the plough
     layer and `c_sub` below (default `c_init`), and the inflow carries `c_irrigation` and `c_rain`
     (flux-weighted each day) -- the Yamazaki field (PREREG 9.3). The exposure is the root-weighted
-    mean pore water over the profile; the root profile (linear to 0 at 30 cm) has no source in the
-    repo (`soil_root_beta`, flagged).
+    mean pore water over the profile; `root_profile` (PREREG 10.2) is the rice root length density
+    of Morita et al. 1988 (plot C by default; "morita_A".."morita_F"; "linear30" the old unsourced one).
     """
     import phydrus as ps
     try:
@@ -424,9 +451,7 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, soil: dict | None = No
                              np.where(z >= -zb, _pan_profile(soil, kpan, h_sub, zb + z), h_sub))
         c_below = c_init if c_sub is None else c_sub
         prof["Conc"] = np.where(z >= -PLOUGH_DEPTH, c_init, c_below)
-        beta = np.clip(1.0 + z / 30.0, 0, None)                 # roots: surface -> 0 at -30 cm
-        beta[z < -30] = 0.0
-        prof["Beta"] = beta
+        prof["Beta"] = root_density(z, root_profile)            # roots (PREREG 10.2)
         ml.add_profile(prof)
         # no reduction above the wilting point (PREREG 9.10): uptake at the potential rate from
         # any ponded head (p0 = popt above it) down to -15000 cm, where it stops
@@ -462,7 +487,7 @@ def run_paddy_hydrus(Kd: float, season: float = 120.0, *, soil: dict | None = No
             zz, hh, tq, cc = prof_t[tt]
             if w is None:                 # root density x each node's control volume
                 edges = np.concatenate([[zz[0]], 0.5 * (zz[1:] + zz[:-1]), [zz[-1]]])
-                w = np.clip(1.0 + zz / 30.0, 0, None) * np.abs(np.diff(edges))
+                w = root_density(zz, root_profile) * np.abs(np.diff(edges))
                 w = w / w.sum()
                 top = zz >= -PLOUGH_DEPTH
                 vt = np.abs(np.diff(edges))[top] / np.abs(np.diff(edges))[top].sum()
