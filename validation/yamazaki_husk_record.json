@@ -1,0 +1,73 @@
+{
+ "source": "validation/yamazaki_husk_check.py (PREREG 10.5; a record)",
+ "variant": "redistributed_fit",
+ "white_share": 0.88,
+ "congeners": {
+  "PFBA": {
+   "model": 11.838514686189805,
+   "yamazaki": 16.00856431021006,
+   "log10_model_over_obs": -0.13105516775712378,
+   "choi": null
+  },
+  "PFPeA": {
+   "model": 11.80954427289088,
+   "yamazaki": 17.331939497948966,
+   "log10_model_over_obs": -0.16661402570624753,
+   "choi": null
+  },
+  "PFHxA": {
+   "model": 3.8722454937975033,
+   "yamazaki": 9.198419295604369,
+   "log10_model_over_obs": -0.37575031928334635,
+   "choi": null
+  },
+  "PFHpA": {
+   "model": 3.6843894038917337,
+   "yamazaki": 10.452632146832322,
+   "log10_model_over_obs": -0.4528601421756529,
+   "choi": null
+  },
+  "PFOA": {
+   "model": 2.9370653357656904,
+   "yamazaki": 6.78134367758917,
+   "log10_model_over_obs": -0.3634021472994183,
+   "choi": [
+    4.166666666666667,
+    8.75
+   ]
+  },
+  "PFNA": {
+   "model": 2.8122683230321863,
+   "yamazaki": 3.1210402537826294,
+   "log10_model_over_obs": -0.04524261497972276,
+   "choi": null
+  },
+  "PFDA": {
+   "model": 2.2217626661367738,
+   "yamazaki": 2.714050741709047,
+   "log10_model_over_obs": -0.08692029820550426,
+   "choi": null
+  },
+  "PFUnDA": {
+   "model": 3.8787830577767943,
+   "yamazaki": 4.20084025208403,
+   "log10_model_over_obs": -0.03464067669300873,
+   "choi": null
+  },
+  "PFDoDA": {
+   "model": 2.138277416201685,
+   "yamazaki": 1.6366341767699428,
+   "log10_model_over_obs": 0.11611243307523855,
+   "choi": null
+  },
+  "PFOS": {
+   "model": 3.342678577536059,
+   "yamazaki": 1.418760884597914,
+   "log10_model_over_obs": 0.3721854116624365,
+   "choi": [
+    37.0,
+    47.0
+   ]
+  }
+ }
+}

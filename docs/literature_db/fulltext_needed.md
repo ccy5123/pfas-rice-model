@@ -78,3 +78,18 @@ Leads, not yet requested (ask before relying on them):
   Endo 2026 (10.5985/jec.36.s9) -- PFAS sorption (subagent; no Andosol Kd in any).
 
 SHA-256 of every file: in the session record (PREREG 9 commit message).
+
+Requested 2026-11-03 for items 4-5 (PREREG 10.5):
+| DOI | paper | needed for | why it failed |
+|---|---|---|---|
+| 10.1016/j.chemosphere.2019.05.022 | Yamazaki et al. 2019 Chemosphere | hull, unhulled, bran, white rice per congener (IR40 lysimeter) | Elsevier closed; NII repository down |
+| 10.1016/j.envpol.2013.09.040 | Wen et al. 2014 Environ Pollut | wheat husk vs grain per congener | closed |
+| 10.1021/acs.jafc.5c13184 | Attia et al. 2026 J Agric Food Chem | per-organ PFAS incl. husk; foliar route | ACS closed |
+| 10.1021/acs.jafc.5b00012 | Krippner et al. 2015 J Agric Food Chem | maize kernel vs cob/straw | ACS closed |
+| 10.1007/s00244-008-9272-9 | Stahl et al. 2009 Arch Environ Contam Toxicol | grain vs straw (wheat, oats, maize) | Springer closed |
+| 10.1093/oxfordjournals.pcp.a077899 | Hayashi & Chino 1990 Plant Cell Physiol | rice sieve-tube sucrose by stage (T_C,Ph) | OUP 403 |
+| 10.1093/oxfordjournals.pcp.a076347 | Fukumorita & Chino 1982 Plant Cell Physiol | rice phloem sap sugar (T_C,Ph) | OUP 403 |
+| 10.1111/pce.14646 | Tcherkez et al. 2023 Plant Cell Environ | phloem sap volume per grain DM (T_C,Ph) | Wiley 403; HAL bot check |
+| 10.1093/jxb/erg212 | Jiang, Jeschke & Hartung 2003 J Exp Bot | barley xylem vs phloem water flows (phi) | 403 |
+| 10.1104/pp.71.4.835 | Pate et al. 1983 Plant Physiol | phloem/xylem water flows (phi) | PMC blocked |
+| -- | ORYZA v3 Nipponbare / Takanari crop files (Espe 2016 p.126) | a Japanese-cultivar crop set | IRRI download folder unreadable |

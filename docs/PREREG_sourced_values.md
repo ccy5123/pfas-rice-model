@@ -1152,3 +1152,52 @@ obtained. Expectation E42: the straw and grain band ends move by less than 0.1 l
 Nipponbare pots) measure the panicle's transpiration per panicle area falling to ~1/3 of its heading peak by 7 d
 after heading and staying there; it gives no share of canopy transpiration, so lam_grain is unchanged (recorded,
 `lam_grain_ishihara`). T_C,Ph and phi: every candidate full text was closed (requested; fulltext_needed.md).
+
+### 10.6 Outcome of amendment 3 (records named; nothing fitted)
+**10.1 seasonal exposure** (`validation/site_kd_check.py` -> `site_kd_record.json`). Post-season 0-15 cm soil, log10
+predicted/measured at the V_r midpoint [V_r = 0 / max; QSPR Kd; most retentive corner]: PFBA -0.41 [-0.28/-0.61; -0.60;
+-0.26], PFPeA -0.19 [-0.09/-0.35; -0.45; -0.09], PFHxA -0.33 [-0.24/-0.48; -0.55; -0.24], PFHpA -0.46 [-0.38/-0.58;
+-0.57; -0.38], PFOA -0.51 [-0.40/-0.62; -0.61; -0.32], PFNA -0.06, PFDA -0.06, PFUnDA +0.02, PFDoDA -0.06, PFBS -0.39
+[-0.30/-0.54; -0.66; -0.32], PFOS -0.05. The site Kd lifts C4-C8 by 0.10-0.26 log10 over the QSPR, not enough.
+- **Admitted** (rule 10.1): PFPeA, PFNA, PFDA, PFUnDA, PFDoDA, PFOS. Their exposure course
+  (`params/cwo_shapes_irrigation_sitekd.csv`; `model_api.site_kd_exposure_shape`) enters the input-range band as the
+  end `exposure_site_kd`; its plant deltas at the V_r midpoint (root / straw / grain, log10; V_r ends on the grain):
+  PFPeA +0.09 (0.06-0.09), PFNA +0.41/+0.46/+0.46 (0.42-0.51), PFDA +0.86/+0.88/+0.87 (0.82-0.93), PFUnDA +0.34
+  (0.29-0.40), PFDoDA +1.36 (1.31-1.42), PFOS +0.67/+0.69/+0.69 (0.64-0.75). For the long chains the soil, not the
+  irrigation grab, sets the root-zone pore water (season-mean pore/irrigation 3.1-23), so the grab-based observable
+  understates their exposure if the scenario holds; with the fits held this is a one-sided (upward) band end.
+- **Not admitted**: PFBA, PFHxA, PFHpA, PFOA, PFBS. `obs_exposure_time` stays open for them. Even the most retentive
+  linear-equilibrium corner the sources allow leaves PFHpA, PFOA and PFBS below -0.3; the soil holds C4-C8 at ~2-3x
+  the level in equilibrium with the irrigation grab. What would decide it: in-season pore water or an irrigation-water
+  series (the one grab may under-represent the season's inflow), the site's percolation, post-season soil by depth,
+  a precursor inventory (Yamazaki 2024 saw resident short chains leach beyond the input), or a measured
+  desorption-kinetics (slow fraction) experiment on this soil.
+- E36 **held** (PFBA -0.41, PFHpA -0.46, PFOA -0.51 at the midpoint). E37 **held** (and PFPeA also passed). E38
+  **partly missed**: PFOA is still below -0.3 at the corner (-0.32), PFBA is not (-0.26).
+- Band (`params/input_range_band.json`, rebuilt with 10.1 and 10.5): median over 11 congeners root ÷1.29 / ×2.40
+  (was ×1.29), straw ÷1.40 / ×2.61 (×1.89), grain ÷2.97 / ×9.36 (×3.65); the upward ends grow by the exposure end for
+  the six admitted congeners (it leads their root, straw and grain bands). The one-at-a-time envelope covers the
+  corner run in 38/66 cases (as before).
+
+**10.2 root profile** (`validation/root_profile_check.py` -> `root_profile_record.json`): the stored flooded shapes'
+season mean moves by at most 0.013 log10 from the linear profile to Morita plot C (`params/cwo_shapes_hydrus.csv`
+rebuilt); plots A-F span -0.006 / +0.028 around C. The site-Kd soil check moves by <= 0.01 between the two profiles.
+E39 **held**. `soil_root_beta` closed (measured).
+
+**10.3**: no polar-end limit implemented (no sourced cut); recorded.
+
+**10.5** (`validation/yamazaki_husk_check.py` -> `yamazaki_husk_record.json`): husk ÷ brown rice, model / Yamazaki
+(log10): PFBA 11.8 / 16.0 (-0.13), PFPeA 11.8 / 17.3 (-0.17), PFHxA 3.9 / 9.2 (-0.38), PFHpA 3.7 / 10.5 (-0.45), PFOA
+2.9 / 6.8 (-0.36; Choi 4.2-8.8), PFNA 2.8 / 3.1 (-0.05), PFDA 2.2 / 2.7 (-0.09), PFUnDA 3.9 / 4.2 (-0.03), PFDoDA 2.1 /
+1.6 (+0.12), PFOS 3.3 / 1.4 (+0.37; Choi 37-47). E41 **missed**: the model's ratio falls with chain length as the
+observed one does (it does not rise); it is within 0.45 log10 of Yamazaki's for every congener, under for C6-C8.
+The phloem-only brown rice with a transpired husk deposit is consistent with the site's own husk/brown pattern at
+harvest; Choi's PFOS ratio (37-47) disagrees with Yamazaki's field (1.4), so it is not a target. The route and the
+timing stay open (no time-resolved data). Artacho 2011 joined the crop sets: E42 **held** in the median (the crop
+set's largest straw deviation, median over congeners, 0.124 -> 0.208, +0.084; at most +0.108; grain unchanged).
+- E40 **held**: the PFAS default and the Yamazaki observable are bit-identical (165 cells, max |Δlog10| 0), re-checked
+  after the last code change.
+
+**What amendment 3 leaves open**: `obs_exposure_time` for PFBA, PFHxA, PFHpA, PFOA, PFBS; the grain loading route and
+timing; a Japanese-cultivar ORYZA set; T_C,Ph and phi narrower than their ranges (full texts requested); the neutral
+polar-end limit (requested papers).

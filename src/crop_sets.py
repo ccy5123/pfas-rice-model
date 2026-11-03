@@ -12,6 +12,9 @@ the crop parameters:
                  COLDMIN is not applied (the port has no cold-stop rule).
   wu2022_<site>  Wu et al. 2022 Appl. Ecol. Environ. Res. 20:633, Tables 3-4 (five Liaoning sites,
                  ORYZA v3): DVR*, FSTTB, FLVTB, FSOTB, SLATB (table).
+  artacho2011    Artacho, Meza & Alcalde 2011 Chilean J. Agric. Res. 71:23, Table 2 (temperate japonica
+                 Diamante-INIA, Chile; PREREG 10.5): TBD/TOD/TMD, DVR*, RGRLMX/RGRLMN, SLATB, SSGATB,
+                 FSTR, WGRMX, FLVTB, FSTTB, FSOTB, DRLVT.
 
 Everything a paper does not list stays IR72's, as in the papers' own crop files. The development
 rates of every set are re-calibrated to the measured heading and harvest dates on the site-year
@@ -31,7 +34,7 @@ WU_SITES = ("huanren", "donggang", "liaozhong", "kaiyuan", "dawa")
 # Kaiyuan's printed partitioning equals Donggang's (a possible copy error in the paper), so it is
 # not used (PREREG 7.5); the band runs IR72 against the other five sets
 WU_USED = tuple(s for s in WU_SITES if s != "kaiyuan")
-CROP_SETS = ("IR72", "gao2021") + tuple(f"wu2022_{s}" for s in WU_USED)
+CROP_SETS = ("IR72", "gao2021") + tuple(f"wu2022_{s}" for s in WU_USED) + ("artacho2011",)
 BAND_SETS = CROP_SETS[1:]
 
 
@@ -63,6 +66,15 @@ def _wu(site):
     return out
 
 
+def _artacho():
+    rows = {r["parameter"]: r["value"] for r in _rows("artacho2011_japonica_oryza_params.csv")}
+    out = {k: _table(rows[k]) for k in ("SLATB", "SSGATB", "FLVTB", "FSTTB", "FSOTB", "DRLVT")}
+    out["SWISLA"] = "TABLE"
+    for k in ("TBD", "TOD", "TMD", "RGRLMX", "RGRLMN", "FSTR", "WGRMX") + RATE_KEYS:
+        out[k] = float(rows[k])
+    return out
+
+
 def overrides(name="IR72"):
     """Crop-dict overrides on IR72.D92 for a published set (empty for IR72 itself)."""
     if name == "IR72":
@@ -71,4 +83,6 @@ def overrides(name="IR72"):
         return _gao()
     if name.startswith("wu2022_") and name[7:] in WU_USED:
         return _wu(name[7:])
+    if name == "artacho2011":
+        return _artacho()
     raise ValueError(f"unknown crop set {name!r}; expected one of {CROP_SETS}")

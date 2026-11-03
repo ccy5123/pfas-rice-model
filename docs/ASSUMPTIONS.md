@@ -25,7 +25,7 @@ when each range input moves to its ends with the fits held, and the inputs that 
 | heading | Kasalath 2020-08-03, Koshihikari 2020-08-11 (mean run: their mean) | measured | Yamazaki SI p.S3 |
 | harvest = physiological maturity (DVS 2) | -- | convention | the phenology is calibrated so that DVS 2 falls on the harvest day |
 | phenology calibration | one factor on DVRJ/DVRI/DVRP -> heading; DVRR -> harvest | fitted | ORYZA2000 manual section 8.2 (DRATES) |
-| crop parameters | IR72.D92 verbatim | **open** | no ORYZA crop set for Koshihikari or Kasalath has been published (`sourced_inputs` crop_cultivar_search); the japonica sets of Gao et al. 2021 and Wu et al. 2022 are the next amendment's range |
+| crop parameters | IR72.D92 verbatim; the published japonica sets (Gao 2021, Wu 2022 x 4, Artacho 2011) as categorical band ends | inherited; range | no ORYZA crop set for Koshihikari or Kasalath has been published (`sourced_inputs` crop_cultivar_search); PREREG 7.5, 10.5 |
 | nursery after emergence (SBDUR) | 25.5 d (range 25-26) | derived | sown 04-13 (Yamazaki), emergence 2-3 d after sowing (Ibaraki calendar); ORYZA counts whole days, so the midpoint runs the 25- and 26-d drivers interpolated |
 | seedbed cover (TMPSB, on the daily maximum) | 2.5 C (range 0-5.0) | derived | Ibaraki calendar seedbed 15-25 / 10-25 C against an ambient maximum of 20.0 C (JMA Tsukuba 2020) |
 | planting density | 18.5 hills m-2 | measured | Ibaraki prefecture standard (the field's own is unreported) |
@@ -43,7 +43,7 @@ midpoint and both ends (`lo`, `hi`).
 | item | value | status | source |
 |---|---|---|---|
 | tissue basis | dry weight (pg/g dw) | measured | Tables S18, S19 |
-| exposure | irrigation water, Table S16 (one grab, 2020-06-08), held over the season | measured value; **time course open** | the seasonal course of the water is not reported |
+| exposure | irrigation water, Table S16 (one grab, 2020-06-08), held over the season | measured value; time course: band end for 7 congeners, **open** for C4, C6-C8, PFBS | the seasonal course is not reported; the irrigation-source scenario on the site Kd supplies it where its post-season soil check passes (PREREG 10.1) |
 | two cultivars | geometric mean (observation and model alike) | convention | each cultivar runs on its own heading and harvest |
 | straw | height bands weighted by their share of straw dry mass; mean of the 10 and 49 d-after-heading profiles (range = each profile) | measured | Tanaka et al. 2022, Rice 15:10, Fig. 3 (digitised; `raw_si/tanaka2022_fig3_layers.csv`) |
 | brown rice | white share 0.88 (range 0.86-0.90) of white + bran | measured | SI p.S3 |
@@ -119,9 +119,10 @@ PREREG 9.2-9.14; every row is in `params/value_provenance.csv` (`soil_*`).
 | water calendar | flooded; midsummer drainage 35-40 DAT for 15-20 d; intermittent irrigation to heading + 30 d (flooded water balance; rain-only end) | measured (cycle not reported) | Ibaraki calendar; Tournebize 2006 |
 | dispersivity | 0.6 (0.2-1.0) cm | measured | Tokumoto 2005; Tournebize 2006 |
 | root water uptake | no reduction above -15000 cm | structural | the crop driver is stress-free |
-| root distribution | linear to 0 at 30 cm | **open** | no source |
+| root distribution | root length density 7.6 / 8.0 / 3.1 / 1.4 cm/cm³ at 0-5 / 5-10 / 10-20 / 20-30 cm, 0 below (plot C); plots A-F the band | measured | Morita, Suga & Yamazaki 1988 Table 2 (transplanted, flooded, ripening); PREREG 10.2. Nothing sampled below 30 cm |
+| Kd (irrigation-source scenario) | site desorption Kd from the pre-season sequential extraction; pellet water V_r 0.48 (0-0.963) mL/g | measured (V_r range) | Yamazaki SI p.S6, Table S16; PREREG 10.1. No measured Andosol PFAS Kd exists; the Koc QSPR stays for the generic soil |
 | grid, depth, tolerances | dx 0.25 cm (pan base 0.005), 100 cm | numerical | converged <= 0.0004 log10 |
-| irrigation-source scenario | Yamazaki S16 soil, irrigation water and rain; subsoil 0 / half / same | measured; subsoil range | fails its post-season soil check for C4-C8: not in the band |
+| irrigation-source scenario | Yamazaki S16 soil, irrigation water and rain; subsoil 0 / half / same; site Kd | measured; subsoil range | on the site Kd it passes its post-season soil check (0.3 log10) for PFPeA, PFNA-PFDoDA, PFOS, whose seasonal course is a band end; PFBA, PFHxA, PFHpA, PFOA, PFBS fail (-0.33 to -0.51): open |
 
 ## 7. App
 

@@ -20,7 +20,9 @@
 # organ water's stage anchors one anchor at a time (PREREG 7.1; root, stem and leaf water no
 # longer enter as constants), the husk share at maturity, the rachis and the husk's phloem draw
 # (7.2), the published japonica crop sets (7.5; a categorical input: every set is an "end", the
-# band takes the extreme deviations), and PFBS's L_Ph range [0, L_MQL] (its grain is censored).
+# band takes the extreme deviations), PFBS's L_Ph range [0, L_MQL] (its grain is censored), and the
+# exposure course of the admitted congeners (PREREG 10.1: the irrigation-source scenario on the site
+# desorption Kd against the constant grab).
 #
 #   python validation/input_range_band.py     (writes params/input_range_band.json)
 # =============================================================================
@@ -79,6 +81,9 @@ def inputs():
     out.append(("husk_phloem", ({"sim": {"husk_phloem": False}}, {"sim": {"husk_phloem": True}})))
     out.append(("crop_set", tuple({"site": {"crop_set": cs}} for cs in CS.BAND_SETS)))
     out.append(("PFBS.L_Ph", ({"pfbs_L": 0.0}, {"pfbs_L": "mql"})))
+    # the exposure course (PREREG 10.1): constant grab (the observable) vs the irrigation-source
+    # scenario on the site desorption Kd, for the congeners its post-season soil check admitted
+    out.append(("exposure_site_kd", ({}, {"shape": "mid"})))
     return out
 
 
@@ -114,7 +119,10 @@ def observable(job):
     """log10 {root, straw, grain} of the two-run observable for one congener and settings."""
     c, settings = job
     sim, site, patched, anchors, pan = {}, {}, [], {}, {}
+    shape = None
     for st in settings:
+        if "shape" in st:
+            shape = api.site_kd_exposure_shape(c, st["shape"])
         sim.update(st.get("sim", {}))
         site.update(st.get("site", {}))
         pan.update(st.get("panicle", {}))
@@ -135,7 +143,7 @@ def observable(job):
     if pan:
         site["panicle_kw"] = pan
     try:
-        b = api.yamazaki_harvest_baf(c, scenario_kw=site or None, **sim)
+        b = api.yamazaki_harvest_baf(c, scenario_kw=site or None, cwo_shape=shape, **sim)
     finally:
         for organ, saved in reversed(patched):
             _restore(organ, saved)

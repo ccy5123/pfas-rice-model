@@ -15,7 +15,8 @@
 # For admitted congeners the plant cells (root, straw, grain; mean-date, absolute dry harvest
 # concentration) at the scenario's pore water vs the constant grab, delta log10, at mid and both ends.
 #
-#   python validation/site_kd_check.py        (~15 min; needs the HYDRUS engine)
+#   python validation/site_kd_check.py        (~40 min; needs the HYDRUS engine; then writes the shapes)
+#   python validation/site_kd_check.py --shapes   (the admitted congeners' exposure courses only)
 # =============================================================================
 from __future__ import annotations
 
@@ -34,6 +35,7 @@ import model_api as api      # noqa: E402
 import soil_hydrus as sh     # noqa: E402
 
 OUT = os.path.join(HERE, "site_kd_record.json")
+SHAPES = os.path.join(ROOT, "params", "cwo_shapes_irrigation_sitekd.csv")
 TOL = 0.3                    # log10, PREREG 10.1
 
 
@@ -78,7 +80,40 @@ def run_congener(c, vr_max):
     return rec
 
 
+def write_shapes(rec=None):
+    """The admitted congeners' root-zone pore water over the irrigation grab, c(t)/c_irr, at the V_r
+    midpoint and both ends (PREREG 10.1): the exposure-course end of the input-range band."""
+    rec = rec or json.load(open(OUT))
+    vr_max = rec["vr_max"]
+    cols, t_ref = {}, None
+    for c, r in rec["congeners"].items():
+        if not r["admitted"]:
+            continue
+        grab = api.yamazaki_obs(c)["water_ng_L"] / 1000.0
+        c_irr = sh._s16(c)["irrigation_ng_L"][0]
+        for key, vr in (("mid", 0.5 * vr_max), ("vr0", 0.0), ("vrmax", vr_max)):
+            _, res = api.hydrus_drivers(c, source="irrigation", sub="mid", Cwo_ref=grab,
+                                        Kd=sh.site_desorption_kd(c, vr))
+            t = np.asarray(res.t, float)
+            t_ref = t if t_ref is None else t_ref
+            cols[f"{c}|{key}"] = np.interp(t_ref, t, res.Cw / c_irr)
+        print(f"  {c:8} mean c/c_irr {np.mean(cols[c + '|mid']):.3f}", flush=True)
+    names = list(cols)
+    with open(SHAPES, "w") as f:
+        f.write("# Root-zone pore water over the irrigation grab, c(t)/c_irr, of the irrigation-source scenario on the\n"
+                "# site desorption Kd (PREREG 10.1), for the congeners its post-season soil check admitted; columns\n"
+                "# <congener>|<V_r: mid, vr0, vrmax>. Built by validation/site_kd_check.py --shapes. t_day = days after\n"
+                "# transplanting; held at the end value beyond the last row.\n")
+        f.write("t_day," + ",".join(names) + "\n")
+        for i, tt in enumerate(t_ref):
+            f.write(f"{tt:g}," + ",".join(f"{cols[n][i]:.6g}" for n in names) + "\n")
+    print(f"[written] {os.path.relpath(SHAPES, ROOT)}")
+
+
 def main():
+    if "--shapes" in sys.argv:
+        write_shapes()
+        return
     if not sh.hydrus_available():
         print("HYDRUS-1D engine not built; nothing to run.")
         return
@@ -101,6 +136,7 @@ def main():
                        vr_max=vr_max, tol=TOL, soil=sh.andosol_soil(),
                        root_profile=sh.ROOT_PROFILE_DEFAULT, congeners=out), f, indent=1)
     print(f"[written] {os.path.relpath(OUT, ROOT)}")
+    write_shapes()
 
 
 if __name__ == "__main__":

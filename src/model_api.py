@@ -290,12 +290,15 @@ def observed_baf(congener):
 
 
 def yamazaki_harvest_baf(congener, runs="both", dead_leaf_attached=1.0, scenario_kw=None,
-                         **sim_kw):
+                         cwo_shape=None, **sim_kw):
     """The model's version of the Yamazaki 2023 observation: dry-basis harvest BAF
     {root, straw, grain} [L/kg dw] on the 2020 site-year, exposure = the congener's
     irrigation-water level (constant), the two harvest runs (2020-09-01, 2020-09-10)
     combined by geometric mean as the data combine the two cultivars (`runs="mean"`: the
-    single mean-date run). `sim_kw` pass to `simulate` (f_xy_source, overrides, ...)."""
+    single mean-date run). `sim_kw` pass to `simulate` (f_xy_source, overrides, ...).
+    `cwo_shape` (PREREG 10.1; default None = constant): the exposure course as a multiple of the
+    grab, a pair (t_day, ratio) on days after transplanting (held at its ends); the BAF stays per
+    the grab, i.e. the harvest concentration over the irrigation level."""
     import site_scenario as ss
     d = yamazaki_obs(congener)
     cwo = d["water_ng_L"] / 1000.0 if d else 1.0
@@ -303,10 +306,31 @@ def yamazaki_harvest_baf(congener, runs="both", dead_leaf_attached=1.0, scenario
     logs = {k: [] for k in ("root", "straw", "grain")}
     for h in hs:
         drv = scenario_drivers(Cwo=cwo, harvest=h, **(scenario_kw or {}))
+        if cwo_shape is not None:
+            ts, ratio = cwo_shape
+            drv = dict(drv, Cwo=cwo * np.interp(np.asarray(drv["t"], float), ts, ratio))
         r = simulate(congener, drivers=drv, dead_leaf_attached=dead_leaf_attached, **sim_kw)
         for k in logs:
-            logs[k].append(np.log10(max(r["baf_final_dw"][k], 1e-30)))
+            v = r["baf_final_dw"][k] if cwo_shape is None else r["conc_dw"][k][-1] / cwo
+            logs[k].append(np.log10(max(v, 1e-30)))
     return {k: float(10 ** np.mean(v)) for k, v in logs.items()}
+
+
+def site_kd_exposure_shape(congener, key="mid"):
+    """The irrigation-source exposure course on the site desorption Kd (PREREG 10.1) as
+    (t_day, c/c_irr), for a congener its post-season soil check admitted; None otherwise.
+    `key`: the pellet-water V_r "mid" (the run), "vr0" or "vrmax" (its ends)."""
+    import csv as _csv
+    path = os.path.join(_ROOT, "params", "cwo_shapes_irrigation_sitekd.csv")
+    if not os.path.isfile(path):
+        return None
+    rows = list(_csv.reader(l for l in open(path) if not l.startswith("#")))
+    col = f"{congener}|{key}"
+    if col not in rows[0]:
+        return None
+    j = rows[0].index(col)
+    a = np.array([[float(r[0]), float(r[j])] for r in rows[1:]])
+    return a[:, 0], a[:, 1]
 
 
 # --- Tang 2026 per-organ TF validation (dry-weight basis) -----------------------
