@@ -1045,3 +1045,80 @@ table; TSCF (their eq. 4) uses a modelled solution concentration, so the figure-
 transcriptions were checked against the SIs: Tang S7/S8, 75 cells, one SD corrected (PFOS 0.1 ug/g BCF 0.025 -> 0.0254; no
 code reads it); Kim S5/S6, 51 rows, all equal. New transcriptions: `raw_si/tang2026_si_table_s2_soil.csv`,
 `raw_si/kim2019_si_table_s2_sites.csv`, `raw_si/felizeter2014_si_table_s3_dates.csv`.
+
+## 10. Amendment 3 -- seasonal exposure, the rice root profile, the neutral polar end (committed before its runs)
+
+The user's principle stands (9, preamble). Decision rules (§1, §2, 5.3, 5.4) and the default variant are
+unchanged. The literature for this section was read before this text was written; the only numbers computed
+before it are the extraction Kd of 10.1 (a closed-form solve on Table S16, no model run) and the hand
+steady-state of E36. No HYDRUS or plant run of amendment 3 has been made.
+
+### 10.1 Seasonal exposure (`obs_exposure_time`): the site soil's own desorption Kd
+9.14 kept the irrigation-source scenario out of the band because it over-leaches C4-C8 (post-season soil
+-0.46 to -0.62 log10) on the Koc-QSPR Kd (log Koc = log 96 + 0.55 (nPFC - 7)). Literature (rows `soil_kd_*`):
+- No measured PFAS Kd/Koc on an Andosol, allophanic or kuroboku soil was found (OpenAlex, J-STAGE, web).
+- The chain-length slope does not hold for short chains: Fabregat-Palau 2025 (ES&T, 1,274 compiled Kd) find
+  the PFCA Koc populations below 6 fluorinated carbons statistically equal; Nguyen 2020 (abstract only) short-
+  chain Kd within 0.5 log across soils. The QSPR's PFBA Kd 0.023 L/kg is an extrapolation without support.
+- Anion exchange on oxides is not a sourced fix for a flooded paddy: ferrihydrite sorbs PFAS appreciably only at
+  pH <= 5 and favours >= C6 (Campos-Pereira 2020); sesquioxide-rich soils at pH 5.5-7.8 sorb less than the
+  literature average (Oliver 2020). Pore water here is pH 6.5-7.0 (9.1h).
+- Japanese Andosols: water extracts > 70 % of PFOA/PFNA from an Andosol (Eun 2026, J-STAGE); resident short-chain
+  PFCAs leached out of an Andosol lysimeter beyond the input (Yamazaki 2024, Bunseki Kagaku).
+The site's own soil is measured: Yamazaki SI p.S6 extracts 20 g wet air-dried soil three times with 25 mL water
+(24 h, centrifuged) and then with methanol; Table S16 gives both fractions before and after the season. Read as
+three equilibrium desorption steps (`soil_hydrus.site_desorption_kd`): per g dry soil, step 1 holds the soil's
+moisture w0 (Table S5: 9.7 % / 10.6 %) plus r = 25 mL / m_dw, later steps the pellet-retained water V_r plus r,
+and the methanol takes the rest, so methanol-after-water / water = F/(1-F) with
+F = (V_r+Kd)/(w0+r+Kd) x ((V_r+Kd)/(V_r+r+Kd))^2. V_r is not reported: it runs from 0 (the largest Kd the
+extraction allows) to 0.963 mL/g (where PFBA's Kd reaches 0; the data's own bound), at the midpoint 0.482.
+Only the PRE-season extraction sets Kd; the post-season soil stays out of sample. Pre-season values (L/kg,
+V_r = 0 / mid / max): PFBA 1.30/0.66/0; PFPeA 1.85/1.15/0.42; PFHxA 2.00/1.29/0.54; PFHpA 2.51/1.74/0.93;
+PFOA 5.84/4.69/3.49; PFNA 17.7/15.2/12.7; PFDA 65.5/57.6/49.7; PFUnDA 439/389/339; PFDoDA 423/375/326;
+PFBS 2.00/1.29/0.54; PFOS 49.9/43.8/37.6 (QSPR: 0.023, 0.081, 0.29, 1.0, 3.6, 12.8, 45, 161, 571, 0.14, 21.7).
+Stated limits: the soil was air-dried and sieved (Andosol properties change on drying); 3 x 24 h lab desorption
+may not reach the field's slow fraction; the isotherm is taken as linear at field concentrations.
+- **Runs**: the irrigation-source scenario of 9.3 unchanged (sub mid, water "supplied"), Kd = the site Kd at the
+  V_r midpoint (base) and both ends, on the root profile of 10.2 (and on the old one, recorded). Diagnostic, the
+  most retentive corner the sources allow: Kd at V_r = 0 with percolation at its low end 0.41 cm/d.
+- **Rule** (per congener; the check is per congener): a congener whose predicted post-season 0-15 cm soil is
+  within 0.3 log10 of the measured one at the V_r midpoint is ADMITTED: its scenario exposure shape (run at the
+  grab, 9.3) enters the input-range band as a range end (5.4), with the V_r ends reported. A congener outside
+  0.3 is not admitted and keeps `obs_exposure_time` open for it. If C4-C8 fail even at the most retentive corner,
+  no linear equilibrium Kd the site's soil allows explains their retention, and the record says which data would
+  decide the process (in-season pore water or irrigation series, site percolation, post-season soil by depth,
+  precursor inventory). The default observable stays on the constant grab either way.
+
+### 10.2 Rice root profile (`soil_root_beta`)
+Source: Morita, Suga & Yamazaki 1988, Jpn J Crop Sci 57:438, Table 2 (read in full; sha256 8c2e5493...):
+transplanted, continuously flooded paddy (Chiba paddy soil in a concrete field, tilled to ~20 cm), root length
+density at ripening by layer, 15-cm cores below the hill and between hills averaged, six plots (N 0-24 kg/10a,
+11-44 hills/m2). RLD (cm/cm3) 0-5 / 5-10 / 10-20 / 20-30 cm: A 4.4/6.6/2.3/1.1, B 7.3/8.0/2.6/1.4,
+C 7.6/8.0/3.1/1.4, D 7.5/8.8/4.1/1.4, E 4.2/6.2/2.4/1.1, F 6.8/7.0/2.6/1.5. It is the only 0-30 cm profile of
+transplanted flooded rice found (Kang 1994, volcanic-ash paddy, to 25 cm; Tanaka 1985 to 15 cm; Kawata 1980
+counts only; recorded as supporting rows). Change: the HYDRUS root-uptake distribution and the root-weighted
+exposure use the RLD step profile of plot C (the control: 22.7 hills/m2, N 8 kg/10a; the site has 18.5) at
+its measured depths, 0 below 30 cm (no measurement below; the old cut kept and stated); the other five plots
+are run and their envelope reported (5.4). Transfer stated: Chiba alluvial soil tilled to 20 cm, one stage,
+applied to the Tsukuba plough layer of 15 cm over a pan. The stored flooded shapes (9.11) and the irrigation
+check are rebuilt on it.
+
+### 10.3 Neutral sap at the polar end (no change)
+Read in full: Tyree, Peterson & Edgington 1979 (Plant Physiol 63:367), Kleier 1988 (Plant Physiol 86:803),
+Hsu, Kleier & Melander 1988 (Plant Physiol 86:811). The theory gives the decay length over which sieve-tube
+sap equilibrates with its surroundings, rV/(2P), and a permeability relation on Nitella membranes
+(log P = 1.20 log Kow - 5.85, Kleier eq. 2, which Kleier says may be too high for higher-plant membranes). No
+source states a log Kow (or permeability) below which phloem sap may not be taken equal to xylem sap; a cut
+derived from these equations needs rice sieve-tube radius, sap velocity and path length, none sourced. So no
+limit is implemented; the outputs keep stating the assumption and its polar-end limitation (row
+`neu_phloem_polar`). The papers that might give one (Bromilow 1990, Hsu & Kleier 1990/1996) are requested.
+
+### 10.4 Expectations (written before the runs; misses will be recorded)
+- E36 At the V_r midpoint PFBA, PFHpA and PFOA stay below the measured post-season soil by more than 0.3 log10
+  (hand steady state with the irrigation grab at V_r = 0: soil = c_irr (Kd + theta_s/rho) gives -0.40, -0.44,
+  -0.46), so they are not admitted.
+- E37 PFNA-PFDoDA and PFOS stay within 0.3 log10 and are admitted.
+- E38 At the most retentive corner PFBA and PFOA are still below -0.3.
+- E39 The Morita profile moves no stored flooded shape's season mean by more than 0.05 log10 (its cumulative
+  fractions are within 0.06 of the linear profile's at 5, 10, 15, 20 cm).
+- E40 Every PFAS `simulate()` output of the default and the Yamazaki observable are bit-identical.
