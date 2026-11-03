@@ -1201,3 +1201,55 @@ set's largest straw deviation, median over congeners, 0.124 -> 0.208, +0.084; at
 **What amendment 3 leaves open**: `obs_exposure_time` for PFBA, PFHxA, PFHpA, PFOA, PFBS; the grain loading route and
 timing; a Japanese-cultivar ORYZA set; T_C,Ph and phi narrower than their ranges (full texts requested); the neutral
 polar-end limit (requested papers).
+
+### 10.7 Addendum (the requested full texts, read 2026-11-03; committed before its runs)
+The user supplied 27 of the requested papers and one SI (Drive `papers (4).zip`, sha256 ddb7bff0...; per-file SHA-256 in
+`fulltext_needed.md`). What they change, each checked against the text by the main session where it sets a value:
+
+**(a) T_C,Ph range re-derived from the sap that feeds the grain (default; re-fit).** 5.1 took the range from sucrose
+177-225 mg/mL (Chino 1988, which is Fukumorita & Chino 1982's leaf-sheath sap of ~70-d VEGETATIVE plants, p.274) and
+573.8 mM (Hayashi & Chino 1990, read then as abstract). Hayashi & Chino 1990 Table 1 (p.248; full text): uppermost
+internode one week after anthesis, sucrose 573.8 ± 123.1 mM, total amino acids 124.8 mM, K 40.4 mM. The grain is fed
+by that sap, so the range is taken from it alone, over the same bases as before plus the amino acids the sap carries:
+sucrose + amino acids as grain dry matter, 1000 / (196.4 + 17.2 g/L) = 4.68 L/kg; sucrose as carbohydrate with
+ORYZA CRGSO 1.462, 1.462 / (196.4 x 360/342.3 g/L) = 7.08 L/kg. Range 4.68-7.08, midpoint 5.88 (was 4.4-7.8, 6.1).
+The amino-acid mass (17.2 g/L, mean residue mass 137.5 g/mol from Table 2) was computed by a subagent; the sucrose
+by the main session. The between-plant SD (±21 %) is not added (the range is over bases, as before). Supporting:
+Tcherkez 2023 (wheat, assumed 400 mM sucrose) implies 3.8-5.6 L/kg.
+
+**(b) phi range extended to the one cereal value (default; re-fit).** Jiang, Jeschke & Hartung 2003 (J Exp Bot 54:1985,
+Fig. 7A, read by the main session): single barley over 13 d from 41 d after sowing, phloem water to the root 18 g
+against transpiration 1128 (laminae) + 149 (sheath + stem) g: phi = 18/1277 = 0.014, below Windt 2006's 0.02-0.10
+(non-cereals). The range becomes 0.014-0.10, midpoint 0.057 (was 0.06). Stated: vegetative barley, phloem water from
+the C/N flow budget (Jeschke-Pate method), not measured volume flow. The parasitised barley (Fig. 8, 12/825 = 0.0145)
+agrees.
+
+**(c) Neutral sap at the polar end: a sourced limit (neutral path only).** Bromilow, Chamberlain & Evans 1990 (Weed Sci
+38:305; read by the main session) p.312: "For nonionized compounds, only those of log Kow <0 such as amitrole and
+aldicarb sulphone were well retained in the phloem of castor bean"; p.308: nonionized chemicals of log Kow 0 to 3
+cross membranes most freely (equilibrate between phloem and xylem, p.306). Measured Ricinus translocation (Grayson &
+Kleier 1990 Table 1): log Kow -0.87 to -0.47, 61-70 %; -0.12, 42 %; 0.80, 6 %; >= 1.8, 0 %. So the sources' "less polar
+neutrals" (Trapp 2007) have a sourced lower edge, log Kow 0, below which a neutral is retained in the sieve tubes and
+its phloem sap is not the xylem sap. Change: `simulate_neutral(grain_feed="xylem")` reports the brown rice (and the
+rough grain) as not predicted (NaN, flagged `grain_feed_outside`) for log Kow < 0; the husk + rachis pool is reported.
+No neutral validation table has a grain row.
+
+**(d) Records (no change).** Soil sorption (Nguyen 2020, Campos-Pereira 2023, Brusseau 2023, Fabregat-Palau 2021,
+Kookana 2022, Li 2018): for ~4 % OC at pH 6.5-7.7 the short-chain Kd is PFBA ~0.2-0.9, PFHxA ~0.8-2.5, PFBS ~0.5-2.4 L/kg
+(Fabregat-Palau Tables 2-4; eq. 12 at f_oc 0.0375 gives PFBA 0.20-0.27, PFHxA 1.2-1.5 L/kg), matching the site
+extraction Kd; short chains "were readily desorbed" (Kookana p.117-118); no Andosol data. 10.6 stands: no equilibrium
+Kd explains the C4-C8 retention. Grain: Yamazaki 2019 (IR40 lysimeter, tap water; p.16) puts 99.5 % of a grain's
+PFOS in the hull (hull/brown ~800, a lower bound) and PFBA hull/brown 15, against the 2023 field's PFOS 1.4; the PFOS
+husk/brown is therefore not settled by the data, and 10.6's "Choi's PFOS is not a target" is withdrawn (both
+directions have a rice source). Wheat husk ~ grain (Wen 2014 Table 3); no timing data anywhere. Zhivotovsky Castello
+2014 p.599 says rice has no xylem discontinuity at the rachilla (citing Zee 1972): consistent with Zee 1972 as read
+(the xylem is continuous, but no dye enters the intact caryopsis, which does not transpire); the model's "no xylem
+flow into brown rice" stands. Roots: Yamaguchi & Tanaka 1990 (Sapporo paddy, after full flowering) 86 % in 0-20 cm,
+90 % depth 23 cm, against Morita plot C 89 % and ~21 cm: consistent; nothing measured below ~33 cm.
+
+**Runs**: the full re-fit of every variant (`validation/refit_sourced.py`), `build_parameters.py`, the transfer tests
+(`transfer_sourced.py`), the band, the policy-brief runs, the neutral scores and the biocide census.
+**Expectations**: E43 the default's Yamazaki RMSE stays within 0.005 of 0.116. E44 every transfer score of the default
+moves by < 0.02. E45 after the re-fit no Yamazaki observable cell of the default moves by more than 0.02 log10.
+E46 the census brown rice becomes NaN exactly for the rows with log Kow < 0; the census rank correlations (root
++0.904, straw -0.777) do not change. E47 the neutral validation scores do not change (3 decimals).
