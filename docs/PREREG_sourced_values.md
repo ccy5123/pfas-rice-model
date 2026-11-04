@@ -1270,3 +1270,67 @@ E46 the census brown rice becomes NaN exactly for the rows with log Kow < 0; the
 - Policy briefs rebuilt (`policy_brief_runs.py`, `bat_census_biocides.py`, `policy_biocides_figures.py`); the PFAS brief's
   numbers that moved (long-chain grain mean 7.24 -> 7.30 L/kg; previous default's Kim RMSE 2.04/1.78 -> 2.03/1.77, its
   inverse 17.5x -> 17.3x; the inverse 0.649 (0.051-8.20) -> 0.648 (0.051-8.18) ug/L) are corrected in the brief and its guard.
+
+## 11. Amendment 4 -- the cell-wall binding K_cw of every record (committed before its runs)
+
+The user's principle stands (9, preamble). Decision rules (§1, §2, 5.3, 5.4) and the default variant are unchanged.
+Before this text was written one diagnostic was run and is disclosed: on the current default, WITHOUT re-fitting,
+every K_cw of PFBA, PFHxA, PFOA and PFOS was scaled by 0 and 0.25 (Yamazaki observable, log10 change root / straw /
+grain at scale 0: PFBA -0.24/-0.01/+0.14, PFHxA -0.16/-0.04/+0.09, PFOA -0.05/-0.03/+0.04, PFOS -0.01/-0.00/+0.01).
+The root moves with B_1 (which the closed-form r_eq re-fit absorbs exactly), the grain with the leaf's free
+concentration (which L_Ph absorbs); no transfer score and no re-fit was computed.
+
+### 11.1 What is wrong now (`bind_kcw`, `smiles_kcw`)
+`bind_kcw` is recorded "derived, done=yes", but its decomposition (1-s) K_poly + s K_lignin rests on a K_poly whose
+absolute size (PFOA 4.0, slope 0.10/CF2, sulfonate offset 0.40) has no traceable source ("Prompt2 handoff", not
+found; `docs/kcw_side_project/PLAN_KR.md` 2.4, `READING_LOG_KR.md` 4) and a K_lignin from a chemically processed Kraft
+lignin (Mel 2024) that runs opposite to the natural-matrix evidence (Campos-Pereira 2022: sorption rises with
+carbohydrate C and falls with aromatic C; Sörengård 2020: bark and wood fibre PFOA log Kd -0.15 to -0.06). Neither
+pure-polysaccharide nor native-lignin PFAS Kd exists, so the split has no source. GenX borrows PFPeA's value
+(matched K_MW), and a SMILES structure gets the placeholder 20 L/kg. All three violate the principle.
+
+### 11.2 The rule (the side project's correction 1, `docs/kcw_side_project/PREREG_KR.md` §5, applied to every record)
+- **One whole-wall K_cw per compound [L/kg cell-wall dw], the same in every organ.** The lignin share s no longer
+  enters K_cw (its band ends leave the input-range band; `rice_composition_sourced.csv` keeps the rows as data).
+- **Upper end**: Makselon 2019 Sphagnum peat Oi, mean Kd of the runs at pH >= 5.8 (>= 4 runs; PFUnDA excluded):
+  PFCA n 7 (PFOA) 9.3, n 11 (PFDoDA) 28.8, n 13 (PFTeDA) 95.1; PFSA n 4 (PFBS) 10.2, n 6 (PFHxS) 4.4, n 8 (PFOS) 22.1
+  L/kg (`raw_si/makselon2019_peatOi_tableA9_logkoc.csv`). Between measured chains of one head group: log-linear in n.
+- **Lower end**: Sörengård 2020 Fig. 1 (pH 7.5), the lowest log Kd of the four plant-derived sorbents (peat, granulated
+  bark, composted bark, composted wood fibre), read per compound by the registered colour procedure (side-project
+  PREREG 2.2: 400 dpi render, axis on the 4/2/0 gridlines, low_conf flagged; a low_conf point that sets the minimum is
+  stated). Read so far: PFOA -0.31 (0.49 L/kg), PFOS -0.16 (0.69 L/kg). The remaining compounds need the full text
+  (requested 2026-11-04; the figure is not in the repo).
+- **Representative**: the geometric mean of the two ends; both ends are an input-range band end (5.4).
+- **Domain** (per head group): a chain whose two ends are both measured, or lie between measured chains of its head group
+  for the upper end and is itself measured for the lower end. Expected: PFCA n 7 up to the longest chain Sörengård
+  reports (n 11 if C12 is the last), PFSA n 4, 6, 8.
+- **Outside the domain** (decision tree, applied in this order; registered before the figure is read):
+  (i) the compound has a Sörengård plant-sorbent value but no peat upper end (expected: PFBA-PFHpA): K_cw = that
+  lowest plant-sorbent Kd (a measured value on a plant-derived matrix; a one-sided value -- the true one is not
+  below it on these substrates), flagged `kcw_lower_only`; no upward band end (none is sourced: the peat's pH 3.7
+  isotherm is at another pH, and its own PFHpA > PFOA at pH 3.7 contradicts carrying PFOA's upper end down the chain).
+  If Sörengård reports no quantifiable sorption for it, case (ii).
+  (ii) neither end measured (GenX = HFPO-DA, any other head group, a chain beyond the measured ones): the cell-wall term
+  is REMOVED (K_cw = 0; a mechanism simplification, flagged `kcw_removed`). Reported, not a band end: the effect of
+  giving it the representative of the nearest measured chain of its head group.
+- **Ethers** (SMILES path; GenX is case (ii) since n 5 is outside every domain): inside the domain the PFCA/PFSA value of
+  the same n with a log offset per ether O of 0 (range -0.49 ... +0.49, band ends; Chen 2025 GenX K_MW and Muensterman
+  2026 CHI log D), linear in the number of O (an assumption, stated).
+- **Branched**: n counted, no correction, flagged.
+- **Kraft lignin** (Mel 2024) is not a range end; a reported comparison run gives K_cw = Mel's value where measured.
+- **Stated transfer**: Kd per kg of a plant-derived matrix (peat, bark, wood fibre) is read as K_cw per kg of rice cell
+  wall; the matrices are not living rice cell walls.
+
+### 11.3 Runs
+`build_parameters.py` on the new K_cw (`src/kcw_sourced.py`; `smiles_kcw` on the same function), the full re-fit of
+every variant (`validation/refit_sourced.py`), `build_parameters.py`, `transfer_sourced.py`, `input_range_band.py`
+(K_cw ends replace the lignin-share ends), the policy-brief runs, the PFAS goldens. Reported: the Kraft comparison and the
+case-(ii) nearest-chain run on GenX.
+
+### 11.4 Expectations (written before the runs; misses will be recorded)
+- E48 After the re-fit the default's Yamazaki log10 RMSE stays within 0.005 of 0.1153 (r_eq absorbs B_1 exactly; L_Ph and
+  f_xy absorb the shoot).
+- E49 Every transfer score of the default moves by < 0.02; no PREREG 5.3 decision changes.
+- E50 GenX (no fit; median transport) loses > 0.1 log10 of root BAF (its root B_1 loses the cell-wall term).
+- E51 No K_cw band end leads any congener's straw or grain band; the median root band ends move by < 0.05 log10.
+- E52 No Yamazaki observable cell of the default moves by more than 0.03 log10 after the re-fit.
