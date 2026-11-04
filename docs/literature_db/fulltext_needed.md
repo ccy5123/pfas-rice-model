@@ -10,9 +10,14 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 | DOI | paper | needed for | why it failed |
 |---|---|---|---|
 | -- | Iwatsuki 1932, 農業及園芸 7:64 | seasonal rice root profile to 89 cm (10.2) | no DOI; cited only |
-| -- | Eun et al. 2022 (authors' data) | per-congener drainage-water values of Fig. 3 (stacked bars, legend colours repeat) | published as figure only |
-| -- | IRRI ORYZA download folder (Google Drive 0BwRcFC9_t3sQVnNRaXZMM3BYelk) | ORYZA v3 Nipponbare and Takanari crop files (Espe 2016 p.126) | 401; installers behind Google Forms |
-| -- | Jing Q / Bouman; AgMIP-Rice (Hasegawa) | the Nipponbare / Takanari files; the Akitakomachi parameters | "available from the authors" |
+
+## Not obtainable (user, 2026-11-04) -- the consequence stays as recorded
+| item | needed for | what stays |
+|---|---|---|
+| Sörengård 2020 Fig. 1 raw values of the hidden markers (authors) | PFBS (3 of 4 sorbents) and PFBA (2) K_cw lower end | lowest READ value, flagged `min_may_be_lower` (PREREG 11.7) |
+| Eun et al. 2022 Fig. 3 per-congener drainage water (authors) | in-season exposure of C4-C8 | `obs_exposure_time` open (11.5) |
+| IRRI ORYZA download folder / Jing & Bouman files (Nipponbare, Takanari) | Japanese-cultivar crop set | IR72 runs, published japonica sets as band ends (11.6, 11.8) |
+| AgMIP-Rice Akitakomachi parameters (Hasegawa) | same | same; DSSAT `Shizukuishi.CRP` stays out (undocumented) |
 
 Leads, not yet requested (ask before relying on them):
 - (Kobayashi & Horie 1994 read 2026-11-04: counts only, no rachis weight.)
