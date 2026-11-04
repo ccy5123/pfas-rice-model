@@ -1,0 +1,592 @@
+{
+ "protocol": "docs/kcw_side_project/PREREG_KR.md \u00a73 + \u00a75 (correction 1); main PREREG 11.2/11.7",
+ "note": "a record: no pass mark; root composition = rice (the other plants' composition is unknown)",
+ "predictions": {
+  "PFBA": {
+   "rec": 0.07170773742742759,
+   "lo": 0.014906856904724286,
+   "hi": 0.12941211290814392,
+   "K_cw": 0.5888436553555889,
+   "K_cw_range": [
+    0.5888436553555889,
+    0.5888436553555889
+   ],
+   "K_cw_case": "lower_only",
+   "K_cw_flags": [
+    "set by a low_conf reading (Granulated bark)",
+    "min_may_be_lower (a hidden marker could lie below the lowest read value)",
+    "kcw_lower_only"
+   ],
+   "K_PL": 42.65795188015925,
+   "K_PL_src": "Chen 2025 (PFBA)",
+   "K_prot": 10.72,
+   "n": 3,
+   "head": "carboxylate",
+   "n_ether_O": 0,
+   "branched": false
+  },
+  "PFOA": {
+   "rec": 0.026439948879561095,
+   "lo": 0.0012413887610947657,
+   "hi": 0.18288582554354443,
+   "K_cw": 2.1873453219227437,
+   "K_cw_range": [
+    0.5128613839913648,
+    9.328991627526921
+   ],
+   "K_cw_case": "domain",
+   "K_cw_flags": [],
+   "K_PL": 1905.4607179632462,
+   "K_PL_src": "Chen 2025 (PFOA)",
+   "K_prot": 12.3,
+   "n": 7,
+   "head": "carboxylate",
+   "n_ether_O": 0,
+   "branched": false
+  },
+  "PFNA": {
+   "rec": 0.011262111861403573,
+   "lo": 0.00046289718891346233,
+   "hi": 0.09557466834374122,
+   "K_cw": 2.577116097083453,
+   "K_cw_range": [
+    0.5370317963702527,
+    12.367102698082512
+   ],
+   "K_cw_case": "domain",
+   "K_cw_flags": [
+    "upper end interpolated (log-linear in n)"
+   ],
+   "K_PL": 5623.413251903491,
+   "K_PL_src": "Chen 2025 (PFNA)",
+   "K_prot": 16.98,
+   "n": 8,
+   "head": "carboxylate",
+   "n_ether_O": 0,
+   "branched": false
+  },
+  "PFHxS": {
+   "rec": 0.006508086452358181,
+   "lo": 0.0003495494030458284,
+   "hi": 0.04427076999915894,
+   "K_cw": 1.2055077105583378,
+   "K_cw_range": [
+    0.3311311214825911,
+    4.388741335181351
+   ],
+   "K_cw_case": "domain",
+   "K_cw_flags": [
+    "lower end set by a low_conf reading (Composted bark)"
+   ],
+   "K_PL": 4466.835921509631,
+   "K_PL_src": "Chen 2025 (PFHxS)",
+   "K_prot": 42.66,
+   "n": 6,
+   "head": "sulfonate",
+   "n_ether_O": 0,
+   "branched": false
+  },
+  "PFOS": {
+   "rec": 0.003322531369934158,
+   "lo": 0.00012179996542945486,
+   "hi": 0.033266290855244546,
+   "K_cw": 4.145302309614921,
+   "K_cw_range": [
+    0.7762471166286917,
+    22.13667641398574
+   ],
+   "K_cw_case": "domain",
+   "K_cw_flags": [],
+   "K_PL": 31622.776601683792,
+   "K_PL_src": "Chen 2025 (PFOS)",
+   "K_prot": 34.67,
+   "n": 8,
+   "head": "sulfonate",
+   "n_ether_O": 0,
+   "branched": false
+  },
+  "HFPO-DA": {
+   "rec": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "K_cw": 0.0,
+   "K_cw_range": [
+    0.0,
+    0.0
+   ],
+   "K_cw_case": "removed",
+   "K_cw_flags": [
+    "branched: n counted, no correction",
+    "kcw_removed"
+   ],
+   "K_PL": 117.48975549395291,
+   "K_PL_src": "Chen 2025 (HFPO-DA)",
+   "K_prot": 12.3,
+   "n": 5,
+   "head": "carboxylate",
+   "n_ether_O": 1,
+   "branched": true
+  },
+  "HFPO-TrA": {
+   "rec": 0.09714412766910346,
+   "lo": 0.000457985346819891,
+   "hi": 0.9050360917087674,
+   "K_cw": 2.577116097083453,
+   "K_cw_range": [
+    0.056234132519034905,
+    118.10491387234495
+   ],
+   "K_cw_case": "domain",
+   "K_cw_flags": [
+    "branched: n counted, no correction",
+    "2 ether O: offset 0 (band -0.49..+0.49/O), linear in O (assumed)",
+    "upper end interpolated (log-linear in n)"
+   ],
+   "K_PL": 457.0881896148747,
+   "K_PL_src": "QSPR (literature_params.k_pl)",
+   "K_prot": 12.0,
+   "n": 8,
+   "head": "carboxylate",
+   "n_ether_O": 2,
+   "branched": true
+  },
+  "HFPO-TeA": {
+   "rec": 0.11413828215713492,
+   "lo": 0.00028609403767048026,
+   "hi": 0.9562803552382986,
+   "K_cw": 9.65570257090172,
+   "K_cw_range": [
+    0.1096478196143185,
+    850.2913461084746
+   ],
+   "K_cw_case": "domain",
+   "K_cw_flags": [
+    "branched: n counted, no correction",
+    "3 ether O: offset 0 (band -0.49..+0.49/O), linear in O (assumed)"
+   ],
+   "K_PL": 1778.2794100389228,
+   "K_PL_src": "QSPR (literature_params.k_pl)",
+   "K_prot": 6.748095902284189,
+   "n": 11,
+   "head": "carboxylate",
+   "n_ether_O": 3,
+   "branched": true
+  },
+  "6:2 Cl-PFESA": {
+   "rec": 0.0043775954280686575,
+   "lo": 5.201423281014298e-05,
+   "hi": 0.12294181691193813,
+   "K_cw": 4.145302309614921,
+   "K_cw_range": [
+    0.251188643150958,
+    68.40887001317145
+   ],
+   "K_cw_case": "domain",
+   "K_cw_flags": [
+    "branched: n counted, no correction",
+    "1 ether O: offset 0 (band -0.49..+0.49/O), linear in O (assumed)"
+   ],
+   "K_PL": 23988.329190194898,
+   "K_PL_src": "Chen 2025 (9Cl-PF3ONS)",
+   "K_prot": 12.0,
+   "n": 8,
+   "head": "sulfonate",
+   "n_ether_O": 1,
+   "branched": true
+  },
+  "wH-PFBA": {
+   "rec": 0.06367625258413796,
+   "lo": 0.01314190752042128,
+   "hi": 0.11577076322312153,
+   "K_cw": 0.5888436553555889,
+   "K_cw_range": [
+    0.5888436553555889,
+    0.5888436553555889
+   ],
+   "K_cw_case": "lower_only",
+   "K_cw_flags": [
+    "set by a low_conf reading (Granulated bark)",
+    "min_may_be_lower (a hidden marker could lie below the lowest read value)",
+    "kcw_lower_only"
+   ],
+   "K_PL": 69.18309709189363,
+   "K_PL_src": "QSPR (literature_params.k_pl)",
+   "K_prot": 10.72,
+   "n": 3,
+   "head": "carboxylate",
+   "n_ether_O": 0,
+   "branched": false
+  },
+  "wH-PFNA": {
+   "rec": 0.014341312159961895,
+   "lo": 0.000591117564153894,
+   "hi": 0.11895508403375206,
+   "K_cw": 2.577116097083453,
+   "K_cw_range": [
+    0.5370317963702527,
+    12.367102698082512
+   ],
+   "K_cw_case": "domain",
+   "K_cw_flags": [
+    "upper end interpolated (log-linear in n)"
+   ],
+   "K_PL": 4365.158322401657,
+   "K_PL_src": "QSPR (literature_params.k_pl)",
+   "K_prot": 16.98,
+   "n": 8,
+   "head": "carboxylate",
+   "n_ether_O": 0,
+   "branched": false
+  }
+ },
+ "observations": {
+  "Guo2025": {
+   "PFBA": 0.3409,
+   "PFOA": 0.5784,
+   "PFNA": 0.5587,
+   "HFPO-DA": 0.3649,
+   "HFPO-TrA": 0.4895,
+   "HFPO-TeA": 0.6116,
+   "PFOS": 0.7069,
+   "6:2 Cl-PFESA": 0.7156,
+   "wH-PFBA": 0.5388,
+   "wH-PFNA": 0.4751
+  },
+  "Liu2023": {
+   "PFHxS": 0.503,
+   "PFOA": 0.573,
+   "PFOS": 0.56,
+   "6:2 Cl-PFESA": 0.59
+  },
+  "Yu2021_PFOS": {
+   "PFOS": 0.5527500000000001
+  },
+  "Wang2020_16d": {
+   "PFOA": 0.29100000000000004,
+   "PFOS": 0.47700000000000004
+  }
+ },
+ "pairs": {
+  "X1": {
+   "pair": "PFOA vs PFBA",
+   "model": "PFOA < PFBA",
+   "observed": "PFOA >= PFBA",
+   "agree": false,
+   "model_as_expected": true
+  },
+  "X2": {
+   "Guo": {
+    "pair": "PFOS vs PFOA",
+    "model": "PFOS < PFOA",
+    "observed": "PFOS >= PFOA",
+    "agree": false,
+    "model_as_expected": true
+   },
+   "Liu": {
+    "pair": "PFOS vs PFOA",
+    "model": "PFOS < PFOA",
+    "observed": "PFOS < PFOA",
+    "agree": true,
+    "model_as_expected": true
+   },
+   "Wang": {
+    "pair": "PFOS vs PFOA",
+    "model": "PFOS < PFOA",
+    "observed": "PFOS >= PFOA",
+    "agree": false,
+    "model_as_expected": true
+   }
+  },
+  "X3": {
+   "model_order": [
+    "PFOS",
+    "6:2 Cl-PFESA",
+    "PFHxS",
+    "PFOA"
+   ],
+   "observed_order": [
+    "PFHxS",
+    "PFOS",
+    "PFOA",
+    "6:2 Cl-PFESA"
+   ],
+   "spearman_rho": 0.0,
+   "expected": "model low Cl-PFESA and PFOS, high PFHxS; rho < 0",
+   "model_as_expected": false,
+   "rho_negative": false
+  },
+  "X4": {
+   "model": {
+    "HFPO-DA": 0.0,
+    "HFPO-TrA": 0.09714412766910346,
+    "HFPO-TeA": 0.11413828215713492
+   },
+   "observed": {
+    "HFPO-DA": 0.3649,
+    "HFPO-TrA": 0.4895,
+    "HFPO-TeA": 0.6116
+   },
+   "model_DA_gt_TrA_gt_TeA": false,
+   "observed_DA_gt_TrA_gt_TeA": false
+  },
+  "X5": {
+   "model_between": false,
+   "observed_between": true
+  },
+  "spearman": {
+   "Guo2025": {
+    "n": 10,
+    "rho": -0.1515151515151515
+   },
+   "Liu2023": {
+    "n": 4,
+    "rho": 0.0
+   }
+  }
+ },
+ "model_impact": {
+  "ADONA": {
+   "n": 7,
+   "head": "carboxylate",
+   "n_ether_O": 2,
+   "matched": null,
+   "K_cw_case": "domain",
+   "runs": {
+    "old_placeholder_20": {
+     "K_cw": 20.0,
+     "root": 5.868345152864014,
+     "straw": 10.954640098069104,
+     "brown_rice": 1.926997823403556
+    },
+    "rule_rec": {
+     "K_cw": 2.1873453219227437,
+     "root": 2.651902042549689,
+     "straw": 8.70801491641586,
+     "brown_rice": 2.2562680535797206
+    },
+    "rule_low": {
+     "K_cw": 0.053703179637025276,
+     "root": 2.266628840779867,
+     "straw": 8.375744355930363,
+     "brown_rice": 2.2779006905779107
+    },
+    "rule_high": {
+     "K_cw": 89.09117839344258,
+     "root": 18.344186439795152,
+     "straw": 14.6819568617451,
+     "brown_rice": 1.0551547833330936
+    }
+   }
+  },
+  "PFNS (C9 PFSA)": {
+   "n": 9,
+   "head": "sulfonate",
+   "n_ether_O": 0,
+   "matched": null,
+   "K_cw_case": "removed",
+   "runs": {
+    "old_placeholder_20": {
+     "K_cw": 20.0,
+     "root": 78.29309144869224,
+     "straw": 16.605764101441054,
+     "brown_rice": 0.5362503140099598
+    },
+    "rule_rec": {
+     "K_cw": 0.0,
+     "root": 74.68167188159663,
+     "straw": 16.45686850063125,
+     "brown_rice": 0.5774645786015505
+    },
+    "rule_low": {
+     "K_cw": 0.0,
+     "root": 74.68167188159663,
+     "straw": 16.45686850063125,
+     "brown_rice": 0.5774645786015505
+    },
+    "rule_high": {
+     "K_cw": 0.0,
+     "root": 74.68167188159663,
+     "straw": 16.45686850063125,
+     "brown_rice": 0.5774645786015505
+    }
+   }
+  },
+  "br-PFOA (5-CF3)": {
+   "n": 7,
+   "head": "carboxylate",
+   "n_ether_O": 0,
+   "matched": null,
+   "K_cw_case": "domain",
+   "runs": {
+    "old_placeholder_20": {
+     "K_cw": 20.0,
+     "root": 17.89664332875034,
+     "straw": 13.4053688204019,
+     "brown_rice": 1.3791601555570423
+    },
+    "rule_rec": {
+     "K_cw": 2.1873453219227437,
+     "root": 14.680199903399746,
+     "straw": 12.364257855070266,
+     "brown_rice": 1.626594468284168
+    },
+    "rule_low": {
+     "K_cw": 0.5128613839913648,
+     "root": 14.377837181079833,
+     "straw": 12.24534074148859,
+     "brown_rice": 1.65366105228464
+    },
+    "rule_high": {
+     "K_cw": 9.328991627526921,
+     "root": 15.969771921755372,
+     "straw": 12.82678423399396,
+     "brown_rice": 1.5188580963224865
+    }
+   }
+  },
+  "HFPO-TrA": {
+   "n": 8,
+   "head": "carboxylate",
+   "n_ether_O": 2,
+   "matched": null,
+   "K_cw_case": "domain",
+   "runs": {
+    "old_placeholder_20": {
+     "K_cw": 20.0,
+     "root": 7.684377254595691,
+     "straw": 11.453546912850252,
+     "brown_rice": 1.8262491142071016
+    },
+    "rule_rec": {
+     "K_cw": 2.577116097083453,
+     "root": 4.538315273970543,
+     "straw": 9.51407965101888,
+     "brown_rice": 2.1685881013679817
+    },
+    "rule_low": {
+     "K_cw": 0.056234132519034905,
+     "root": 4.0831179020851405,
+     "straw": 9.162966684268522,
+     "brown_rice": 2.212180023306359
+    },
+    "rule_high": {
+     "K_cw": 118.10491387234495,
+     "root": 25.399249957234762,
+     "straw": 15.44514876253192,
+     "brown_rice": 0.8530738715525028
+    }
+   }
+  },
+  "6:2 Cl-PFESA": {
+   "n": 8,
+   "head": "sulfonate",
+   "n_ether_O": 1,
+   "matched": null,
+   "K_cw_case": "domain",
+   "runs": {
+    "old_placeholder_20": {
+     "K_cw": 20.0,
+     "root": 14.653101699773655,
+     "straw": 12.907914523463955,
+     "brown_rice": 1.4995825426147913
+    },
+    "rule_rec": {
+     "K_cw": 4.145302309614921,
+     "root": 11.790208036658356,
+     "straw": 11.808692588083776,
+     "brown_rice": 1.750579564867258
+    },
+    "rule_low": {
+     "K_cw": 0.251188643150958,
+     "root": 11.087045257580046,
+     "straw": 11.474915909281972,
+     "brown_rice": 1.8217832564505418
+    },
+    "rule_high": {
+     "K_cw": 68.40887001317145,
+     "root": 23.39432540137267,
+     "straw": 14.80346542965498,
+     "brown_rice": 1.0233565425406481
+    }
+   }
+  },
+  "PFOA (control)": {
+   "n": 7,
+   "head": "carboxylate",
+   "n_ether_O": 0,
+   "matched": "PFOA",
+   "K_cw_case": "domain",
+   "runs": {
+    "old_placeholder_20": {
+     "K_cw": 20.0,
+     "root": 17.902829257824948,
+     "straw": 13.41199073172749,
+     "brown_rice": 1.3775326071254783
+    },
+    "rule_rec": {
+     "K_cw": 2.1873453219227437,
+     "root": 14.686385832474087,
+     "straw": 12.373705444093618,
+     "brown_rice": 1.624432502181505
+    },
+    "rule_low": {
+     "K_cw": 0.5128613839913648,
+     "root": 14.384023110198713,
+     "straw": 12.25513512373267,
+     "brown_rice": 1.6514421252187823
+    },
+    "rule_high": {
+     "K_cw": 9.328991627526921,
+     "root": 15.975957850740837,
+     "straw": 12.83492730853172,
+     "brown_rice": 1.5169282583027381
+    },
+    "kraft_mel2024": {
+     "K_cw": 16.595869074375607,
+     "root": 17.288142962001782,
+     "straw": 13.240623919020043,
+     "brown_rice": 1.4194502986984199
+    }
+   }
+  },
+  "PFOS (control)": {
+   "n": 8,
+   "head": "sulfonate",
+   "n_ether_O": 0,
+   "matched": "PFOS",
+   "K_cw_case": "domain",
+   "runs": {
+    "old_placeholder_20": {
+     "K_cw": 20.0,
+     "root": 227.89764388253576,
+     "straw": 17.770675099943674,
+     "brown_rice": 0.20877938481023925
+    },
+    "rule_rec": {
+     "K_cw": 4.145302309614921,
+     "root": 225.0347329153863,
+     "straw": 17.75407379666328,
+     "brown_rice": 0.21350424976036175
+    },
+    "rule_low": {
+     "K_cw": 0.7762471166286917,
+     "root": 224.42637665740804,
+     "straw": 17.75044815213565,
+     "brown_rice": 0.21453592728250948
+    },
+    "rule_high": {
+     "K_cw": 22.13667641398574,
+     "root": 228.28346736252084,
+     "straw": 17.7728560010689,
+     "brown_rice": 0.20815856550564943
+    },
+    "kraft_mel2024": {
+     "K_cw": 34.673685045253166,
+     "root": 230.54729751441968,
+     "straw": 17.785393970092482,
+     "brown_rice": 0.2045889567252253
+    }
+   }
+  }
+ }
+}

@@ -437,9 +437,12 @@ The last session's brief (`docs/HANDOFF_next_KR.md`): all four tasks done 2026-1
 4. **After amendment 3** (PREREG §10, outcome 10.6): the seasonal exposure of PFBA, PFHxA, PFHpA, PFOA, PFBS (no
    linear-equilibrium Kd the site's soil allows explains their retention; needs in-season water, percolation, soil
    by depth or precursors), the PFOS husk/brown ratio (Yamazaki 2019
-   lysimeter >= 38 against the 2023 field 1.4). K_cw is done (amendment 4, §11); what would narrow it: a measured rice
-   cell-wall (or whole-root alcohol-insoluble residue) PFAS isotherm at pH 6-7, and the short-chain upper end (no peat value
-   for PFBA-PFHpA). Exposure and grain-route re-searches (§11.5, 11.8) found nothing that decides either question.
+   lysimeter >= 38 against the 2023 field 1.4). K_cw is done (amendment 4, §11); the side project's record
+   (`validation/kcw_predict_record.py`, `docs/kcw_side_project/RESULT_KR.md`): every subcellular dataset (Guo, Liu, Yu, Wang)
+   puts 5-200x more of the root burden in the cell wall than the model's (1-θ)f_cw K_cw / B_root (a K_cw : K_PL balance or
+   fractionation question; nothing fitted). What would narrow it: a measured rice cell-wall (alcohol-insoluble residue) PFAS
+   isotherm at pH 6-7 with a mass-balanced surface / wall / membrane fractionation, and the short-chain upper end (no peat
+   value for PFBA-PFHpA). Exposure and grain-route re-searches (§11.5, 11.8) found nothing that decides either question.
 5. **Web app** (FastAPI `server/` + React `frontend/`; `docs/web_app.md`): ported from closed PR #71 (pre-amendment-1) to
    the current `model_api` (2026-11-04): the removed parameters (E_m, carrier/bypass, k_leach, tissue density, W2 fit,
    two-pool overlays) left the UI; it offers the Streamlit app's crop drivers, shoot / f_xy / lipid variant (with the
