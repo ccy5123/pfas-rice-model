@@ -11,8 +11,10 @@
   mark it as such in the work and in `sourced_inputs.csv`. Try the open-access copy first
   (OpenAlex `oa_url`, J-STAGE, publisher PDF) and list only what still fails.
   Running list: `docs/literature_db/fulltext_needed.md`.
-- **Never subscribe to PR activity** (`subscribe_pr_activity`), not even for a PR the session opened; it is
-  also denied in `.claude/settings.json`. Report CI/review state only when the user asks.
+- **No pull requests: commit and push straight to `main` (user, 2026-11-04).** The user works alone. Every session
+  works on `main` (`git checkout main && git pull`), commits, and pushes `main`; it does not create `claude/...`
+  branches or PRs, even if its harness instructions say to. Never subscribe to PR activity (`subscribe_pr_activity`
+  is also denied in `.claude/settings.json`). Report CI state only when the user asks.
 - **Save every paper, SI and record you are given (user, 2026-10-27).** Whatever the user uploads or you find (papers, SI,
   source data, transcripts of earlier work) is recorded in the repo the same session: the values read go to
   `docs/literature_db/raw_si/` (one CSV per table, a header naming DOI, table, conditions and who read it) and are indexed
@@ -425,8 +427,11 @@ is opt-in and exactly zero at K_AW = 0; no measured volatile-compound plant data
 4. **After amendment 3** (PREREG §10, outcome 10.6): the seasonal exposure of PFBA, PFHxA, PFHpA, PFOA, PFBS (no
    linear-equilibrium Kd the site's soil allows explains their retention; needs in-season water, percolation, soil
    by depth or precursors), the PFOS husk/brown ratio (Yamazaki 2019
-   lysimeter >= 38 against the 2023 field 1.4), SMILES/curated K_cw (side project,
-   PR ccy5123/pfas-rice-model#73).
+   lysimeter >= 38 against the 2023 field 1.4), SMILES/curated K_cw (side project: plan, pre-registration with correction 1 and
+   the reading log in `docs/kcw_side_project/`; its step 3 — the K_cw values — is next).
+6. **Web app port** (FastAPI + React, preserved as tag `archive/web-app-fastapi-react`): built on the pre-amendment-1
+   API (E_m, k_leach, tissue density); 28 of its 30 API tests fail on the current model. Port `server/service.py`
+   to the current `model_api` before it can join `main`.
 5. **Method B** (tight HYDRUS coupling) — later.
 
 ## 10. Gotchas / external dependencies

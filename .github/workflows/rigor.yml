@@ -11,8 +11,13 @@ name: sci-adk rigor guard
 
 on:
   push:
-    branches: ["**"]
-  pull_request:
+    branches: ["**"]    # every push runs once (work goes straight to main; no PR branches)
+
+# Supersede an in-flight run when the same branch is pushed again, instead of letting
+# both finish (the suite takes ~11 min).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   rigor:
