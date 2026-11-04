@@ -10,6 +10,7 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 | DOI | paper | needed for | why it failed |
 |---|---|---|---|
 | -- | Iwatsuki 1932, 農業及園芸 7:64 | seasonal rice root profile to 89 cm (10.2) | no DOI; cited only |
+| 10.1016/j.jece.2020.103744 | Sörengård et al. 2020, J. Environ. Chem. Eng. 8:103744 | Fig. 1 A-C: log Kd of PFCA C4-C12 and PFSA C4/C6/C8 on peat, granulated bark, composted bark, composted wood fibre (the K_cw lower end, PREREG 11.2) | read on 2026-10-27 from a direct upload (sha256 05a6e1a1...); the PDF is not in the repo nor the Drive folder; OpenAlex closed, no repository copy (2026-11-04) |
 
 Leads, not yet requested (ask before relying on them):
 - Kobayashi & Horie 1994, Jpn. J. Crop Sci. 63:193-199 (spikelet and rachis-branch differentiation) —
