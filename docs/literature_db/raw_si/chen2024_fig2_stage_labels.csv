@@ -1,5 +1,7 @@
 # Chen X, Xu D, Xiao Y, Zuo M, Zhou J, Sun X, Shan G, Zhu L (2024) Multimedia and full-life-cycle monitoring discloses the dynamic accumulation rules of PFAS
 # and underestimated foliar uptake in wheat near a fluorochemical industrial park. Environ. Sci. Technol. 58:18088-18097, doi:10.1021/acs.est.4c03525
+# UNRESOLVED (2026-11-04, SI read): SI Table S1 lists ear samples at stages II and III and husk + grain at IV, while the Fig. 2D bars are labelled
+# III and IV; which stages the two ear bars are is not settled (raw_si/chen2024_si_table1_sample_counts.csv).
 # Figure 2 (p.18091): numbers PRINTED as data labels on the stacked bars (read at 250-300 dpi; not digitised); ng/g (dry mass per Methods eq. 1-2); presumably
 # means over flood-irrigated sites (spray sites excluded); n per stage not printed on the figure (SI Tables S5-S9 not obtained). Compound = bar colour (legend).
 # Stage dates (Table 1): I 2021-01-01 seeding (seedling) stage; II 2021-04-01 growing; III 2021-05-17 filling; IV 2021-05-31 maturing. Winter wheat, Shandong FIP vicinity;

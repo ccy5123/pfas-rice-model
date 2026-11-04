@@ -1,0 +1,11 @@
+# Chen X et al. (2024) Environ. Sci. Technol. 58:18088-18097, doi:10.1021/acs.est.4c03525. SI Table S1 "Sample counts of wheat tissues in different life stages" (transcribed exactly).
+# Stages (main Table 1): I seedling 2021-01-01, II growing 04-01, III filling 05-17, IV maturing 05-31. WHEAT; context only, not rice values.
+# NOTE: ear sampled at II and III, husk and grain (separately) only at IV. raw_si/chen2024_fig2_stage_labels.csv (main Fig. 2) shows ear at III and IV, none at II: the two disagree.
+# Read by a literature subagent 2026-11-04 (not re-checked). SI file sha256 d5cec0ae37d47b892af906731f3bd6495707057bb7af1320851bbe5371e1f7b4
+organ,I,II,III,IV
+root,13,13,13,13
+stem,0,13,13,13
+leaf,13,13,13,13
+ear,0,13,13,0
+husk,0,0,0,13
+grain,0,0,0,13

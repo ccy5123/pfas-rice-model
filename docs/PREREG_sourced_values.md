@@ -1443,3 +1443,13 @@ variants never reach such a trial. No result of the stopped run was used.
 - Policy brief rebuilt (`policy_brief_runs.py`); numbers that moved are corrected in `POLICY_BRIEF_KR.md` and its guard
   (white-rice PFOA 0.0288 -> 0.0299 ug/kg, short/long-chain grain means 0.90/7.30 -> 0.93/7.33 L/kg, the previous default's Kim
   RMSE 2.03/1.77 -> 2.02/1.76 and inverse 17.3x -> 15.7x, PFDoDA previous-default miss 809x -> 796x).
+
+### 11.11 Record (the SIs of 11.8's papers and Kobayashi & Horie 1994; no model change)
+Read by a subagent 2026-11-04 (hashes in `fulltext_needed.md`). Wu 2024 SI: a fresh spike in closed tanks stays 96-99 % in
+the overlying water for PFBA-PFOA (Figs. S1-S4, by eye); the fractions sum to ~100 % by construction, so no residual pool,
+desorption rate, percolation or precursor inventory. Wu 2026 SI Table S2: the spike is unequal (20 % each PFOA, PFBA, PFOS,
+PFDoA; 2 % the others), correcting the main-text record. Chen 2024 SI: husk and grain sampled at maturity only (wheat husk/grain
+sum-PFAS median 8.5, by eye); Table S1 puts the ear samples at stages II-III while Fig. 2D labels III-IV (unresolved). Zhang
+2026 SI: no soil properties and nothing that resolves 11.8's Table 3 inconsistency. Kobayashi & Horie 1994 (no SI exists; the
+paper is open on J-STAGE): spikelet and rachis-branch counts only, no rachis dry weight, so the rachis share (7.2) stays a
+range. `obs_exposure_time`, the grain route and the rachis share stay open.

@@ -1,7 +1,7 @@
 # Wu J, Li L, Bi W, Huang X, Chen M, Tu W (2026) Impact of rice residue decomposition on the diffusion of perfluoroalkyl substances in drainage and waterlogged
 # paddy fields. Environ. Pollut. 395:127828, doi:10.1016/j.envpol.2026.127828. NO tables in the main text: TEXT values (p.2-7); per-congener values in SI Fig. S4 (SI NOT obtained).
 # Soil: paddy fields of Jiangxi Agricultural University (115.843 E, 28.766 N), Nanchang. 400 g fresh soil + 500 mL Milli-Q per tank (15 x 15 cm), 14-d stabilisation;
-# drainage = overlying water removed; waterlogged = +500 mL; 40 ug of each of 14 PFAS mixed in (~100 ng/g each), sampled day 31 (n 3); time series days 1-31 = DOM only.
+# drainage = overlying water removed; waterlogged = +500 mL; 40 ug of PFAS mixed in -- CORRECTED from the SI (Table S2): not equal per congener, PFOA/PFBA/PFOS/PFDoA 20 % each, ten others 2 % each (raw_si/wu2026_si_table2_spike_composition.csv), sampled day 31 (n 3); time series days 1-31 = DOM only.
 # PW = centrifugation 10 000 rpm of drained soil; "mass distribution (%)" shares of PFCAs / PFSAs (Fig. 3c-f), basis (mass vs concentration) not stated. Data on request only.
 # Read by a literature subagent 2026-11-04 (not re-checked). File sha256 b25e36762e69b09579b6ef4283ba9bafb5556b7bddb803fc4451f2c507ba9364 (1-s2.0-S0269749126001983-main.pdf)
 quantity,value,location

@@ -1,0 +1,8 @@
+# Zhang et al. (2026) Agric. Water Manag. 323:110041, doi:10.1016/j.agwat.2025.110041. SI (mmc1.docx, 4 pp.) Table S1 "Physicochemical Properties of RBC vs. MBC (600 C Pyrolysis)" (exact).
+# These are the BIOCHARS, not the paddy soil. The SI gives NO soil type, OC, pH, texture or CEC, and no DIFS/DGT equations or parameters (Text S1 = batch kinetics/isotherm METHODS only:
+# 0.5 g soil + 30 mL, 10 mg/L PFBA or PFOA, pH 6.0, 25 C, 1-1440 min; isotherm 1-50 mg/L, 24 h; pseudo-1st/2nd order, Langmuir/Freundlich; NO fitted values in the SI). Fig. S2 = rice root/shoot conc. (figure only).
+# Nothing in the SI resolves the Table 3 inconsistency (PREREG 11.8). Read by a literature subagent 2026-11-04 (not re-checked). SI sha256 6124f8df9fc52001503dd38f00804a67d524fd6aa5cc278f61e3b99327a20302
+property,RBC,MBC
+SSA_m2_per_g,175.9,257.6
+pH,7.4,8.3
+pHpzc,6.8,7.5

@@ -1,0 +1,12 @@
+# Chen et al. 2024 ES&T 58:18088, doi:10.1021/acs.est.4c03525. SI Table S6 "Major PFAS concentration (ng/g) in rhizosphere soil in different stages" (mean +- SD, transcribed exactly).
+# Footnote a: PFOA and sum PFAS rows are in ug/g (marked unit column). Wheat field soils near the Huantai (Shandong) fluorochemical park; n per stage 13.
+# Read by a literature subagent 2026-11-04 (not re-checked). SI file sha256 d5cec0ae37d47b892af906731f3bd6495707057bb7af1320851bbe5371e1f7b4
+compound,unit,I,II,III,IV
+PFBA,ng/g,3.0 +- 1.7,3.5 +- 2.0,3.9 +- 2.7,2.4 +- 2.1
+PFPeA,ng/g,0.8 +- 1.1,0.9 +- 0.6,0.5 +- 0.4,1.5 +- 1.8
+PFHxA,ng/g,2.2 +- 3.6,2.5 +- 2.2,2.2 +- 2.6,2.6 +- 3.6
+PFHpA,ng/g,3.1 +- 5.0,2.6 +- 2.2,2.6 +- 3.8,3.1 +- 5.2
+PFOA,ug/g,0.20 +- 0.30,0.22 +- 0.20,0.27 +- 0.36,0.25 +- 0.39
+HFPO-DA,ng/g,1.5 +- 1.3,3.4 +- 2.7,2.5 +- 2.5,2.5 +- 2.8
+HFPO-TA,ng/g,18 +- 17,55 +- 72,117 +- 137,131 +- 193
+sum PFAS,ug/g,0.23 +- 0.33,0.29 +- 0.26,0.40 +- 0.49,0.40 +- 0.59

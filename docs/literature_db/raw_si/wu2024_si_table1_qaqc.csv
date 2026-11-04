@@ -1,0 +1,13 @@
+# Wu et al. 2024 Sci. Total Environ. 956:177377, doi:10.1016/j.scitotenv.2024.177377. SI Table S1 "Details of quality assurance and quality control" (transcribed exactly; C4-C9 + sulfonates).
+# Soil recovery = 60 C methanol extraction of spiked soil (Text S2). Quantification by external calibration (no isotope internal standards).
+# Read by a literature subagent 2026-11-04 (not re-checked). SI file sha256 b70489c12cedf4c5ed25b45c0aade663ff33853651e2e85f33c42a333766799e
+compound,LOD_ng_per_L,LOQ_ng_per_L,OW_recovery_pct,OW_RSD_pct,soil_recovery_pct,soil_RSD_pct
+PFBA,0.511,1.704,105.328,8.686,67.077,1.059
+PFPeA,0.476,1.585,101.479,3.363,77.455,1.346
+PFHxA,0.684,2.280,104.738,4.849,54.859,1.623
+PFHpA,0.203,0.677,101.988,6.615,57.836,2.295
+PFOA,0.327,1.090,107.551,6.150,57.366,1.479
+PFNA,0.656,2.188,106.887,5.487,59.677,2.867
+PFBS,0.779,2.595,103.509,1.968,79.480,2.571
+PFHxS,0.429,1.429,114.392,4.883,77.670,1.335
+PFOS,1.717,5.724,106.086,10.405,76.732,27.564

@@ -1,0 +1,12 @@
+# Kobayashi K, Horie T (1994) The effect of plant nitrogen condition during reproductive stage on the differentiation of spikelets and rachis-branches in rice. Jpn. J. Crop Sci. 63(2):193-199,
+# doi:10.1626/jcs.63.193 (J-STAGE open access; 7-page scan, no text layer; read on 200-dpi renders, Japanese with English abstract/captions). Table 1 (p.194), transcribed exactly (day/month).
+# Nipponbare, Kyoto Univ. farm paddy, 22.2 hills/m2, 2 plants/hill, seedlings 15-30 d (leaf age 3.8-4.9). PI panicle initiation; ESD/LSD early/late spikelet differentiation.
+# SEARCH RESULT for the rachis share: the paper reports NO rachis or rachis-branch DRY WEIGHT and no rachis share of panicle weight at any stage. Organ dry weights (leaf blade, sheath+culm,
+# dead leaves, panicle at full heading only; 90 C >= 48 h; p.194 Methods) were measured but are NOT tabulated. Only COUNTS: differentiated/degenerated spikelets and primary/secondary
+# rachis-branches per m2 (Figs. 1-6; e.g. 17 800-56 600 differentiated spikelets/m2, final 15 500-39 100/m2, p.195; ~2 secondary branches per primary, p.197).
+# Read by a literature subagent 2026-11-04 (not re-checked). File sha256 2e18480c9866ab434b082013d5bd633443c7744f8822b251fc2cec4d4422fbee
+year,crop,sowing,transplanting,PI,ESD,LSD,heading
+1988,1,15/IV,14/V,2/VII,20/VII,24/VII,15/VIII
+1988,2,28/V,22/VI,26/VII,9/VIII,12/VIII,30/VIII
+1989,1,17/IV,15/V,11/VII,20/VII,26/VII,15/VIII
+1989,2,20/VI,5/VII,5/VIII,14/VIII,18/VIII,5/IX

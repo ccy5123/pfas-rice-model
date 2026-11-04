@@ -1,0 +1,64 @@
+# Wu J, Li L, Chen M, Liu M, Tu W (2024) Sci. Total Environ. 956:177377, doi:10.1016/j.scitotenv.2024.177377. SI (mmc1.docx) Figs. S1-S4 (experiment A).
+# FIGURE-ONLY values read BY EYE on the native PNGs embedded in the SI (2572x1969 px), +-2 % of axis span; NOT tabulated anywhere. Means of n=3 (SI caption; main text says n 4).
+# Conditions: PP tanks 15x15 cm, 400 g fresh paddy soil (Jiangxi Agric. Univ.; texture/OC NOT in SI), 40 ug of each of 15 PFAS mixed in (100 ng/g fresh soil), FRESH spike (no ageing),
+# flood = +500 mL Milli-Q, drought = no water; closed tanks (no drainage/percolation). Days after spiking 7/14/21. Soil pH (Fig. S9, by eye): flood 8.43/7.00/6.69, drought 7.58/7.67/8.32;
+# soil water content flood 77/80/81 %, drought 72/27/12 %; EC flood 183/190/203, drought 360/143/40 uS/cm. No OC, texture, CEC in the SI.
+# Fractions: OW overlying water (ug/L, flood only); SS "soil solution" = water + 30-min ultrasonic extract (not in-situ pore water); EPS 0.05 % NaCl extract; SP 60 C methanol extract (ng/g soil).
+# AGENT CHECK: OW[ug/L]*0.5 L/40 ug*100 + SS + EPS + SP = 100.0 +-0.3 at every point checked (PFBA, PFHxA, PFNA, PFHxS, PFOS flood; PFBA, PFHpA, PFOA, PFBS, PFHxS drought):
+# the "ng/g soil" values are % of the spike, closed by construction (soil recoveries 55-79 %, SI Table S1) -> no unextracted/residual pool is measured.
+# Read by a literature subagent 2026-11-04 (not re-checked). SI file sha256 b70489c12cedf4c5ed25b45c0aade663ff33853651e2e85f33c42a333766799e
+compound,treatment,day,OW_ug_per_L,OW_share_pct_derived,SS_ng_per_g,EPS_ng_per_g,SP_ng_per_g
+PFBA,flood,7,77.8,97.3,2.7,0.0,0.0
+PFBA,flood,14,76.9,96.1,3.9,0.0,0.0001
+PFBA,flood,21,76.95,96.2,3.8,0.0,0.0012
+PFBA,drought,7,,,99.6,0.38,0.0025
+PFBA,drought,14,,,99.5,0.45,0.0037
+PFBA,drought,21,,,98.0,2.0,0.0195
+PFPeA,flood,7,78.73,98.4,1.55,0.03,0.003
+PFPeA,flood,14,77.97,97.5,2.5,0.03,0.003
+PFPeA,flood,21,78.07,97.6,2.4,0.03,0.004
+PFPeA,drought,7,,,98.3,1.65,0.097
+PFPeA,drought,14,,,97.7,2.15,0.155
+PFPeA,drought,21,,,95.8,3.9,0.347
+PFHxA,flood,7,79.39,99.2,0.5,0.1,0.1
+PFHxA,flood,14,78.66,98.3,1.4,0.1,0.1
+PFHxA,flood,21,78.90,98.6,1.1,0.1,0.05
+PFHxA,drought,7,,,82.6,6.6,10.7
+PFHxA,drought,14,,,91.6,6.1,2.3
+PFHxA,drought,21,,,90.4,7.5,2.1
+PFHpA,flood,7,79.19,99.0,0.5,0.3,0.15
+PFHpA,flood,14,79.24,99.05,0.7,0.1,0.1
+PFHpA,flood,21,79.54,99.4,0.4,0.05,0.05
+PFHpA,drought,7,,,60.6,25.8,13.7
+PFHpA,drought,14,,,81.3,11.4,7.3
+PFHpA,drought,21,,,86.2,9.3,4.4
+PFOA,flood,7,78.50,98.1,0.3,0.2,0.9
+PFOA,flood,14,78.91,98.6,0.4,0.05,0.5
+PFOA,flood,21,79.30,99.1,0.1,0.03,0.3
+PFOA,drought,7,,,21.0,10.6,68.5
+PFOA,drought,14,,,60.8,3.25,36.0
+PFOA,drought,21,,,53.2,4.25,42.6
+PFNA,flood,7,47.2,59.0,0.9,1.15,38.8
+PFNA,flood,14,67.9,84.9,0.5,0.22,14.4
+PFNA,flood,21,68.6,85.8,0.5,0.11,13.6
+PFNA,drought,7,,,1.8,2.57,95.7
+PFNA,drought,14,,,17.0,0.6,82.3
+PFNA,drought,21,,,6.3,1.24,92.5
+PFBS,flood,7,71.7,89.6,5.2,4.4,0.7
+PFBS,flood,14,74.0,92.5,4.2,3.0,0.35
+PFBS,flood,21,75.0,93.75,3.4,2.5,0.3
+PFBS,drought,7,,,57.2,35.5,7.3
+PFBS,drought,14,,,67.5,27.1,5.25
+PFBS,drought,21,,,74.7,22.4,2.9
+PFHxS,flood,7,63.5,79.4,6.4,9.2,4.9
+PFHxS,flood,14,72.3,90.4,3.9,2.8,2.9
+PFHxS,flood,21,75.3,94.1,1.7,0.9,2.9
+PFHxS,drought,7,,,29.2,41.8,29.1
+PFHxS,drought,14,,,46.8,25.1,28.0
+PFHxS,drought,21,,,54.3,24.1,21.5
+PFOS,flood,7,19.7,24.6,11.1,13.3,51.0
+PFOS,flood,14,50.6,63.3,10.1,4.9,21.7
+PFOS,flood,21,41.4,51.8,6.9,6.3,34.9
+PFOS,drought,7,,,11.7,9.3,79.0
+PFOS,drought,14,,,6.8,4.7,88.4
+PFOS,drought,21,,,3.0,2.7,94.2

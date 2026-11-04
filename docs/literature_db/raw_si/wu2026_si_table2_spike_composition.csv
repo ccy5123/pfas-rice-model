@@ -1,0 +1,22 @@
+# Wu J, Li L, Bi W, Huang X, Chen M, Tu W (2026) Environ. Pollut. 395:127828, doi:10.1016/j.envpol.2026.127828. SI (mmc1.doc, converted with LibreOffice) Table S2
+# "Experimental setup of the PFAS composition in agricultural soils" (mean literature soil concentrations; transcribed exactly). Spike = 20 % of the total for each of 4 PFAS, 2 % for each of 10.
+# CONFLICT: raw_si/wu2026_text_values.csv records "40 ug of each of 14 PFAS (~100 ng/g each)" from the main text; this table says the spike was NOT equal per congener.
+# SI Fig. S3 names total soil levels 1, 10, 100, 1000 ng/g (debris-mass test). SI Fig. S4 (per-congener OW/PW/SS/SM/OF) is a colour heatmap with an unlabelled Min-Max scale: NO values readable.
+# SI also has no soil texture, OC beyond the main text, ageing, percolation, desorption kinetics or precursor data. QA/QC (Table S3) soil recoveries identical to Wu 2024 Table S1.
+# Read by a literature subagent 2026-11-04 (not re-checked). SI file sha256 55cfbe7fd555b30f35b72e0b7017d75d174de2f87fc887455d6d38c127a0a54f
+compound,lit_mean_soil_ng_per_g,relative_proportion_pct,group_sum_pct,spike_share
+PFOA,32.087,52.053,79.386,20 % each of four
+PFBA,6.810,11.048,79.386,20 % each of four
+PFOS,6.116,9.922,79.386,20 % each of four
+PFDoA,3.923,6.364,79.386,20 % each of four
+PFUnDA,2.721,4.414,20.614,2 % each of ten
+PFPeA,2.058,3.338,20.614,2 % each of ten
+PFDA,1.885,3.057,20.614,2 % each of ten
+PFHxA,1.627,2.639,20.614,2 % each of ten
+PFBS,1.435,2.328,20.614,2 % each of ten
+PFHpA,1.333,2.163,20.614,2 % each of ten
+PFNA,0.738,1.197,20.614,2 % each of ten
+HFPO-DA,0.463,0.752,20.614,2 % each of ten
+PFHxS,0.446,0.724,20.614,2 % each of ten
+HFPO-TA,0.000,0.000,20.614,2 % each of ten
+sum,61.644,,,

@@ -1,0 +1,19 @@
+# Chen et al. 2024 ES&T 58:18088, doi:10.1021/acs.est.4c03525. SI Figure S2 panels (E) husk and (F) grain: sum PFAS (ng/g, dry mass) per sampling site, single bars without error bars.
+# FIGURE-ONLY, read BY EYE at 400 dpi (+-50 ng/g husk, +-5 ng/g grain). Husk and grain exist only at stage IV (maturity, SI Table S1) -> these are maturity values; NO husk-vs-grain by stage exists.
+# Sites by distance from the fluorochemical park: <1 km N1-S1, 1-2 km W2 W3, 2-4 km NE5 W4. Per-congener split only as stacked % bars (not read). WHEAT; context only.
+# husk_to_grain = agent arithmetic on the by-eye values (median 8.5, range 2.2-13.2).
+# Read by a literature subagent 2026-11-04 (not re-checked). SI file sha256 d5cec0ae37d47b892af906731f3bd6495707057bb7af1320851bbe5371e1f7b4
+site,husk_sumPFAS_ng_per_g,grain_sumPFAS_ng_per_g,husk_to_grain
+N1,2050,348,5.9
+N2,1530,300,5.1
+NE1,690,73,9.5
+NE2,970,97,10.0
+NE3,1560,140,11.1
+NE4,3560,363,9.8
+W1,4070,308,13.2
+E1,1340,206,6.5
+S1,70,32,2.2
+W2,930,113,8.2
+W3,240,19,12.6
+NE5,570,81,7.0
+W4,170,20,8.5

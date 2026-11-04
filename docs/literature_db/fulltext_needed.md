@@ -15,8 +15,7 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 | -- | Jing Q / Bouman; AgMIP-Rice (Hasegawa) | the Nipponbare / Takanari files; the Akitakomachi parameters | "available from the authors" |
 
 Leads, not yet requested (ask before relying on them):
-- Kobayashi & Horie 1994, Jpn. J. Crop Sci. 63:193-199 (spikelet and rachis-branch differentiation) —
-  possible rachis weights for PREREG 7.2 (cited by Matsui & Kagata 2002).
+- (Kobayashi & Horie 1994 read 2026-11-04: counts only, no rachis weight.)
 
 ## Obtained 2026-11-04 (user, Google Drive `papers (5).zip`, sha256 466246d847f6cbfafc328e2c7763aeaf669d2888ae081c3fbec4b2bc93840441)
 Read in full (Sörengård by the main session; the rest by literature subagents, PREREG 11.7-11.8). PDFs not committed.
@@ -32,7 +31,11 @@ Read in full (Sörengård by the main session; the rest by literature subagents,
 - 10.1111/gcb.12758 Li 2015 (li2015.pdf 3696889ad78c839e5eddec64d892f06455a01c8912439fa92391a7e74c6c7708; SI docx
   0658b14f366397edb711c1120a3a69138226fee120b33bf2cf07579d19c3f442) -> `raw_si/li2015_agmip_s3_oryza_params.csv`, `shizukuishi_crp_vs_li2015_s3.csv`
 - 10.1002/agj2.20258 Lu 2020 (f7f1b27753f77a635d27d84e9b87c0e20d1cc82dc957a87c0476cdc8b64b3314) -> `raw_si/lu2020_jiangsu_oryza_v3_params.csv`
-Still requested from these: the SIs of Wu 2024 (Figs. S1-S22), Wu 2026 (Fig. S4), Chen 2024 (Tables S5-S9), Zhang 2026 (Table S1, Text S1).
+SIs obtained 2026-11-04 (user, `papers_SI.zip` sha256 967b5d2e72e13176063f74c018dcb93345e2600d8e553d894e7cdf66ad3147f9; read by a subagent):
+Wu2024_SI1.docx b70489c12cedf4c5ed25b45c0aade663ff33853651e2e85f33c42a333766799e; Wu2026_SI1.doc 55cfbe7fd555b30f35b72e0b7017d75d174de2f87fc887455d6d38c127a0a54f;
+Chen2024_SI1.pdf d5cec0ae37d47b892af906731f3bd6495707057bb7af1320851bbe5371e1f7b4; Zhang2026_SI1.docx 6124f8df9fc52001503dd38f00804a67d524fd6aa5cc278f61e3b99327a20302.
+Also read: 10.1626/jcs.63.193 Kobayashi & Horie 1994 (open access J-STAGE scan, 2e18480c9866ab434b082013d5bd633443c7744f8822b251fc2cec4d4422fbee; no SI exists):
+no rachis dry weight. Nothing in these changes an open question (PREREG 11.11).
 
 ## Obtained (2026-10-26, uploaded by the user or open access) — read in the main session
 - 10.1626/pps.5.198 Matsui & Kagata 2002 (no rachis weight: spikelets only)

@@ -1,0 +1,21 @@
+# Chen et al. 2024 ES&T 58:18088, doi:10.1021/acs.est.4c03525. SI Figure S5 "Heat map of relative proportion of PFAS in soil and different tissues of wheat" (%).
+# Numbers PRINTED in the heat-map cells (read at 300 dpi; transcribed, not digitised). Stage pooling not stated; no husk column. WHEAT; context only.
+# Read by a literature subagent 2026-11-04 (not re-checked). SI file sha256 d5cec0ae37d47b892af906731f3bd6495707057bb7af1320851bbe5371e1f7b4
+compound,soil,root,shoot,leaf,ear,grain
+PFBA,2.68,18.60,41.24,37.03,58.82,62.63
+PFPeA,0.72,7.50,12.19,11.05,11.93,13.47
+PFHxA,0.83,3.24,7.04,7.10,4.87,4.79
+PFHpA,0.87,1.73,1.96,1.70,0.64,0.95
+PFOA,71.75,52.47,27.15,35.77,20.31,8.82
+PFNA,0.33,0.38,0.52,0.09,0.04,0.45
+PFDA,0.27,0.15,0.10,0.02,0.03,0.17
+PFUdA,0.11,0.09,0.08,0.14,0.05,1.05
+PFDoA,0.07,0.09,0.07,0.02,0.06,1.40
+PFBS,0.02,0.01,0.02,0.01,0.00,0.03
+PFHxS,0.11,0.21,0.16,0.04,0.02,0.07
+PFOS,0.27,0.22,0.20,0.04,0.08,0.88
+HFPO-TA,19.43,9.49,2.57,2.89,1.29,0.07
+HFPO-DA,1.58,4.41,5.82,3.93,1.00,0.15
+6:2 F-53B,1.18,1.36,0.92,0.17,0.79,4.87
+8:2 F-53B,0.04,0.12,0.10,0.02,0.05,0.17
+PFEESA,0.01,0.03,0.03,0.01,0.02,0.03
