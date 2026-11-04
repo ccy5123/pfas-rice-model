@@ -494,7 +494,8 @@ def eliminate(pool, shoot, log):
     """Backward elimination of the lipid terms (PREREG 5.6)."""
     model = {}
     cur = fit_lipid(pool, shoot, model, START, {})
-    log.append(dict(step="full", model=dict(model), p=cur["p"], rmse=cur["rmse"]))
+    log.append(dict(step="full", model=dict(model), p=cur["p"], rmse=cur["rmse"],
+                    rejected_trials=cur["rejected_trials"]))
     print(f"  [{shoot}] full: rmse {cur['rmse']:.4f}  {fmt(cur['p'], cur['names'])}", flush=True)
     while True:
         cand = []
@@ -516,14 +517,16 @@ def eliminate(pool, shoot, log):
                   f"[{d['lo']:+.4f}, {d['hi']:+.4f}]", flush=True)
         removable = [(t, r, d) for t, r, d in cand if d["verdict"] != "worse"]
         log.append(dict(step="candidates", model=dict(model),
-                        cand=[dict(term=t, rmse=r["rmse"], p=r["p"], decide=d)
+                        cand=[dict(term=t, rmse=r["rmse"], p=r["p"], decide=d,
+                                   rejected_trials=r["rejected_trials"])
                               for t, r, d in cand]))
         if not removable:
             break
         t, r, d = min(removable, key=lambda z: z[1]["rmse"])
         model = r["model"]
         cur = r
-        log.append(dict(step="remove", term=t, model=dict(model), p=cur["p"], rmse=cur["rmse"]))
+        log.append(dict(step="remove", term=t, model=dict(model), p=cur["p"], rmse=cur["rmse"],
+                        rejected_trials=cur["rejected_trials"]))
         print(f"  [{shoot}] removed {t}: rmse {cur['rmse']:.4f}  {fmt(cur['p'], cur['names'])}",
               flush=True)
         if not free_names(model)[1:]:

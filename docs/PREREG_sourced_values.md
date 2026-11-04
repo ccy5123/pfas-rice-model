@@ -1453,3 +1453,7 @@ sum-PFAS median 8.5, by eye); Table S1 puts the ear samples at stages II-III whi
 2026 SI: no soil properties and nothing that resolves 11.8's Table 3 inconsistency. Kobayashi & Horie 1994 (no SI exists; the
 paper is open on J-STAGE): spikelet and rachis-branch counts only, no rachis dry weight, so the rachis share (7.2) stays a
 range. `obs_exposure_time`, the grain route and the rachis share stay open.
+
+### 11.12 Note (record keeping; no run)
+The trial-rejection count of 11.9 is now written into each elimination step of `validation/refit_sourced.json`
+(`elimination[].rejected_trials`, and per candidate); the amendment-4 record predates this and does not carry it (11.10).
