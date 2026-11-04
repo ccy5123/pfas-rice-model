@@ -1,0 +1,16 @@
+# Eun H, Yamazaki E, Pan Y, Taniyasu S, Noborio K, Yamashita N (2022) IJERPH 19:10379, doi:10.3390/ijerph191610379 (open access, PMC9408263;
+# Europe PMC full-text XML sha256 9f1f2021383f321b9d514796a850c3ffccc8935c0d7c5e16141718738daea3a9). Read by a literature subagent 2026-11-04 (not re-checked).
+# Table 1: PFAS in the lysimeter's (non-drinking) tap irrigation water [pg/L] and the one-off simulated contaminated-water spike [ng/L].
+# Site: Meiji Univ. paddy lysimeter (Kawasaki), 2 x 2 m, 1.8 m deep, low-humic Andosol 0-35 cm over Kanto loam, roofed; 2015 season.
+# NOT the Yamazaki 2023 Tsukuba field. No percolation rate, Kd or tabulated soil/leachate values in the paper (Figs. 2-4 only).
+# By-eye figure reading (NOT a table value, +-20 %): Fig. 3, 5-cm leachate before the spike sum PFAS ~60-100 ng/L (~10x the tap water, 7.6 ng/L).
+pfas,tap_irrigation_pg_per_L,spike_ng_per_L
+PFBA,858,14754
+PFPeA,391,15100
+PFHxA,647,7873
+PFHpA,528,3198
+PFOA,1166,19156
+PFNA,498,
+PFBS,352,1484
+PFHxS,1721,702885
+PFOS,1240,395909

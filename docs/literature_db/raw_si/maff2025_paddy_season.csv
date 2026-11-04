@@ -1,0 +1,26 @@
+# MAFF (Japan) 2025. (1) FY2024 brief "農業環境中のPFOS、PFOAのコメへの移行、蓄積性について", https://www.maff.go.jp/j/syouan/seisaku/PFAS/attach/pdf/index-9.pdf
+#   (sha256 a8bb800887c5fbc49df11564fe68430ce675991c1ab1f96c7c58d276329fad05), p.2-3. (2) Regulatory-science project progress report FY2023-2027,
+#   https://www.maff.go.jp/j/syouan/seisaku/regulatory_science/attach/pdf/kadai_jisshi-53.pdf (sha256 61ce7b51e985497a5c0be211524775d176363c47e308666b024b14f1c8142593), FY2024 part p.16-24.
+# Read by a literature subagent 2026-11-04 (not re-checked). Region, soil type and calendar withheld; paddy SURFACE water (one early and one summer grab), not pore water.
+# Soil 0-15 cm before tillage (spring) and at harvest (autumn), ng/kg dw; surface water ng/L. Authors: soil species and levels did not change much over the season.
+source,plot,quantity,pfas,spring,autumn_or_summer,unit,page
+report,c-1,soil,PFOA,14076,15704,ng/kg dw,p.17
+report,c-1,soil,PFOS,462,510,ng/kg dw,p.17
+report,c-1,soil,PFNA,1084,1230,ng/kg dw,p.17
+report,c-1,soil,PFHxS,73,57,ng/kg dw,p.17
+report,B-a,soil,PFOS,4514,5070,ng/kg dw,p.22
+report,B-a,soil,PFOA,292,359,ng/kg dw,p.22
+report,B-a,soil,PFNA,951,1006,ng/kg dw,p.22
+report,B-a,soil,PFHxS,1276,946,ng/kg dw,p.22
+report,c-1,surface_water,PFOA,2812,391,ng/L,p.18
+report,B-a,surface_water,PFBA,10,44,ng/L,p.22
+report,B-a,surface_water,PFOA,9,13,ng/L,p.22
+report,B-a,surface_water,PFNA,28,25,ng/L,p.22
+report,B-a,surface_water,PFHxS,43,44,ng/L,p.22
+report,B-a,surface_water,PFOS,70,65,ng/L,p.22
+report,B-b,surface_water,PFBA,9,29,ng/L,Fig. 13
+brief,15 plots,soil,PFOS,640-6600,,ng/kg dw,p.2
+brief,15 plots,brown_rice,PFOS,<9,,ng/kg,p.2
+brief,15 plots,soil,PFOA,510-18000,,ng/kg dw,p.3
+brief,15 plots,brown_rice,PFOA,<2-20 (median 5),,ng/kg,p.3
+report,A,brown_rice,PFBA,median 86 (max 325),,ng/kg,p.19

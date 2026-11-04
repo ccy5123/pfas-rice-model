@@ -1334,3 +1334,18 @@ case-(ii) nearest-chain run on GenX.
 - E50 GenX (no fit; median transport) loses > 0.1 log10 of root BAF (its root B_1 loses the cell-wall term).
 - E51 No K_cw band end leads any congener's straw or grain band; the median root band ends move by < 0.05 log10.
 - E52 No Yamazaki observable cell of the default moves by more than 0.03 log10 after the re-fit.
+
+### 11.5 Record (seasonal exposure and grain route re-searched 2026-11-04; no model change)
+Search log: `docs/literature_db/searches/2026-11-04_exposure_grain_route.md` (literature subagent; values not re-checked
+by the main session). **Exposure** (`obs_exposure_time`, 10.6): no follow-up of the Yamazaki 2023 field by its group
+(OpenAlex author records since 2022); no TOP / precursor assay on a paddy soil; no PFAS desorption kinetics on an Andosol;
+no readable paddy pore-water series. Two field records point the same way as 10.6's reading (a resident soil pool, not a
+depleted one, sets the water): Eun 2022's Andosol lysimeter, whose pre-spike 5-cm leachate ran ~10x the irrigation water
+(figure, by eye), and MAFF 2025's 15 paddy plots, whose 0-15 cm soil did not fall over the season while surface-water
+PFBA rose in summer (`raw_si/eun2022_table1_irrigation.csv`, `maff2025_paddy_season.csv`). Neither gives percolation, Kd
+or pore water, so neither decides the process; `obs_exposure_time` stays open for PFBA, PFHxA, PFHpA, PFOA, PFBS.
+Requested: Zhang 2025 (paddy DGT pore water + fitted desorption), Wu 2024/2026. **Grain route**: still no rice PFAS study
+samples husk, brown rice or rachis through filling or uses a tracer / girdling / flag-leaf removal; MAFF's brown-rice PFOS
+< 9 ng/kg where soil PFOS was 4.5-5.1 ug/kg (husk not measured). The one cereal-ear time course is wheat (Chen 2024,
+abstract only). What would decide it: husk, brown rice and rachis sampled from heading to maturity at one site, with a
+labelled-PFOS flag-leaf feeding or girdling test.

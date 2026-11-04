@@ -11,6 +11,12 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 |---|---|---|---|
 | -- | Iwatsuki 1932, 農業及園芸 7:64 | seasonal rice root profile to 89 cm (10.2) | no DOI; cited only |
 | 10.1016/j.jece.2020.103744 | Sörengård et al. 2020, J. Environ. Chem. Eng. 8:103744 | Fig. 1 A-C: log Kd of PFCA C4-C12 and PFSA C4/C6/C8 on peat, granulated bark, composted bark, composted wood fibre (the K_cw lower end, PREREG 11.2) | read on 2026-10-27 from a direct upload (sha256 05a6e1a1...); the PDF is not in the repo nor the Drive folder; OpenAlex closed, no repository copy (2026-11-04) |
+| 10.1016/j.agwat.2025.110041 | Zhang et al. 2025, Agric. Water Manag. | paddy pore-water profiles, fitted Kd and desorption rate constants (PFBA, PFOA): `obs_exposure_time` (10.6) | ScienceDirect 403; SSRN preprints 5157625 / 5125235 "Content Blocked" (2026-11-04) |
+| 10.1016/j.scitotenv.2024.177377 | Wu et al. 2024, Sci. Total Environ. | overlying / pore water course of C4-C9 under irrigation (10.6) | closed, no OA copy |
+| 10.1016/j.envpol.2026.127828 | Wu et al. 2026, Environ. Pollut. | pore water drained vs waterlogged (10.6) | closed |
+| 10.1021/acs.est.4c03525 | Chen et al. 2024, ES&T | wheat ear / stem PFAS by stage (grain timing, mechanism context) | closed (ACS) |
+| 10.3791/64400 | Liu, Zhou & Zhu 2022, JoVE | split-root wheat phloem transfer of PFOA / PFOS | closed |
+| -- | Eun et al. 2022 (authors' data) | per-congener drainage-water values of Fig. 3 (stacked bars, legend colours repeat) | published as figure only |
 
 Leads, not yet requested (ask before relying on them):
 - Kobayashi & Horie 1994, Jpn. J. Crop Sci. 63:193-199 (spikelet and rachis-branch differentiation) —
