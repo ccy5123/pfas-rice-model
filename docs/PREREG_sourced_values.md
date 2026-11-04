@@ -1362,3 +1362,21 @@ on which cultivar or data. It is not a published set, so rule 7.5 (every PUBLISH
 categorical band end) does not admit it; it is recorded, not run. It would become a band end if its calibration were
 documented (Bannayan 2005 and Li 2015 SI Table S3 are requested). The default crop stays IR72.D92 with the six published
 japonica sets as band ends; the Japanese-cultivar lever stays open.
+
+### 11.7 Addendum (reading Sörengård 2020 Fig. 1; committed before any model run on the readings)
+The user supplied the full text (Drive `papers (5).zip`, sha256 466246d8...; `sorengard2020.pdf` sha256 4e614b14..., a
+different file from the 2026-10-27 upload 05a6e1a1...) and the SI is open (Elsevier mmc1.docx, sha256 0ff4b962...; it has
+no Kd table: Fig. 1 is the only source). Found while reading, before any K_cw value entered the model:
+- Fig. 1 is an embedded 300-ppi JPEG; it is read on the native image (a 400-dpi render only resamples it), axes calibrated on
+  the gridlines (panel A 43.0, B 53.3, C 45.0 px per log unit), the 44 sorbent columns 35.84 px apart; peat = column 19,
+  composted wood fibre 31, granulated bark 36, composted bark 42 (axis labels). SI Table S6: their batch pH 7.20-7.50.
+- **Hidden markers**: a marker drawn under later series can be fully covered (no pixel). A hidden value is not read; it is
+  recorded with the interval its centre could occupy under the covering markers. The lower end is the lowest READ value
+  of the four sorbents; where a hidden interval reaches below it, the record is flagged `min_may_be_lower` and the flag is
+  carried into `K_cw_flags`. A partly covered marker is read from its visible edge plus the marker radius (low_conf).
+- **PFHpA is not plotted** in Fig. 1A (legend PFBA, PFPeA, PFHxA, PFOA only), although the methods list it: it has no lower
+  end, so it falls in case (ii) of 11.2 (removed). PFTeDA (C13) is plotted, so PFCA n 13 has both ends (domain).
+- PFDoDA and PFTeDA (light-blue rings) cannot be told apart in Fig. 1B; both are drawn after the grey series and can be
+  covered only by the navy C16/C18 markers (at >= +0.9) or by each other, so both take the lowest blue-ring reading.
+- The 2026-10-27 PFOA/PFOS reading (`sorengard2020_fig1_plant_sorbents.csv`, 400-dpi render) is kept as the record; the new
+  reading of all compounds (`sorengard2020_fig1_all_compounds.csv`) replaces it as the input.
