@@ -59,6 +59,8 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 ├── reproduce_demo.py                 # entry point: Yamazaki 2020 site-year, dry basis (default | --lipid | --free)
 ├── build_parameters.py               # (re)assembles params/parameters.json from source tables + refit_sourced.csv
 ├── app.py                            # Streamlit visualization tool (plant/soil map + exposure modes)
+├── server/                           # FastAPI web backend (Scenario -> model_api; docs/web_app.md)
+├── frontend/                         # React + TypeScript (Vite) front end of the web app
 ├── src/
 │   ├── pfas_rice_plant_module_4pool_surf.py  # basis-A 4-compartment ODE (CANONICAL core; + K_surf)
 │   ├── pfas_rice_plant_module_nstem.py       # N serial stem segments (multi-height mixer; Yamazaki gradient)
@@ -76,6 +78,7 @@ Corrected neutral DPU base: `docs/dpu_model_summary_corrected.tex`
 │   ├── calibration.py                        # Tier-1 calibration machinery (synthetic recovery)
 │   ├── literature_params.py                  # literature QSPRs/anchors (cited) + Kim 2019 tables
 │   ├── model_api.py                          # UI-agnostic API: simulate(), scenario_drivers(), yamazaki_harvest_baf(), ...
+│   ├── report_html.py                        # one-page run summary HTML (Streamlit download + web app)
 │   ├── pfas_structure.py                     # SMILES -> Compound (RDKit; read-across + QSPR)
 │   ├── plots.py                              # Plotly builders
 │   ├── forcing_rice.py / growth_rice.py / oryza_growth.py  # generic-climatology drivers (scenario="generic")
@@ -430,9 +433,13 @@ The next session's brief (Korean, four tasks in order): `docs/HANDOFF_next_KR.md
    by depth or precursors), the PFOS husk/brown ratio (Yamazaki 2019
    lysimeter >= 38 against the 2023 field 1.4), SMILES/curated K_cw (side project: plan, pre-registration with correction 1 and
    the reading log in `docs/kcw_side_project/`; its step 3 — the K_cw values — is next).
-5. **Web app port** (FastAPI + React, kept unmerged on branch `ccr-8952970f-q0e2iz`, closed PR #71): built on the pre-amendment-1
-   API (E_m, k_leach, tissue density); 28 of its 30 API tests fail on the current model. Port `server/service.py`
-   to the current `model_api` before it can join `main`.
+5. **Web app** (FastAPI `server/` + React `frontend/`; `docs/web_app.md`): ported from closed PR #71 (pre-amendment-1) to
+   the current `model_api` (2026-11-04): the removed parameters (E_m, carrier/bypass, k_leach, tissue density, W2 fit,
+   two-pool overlays) left the UI; it offers the Streamlit app's crop drivers, shoot / f_xy / lipid variant (with the
+   withdrawn flag), stored flooded shapes, inventory seeds, white-rice intake and brown-rice labels. The one-page summary
+   is `src/report_html.py`, shared with `ui/common._summary_html`. `tests/test_web_api.py` runs in `web.yml` (it skips in
+   `tests.yml`, which installs no fastapi). Open: the Streamlit sidebar still offers two inputs the model refuses
+   (the "crop drivers off" checkbox, the live-HYDRUS flood/percolation sliders: a `TypeError`); the web app omits them.
 6. **Method B** (tight HYDRUS coupling) — later.
 
 ## 10. Gotchas / external dependencies
