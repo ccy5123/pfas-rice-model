@@ -429,7 +429,7 @@ is opt-in and exactly zero at K_AW = 0; no measured volatile-compound plant data
    by depth or precursors), the PFOS husk/brown ratio (Yamazaki 2019
    lysimeter >= 38 against the 2023 field 1.4), SMILES/curated K_cw (side project: plan, pre-registration with correction 1 and
    the reading log in `docs/kcw_side_project/`; its step 3 — the K_cw values — is next).
-6. **Web app port** (FastAPI + React, preserved as tag `archive/web-app-fastapi-react`): built on the pre-amendment-1
+6. **Web app port** (FastAPI + React, kept unmerged on branch `ccr-8952970f-q0e2iz`, closed PR #71): built on the pre-amendment-1
    API (E_m, k_leach, tissue density); 28 of its 30 API tests fail on the current model. Port `server/service.py`
    to the current `model_api` before it can join `main`.
 5. **Method B** (tight HYDRUS coupling) — later.
