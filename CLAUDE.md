@@ -448,8 +448,9 @@ The last session's brief (`docs/HANDOFF_next_KR.md`): all four tasks done 2026-1
    two-pool overlays) left the UI; it offers the Streamlit app's crop drivers, shoot / f_xy / lipid variant (with the
    withdrawn flag), stored flooded shapes, inventory seeds, white-rice intake and brown-rice labels. The one-page summary
    is `src/report_html.py`, shared with `ui/common._summary_html`. `tests/test_web_api.py` runs in `web.yml` (it skips in
-   `tests.yml`, which installs no fastapi). Open: the Streamlit sidebar still offers two inputs the model refuses
-   (the "crop drivers off" checkbox, the live-HYDRUS flood/percolation sliders: a `TypeError`); the web app omits them.
+   `tests.yml`, which installs no fastapi). The Streamlit sidebar's live-HYDRUS mode takes the sourced water calendar
+   (choice: water after midsummer drainage, supplied | rain) and the site f_oc by default; the removed flood/percolation
+   sliders and the placeholder-crop checkbox are gone (`tests/test_ui_hydrus_path.py`).
 6. **Method B** (tight HYDRUS coupling) — later.
 
 ## 10. Gotchas / external dependencies

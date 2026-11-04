@@ -12,6 +12,7 @@ import plots
 
 from ui.common import (_EX, _cong_label, _cong_label_ko, _PRESETS_KO, _SCENARIOS_KO, _mol_svg,
                        _hydrus_drivers_cached, _hydrus_soil_congener)
+from soil_hydrus import FOC as _SITE_FOC          # the site's f_oc (Yamazaki SI Table S5)
 import ui.common as _CM
 
 # Ceiling for the soil Koc field, shared with the lookup so a value it is willing to
@@ -507,9 +508,9 @@ def build():
                                         width="stretch", theme=None)
                     except Exception:                               # noqa: BLE001 (preview is non-essential)
                         pass
-                measured = st.checkbox("Crop drivers on (off = illustrative placeholder logistics)", value=True,
-                                       help="On: the crop drivers chosen above. Off: the illustrative logistic "
-                                            "placeholders (no basis; for structure only).")
+                # the crop drivers are always on: the illustrative placeholder logistics were removed
+                # (no basis; `simulate(measured_forcing=False)` refuses them)
+                measured = True
 
             elif mode == "Custom tables (Cwᵒ + growth)":
                 st.caption("Enter the **growth** and **pore-water Cwᵒ(t)** tables in the main panel → "
@@ -570,15 +571,17 @@ def build():
                     # chain-length QSPR would be meaningless here.
                     st.caption("Runs a **real HYDRUS-1D** paddy model (Richards + advection–dispersion + "
                                "linear Kd + root uptake) → Cwᵒ(t), Q_TP(t). Cached per setting.")
-                    f_oc = st.slider("Soil organic carbon f_oc", 0.005, 0.05, 0.02, 0.005,
+                    f_oc = st.slider("Soil organic carbon f_oc", 0.005, 0.06, float(_SITE_FOC), 0.0005,
                                      help="Kd = Koc·f_oc → retardation R = 1+ρKd/θ. Koc is the "
                                           "value in the compound panel above.")
-                    flood_until = st.slider("Flooded until  [day]", 30, 120, 90, 5)
-                    percolation = st.slider("Percolation excess  [cm/day]", 0.0, 1.0, 0.30, 0.05)
+                    after_dr = st.radio("Water after midsummer drainage", ["supplied", "rain"], horizontal=True,
+                                        help="The sourced Ibaraki calendar fixes flooding, midsummer drainage and "
+                                             "the plough-pan percolation (PREREG 9.2-9.13). After drainage the "
+                                             "intermittent irrigation has no sourced cycle: 'supplied' (base) gives "
+                                             "it the flooded water balance, 'rain' no irrigation (the range end).")
                     kd_n = float(neutral["Koc"]) * float(f_oc)
                     try:
-                        drivers = _hydrus_drivers_cached(None, season, f_oc, flood_until, percolation,
-                                                         crop=biomass, Kd=kd_n)
+                        drivers = _hydrus_drivers_cached(None, season, f_oc, after_dr, crop=biomass, Kd=kd_n)
                         st.success(f"HYDRUS-1D run complete — Kd = {kd_n:.3g} L/kg "
                                    f"(Koc {neutral['Koc']:.1f} × f_oc {f_oc:g}; mean-normalised).")
                     except Exception as e:                                  # noqa: BLE001
@@ -594,15 +597,15 @@ def build():
                                    f"the plant uptake still uses your structure.")
                     st.caption("Runs a **real HYDRUS-1D** paddy model (Richards + advection–dispersion + "
                                "linear Kd + root uptake) → Cwᵒ(t), Q_TP(t). Cached per setting.")
-                    f_oc = st.slider("Soil organic carbon f_oc", 0.005, 0.05, 0.02, 0.005,
+                    f_oc = st.slider("Soil organic carbon f_oc", 0.005, 0.06, float(_SITE_FOC), 0.0005,
                                      help="Kd = Koc(chain length)·f_oc → per-congener retardation R = 1+ρKd/θ.")
-                    flood_until = st.slider("Flooded until  [day]", 30, 120, 90, 5,
-                                            help="Continuous flooding (clean irrigation) until this day, then drainage.")
-                    percolation = st.slider("Percolation excess  [cm/day]", 0.0, 1.0, 0.30, 0.05,
-                                            help="Clean-water through-flow that leaches the dissolved pool.")
+                    after_dr = st.radio("Water after midsummer drainage", ["supplied", "rain"], horizontal=True,
+                                        help="The sourced Ibaraki calendar fixes flooding, midsummer drainage and "
+                                             "the plough-pan percolation (PREREG 9.2-9.13). After drainage the "
+                                             "intermittent irrigation has no sourced cycle: 'supplied' (base) gives "
+                                             "it the flooded water balance, 'rain' no irrigation (the range end).")
                     try:
-                        drivers = _hydrus_drivers_cached(soil_cong, season, f_oc, flood_until, percolation,
-                                                         crop=biomass)
+                        drivers = _hydrus_drivers_cached(soil_cong, season, f_oc, after_dr, crop=biomass)
                         st.success(f"HYDRUS-1D run complete — Cwᵒ(t) for {soil_cong} "
                                    f"(Kd-retarded; mean-normalised).")
                     except Exception as e:                                  # noqa: BLE001

@@ -164,14 +164,14 @@ def _mol_svg(smiles, w=290, h=170):
 
 
 @st.cache_data(show_spinner="Running HYDRUS-1D…")
-def _hydrus_drivers_cached(congener, season, f_oc, flood_until, percolation, crop="site2020",
+def _hydrus_drivers_cached(congener, season, f_oc, after_drainage="supplied", crop="site2020",
                            Kd=None):
     """Cache a real HYDRUS-1D paddy run (a few seconds) per parameter set.
 
     `Kd` [L/kg] bypasses the PFAS chain-length Koc QSPR — the route a NEUTRAL organic
     takes (congener is then None) and the way in for a measured sorption value."""
     drv, _ = api.hydrus_drivers(congener, season=season, f_oc=f_oc, Kd=Kd, **crop_kw(crop),
-                                flood_until=float(flood_until), percolation=float(percolation))
+                                after_drainage=after_drainage)
     return drv
 
 
