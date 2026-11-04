@@ -1,0 +1,29 @@
+{
+  "name": "pfas-rice-web",
+  "private": true,
+  "version": "2.0.0",
+  "description": "React front end for the PFAS–rice uptake model (talks to the FastAPI backend in ../server).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "plotly.js-dist-min": "4.1.1",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "5.0.2",
+    "typescript": "5.9.2",
+    "vite": "7.1.5",
+    "vitest": "3.2.4"
+  }
+}
