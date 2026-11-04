@@ -1,13 +1,13 @@
 /* Design tokens carried over from .streamlit/config.toml + ui/common._APP_CSS:
    warm paper + teal-green accent, soft-shadow rounded cards, light & dark. */
 @font-face { font-family: Pretendard; font-weight: 400; font-display: swap;
-  src: url(https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-Regular.woff2) format("woff2"); }
+  src: url(https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Regular.woff2) format("woff2"); }
 @font-face { font-family: Pretendard; font-weight: 600; font-display: swap;
-  src: url(https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-SemiBold.woff2) format("woff2"); }
+  src: url(https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-SemiBold.woff2) format("woff2"); }
 @font-face { font-family: Pretendard; font-weight: 700; font-display: swap;
-  src: url(https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-Bold.woff2) format("woff2"); }
+  src: url(https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Bold.woff2) format("woff2"); }
 @font-face { font-family: Pretendard; font-weight: 800; font-display: swap;
-  src: url(https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-ExtraBold.woff2) format("woff2"); }
+  src: url(https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-ExtraBold.woff2) format("woff2"); }
 
 :root {
   --bg: #F7F3EC; --surface: #FFFFFF; --ink: #211E18; --sub: #6B6456; --border: #E4DCCE;
