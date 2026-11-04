@@ -1,0 +1,44 @@
+# Muensterman DJ, Valko K, Chen R, Ng C, Droz B, Vyas S, Benotti M, Field J (2026) Biomimetic chromatography ... Environ Sci Technol 60:1207-1217, doi:10.1021/acs.est.5c11716; correction doi:10.1021/acs.est.6c07668 (eq. 4: log kIAM = 0.046 CHI_IAM + 0.42).
+# SI Table S13 (pp. S27-S30), pH 7.4, rapid-gradient HPLC on IAM / HSA / AGP columns. Subset: PFCA, PFSA, chlorinated/cyclic PFSA and the ether acids.
+# Parsed from the SI PDF text layer (es5c11716_si_001.pdf, figshare 60722189) and spot-checked against the printed rows (main session, 2026-10-27).
+# log_K_IAM = phospholipid membrane-water partition (comparable to K_MW: R2 0.87 vs SSLM for 60 PFAS, main text). NOT a cell-wall coefficient.
+class,pfas,tR_IAM_min,CHI_IAM,log_K_IAM,tR_HSA_min,log_K_HSA,tR_AGP_min,log_k_AGP
+PFCA,PFBA,3.2,5,1.3,4.4,3.3,0.31,-1.8
+PFCA,PFPeA,4,17,1.7,5.6,4.1,0.31,-1.8
+PFCA,PFHxA,4.4,24,2,5.9,4.3,0.33,-1.8
+PFCA,PFHpA,4.7,29,2.4,6.4,4.6,0.37,-1.7
+PFCA,PFOA,4.9,34,2.8,6.4,4.7,2.8,0.017
+PFCA,PFNA,5.2,38,3.2,6.4,4.6,3.4,0.17
+PFCA,PFDA,5.4,42,3.7,6.3,4.6,4.2,0.35
+PFCA,PFUdA,5.6,46,4.3,6.2,4.5,5.1,0.51
+PFCA,PFDoA,5.8,49,4.9,5.9,4.3,5.5,0.57
+PFCA,PFTrDA,6,52,5.5,5.9,4.3,5.7,0.60
+PFCA,PFTeDA,6.2,55,6.2,5.9,4.3,5.9,0.63
+PFCA,PFHxDA,6.5,60,7.5,5.9,4.3,6.2,0.67
+PFCA,PFODA,6.7,64,9.1,5.8,4.2,6.6,0.72
+PFSA,PFPrS,4.1,21,1.8,5.4,4,0.31,-1.8
+PFSA,PFBS,4.5,26,2.2,5.8,4.2,0.33,-1.8
+PFSA,PFPeS,4.8,31,2.6,6.1,4.5,0.37,-1.7
+PFSA,PFHxS,5,35,2.9,7.1,5.1,1.5,-0.52
+PFSA,PFHpS,5.3,39,3.4,6.8,4.9,3.3,0.14
+PFSA,PFOS,5.5,42,3.8,6.3,4.6,4,0.31
+PFSA,PFNS,5.6,46,4.3,6.1,4.4,4.9,0.48
+PFSA,PFDS,5.8,49,4.8,5.9,4.3,5.4,0.56
+PFSA,PFDoS,6.1,53,5.8,5.9,4.3,5.8,0.62
+PFSA,PFTrDS,6.2,55,6.3,5.9,4.3,6,0.64
+Cl-PFSA,Cl-PFOS,5.6,45,4.2,6.4,4.6,4.8,0.46
+Cy-PFSA,PFEtCHxS,5.3,39,3.4,6.8,4.9,3.2,0.11
+Cl-PFESA,9Cl-PF3ONS,5.4,42,3.8,6.1,4.5,4.7,0.45
+Cl-PFESA,11Cl-PF3OUdS,5.8,48,4.6,5.9,4.3,5.6,0.59
+PFECA,HFPO-DA,4.4,24,2,5.8,4.2,0.32,-1.8
+PFECA,ADONA,4.6,28,2.3,6.1,4.4,0.36,-1.7
+PFECA,PFMPA,3.5,10,1.4,5.6,4.1,0.3,-1.9
+PFECA,PFMBA,4,19,1.7,5.6,4.1,0.31,-1.8
+PFECA,NFDHA,4.2,22,1.9,6,4.4,0.31,-1.8
+PFESA,PFEESA,4.6,27,2.3,5.9,4.3,0.33,-1.8
+Cl-PFECA,N2-Cl-PFECA,5,34,2.9,6,4.3,3.4,0.17
+Cl-PFECA,N3-Cl-PFECA,5.5,43,3.9,5.7,4.2,5.4,0.55
+Cl-PFECA,N4-Cl-PFECA,5.9,50,5.1,5.5,4,5.9,0.64
+Cl-PFECA,N5-Cl-PFECA,6.2,56,6.4,5.4,4,6.2,0.68
+Cl-PFECA,M3-Cl-PFECA,5.3,41,3.6,5.8,4.2,5,0.5
+Cl-PFECA,M4-Cl-PFECA,5.8,48,4.7,5.6,4.1,5.8,0.62

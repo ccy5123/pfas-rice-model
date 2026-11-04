@@ -13,6 +13,12 @@
   Running list: `docs/literature_db/fulltext_needed.md`.
 - **Never subscribe to PR activity** (`subscribe_pr_activity`), not even for a PR the session opened; it is
   also denied in `.claude/settings.json`. Report CI/review state only when the user asks.
+- **Save every paper, SI and record you are given (user, 2026-10-27).** Whatever the user uploads or you find (papers, SI,
+  source data, transcripts of earlier work) is recorded in the repo the same session: the values read go to
+  `docs/literature_db/raw_si/` (one CSV per table, a header naming DOI, table, conditions and who read it) and are indexed
+  in `raw_si/README.md`; the file is moved to "Obtained" in `fulltext_needed.md`; a search that found nothing is written
+  down too (what was sought, where it was looked for). The publisher PDFs/DOCX themselves stay out of git (copyright);
+  keep their SHA-256 so a later session can tell it holds the same file.
 
 ## 1. Goal
 Mechanistic **four-compartment dynamic model** for PFAS bioaccumulation in rice

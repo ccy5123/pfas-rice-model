@@ -1,0 +1,11 @@
+# Mel M, Lau B, Hockaday WC (2024) Sorption of per- and polyfluoroalkyl substances by lignin in pulp and paper wastewater.
+# J Hazard Mater 480:136016, doi:10.1016/j.jhazmat.2024.136016. Main text read in full + SI (Table S1 is an image; Fig. S1 Langmuir R2 0.474/0.419/0.695/0.195), main session 2026-10-27.
+# Sorbent: Sigma-Aldrich alkali/Kraft lignin (>98 %, softwood; zeta -43 mV at pH 6.5; 0.5 m2/g). Simulated pulp & paper wastewater, I = 20 mM
+# (Na2SO4 0.0154, NaCl 0.003, CaSO4 0.001, KCl 0.0006 mol/L), pH 6.5, room temperature, 1-10 g lignin in 100 mL, 4-PFAS mix spiked to 10 ug/L, 10 d (equilibrium < 72 h).
+# Kd = Cs/Ceq at that single spike, varying sorbent mass (Fig. 1; +- = SE, n = 3). Freundlich fit log Qe = (1/n) log Ce + log KF (Table 2; R2 Fig. 6).
+# sorbed / desorbed = % of spike sorbed, % of sorbed released in one desorption step (Fig. 5). log Koc from the text (lignin as OC).
+pfas,n_CF,head,log_Kd_mL_g,log_Kd_SE,Kd_L_kg,freundlich_n,freundlich_KF,freundlich_R2,sorbed_pct,sorbed_SE,desorbed_pct,desorbed_SE,log_Koc
+PFBA,3,carboxylate,0.88,0.07,7.6,0.858,0.158,0.908,32,5.8,2,0.80,
+PFBS,4,sulfonate,1.43,0.3,26.9,0.631,7.898,0.903,53,5.1,0.2,0.04,
+PFOA,7,carboxylate,1.22,0.3,16.6,3.440,0.218,0.882,42,5.4,0.6,0.09,2.1
+PFOS,8,sulfonate,1.54,0.2,34.7,1.311,12.470,0.925,82,6.2,0.2,0.07,2.6

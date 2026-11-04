@@ -1,0 +1,13 @@
+# Sörengård M, Östblom E, Köhler S, Ahrens L (2020) Adsorption behavior of per- and polyfluoroalkyl substances (PFASs) to 44 inorganic and organic sorbents
+# and use of dyes as proxies for PFAS sorption. J Environ Chem Eng 8:103744, doi:10.1016/j.jece.2020.103744 (main text read; SI not obtained).
+# Batch: 17 PFAS each 0.1 ug/mL (100 ug/L), pH 7.5 +- 0.5 in 6 mM phosphate buffer, duplicates (n = 2); Kd = cs/cw [L/kg dw]. Solid:liquid ratio in SI Table S6 (not read).
+# Values are per-sorbent mean log Kd of PFOA (Fig. 1A, navy) and PFOS (Fig. 1C, dark brown), read by colour from the page rendered at 400 dpi (main session,
+# 2026-10-27); axis calibrated on the 4 / 2 / 0 gridlines. Reading uncertainty about +-0.2 log; low_conf = few marker pixels found (overlapping markers).
+# Text (p. 3): non-AC sorbents mean log Kd 0.50 +- 1.0 (PFCAs), 0.14 +- 0.61 (PFSAs). Plant-derived organic sorbents only (+ chitosan, Moringa seed for scale).
+sorbent,log_Kd_PFOA,log_Kd_PFOS,flag
+Peat,-0.31,-0.06,PFOS low_conf
+Granulated bark,-0.10,0.24,
+Composted bark,-0.15,-0.16,
+Composted wood fiber,-0.06,0.35,
+Chitosan,-0.19,0.20,PFOS low_conf (not plant)
+Moringa seed,0.42,1.37,seed (protein-rich), for scale
