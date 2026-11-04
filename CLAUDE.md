@@ -394,7 +394,7 @@ is opt-in and exactly zero at K_AW = 0; no measured volatile-compound plant data
   first version (ccy5123/pfas-rice-model#65) carried pre-correction numbers.
 - **Compound lookup** (EPA CompTox): `python src/chem_lookup.py carbamazepine` (needs `CTX_API_KEY`;
   base URL `https://comptox.epa.gov/ctx-api`).
-- **Tests**: `pytest` (576 pass with the full stack incl. fastapi, 2 skipped (`test_sci_adk_rigor.py` without sci-adk); ~11 min). CI (`.github/workflows/tests.yml`) runs the whole suite;
+- **Tests**: `pytest` (581 pass with the full stack incl. fastapi, 2 skipped (`test_sci_adk_rigor.py` without sci-adk); ~11 min). CI (`.github/workflows/tests.yml`) runs the whole suite;
   `rigor.yml` runs the sci-adk over-claim guard on the frozen `runs/` records.
 
 ## 8. Conventions
@@ -419,7 +419,7 @@ is opt-in and exactly zero at K_AW = 0; no measured volatile-compound plant data
   range in `docs/ASSUMPTIONS.md`.
 
 ## 9. Next tasks / open questions
-The last session's brief (`docs/HANDOFF_next_KR.md`): all four tasks done 2026-11-04 (K_cw §11; searches §11.5-11.8; web app).
+The next session's brief (Korean): `docs/HANDOFF_next_KR.md` (after amendment 4; what remains needs measurements).
 1. **Measurements that would narrow the sourced ranges** (`docs/ASSUMPTIONS.md`,
    `params/value_provenance.csv`): japonica crop parameters for the site's cultivars (the largest straw and
    grain lever since amendment 2a), a rice panicle transpiration share by stage, rice phloem sap per grain DM
