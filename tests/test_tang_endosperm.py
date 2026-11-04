@@ -52,9 +52,9 @@ def test_white_composition_is_the_sourced_row():
 def test_white_lowers_the_endosperm():
     f = {c: api.endosperm_white_factor(c) for c in api.TANG_CONGENERS}
     assert all(v < 1.0 for v in f.values()), f
-    # with the sourced composition the milled-away phospholipid no longer orders them: PFOS and
-    # PFOA (K_PL 31623 vs 1905) within 0.5 %, GenX (118) the least lowered
-    assert abs(f["PFOS"] - f["PFOA"]) < 0.005 and f["GenX"] > max(f["PFOS"], f["PFOA"]), f
+    # with the sourced whole-wall K_cw (PREREG 11) the milled-away phospholipid orders them by K_PL:
+    # PFOS (31623) lowered most, then PFOA (1905), GenX (118) least
+    assert f["PFOS"] < f["PFOA"] < f["GenX"], f
     v = api.tang_tf_validation("PFOS", dose="low", endosperm="white")
     vb = api.tang_tf_validation("PFOS", dose="low")
     assert v["model_tf"]["endosperm"] == pytest.approx(vb["model_tf"]["endosperm"] * f["PFOS"])

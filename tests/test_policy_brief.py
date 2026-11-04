@@ -75,12 +75,12 @@ def test_worked_example_matches_the_document(brief, results):
     assert v(results, "2_pfoa", "cwo") == pytest.approx(0.0787)
     assert v(results, "2_pfoa", "conc.root") == pytest.approx(0.383, abs=5e-4)
     assert v(results, "2_pfoa", "conc.straw") == pytest.approx(0.323, abs=5e-4)
-    assert v(results, "2_pfoa", "conc.grain") == pytest.approx(0.0288, abs=5e-5)
-    for s in ("**0.383**", "**0.323**", "**0.0288**"):
+    assert v(results, "2_pfoa", "conc.grain") == pytest.approx(0.0299, abs=5e-5)
+    for s in ("**0.383**", "**0.323**", "**0.0299**"):
         assert s in brief
-    assert v(results, "2_pfoa", "efsa_twi_percent") == pytest.approx(8.08, abs=0.01)
+    assert v(results, "2_pfoa", "efsa_twi_percent") == pytest.approx(8.40, abs=0.01)
     assert "**8 %**" in brief
-    assert v(results, "2_pfoa", "grain.band_factor") == pytest.approx(3.65, abs=0.01)
+    assert v(results, "2_pfoa", "grain.band_factor") == pytest.approx(3.64, abs=0.01)
     assert "×/÷3.6" in brief
     # brown rice is phloem-fed only (amendment 2a): the panicle's deposit stays in the husk
     assert v(results, "2_pfoa", "grain_via_xylem") == 0.0
@@ -93,8 +93,8 @@ def test_worked_example_matches_the_document(brief, results):
             0.05 / 0.0787, rel=1e-6)
     assert "농도는 노출에 비례합니다" in brief
     # the deck's 50 ng/L example
-    assert v(results, "2_pfoa_50ngL", "conc.grain") == pytest.approx(0.018, abs=5e-4)
-    assert v(results, "2_pfoa_50ngL", "efsa_twi_percent") == pytest.approx(5.14, abs=0.01)
+    assert v(results, "2_pfoa_50ngL", "conc.grain") == pytest.approx(0.019, abs=5e-4)
+    assert v(results, "2_pfoa_50ngL", "efsa_twi_percent") == pytest.approx(5.34, abs=0.01)
     assert "EFSA 대비 5 %" in brief
     # Kim's PFOA brown rice against the model's, both dry
     assert 0.349 / v(results, "2_pfoa", "conc.grain_dw") == pytest.approx(8.24, abs=0.01)
@@ -116,10 +116,10 @@ def test_the_field_grain_table_matches(brief, results):
     assert "표본 내 비교" in brief
     prev_miss = v(results, "1_congeners", "PFDoDA.obs_grain") / \
         v(results, "1_congeners", "PFDoDA.yz_grain_prev")
-    assert 800 < prev_miss < 825 and "약 809배" in brief
-    assert v(results, "1_congeners", "mean_grain_shortchain_C4_C6_base") == pytest.approx(0.90, abs=0.005)
-    assert v(results, "1_congeners", "mean_grain_longchain_C9_C12_base") == pytest.approx(7.30, abs=0.005)
-    assert "단쇄(C4–C6) 0.90, 장쇄(C9–C12) 7.30 L/kg" in brief
+    assert 790 < prev_miss < 815 and "약 796배" in brief
+    assert v(results, "1_congeners", "mean_grain_shortchain_C4_C6_base") == pytest.approx(0.93, abs=0.005)
+    assert v(results, "1_congeners", "mean_grain_longchain_C9_C12_base") == pytest.approx(7.33, abs=0.005)
+    assert "단쇄(C4–C6) 0.93, 장쇄(C9–C12) 7.33 L/kg" in brief
 
 
 def test_kim2019_scores_are_the_documented_result(brief, results):
@@ -127,9 +127,9 @@ def test_kim2019_scores_are_the_documented_result(brief, results):
     so the document must say both."""
     assert v(results, "3_kim2019", "rmse_point_default") == pytest.approx(0.56, abs=0.005)
     assert v(results, "3_kim2019", "rmse_interval_default") == pytest.approx(0.44, abs=0.005)
-    assert v(results, "3_kim2019", "rmse_point_prev") == pytest.approx(2.03, abs=0.005)
-    assert v(results, "3_kim2019", "rmse_interval_prev") == pytest.approx(1.77, abs=0.005)
-    for s in ("**0.56**", "**0.44**", "2.03", "1.77"):
+    assert v(results, "3_kim2019", "rmse_point_prev") == pytest.approx(2.02, abs=0.005)
+    assert v(results, "3_kim2019", "rmse_interval_prev") == pytest.approx(1.76, abs=0.005)
+    for s in ("**0.56**", "**0.44**", "2.02", "1.76"):
         assert s in brief
     # Kim weighed freeze-dried grain: the comparison is on the dry basis
     assert v(results, "3_kim2019", "PFOA.model_grain_baf") == pytest.approx(
@@ -160,8 +160,8 @@ def test_inverse_recovers_a_known_truth_but_misses_the_field(brief, results):
     assert f == pytest.approx(8.24, abs=0.01)
     assert v(results, "4_inverse", "field.ci95_lo") < truth < v(results, "4_inverse", "field.ci95_hi")
     assert "약 8배 과대추정" in brief and "실측을 겨우 포함함" in brief
-    assert v(results, "4_inverse", "field.overestimate_factor_prev") == pytest.approx(17.3, abs=0.05)
-    assert "약 17.3배" in brief
+    assert v(results, "4_inverse", "field.overestimate_factor_prev") == pytest.approx(15.7, abs=0.05)
+    assert "약 15.7배" in brief
 
 
 def test_structure_input_flags_the_unknown_ones(results):

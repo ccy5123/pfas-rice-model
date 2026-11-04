@@ -1417,3 +1417,29 @@ root BAF. Changes (numerical only; no physical run changes): `tf_final` is NaN w
 least-squares treats a trial that fails or returns non-finite cells as a rejected step (a constant residual of 1e3 per
 cell), counted in the record (`rejected_trials`). Every run with a positive root is bit-identical; the default and fit
 variants never reach such a trial. No result of the stopped run was used.
+
+### 11.10 Outcome of amendment 4 (records named; nothing fitted beyond the registered re-fit)
+- **K_cw** (`src/kcw_sourced.py`, `params/parameters.json`; L/kg, every organ): PFOA 2.19 [0.51, 9.33], PFNA 2.58, PFDA 3.65,
+  PFUnDA 6.01, PFDoDA 9.66 [3.24, 28.8], PFBS 7.00 [4.79, 10.2] (`min_may_be_lower`), PFHxS 1.21 [0.33, 4.39] (low_conf lower
+  end), PFOS 4.15 [0.78, 22.1]; lower end only: PFBA 0.59 (`min_may_be_lower`), PFPeA 0.34, PFHxA 0.195; removed: PFHpA (not
+  plotted), GenX (ether). Before: PFOA 10.5 (root), PFOS 24.0, PFBA 4.6, GenX = PFPeA 5.6. SMILES: the PREREG 11.2 rule
+  (PFPeS: no Sörengård value -> removed; ADONA-type ether: removed); the 20 L/kg placeholder is gone.
+- **Re-fit** (`validation/refit_sourced.py`, 66 min; the first attempt stopped, 11.9): Yamazaki log10 RMSE redistributed_fit
+  0.1153 -> 0.1147 (root 0.000, straw 0.155, grain 0.125); redistributed_lipid 0.153 -> 0.148 (elimination again leaves
+  f_xy = a 0.0457 and g_xy 0.00736; was 0.0659 / 0.00712); 4pool_lipid 0.151 -> 0.144; redistributed_free 1.260 -> 1.268;
+  4pool_free 1.307 -> 1.316. The trial-rejection count of 11.9 was not carried into the JSON record (stated). E48 **held**.
+- **Default outputs** (`validation/default_snapshot.py`, 137 cells: `simulate` dry-basis BAFs + the Yamazaki observable): the
+  fitted congeners move <= 0.0027 log10 (PFDoDA leaf); PFHxS (no fit, median transport) +0.026; GenX root -0.138. E52
+  **held**; E50 **held** (GenX root -0.138 > 0.1). The eaten white rice moves more than the brown rice (PFOA intake 8.09 ->
+  8.40 % of the EFSA TWI): the white/brown factor binds both tissues with K_cw.
+- **Transfers** (`transfer_sourced.py`), default: Tang 0.686 -> 0.705, Kim point 0.562 -> 0.561 / interval 0.443, Li shoot
+  0.468 -> 0.457, Li grain 1.334 -> 1.336 [rough 1.045]; honesty band 0.561 log10 (x3.64). Default unchanged (redistributed_fit;
+  better than the incumbent on the Li grain, -0.026 [-0.043, -0.001]; ties elsewhere). E49 **held** (largest move +0.019).
+- **Band** (`input_range_band.py`; K_cw ends replace the lignin-share ends; the Lu 2020 sets join the crop sets): median over 11
+  congeners root ÷1.13 / ×1.82 (was ÷1.29 / ×2.40), straw ÷1.55 / ×2.55 (÷1.41 / ×2.62), grain ÷2.30 / ×7.63 (÷2.77 / ×9.35).
+  K_cw leads no straw or grain band (it leads PFOA's root band, 0.037); the crop-set ends' median contribution is unchanged
+  (straw 0.209, grain 0.236). E51 **partly missed**: the root band narrowed by more than 0.05 log10 (the cell-wall term shrank
+  and the lignin-share ends left). E53 **held**.
+- Policy brief rebuilt (`policy_brief_runs.py`); numbers that moved are corrected in `POLICY_BRIEF_KR.md` and its guard
+  (white-rice PFOA 0.0288 -> 0.0299 ug/kg, short/long-chain grain means 0.90/7.30 -> 0.93/7.33 L/kg, the previous default's Kim
+  RMSE 2.03/1.77 -> 2.02/1.76 and inverse 17.3x -> 15.7x, PFDoDA previous-default miss 809x -> 796x).

@@ -17,7 +17,7 @@ def test_each_organ_binds_with_its_own_cell_wall_k():
     c = api._CONG["PFOA"]
     own = api.kcw_by_organ(c)
     assert own == {o: float(c["K_cw_wholecw_Lkg"][o]) for o in api.TISSUES}
-    assert len(set(own.values())) > 1                       # the organs really differ
+    assert len(set(own.values())) == 1                      # one whole-wall K_cw per compound (PREREG 11.2)
     assert set(api.kcw_by_organ(c, "stem").values()) == {float(c["K_cw_wholecw_Lkg"]["stem"])}
     for shoot in ("redistributed", "4pool"):
         r = api.simulate("PFOA", shoot=shoot)
