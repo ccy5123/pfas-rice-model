@@ -238,7 +238,7 @@ def compound_from_smiles(smiles: str, *, name: str | None = None,
                          f_xy: float | None = None, L_Ph: float = 0.005,
                          kappa_d: float = 0.5, Vmax_in: float = 20.0, Km_in: float = 5.0,
                          Vmax_out: float = 8.0, Km_out: float = 5.0,
-                         kcw_anchor: float = L.KCW_ANCHOR_LKG):
+                         kcw_anchor: float | None = None):
     """Build a :class:`Compound` from a SMILES string.
 
     Returns ``(compound, descriptors)``.  Binding (K_PL, K_prot) and speciation
@@ -274,6 +274,13 @@ def compound_from_smiles(smiles: str, *, name: str | None = None,
         K_prot = L.k_prot(npf, plant=plant_protein); kprot_src = "QSPR (chain factor)"
         off_class = d.transport_class if d.transport_class in L.FXY_HEADGROUP_LN_OFFSET else "carboxylate"
         f_xy_rec = L.f_xy_headgroup(_fxy_carboxylate(npf), off_class)
+        if kcw_anchor is None:              # PREREG 11.2: the sourced whole-wall K_cw (or removed)
+            import kcw_sourced as KS
+            kk = KS.kcw_sourced(npf, d.head_group, n_ether_O=d.n_ether_O,
+                                branched=not d.is_linear)
+            kcw_anchor = kk.rec
+            d.notes.append(f"K_cw: {kk.rec:.3g} L/kg [{kk.low:.3g}, {kk.high:.3g}] ({kk.case}; "
+                           f"{kk.provenance}{'; ' + '; '.join(kk.flags) if kk.flags else ''})")
         fxy_src = (f"monotone PFCA(nPFC={npf}) x exp({L.FXY_HEADGROUP_LN_OFFSET[off_class]:+.1f})"
                    f" [{off_class}] (PROVISIONAL)")
 

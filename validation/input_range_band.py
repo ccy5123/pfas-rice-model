@@ -67,6 +67,8 @@ def inputs():
     rng = api.PARAMS["tissue_composition_ranges"]
     for organ in ORGAN_OF:
         for q, (lo, hi) in rng[organ].items():
+            if q == "lignin_share":
+                continue                        # no longer enters K_cw (PREREG 11.2)
             if q == "theta_fw" and ORGAN_OF[organ] in om.THETA_STAGE:
                 continue                        # staged: its anchors below (PREREG 7.1)
             if hi > lo:
@@ -76,6 +78,8 @@ def inputs():
             if a["high"][i] > a["low"][i]:
                 out.append((f"{organ}.theta@DVS{d:g}",
                             tuple({"anchor": (organ, i, v)} for v in (a["low"][i], a["high"][i]))))
+    # PREREG 11.2: each congener's whole-wall K_cw at its two measured ends (one value, every organ)
+    out.append(("K_cw", ({"kcw": 0}, {"kcw": 1})))
     out.append(("husk_share_maturity", tuple({"panicle": {"h_mat": v}} for v in pn.H_MAT_RANGE)))
     out.append(("rachis", tuple({"panicle": {"rachis_frac": v}} for v in pn.RACHIS_FRAC_RANGE)))
     out.append(("husk_phloem", ({"sim": {"husk_phloem": False}}, {"sim": {"husk_phloem": True}})))
@@ -88,20 +92,21 @@ def inputs():
 
 
 def _apply_comp(organ, q, v):
-    """Patch one composition cell (and, for the lignin share, every congener's organ K_cw; for
-    theta_fw also the dry -> fresh conversion of the organ mass, which reads the same theta)."""
+    """Patch one composition cell (for theta_fw also the dry -> fresh conversion of the organ
+    mass, which reads the same theta)."""
     saved = (dict(api._COMP[organ]), {c: dict(api._CONG[c]["K_cw_wholecw_Lkg"]) for c in api._CONG},
              dict(om.THETA_FW))
     if q == "theta_fw":
         om.THETA_FW[ORGAN_OF[organ]] = v
-    if q == "lignin_share":
-        o = ORGAN_OF[organ]
-        for c, rec in api._CONG.items():
-            kp, kl = rec.get("K_cw_poly_rec_Lkg"), rec.get("K_lignin_rec_Lkg")
-            if kp is not None and kl is not None:
-                rec["K_cw_wholecw_Lkg"][o] = (1.0 - v) * kp + v * kl
-    else:
-        api._COMP[organ][q] = v
+    api._COMP[organ][q] = v
+    return saved
+
+
+def _apply_kcw(c, values):
+    """Patch congener c's K_cw (every organ); returns what `_restore` puts back."""
+    saved = (dict(api._COMP["root"]), {c: dict(api._CONG[c]["K_cw_wholecw_Lkg"])},
+             dict(om.THETA_FW))
+    api._CONG[c]["K_cw_wholecw_Lkg"].update(values)
     return saved
 
 
@@ -131,6 +136,10 @@ def observable(job):
             a = om.THETA_STAGE[organ]
             vals = anchors.setdefault(organ, list(0.5 * (a["low"] + a["high"])))
             vals[i] = v
+        if "kcw" in st and api._CONG[c].get("K_cw_case") == "domain":
+            v = api._CONG[c]["K_cw_range_Lkg"][st["kcw"]]
+            kc = api._CONG[c]["K_cw_wholecw_Lkg"]
+            patched.append(("root", _apply_kcw(c, {o: v for o in kc})))
         if "comp" in st:
             organ, q, v = st["comp"]
             patched.append((organ, _apply_comp(organ, q, v)))

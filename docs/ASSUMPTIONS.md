@@ -55,10 +55,10 @@ midpoint and both ends (`lo`, `hi`).
 
 | constant | value | status | source / note |
 |---|---|---|---|
-| organ composition (theta_fw, f_prot, f_PL, f_cw, lignin share) | midpoints of `params/rice_composition_sourced.csv` | measured; physical bounds where no rice source exists (root and leaf f_cw upper ends; lignin shares of root, leaf and grain) | `sourced_inputs` tis_* rows |
+| organ composition (theta_fw, f_prot, f_PL, f_cw; the lignin share no longer enters K_cw) | midpoints of `params/rice_composition_sourced.csv` | measured; physical bounds where no rice source exists (root and leaf f_cw upper ends; lignin shares of root, leaf and grain) | `sourced_inputs` tis_* rows |
 | root theta_fw over the season | 0.713 (one maturity study) | **open** | later search: maturity pot roots 0.51-0.77 (five studies), seedling to vegetative 0.76-0.89 (hydroponic and flooded soil). The model's theta is constant over the season; how to represent the seasonal fall (a range, or theta(t)) is amendment 2 |
 | K_PL, K_prot | per congener | measured | Chen 2025 (SSLM), Zhou 2025 |
-| K_cw | per organ: (1 - s) K_poly + s K_lignin | derived | GAP A deliverable (Guo 2025, Mel 2024); s = the organ's lignin share |
+| K_cw | one whole-wall value per compound, every organ: geomean of Makselon 2019 peat Oi (pH >= 5.8) and the lowest plant-derived sorbent of Sörengård 2020 Fig. 1; lower end only for PFBA-PFHxA; removed for PFHpA (not plotted) and GenX | measured (range; both ends band ends) | PREREG 11.2, 11.7 (`src/kcw_sourced.py`); the GAP A split (untraceable K_poly, Kraft lignin) withdrawn; stated transfer: plant-derived matrix -> rice cell wall |
 | root entry | linear equilibrium `lam_eq (r_eq Cwo - Cw_root)` | structural | the GHK + Michaelis-Menten pair had no sourced constants; uptake is linear in exposure in every series found (Blaine 2014 and others) |
 | r_eq | per congener and variant | fitted | Yamazaki root (closed form); per-cultivar interval recorded |
 | lam_eq | 1e6 per day per kg | numerical | converged (`numerics_convergence.py`; 1e4 was not: 0.0008 log10) |
@@ -133,4 +133,4 @@ PREREG 9.2-9.14; every row is in `params/value_provenance.csv` (`soil_*`).
 | rice eaten | white rice at 14 % moisture, from the dry brown-rice value and the white-rice composition | derived | `model_api.white_rice_conc` |
 | intake signal | green below / red at or above the TWI | structural | EFSA 2020 TWI (the only sourced threshold) |
 | tissue density (per-volume view) | removed (PREREG 9.5) | -- | it entered no result and had no source |
-| SMILES K_cw | 20 L/kg placeholder | **open** | no source; decided by the K_cw side project (`docs/kcw_side_project/`, PREREG 9.5) |
+| SMILES K_cw | the PREREG 11.2 rule by chain length and head group (ethers inside the domain: offset 0, band ±0.49 per O); removed outside | measured / removed | `src/kcw_sourced.py` (side project correction 1 applied) |

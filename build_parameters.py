@@ -5,18 +5,18 @@
 # Merges the closed deliverables into one machine-readable file for downstream
 # (Claude Code) use:
 #   K_prot(n), K_PL(n)         <- params/Bk_table_S5.csv     (Zhou2025, Chen2025)
-#   K_cw whole-cw per organ    <- params/Kcw_Klignin_params_v2.csv  (GAP A, Prompt2)
+#   K_cw whole wall, all organs <- src/kcw_sourced.py (PREREG 11: Makselon 2019 peat Oi upper end,
+#                                   Sörengård 2020 plant-sorbent lower end, geometric mean)
 #   f_xy_recommended(n)        <- params/Bk_table_S5.csv f_xy (= S4/theory_anchor, MONOTONE)
 #   r_eq__<v>, L_Ph__<v>, f_xy__<v> <- params/refit_sourced.csv (validation/refit_sourced.py; Yamazaki 2020
 #                                   site-year; one set per variant v = <shoot>_<lipid|free|fit>)
 #   lipid_loading[shoot]       <- params/lipid_loading_sourced.json (same script)
 #   tissue composition         <- params/rice_composition_sourced.csv (midpoints of sourced ranges)
-#   K_cw whole-cw per organ    <- (1 - s) K_poly + s K_lignin, s = the organ's lignin share (same table)
 #   B_k(n) per organ (basis-A) <- recomputed here (self-consistent)
 # Emits: params/parameters.json, params/f_xy_recommended.csv
 # Run:   python build_parameters.py   (from package root)
 # =============================================================================
-import csv, json, os
+import csv, json, os, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 P = os.path.join(HERE, "params")
@@ -25,7 +25,8 @@ def rd(name):
         return list(csv.DictReader(f))
 
 S5  = rd("Bk_table_S5.csv")
-KCW = {r["pfas"]: r for r in rd("Kcw_Klignin_params_v2.csv")}
+sys.path.insert(0, os.path.join(HERE, "src"))
+import kcw_sourced as KS                    # noqa: E402  (PREREG 11.2)
 def rd_commented(name):
     with open(os.path.join(P, name), newline="") as f:
         return list(csv.DictReader(line for line in f if not line.startswith("#")))
@@ -45,12 +46,15 @@ def mid(o, q):
 # tissue composition = midpoints of the sourced ranges (whole cell wall f_cw)
 composition = {o: {q: mid(o, q) for q in ("theta_fw", "f_prot", "f_PL", "f_cw")}
                for o in ORGANS + ["grain_white"]}
-lignin_share = {o: mid(o, "lignin_share") for o in ORGANS + ["grain_white"]}
 
-def kcw_whole(k_poly, k_lig, o):
-    """Whole-cell-wall K_cw of organ o: lignin-share-weighted mix of the two pools."""
-    s = lignin_share[o]
-    return round((1.0 - s) * k_poly + s * k_lig, 4)
+def kcw_fields(n_pf, head, n_ether_O=0):
+    """PREREG 11.2: one whole-wall K_cw for every organ, its band ends, case and flags."""
+    k = KS.kcw_sourced(n_pf, head, n_ether_O=n_ether_O)
+    v = round(k.rec, 4)
+    return v, {"K_cw_wholecw_Lkg": {("grain" if o == "grain_brown" else o): v for o in ORGANS},
+               "K_cw_range_Lkg": [round(k.low, 4), round(k.high, 4)],
+               "K_cw_case": k.case, "K_cw_flags": k.flags, "K_cw_source": k.provenance,
+               **({"K_cw_nearest_Lkg": round(k.nearest_rec, 4)} if k.nearest_rec else {})}
 
 def Bk_basisA(comp, K_prot, K_PL, K_cw):
     th = comp["theta_fw"]
@@ -60,47 +64,43 @@ def Bk_basisA(comp, K_prot, K_PL, K_cw):
 
 congeners = []
 for r in S5:
-    name = r["PFAS"]; k = KCW[name]
+    name = r["PFAS"]
     K_prot = float(r["K_prot"]); K_PL = float(r["K_PL"])
-    Kcw_org = {o: kcw_whole(float(k["K_cw_poly_rec"]), float(k["K_lignin_rec"]), o) for o in ORGANS}
+    pfca = r["group"] == "CA"
+    kcw, kcw_rec = kcw_fields(int(r["n_C"]) - 1 if pfca else int(r["n_C"]),
+                              "carboxylate" if pfca else "sulfonate")
     Bk = {("grain" if o == "grain_brown" else o):
-          Bk_basisA(composition[o], K_prot, K_PL, Kcw_org[o]) for o in ORGANS}
+          Bk_basisA(composition[o], K_prot, K_PL, kcw) for o in ORGANS}
     congeners.append({
         "name": name, "n_C": int(r["n_C"]),
-        "group": "PFCA" if r["group"] == "CA" else "PFSA",
+        "group": "PFCA" if pfca else "PFSA",
         "K_prot_Lkg": K_prot, "K_PL_Lkg": K_PL,
-        "K_cw_wholecw_Lkg": {("grain" if o == "grain_brown" else o): Kcw_org[o] for o in ORGANS},
-        "K_cw_poly_rec_Lkg": float(k["K_cw_poly_rec"]),
-        "K_lignin_rec_Lkg": float(k["K_lignin_rec"]),
+        **kcw_rec,
         "f_xy_recommended": float(r["f_xy"]),                  # MONOTONE (S4/theory) — USE THIS
         "B_k_basisA_Lkg_fw": Bk,
     })
 
 # --- GenX (HFPO-DA), an ETHER-PFAS — PROVISIONAL addition (not in the calibrated 12) ---
-# Binding ~ PFPeA: GenX Chen2025 log K_MW = 2.07 ~ PFPeA 2.02, so the membrane K_PL is
-# the MEASURED Chen2025 HFPO-DA value and K_prot / K_cw are borrowed from PFPeA (Zhou2025
-# has no GenX). Translocation f_xy = carboxylate f_xy at nPFC=5 (PFPeA) × the ether
+# Binding: GenX Chen2025 log K_MW = 2.07 ~ PFPeA 2.02, so the membrane K_PL is the MEASURED
+# Chen2025 HFPO-DA value and K_prot is borrowed from PFPeA (Zhou2025 has no GenX). K_cw follows
+# PREREG 11.2 (5 perfluorinated C + 1 ether O: outside every measured domain -> removed). Translocation f_xy = carboxylate f_xy at nPFC=5 (PFPeA) × the ether
 # head-group offset exp(-0.7) (Tang 2026): GenX is short-chain so it stays MORE shoot-
 # mobile than PFOA despite the ether penalty (f_xy 0.23 ≫ PFOA 0.04). Soil Kd uses the
 # carboxylate Koc at nPFC=5 (weakly sorbed). Added for ether-PFAS support + the Tang OOS test.
 import math
 _pe = next(x for x in S5 if x["PFAS"] == "PFPeA")
-_pe_kcw = KCW["PFPeA"]
 GENX_ETHER_LN_OFFSET = -0.7                                   # literature_params.FXY_HEADGROUP_LN_OFFSET["ether"]
 _gx_kprot, _gx_kpl = float(_pe["K_prot"]), 117.5             # K_prot≈PFPeA; K_PL=Chen2025 HFPO-DA
-_gx_kcw = {o: kcw_whole(float(_pe_kcw["K_cw_poly_rec"]), float(_pe_kcw["K_lignin_rec"]), o)
-           for o in ORGANS}
+_gx_kcw, _gx_kcw_rec = kcw_fields(5, "carboxylate", n_ether_O=1)
 _gx_fxy = round(float(_pe["f_xy"]) * math.exp(GENX_ETHER_LN_OFFSET), 4)
 congeners.append({
     "name": "GenX", "n_C": 5, "group": "ether",
     "K_prot_Lkg": _gx_kprot, "K_PL_Lkg": _gx_kpl,
-    "K_cw_wholecw_Lkg": {("grain" if o == "grain_brown" else o): _gx_kcw[o] for o in ORGANS},
-    "K_cw_poly_rec_Lkg": float(_pe_kcw["K_cw_poly_rec"]),
-    "K_lignin_rec_Lkg": float(_pe_kcw["K_lignin_rec"]),
+    **_gx_kcw_rec,
     "f_xy_recommended": _gx_fxy,
     "B_k_basisA_Lkg_fw": {("grain" if o == "grain_brown" else o):
-                          Bk_basisA(composition[o], _gx_kprot, _gx_kpl, _gx_kcw[o]) for o in ORGANS},
-    "provisional": "ether-PFAS (HFPO-DA/GenX): K_PL measured (Chen2025), K_prot/K_cw≈PFPeA (matched K_MW), "
+                          Bk_basisA(composition[o], _gx_kprot, _gx_kpl, _gx_kcw) for o in ORGANS},
+    "provisional": "ether-PFAS (HFPO-DA/GenX): K_PL measured (Chen2025), K_prot≈PFPeA (matched K_MW), K_cw removed (PREREG 11.2), "
                    "f_xy=PFCA(nPFC5)·exp(-0.7) (Tang2026 ether offset); NOT calibrated to BAF data.",
 })
 
@@ -131,7 +131,7 @@ doc = {
         "units": {"K_*": "L/kg pool-dw", "B_k": "L/kg fw", "theta": "L/kg fw", "f_*": "kg/kg dw"},
         "provenance": {
             "K_PL": "Chen2025 SSLM", "K_prot": "Zhou2025",
-            "K_cw": "GAP A / Prompt2 v2 (Guo2025 Fig.3f DFT + Mel2024 lignin anchor; rice whole-cw per organ)",
+            "K_cw": "PREREG 11 (src/kcw_sourced.py): one whole-wall value, geometric mean of Makselon 2019 peat Oi (pH >= 5.8, upper) and Sörengård 2020 plant-derived sorbents (lowest, lower); lower only where only that is measured; removed where neither",
             "f_xy_recommended": "GAP B / S4 + docs/theory_anchor.tex (Trapp+Briggs LFER: MONOTONE logistic)",
             "transport": "r_eq__<v>, L_Ph__<v> (and f_xy__<v> for v = *_fit): fitted per congener to Yamazaki 2023 root and grain (fit: also straw) on the 2020 Tsukuba site-year with that shoot and loading form; validation/refit_sourced.py, params/refit_sourced.csv (pre-registered: docs/PREREG_sourced_values.md)",
             "lipid_loading": "per shoot model, fitted with the lipid variant's per-congener values (params/lipid_loading_sourced.json); terms the data do not identify are removed",
