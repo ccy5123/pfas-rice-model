@@ -17,6 +17,12 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 | 10.1021/acs.est.4c03525 | Chen et al. 2024, ES&T | wheat ear / stem PFAS by stage (grain timing, mechanism context) | closed (ACS) |
 | 10.3791/64400 | Liu, Zhou & Zhu 2022, JoVE | split-root wheat phloem transfer of PFOA / PFOS | closed |
 | -- | Eun et al. 2022 (authors' data) | per-congener drainage-water values of Fig. 3 (stacked bars, legend colours repeat) | published as figure only |
+| 10.1016/j.fcr.2004.10.003 | Bannayan et al. 2005, Field Crops Res. 93:237 | ORYZA2000 Akitakomachi (Shizukuishi FACE): the adjusted SLA and root:shoot values; possibly the origin of DSSAT `Shizukuishi.CRP` (11.6) | closed; snippet only (2026-11-04) |
+| 10.1016/j.agsy.2008.06.005 | Jing et al. 2008, Agric. Syst. 98:177 | ORYZA2000 Nipponbare / Takanari DVR, SLA, FLV/FST/FSO (the thesis, edepot.wur.nl/31932, says "available from the authors") | not obtained |
+| 10.1111/gcb.12758 | Li T et al. 2015, Glob. Change Biol. 21:1328, SI Table S3 | ORYZA calibration at Shizukuishi (Akitakomachi) | Wiley 403 (main text read from an open copy) |
+| -- | IRRI ORYZA download folder (Google Drive 0BwRcFC9_t3sQVnNRaXZMM3BYelk) | ORYZA v3 Nipponbare and Takanari crop files (Espe 2016 p.126) | 401; installers behind Google Forms |
+| -- | Jing Q / Bouman; AgMIP-Rice (Hasegawa) | the Nipponbare / Takanari files; the Akitakomachi parameters | "available from the authors" |
+| 10.1002/agj2.20258 | Lu et al. 2020, Agron. J. | Jiangsu japonica ORYZA v3 parameter table (optional) | Wiley 403 |
 
 Leads, not yet requested (ask before relying on them):
 - Kobayashi & Horie 1994, Jpn. J. Crop Sci. 63:193-199 (spikelet and rachis-branch differentiation) —

@@ -1349,3 +1349,16 @@ samples husk, brown rice or rachis through filling or uses a tracer / girdling /
 < 9 ng/kg where soil PFOS was 4.5-5.1 ug/kg (husk not measured). The one cereal-ear time course is wheat (Chen 2024,
 abstract only). What would decide it: husk, brown rice and rachis sampled from heading to maturity at one site, with a
 labelled-PFOS flag-leaf feeding or girdling test.
+
+### 11.6 Record (Japanese-cultivar ORYZA sets searched 2026-11-04; no model change)
+Search log: `docs/literature_db/searches/2026-11-04_japanese_oryza_sets.md` (literature subagent). No ORYZA2000 / v3 set
+for Koshihikari or Kasalath exists in any source found (GitHub code search of every ORYZA crop file, J-STAGE, OpenAlex,
+web in English and Japanese). Jing 2007 (WUR thesis, read) calibrated Nipponbare and Takanari at four Japanese sites but
+does not print the values ("available from the authors", p.32); they are the files Espe 2016 used and the IRRI folder
+holds (not obtainable). Hasegawa 2017 and Li 2015 (AgMIP-Rice, Shizukuishi Akitakomachi) give no values. The one
+Japanese-site crop file found is DSSAT's `Shizukuishi.CRP` (`raw_si/dssat_shizukuishi_crp_params.csv`): it keeps IR72's
+phenology and changes leaf growth, SLA, light, partitioning, FSTR and leaf death, but no document says who calibrated it,
+on which cultivar or data. It is not a published set, so rule 7.5 (every PUBLISHED temperate japonica set is a
+categorical band end) does not admit it; it is recorded, not run. It would become a band end if its calibration were
+documented (Bannayan 2005 and Li 2015 SI Table S3 are requested). The default crop stays IR72.D92 with the six published
+japonica sets as band ends; the Japanese-cultivar lever stays open.

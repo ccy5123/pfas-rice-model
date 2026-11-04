@@ -1,0 +1,20 @@
+# DSSAT 4.6 / 4.7 ORYZA crop file Shizukuishi.CRP (cultivar "IB6002 IR72-Shizukuishi" in RIORZ046/047.CUL), as distributed in
+# https://raw.githubusercontent.com/allfed/mink/main/basics_15jun22/sge_Mink3daily/actual_program_4.6_whpt_08jul16/not_potatoes_stuff/Shizukuishi.CRP
+# sha256 baf76586a2e13ecee8a7a4548044bc2e63cd8057b15b28cbbb4f984303a1e502 (identical copy under actual_program_4.7.5.11/previous_CULetc/).
+# Read by a literature subagent 2026-11-04. PROVENANCE UNDOCUMENTED: header copied from IR72.D92, no reference, cultivar not named; CO2 368 ppm
+# (Shizukuishi FACE ambient) suggests the AgMIP-Rice Shizukuishi (Akitakomachi) calibration -- an inference. NOT used by the model (PREREG 11.6).
+# Only the parameters that differ from IR72.D92 (raw_si/oryza_ir72_d92_params.csv); tables as DVS:value (EFFTB: temperature C:value).
+# Unchanged from IR72.D92: TBD TOD TMD, DVRJ DVRI DVRP DVRR, SHCKD SHCKL, SSGATB, SPGF 64900, WGRMX 2.49e-5.
+param,value,ir72_d92
+RGRLMX,0.00955,0.0085
+RGRLMN,0.00462,0.004
+SLATB,0:0.00470;0.42:0.00222;0.65:0.00219;0.80:0.00219;1.0:0.00219;1.2:0.00195;2.0:0.00142;2.5:0.00053,see IR72.D92
+KDFTB,0:0.462;0.65:0.541;1.0:0.632;2.5:0.671,see IR72.D92
+EFFTB,0:0.523;10:0.633;40:0.435;60:0.185,see IR72.D92
+FSTR,0.0917,0.20
+FSHTB,0:0.582;0.42:0.954;1:1;2.5:1,see IR72.D92
+FLVTB,0:0.614;0.42:0.351;0.65:0.448;0.80:0.235;1.0:0,see IR72.D92
+FSTTB,0.002:0.386;0.42:0.649;0.65:0.552;0.80:0.632;1.0:0.299;1.2:0.045;2.0:0,see IR72.D92
+FSOTB,0:0;0.42:0;0.65:0;0.80:0.133;1.0:0.701;1.2:0.955;2.0:1,see IR72.D92
+DRLVT,0:0;0.6:0;1.0:0.0030;1.6:0.0056;2.0:0.0163;2.5:0.0224,see IR72.D92
+CO2,368,340
