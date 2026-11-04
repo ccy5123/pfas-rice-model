@@ -444,7 +444,18 @@ def fit_lipid(pool, shoot, model, start, warm):
         return fits
 
     def resid(x):
-        return cells(fits_at(x))
+        # a trial outside the physical region (e.g. a loading constant so large that the root pool
+        # empties) is rejected by the trust region instead of stopping the run (PREREG 11.9)
+        try:
+            e = cells(fits_at(x))
+        except Exception:                                # noqa: BLE001
+            state["rejected"] = state.get("rejected", 0) + 1
+            return np.full(state["n_cells"], 1e3)
+        state["n_cells"] = len(e)
+        if not np.all(np.isfinite(e)):
+            state["rejected"] = state.get("rejected", 0) + 1
+            return np.full(len(e), 1e3)
+        return e
 
     def jac(x):
         fits = fits_at(x)
@@ -474,7 +485,7 @@ def fit_lipid(pool, shoot, model, start, warm):
     e = cells(fits)
     return dict(p=p, names=names, model=dict(model), fits=fits, cells=e.tolist(),
                 rmse=float(np.sqrt(np.mean(e ** 2))), nfev=int(sol.nfev), njev=int(sol.njev),
-                status=int(sol.status),
+                status=int(sol.status), rejected_trials=int(state.get("rejected", 0)),
                 at_logg_min=[n for n in names if n in ("g_xy", "g_ph")
                              and np.log10(p[n]) <= LOGG_MIN + 1e-6])
 

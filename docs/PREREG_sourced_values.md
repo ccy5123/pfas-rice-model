@@ -1409,3 +1409,11 @@ Read 2026-11-04 (full texts; per-file SHA-256 in `fulltext_needed.md`):
   (qualitative; no phi derivable). `obs_exposure_time` and the grain route stay open (11.5).
 - **Expectation** E53: adding the four Lu sets moves the median congener's crop-set straw and grain band ends by < 0.1 log10
   (their partitioning lies inside the Wu/Gao tables at DVS 1).
+
+### 11.9 Addendum (numerics; found when the amendment-4 re-fit stopped, before any of its results)
+The first amendment-4 re-fit stopped inside the lipid variant's backward elimination: a trust-region trial set the
+phloem lipid constant to g_ph = 5e69 (log10 g has no upper bound), the root pool emptied and `simulate` divided by a zero
+root BAF. Changes (numerical only; no physical run changes): `tf_final` is NaN when the root is empty, and the lipid
+least-squares treats a trial that fails or returns non-finite cells as a rejected step (a constant residual of 1e3 per
+cell), counted in the record (`rejected_trials`). Every run with a positive root is bit-identical; the default and fit
+variants never reach such a trial. No result of the stopped run was used.

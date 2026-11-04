@@ -1139,7 +1139,9 @@ def _run_redistributed(congener, cmpd, t, Cwo_series, Qtp, M4, leaf_loss, season
         dead_leaf=dict(burden=obs["dead_burden"], dry=obs["dead_dry"], attached=obs["attached"]),
         baf={k: v / cwo_ref for k, v in conc.items()},
         baf_final=baf_final,
-        tf_final={k: baf_final[k] / baf_final["root"]
+        # NaN when the root pool is empty (only reached by an optimiser's trial at an absurd
+        # loading constant; every physical run has a positive root): lets a fit reject the step
+        tf_final={k: (baf_final[k] / baf_final["root"] if baf_final["root"] > 0 else float("nan"))
                   for k in ("root", "stem", "leaf", "grain")},
         seq_fraction=(float(Y[model.SEQ, -1] / max(conc["root"][-1], 1e-12))
                       if model.two_pool else 0.0),
