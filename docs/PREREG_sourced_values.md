@@ -1380,3 +1380,32 @@ no Kd table: Fig. 1 is the only source). Found while reading, before any K_cw va
   covered only by the navy C16/C18 markers (at >= +0.9) or by each other, so both take the lowest blue-ring reading.
 - The 2026-10-27 PFOA/PFOS reading (`sorengard2020_fig1_plant_sorbents.csv`, 400-dpi render) is kept as the record; the new
   reading of all compounds (`sorengard2020_fig1_all_compounds.csv`) replaces it as the input.
+
+### 11.8 Addendum (the user's papers (5).zip; committed before the band run of amendment 4)
+Read 2026-11-04 (full texts; per-file SHA-256 in `fulltext_needed.md`):
+- **Crop sets.** Lu, Yu, Wang, Wang & Shan 2020 (Agron. J., doi 10.1002/agj2.20258, Table 2 p.7; read by a subagent, the
+  Table 2 layout checked by the main session): ORYZA v3 calibrations in central Jiangsu (32-33 N, 2011) for four japonica
+  sets -- ES1 Yangjing4227 (mechanically transplanted), ES2 Zhendao88 (direct-seeded), ES4 Huaidao5 (direct-seeded), ES9
+  Huaidao5 (mechanically transplanted) -- giving DVR*, FLVTB, FSTTB, FSOTB and SLATB, "the empirical values of the default
+  species (IR72)" for the rest (p.6): the same parameters as the Wu 2022 ORYZA v3 sets already in the band. Rule 7.5 admits
+  every published temperate japonica set as a categorical band end, so the four join `crop_sets.BAND_SETS` as
+  `lu2020_es1/es2/es4/es9` (DVR* re-calibrated to the site's heading and harvest like every set). Stated: Jiangsu japonica
+  (geng) read as temperate japonica (the paper says "Japonica"); two sets are direct-seeded (Artacho's broadcast set is the
+  precedent); ES4 and ES9 are one cultivar under two methods; the printed tables end at DVS 2; in Table 2 the ES9 label sits
+  one row early, so the 0.0013 row is ES7's (indica hybrid, not used) and ES9's DVS-2 SLA is 0.0025.
+- **Not sets.** Li et al. 2015 (GCB 21:1328) SI Table S3 prints ORYZA2000's Shizukuishi (Akitakomachi) calibration as
+  summary numbers only (SLA max/min, minimum shoot fraction, initial panicle fraction, maximum leaf fraction, maximum leaf
+  death, KDF min/max, FSTR; no DVS tables, no development rates; blind start not IR72.D92): recorded
+  (`raw_si/li2015_agmip_s3_oryza_params.csv`), not a band end. 11.6's "Li 2015 give no values" is corrected to this. None of
+  its values matches DSSAT `Shizukuishi.CRP`; Bannayan 2005 changed only two phenology parameters (p.240, values not printed)
+  and Jing 2008 prints none ("available from the authors", p.179). The CRP stays undocumented and out (11.6 stands).
+- **Exposure and grain route (no change).** Zhang et al. 2026 (Agric. Water Manag. 323:110041; Heilongjiang paddy,
+  irrigation spiked at 5 ng/L): DIFS resupply of PFBA and PFOA falls over four irrigation cycles while the desorption rate
+  rises (Table 3), but the table is internally inconsistent (response time != 1/(k1+k-1); DIFS Kd ~1000x its own batch Kd)
+  and no soil type or OC is given: not used. Wu et al. 2024 / 2026 (fresh 100 ng/g spikes in lab tanks, Milli-Q water): C4-C8
+  mostly dissolved, in line with the model's leaching, not with extra retention. Chen et al. 2024 (wheat near a fluorochemical
+  park): ear PFBA 492.5 -> 244.8 ng/g from filling to maturity, PFOA ~flat; husk ~7x grain over the season (context only, a
+  strong air source). Liu, Zhou & Zhu 2022 (JoVE): shoot-to-root phloem movement of PFOA/PFOS in split-root wheat
+  (qualitative; no phi derivable). `obs_exposure_time` and the grain route stay open (11.5).
+- **Expectation** E53: adding the four Lu sets moves the median congener's crop-set straw and grain band ends by < 0.1 log10
+  (their partitioning lies inside the Wu/Gao tables at DVS 1).
