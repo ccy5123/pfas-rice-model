@@ -26,3 +26,6 @@ external/hydrus_source/HYDRUS1D-4.08.pdf
 .streamlit/secrets.toml
 secrets.toml
 
+
+# agent worktrees (Claude Code)
+.claude/worktrees/
