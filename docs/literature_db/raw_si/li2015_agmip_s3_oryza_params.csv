@@ -1,0 +1,38 @@
+# Li T, Hasegawa T, Yin X, Zhu Y, Boote K, et al. (2015) Uncertainties in predicting rice yield by current crop models under a
+# wide range of climatic conditions. Global Change Biology 21:1328 (the PDF is the 2014 early-view copy, pp.1-14), doi:10.1111/gcb.12758. Supporting information
+# gcb12758-sup-0001-figs1-s5-tabs1-s4.docx (sha256 0658b14f366397edb711c1120a3a69138226fee120b33bf2cf07579d19c3f442; main-text PDF
+# sha256 3696889ad78c839e5eddec64d892f06455a01c8912439fa92391a7e74c6c7708; neither committed). Table S3 ("parameters that were
+# subject to changes in the model calibration phase ... Blind ... Calibrated ... for each sentinel site"), the ORYZA2000 block
+# (calibration method IV: computer-aided optimisation on all sequential measurements) and the APSIM-ORYZA block (method II: manual
+# tuning on all sequential measurements), transcribed cell by cell from the DOCX XML by a literature subagent 2026-11-04.
+# Sites (main text Table 1 p.3): IRRI Los Banos (IR58, 1985-86), Ludhiana (PAU201, 2008-09), Nanjing (Wuxiangjing 14 japonica +
+# Liangyoupeijiu indica hybrid, 2007), Shizukuishi (Akitakomachi japonica, 1998-2000 FACE ambient plots; calibration on 1999 N40/90/150).
+# Blind = each model's own default parameters with phenology-only calibration (values of the phenology calibration are NOT printed
+# for ORYZA2000). Values are SUMMARY SCALARS (max/min/initial of a DVS table), not the tables. Units as printed; blank = not changed.
+# "to 0.012" is printed so. "0 .001599" printed with a space.
+model,parameter_as_printed,unit,IRRI_blind,IRRI_cal,Ludhiana_blind,Ludhiana_cal,Nanjing_blind,Nanjing_cal,Shizukuishi_blind,Shizukuishi_cal,oryza_name_guess
+ORYZA2000,"Fraction N translocation from roots, as (additional) fraction of total N translocation from stems and leaves",Fraction,0.15,0.11446,0.15,0.0764,0.15,0.31768,0.12223,0.1558,FNTRT
+ORYZA2000,"Specific leaf area (SLA)(max, min)",ha kg-1,"0.0045, 0.0023","0.00455, 0.00104","0.0025, 0.0012","0.00169, 0.00107","0.0034, 0.0023","0.00345, 0.0017","0.00303, 0.0013","0.00152, 0.00125",SLATB / SLAMAX
+ORYZA2000,Min fraction of assimilate to shoot,Fraction,0.5,0.462,0.55,0.346,0.65,0.789,0.67,0.34,FSHTB (min)
+ORYZA2000,Initial fraction of assimilate in shoot to panicle,Fraction,0.600,0.942,0.500,0.496,0.350,0.826,0.600,0.822,FSOTB (first nonzero?)
+ORYZA2000,Max fraction of assimilate in shoot to leaf,Fraction,0.600,0.515,0.540,0.610,0.580,0.645,0.561,0.483,FLVTB (max)
+ORYZA2000,Max leaf death coefficient,(none),0.050,0.0813,0.027,0.037,0.040,0.0298,0.0325,0.0298,DRLVT (max)
+ORYZA2000,Initial leaf N fraction,g N m-2 leaf,,,,,0.500,0.369,0.259,0.245,NFLVTB (initial)
+ORYZA2000,Initial leaf N fraction,kg N kg-1 leaf,,,,,0.025,0.021,0.023,0.014,NMAXLT? (initial)
+ORYZA2000,"Light extinction coefficient (min, max)",Unitless,,,"0.400,0.550","0.355,0.518","0.400, 0.600","0.350,0.515","0.321,0.549","0.301,0.477",KDFTB
+ORYZA2000,Assimilate in stem for reserves,Fraction,,,0.110,0.107,,,0.120,0.077,FSTR
+APSIM-ORYZA,Development rate in juvenile phase,oC-1d-1,0.000823,0.001023,,,0.000608,0.000587,,,DVRJ
+APSIM-ORYZA,Development rate in photoperiod-sensitive phase,oC-1d-1,,,,,0.000483,0.000543,,,DVRI
+APSIM-ORYZA,Development rate in reproductive phase,C-1d-1,,,0.001899,0 .001599,0.001945,0.001545,0.001885,0.001785,DVRR
+APSIM-ORYZA,Relation between seedling age and delay in phenological development,oCd oC-1d-1,,,,,0.4,0.2,,,SHCKD
+APSIM-ORYZA,Maximum daily nitrogen (N) uptake,kg N ha-1 d-1,8,4,,,,,8,5,NMAXUP
+APSIM-ORYZA,Leaf death rate during reproductive phase,d-1,,,,,0.05,0.02,,,DRLVT
+APSIM-ORYZA,Fraction of assimilate to leaf at development stage (DS)<0.65,Fraction,,,0.6,0.65,0.6,0.7,,,FLVTB
+APSIM-ORYZA,Fraction of assimilate to stem at DS=0.65,Fraction,,,0.4,0.35,0.4,0.3,,,FSTTB (row label as printed; probably DS<0.65)
+APSIM-ORYZA,Fraction of assimilate to leaf at DS=0.65,Fraction,,,0.3,0.45,0.7,0.4,,,FLVTB
+APSIM-ORYZA,Fraction of assimilate to stem at DS=0.65,Fraction,,,0.7,0.55,0.3,0.6,,,FSTTB
+APSIM-ORYZA,Fraction of assimilate to stem at DS=1.0,Fraction,,,,,0.4,0.6,,,FSTTB
+APSIM-ORYZA,Fraction of assimilate to panicle at DS=1.0,Fraction,,,,,0.6,0.4,,,FSOTB
+APSIM-ORYZA,Maximum N concentration in storage organs,kg N kg-1,,,,,,,0.0175,0.0125,NMAXSO
+APSIM-ORYZA,Maximum leaf N fraction on weight basis at DS=1.0,kg N kg-1 leaves,,,,,,,0.028,0.014,NMAXLT
+APSIM-ORYZA,Maximum leaf N fraction on weight basis at DS=2.0,kg N kg-1 leaves,,,,,,,0.022,to 0.012,NMAXLT

@@ -1,0 +1,63 @@
+# Sörengård M, Östblom E, Köhler S, Ahrens L (2020) J Environ Chem Eng 8:103744, doi:10.1016/j.jece.2020.103744. Full text user-supplied 2026-11-04
+# (Drive papers (5).zip; sorengard2020.pdf sha256 4e614b14b55df97f36f591cb58dcaf53b2823d693222172cacaee71abfea2928); SI open (Elsevier mmc1.docx,
+# sha256 0ff4b962118d0cdbf070db0c6164eb44be0da252cdf93d28a7211dd89c75e168: no Kd table; Table S6 batch pH peat 7.5, granulated bark 7.2,
+# composted bark 7.29, composted wood fibre 7.46). Batch: 17 PFAS each 0.1 ug/mL, 6 mM phosphate buffer, duplicates; Kd = cs/cw [L/kg dw].
+# Fig. 1 (mean log Kd, n = 2), read by the main session 2026-11-04 on the native embedded 300-ppi image (1750 x 1659 px; PREREG 11.7): axes on the
+# gridlines (log Kd 0 at y 330 / 791 / 1241 px, 43.0 / 53.3 / 45.0 px per log unit in panels A / B / C), columns 35.84 px apart (column 5 at x 312);
+# peat = column 19, composted wood fibre 31, granulated bark 36, composted bark 42. Reading uncertainty about +-0.05 log (full marker), +-0.1 (low_conf).
+# low_conf = partly covered by a later series, centre from the visible edge + marker radius. hidden = fully covered: not read; hidden_low/high = the
+# interval its centre could occupy under the covering markers. np = series not plotted (PFHpA: absent from Fig. 1A although listed in the methods).
+# PFDoDA / PFTeDA: light-blue rings not separable; both take the same readings (flag). Supersedes sorengard2020_fig1_plant_sorbents.csv as the input.
+pfas,sorbent,log_Kd,flag,hidden_low,hidden_high
+PFBA,Peat,0.36,low_conf (top under PFPeA),,
+PFBA,Composted wood fiber,hidden,under PFOA,-0.15,0.05
+PFBA,Granulated bark,-0.23,low_conf (top under PFOA),,
+PFBA,Composted bark,hidden,under PFOA/PFPeA/PFHxA,-0.71,-0.14
+PFPeA,Peat,0.55,,,
+PFPeA,Composted wood fiber,hidden,under PFOA,-0.15,0.05
+PFPeA,Granulated bark,-0.01,low_conf (under PFHxA/PFOA),,
+PFPeA,Composted bark,-0.47,,,
+PFHxA,Peat,-0.19,low_conf (bottom under PFOA),,
+PFHxA,Composted wood fiber,hidden,under PFOA,-0.15,0.05
+PFHxA,Granulated bark,-0.03,low_conf (bottom under PFOA),,
+PFHxA,Composted bark,-0.71,,,
+PFHpA,Peat,np,not plotted,,
+PFHpA,Composted wood fiber,np,not plotted,,
+PFHpA,Granulated bark,np,not plotted,,
+PFHpA,Composted bark,np,not plotted,,
+PFOA,Peat,-0.29,,,
+PFOA,Composted wood fiber,-0.05,,,
+PFOA,Granulated bark,-0.08,,,
+PFOA,Composted bark,-0.14,,,
+PFNA,Peat,-0.15,,,
+PFNA,Composted wood fiber,0.10,,,
+PFNA,Granulated bark,-0.17,,,
+PFNA,Composted bark,-0.27,,,
+PFDA,Peat,0.04,,,
+PFDA,Composted wood fiber,0.37,,,
+PFDA,Granulated bark,-0.04,,,
+PFDA,Composted bark,-0.09,,,
+PFUnDA,Peat,0.33,,,
+PFUnDA,Composted wood fiber,0.56,,,
+PFUnDA,Granulated bark,0.29,,,
+PFUnDA,Composted bark,0.22,,,
+PFDoDA,Peat,0.57,PFDoDA/PFTeDA not separable,,
+PFDoDA,Composted wood fiber,0.81,PFDoDA/PFTeDA not separable,,
+PFDoDA,Granulated bark,0.51,PFDoDA/PFTeDA not separable,,
+PFDoDA,Composted bark,0.60,PFDoDA/PFTeDA not separable,,
+PFTeDA,Peat,0.57,PFDoDA/PFTeDA not separable,,
+PFTeDA,Composted wood fiber,0.81,PFDoDA/PFTeDA not separable,,
+PFTeDA,Granulated bark,0.51,PFDoDA/PFTeDA not separable,,
+PFTeDA,Composted bark,0.60,PFDoDA/PFTeDA not separable,,
+PFBS,Peat,0.68,,,
+PFBS,Composted wood fiber,hidden,under PFOS/8:2 FTSA/6:2 FTSA/PFHxS,-0.25,0.39
+PFBS,Granulated bark,hidden,under PFOS/PFHxS/6:2 FTSA,-0.32,0.29
+PFBS,Composted bark,hidden,under PFOS/6:2 FTSA/PFHxS,-0.48,-0.11
+PFHxS,Peat,-0.34,,,
+PFHxS,Composted wood fiber,-0.18,low_conf (under 6:2 FTSA),,
+PFHxS,Granulated bark,0.02,,,
+PFHxS,Composted bark,-0.48,low_conf (under 6:2 FTSA),,
+PFOS,Peat,-0.08,low_conf (under 6:2 FTSA),,
+PFOS,Composted wood fiber,0.39,,,
+PFOS,Granulated bark,0.29,,,
+PFOS,Composted bark,-0.11,,,

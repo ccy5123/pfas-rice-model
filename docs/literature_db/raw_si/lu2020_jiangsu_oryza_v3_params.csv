@@ -1,0 +1,22 @@
+# Lu B, Yu K, Wang Z, Wang J, Shan J (2020) Adaptability evaluation of ORYZA (v3) for single-cropped rice under different
+# establishment techniques in eastern China. Agronomy Journal (2020; the PDF is paginated 1-18, no volume printed), doi:10.1002/agj2.20258
+# (open access, CC BY-NC-ND; PDF sha256 f7f1b27753f77a635d27d84e9b87c0e20d1cc82dc957a87c0476cdc8b64b3314, NOT committed).
+# Table 2 p.7 ("Genotype parameters for different rice varieties calibrated through ORYZA (v3)"), read by a literature subagent
+# 2026-11-04 from the text layer and checked against a 200-dpi render of p.7. Conditions: Jiangsu Province, central (Yangzhou,
+# Taizhou, Huai'an; 32.3-33.3 N), 2011 calibration data, potential production (no soil/N/water limitation); Table 1 p.4 gives
+# sowing dates, rice type and method (MT mechanically transplanted, DS direct seeded, AT artificially transplanted).
+# Calibrated with the ORYZA (v3) DRATE (DVR) and PARAM (partitioning) tools. p.6: "Because most parameters in the model are
+# universal for all rice cultivars, the empirical values of the default species (IR72) in the model database can be used directly."
+# Only DVR, FLV, FST, FSO and SLA are printed (p.6 also names relative leaf growth rate and fraction of stem reserves as
+# calibratable, but no values are given): every parameter not listed here is IR72's. DVR in 1/(degC d) as printed; SLA unit not
+# printed (ORYZA convention ha/kg). Tables as "DVS:value;...". FLV+FST+FSO = 1 at every printed DVS.
+# LAYOUT NOTE: the row "ES9 (Huaidao5) - - 2.00 0.00 0.00 1.00 2.00 0.0013" is printed directly under ES7's DVRR row, and ES9's
+# own DVRJ..DVRR rows follow it, closed by a second DVS 2.00 row (SLA 0.0025). Every other block is DVRJ,DVRI,DVRP,DVRR,(2.00 row),
+# so the 0.0013 row is read as ES7's DVS-2.00 row with the ES9 label set one row early; ES9's DVS-2.00 SLA is 0.0025. An inference.
+# ES7 (C liangyou608) is an indica hybrid, not a japonica set.
+site,cultivar,rice_type,method_2011,sowing_2011,DVRJ,DVRI,DVRP,DVRR,FLVTB,FSTTB,FSOTB,SLATB
+ES1,Yangjing4227,Japonica,MT,2011-05-26,0.000542,0.000758,0.000780,0.001621,0.00:0.50;0.50:0.50;0.75:0.25;1.00:0.00;2.00:0.00,0.00:0.50;0.50:0.50;0.75:0.75;1.00:0.40;2.00:0.00,0.00:0.00;0.50:0.00;0.75:0.00;1.00:0.60;2.00:1.00,0.00:0.0030;0.50:0.0030;0.75:0.0021;1.00:0.0023;2.00:0.0028
+ES2,Zhendao88,Japonica,DS,2011-06-09,0.000583,0.000758,0.000778,0.001622,0.00:0.50;0.50:0.47;0.75:0.13;1.00:0.00;2.00:0.00,0.00:0.50;0.50:0.53;0.75:0.87;1.00:0.35;2.00:0.00,0.00:0.00;0.50:0.00;0.75:0.00;1.00:0.65;2.00:1.00,0.00:0.0030;0.50:0.0030;0.75:0.0026;1.00:0.0024;2.00:0.0022
+ES4,Huaidao5,Japonica,DS,2011-06-12,0.000661,0.000758,0.000777,0.001663,0.00:0.50;0.50:0.50;0.75:0.30;1.00:0.00;2.00:0.00,0.00:0.50;0.50:0.50;0.75:0.70;1.00:0.40;2.00:0.00,0.00:0.00;0.50:0.00;0.75:0.00;1.00:0.60;2.00:1.00,0.00:0.0030;0.50:0.0030;0.75:0.0028;1.00:0.0030;2.00:0.0024
+ES7,C liangyou608,Indica (hybrid),AT,2011-05-06,0.000566,0.000758,0.000781,0.001561,0.00:0.50;0.50:0.45;0.75:0.20;1.00:0.00;2.00:0.00,0.00:0.50;0.50:0.55;0.75:0.65;1.00:0.15;2.00:0.00,0.00:0.00;0.50:0.00;0.75:0.15;1.00:0.85;2.00:1.00,0.00:0.0030;0.50:0.0030;0.75:0.0019;1.00:0.0017;2.00:0.0013
+ES9,Huaidao5,Japonica,MT,2011-05-20,0.000545,0.000758,0.000783,0.001599,0.00:0.50;0.50:0.45;0.75:0.40;1.00:0.00;2.00:0.00,0.00:0.50;0.50:0.55;0.75:0.60;1.00:0.50;2.00:0.00,0.00:0.00;0.50:0.00;0.75:0.00;1.00:0.50;2.00:1.00,0.00:0.0030;0.50:0.0030;0.75:0.0021;1.00:0.0023;2.00:0.0025

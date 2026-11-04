@@ -1,0 +1,12 @@
+# Zhang et al. (2026) Agric. Water Manag. 323:110041, doi:10.1016/j.agwat.2025.110041 (CC BY)
+# Table 2 (p.12): Langmuir and Freundlich parameters of PFBA / PFOA sorption by the soil (batch; equilibrium solution up to ~25 mg/L, Fig. 8). Transcribed exactly.
+# Units as printed: KL "(mg L-1)" [sic], qmax mg/g; Kf and nf printed without units. Batch at mg/L levels: not a trace-level Kd.
+# Site/treatments as in zhang2026_table1_adsorption_kinetics.csv. Soil type / OC not given in the main text.
+# Read by a literature subagent 2026-11-04 (not re-checked). File sha256 4dc3dcebeec18377be886461617b2287d2b3e78dc6b169a18e4911c32a978c96
+site,treatment,langmuir_KL,langmuir_qmax_mg_per_g,langmuir_R2,freundlich_Kf,freundlich_nf,freundlich_R2
+PFBA site,WBC,0.125,1.437,0.979,0.311,0.652,0.923
+PFBA site,RBC,0.178,2.028,0.970,0.560,0.591,0.960
+PFBA site,MBC,0.184,2.104,0.958,0.577,0.584,0.945
+PFOA site,WBC,0.221,1.987,0.943,1.213,0.547,0.960
+PFOA site,RBC,0.304,2.387,0.950,2.079,0.493,0.977
+PFOA site,MBC,0.317,2.643,0.955,2.102,0.488,0.980

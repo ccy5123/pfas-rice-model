@@ -10,23 +10,29 @@ the text has been read, and record what was taken from it in `sourced_inputs.csv
 | DOI | paper | needed for | why it failed |
 |---|---|---|---|
 | -- | Iwatsuki 1932, 農業及園芸 7:64 | seasonal rice root profile to 89 cm (10.2) | no DOI; cited only |
-| 10.1016/j.jece.2020.103744 | Sörengård et al. 2020, J. Environ. Chem. Eng. 8:103744 | Fig. 1 A-C: log Kd of PFCA C4-C12 and PFSA C4/C6/C8 on peat, granulated bark, composted bark, composted wood fibre (the K_cw lower end, PREREG 11.2) | read on 2026-10-27 from a direct upload (sha256 05a6e1a1...); the PDF is not in the repo nor the Drive folder; OpenAlex closed, no repository copy (2026-11-04) |
-| 10.1016/j.agwat.2025.110041 | Zhang et al. 2025, Agric. Water Manag. | paddy pore-water profiles, fitted Kd and desorption rate constants (PFBA, PFOA): `obs_exposure_time` (10.6) | ScienceDirect 403; SSRN preprints 5157625 / 5125235 "Content Blocked" (2026-11-04) |
-| 10.1016/j.scitotenv.2024.177377 | Wu et al. 2024, Sci. Total Environ. | overlying / pore water course of C4-C9 under irrigation (10.6) | closed, no OA copy |
-| 10.1016/j.envpol.2026.127828 | Wu et al. 2026, Environ. Pollut. | pore water drained vs waterlogged (10.6) | closed |
-| 10.1021/acs.est.4c03525 | Chen et al. 2024, ES&T | wheat ear / stem PFAS by stage (grain timing, mechanism context) | closed (ACS) |
-| 10.3791/64400 | Liu, Zhou & Zhu 2022, JoVE | split-root wheat phloem transfer of PFOA / PFOS | closed |
 | -- | Eun et al. 2022 (authors' data) | per-congener drainage-water values of Fig. 3 (stacked bars, legend colours repeat) | published as figure only |
-| 10.1016/j.fcr.2004.10.003 | Bannayan et al. 2005, Field Crops Res. 93:237 | ORYZA2000 Akitakomachi (Shizukuishi FACE): the adjusted SLA and root:shoot values; possibly the origin of DSSAT `Shizukuishi.CRP` (11.6) | closed; snippet only (2026-11-04) |
-| 10.1016/j.agsy.2008.06.005 | Jing et al. 2008, Agric. Syst. 98:177 | ORYZA2000 Nipponbare / Takanari DVR, SLA, FLV/FST/FSO (the thesis, edepot.wur.nl/31932, says "available from the authors") | not obtained |
-| 10.1111/gcb.12758 | Li T et al. 2015, Glob. Change Biol. 21:1328, SI Table S3 | ORYZA calibration at Shizukuishi (Akitakomachi) | Wiley 403 (main text read from an open copy) |
 | -- | IRRI ORYZA download folder (Google Drive 0BwRcFC9_t3sQVnNRaXZMM3BYelk) | ORYZA v3 Nipponbare and Takanari crop files (Espe 2016 p.126) | 401; installers behind Google Forms |
 | -- | Jing Q / Bouman; AgMIP-Rice (Hasegawa) | the Nipponbare / Takanari files; the Akitakomachi parameters | "available from the authors" |
-| 10.1002/agj2.20258 | Lu et al. 2020, Agron. J. | Jiangsu japonica ORYZA v3 parameter table (optional) | Wiley 403 |
 
 Leads, not yet requested (ask before relying on them):
 - Kobayashi & Horie 1994, Jpn. J. Crop Sci. 63:193-199 (spikelet and rachis-branch differentiation) —
   possible rachis weights for PREREG 7.2 (cited by Matsui & Kagata 2002).
+
+## Obtained 2026-11-04 (user, Google Drive `papers (5).zip`, sha256 466246d847f6cbfafc328e2c7763aeaf669d2888ae081c3fbec4b2bc93840441)
+Read in full (Sörengård by the main session; the rest by literature subagents, PREREG 11.7-11.8). PDFs not committed.
+- 10.1016/j.jece.2020.103744 Sörengård 2020 (sorengard2020.pdf 4e614b14b55df97f36f591cb58dcaf53b2823d693222172cacaee71abfea2928; SI open,
+  Elsevier mmc1.docx 0ff4b962118d0cdbf070db0c6164eb44be0da252cdf93d28a7211dd89c75e168) -> `raw_si/sorengard2020_fig1_all_compounds.csv`
+- 10.1016/j.agwat.2025.110041 Zhang 2026 (zhang2026.pdf 4dc3dcebeec18377be886461617b2287d2b3e78dc6b169a18e4911c32a978c96) -> `raw_si/zhang2026_*.csv`
+- 10.1016/j.scitotenv.2024.177377 Wu 2024 (5255230b23ba26c4d89b58a3b307d8cf7649924811cf9ce2c95aab270e002f18) -> `raw_si/wu2024_text_values.csv` (SI not obtained)
+- 10.1016/j.envpol.2026.127828 Wu 2026 (b25e36762e69b09579b6ef4283ba9bafb5556b7bddb803fc4451f2c507ba9364) -> `raw_si/wu2026_text_values.csv` (SI not obtained)
+- 10.1021/acs.est.4c03525 Chen 2024 (22e15eeac6d709ba8d1523993a797333005e572803b148495b6a9fc73a7af2c7) -> `raw_si/chen2024_fig2_stage_labels.csv` (SI not obtained)
+- 10.3791/64400 Liu, Zhou & Zhu 2022 (b1d18cd92581b100d394b5ea33228908585d910f45b8b04f1749f70648e82905) -> `raw_si/liu2022_jove_splitroot_text.csv`
+- 10.1016/j.fcr.2004.10.003 Bannayan 2005 (0fe9a7895047615b8a8bdc53b43436ebf66ef864b8343d7298a809d06e8ac18b): no parameter values printed
+- 10.1016/j.agsy.2008.06.005 Jing 2008 (619e6cff94f8b749d28ab9fd203a0d8ca30c365424f6839cff885a62686e8811): no values ("available from the authors")
+- 10.1111/gcb.12758 Li 2015 (li2015.pdf 3696889ad78c839e5eddec64d892f06455a01c8912439fa92391a7e74c6c7708; SI docx
+  0658b14f366397edb711c1120a3a69138226fee120b33bf2cf07579d19c3f442) -> `raw_si/li2015_agmip_s3_oryza_params.csv`, `shizukuishi_crp_vs_li2015_s3.csv`
+- 10.1002/agj2.20258 Lu 2020 (f7f1b27753f77a635d27d84e9b87c0e20d1cc82dc957a87c0476cdc8b64b3314) -> `raw_si/lu2020_jiangsu_oryza_v3_params.csv`
+Still requested from these: the SIs of Wu 2024 (Figs. S1-S22), Wu 2026 (Fig. S4), Chen 2024 (Tables S5-S9), Zhang 2026 (Table S1, Text S1).
 
 ## Obtained (2026-10-26, uploaded by the user or open access) — read in the main session
 - 10.1626/pps.5.198 Matsui & Kagata 2002 (no rachis weight: spikelets only)

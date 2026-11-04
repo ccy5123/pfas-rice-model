@@ -1,0 +1,14 @@
+# Zhang J, Hou R, Su A, Wang M, Sun H, Xu H, Huang W, Peng F, Zhao S (2026) Study on the regulatory effect of biochar-based materials on the migration
+# and accumulation of perfluoroalkyl substances in paddy soil-water-plant systems. Agric. Water Manag. 323:110041 (online 3 Dec 2025; CC BY), doi:10.1016/j.agwat.2025.110041
+# Table 1 (p.12): adsorption kinetics of PFBA / PFOA by the soil, batch (stock 1000 mg/L; Text S1 not available). Transcribed exactly.
+# Conditions: field enclosures (1.2 x 1.2 x 0.2 m), Heilongjiang Inst. Water Resources Sci. & Tech. (126.75 E, 45.37 N), Songnen Plain; June-Aug 2024; rice cv. Longjing 31;
+# WBC = no biochar, RBC = rice-husk biochar, MBC = montmorillonite-modified biochar (3 % w/w). Soil type / OC / texture NOT given in the main text (SI not obtained).
+# mg/g-scale loadings: NOT trace-level sorption; not a paddy Kd for the model. k2 units as printed (g mg-1 min-1).
+# Read by a literature subagent 2026-11-04 (not re-checked). File sha256 4dc3dcebeec18377be886461617b2287d2b3e78dc6b169a18e4911c32a978c96 (zhang2026.pdf)
+site,treatment,pfo_qe_mg_per_g,pfo_k1_per_h,pfo_R2,pso_qe_mg_per_g,pso_k2_g_per_mg_per_min,pso_R2
+PFBA site,WBC,1.186,0.013,0.929,1.224,0.002,0.951
+PFBA site,RBC,1.689,0.018,0.950,1.745,0.008,0.974
+PFBA site,MBC,1.915,0.019,0.951,1.978,0.007,0.963
+PFOA site,WBC,1.698,0.014,0.938,1.764,0.006,0.949
+PFOA site,RBC,2.053,0.020,0.959,2.179,0.011,0.977
+PFOA site,MBC,2.387,0.022,0.962,2.425,0.008,0.975

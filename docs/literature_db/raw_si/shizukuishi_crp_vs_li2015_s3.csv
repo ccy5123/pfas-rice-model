@@ -1,0 +1,15 @@
+# Comparison (literature subagent 2026-11-04): DSSAT Shizukuishi.CRP (repo raw_si/dssat_shizukuishi_crp_params.csv) against the only
+# printed Shizukuishi ORYZA values found: Li et al. 2015 GCB SI Table S3 (10.1111/gcb.12758; docx sha256 0658b14f...). Bannayan 2005
+# and Jing 2008 print no parameter values. CRP summary scalars are read off its tables (DVS 0-2.0 unless noted).
+quantity,CRP_value,Li2015_Shizukuishi_blind,Li2015_Shizukuishi_calibrated,IR72_D92,match
+SLA max,0.00470 (DVS 0),0.00303,0.00152,0.0045,no
+SLA min,0.00142 (DVS 2.0); 0.00053 (DVS 2.5),0.0013,0.00125,0.0023,no
+FSH min,0.582,0.67,0.34,0.50,no
+FLV max,0.614,0.561,0.483,0.60,no
+FSO initial (first nonzero / at DVS 1),0.133 (DVS 0.8); 0.701 (DVS 1.0),0.600,0.822,0.600 (DVS 1.0),no
+DRLV max,0.0163 (DVS 2.0); 0.0224 (DVS 2.5),0.0325,0.0298,0.050,no
+KDF min/max,0.462/0.671,0.321/0.549,0.301/0.477,0.4/0.6,no
+FSTR,0.0917,0.120,0.077,0.20,no
+RGRLMX/RGRLMN,0.00955/0.00462,not printed,not printed,0.0085/0.0040,n/a
+DVR*,= IR72.D92,not printed (ORYZA2000),not printed,IR72,n/a
+CO2 ambient,368,NOAA ESRL ambient (value not printed),same,340,n/a (Bannayan p.239: ambient plots 365-369 ppm over 1998-2000)

@@ -1,0 +1,22 @@
+# Chen X, Xu D, Xiao Y, Zuo M, Zhou J, Sun X, Shan G, Zhu L (2024) Multimedia and full-life-cycle monitoring discloses the dynamic accumulation rules of PFAS
+# and underestimated foliar uptake in wheat near a fluorochemical industrial park. Environ. Sci. Technol. 58:18088-18097, doi:10.1021/acs.est.4c03525
+# Figure 2 (p.18091): numbers PRINTED as data labels on the stacked bars (read at 250-300 dpi; not digitised); ng/g (dry mass per Methods eq. 1-2); presumably
+# means over flood-irrigated sites (spray sites excluded); n per stage not printed on the figure (SI Tables S5-S9 not obtained). Compound = bar colour (legend).
+# Stage dates (Table 1): I 2021-01-01 seeding (seedling) stage; II 2021-04-01 growing; III 2021-05-17 filling; IV 2021-05-31 maturing. Winter wheat, Shandong FIP vicinity;
+# rhizosphere soil 0-30 cm sum PFAS 0.33 +- 0.43 ug/g (n 52), PFOA 84 % near the park; short-chain PFCAs (C4-7) in soil 0.9-3.2 ng/g. Dry deposition 75 +- 102 ng/m2/d.
+# WHEAT, heavy atmospheric PFOA source: mechanism context only, not a rice value. Ear = whole ear (husk + grain) at III and IV; no ear before III.
+# Read by a literature subagent 2026-11-04 (not re-checked). File sha256 22e15eeac6d709ba8d1523993a797333005e572803b148495b6a9fc73a7af2c7 (es4c03525.pdf)
+organ,stage,PFBA,PFPeA,PFOA,HFPO_DA,HFPO_TA
+root,I,81.3,32.3,252.3,,37.0
+root,II,84.4,26.7,191.7,,36.3
+root,III,64.4,26.9,347.4,,76.3
+root,IV,68.5,23.9,367.8,,39.8
+stem,II,219.6,56.7,62.6,16.4,
+stem,III,56.7,19.6,41.0,,
+stem,IV,77.7,24.2,76.1,,
+leaf,I,397.2,95.9,124.7,,
+leaf,II,856.7,194.9,256.4,74.3,
+leaf,III,372.6,163.6,613.0,,
+leaf,IV,485.4,161.5,1534.5,,
+ear,III,492.5,107.5,109.3,,
+ear,IV,244.8,45.7,104.4,,

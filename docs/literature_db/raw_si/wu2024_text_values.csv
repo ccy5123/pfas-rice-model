@@ -1,0 +1,18 @@
+# Wu J, Li L, Chen M, Liu M, Tu W (2024) Modulation of irrigation-induced microbial nitrogen-iron redox to per- and polyfluoroalkyl substances' water-soil
+# interface release in paddy fields: activation or immobilization? Sci. Total Environ. 956:177377, doi:10.1016/j.scitotenv.2024.177377
+# NO tables in the main text; values below are TEXT values (p.3-4) plus by-eye Fig. 1 notes. Per-congener concentrations / TFs are in SI Figs. S1-S8, S14-S22 (SI NOT obtained).
+# Conditions: PP tanks 15 cm x 15 cm, 400 g fresh paddy soil (origin, texture, OC NOT reported in the main text), 14-d pre-flood with 500 mL Milli-Q, overlying water
+# removed, 40 ug of each of 15 PFAS mixed in (100 ng/g fresh soil, freshly spiked, no ageing); "flood" = +500 mL Milli-Q, "drought" = no water; sampled days 7, 14, 21 (n 4).
+# Fractions: OW = overlying water (0.22 um filtered); SS = water + ultrasonic extract; EPS = 0.05 % NaCl extract; SP = 60 C methanol extract. External calibration.
+# Fig. 1 is labelled "mass distribution (relative concentrations, %)": whether the % are masses or concentrations is NOT stated.
+# Read by a literature subagent 2026-11-04 (not re-checked). File sha256 5255230b23ba26c4d89b58a3b307d8cf7649924811cf9ce2c95aab270e002f18 (1-s2.0-S004896972407534X-main.pdf)
+quantity,value,location,note
+C4-C9 PFCAs share in overlying water (flood),70.74-99.14 %,p.3 Sec. 3.1; Fig. 1a,abstract gives 41.79-99.14 % for C4-C9 PFAS
+C10-C14 PFCAs share on soil particles (flood),98.70-99.98 %,p.3; Fig. 1a,
+C4-C8 PFCAs share in soil solution (drought),53.15-97.96 %,p.3; Fig. 1b,
+C4-C6 PFSAs share in soil solution (drought),54.39-74.67 %,p.3; Fig. 1b,
+other PFAS share on soil particles (drought),92.45-99.90 %,p.4; Fig. 1b,
+soil pH drought (day 7 -> 21),7.58 -> 8.32,p.4 Sec. 3.2 (Fig. S9),
+soil pH flood (day 7 -> 21),8.43 -> 6.69,p.4 Sec. 3.2 (Fig. S9),
+Fig. 1a by eye (flood) overlying-water share,PFBA ~94; PFPeA-PFOA ~96-99; PFNA ~80; PFBS ~91; PFHxS ~92; PFOS ~42 %,Fig. 1a (figure only; by eye +-3 %),not digitised
+Fig. 1b by eye (drought) soil-solution share,PFBA ~97; PFHxA ~90; PFHpA ~86; PFOA ~53; PFBS ~75; PFOS ~3 %,Fig. 1b (figure only; by eye +-3 %),not digitised

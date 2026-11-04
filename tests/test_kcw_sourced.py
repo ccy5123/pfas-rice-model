@@ -17,18 +17,27 @@ def test_upper_ends_match_the_registered_values():
     assert "PFUnDA" not in u                      # 3 runs at pH >= 5.8: excluded
 
 
-def test_pfoa_pfos_from_the_readings_in_the_repo():
+def test_pfoa_pfos_from_the_11_7_reading():
     pfoa = K.kcw_sourced(7, "carboxylate")
     assert pfoa.case == "domain"
-    assert pfoa.low == pytest.approx(10 ** -0.31) and pfoa.high == pytest.approx(9.329, rel=1e-3)
+    assert pfoa.low == pytest.approx(10 ** -0.29) and pfoa.high == pytest.approx(9.329, rel=1e-3)
     assert pfoa.rec == pytest.approx(math.sqrt(pfoa.low * pfoa.high))
     pfos = K.kcw_sourced(8, "sulfonate")
-    assert pfos.low == pytest.approx(10 ** -0.16)          # composted bark (peat is low_conf but higher)
+    assert pfos.low == pytest.approx(10 ** -0.11)          # composted bark (PREREG 11.7 reading)
 
 
 def test_unread_registered_compound_is_an_error_not_out_of_domain():
+    lower = {c: v for c, v in K.sorengard_lower().items() if c != "PFBS"}
     with pytest.raises(K.PendingReading):
-        K.kcw_sourced(4, "sulfonate", lower=K.sorengard_lower())
+        K.kcw_sourced(4, "sulfonate", lower=lower)
+
+
+def test_prereg_11_7_cases():
+    assert K.kcw_sourced(6, "carboxylate").case == "removed"          # PFHpA not plotted
+    assert K.kcw_sourced(3, "carboxylate").case == "lower_only"       # PFBA
+    assert K.kcw_sourced(13, "carboxylate").case == "domain"          # PFTeDA plotted
+    assert K.kcw_sourced(5, "carboxylate", n_ether_O=1).case == "removed"   # GenX
+    assert any("min_may_be_lower" in f for f in K.kcw_sourced(4, "sulfonate").flags)
 
 
 def _toy():
@@ -54,5 +63,5 @@ def test_decision_tree():
     assert r.low == pytest.approx(1.0 * 10 ** (-0.98)) and r.high == pytest.approx(10.0 * 10 ** 0.98)
     r = K.kcw_sourced(8, "sulfonamide", upper=up, lower=lo)
     assert r.case == "removed"
-    r = K.kcw_sourced(13, "carboxylate", upper=up, lower=lo)  # beyond every lower reading
+    r = K.kcw_sourced(12, "carboxylate", upper=up, lower=lo)  # PFTrDA: no reading, beyond the upper ends
     assert r.case == "removed"

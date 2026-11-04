@@ -56,3 +56,8 @@
   the only Japanese-site file is Shizukuishi.CRP.
 - J-STAGE API (ORYZA2000, ORYZA, ORYZA v3): no Japanese ORYZA calibration paper (one CSSJ abstract on Colombian
   varieties). CiNii OpenSearch 502. Web (EN/JA): no Koshihikari/Kasalath ORYZA set.
+
+
+## Correction (2026-11-04, after reading the full texts)
+- Bannayan 2005 (full text): calibrated on phenology only ("we changed only two parameters for vegetative development", p.240); the
+  snippet's "SLA and root:shoot corrected" is not in the paper. Li 2015 SI Table S3 does print summary values (PREREG 11.8).

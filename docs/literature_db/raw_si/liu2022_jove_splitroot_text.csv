@@ -1,0 +1,14 @@
+# Liu S, Zhou J, Zhu L (2022) Investigating long-distance transport of perfluoroalkyl acids in wheat via a split-root exposure technique. J. Vis. Exp. (187) e64400,
+# doi:10.3791/64400. Hydroponic wheat seedlings (Triticum aestivum), 1/4 Hoagland, 50-mL tubes, 7-d split-root exposure at 100 ug/L PFOA or PFOS, n 3;
+# 14 h 22 C / 10 h 27 C. Values: text p.4 and Fig. 2 (p.6; bars by eye, not digitised).
+# ATTRIBUTION CONFLICT (agent): the text (p.4) assigns 0.26 ng/g and 17.8 ng/L to PFOS and 0.64 ng/g and 28.5 ng/L to PFOA ("respectively"), but Fig. 2B/2D show
+# the unspiked root at ~0.26 ng/g dw for PFOA and ~0.63 for PFOS, unspiked solution ~0.02 ug/L PFOA and ~0.03 ug/L PFOS. Which tube was spiked is also contradictory
+# (abstract and step 2.1.1: tube B; Fig. 1 legend: "B tubes are all unspiked"). Seedlings (no grain); mechanism evidence only.
+# Read by a literature subagent 2026-11-04 (not re-checked). File sha256 b1d18cd92581b100d394b5ea33228908585d910f45b8b04f1749f70648e82905
+quantity,PFOA_as_in_figure,PFOS_as_in_figure,text_as_printed,location
+unspiked-half root (ng/g dw),~0.26,~0.63,"PFOS 0.26 +- 0.02, PFOA 0.64 +- 0.05",p.4; Fig. 2B/2D
+unspiked-half root share of whole-plant amount,,,"1.5 % and 1.8 % (PFOS, PFOA order as printed)",p.4
+unspiked solution after 7 d (ng/L),~20,~30,"17.8 +- 0.28 and 28.5 +- 5.9 (PFOS, PFOA order as printed)",p.4; Fig. 2B/2D
+spiked solution after 7 d (ug/L),~64,~97,nominal 100,Fig. 2A/2C by eye
+spiked-half root (ng/g dw),~12,~31,,Fig. 2A/2C by eye
+shoot (ng/g dw),~5,~5,,Fig. 2A/2C by eye

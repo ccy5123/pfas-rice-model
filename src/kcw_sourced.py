@@ -26,7 +26,7 @@ from pathlib import Path
 RAW = Path(__file__).resolve().parents[1] / "docs" / "literature_db" / "raw_si"
 MAKSELON_CSV = RAW / "makselon2019_peatOi_tableA9_logkoc.csv"
 SORENGARD_WIDE_CSV = RAW / "sorengard2020_fig1_plant_sorbents.csv"     # PFOA, PFOS (2026-10-27)
-SORENGARD_LONG_CSV = RAW / "sorengard2020_fig1_all_compounds.csv"      # every compound (registered read)
+SORENGARD_LONG_CSV = RAW / "sorengard2020_fig1_all_compounds.csv"      # every compound (PREREG 11.7 reading)
 
 MAKSELON_OC_FRACTION = 0.449          # Table 1: organic C 44.90 % dw
 MAKSELON_MIN_PH = 5.8
@@ -43,7 +43,7 @@ HEADS = {"carboxylate": PFCA, "sulfonate": PFSA}
 # the compounds Sörengård 2020 Fig. 1 plots (side-project PREREG 2.2): asking for one of them
 # before its reading is in the repo is an error, not a silent "outside the domain"
 SORENGARD_REGISTERED = ("PFBA", "PFPeA", "PFHxA", "PFHpA", "PFOA", "PFNA", "PFDA", "PFUnDA",
-                        "PFDoDA", "PFBS", "PFHxS", "PFOS")
+                        "PFDoDA", "PFTeDA", "PFBS", "PFHxS", "PFOS")
 
 
 class PendingReading(RuntimeError):
@@ -70,15 +70,22 @@ def makselon_upper() -> dict[str, float]:
 
 
 def sorengard_lower() -> dict[str, dict]:
-    """{compound: {"Kd": lowest plant-sorbent Kd [L/kg], "sorbent": ..., "low_conf": bool}}."""
+    """{compound: {"Kd", "sorbent", "low_conf", "min_may_be_lower"}} -- the lowest READ log Kd of the four
+    plant-derived sorbents (PREREG 11.7); None where the compound is read but has no value (not plotted)."""
     vals: dict[str, list] = {}
+    hid: dict[str, list] = {}
     if SORENGARD_LONG_CSV.exists():
         for r in _rows(SORENGARD_LONG_CSV):
-            if r["sorbent"] in PLANT_SORBENTS and r["log_Kd"] not in ("", "nq"):
-                vals.setdefault(r["pfas"], []).append(
-                    (float(r["log_Kd"]), r["sorbent"], "low_conf" in (r.get("flag") or "")))
-            elif r["sorbent"] in PLANT_SORBENTS and r["log_Kd"] == "nq":
-                vals.setdefault(r["pfas"], [])
+            if r["sorbent"] not in PLANT_SORBENTS:
+                continue
+            vals.setdefault(r["pfas"], [])
+            try:
+                v = float(r["log_Kd"])
+            except ValueError:
+                if r["log_Kd"] == "hidden":
+                    hid.setdefault(r["pfas"], []).append(float(r["hidden_low"]))
+                continue
+            vals[r["pfas"]].append((v, r["sorbent"], "low_conf" in (r.get("flag") or "")))
     else:
         for r in _rows(SORENGARD_WIDE_CSV):
             if r["sorbent"] not in PLANT_SORBENTS:
@@ -89,10 +96,11 @@ def sorengard_lower() -> dict[str, dict]:
     out = {}
     for c, v in vals.items():
         if not v:
-            out[c] = None                      # read, but no quantifiable sorption
+            out[c] = None                      # read, but no value (not plotted / not quantifiable)
             continue
         lo = min(v)
-        out[c] = {"Kd": 10.0 ** lo[0], "sorbent": lo[1], "low_conf": lo[2]}
+        out[c] = {"Kd": 10.0 ** lo[0], "sorbent": lo[1], "low_conf": lo[2],
+                  "min_may_be_lower": any(h < lo[0] for h in hid.get(c, []))}
     return out
 
 
@@ -148,6 +156,8 @@ def kcw_sourced(n: int, head: str, n_ether_O: int = 0, branched: bool = False,
         a, b = sorted((lo, hi))
         if lo_rec["low_conf"]:
             flags.append(f"lower end set by a low_conf reading ({lo_rec['sorbent']})")
+        if lo_rec.get("min_may_be_lower"):
+            flags.append("min_may_be_lower (a hidden marker could lie below the lowest read value)")
         if n_ether_O:
             e0, e1 = ETHER_LOG_OFFSET_RANGE
             f = 10.0 ** (ETHER_LOG_OFFSET_REC * n_ether_O)
@@ -159,6 +169,10 @@ def kcw_sourced(n: int, head: str, n_ether_O: int = 0, branched: bool = False,
                           f"PREREG 11.2: geomean(Makselon 2019 peat Oi pH>=5.8 {hi:.3g}, "
                           f"Sörengård 2020 {lo_rec['sorbent']} {lo:.3g})")
     if lo is not None and not n_ether_O:
+        if lo_rec["low_conf"]:
+            flags.append(f"set by a low_conf reading ({lo_rec['sorbent']})")
+        if lo_rec.get("min_may_be_lower"):
+            flags.append("min_may_be_lower (a hidden marker could lie below the lowest read value)")
         return KcwSourced(lo, lo, lo, "lower_only", flags + ["kcw_lower_only"],
                           f"PREREG 11.2 (i): Sörengård 2020 {lo_rec['sorbent']} {lo:.3g} (one-sided)")
     near = _nearest_rec(n, head, upper, lower) if _nearest else None

@@ -1,0 +1,19 @@
+# Wu J, Li L, Bi W, Huang X, Chen M, Tu W (2026) Impact of rice residue decomposition on the diffusion of perfluoroalkyl substances in drainage and waterlogged
+# paddy fields. Environ. Pollut. 395:127828, doi:10.1016/j.envpol.2026.127828. NO tables in the main text: TEXT values (p.2-7); per-congener values in SI Fig. S4 (SI NOT obtained).
+# Soil: paddy fields of Jiangxi Agricultural University (115.843 E, 28.766 N), Nanchang. 400 g fresh soil + 500 mL Milli-Q per tank (15 x 15 cm), 14-d stabilisation;
+# drainage = overlying water removed; waterlogged = +500 mL; 40 ug of each of 14 PFAS mixed in (~100 ng/g each), sampled day 31 (n 3); time series days 1-31 = DOM only.
+# PW = centrifugation 10 000 rpm of drained soil; "mass distribution (%)" shares of PFCAs / PFSAs (Fig. 3c-f), basis (mass vs concentration) not stated. Data on request only.
+# Read by a literature subagent 2026-11-04 (not re-checked). File sha256 b25e36762e69b09579b6ef4283ba9bafb5556b7bddb803fc4451f2c507ba9364 (1-s2.0-S0269749126001983-main.pdf)
+quantity,value,location
+soil pH (initial),7.89,p.2 Sec. 2.2
+soil EC (initial),207 uS/cm,p.2
+soil organic matter (initial),1.35 %,p.2
+soil CEC (initial),12.5 mmol/kg [sic],p.2
+soil AP / AN (initial),9.42 / 63.59 mg/kg,p.2
+drainage soil after 7 d: pH / OM / CEC,7.53 / 1.10 % / 13.61 mmol/kg,p.2
+waterlogged soil after 7 d: pH / OM / CEC,7.95 / 1.18 % / 13.88 mmol/kg,p.2
+PFCAs share in PW (drainage) no residue -> 5 g residue,70.55 -> 65.22 %,p.7 Fig. 3c
+PFCAs share in OW (waterlogged) no residue -> residue,69.50 -> 62.83 %,p.7 Fig. 3d
+PFSAs share in PW (drainage) no residue -> residue,55.17 -> 73.60 %,p.7 Fig. 3e
+PFSAs share in OW (waterlogged) no residue -> residue,76.61 -> 64.12 %,p.7-8 Fig. 3f
+residue mass left (3 g added) drainage vs waterlogged day 7 / day 56,2.35 vs 1.82 g / 1.08 vs 0.63 g,p.5 Fig. 1a

@@ -1,0 +1,32 @@
+# Zhang et al. (2026) Agric. Water Manag. 323:110041, doi:10.1016/j.agwat.2025.110041 (CC BY)
+# Table 3 (p.14): 2D-DIFS fit to 24-h MIP-DGT + HR-Peeper deployments (probe 14-16 cm into the soil, 5-mm slices) after each of four irrigations T1-T4
+# (5 cm standing water; irrigation water spiked with 5 ng/L PFBA and PFOA). Transcribed exactly. R = C_DGT/C_Peeper; Kd = Cs/C_Peeper (eq. 5) in cm3/g;
+# Tc s; k1 printed as 10^-5 s-1, k-1 as 10^-7 s-1 (Methods: k1 = adsorption, k-1 = desorption; Results p.15 calls k-1 the "adsorption rate").
+# CONSISTENCY FLAGS (agent): Tc = 1/(k1 + k-1) (eq. 6) does not reproduce the printed Tc (PFBA-WBC T1: 1/(3.86e-5 + 2.1e-6) = 24 600 s vs 3197 s);
+# Kd ~1000-3000 cm3/g is 3-4 orders above any batch short-chain soil Kd (and above the paper's own Table 2); Kd units/basis unresolved. Use as reported, not as a model Kd.
+# Soil type / OC not given in the main text. Read by a literature subagent 2026-11-04 (not re-checked). File sha256 4dc3dcebeec18377be886461617b2287d2b3e78dc6b169a18e4911c32a978c96
+irrigation_cycle,compound,treatment,R,Kd_cm3_per_g,Tc_s,k1_1e-5_per_s,k_minus1_1e-7_per_s
+T1,PFBA,WBC,0.171,1164,3197,3.86,21
+T1,PFBA,RBC,0.157,1732,2741,26,30
+T1,PFBA,MBC,0.138,2047,1384,42,117
+T1,PFOA,WBC,0.183,1337,2631,11,39
+T1,PFOA,RBC,0.162,1856,1576,45,57
+T1,PFOA,MBC,0.145,2096,1048,58,134
+T2,PFBA,WBC,0.152,1059,2768,2.95,57
+T2,PFBA,RBC,0.145,1738,2289,14,85
+T2,PFBA,MBC,0.072,2148,1357,36,187
+T2,PFOA,WBC,0.173,1152,2572,9,75
+T2,PFOA,RBC,0.155,1827,2059,42,142
+T2,PFOA,MBC,0.106,2109,1216,53,167
+T3,PFBA,WBC,0.141,1104,2027,1.27,86
+T3,PFBA,RBC,0.135,2037,1478,8.39,107
+T3,PFBA,MBC,0.054,2562,1346,24,173
+T3,PFOA,WBC,0.148,1252,1768,5.69,102
+T3,PFOA,RBC,0.120,2325,1289,27,159
+T3,PFOA,MBC,0.091,2574,1057,31,197
+T4,PFBA,WBC,0.134,938,1314,0.86,147
+T4,PFBA,RBC,0.129,2041,1021,6.14,210
+T4,PFBA,MBC,0.046,1057,938,17,232
+T4,PFOA,WBC,0.101,2976,1276,3.27,161
+T4,PFOA,RBC,0.128,2259,904,14,248
+T4,PFOA,MBC,0.070,2458,352,23,324
