@@ -12,7 +12,7 @@
     "provenance": {
       "K_PL": "Chen2025 SSLM",
       "K_prot": "Zhou2025",
-      "K_cw": "GAP A / Prompt2 v2 (Guo2025 Fig.3f DFT + Mel2024 lignin anchor; rice whole-cw per organ)",
+      "K_cw": "PREREG 11 (src/kcw_sourced.py): one whole-wall value, geometric mean of Makselon 2019 peat Oi (pH >= 5.8, upper) and Sörengård 2020 plant-derived sorbents (lowest, lower); lower only where only that is measured; removed where neither",
       "f_xy_recommended": "GAP B / S4 + docs/theory_anchor.tex (Trapp+Briggs LFER: MONOTONE logistic)",
       "transport": "r_eq__<v>, L_Ph__<v> (and f_xy__<v> for v = *_fit): fitted per congener to Yamazaki 2023 root and grain (fit: also straw) on the 2020 Tsukuba site-year with that shoot and loading form; validation/refit_sourced.py, params/refit_sourced.csv (pre-registered: docs/PREREG_sourced_values.md)",
       "lipid_loading": "per shoot model, fitted with the lipid variant's per-congener values (params/lipid_loading_sourced.json); terms the data do not identify are removed",
@@ -192,31 +192,40 @@
       "K_prot_Lkg": 10.72,
       "K_PL_Lkg": 42.66,
       "K_cw_wholecw_Lkg": {
-        "root": 4.6,
-        "stem": 2.032,
-        "leaf": 4.6,
-        "grain": 4.6
+        "root": 0.5888,
+        "stem": 0.5888,
+        "leaf": 0.5888,
+        "grain": 0.5888
       },
-      "K_cw_poly_rec_Lkg": 1.6,
-      "K_lignin_rec_Lkg": 7.6,
+      "K_cw_range_Lkg": [
+        0.5888,
+        0.5888
+      ],
+      "K_cw_case": "lower_only",
+      "K_cw_flags": [
+        "set by a low_conf reading (Granulated bark)",
+        "min_may_be_lower (a hidden marker could lie below the lowest read value)",
+        "kcw_lower_only"
+      ],
+      "K_cw_source": "PREREG 11.2 (i): Sörengård 2020 Granulated bark 0.589 (one-sided)",
       "f_xy_recommended": 0.79,
       "B_k_basisA_Lkg_fw": {
-        "root": 1.842,
-        "stem": 1.399,
-        "leaf": 2.11,
-        "grain": 1.156
+        "root": 1.237,
+        "stem": 1.099,
+        "leaf": 1.56,
+        "grain": 1.031
       },
-      "r_eq__redistributed_lipid": 1.1971263,
-      "L_Ph__redistributed_lipid": 0.03471021,
-      "r_eq__redistributed_free": 1.197132,
-      "L_Ph__redistributed_free": 0.00286475,
-      "r_eq__redistributed_fit": 1.1971267,
-      "L_Ph__redistributed_fit": 0.01799859,
-      "f_xy__redistributed_fit": 0.13678203,
-      "r_eq__4pool_lipid": 1.1970297,
-      "L_Ph__4pool_lipid": 0.02333896,
-      "r_eq__4pool_free": 1.1970354,
-      "L_Ph__4pool_free": 0.00198804
+      "r_eq__redistributed_lipid": 1.9015123,
+      "L_Ph__redistributed_lipid": 0.02231285,
+      "r_eq__redistributed_free": 1.9015216,
+      "L_Ph__redistributed_free": 0.00131633,
+      "r_eq__redistributed_fit": 1.9015127,
+      "L_Ph__redistributed_fit": 0.01321215,
+      "f_xy__redistributed_fit": 0.08606568,
+      "r_eq__4pool_lipid": 1.9014436,
+      "L_Ph__4pool_lipid": 0.01517564,
+      "r_eq__4pool_free": 1.9014529,
+      "L_Ph__4pool_free": 0.00091336
     },
     {
       "name": "PFPeA",
@@ -225,31 +234,38 @@
       "K_prot_Lkg": 12.3,
       "K_PL_Lkg": 104.71,
       "K_cw_wholecw_Lkg": {
-        "root": 5.6,
-        "stem": 2.5184,
-        "leaf": 5.6,
-        "grain": 5.6
+        "root": 0.3388,
+        "stem": 0.3388,
+        "leaf": 0.3388,
+        "grain": 0.3388
       },
-      "K_cw_poly_rec_Lkg": 2.0,
-      "K_lignin_rec_Lkg": 9.2,
+      "K_cw_range_Lkg": [
+        0.3388,
+        0.3388
+      ],
+      "K_cw_case": "lower_only",
+      "K_cw_flags": [
+        "kcw_lower_only"
+      ],
+      "K_cw_source": "PREREG 11.2 (i): Sörengård 2020 Composted bark 0.339 (one-sided)",
       "f_xy_recommended": 0.47,
       "B_k_basisA_Lkg_fw": {
-        "root": 2.385,
-        "stem": 1.595,
-        "leaf": 2.518,
-        "grain": 1.359
+        "root": 1.592,
+        "stem": 1.142,
+        "leaf": 1.796,
+        "grain": 1.194
       },
-      "r_eq__redistributed_lipid": 0.35632952,
-      "L_Ph__redistributed_lipid": 0.03227064,
-      "r_eq__redistributed_free": 0.35633044,
-      "L_Ph__redistributed_free": 0.00486927,
-      "r_eq__redistributed_fit": 0.35632959,
-      "L_Ph__redistributed_fit": 0.02160613,
-      "f_xy__redistributed_fit": 0.11451363,
-      "r_eq__4pool_lipid": 0.35629405,
-      "L_Ph__4pool_lipid": 0.02199737,
-      "r_eq__4pool_free": 0.35629497,
-      "L_Ph__4pool_free": 0.00337624
+      "r_eq__redistributed_lipid": 0.56075595,
+      "L_Ph__redistributed_lipid": 0.02037883,
+      "r_eq__redistributed_free": 0.56075749,
+      "L_Ph__redistributed_free": 0.00217439,
+      "r_eq__redistributed_fit": 0.560756,
+      "L_Ph__redistributed_fit": 0.01530993,
+      "f_xy__redistributed_fit": 0.07272806,
+      "r_eq__4pool_lipid": 0.56071839,
+      "L_Ph__4pool_lipid": 0.01400284,
+      "r_eq__4pool_free": 0.56071993,
+      "L_Ph__4pool_free": 0.00150715
     },
     {
       "name": "PFHxA",
@@ -258,31 +274,38 @@
       "K_prot_Lkg": 14.13,
       "K_PL_Lkg": 263.03,
       "K_cw_wholecw_Lkg": {
-        "root": 6.75,
-        "stem": 3.112,
-        "leaf": 6.75,
-        "grain": 6.75
+        "root": 0.195,
+        "stem": 0.195,
+        "leaf": 0.195,
+        "grain": 0.195
       },
-      "K_cw_poly_rec_Lkg": 2.5,
-      "K_lignin_rec_Lkg": 11.0,
+      "K_cw_range_Lkg": [
+        0.195,
+        0.195
+      ],
+      "K_cw_case": "lower_only",
+      "K_cw_flags": [
+        "kcw_lower_only"
+      ],
+      "K_cw_source": "PREREG 11.2 (i): Sörengård 2020 Composted bark 0.195 (one-sided)",
       "f_xy_recommended": 0.216,
       "B_k_basisA_Lkg_fw": {
-        "root": 3.521,
-        "stem": 1.915,
-        "leaf": 3.228,
-        "grain": 1.675
+        "root": 2.533,
+        "stem": 1.309,
+        "leaf": 2.329,
+        "grain": 1.47
       },
-      "r_eq__redistributed_lipid": 0.24139078,
-      "L_Ph__redistributed_lipid": 0.11304542,
-      "r_eq__redistributed_free": 0.24139097,
-      "L_Ph__redistributed_free": 0.03522382,
-      "r_eq__redistributed_fit": 0.24139076,
-      "L_Ph__redistributed_fit": 0.11251336,
-      "f_xy__redistributed_fit": 0.08719275,
-      "r_eq__4pool_lipid": 0.24136523,
-      "L_Ph__4pool_lipid": 0.0702538,
-      "r_eq__4pool_free": 0.24136543,
-      "L_Ph__4pool_free": 0.02362488
+      "r_eq__redistributed_lipid": 0.34401862,
+      "L_Ph__redistributed_lipid": 0.07904852,
+      "r_eq__redistributed_free": 0.34401896,
+      "L_Ph__redistributed_free": 0.01702646,
+      "r_eq__redistributed_fit": 0.34401861,
+      "L_Ph__redistributed_fit": 0.08068679,
+      "f_xy__redistributed_fit": 0.06109869,
+      "r_eq__4pool_lipid": 0.34398313,
+      "L_Ph__4pool_lipid": 0.04944143,
+      "r_eq__4pool_free": 0.34398347,
+      "L_Ph__4pool_free": 0.01153715
     },
     {
       "name": "PFHpA",
@@ -291,31 +314,39 @@
       "K_prot_Lkg": 13.18,
       "K_PL_Lkg": 707.95,
       "K_cw_wholecw_Lkg": {
-        "root": 8.6,
-        "stem": 3.9776,
-        "leaf": 8.6,
-        "grain": 8.6
+        "root": 0.0,
+        "stem": 0.0,
+        "leaf": 0.0,
+        "grain": 0.0
       },
-      "K_cw_poly_rec_Lkg": 3.2,
-      "K_lignin_rec_Lkg": 14.0,
+      "K_cw_range_Lkg": [
+        0.0,
+        0.0
+      ],
+      "K_cw_case": "removed",
+      "K_cw_flags": [
+        "kcw_removed"
+      ],
+      "K_cw_source": "PREREG 11.2 (ii)",
+      "K_cw_nearest_Lkg": 2.1873,
       "f_xy_recommended": 0.098,
       "B_k_basisA_Lkg_fw": {
-        "root": 6.401,
-        "stem": 2.521,
-        "leaf": 4.658,
-        "grain": 2.087
+        "root": 5.105,
+        "stem": 1.695,
+        "leaf": 3.478,
+        "grain": 1.818
       },
-      "r_eq__redistributed_lipid": 0.36196309,
-      "L_Ph__redistributed_lipid": 0.07832308,
-      "r_eq__redistributed_free": 0.36196303,
-      "L_Ph__redistributed_free": 0.0826347,
-      "r_eq__redistributed_fit": 0.36196294,
-      "L_Ph__redistributed_fit": 0.17660069,
-      "f_xy__redistributed_fit": 0.05648769,
-      "r_eq__4pool_lipid": 0.36193018,
-      "L_Ph__4pool_lipid": 0.05237386,
-      "r_eq__4pool_free": 0.36193012,
-      "L_Ph__4pool_free": 0.0541195
+      "r_eq__redistributed_lipid": 0.45778089,
+      "L_Ph__redistributed_lipid": 0.06256809,
+      "r_eq__redistributed_free": 0.45778092,
+      "L_Ph__redistributed_free": 0.0463145,
+      "r_eq__redistributed_fit": 0.45778076,
+      "L_Ph__redistributed_fit": 0.13137863,
+      "f_xy__redistributed_fit": 0.04462464,
+      "r_eq__4pool_lipid": 0.45772755,
+      "L_Ph__4pool_lipid": 0.04165434,
+      "r_eq__4pool_free": 0.45772757,
+      "L_Ph__4pool_free": 0.03071003
     },
     {
       "name": "PFOA",
@@ -324,32 +355,37 @@
       "K_prot_Lkg": 12.3,
       "K_PL_Lkg": 1905.46,
       "K_cw_wholecw_Lkg": {
-        "root": 10.5,
-        "stem": 4.936,
-        "leaf": 10.5,
-        "grain": 10.5
+        "root": 2.1873,
+        "stem": 2.1873,
+        "leaf": 2.1873,
+        "grain": 2.1873
       },
-      "K_cw_poly_rec_Lkg": 4.0,
-      "K_lignin_rec_Lkg": 17.0,
+      "K_cw_range_Lkg": [
+        0.5129,
+        9.329
+      ],
+      "K_cw_case": "domain",
+      "K_cw_flags": [],
+      "K_cw_source": "PREREG 11.2: geomean(Makselon 2019 peat Oi pH>=5.8 9.33, Sörengård 2020 Peat 0.513)",
       "f_xy_recommended": 0.04,
       "B_k_basisA_Lkg_fw": {
-        "root": 13.718,
-        "stem": 3.902,
-        "leaf": 8.188,
-        "grain": 3.219
+        "root": 12.465,
+        "stem": 3.331,
+        "leaf": 7.047,
+        "grain": 2.959
       },
-      "r_eq__redistributed_lipid": 0.10342354,
-      "L_Ph__redistributed_lipid": 0.67912731,
-      "r_eq__redistributed_free": 0.10342346,
-      "L_Ph__redistributed_free": 1.9589691,
+      "r_eq__redistributed_lipid": 0.11399385,
+      "L_Ph__redistributed_lipid": 0.74390003,
+      "r_eq__redistributed_free": 0.11399379,
+      "L_Ph__redistributed_free": 1.6825799,
       "L_Ph_unreachable__redistributed_free": 1.0,
-      "r_eq__redistributed_fit": 0.10342353,
-      "L_Ph__redistributed_fit": 0.46812853,
-      "f_xy__redistributed_fit": 0.17171838,
-      "r_eq__4pool_lipid": 0.10341338,
-      "L_Ph__4pool_lipid": 0.34207886,
-      "r_eq__4pool_free": 0.10341331,
-      "L_Ph__4pool_free": 2.2746848,
+      "r_eq__redistributed_fit": 0.11399385,
+      "L_Ph__redistributed_fit": 0.40245214,
+      "f_xy__redistributed_fit": 0.15574481,
+      "r_eq__4pool_lipid": 0.11398274,
+      "L_Ph__4pool_lipid": 0.34085955,
+      "r_eq__4pool_free": 0.11398267,
+      "L_Ph__4pool_free": 1.9344881,
       "L_Ph_unreachable__4pool_free": 1.0
     },
     {
@@ -359,32 +395,39 @@
       "K_prot_Lkg": 16.98,
       "K_PL_Lkg": 5623.41,
       "K_cw_wholecw_Lkg": {
-        "root": 13.0,
-        "stem": 6.152,
-        "leaf": 13.0,
-        "grain": 13.0
+        "root": 2.5771,
+        "stem": 2.5771,
+        "leaf": 2.5771,
+        "grain": 2.5771
       },
-      "K_cw_poly_rec_Lkg": 5.0,
-      "K_lignin_rec_Lkg": 21.0,
+      "K_cw_range_Lkg": [
+        0.537,
+        12.3671
+      ],
+      "K_cw_case": "domain",
+      "K_cw_flags": [
+        "upper end interpolated (log-linear in n)"
+      ],
+      "K_cw_source": "PREREG 11.2: geomean(Makselon 2019 peat Oi pH>=5.8 12.4, Sörengård 2020 Composted bark 0.537)",
       "f_xy_recommended": 0.014,
       "B_k_basisA_Lkg_fw": {
-        "root": 36.05,
-        "stem": 7.978,
-        "leaf": 19.141,
-        "grain": 7.154
+        "root": 34.479,
+        "stem": 7.236,
+        "leaf": 17.71,
+        "grain": 6.829
       },
-      "r_eq__redistributed_lipid": 0.04554327,
-      "L_Ph__redistributed_lipid": 1.9595267,
-      "r_eq__redistributed_free": 0.04554319,
-      "L_Ph__redistributed_free": 4.5999826,
+      "r_eq__redistributed_lipid": 0.04763042,
+      "L_Ph__redistributed_lipid": 2.0169925,
+      "r_eq__redistributed_free": 0.04763034,
+      "L_Ph__redistributed_free": 4.253981,
       "L_Ph_unreachable__redistributed_free": 1.0,
-      "r_eq__redistributed_fit": 0.04554326,
-      "L_Ph__redistributed_fit": 1.2070223,
-      "f_xy__redistributed_fit": 0.333068,
-      "r_eq__4pool_lipid": 0.04554327,
-      "L_Ph__4pool_lipid": 0.95460722,
-      "r_eq__4pool_free": 0.04554319,
-      "L_Ph__4pool_free": 5.7764731,
+      "r_eq__redistributed_fit": 0.04763041,
+      "L_Ph__redistributed_fit": 1.1165375,
+      "f_xy__redistributed_fit": 0.31844939,
+      "r_eq__4pool_lipid": 0.04763041,
+      "L_Ph__4pool_lipid": 0.94869517,
+      "r_eq__4pool_free": 0.04763034,
+      "L_Ph__4pool_free": 5.2704475,
       "L_Ph_unreachable__4pool_free": 1.0
     },
     {
@@ -394,33 +437,40 @@
       "K_prot_Lkg": 23.44,
       "K_PL_Lkg": 15135.61,
       "K_cw_wholecw_Lkg": {
-        "root": 16.15,
-        "stem": 7.7184,
-        "leaf": 16.15,
-        "grain": 16.15
+        "root": 3.6505,
+        "stem": 3.6505,
+        "leaf": 3.6505,
+        "grain": 3.6505
       },
-      "K_cw_poly_rec_Lkg": 6.3,
-      "K_lignin_rec_Lkg": 26.0,
+      "K_cw_range_Lkg": [
+        0.8128,
+        16.3946
+      ],
+      "K_cw_case": "domain",
+      "K_cw_flags": [
+        "upper end interpolated (log-linear in n)"
+      ],
+      "K_cw_source": "PREREG 11.2: geomean(Makselon 2019 peat Oi pH>=5.8 16.4, Sörengård 2020 Composted bark 0.813)",
       "f_xy_recommended": 0.0051,
       "B_k_basisA_Lkg_fw": {
-        "root": 92.6,
-        "stem": 17.972,
-        "leaf": 46.375,
-        "grain": 16.729
+        "root": 90.717,
+        "stem": 17.127,
+        "leaf": 44.66,
+        "grain": 16.339
       },
-      "r_eq__redistributed_lipid": 0.12919812,
-      "L_Ph__redistributed_lipid": 23.176815,
+      "r_eq__redistributed_lipid": 0.13188661,
+      "L_Ph__redistributed_lipid": 23.514641,
       "L_Ph_unreachable__redistributed_lipid": 1.0,
-      "r_eq__redistributed_free": 0.12919767,
-      "L_Ph__redistributed_free": 11.16956,
+      "r_eq__redistributed_free": 0.13188615,
+      "L_Ph__redistributed_free": 10.760232,
       "L_Ph_unreachable__redistributed_free": 1.0,
-      "r_eq__redistributed_fit": 0.12919806,
-      "L_Ph__redistributed_fit": 6.3240827,
-      "f_xy__redistributed_fit": 0.75392449,
-      "r_eq__4pool_lipid": 0.12919811,
-      "L_Ph__4pool_lipid": 4.9705125,
-      "r_eq__4pool_free": 0.12919767,
-      "L_Ph__4pool_free": 17.057274,
+      "r_eq__redistributed_fit": 0.13188654,
+      "L_Ph__redistributed_fit": 6.0896738,
+      "f_xy__redistributed_fit": 0.73853919,
+      "r_eq__4pool_lipid": 0.13188659,
+      "L_Ph__4pool_lipid": 4.8251235,
+      "r_eq__4pool_free": 0.13188615,
+      "L_Ph__4pool_free": 16.152038,
       "L_Ph_unreachable__4pool_free": 1.0
     },
     {
@@ -430,32 +480,39 @@
       "K_prot_Lkg": 23.44,
       "K_PL_Lkg": 31622.78,
       "K_cw_wholecw_Lkg": {
-        "root": 20.5,
-        "stem": 9.8,
-        "leaf": 20.5,
-        "grain": 20.5
+        "root": 6.0057,
+        "stem": 6.0057,
+        "leaf": 6.0057,
+        "grain": 6.0057
       },
-      "K_cw_poly_rec_Lkg": 8.0,
-      "K_lignin_rec_Lkg": 33.0,
+      "K_cw_range_Lkg": [
+        1.6596,
+        21.7337
+      ],
+      "K_cw_case": "domain",
+      "K_cw_flags": [
+        "upper end interpolated (log-linear in n)"
+      ],
+      "K_cw_source": "PREREG 11.2: geomean(Makselon 2019 peat Oi pH>=5.8 21.7, Sörengård 2020 Composted bark 1.66)",
       "f_xy_recommended": 0.0039,
       "B_k_basisA_Lkg_fw": {
-        "root": 190.258,
-        "stem": 34.928,
-        "leaf": 92.733,
-        "grain": 32.495
+        "root": 188.074,
+        "stem": 34.14,
+        "leaf": 90.743,
+        "grain": 32.042
       },
-      "r_eq__redistributed_lipid": 0.2950634,
-      "L_Ph__redistributed_lipid": 1.2802787,
-      "r_eq__redistributed_free": 0.29506027,
-      "L_Ph__redistributed_free": 22.358889,
+      "r_eq__redistributed_lipid": 0.2984936,
+      "L_Ph__redistributed_lipid": 1.2231219,
+      "r_eq__redistributed_free": 0.29849037,
+      "L_Ph__redistributed_free": 21.881893,
       "L_Ph_unreachable__redistributed_free": 1.0,
-      "r_eq__redistributed_fit": 0.29506104,
-      "L_Ph__redistributed_fit": 3.288012,
-      "f_xy__redistributed_fit": 0.53820842,
-      "r_eq__4pool_lipid": 0.29506346,
-      "L_Ph__4pool_lipid": 1.1529116,
-      "r_eq__4pool_free": 0.29506027,
-      "L_Ph__4pool_free": 48.978247,
+      "r_eq__redistributed_fit": 0.29849114,
+      "L_Ph__redistributed_fit": 3.2174397,
+      "f_xy__redistributed_fit": 0.53202208,
+      "r_eq__4pool_lipid": 0.29849361,
+      "L_Ph__4pool_lipid": 1.1150344,
+      "r_eq__4pool_free": 0.29849037,
+      "L_Ph__4pool_free": 46.995974,
       "L_Ph_unreachable__4pool_free": 1.0
     },
     {
@@ -465,33 +522,38 @@
       "K_prot_Lkg": 23.44,
       "K_PL_Lkg": 66069.34,
       "K_cw_wholecw_Lkg": {
-        "root": 26.0,
-        "stem": 12.304,
-        "leaf": 26.0,
-        "grain": 26.0
+        "root": 9.6557,
+        "stem": 9.6557,
+        "leaf": 9.6557,
+        "grain": 9.6557
       },
-      "K_cw_poly_rec_Lkg": 10.0,
-      "K_lignin_rec_Lkg": 42.0,
+      "K_cw_range_Lkg": [
+        3.2359,
+        28.8116
+      ],
+      "K_cw_case": "domain",
+      "K_cw_flags": [],
+      "K_cw_source": "PREREG 11.2: geomean(Makselon 2019 peat Oi pH>=5.8 28.8, Sörengård 2020 Granulated bark 3.24)",
       "f_xy_recommended": 0.003,
       "B_k_basisA_Lkg_fw": {
-        "root": 393.753,
-        "stem": 69.972,
-        "leaf": 189.094,
-        "grain": 65.322
+        "root": 391.29,
+        "stem": 69.422,
+        "leaf": 186.851,
+        "grain": 64.812
       },
-      "r_eq__redistributed_lipid": 0.5054657,
-      "L_Ph__redistributed_lipid": 36.55325,
-      "r_eq__redistributed_free": 0.50545803,
-      "L_Ph__redistributed_free": 45.597017,
+      "r_eq__redistributed_lipid": 0.50864907,
+      "L_Ph__redistributed_lipid": 29.957629,
+      "r_eq__redistributed_free": 0.50864098,
+      "L_Ph__redistributed_free": 45.056293,
       "L_Ph_unreachable__redistributed_free": 1.0,
-      "r_eq__redistributed_fit": 0.50546002,
-      "L_Ph__redistributed_fit": 45.606062,
+      "r_eq__redistributed_fit": 0.50864298,
+      "L_Ph__redistributed_fit": 45.064813,
       "f_xy__redistributed_fit": 1.0,
       "L_Ph_unreachable__redistributed_fit": 1.0,
-      "r_eq__4pool_lipid": 0.50546513,
-      "L_Ph__4pool_lipid": 178.30721,
-      "r_eq__4pool_free": 0.50540546,
-      "L_Ph__4pool_free": 1751.5822,
+      "r_eq__4pool_lipid": 0.50864831,
+      "L_Ph__4pool_lipid": 107.33847,
+      "r_eq__4pool_free": 0.50858808,
+      "L_Ph__4pool_free": 1606.8375,
       "L_Ph_unreachable__4pool_free": 1.0
     },
     {
@@ -501,36 +563,43 @@
       "K_prot_Lkg": 36.31,
       "K_PL_Lkg": 524.81,
       "K_cw_wholecw_Lkg": {
-        "root": 16.0,
-        "stem": 6.584,
-        "leaf": 16.0,
-        "grain": 16.0
+        "root": 7.0002,
+        "stem": 7.0002,
+        "leaf": 7.0002,
+        "grain": 7.0002
       },
-      "K_cw_poly_rec_Lkg": 5.0,
-      "K_lignin_rec_Lkg": 27.0,
+      "K_cw_range_Lkg": [
+        4.7863,
+        10.2381
+      ],
+      "K_cw_case": "domain",
+      "K_cw_flags": [
+        "min_may_be_lower (a hidden marker could lie below the lowest read value)"
+      ],
+      "K_cw_source": "PREREG 11.2: geomean(Makselon 2019 peat Oi pH>=5.8 10.2, Sörengård 2020 Peat 4.79)",
       "f_xy_recommended": 0.26296,
       "B_k_basisA_Lkg_fw": {
-        "root": 6.837,
-        "stem": 3.362,
-        "leaf": 6.601,
-        "grain": 3.788
+        "root": 5.481,
+        "stem": 3.449,
+        "leaf": 5.366,
+        "grain": 3.508
       },
-      "r_eq__redistributed_lipid": 0.98710597,
-      "L_Ph__redistributed_lipid": 0.02117085,
-      "L_Ph_MQL__redistributed_lipid": 0.04234171,
-      "r_eq__redistributed_free": 0.98710688,
-      "L_Ph__redistributed_free": 0.00801417,
-      "L_Ph_MQL__redistributed_free": 0.01602835,
-      "r_eq__redistributed_fit": 0.98710537,
-      "L_Ph__redistributed_fit": 0.07743317,
-      "f_xy__redistributed_fit": 0.03449859,
-      "L_Ph_MQL__redistributed_fit": 0.15486635,
-      "r_eq__4pool_lipid": 0.98701536,
-      "L_Ph__4pool_lipid": 0.01481663,
-      "L_Ph_MQL__4pool_lipid": 0.02963326,
-      "r_eq__4pool_free": 0.98701627,
-      "L_Ph__4pool_free": 0.00561427,
-      "L_Ph_MQL__4pool_free": 0.01122854
+      "r_eq__redistributed_lipid": 1.2410729,
+      "L_Ph__redistributed_lipid": 0.01832934,
+      "L_Ph_MQL__redistributed_lipid": 0.03665867,
+      "r_eq__redistributed_free": 1.2410743,
+      "L_Ph__redistributed_free": 0.00514311,
+      "L_Ph_MQL__redistributed_free": 0.01028622,
+      "r_eq__redistributed_fit": 1.2410724,
+      "L_Ph__redistributed_fit": 0.06283846,
+      "f_xy__redistributed_fit": 0.02743372,
+      "L_Ph_MQL__redistributed_fit": 0.12567692,
+      "r_eq__4pool_lipid": 1.240963,
+      "L_Ph__4pool_lipid": 0.01290315,
+      "L_Ph_MQL__4pool_lipid": 0.0258063,
+      "r_eq__4pool_free": 1.2409644,
+      "L_Ph__4pool_free": 0.00361206,
+      "L_Ph_MQL__4pool_free": 0.00722411
     },
     {
       "name": "PFHxS",
@@ -539,19 +608,26 @@
       "K_prot_Lkg": 42.66,
       "K_PL_Lkg": 4466.84,
       "K_cw_wholecw_Lkg": {
-        "root": 19.5,
-        "stem": 9.656,
-        "leaf": 19.5,
-        "grain": 19.5
+        "root": 1.2055,
+        "stem": 1.2055,
+        "leaf": 1.2055,
+        "grain": 1.2055
       },
-      "K_cw_poly_rec_Lkg": 8.0,
-      "K_lignin_rec_Lkg": 31.0,
+      "K_cw_range_Lkg": [
+        0.3311,
+        4.3887
+      ],
+      "K_cw_case": "domain",
+      "K_cw_flags": [
+        "lower end set by a low_conf reading (Composted bark)"
+      ],
+      "K_cw_source": "PREREG 11.2: geomean(Makselon 2019 peat Oi pH>=5.8 4.39, Sörengård 2020 Composted bark 0.331)",
       "f_xy_recommended": 0.07191,
       "B_k_basisA_Lkg_fw": {
-        "root": 30.666,
-        "stem": 8.084,
-        "leaf": 18.417,
-        "grain": 8.086
+        "root": 27.91,
+        "stem": 6.329,
+        "leaf": 15.906,
+        "grain": 7.515
       }
     },
     {
@@ -561,32 +637,37 @@
       "K_prot_Lkg": 34.67,
       "K_PL_Lkg": 31622.78,
       "K_cw_wholecw_Lkg": {
-        "root": 24.0,
-        "stem": 14.584,
-        "leaf": 24.0,
-        "grain": 24.0
+        "root": 4.1453,
+        "stem": 4.1453,
+        "leaf": 4.1453,
+        "grain": 4.1453
       },
-      "K_cw_poly_rec_Lkg": 13.0,
-      "K_lignin_rec_Lkg": 35.0,
+      "K_cw_range_Lkg": [
+        0.7762,
+        22.1367
+      ],
+      "K_cw_case": "domain",
+      "K_cw_flags": [],
+      "K_cw_source": "PREREG 11.2: geomean(Makselon 2019 peat Oi pH>=5.8 22.1, Sörengård 2020 Composted bark 0.776)",
       "f_xy_recommended": 0.01332,
       "B_k_basisA_Lkg_fw": {
-        "root": 190.979,
-        "stem": 36.157,
-        "leaf": 93.91,
-        "grain": 33.402
+        "root": 187.987,
+        "stem": 33.989,
+        "leaf": 91.185,
+        "grain": 32.783
       },
-      "r_eq__redistributed_lipid": 0.0892889,
-      "L_Ph__redistributed_lipid": 3.2965048,
-      "r_eq__redistributed_free": 0.08928806,
-      "L_Ph__redistributed_free": 22.641617,
+      "r_eq__redistributed_lipid": 0.09071145,
+      "L_Ph__redistributed_lipid": 3.1032622,
+      "r_eq__redistributed_free": 0.09071057,
+      "L_Ph__redistributed_free": 21.987688,
       "L_Ph_unreachable__redistributed_free": 1.0,
-      "r_eq__redistributed_fit": 0.08928846,
-      "L_Ph__redistributed_fit": 4.2499419,
-      "f_xy__redistributed_fit": 0.96423244,
-      "r_eq__4pool_lipid": 0.08928891,
-      "L_Ph__4pool_lipid": 2.9255409,
-      "r_eq__4pool_free": 0.08928806,
-      "L_Ph__4pool_free": 51.204773,
+      "r_eq__redistributed_fit": 0.09071097,
+      "L_Ph__redistributed_fit": 4.1267059,
+      "f_xy__redistributed_fit": 0.94911642,
+      "r_eq__4pool_lipid": 0.09071144,
+      "L_Ph__4pool_lipid": 2.7556845,
+      "r_eq__4pool_free": 0.09071057,
+      "L_Ph__4pool_free": 47.053176,
       "L_Ph_unreachable__4pool_free": 1.0
     },
     {
@@ -596,28 +677,36 @@
       "K_prot_Lkg": 12.3,
       "K_PL_Lkg": 117.5,
       "K_cw_wholecw_Lkg": {
-        "root": 5.6,
-        "stem": 2.5184,
-        "leaf": 5.6,
-        "grain": 5.6
+        "root": 0.0,
+        "stem": 0.0,
+        "leaf": 0.0,
+        "grain": 0.0
       },
-      "K_cw_poly_rec_Lkg": 2.0,
-      "K_lignin_rec_Lkg": 9.2,
+      "K_cw_range_Lkg": [
+        0.0,
+        0.0
+      ],
+      "K_cw_case": "removed",
+      "K_cw_flags": [
+        "kcw_removed"
+      ],
+      "K_cw_source": "PREREG 11.2 (ii)",
+      "K_cw_nearest_Lkg": 2.1873,
       "f_xy_recommended": 0.2334,
       "B_k_basisA_Lkg_fw": {
-        "root": 2.46,
-        "stem": 1.608,
-        "leaf": 2.553,
-        "grain": 1.371
+        "root": 1.616,
+        "stem": 1.085,
+        "leaf": 1.785,
+        "grain": 1.196
       },
-      "provisional": "ether-PFAS (HFPO-DA/GenX): K_PL measured (Chen2025), K_prot/K_cw≈PFPeA (matched K_MW), f_xy=PFCA(nPFC5)·exp(-0.7) (Tang2026 ether offset); NOT calibrated to BAF data."
+      "provisional": "ether-PFAS (HFPO-DA/GenX): K_PL measured (Chen2025), K_prot≈PFPeA (matched K_MW), K_cw removed (PREREG 11.2), f_xy=PFCA(nPFC5)·exp(-0.7) (Tang2026 ether offset); NOT calibrated to BAF data."
     }
   ],
   "lipid_loading": {
     "redistributed": {
-      "a": 0.06587336181112426,
+      "a": 0.04572707512435045,
       "b": 0.0,
-      "g_xy": 0.007065105573733865,
+      "g_xy": 0.007355608839560879,
       "g_ph": 0.0,
       "pfsa_ln": 0.0,
       "gate": "none",
@@ -629,9 +718,9 @@
       ]
     },
     "4pool": {
-      "a": 0.0636297356472181,
+      "a": 0.044040577489330594,
       "b": 0.0,
-      "g_xy": 0.007252179472982059,
+      "g_xy": 0.007421219553116646,
       "g_ph": 0.0,
       "pfsa_ln": 0.0,
       "gate": "none",
